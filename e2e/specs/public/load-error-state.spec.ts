@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 
 test('the overview offers a retry when its routes fail to load', async ({
     page,
@@ -9,7 +9,7 @@ test('the overview offers a retry when its routes fail to load', async ({
         route.abort('failed'),
     )
     await page.getByTestId('nav-link-home').click()
-    await page.waitForURL((url) => url.pathname === '/')
+    await page.waitForURL((url) => url.pathname === gymPath('/'))
 
     const loadError = page.getByTestId('load-error')
     await expect(loadError).toBeVisible()

@@ -13,6 +13,7 @@ COPY pocketbase/hooks ./hooks
 FROM pb-deps AS pb-test
 COPY pocketbase/migrations_test.go ./
 COPY pocketbase/pb_migrations ./pb_migrations
+COPY pocketbase/testdata ./testdata
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     mkdir /out && { go run gotest.tools/gotestsum@v1.13.0 --junitfile /out/junit.xml ./...; echo $? > /out/exit-code; }

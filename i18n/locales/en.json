@@ -127,7 +127,14 @@
         "resendVerificationInfo": "We'll send a new verification link to your email address.",
         "confirmPassword": "Confirm password",
         "showPassword": "Show password",
-        "hidePassword": "Hide password"
+        "hidePassword": "Hide password",
+        "myGyms": "My gyms",
+        "noGyms": "You are not on the staff of any gym.",
+        "leave": "Leave",
+        "leaveGym": "Leave {gym}",
+        "leaveGymConfirm": "You lose your role and staff access in this gym. Your logbook stays.",
+        "leftGym": "You left the gym.",
+        "lastAdmin": "The gym needs another admin before you can leave."
     },
     "routes": {
         "home": "Overview",
@@ -444,7 +451,8 @@
                 "report_decided_kept": "A report was decided — content kept online",
                 "task_defect_filed": "New defect reported on “{route}”",
                 "task_assigned": "Task assigned to you: “{title}”",
-                "task_defect_fixed": "The problem you reported on “{route}” has been fixed — thank you!"
+                "task_defect_fixed": "The problem you reported on “{route}” has been fixed — thank you!",
+                "task_defect_filed_gym": "New defect reported on “{route}” at {gym}"
             }
         }
     },
@@ -543,13 +551,24 @@
                 "inventorySession": "Keeps the progress of an inventory scan",
                 "inventoryInstructions": "Remembers that inventory instructions were shown",
                 "offlineLogbook": "Keeps your logbook and unsent ascents available offline",
-                "offlineScores": "Keeps competition scores you entered without signal until they are sent"
+                "offlineScores": "Keeps competition scores you entered without signal until they are sent",
+                "gym": "Remembers the gym you last opened",
+                "recentGyms": "Lists the gyms you visited recently on the start page"
             },
             "durations": {
                 "session": "Until sign-out",
                 "oneYear": "1 year",
                 "persistent": "Until deleted in the browser"
             }
+        },
+        "gymImprint": "Legal notice of {name}",
+        "gymPage": {
+            "incomplete": "The gym has not completed its legal notice yet.",
+            "platformImprint": "Platform legal notice",
+            "platformPrivacy": "Platform privacy policy",
+            "platformTitle": "Platform operator",
+            "platformBody": "The gym runs this page on Gripello. The platform operator processes data on behalf of the gym and is controller for your account and logbook across all gyms.",
+            "extraTitle": "Additional information from the gym"
         }
     },
     "page": {
@@ -652,7 +671,10 @@
         "manage": "Manage",
         "moderation": "Moderation",
         "admin": "Admin",
-        "quickNavigation": "Quick navigation"
+        "quickNavigation": "Quick navigation",
+        "platform": "Platform",
+        "allGyms": "All gyms…",
+        "manageGyms": "Manage gyms"
     },
     "users": {
         "create": "Add user",
@@ -709,7 +731,7 @@
         "roleUpdated": "Role updated.",
         "roleDeleted": "Role deleted.",
         "roleSaveError": "Could not save the role.",
-        "roleDeleteError": "Could not delete the role.",
+        "roleDeleteError": "Could not delete the role. It may still be assigned to members.",
         "adminRoleLocked": "The admin role cannot be renamed or deleted.",
         "subtitle": "What each role may do. Changes apply immediately.",
         "noDescription": "No description",
@@ -734,22 +756,18 @@
         "replace": "Replace",
         "clickToUpload": "Click to upload",
         "loadError": "Could not load settings.",
-        "initError": "Could not set up settings.",
         "organization": "Organization",
         "organizationName": "Organization name",
         "organizationNamePlaceholder": "e.g. Mountain Club",
         "organizationUnit": "Organization unit",
         "organizationUnitPlaceholder": "e.g. North climbing gym",
         "publicUrls": "Public URLs",
-        "applicationUrl": "Application URL",
         "imprintUrl": "Legal notice URL",
         "privacyUrl": "Privacy URL",
         "saveSuccess": "Settings saved.",
         "saveError": "Could not save settings. Please try again.",
         "contactEmail": "Contact email",
         "contactEmailHint": "Published as your point of contact and notified about new content reports.",
-        "auditRetention": "Audit log retention (days)",
-        "auditRetentionHint": "Entries older than this are deleted automatically. Default 90 days.",
         "mailNotConfigured": "Email is not configured, so password resets and content report notices cannot be delivered. SMTP is configured in PocketBase, not here.",
         "mailNotConfiguredAction": "Open PocketBase mail settings",
         "legalTitle": "Legal notice",
@@ -786,8 +804,6 @@
         "routeGradeSystem": "Route scale",
         "boulderGradeSystem": "Boulder scale",
         "gradingHint": "Applies to newly set routes. Existing routes keep their scale until edited.",
-        "allowRegistration": "Allow public registration",
-        "allowRegistrationHint": "Anyone can create a climber account without permissions. Requires a working mail server for email verification.",
         "description": "Manage your organization, branding, grading scales and legal information.",
         "sections": "Settings sections",
         "branding": "Branding",
@@ -1022,7 +1038,7 @@
         "empty": "Nothing recorded yet",
         "emptyHint": "Actions appear here as they happen.",
         "anonymous": "Anonymous",
-        "superuser": "Administrator (PocketBase)",
+        "superuser": "Platform administrator",
         "retentionNote": "Entries are deleted automatically after {days} day. | Entries are deleted automatically after {days} days.",
         "period": {
             "24h": "Last 24 hours",
@@ -1061,7 +1077,15 @@
             "reports": "Report",
             "tasks": "Task"
         },
-        "changedLabel": "Changed"
+        "changedLabel": "Changed",
+        "filter": {
+            "actor": "Actor",
+            "gym": "Gym"
+        },
+        "actor": {
+            "guests": "Guests",
+            "me": "Me"
+        }
     },
     "gradeSystems": {
         "uiaa": "UIAA",
@@ -1178,7 +1202,9 @@
         },
         "pendingSync": "Not synced yet",
         "savedOffline": "Ascent saved offline. It syncs once you are back online.",
-        "syncFailed": "Sync failed"
+        "syncFailed": "Sync failed",
+        "gym": "Gym",
+        "allGyms": "All gyms"
     },
     "map": {
         "title": "Gym map",
@@ -1676,5 +1702,65 @@
             "entryFee": "There is an entry fee. Pay via the link on the competition page; staff mark you as paid."
         },
         "requiresPayment": "Entry fee required"
+    },
+    "members": {
+        "title": "Members",
+        "invite": "Add member",
+        "email": "Email of the account",
+        "role": "Role",
+        "search": "Search members…",
+        "noMembers": "No members found",
+        "remove": "Remove member",
+        "removeConfirm": "Remove this person from the gym staff? Their account stays.",
+        "removed": "Member removed.",
+        "alreadyMember": "This person is already a member.",
+        "invited": "Account added to the gym.",
+        "invitedByMail": "New account created. An email to set a password is on its way."
+    },
+    "landing": {
+        "title": "Find your gym",
+        "search": "Search gyms",
+        "myGyms": "My gyms",
+        "recent": "Recently visited",
+        "allGyms": "All gyms",
+        "empty": "No gyms found"
+    },
+    "gym": {
+        "notFound": "This gym does not exist or is not active."
+    },
+    "platform": {
+        "gyms": {
+            "title": "Gyms",
+            "create": "New gym",
+            "delete": "Delete gym",
+            "name": "Name",
+            "slug": "URL",
+            "active": "Active",
+            "adminEmail": "First admin email",
+            "invalidSlug": "3 to 40 lowercase letters, digits or dashes; not a reserved word.",
+            "created": "Gym created, invitation sent",
+            "inviteFailed": "Gym created, but the invitation failed",
+            "deleted": "Gym deleted",
+            "deleteConfirm": "Delete “{name}” with all its routes, walls, competitions and memberships? This cannot be undone.",
+            "previousSlugs": "Previous addresses",
+            "venue": "Venue",
+            "createdAt": "Created",
+            "open": "Open gym"
+        },
+        "settings": {
+            "title": "Platform settings",
+            "access": "Access",
+            "allowRegistration": "Allow registration",
+            "auditRetentionDays": "Keep audit log (days)",
+            "links": "Contact & links"
+        },
+        "overview": {
+            "title": "Overview",
+            "activeGyms": "Active gyms",
+            "memberships": "Memberships",
+            "routes": "Routes",
+            "admins": "Platform admins",
+            "dashboard": "PocketBase dashboard"
+        }
     }
 }

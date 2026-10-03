@@ -33,7 +33,9 @@ test('every role card and its permission toggles stay reachable on a phone', asy
     await gotoSettled(page, '/admin/users')
 
     const cards = page.locator('[data-testid^="role-permissions-row-"]')
-    await expect(page.getByTestId('role-permissions-row-user')).toBeVisible()
+    await expect(
+        page.getByTestId('role-permissions-row-routesetter'),
+    ).toBeVisible()
 
     await expect(async () => {
         for (const card of await cards.all()) {
@@ -43,7 +45,9 @@ test('every role card and its permission toggles stay reachable on a phone', asy
         }
     }).toPass()
 
-    const toggle = page.getByTestId('role-permissions-user-view_analytics')
+    const toggle = page.getByTestId(
+        'role-permissions-routesetter-view_analytics',
+    )
     await toggle.scrollIntoViewIfNeeded()
     await expect
         .poll(async () => {

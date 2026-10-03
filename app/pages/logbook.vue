@@ -4,8 +4,17 @@
             :title="t('ticks.logbook')"
             :subtitle="t('ticks.logbookSubtitle')"
         >
-            <template v-if="logbookTicks.length" #actions>
+            <template v-if="allTicks.length" #actions>
                 <div class="flex flex-wrap gap-2">
+                    <USelect
+                        v-if="tickGyms.length > 1"
+                        v-model="gymId"
+                        :items="gymItems"
+                        size="sm"
+                        class="min-w-40"
+                        :aria-label="t('ticks.gym')"
+                        data-testid="logbook-gym"
+                    />
                     <UFieldGroup data-testid="logbook-kind">
                         <UButton
                             v-for="option in LOGBOOK_KINDS"
@@ -57,7 +66,7 @@
             </template>
         </LayoutEmptyState>
 
-        <template v-else-if="!logbookTicks.length">
+        <template v-else-if="!allTicks.length">
             <LayoutEmptyState
                 icon="i-lucide-notebook"
                 :title="t('ticks.empty')"
@@ -231,6 +240,7 @@ import {
 } from '#shared/utils/logbook'
 import { applyTickOutbox, isOfflineError } from '~/utils/tickOutbox'
 import { cacheKeys } from '~/utils/realtimeCache'
+import { ALL_GYMS, gymsInTicks, ticksInGym } from '~/utils/logbookGyms'
 
 type LoggedTick = TickRecord & { expand?: { route?: RouteRecord } }
 
@@ -263,7 +273,7 @@ const {
         try {
             const list = await pb.collection('ticks').getFullList<LoggedTick>({
                 sort: '-date,-created',
-                expand: 'route',
+                expand: 'route.gym',
                 requestKey: null,
             })
             outbox.cacheTicks(list)
@@ -276,7 +286,7 @@ const {
     { default: () => [] },
 )
 
-const logbookTicks = computed(() =>
+const allTicks = computed(() =>
     applyTickOutbox(
         ticks.value,
         outbox.queue.value,
@@ -286,6 +296,13 @@ const logbookTicks = computed(() =>
         routeArchived: !!tick.expand?.route?.archived,
     })),
 )
+const tickGyms = computed(() => gymsInTicks(allTicks.value))
+const gymId = ref(ALL_GYMS)
+const gymItems = computed(() => [
+    { label: t('ticks.allGyms'), value: ALL_GYMS },
+    ...tickGyms.value.map((gym) => ({ label: gym.name, value: gym.id })),
+])
+const logbookTicks = computed(() => ticksInGym(allTicks.value, gymId.value))
 
 const kind = ref<LogbookKind>(preferredKind(logbookTicks.value))
 const range = ref<LogbookRange>('12m')

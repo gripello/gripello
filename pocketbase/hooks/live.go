@@ -27,6 +27,7 @@ var competitionChangeKinds = map[string]string{
 
 type competitionChange struct {
 	Competition string `json:"competition"`
+	Gym         string `json:"gym"`
 	Kind        string `json:"kind"`
 	User        string `json:"user,omitempty"`
 	Entry       string `json:"entry,omitempty"`
@@ -41,6 +42,7 @@ type openDefect struct {
 }
 
 type openDefectsChange struct {
+	Gym     string       `json:"gym"`
 	Routes  []string     `json:"routes"`
 	Defects []openDefect `json:"defects"`
 }
@@ -53,7 +55,7 @@ type tickChange struct {
 func registerLive(app core.App) {
 	onDefectChange := func(e *core.RecordEvent) error {
 		if routes := defectRoutes(e.Record); len(routes) > 0 {
-			broadcastOpenDefects(e.App, routes)
+			broadcastOpenDefects(e.App, e.Record.GetString("gym"), routes)
 		}
 		return e.Next()
 	}
@@ -76,8 +78,17 @@ func registerLive(app core.App) {
 
 	onCompetitionChange := func(e *core.RecordEvent) error {
 		change := competitionChangeOf(e.Record)
+		competition := e.Record
+		if e.Record.Collection().Name != "competitions" {
+			found, err := e.App.FindRecordById("competitions", change.Competition)
+			if err != nil {
+				return e.Next()
+			}
+			competition = found
+		}
+		change.Gym = competition.GetString("gym")
 		change.At = time.Now().UnixMilli()
-		broadcastCompetitionChange(e.App, change)
+		broadcastCompetitionChange(e.App, change, competitionAudience(e.App, change.Gym, competition.GetString("status") == "draft"))
 		return e.Next()
 	}
 	for collection := range competitionChangeKinds {
@@ -87,18 +98,27 @@ func registerLive(app core.App) {
 	}
 }
 
-func broadcastCompetitionChange(app core.App, change competitionChange) {
+func broadcastCompetitionChange(app core.App, change competitionChange, audience func(auth *core.Record) bool) {
 	if change.User == "" {
-		broadcast(app, competitionsTopic, change, nil)
+		broadcast(app, competitionsTopic, change, audience)
 		return
 	}
 	owner := change.User
 	broadcast(app, competitionsTopic, change, func(auth *core.Record) bool {
-		return auth != nil && auth.Id == owner
+		return auth != nil && auth.Id == owner && audience(auth)
 	})
 	broadcast(app, competitionsTopic, publicCompetitionChange(change), func(auth *core.Record) bool {
-		return auth == nil || auth.Id != owner
+		return (auth == nil || auth.Id != owner) && audience(auth)
 	})
+}
+
+func competitionAudience(app core.App, gymID string, draft bool) func(auth *core.Record) bool {
+	return func(auth *core.Record) bool {
+		if !draft {
+			return true
+		}
+		return auth != nil && (hasPermission(app, auth.Id, gymID, "manage_competitions") || hasPermission(app, auth.Id, gymID, "judge_competitions"))
+	}
 }
 
 func publicCompetitionChange(change competitionChange) competitionChange {
@@ -138,7 +158,7 @@ func defectRoutes(task *core.Record) []string {
 	return routes
 }
 
-func broadcastOpenDefects(app core.App, routes []string) {
+func broadcastOpenDefects(app core.App, gymID string, routes []string) {
 	defects := []openDefect{}
 	for _, route := range routes {
 		records, err := app.FindRecordsByFilter(openDefectsTopic, "route = {:route}", "", 0, 0, dbx.Params{"route": route})
@@ -155,7 +175,7 @@ func broadcastOpenDefects(app core.App, routes []string) {
 			})
 		}
 	}
-	broadcast(app, openDefectsTopic, openDefectsChange{Routes: routes, Defects: defects}, nil)
+	broadcast(app, openDefectsTopic, openDefectsChange{Gym: gymID, Routes: routes, Defects: defects}, nil)
 }
 
 func broadcast(app core.App, topic string, data any, accept func(auth *core.Record) bool) {

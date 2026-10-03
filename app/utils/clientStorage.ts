@@ -1,10 +1,12 @@
 import { INVENTORY_INSTRUCTIONS_KEY, INVENTORY_STORAGE_KEY } from './inventory'
 import { TICKS_DB } from './tickOutbox'
+import { RECENT_GYMS_KEY } from './recentGyms'
 
 export const AUTH_COOKIE = 'pb_auth'
 export const SESSION_ONLY_AUTH_COOKIE = 'pb_auth_session'
 export const THEME_MODE_COOKIE = 'theme-mode'
 export const SIDEBAR_OPEN_COOKIE = 'sidebar-open'
+export const GYM_COOKIE = 'gym'
 export const EXPORT_COLUMNS_KEY = 'gripello.export-columns'
 export const COMPETITION_SCORES_KEY = 'gripello:competition-scores'
 
@@ -36,6 +38,18 @@ export const CLIENT_STORAGE: ClientStorageEntry[] = [
         kind: 'cookie',
         purpose: 'sidebar',
         duration: 'oneYear',
+    },
+    {
+        name: GYM_COOKIE,
+        kind: 'cookie',
+        purpose: 'gym',
+        duration: 'oneYear',
+    },
+    {
+        name: RECENT_GYMS_KEY,
+        kind: 'localStorage',
+        purpose: 'recentGyms',
+        duration: 'persistent',
     },
     {
         name: EXPORT_COLUMNS_KEY,

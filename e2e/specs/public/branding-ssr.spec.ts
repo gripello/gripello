@@ -1,9 +1,10 @@
 import { test, expect } from '../../support/fixtures'
+import { gymPath } from '../../support/nav'
 
 test('server-renders the favicon, logo and logged-out navbar', async ({
     page,
 }) => {
-    const response = await page.goto('/')
+    const response = await page.goto(gymPath('/'))
     const html = (await response?.text()) ?? ''
 
     expect(html).toMatch(/<link[^>]+rel="icon"[^>]+href="[^"]+"/)
@@ -24,7 +25,7 @@ test('server-renders the logged-in navbar', async ({ adminPage: page }) => {
 })
 
 test('the navbar logo actually loads', async ({ page }) => {
-    await page.goto('/')
+    await page.goto(gymPath('/'))
 
     const logo = page.getByTestId('nav-logo').locator('img:visible')
     await expect(logo).toBeVisible()

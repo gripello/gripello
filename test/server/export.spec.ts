@@ -2,26 +2,36 @@ import { describe, expect, it, vi } from 'vitest'
 import {
     attachmentHeader,
     resolveApplicationUrl,
+    resolveExportGymId,
     resolveExportColumns,
     resolveRouteIds,
+    requireRouteIds,
+    pdfBuffer,
 } from '../../server/utils/export'
+import PDFDocument from 'pdfkit'
 
 vi.mock('h3', async () => {
     return {
-        getQuery: (event: any) => event.query ?? {},
         readBody: async (event: any) => {
             if (event.body === undefined) {
                 throw new Error('no body')
             }
             return event.body
         },
-        getRequestURL: () => new URL('https://request.example/manage/routes'),
+        getRequestURL: (
+            event: any,
+            options: { xForwardedHost?: boolean } = {},
+        ) =>
+            new URL(
+                `https://${(options.xForwardedHost && event?.headers?.['x-forwarded-host']) || 'request.example'}/manage/routes`,
+            ),
+        createError: (input: { statusMessage: string }) =>
+            Object.assign(new Error(input.statusMessage), input),
     }
 })
 
-const eventWith = (body: unknown, query: Record<string, string> = {}) => ({
+const eventWith = (body: unknown) => ({
     body,
-    query,
     context: {} as Record<string, unknown>,
 })
 
@@ -126,26 +136,74 @@ describe('resolveRouteIds', () => {
         expect((await resolveExportColumns(event))[0].key).toBe('name')
     })
 
-    it('falls back to the comma-separated query parameter', async () => {
+    it('ignores the query string', async () => {
+        expect(await resolveRouteIds(eventWith(undefined))).toEqual([])
+    })
+
+    it('drops duplicate ids', async () => {
         expect(
-            await resolveRouteIds(eventWith(undefined, { id: 'a, b ,' })),
+            await resolveRouteIds(eventWith({ ids: ['a', 'b', 'a', ' b'] })),
         ).toEqual(['a', 'b'])
     })
 })
 
-describe('resolveApplicationUrl', () => {
-    it('prefers the configured URL and strips trailing slashes', () => {
-        expect(
-            resolveApplicationUrl({} as never, {
-                application_url: 'https://dav.example//',
-            }),
-        ).toBe('https://dav.example')
+describe('requireRouteIds', () => {
+    it('rejects an empty selection', () => {
+        expect(() => requireRouteIds([])).toThrow(
+            expect.objectContaining({ statusCode: 400 }),
+        )
     })
 
-    it('falls back to the request origin', () => {
-        expect(resolveApplicationUrl({} as never, {})).toBe(
+    it('rejects more ids than allowed', () => {
+        expect(() => requireRouteIds(['a', 'b'], 1)).toThrow(
+            expect.objectContaining({ statusCode: 400 }),
+        )
+        expect(requireRouteIds(['a'], 1)).toEqual(['a'])
+    })
+})
+
+describe('pdfBuffer', () => {
+    it('returns the whole document after async drawing', async () => {
+        const doc = new PDFDocument()
+        const pdf = await pdfBuffer(doc, async () => {
+            await Promise.resolve()
+            doc.text('Tag')
+        })
+        expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
+        expect(pdf.toString('latin1').trimEnd().endsWith('%%EOF')).toBe(true)
+    })
+
+    it('returns a valid document without routes', async () => {
+        const pdf = await pdfBuffer(new PDFDocument(), () => {})
+        expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
+    })
+})
+
+describe('resolveApplicationUrl', () => {
+    it('uses the request origin', () => {
+        expect(resolveApplicationUrl({} as never)).toBe(
             'https://request.example',
         )
+    })
+
+    it('ignores a forwarded host', () => {
+        expect(
+            resolveApplicationUrl({
+                headers: { 'x-forwarded-host': 'evil.example' },
+            } as never),
+        ).toBe('https://request.example')
+    })
+})
+
+describe('resolveExportGymId', () => {
+    it('reads the gym from the body', async () => {
+        expect(await resolveExportGymId(eventWith({ gym: ' g1 ' }))).toBe('g1')
+    })
+
+    it('rejects a missing gym', async () => {
+        await expect(resolveExportGymId(eventWith({}))).rejects.toMatchObject({
+            statusCode: 400,
+        })
     })
 })
 

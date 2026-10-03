@@ -25,7 +25,7 @@
                     :is="linkRows ? NuxtLink : 'button'"
                     v-bind="
                         linkRows
-                            ? { to: `/route?id=${route.id}` }
+                            ? { to: gymPath(`/route?id=${route.id}`) }
                             : { type: 'button' }
                     "
                     class="map-route-row__main"
@@ -63,7 +63,7 @@
                 </component>
                 <NuxtLink
                     v-if="!linkRows"
-                    :to="`/route?id=${route.id}`"
+                    :to="gymPath(`/route?id=${route.id}`)"
                     class="map-route-row__open"
                     :aria-label="$t('routes.view')"
                     :title="$t('routes.view')"
@@ -85,6 +85,8 @@
 import type { RouteListItem } from '~/types/models'
 import type { DefectSeverity } from '~/utils/tasks'
 import { formatAnchorPoint } from '#shared/utils/formatting'
+
+const gymPath = useGymPath()
 
 defineProps<{
     groups: { id: string; name: string; routes: RouteListItem[] }[]

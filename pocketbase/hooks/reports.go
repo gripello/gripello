@@ -62,10 +62,10 @@ func registerReports(app core.App) {
 
 	app.OnRecordAfterCreateSuccess("reports").BindFunc(func(e *core.RecordEvent) error {
 		pushNotification(e.App, notification{
-			Users:  usersByPermission(e.App, "manage_reports"),
+			Users:  usersByPermission(e.App, e.Record.GetString("gym"), "manage_reports"),
 			Type:   "report_filed",
 			Params: map[string]any{"snippet": truncateRunes(e.Record.GetString("content_snapshot"), 140)},
-			URL:    "/manage/reports",
+			URL:    gymPath(e.App, e.Record.GetString("gym"), "/manage/reports"),
 		})
 
 		if err := sendReportReceipt(e.App, e.Record); err != nil {
@@ -154,7 +154,7 @@ func notifyReportDecided(app core.App, report *core.Record) {
 	if decidedBy := report.GetStringSlice("decided_by"); len(decidedBy) > 0 {
 		decider = decidedBy[0]
 	}
-	recipients := slices.DeleteFunc(usersByPermission(app, "manage_reports"), func(user *core.Record) bool {
+	recipients := slices.DeleteFunc(usersByPermission(app, report.GetString("gym"), "manage_reports"), func(user *core.Record) bool {
 		return user.Id == decider
 	})
 
@@ -163,7 +163,7 @@ func notifyReportDecided(app core.App, report *core.Record) {
 		notificationType = "report_decided_removed"
 	}
 
-	pushNotification(app, notification{Users: recipients, Type: notificationType, URL: "/manage/reports"})
+	pushNotification(app, notification{Users: recipients, Type: notificationType, URL: gymPath(app, report.GetString("gym"), "/manage/reports")})
 }
 
 func sendReportReceipt(app core.App, report *core.Record) error {
@@ -172,38 +172,42 @@ func sendReportReceipt(app core.App, report *core.Record) error {
 		return nil
 	}
 
-	appName := app.Settings().Meta.AppName
 	summary := reportSummaryHTML(app, report)
 
 	receiptSent, err := sendMail(
 		app,
 		[]string{report.GetString("notifier_email")},
-		"We received your report - "+appName,
+		gymMailSubject(app, report.GetString("gym"), "We received your report"),
 		reportReceiptHTML(report),
 	)
 	if err != nil {
 		return err
 	}
 	if receiptSent {
-		report.Set("receipt_sent", true)
-		if err := app.Save(report); err != nil {
+		stored, err := app.FindRecordById("reports", report.Id)
+		if err != nil {
+			return err
+		}
+		stored.Set("receipt_sent", true)
+		if err := app.Save(stored); err != nil {
 			return err
 		}
 	}
 
 	_, err = sendMail(
 		app,
-		reportAlertRecipients(app),
-		"New content report - "+appName,
+		reportAlertRecipients(app, report),
+		gymMailSubject(app, report.GetString("gym"), "New content report"),
 		fmt.Sprintf(`<p>A new report was submitted and is awaiting review.</p>
              %s
              <p><strong>Reported by:</strong> %s
              (%s)</p>
-             <p><a href="%s/manage/reports">Open the moderation queue</a></p>`,
+             <p><a href="%s%s">Open the moderation queue</a></p>`,
 			summary,
 			html.EscapeString(report.GetString("notifier_name")),
 			html.EscapeString(report.GetString("notifier_email")),
 			html.EscapeString(appURL(app)),
+			html.EscapeString(gymPath(app, report.GetString("gym"), "/manage/reports")),
 		),
 	)
 	return err
@@ -241,7 +245,7 @@ func sendReportDecision(app core.App, report *core.Record) error {
 	if _, err := sendMail(
 		app,
 		[]string{report.GetString("notifier_email")},
-		"Decision on your report - "+app.Settings().Meta.AppName,
+		gymMailSubject(app, report.GetString("gym"), "Decision on your report"),
 		fmt.Sprintf(`<p>Hello %s,</p>
              <p>We have reviewed your report (reference %s).</p>
              <p><strong>Decision:</strong> %s</p>
@@ -251,7 +255,7 @@ func sendReportDecision(app core.App, report *core.Record) error {
 			html.EscapeString(report.Id),
 			html.EscapeString(outcome),
 			reasoning,
-			reportRedressHTML(app),
+			reportRedressHTML(app, report.GetString("gym")),
 		),
 	); err != nil {
 		return err
@@ -294,14 +298,14 @@ func sendMail(app core.App, recipients []string, subject string, body string) (b
 	return true, nil
 }
 
-func reportAlertRecipients(app core.App) []string {
+func reportAlertRecipients(app core.App, report *core.Record) []string {
 	addresses := []string{}
-	for _, user := range usersByPermission(app, "manage_reports") {
+	for _, user := range usersByPermission(app, report.GetString("gym"), "manage_reports") {
 		if address := user.GetString("email"); address != "" && !slices.Contains(addresses, address) {
 			addresses = append(addresses, address)
 		}
 	}
-	if contact := contactEmail(app); contact != "" && !slices.Contains(addresses, contact) {
+	if contact := contactEmail(app, report.GetString("gym")); contact != "" && !slices.Contains(addresses, contact) {
 		addresses = append(addresses, contact)
 	}
 	return addresses
@@ -332,9 +336,9 @@ func reportSummaryHTML(app core.App, report *core.Record) string {
 	)
 }
 
-func reportRedressHTML(app core.App) string {
+func reportRedressHTML(app core.App, gymID string) string {
 	contactLine := ""
-	if contact := contactEmail(app); contact != "" {
+	if contact := contactEmail(app, gymID); contact != "" {
 		escaped := html.EscapeString(contact)
 		contactLine = fmt.Sprintf(`<li>Contacting the operator directly at <a href="mailto:%s">%s</a>.</li>`, escaped, escaped)
 	}
@@ -358,12 +362,4 @@ func reportReasonLabel(reason string) string {
 
 func appURL(app core.App) string {
 	return strings.TrimRight(app.Settings().Meta.AppURL, "/")
-}
-
-func contactEmail(app core.App) string {
-	settings, err := app.FindRecordById("settings", "settings_123456")
-	if err != nil {
-		return ""
-	}
-	return settings.GetString("contact_email")
 }

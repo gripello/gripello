@@ -25,6 +25,7 @@ async function responseToBlob(response: Response, format: ExportFormat) {
 
 export function useRouteExport() {
     const pb = usePocketbase()
+    const gymId = useCurrentGymId()
     const { t, locale } = useI18n()
     const { error: notifyError } = useNotification()
 
@@ -49,6 +50,7 @@ export function useRouteExport() {
                 headers,
                 body: JSON.stringify({
                     ids,
+                    gym: gymId.value,
                     locale: locale.value,
                     typeLabels: Object.fromEntries(
                         ROUTE_TYPES.map((type) => [

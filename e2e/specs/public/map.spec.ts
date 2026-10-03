@@ -1,6 +1,6 @@
 import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser } from '../../support/seed'
+import { authAsSuperuser, e2eGymId } from '../../support/seed'
 import { gotoSettled } from '../../support/nav'
 import { PB_URL, seedMap, type SeededMap } from '../../support/map'
 
@@ -105,9 +105,10 @@ test('a location without a floor plan points to the list', async ({
     page,
     testPrefix,
 }) => {
-    const plain = await seeded.root
-        .collection('locations')
-        .create({ name: `${testPrefix} No Map` })
+    const plain = await seeded.root.collection('locations').create({
+        name: `${testPrefix} No Map`,
+        gym: await e2eGymId(seeded.root),
+    })
     try {
         await gotoSettled(page, `/map?location=${plain.id}`)
         await expect(page.getByTestId('map-empty')).toBeVisible()

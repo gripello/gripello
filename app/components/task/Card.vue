@@ -126,7 +126,7 @@
             <div class="ml-auto flex shrink-0 items-center gap-0.5">
                 <UTooltip v-if="route" :text="t('tasks.openRoute')">
                     <UButton
-                        :to="`/route?id=${route.id}`"
+                        :to="gymPath(`/route?id=${route.id}`)"
                         icon="i-lucide-external-link"
                         color="neutral"
                         variant="ghost"
@@ -206,6 +206,8 @@ import type {
     TaskStatus,
     WallRecord,
 } from '~/types/models'
+
+const gymPath = useGymPath()
 
 const props = defineProps<{
     task: TaskRecord

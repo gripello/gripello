@@ -34,6 +34,7 @@ export const liveTopics = {
 }
 
 export interface OpenDefectsChange {
+    gym: string
     routes: string[]
     defects: OpenRouteDefectRecord[]
 }
@@ -102,9 +103,11 @@ export function replaceRouteDefects<
     T extends Pick<OpenRouteDefectRecord, 'route'>,
 >(
     defects: T[],
-    change: { routes: string[]; defects: T[] },
+    change: { gym: string; routes: string[]; defects: T[] },
     inScope: (routeId: string) => boolean,
+    gymId: string,
 ): T[] {
+    if (!gymId || change.gym !== gymId) return defects
     const routes = change.routes.filter(inScope)
     if (!routes.length) return defects
     return [

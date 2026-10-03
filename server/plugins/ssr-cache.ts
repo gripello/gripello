@@ -3,6 +3,11 @@ import { ssrCacheRequest } from '../utils/ssrCacheRequest'
 
 export default defineNitroPlugin((nitroApp) => {
     nitroApp.hooks.hook('render:response', (response, { event }) => {
+        if (getCookie(event, 'pb_auth'))
+            response.headers = {
+                ...response.headers,
+                'cache-control': 'private, no-store',
+            }
         const leaderKey = event.context.ssrCacheLeader as string | undefined
         const ok =
             (!response.statusCode || response.statusCode === 200) &&

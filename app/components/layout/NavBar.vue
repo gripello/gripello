@@ -9,7 +9,7 @@
         }"
     >
         <template #left>
-            <LayoutBrandLogo :settings="settings" class="lg:hidden" />
+            <LayoutGymSwitcher class="max-w-[55vw] lg:hidden" />
             <UButton
                 :icon="
                     sidebarOpen
@@ -61,13 +61,9 @@
 
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import type { SettingsRecord } from '~/types/models'
 import { visibleNavItems } from '~/utils/navigation'
 
-const props = defineProps<{
-    loggedIn: boolean
-    settings: Partial<SettingsRecord>
-}>()
+const props = defineProps<{ loggedIn: boolean }>()
 
 const { mode: themeMode, setMode } = useThemeMode()
 const themeModeIcon = computed(
@@ -107,10 +103,11 @@ const themeItems = computed<DropdownMenuItem[]>(() =>
 
 const { t } = useI18n()
 const { can } = usePermissions()
+const { slug } = useGym()
 const { open: sidebarOpen, toggle: toggleSidebar } = useSidebar()
 
 const paletteLinks = computed(() =>
-    visibleNavItems(can, props.loggedIn).flatMap(
+    visibleNavItems(can, props.loggedIn, slug.value).flatMap(
         (item) =>
             (item.children ?? [item]) as {
                 to: string

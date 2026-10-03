@@ -5,18 +5,18 @@ import {
     isGradeSystem,
     type GradeSystem,
 } from '#shared/utils/grades'
-import type { SettingsRecord } from '~/types/models'
+import type { GymRecord } from '~/types/models'
 
 export function useGradeSystems() {
     const { t } = useI18n()
-    const { data: settings } = useNuxtData<SettingsRecord>('settings')
+    const { data: gym } = useNuxtData<GymRecord>('gym')
 
     const routeGradeSystem = computed<GradeSystem>(() => {
-        const value = settings.value?.route_grade_system
+        const value = gym.value?.route_grade_system
         return isGradeSystem(value) ? value : DEFAULT_ROUTE_GRADE_SYSTEM
     })
     const boulderGradeSystem = computed<GradeSystem>(() => {
-        const value = settings.value?.boulder_grade_system
+        const value = gym.value?.boulder_grade_system
         return isGradeSystem(value) ? value : DEFAULT_BOULDER_GRADE_SYSTEM
     })
 

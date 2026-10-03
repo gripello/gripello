@@ -106,6 +106,7 @@
 <script setup lang="ts">
 import { timeAgo } from '#shared/utils/formatting'
 import type { NotificationRecord } from '~/types/models'
+import { notificationLabelKey } from '~/utils/notificationLabel'
 
 const { t, locale } = useI18n()
 const pb = usePocketbase()
@@ -123,7 +124,7 @@ const {
 const open = ref(false)
 
 function label(item: NotificationRecord) {
-    return t(`notifications.center.types.${item.type}`, item.params ?? {})
+    return t(notificationLabelKey(item), item.params ?? {})
 }
 
 async function openItem(item: NotificationRecord) {

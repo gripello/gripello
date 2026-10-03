@@ -54,6 +54,71 @@
             </div>
         </template>
 
+        <template v-if="user">
+            <section data-testid="me-gyms">
+                <p class="native-heading">{{ $t('account.myGyms') }}</p>
+                <div class="native-group">
+                    <p
+                        v-if="!memberships.length"
+                        class="native-row text-muted"
+                        data-testid="me-gyms-empty"
+                    >
+                        {{ $t('account.noGyms') }}
+                    </p>
+                    <div
+                        v-for="membership in memberships"
+                        :key="membership.id"
+                        class="native-row pe-2"
+                        style="--native-tint: var(--ui-primary)"
+                    >
+                        <NuxtLink
+                            :to="`/${membership.expand?.gym?.slug}`"
+                            class="flex min-w-0 flex-1 items-center gap-3.5"
+                            :data-testid="`me-gym-${membership.expand?.gym?.slug}`"
+                        >
+                            <span class="native-row__icon">
+                                <UIcon name="i-lucide-building-2" />
+                            </span>
+                            <span class="native-row__text truncate">{{
+                                membership.expand?.gym?.name
+                            }}</span>
+                            <UBadge
+                                color="neutral"
+                                variant="soft"
+                                data-testid="me-gym-role"
+                            >
+                                {{ membership.expand?.role?.name }}
+                            </UBadge>
+                        </NuxtLink>
+                        <UButton
+                            icon="i-lucide-log-out"
+                            color="error"
+                            variant="ghost"
+                            :aria-label="
+                                t('account.leaveGym', {
+                                    gym: membership.expand?.gym?.name,
+                                })
+                            "
+                            :data-testid="`me-gym-leave-${membership.expand?.gym?.slug}`"
+                            @click="leaving = membership"
+                        />
+                    </div>
+                </div>
+            </section>
+            <ConfirmDialog
+                v-model="leaveDialog"
+                :title="
+                    t('account.leaveGym', {
+                        gym: leaving?.expand?.gym?.name,
+                    })
+                "
+                :message="t('account.leaveGymConfirm')"
+                :confirm-text="t('account.leave')"
+                :loading="leavePending"
+                @confirm="leaveGym"
+            />
+        </template>
+
         <section class="lg:hidden" data-testid="me-pages">
             <p class="native-heading">{{ $t('me.pages') }}</p>
             <div class="native-group">
@@ -63,7 +128,7 @@
                     :to="link.to"
                     class="native-row"
                     style="--native-tint: var(--ui-primary)"
-                    :data-testid="`me-page-${navTestId(link.to)}`"
+                    :data-testid="`me-page-${navTestId(link.path ?? link.to)}`"
                 >
                     <span class="native-row__icon">
                         <UIcon :name="link.icon" />
@@ -92,7 +157,7 @@
                         :to="link.to"
                         class="native-row"
                         :style="{ '--native-tint': SECTION_TINTS[section.key] }"
-                        :data-testid="`me-staff-${navTestId(link.to)}`"
+                        :data-testid="`me-staff-${navTestId(link.path ?? link.to)}`"
                     >
                         <span class="native-row__icon">
                             <UIcon :name="link.icon" />
@@ -108,7 +173,7 @@
                 </div>
             </section>
         </template>
-        <LayoutInfoList v-if="!lgAndUp" :settings="settings" />
+        <LayoutInfoList v-if="!lgAndUp" :settings="settings" :gym="gym" />
         <div v-if="user" class="native-group mt-6 mb-4">
             <button
                 type="button"
@@ -133,13 +198,17 @@
 </template>
 
 <script setup lang="ts">
-import type { SettingsRecord } from '~/types/models'
+import type { MembershipRecord, SettingsRecord } from '~/types/models'
 import { pageLinks, staffSections } from '~/utils/navigation'
 
 const { t } = useI18n()
 const pb = usePocketbase()
 const router = useRouter()
-const { can } = usePermissions()
+const {
+    can,
+    gymMemberships: memberships,
+    refreshPermissions,
+} = usePermissions()
 const { lgAndUp } = useDisplay()
 const { data: settings } = useNuxtData<SettingsRecord>('settings')
 
@@ -170,10 +239,40 @@ const SECTION_TINTS: Record<string, string> = {
     manage: 'var(--ui-info)',
     moderation: 'var(--ui-warning)',
     admin: '#64748b',
+    platform: 'var(--ui-primary)',
 }
 
-const sections = computed(() => staffSections(can))
-const pages = computed(() => pageLinks(!!user.value))
+const { gym, slug: gymSlug } = useGym()
+const sections = computed(() => staffSections(can, gymSlug.value))
+const pages = computed(() => pageLinks(!!user.value, gymSlug.value))
+
+const leaving = ref<MembershipRecord | null>(null)
+const leaveDialog = computed({
+    get: () => !!leaving.value,
+    set: (open) => {
+        if (!open) leaving.value = null
+    },
+})
+const { pending: leavePending, run: runLeave } = useAsyncAction()
+
+async function leaveGym() {
+    const membership = leaving.value
+    if (!membership) return
+    await runLeave(
+        async () => {
+            await pb.collection('memberships').delete(membership.id)
+            leaving.value = null
+            await refreshPermissions()
+        },
+        {
+            success: t('account.leftGym'),
+            error: (error) =>
+                (error as { status?: number })?.status === 400
+                    ? t('account.lastAdmin')
+                    : t('notifications.error.generic'),
+        },
+    )
+}
 
 async function logout() {
     loggingOut.value = true

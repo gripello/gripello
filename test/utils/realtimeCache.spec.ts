@@ -326,20 +326,35 @@ describe('replaceRouteDefects', () => {
 
     it('swaps the open defects of the changed routes', () => {
         const list = [defect('a', 'r1'), defect('b', 'r2')]
-        const change = { routes: ['r1', 'r3'], defects: [defect('c', 'r3')] }
-        expect(replaceRouteDefects(list, change, () => true)).toEqual([
+        const change = {
+            gym: 'g1',
+            routes: ['r1', 'r3'],
+            defects: [defect('c', 'r3')],
+        }
+        expect(replaceRouteDefects(list, change, () => true, 'g1')).toEqual([
             defect('b', 'r2'),
             defect('c', 'r3'),
         ])
     })
 
+    it('ignores defects of another gym', () => {
+        const list = [defect('a', 'r1')]
+        const change = {
+            gym: 'g2',
+            routes: ['r1', 'r3'],
+            defects: [defect('c', 'r3')],
+        }
+        expect(replaceRouteDefects(list, change, () => true, 'g1')).toBe(list)
+    })
+
     it('keeps a single route list to its own route', () => {
         const scope = defectsScope(cacheKeys.routeDefects('r1'))!
         const change = {
+            gym: 'g1',
             routes: ['r1', 'r2'],
             defects: [defect('a', 'r1'), defect('b', 'r2')],
         }
-        expect(replaceRouteDefects([], change, scope)).toEqual([
+        expect(replaceRouteDefects([], change, scope, 'g1')).toEqual([
             defect('a', 'r1'),
         ])
     })
@@ -348,7 +363,12 @@ describe('replaceRouteDefects', () => {
         const list = [defect('a', 'r1')]
         const scope = defectsScope(cacheKeys.routeDefects('r1'))!
         expect(
-            replaceRouteDefects(list, { routes: ['r2'], defects: [] }, scope),
+            replaceRouteDefects(
+                list,
+                { gym: 'g1', routes: ['r2'], defects: [] },
+                scope,
+                'g1',
+            ),
         ).toBe(list)
     })
 

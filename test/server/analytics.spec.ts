@@ -17,43 +17,69 @@ vi.mock('h3', () => ({
 
 const { requirePermission } = await import('../../server/utils/pb-server')
 
-function userWithRole(name: string, permissions: string[] = []) {
+function memberWithRole(
+    name: string,
+    permissions: string[] = [],
+    gym = 'gymA',
+) {
     return {
         record: {
             expand: {
-                role: {
-                    name,
-                    expand: {
-                        permissions: permissions.map((entry) => ({
-                            name: entry,
-                        })),
+                memberships_via_user: [
+                    {
+                        gym,
+                        expand: {
+                            role: {
+                                name,
+                                expand: {
+                                    permissions: permissions.map((entry) => ({
+                                        name: entry,
+                                    })),
+                                },
+                            },
+                        },
                     },
-                },
+                ],
             },
         },
     }
 }
 
 describe('requirePermission', () => {
-    it('allows a role that has the permission', async () => {
+    it('allows a member whose role has the permission', async () => {
         authRefresh = async () =>
-            userWithRole('routesetter', ['view_analytics'])
+            memberWithRole('routesetter', ['view_analytics'])
         await expect(
-            requirePermission({} as never, 'view_analytics'),
+            requirePermission({} as never, 'view_analytics', 'gymA'),
         ).resolves.toBeDefined()
     })
 
-    it('rejects a role named admin without the permission', async () => {
-        authRefresh = async () => userWithRole('admin')
+    it('rejects the same role in another gym with 403', async () => {
+        authRefresh = async () =>
+            memberWithRole('routesetter', ['view_analytics'], 'gymB')
         await expect(
-            requirePermission({} as never, 'view_analytics'),
+            requirePermission({} as never, 'view_analytics', 'gymA'),
+        ).rejects.toMatchObject({ statusCode: 403 })
+    })
+
+    it('rejects a user without memberships with 403', async () => {
+        authRefresh = async () => ({ record: { expand: {} } })
+        await expect(
+            requirePermission({} as never, 'view_analytics', 'gymA'),
+        ).rejects.toMatchObject({ statusCode: 403 })
+    })
+
+    it('rejects a role named admin without the permission', async () => {
+        authRefresh = async () => memberWithRole('admin')
+        await expect(
+            requirePermission({} as never, 'view_analytics', 'gymA'),
         ).rejects.toMatchObject({ statusCode: 403 })
     })
 
     it('rejects a role without the permission with 403', async () => {
-        authRefresh = async () => userWithRole('user', ['manage_routes'])
+        authRefresh = async () => memberWithRole('setter', ['manage_routes'])
         await expect(
-            requirePermission({} as never, 'view_analytics'),
+            requirePermission({} as never, 'view_analytics', 'gymA'),
         ).rejects.toMatchObject({
             statusCode: 403,
         })
@@ -66,6 +92,7 @@ describe('requirePermission', () => {
         const caught = await requirePermission(
             {} as never,
             'view_analytics',
+            'gymA',
         ).catch((e) => e)
         expect(caught).toMatchObject({ statusCode: 401 })
     })
@@ -77,6 +104,7 @@ describe('requirePermission', () => {
         const caught = await requirePermission(
             {} as never,
             'view_analytics',
+            'gymA',
         ).catch((e) => e)
         expect(caught).toMatchObject({ statusCode: 503 })
     })

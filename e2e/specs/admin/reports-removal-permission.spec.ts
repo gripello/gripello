@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { createRole } from '../../support/seed'
@@ -17,7 +17,7 @@ test('a moderator without comment rights is not offered removal of a reported co
     ])
     const page = await pageAs(await createUser(role.id, 'moderator'))
 
-    await gotoSettled(adminPage, '/')
+    await gotoSettled(adminPage, gymPath('/'))
     const commentId = await createComment(
         adminPage,
         route.id,

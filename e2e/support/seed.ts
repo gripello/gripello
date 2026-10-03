@@ -7,13 +7,14 @@ import {
 } from '../../shared/utils/grades'
 
 export const LOCATIONS = ['Hall A', 'Hall B'] as const
+export const E2E_GYM_SLUG = 'e2e'
 export const TYPES = ['Route', 'Boulder'] as const
 
 export interface SeededUser {
     id: string
     email: string
     password: string
-    role: 'admin' | 'routesetter' | 'user'
+    role: 'admin' | 'routesetter' | 'user' | 'platform'
 }
 
 export async function authAsSuperuser(pb: PocketBase) {
@@ -22,16 +23,90 @@ export async function authAsSuperuser(pb: PocketBase) {
     await pb.collection('_superusers').authWithPassword(email, password)
 }
 
+export async function ensureGym(pb: PocketBase) {
+    const filter = pb.filter('slug = {:slug}', { slug: E2E_GYM_SLUG })
+    return pb
+        .collection('gyms')
+        .getFirstListItem(filter, { requestKey: null })
+        .catch(() =>
+            pb.collection('gyms').create({
+                slug: E2E_GYM_SLUG,
+                name: 'E2E Gym',
+                active: true,
+            }),
+        )
+}
+
+let cachedE2eGymId: Promise<string> | null = null
+
+export function e2eGymId(pb: PocketBase) {
+    cachedE2eGymId ??= pb
+        .collection('gyms')
+        .getFirstListItem(pb.filter('slug = {:slug}', { slug: E2E_GYM_SLUG }), {
+            requestKey: null,
+        })
+        .then((gym) => gym.id)
+        .catch((error) => {
+            cachedE2eGymId = null
+            throw error
+        })
+    return cachedE2eGymId
+}
+
+export function e2eGym() {
+    return e2eGymId(adminClient())
+}
+
 export async function getRoleIds(pb: PocketBase) {
-    const roles = await pb.collection('roles').getFullList({ requestKey: null })
+    const roles = await pb.collection('roles').getFullList({
+        filter: pb.filter('gym = {:gym}', { gym: await e2eGymId(pb) }),
+        requestKey: null,
+    })
     const byName: Record<string, string> = {}
     for (const r of roles) byName[r.name] = r.id
     return byName
 }
 
+export async function e2eRole(pb: PocketBase, name: string) {
+    return pb.collection('roles').getFirstListItem(
+        pb.filter('gym = {:gym} && name = {:name}', {
+            gym: await e2eGymId(pb),
+            name,
+        }),
+        { requestKey: null },
+    )
+}
+
+export async function setMembership(
+    pb: PocketBase,
+    userId: string,
+    roleId: string | undefined,
+) {
+    const gym = await e2eGymId(pb)
+    const existing = await pb
+        .collection('memberships')
+        .getFirstListItem(
+            pb.filter('user = {:user} && gym = {:gym}', { user: userId, gym }),
+            { requestKey: null },
+        )
+        .catch(() => null)
+    if (!roleId) {
+        if (existing) await pb.collection('memberships').delete(existing.id)
+        return null
+    }
+    if (existing) {
+        return pb
+            .collection('memberships')
+            .update(existing.id, { role: roleId })
+    }
+    return pb
+        .collection('memberships')
+        .create({ user: userId, gym, role: roleId })
+}
+
 export async function ensureUser(
     pb: PocketBase,
-    roleId: string,
+    roleId: string | undefined,
     role: SeededUser['role'],
     prefix: string,
 ): Promise<SeededUser> {
@@ -51,7 +126,6 @@ export async function ensureUser(
             password,
             passwordConfirm: password,
             verified: true,
-            role: roleId,
         })
     } else {
         record = await pb.collection('users').create({
@@ -63,9 +137,9 @@ export async function ensureUser(
             username: `${prefix}${role}`,
             firstname: 'E2E',
             name: role,
-            role: roleId,
         })
     }
+    await setMembership(pb, record.id, roleId)
 
     return { id: record.id, email, password, role }
 }
@@ -81,7 +155,9 @@ export async function ensureLocations(pb: PocketBase) {
                     requestKey: null,
                 })
         } catch {
-            record = await pb.collection('locations').create({ name })
+            record = await pb
+                .collection('locations')
+                .create({ name, gym: await e2eGymId(pb) })
         }
         idByName[name] = record.id
     }
@@ -204,6 +280,7 @@ export async function createRole(
           })
         : []
     return pb.collection('roles').create({
+        gym: await e2eGymId(pb),
         name,
         permissions: permissions.map((permission) => permission.id),
     })
@@ -258,6 +335,11 @@ export async function sweepTestData(
     await deleteMatching(pb, 'routes', owned)
     await deleteMatching(pb, 'walls', owned)
     await deleteMatching(pb, 'locations', `name ~ ${name}`)
+    await deleteMatching(
+        pb,
+        'memberships',
+        `user.email ~ ${name} || user.username ~ ${username} || role.name ~ ${name}`,
+    )
     await deleteMatching(
         pb,
         'users',

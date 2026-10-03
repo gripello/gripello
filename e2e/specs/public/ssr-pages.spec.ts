@@ -1,4 +1,5 @@
 import { test, expect } from '../../support/fixtures'
+import { gymPath } from '../../support/nav'
 
 test('server-renders the public route list', async ({ page }) => {
     const response = await page.goto('/routes')
@@ -60,7 +61,7 @@ test('redirects a guarded page on the server, without rendering it', async ({
 test('server-renders the notification bell for signed-in users', async ({
     userPage: page,
 }) => {
-    const response = await page.goto('/')
+    const response = await page.goto(gymPath('/'))
     expect((await response?.text()) ?? '').toContain(
         'data-testid="notification-bell"',
     )

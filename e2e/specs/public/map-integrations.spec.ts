@@ -1,6 +1,6 @@
 import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser } from '../../support/seed'
+import { authAsSuperuser, e2eGym } from '../../support/seed'
 import { authHeader, gotoSettled } from '../../support/nav'
 import { PB_URL, seedMap, type SeededMap } from '../../support/map'
 
@@ -58,7 +58,7 @@ test('the JSON export carries the wall', async ({
     await gotoSettled(page, '/manage/routes')
     const response = await page.request.post('/api/ui/json', {
         headers: await authHeader(page),
-        data: { ids: [seeded.routeIds[0]] },
+        data: { gym: await e2eGym(), ids: [seeded.routeIds[0]] },
     })
     expect(response.ok()).toBe(true)
     const [route] = await response.json()

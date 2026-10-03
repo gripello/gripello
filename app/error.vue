@@ -97,11 +97,16 @@ const isNotFound = computed(() => status.value === 404)
 const title = computed(() =>
     isNotFound.value ? t('errors.notFound.title') : t('errors.server.title'),
 )
-const subtitle = computed(() =>
-    isNotFound.value
-        ? t('errors.notFound.subtitle')
-        : t('errors.server.subtitle'),
+const unknownGym = computed(
+    () =>
+        (props.error.data as { reason?: string } | undefined)?.reason === 'gym',
 )
+const subtitle = computed(() => {
+    if (unknownGym.value) return t('gym.notFound')
+    return isNotFound.value
+        ? t('errors.notFound.subtitle')
+        : t('errors.server.subtitle')
+})
 
 const goHome = () => clearError({ redirect: '/' })
 const retry = () => reloadNuxtApp()

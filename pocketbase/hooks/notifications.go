@@ -35,22 +35,6 @@ func registerNotifications(app core.App) {
 	})
 }
 
-func usersByPermission(app core.App, permission string) []*core.Record {
-	users, err := app.FindRecordsByFilter(
-		"users",
-		"role.permissions.name ?= {:permission}",
-		"",
-		200,
-		0,
-		dbx.Params{"permission": permission},
-	)
-	if err != nil {
-		app.Logger().Error("notifications: failed to resolve users by permission", "permission", permission, "error", err)
-		return nil
-	}
-	return users
-}
-
 func pushNotification(app core.App, message notification) int {
 	if len(message.Users) == 0 {
 		return 0

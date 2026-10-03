@@ -89,6 +89,12 @@ describe('tasksFilter', () => {
         ).toBe('kind = "defect" && assignee = "u1" && priority = 4')
     })
 
+    it('scopes the board to one gym', () => {
+        expect(tasksFilter({ gym: 'g1', kind: 'defect' })).toBe(
+            'gym = "g1" && kind = "defect"',
+        )
+    })
+
     it('limits overdue tasks to dated ones before today', () => {
         expect(tasksFilter({ overdue: true })).toBe(
             '(due_date != "" && due_date < @todayStart)',

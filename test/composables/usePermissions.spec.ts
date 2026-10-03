@@ -22,16 +22,41 @@ let pbMock: any
 
 vi.stubGlobal('usePocketbase', () => pbMock)
 
+const currentGym = vueRef('gymA')
+vi.stubGlobal('useCurrentGymId', () => currentGym)
+
+function membership(gym: string, role: string, permissions: string[]) {
+    return {
+        gym,
+        role: `${role}-${gym}`,
+        expand: {
+            role: {
+                name: role,
+                expand: { permissions: permissions.map((name) => ({ name })) },
+            },
+        },
+    }
+}
+
+function userWith(...memberships: ReturnType<typeof membership>[]) {
+    return { expand: { memberships_via_user: memberships } }
+}
+
+function memberOf(role: string, permissions: string[], gym = 'gymA') {
+    return userWith(membership(gym, role, permissions))
+}
+
 describe('usePermissions', () => {
     beforeEach(() => {
         vi.resetModules()
         for (const key of Object.keys(useStateMocks)) {
             delete useStateMocks[key]
         }
+        currentGym.value = 'gymA'
         pbMock = {
             authStore: {
                 isValid: true,
-                record: { role: 'role123' },
+                record: { id: 'user123' },
             },
             collection: vi.fn(),
             cancelRequest: vi.fn(),
@@ -56,23 +81,22 @@ describe('usePermissions', () => {
 
     it('fetches role with expanded permissions and populates can()', async () => {
         pbMock.collection = vi.fn().mockReturnValue({
-            getOne: vi.fn().mockResolvedValue({
-                name: 'routesetter',
-                expand: {
-                    permissions: [
-                        { name: 'manage_routes' },
-                        { name: 'view_analytics' },
-                        { name: 'manage_comments' },
-                    ],
-                },
-            }),
+            getOne: vi
+                .fn()
+                .mockResolvedValue(
+                    memberOf('routesetter', [
+                        'manage_routes',
+                        'view_analytics',
+                        'manage_comments',
+                    ]),
+                ),
         })
 
         const { can, refreshPermissions, roleName } = await loadComposable()
         await refreshPermissions()
 
-        expect(pbMock.collection).toHaveBeenCalledWith('roles')
-        expect(roleName.value).toBe('routesetter')
+        expect(pbMock.collection).toHaveBeenCalledWith('users')
+        expect(roleName()).toBe('routesetter')
         expect(can('manage_routes')).toBe(true)
         expect(can('view_analytics')).toBe(true)
         expect(can('manage_comments')).toBe(true)
@@ -82,12 +106,9 @@ describe('usePermissions', () => {
 
     it('grants the admin role only its assigned permissions', async () => {
         pbMock.collection = vi.fn().mockReturnValue({
-            getOne: vi.fn().mockResolvedValue({
-                name: 'admin',
-                expand: {
-                    permissions: [{ name: 'manage_routes' }],
-                },
-            }),
+            getOne: vi
+                .fn()
+                .mockResolvedValue(memberOf('admin', ['manage_routes'])),
         })
 
         const { can, refreshPermissions } = await loadComposable()
@@ -97,14 +118,24 @@ describe('usePermissions', () => {
         expect(can('manage_users')).toBe(false)
     })
 
+    it('lets platform admins manage settings and users of every gym', async () => {
+        pbMock.collection = vi.fn().mockReturnValue({
+            getOne: vi
+                .fn()
+                .mockResolvedValue({ ...userWith(), platform_admin: true }),
+        })
+
+        const { can, refreshPermissions } = await loadComposable()
+        await refreshPermissions()
+
+        expect(can('manage_settings', 'gymB')).toBe(true)
+        expect(can('manage_users', 'gymB')).toBe(true)
+        expect(can('manage_routes', 'gymB')).toBe(false)
+    })
+
     it('user role with no permissions has no access', async () => {
         pbMock.collection = vi.fn().mockReturnValue({
-            getOne: vi.fn().mockResolvedValue({
-                name: 'user',
-                expand: {
-                    permissions: [],
-                },
-            }),
+            getOne: vi.fn().mockResolvedValue(memberOf('user', [])),
         })
 
         const { can, refreshPermissions } = await loadComposable()
@@ -132,8 +163,10 @@ describe('usePermissions', () => {
         expect(can('manage_users')).toBe(false)
     })
 
-    it('clears permissions when user has no role assigned', async () => {
-        pbMock.authStore.record = { role: null }
+    it('a climber without memberships has no access', async () => {
+        pbMock.collection = vi.fn().mockReturnValue({
+            getOne: vi.fn().mockResolvedValue(userWith()),
+        })
 
         const { can, refreshPermissions } = await loadComposable()
         await refreshPermissions()
@@ -155,7 +188,7 @@ describe('usePermissions', () => {
         const { can, refreshPermissions, roleName } = await loadComposable()
         await refreshPermissions()
 
-        expect(roleName.value).toBe('')
+        expect(roleName()).toBe('')
         expect(can('manage_routes')).toBe(false)
         consoleError.mockRestore()
     })
@@ -168,10 +201,9 @@ describe('usePermissions', () => {
         pbMock.collection = vi.fn().mockReturnValue({
             getOne: vi
                 .fn()
-                .mockResolvedValueOnce({
-                    name: 'routesetter',
-                    expand: { permissions: [{ name: 'manage_routes' }] },
-                })
+                .mockResolvedValueOnce(
+                    memberOf('routesetter', ['manage_routes']),
+                )
                 .mockRejectedValueOnce(autoCancel),
         })
 
@@ -182,7 +214,7 @@ describe('usePermissions', () => {
         await refreshPermissions()
 
         expect(notifyErrorMock).not.toHaveBeenCalled()
-        expect(roleName.value).toBe('routesetter')
+        expect(roleName()).toBe('routesetter')
         expect(can('manage_routes')).toBe(true)
     })
 
@@ -238,10 +270,7 @@ describe('usePermissions', () => {
 
     it('handles role with no expanded permissions gracefully', async () => {
         pbMock.collection = vi.fn().mockReturnValue({
-            getOne: vi.fn().mockResolvedValue({
-                name: 'routesetter',
-                expand: {},
-            }),
+            getOne: vi.fn().mockResolvedValue(userWith()),
         })
 
         const { can, refreshPermissions } = await loadComposable()
@@ -253,10 +282,9 @@ describe('usePermissions', () => {
     // ── ensureLoaded ─────────────────────────────────────────────────────
 
     it('ensureLoaded fetches permissions only once', async () => {
-        const getOneMock = vi.fn().mockResolvedValue({
-            name: 'routesetter',
-            expand: { permissions: [{ name: 'manage_routes' }] },
-        })
+        const getOneMock = vi
+            .fn()
+            .mockResolvedValue(memberOf('routesetter', ['manage_routes']))
         pbMock.collection = vi.fn().mockReturnValue({ getOne: getOneMock })
 
         const { ensureLoaded, can } = await loadComposable()
@@ -270,10 +298,9 @@ describe('usePermissions', () => {
     })
 
     it('ensureLoaded reloads after a guest visit once the user signs in', async () => {
-        const getOneMock = vi.fn().mockResolvedValue({
-            name: 'routesetter',
-            expand: { permissions: [{ name: 'manage_routes' }] },
-        })
+        const getOneMock = vi
+            .fn()
+            .mockResolvedValue(memberOf('routesetter', ['manage_routes']))
         pbMock.collection = vi.fn().mockReturnValue({ getOne: getOneMock })
         pbMock.authStore = { isValid: false, record: null }
 
@@ -281,7 +308,7 @@ describe('usePermissions', () => {
         await ensureLoaded()
         expect(can('manage_routes')).toBe(false)
 
-        pbMock.authStore = { isValid: true, record: { role: 'role123' } }
+        pbMock.authStore = { isValid: true, record: { id: 'user123' } }
         await ensureLoaded()
 
         expect(getOneMock).toHaveBeenCalledTimes(1)
@@ -290,10 +317,9 @@ describe('usePermissions', () => {
 
     it('ensureLoaded clears permissions after logout', async () => {
         pbMock.collection = vi.fn().mockReturnValue({
-            getOne: vi.fn().mockResolvedValue({
-                name: 'routesetter',
-                expand: { permissions: [{ name: 'manage_routes' }] },
-            }),
+            getOne: vi
+                .fn()
+                .mockResolvedValue(memberOf('routesetter', ['manage_routes'])),
         })
 
         const { ensureLoaded, can } = await loadComposable()
@@ -306,26 +332,20 @@ describe('usePermissions', () => {
         expect(can('manage_routes')).toBe(false)
     })
 
-    it('ensureLoaded reloads when the role changes', async () => {
+    it('ensureLoaded reloads when the user changes', async () => {
         const getOneMock = vi
             .fn()
-            .mockResolvedValueOnce({
-                name: 'user',
-                expand: { permissions: [] },
-            })
-            .mockResolvedValueOnce({
-                name: 'routesetter',
-                expand: { permissions: [{ name: 'manage_routes' }] },
-            })
+            .mockResolvedValueOnce(memberOf('user', []))
+            .mockResolvedValueOnce(memberOf('routesetter', ['manage_routes']))
         pbMock.collection = vi.fn().mockReturnValue({ getOne: getOneMock })
 
         const { ensureLoaded, can } = await loadComposable()
         await ensureLoaded()
-        pbMock.authStore.record = { role: 'role456' }
+        pbMock.authStore.record = { id: 'user456' }
         await ensureLoaded()
 
         expect(getOneMock).toHaveBeenLastCalledWith(
-            'role456',
+            'user456',
             expect.anything(),
         )
         expect(can('manage_routes')).toBe(true)
@@ -344,10 +364,7 @@ describe('usePermissions', () => {
 
         pbMock.authStore = { isValid: false, record: null }
         await refreshPermissions()
-        resolveRole({
-            name: 'routesetter',
-            expand: { permissions: [{ name: 'manage_routes' }] },
-        })
+        resolveRole(memberOf('routesetter', ['manage_routes']))
         await inFlight
 
         expect(pbMock.cancelRequest).toHaveBeenCalledWith('userPermissions')
@@ -366,10 +383,7 @@ describe('usePermissions', () => {
         const middleware = mod.usePermissions()
         const pluginLoad = plugin.ensureLoaded()
         const middlewareLoad = middleware.ensureLoaded()
-        resolveRole({
-            name: 'routesetter',
-            expand: { permissions: [{ name: 'manage_routes' }] },
-        })
+        resolveRole(memberOf('routesetter', ['manage_routes']))
         await Promise.all([pluginLoad, middlewareLoad])
 
         expect(getOneMock).toHaveBeenCalledTimes(1)
@@ -398,16 +412,13 @@ describe('usePermissions', () => {
         let firstSettled = false
         const first = ensureLoaded().then(() => (firstSettled = true))
 
-        pbMock.authStore.record = { role: 'role456' }
+        pbMock.authStore.record = { id: 'user456' }
         const second = refreshPermissions()
         rejectFirst(autoCancel)
         await new Promise((resolve) => setTimeout(resolve, 0))
         expect(firstSettled).toBe(false)
 
-        resolveSecond({
-            name: 'routesetter',
-            expand: { permissions: [{ name: 'manage_routes' }] },
-        })
+        resolveSecond(memberOf('routesetter', ['manage_routes']))
         await Promise.all([first, second])
 
         expect(can('manage_routes')).toBe(true)
@@ -418,44 +429,72 @@ describe('usePermissions', () => {
     it('refreshPermissions updates can() results when role changes', async () => {
         const getOneMock = vi
             .fn()
-            .mockResolvedValueOnce({
-                name: 'routesetter',
-                expand: {
-                    permissions: [
-                        { name: 'manage_routes' },
-                        { name: 'view_analytics' },
-                    ],
-                },
-            })
-            .mockResolvedValueOnce({
-                name: 'user',
-                expand: {
-                    permissions: [],
-                },
-            })
+            .mockResolvedValueOnce(
+                memberOf('routesetter', ['manage_routes', 'view_analytics']),
+            )
+            .mockResolvedValueOnce(memberOf('user', []))
         pbMock.collection = vi.fn().mockReturnValue({ getOne: getOneMock })
 
         const { can, refreshPermissions, roleName } = await loadComposable()
 
         await refreshPermissions()
-        expect(roleName.value).toBe('routesetter')
+        expect(roleName()).toBe('routesetter')
         expect(can('manage_routes')).toBe(true)
         expect(can('manage_users')).toBe(false)
 
         await refreshPermissions()
-        expect(roleName.value).toBe('user')
+        expect(roleName()).toBe('user')
         expect(can('manage_routes')).toBe(false)
         expect(can('view_analytics')).toBe(false)
+    })
+
+    // ── per gym ──────────────────────────────────────────────────────────
+
+    it('grants permissions only in the gym of the membership', async () => {
+        pbMock.collection = vi.fn().mockReturnValue({
+            getOne: vi
+                .fn()
+                .mockResolvedValue(
+                    userWith(
+                        membership('gymA', 'routesetter', ['manage_routes']),
+                        membership('gymB', 'analyst', ['view_analytics']),
+                    ),
+                ),
+        })
+
+        const { can, refreshPermissions, roleName } = await loadComposable()
+        await refreshPermissions()
+
+        expect(can('manage_routes')).toBe(true)
+        expect(can('view_analytics')).toBe(false)
+        expect(can('view_analytics', 'gymB')).toBe(true)
+        expect(can('manage_routes', 'gymC')).toBe(false)
+        expect(roleName('gymB')).toBe('analyst')
+
+        currentGym.value = 'gymB'
+        expect(can('manage_routes')).toBe(false)
+        expect(can('view_analytics')).toBe(true)
+        expect(roleName()).toBe('analyst')
+    })
+
+    it('expands all memberships in one request', async () => {
+        const getOneMock = vi.fn().mockResolvedValue(userWith())
+        pbMock.collection = vi.fn().mockReturnValue({ getOne: getOneMock })
+
+        const { refreshPermissions } = await loadComposable()
+        await refreshPermissions()
+
+        expect(getOneMock).toHaveBeenCalledWith('user123', {
+            expand: 'memberships_via_user.gym,memberships_via_user.role.permissions',
+            requestKey: 'userPermissions',
+        })
     })
 
     // ── loaded state ─────────────────────────────────────────────────────
 
     it('sets loaded to true after successful refresh', async () => {
         pbMock.collection = vi.fn().mockReturnValue({
-            getOne: vi.fn().mockResolvedValue({
-                name: 'user',
-                expand: { permissions: [] },
-            }),
+            getOne: vi.fn().mockResolvedValue(memberOf('user', [])),
         })
 
         const { loaded, refreshPermissions } = await loadComposable()

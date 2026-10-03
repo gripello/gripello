@@ -86,14 +86,18 @@ export function usePbList<
     }
 
     async function prefetch(key: string) {
-        const { data } = await useAsyncData(key, async () => {
+        const request = useAsyncData(key, async () => {
             await refresh()
             return { items: items.value, totalItems: totalItems.value }
         })
-        if (data.value) {
-            items.value = data.value.items as TItem[]
-            totalItems.value = data.value.totalItems
+        const adopt = () => {
+            if (!request.data.value) return
+            items.value = request.data.value.items as TItem[]
+            totalItems.value = request.data.value.totalItems
         }
+        adopt()
+        await request
+        adopt()
     }
 
     return {

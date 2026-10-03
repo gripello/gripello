@@ -1,5 +1,5 @@
 import { createError, eventHandler, readBody, setResponseHeaders } from 'h3'
-import { requirePermission } from '../../utils/pb-server'
+import { getAuthenticatedPb, requirePermission } from '../../utils/pb-server'
 import { loadResults } from '../../utils/competitionResults'
 import { attachmentHeader } from '../../utils/export'
 import {
@@ -12,7 +12,7 @@ import type {
     CompetitionCategoryRecord,
     CompetitionEntryRecord,
     CompetitionRecord,
-    SettingsRecord,
+    GymRecord,
 } from '../../../types/models'
 
 const KINDS = ['results', 'startlist', 'certificates'] as const
@@ -42,7 +42,6 @@ const MIME = {
 }
 
 export default eventHandler(async (event) => {
-    const pb = await requirePermission(event, 'manage_competitions')
     const body = ((await readBody(event)) ?? {}) as ExportRequest
     const { id, kind, format = 'pdf', labels } = body
     if (
@@ -55,17 +54,22 @@ export default eventHandler(async (event) => {
         throw createError({ statusCode: 400, statusMessage: 'Bad request.' })
     }
     const locale = safeLocale(body.locale)
-    const competition = await pb
+    const competition = await getAuthenticatedPb(event)
         .collection('competitions')
         .getOne<CompetitionRecord>(id, { requestKey: null })
         .catch(() => {
             throw createError({ statusCode: 404, statusMessage: 'Not found.' })
         })
-    const [results, settings] = await Promise.all([
+    const pb = await requirePermission(
+        event,
+        'manage_competitions',
+        competition.gym ?? '',
+    )
+    const [results, gym] = await Promise.all([
         loadResults(pb, competition, true),
         pb
-            .collection('settings')
-            .getOne<SettingsRecord>('settings_123456', { requestKey: null })
+            .collection('gyms')
+            .getOne<GymRecord>(competition.gym ?? '', { requestKey: null })
             .catch(() => null),
     ])
     setResponseHeaders(event, {
@@ -75,16 +79,13 @@ export default eventHandler(async (event) => {
         ),
     })
 
-    const subtitle = [
-        dateRange(competition, locale),
-        settings?.organization_name,
-    ]
+    const subtitle = [dateRange(competition, locale), gym?.name]
         .filter(Boolean)
         .join(' · ')
 
     if (kind === 'certificates') {
-        const logo = settings?.sign_image
-            ? await fetchImage(pb.files.getURL(settings, settings.sign_image))
+        const logo = gym?.sign_image
+            ? await fetchImage(pb.files.getURL(gym, gym.sign_image))
             : null
         const rows = results.categories.flatMap((category) =>
             category.rows.map((row) => ({ category: category.name, row })),

@@ -1,6 +1,6 @@
 import PocketBase from 'pocketbase'
 import { expect, type Locator, type Page } from '@playwright/test'
-import { uiaa } from './seed'
+import { e2eGymId, uiaa } from './seed'
 
 export const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
 
@@ -62,6 +62,7 @@ export async function seedMap(
     { routes = 3 }: { routes?: number } = {},
 ): Promise<SeededMap> {
     const location = await root.collection('locations').create({
+        gym: await e2eGymId(root),
         name: `${prefix} Map Hall`,
         map: TEST_MAP,
     })

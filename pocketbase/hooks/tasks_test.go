@@ -138,14 +138,54 @@ func TestUrgentDefectAlertEscapesClimberText(t *testing.T) {
 	task.Set("route", "r1")
 	task.Set("description", "<script>alert(1)</script>")
 
-	body := urgentDefectAlertHTML("https://gym.example", "<b>Arete</b>", task)
+	body := urgentDefectAlertHTML("https://gym.example", "/demo/manage/tasks", "<b>Arete</b>", task)
 
 	if strings.Contains(body, "<script>") || strings.Contains(body, "<b>Arete</b>") {
 		t.Errorf("unescaped climber text in mail: %s", body)
 	}
-	for _, want := range []string{"Loose bolt / screw", "https://gym.example/route?id=r1", "https://gym.example/manage/tasks"} {
+	for _, want := range []string{"Loose bolt / screw", "https://gym.example/route?id=r1", "https://gym.example/demo/manage/tasks"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("mail lacks %q: %s", want, body)
 		}
+	}
+}
+
+func TestDefectFiledParamsNameTheGym(t *testing.T) {
+	params := defectFiledParams("Crimp line", "Boulderhalle Nord")
+	if params["route"] != "Crimp line" || params["gym"] != "Boulderhalle Nord" {
+		t.Fatalf("params = %v", params)
+	}
+}
+
+func TestTaskWallMustMatchTheRoute(t *testing.T) {
+	f := newMemberFixture(t)
+	defer f.app.Cleanup()
+
+	wallIn := func(locationID string) *core.Record {
+		return saveRecord(t, f.app, "walls", map[string]any{
+			"location": locationID, "name": "North",
+			"outline": [][]float64{{2, 2}, {38, 2}, {38, 5}, {2, 5}}, "edge": [][]float64{{2, 5}, {38, 5}},
+		})
+	}
+	floorPlan := map[string]any{"width": 40, "height": 30, "shapes": []any{
+		map[string]any{"kind": "floor", "points": [][]float64{{0, 0}, {40, 0}, {40, 30}, {0, 30}}},
+	}}
+	hall := saveRecord(t, f.app, "locations", map[string]any{"name": "Hall", "gym": f.gymA.Id, "map": floorPlan})
+	otherHall := saveRecord(t, f.app, "locations", map[string]any{"name": "Hall", "gym": f.gymB.Id, "map": floorPlan})
+	ownWall, foreignWall := wallIn(hall.Id), wallIn(otherHall.Id)
+	route := saveRecord(t, f.app, "routes", map[string]any{"name": "Crimp", "grade": "6a", "creator": []string{"S"}, "location": hall.Id, "wall": ownWall.Id})
+
+	tasks, err := f.app.FindCollectionByNameOrId("tasks")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task := core.NewRecord(tasks)
+	task.Set("route", route.Id)
+	if err := attachTaskTarget(f.app, task, true); err != nil || task.GetString("wall") != ownWall.Id {
+		t.Errorf("wall from route = %q (%v)", task.GetString("wall"), err)
+	}
+	task.Set("wall", foreignWall.Id)
+	if attachTaskTarget(f.app, task, true) == nil {
+		t.Error("wall of another gym accepted")
 	}
 }

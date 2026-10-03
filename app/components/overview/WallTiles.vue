@@ -4,7 +4,7 @@
             v-for="wall in walls"
             :key="wall.id"
             :to="{
-                path: '/map',
+                path: gymPath('/map'),
                 query: { location: wall.location, wall: wall.id },
             }"
             class="wall-tile"
@@ -46,6 +46,8 @@
 <script setup lang="ts">
 import { formatDate } from '#shared/utils/formatting'
 import type { WallSummary } from '~/utils/overview'
+
+const gymPath = useGymPath()
 
 defineProps<{ walls: WallSummary[] }>()
 

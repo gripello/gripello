@@ -98,7 +98,7 @@ withDefaults(
         headingKey?: string
     }>(),
     {
-        orgName: '',
+        orgName: 'Gripello',
         orgUnitName: '',
         loading: false,
         eyebrow: '',

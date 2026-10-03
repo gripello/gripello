@@ -5,6 +5,8 @@ const OFFLINE_URL = '/offline.html'
 const PUBLIC_DATA =
     /^\/(_i18n\/|api\/collections\/(walls|locations|averageRating|open_route_defects)\/records$)/
 const FILES = /^\/api\/files\//
+const PUBLIC_PAGE =
+    /^\/(?:(?:privacy|imprint|offline\.html)|(?!(?:account|admin|auth|logbook|manage|platform|scan|competitions)(?:\/|$))[a-z0-9-]{3,40}(?:\/(?:routes|map|route|imprint|privacy))?)?\/?$/
 const FILE_CACHE_LIMIT = 50
 const NETWORK_TIMEOUT_MS = 4000
 
@@ -47,7 +49,7 @@ self.addEventListener('fetch', (event) => {
 
     if (request.mode === 'navigate') {
         event.respondWith(
-            networkFirst(request, PAGES).then(
+            networkFirst(request, PAGES, isPublicPage(url)).then(
                 async (response) =>
                     response ||
                     (await caches.match(OFFLINE_URL)) ||
@@ -67,7 +69,7 @@ self.addEventListener('fetch', (event) => {
         return
     }
 
-    if (FILES.test(url.pathname)) {
+    if (FILES.test(url.pathname) && !url.searchParams.has('token')) {
         event.respondWith(cacheFirst(request, trimFiles))
         return
     }
@@ -78,6 +80,17 @@ self.addEventListener('fetch', (event) => {
     )
         event.respondWith(cacheFirst(request))
 })
+
+function isPublicPage(url) {
+    return PUBLIC_PAGE.test(url.pathname)
+}
+
+function storable(response) {
+    return (
+        response.ok &&
+        !/no-store/i.test(response.headers.get('cache-control') || '')
+    )
+}
 
 function store(cacheName, request, response) {
     const copy = response.clone()
@@ -92,7 +105,7 @@ function cacheFirst(request, afterStore) {
         (cached) =>
             cached ||
             fetch(request).then((response) => {
-                if (response.ok)
+                if (storable(response))
                     store(CACHE, request, response).then(afterStore)
                 return response
             }),
@@ -111,7 +124,7 @@ async function trimFiles() {
         await cache.delete(key)
 }
 
-function networkFirst(request, cacheName) {
+function networkFirst(request, cacheName, cacheable = true) {
     return new Promise((resolve) => {
         let settled = false
         const settle = (response) => {
@@ -128,7 +141,8 @@ function networkFirst(request, cacheName) {
         fetch(request)
             .then((response) => {
                 clearTimeout(timer)
-                if (response.ok) store(cacheName, request, response)
+                if (cacheable && storable(response))
+                    store(cacheName, request, response)
                 settle(response)
             })
             .catch(async () => {

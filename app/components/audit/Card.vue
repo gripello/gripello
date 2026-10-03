@@ -98,7 +98,11 @@ const targetLabel = computed(() => {
 })
 
 const targetUrl = computed(() =>
-    auditTargetUrl(props.entry.collection_name, props.entry.record_id),
+    auditTargetUrl(
+        props.entry.collection_name,
+        props.entry.record_id,
+        props.entry.expand?.gym?.slug,
+    ),
 )
 
 const actionTextClass = computed(

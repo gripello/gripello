@@ -8,13 +8,18 @@ import {
 } from '~/utils/roles'
 import type { RoleRecord } from '~/types/models'
 
-function role(id: string, name: string, color?: string): RoleRecord {
-    return { id, name, color } as RoleRecord
+function role(
+    id: string,
+    name: string,
+    color?: string,
+    permissions: string[] = [],
+): RoleRecord {
+    return { id, name, color, permissions } as RoleRecord
 }
 
-const ADMIN = role('r_admin', 'admin', '#7C4DFF')
-const SETTER = role('r_setter', 'routesetter', '#26A69A')
-const USER = role('r_user', 'user', '#78909C')
+const ADMIN = role('r_admin', 'admin', '#7C4DFF', ['p1', 'p2', 'p3'])
+const SETTER = role('r_setter', 'routesetter', '#26A69A', ['p1', 'p2'])
+const USER = role('r_user', 'helper', '#78909C', ['p1'])
 const ALL = [ADMIN, SETTER, USER]
 
 describe('isProtectedRole', () => {
@@ -42,11 +47,12 @@ describe('reassignTargets', () => {
 })
 
 describe('defaultReassignTarget', () => {
-    it('preselects the least-privileged seeded role', () => {
+    it('preselects the role with the fewest permissions', () => {
         expect(defaultReassignTarget(ALL, SETTER.id)).toBe(USER.id)
+        expect(defaultReassignTarget(ALL, USER.id)).toBe(SETTER.id)
     })
 
-    it('falls back to the first remaining role when `user` is gone', () => {
+    it('falls back to admin only when nothing else is left', () => {
         expect(defaultReassignTarget([ADMIN, SETTER], SETTER.id)).toBe(ADMIN.id)
     })
 

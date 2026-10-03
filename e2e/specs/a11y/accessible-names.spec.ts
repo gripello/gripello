@@ -1,9 +1,9 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 
 test('command palette dialog and search field are named', async ({ page }) => {
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     await page.getByTestId('command-palette-open').click()
     await expect(
         page.getByRole('dialog', { name: 'Search' }).first(),
