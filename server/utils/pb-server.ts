@@ -1,5 +1,7 @@
 import PocketBase from 'pocketbase'
 import { getHeader, createError, type H3Event } from 'h3'
+import { permissionsIn } from '#shared/utils/memberships'
+import type { MembershipRecord } from '../../types/models'
 
 export function createPocketBase() {
     const url = import.meta.dev
@@ -32,12 +34,19 @@ export function getAuthenticatedPb(event: H3Event) {
     return pb
 }
 
-export async function requirePermission(event: H3Event, permission: string) {
+export async function requirePermission(
+    event: H3Event,
+    permission: string,
+    gymId: string,
+) {
     const pb = getAuthenticatedPb(event)
 
     const auth = await pb
         .collection('users')
-        .authRefresh({ expand: 'role.permissions', requestKey: null })
+        .authRefresh({
+            expand: 'memberships_via_user.role.permissions',
+            requestKey: null,
+        })
         .catch((error: { status?: number }) => {
             const isAuthError = error?.status === 401 || error?.status === 403
             throw createError(
@@ -53,12 +62,9 @@ export async function requirePermission(event: H3Event, permission: string) {
             )
         })
 
-    const role = auth.record.expand?.role as
-        { expand?: { permissions?: { name: string }[] } } | undefined
-    const permitted = !!role?.expand?.permissions?.some(
-        (entry) => entry.name === permission,
-    )
-    if (!permitted) {
+    const memberships = (auth.record.expand?.memberships_via_user ??
+        []) as MembershipRecord[]
+    if (!permissionsIn(memberships, gymId).includes(permission)) {
         throw createError({ statusCode: 403, statusMessage: 'Forbidden.' })
     }
 

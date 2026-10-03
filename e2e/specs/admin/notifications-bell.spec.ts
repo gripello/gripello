@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import type PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled, authHeader } from '../../support/nav'
+import { authHeader, gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { createRole } from '../../support/seed'
@@ -198,7 +198,7 @@ test('deciding a report notifies the other moderators exactly once', async ({
 test('a plain user with no notifications still gets a bell', async ({
     userPage: page,
 }) => {
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
 
     await expect(page.getByTestId('notification-bell')).toBeVisible()
     await expect(page.getByTestId('notification-badge')).toBeHidden()
@@ -215,7 +215,7 @@ test('menu keeps a readable width and fits on phones', async ({
         { width: 360, height: 780, minWidth: 320 },
     ]) {
         await page.setViewportSize(viewport)
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await page.getByTestId('notification-bell').click()
         const menuLocator = page.getByTestId('notification-menu')
         await expect

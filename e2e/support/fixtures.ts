@@ -13,6 +13,8 @@ import { signInAs } from './auth'
 import {
     adminClient,
     authAsSuperuser,
+    E2E_GYM_SLUG,
+    e2eGymId,
     ensureUser,
     getRoleIds,
     sweepTestData,
@@ -48,6 +50,17 @@ interface Fixtures {
     pageAs: (user: Pick<SeededUser, 'email' | 'password'>) => Promise<Page>
 }
 
+export async function withGymCookie(
+    context: BrowserContext,
+    baseURL: string | undefined,
+) {
+    if (!baseURL) return context
+    await context.addCookies([
+        { name: 'gym', value: E2E_GYM_SLUG, url: baseURL, sameSite: 'Lax' },
+    ])
+    return context
+}
+
 async function useRolePage(
     browser: Browser,
     deviceOptions: BrowserContextOptions,
@@ -74,12 +87,17 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
     workerLocation: [
         async ({ root }, use, workerInfo) => {
             const name = `e2e-w${workerInfo.workerIndex}-${randomUUID().slice(0, 8)} Hall`
-            const location = await root.collection('locations').create({ name })
+            const location = await root
+                .collection('locations')
+                .create({ name, gym: await e2eGymId(root) })
             await use({ id: location.id, name })
             await sweepTestData(root, name)
         },
         { scope: 'worker' },
     ],
+    context: async ({ context, baseURL }, use) => {
+        await use(await withGymCookie(context, baseURL))
+    },
     deviceOptions: async (
         {
             baseURL,
@@ -138,7 +156,7 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
         await use(async (role = 'user', label = role) =>
             ensureUser(
                 root,
-                roleIds[role] ?? role,
+                role === 'user' ? undefined : (roleIds[role] ?? role),
                 'user',
                 `${testPrefix}-${label}`,
             ),
@@ -147,7 +165,10 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
     pageAs: async ({ browser, deviceOptions }, use) => {
         const contexts: BrowserContext[] = []
         await use(async (user) => {
-            const context = await browser.newContext(deviceOptions)
+            const context = await withGymCookie(
+                await browser.newContext(deviceOptions),
+                deviceOptions.baseURL,
+            )
             contexts.push(context)
             const page = await context.newPage()
             await signInAs(page, user.email, user.password)

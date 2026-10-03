@@ -1,6 +1,10 @@
 import { eventHandler, createError } from 'h3'
 import { requirePermission } from '../../utils/pb-server'
-import { resolveRouteIds, fetchRecordsByIds } from '../../utils/export'
+import {
+    resolveRouteIds,
+    resolveExportGymId,
+    fetchRecordsByIds,
+} from '../../utils/export'
 import {
     locationName,
     normalizeCreators,
@@ -9,7 +13,8 @@ import {
 import type { RatingRecord, RouteRecord } from '../../../types/models'
 
 export default eventHandler(async (event) => {
-    const pb = await requirePermission(event, 'manage_routes')
+    const gymId = await resolveExportGymId(event)
+    const pb = await requirePermission(event, 'manage_routes', gymId)
     const ids = await resolveRouteIds(event)
 
     if (ids.length === 0) {
@@ -27,12 +32,14 @@ export default eventHandler(async (event) => {
             field: 'id',
             expand: 'location,wall',
             requestKey: 'export-json-routes',
+            gym: gymId,
         })
         const ratings = await fetchRecordsByIds<RatingRecord>(pb, {
             collection: 'ratings',
             ids: uniqueIds,
             field: 'route_id',
             requestKey: 'export-json-ratings',
+            gym: gymId,
         })
 
         const routeById = new Map<string, RouteRecord>()

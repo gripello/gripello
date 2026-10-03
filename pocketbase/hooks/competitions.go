@@ -150,11 +150,22 @@ func registerCompetitions(app core.App) {
 }
 
 func isCompetitionManager(e *core.RecordRequestEvent) bool {
-	return e.HasSuperuserAuth() || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, "manage_competitions"))
+	return e.HasSuperuserAuth() || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, competitionGym(e.App, e.Record), "manage_competitions"))
 }
 
 func isCompetitionStaff(e *core.RecordRequestEvent) bool {
-	return isCompetitionManager(e) || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, "judge_competitions"))
+	return isCompetitionManager(e) || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, competitionGym(e.App, e.Record), "judge_competitions"))
+}
+
+func competitionGym(app core.App, record *core.Record) string {
+	if record.Collection().Name == "competitions" {
+		return record.GetString("gym")
+	}
+	competition, err := app.FindRecordById("competitions", record.GetString("competition"))
+	if err != nil {
+		return ""
+	}
+	return competition.GetString("gym")
 }
 
 func stampFreezeAt(competition *core.Record) {

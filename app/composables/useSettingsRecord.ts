@@ -1,7 +1,5 @@
-import type { ClientResponseError } from 'pocketbase'
 import type { SettingsRecord } from '~/types/models'
-
-export const SETTINGS_ID = 'settings_123456'
+import { PLATFORM_SETTINGS_ID } from '#shared/utils/platform'
 
 export function useSettingsRecord() {
     const pb = usePocketbase()
@@ -12,22 +10,11 @@ export function useSettingsRecord() {
         try {
             return await pb
                 .collection('settings')
-                .getOne<SettingsRecord>(SETTINGS_ID)
+                .getOne<SettingsRecord>(PLATFORM_SETTINGS_ID)
         } catch (error) {
-            if ((error as ClientResponseError).status !== 404) {
-                console.error('An error occurred:', error)
-                notifyError(t('settings.loadError'))
-                throw error
-            }
-            try {
-                return await pb
-                    .collection('settings')
-                    .create<SettingsRecord>({ id: SETTINGS_ID })
-            } catch (createError) {
-                console.error('Error creating new settings:', createError)
-                notifyError(t('settings.initError'))
-                throw createError
-            }
+            console.error('An error occurred:', error)
+            notifyError(t('settings.loadError'))
+            throw error
         }
     })
 }

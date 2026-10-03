@@ -1,6 +1,6 @@
 import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { uiaa } from '../../support/seed'
+import { e2eGymId, e2eRole, setMembership, uiaa } from '../../support/seed'
 import { PB_URL } from '../../support/map'
 
 async function clientWithPermission(
@@ -15,6 +15,7 @@ async function clientWithPermission(
             { requestKey: null },
         )
     const role = await root.collection('roles').create({
+        gym: await e2eGymId(root),
         name: `${prefix}-${permissionName}`,
         permissions: [permission.id],
     })
@@ -26,8 +27,8 @@ async function clientWithPermission(
         passwordConfirm: password,
         verified: true,
         name: permissionName,
-        role: role.id,
     })
+    await setMembership(root, user.id, role.id)
     const client = new PocketBase(PB_URL)
     await client.collection('users').authWithPassword(email, password)
     return {
@@ -40,13 +41,31 @@ async function clientWithPermission(
     }
 }
 
+test('climbers and setters only see their own account and membership', async ({
+    createUser,
+}) => {
+    for (const role of ['user', 'routesetter']) {
+        const seeded = await createUser(role, `list-${role}`)
+        const client = new PocketBase(PB_URL)
+        await client
+            .collection('users')
+            .authWithPassword(seeded.email, seeded.password)
+
+        const users = await client.collection('users').getFullList()
+        expect(users.map((user) => user.id)).toEqual([seeded.id])
+
+        const memberships = await client.collection('memberships').getFullList()
+        expect(memberships.map((membership) => membership.user)).toEqual(
+            role === 'user' ? [] : [seeded.id],
+        )
+    }
+})
+
 test('a user manager cannot rename the admin role or strip its permissions', async ({
     root,
     testPrefix,
 }) => {
-    const admin = await root
-        .collection('roles')
-        .getFirstListItem('name = "admin"', { requestKey: null })
+    const admin = await e2eRole(root, 'admin')
     const manager = await clientWithPermission(root, testPrefix, 'manage_users')
     try {
         const roles = manager.client.collection('roles')
@@ -180,6 +199,7 @@ test('a decided report keeps its decision and server-owned fields', async ({
     testPrefix,
 }) => {
     const { id: reportId } = await root.collection('reports').create({
+        gym: await e2eGymId(root),
         content_type: 'rating',
         content_id: `${Date.now()}`.padEnd(15, '0'),
         reason: 'other',

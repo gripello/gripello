@@ -4,10 +4,10 @@ import {
     resolveRouteIds,
     resolveExportColumns,
     resolveApplicationUrl,
+    resolveExportGymId,
     fetchRecordsByIds,
 } from '../../utils/export'
 import { normalizeHexColor } from '#shared/utils/color'
-import type { SettingsRecord } from '../../../types/models'
 
 const QR_PX = 240 // generated QR bitmap size
 const QR_CELL_SIZE = 72 // rendered size inside the sheet, in pixels
@@ -19,7 +19,8 @@ const MAX_COLUMN_WIDTH = 60
 export default eventHandler(async (event) => {
     const { Workbook } = await import('@cj-tech-master/excelts')
 
-    const pb = await requirePermission(event, 'manage_routes')
+    const gymId = await resolveExportGymId(event)
+    const pb = await requirePermission(event, 'manage_routes', gymId)
     const res = event.node.res
 
     const ids = await resolveRouteIds(event)
@@ -46,6 +47,7 @@ export default eventHandler(async (event) => {
             field: 'id',
             expand: 'location,wall',
             requestKey: 'export-xlsx-routes',
+            gym: gymId,
         })
 
         const recordById = new Map(records.map((record) => [record.id, record]))
@@ -57,13 +59,7 @@ export default eventHandler(async (event) => {
         const colorIndex = columns.findIndex((column) => column.key === 'color')
 
         const QRCode = (await import('qrcode')).default
-        let applicationUrl = ''
-        if (qrIndex !== -1) {
-            const settings = await pb
-                .collection('settings')
-                .getOne<SettingsRecord>('settings_123456')
-            applicationUrl = resolveApplicationUrl(event, settings)
-        }
+        const applicationUrl = resolveApplicationUrl(event)
 
         const workbook = new Workbook()
         const sheetName = await resolveExportLabel(event, 'sheet', 'Routes')

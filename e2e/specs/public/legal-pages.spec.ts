@@ -1,5 +1,6 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
+import { e2eGymId } from '../../support/seed'
 
 test('privacy page is server-rendered and public', async ({ page }) => {
     const response = await page.goto('/privacy')
@@ -63,4 +64,44 @@ test('every cookie and localStorage key the app sets is disclosed', async ({
             name,
         )
     }
+})
+
+test('the gym imprint names the gym and links to the platform imprint', async ({
+    page,
+    root,
+}) => {
+    const gymId = await e2eGymId(root)
+    const before = await root.collection('gyms').getOne(gymId)
+    await root
+        .collection('gyms')
+        .update(gymId, { legal_address: 'Climbing Street 1\n12345 Rocktown' })
+    try {
+        await gotoSettled(page, gymPath('/imprint'))
+        await expect(page.getByTestId('gym-imprint-page')).toBeVisible()
+        await expect(page.getByTestId('imprint-name')).toHaveText(before.name)
+        await expect(page.getByTestId('imprint-address')).toContainText(
+            'Climbing Street 1',
+        )
+        await expect(page.getByTestId('footer-imprint')).toHaveAttribute(
+            'href',
+            gymPath('/imprint'),
+        )
+
+        await page.getByTestId('gym-imprint-platform-link').click()
+        await page.waitForURL((url) => url.pathname === '/imprint')
+        await expect(page.getByTestId('imprint-page')).toBeVisible()
+    } finally {
+        await root
+            .collection('gyms')
+            .update(gymId, { legal_address: before.legal_address })
+    }
+})
+
+test('the gym privacy notice names the gym as controller', async ({ page }) => {
+    await gotoSettled(page, gymPath('/privacy'))
+    await expect(page.getByTestId('privacy-controller')).toBeVisible()
+    await expect(page.getByTestId('gym-privacy-platform-link')).toHaveAttribute(
+        'href',
+        '/privacy',
+    )
 })

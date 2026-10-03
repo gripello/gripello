@@ -1,17 +1,32 @@
-interface RoleFetch {
-    roleId: string
+import type { MembershipRecord, UserRecord } from '~/types/models'
+import {
+    activeMemberships,
+    membershipIn,
+    permissionsIn,
+} from '#shared/utils/memberships'
+import { PLATFORM_ADMIN, PLATFORM_ADMIN_GRANTS } from '~/utils/navigation'
+
+interface MembershipFetch {
+    userId: string
     promise: Promise<void>
 }
 
-const roleFetches = new WeakMap<object, RoleFetch>()
+const membershipFetches = new WeakMap<object, MembershipFetch>()
+
+export const MEMBERSHIPS_EXPAND =
+    'memberships_via_user.gym,memberships_via_user.role.permissions'
 
 export function usePermissions() {
     const pb = usePocketbase()
-    const permissions = useState<string[]>('user-permissions', () => [])
-    const roleName = useState<string>('user-role-name', () => '')
+    const memberships = useState<MembershipRecord[]>(
+        'user-memberships',
+        () => [],
+    )
     const loading = ref(false)
     const loaded = useState<boolean>('user-permissions-loaded', () => false)
-    const loadedForRole = useState<string>('user-permissions-role', () => '')
+    const loadedForUser = useState<string>('user-permissions-user', () => '')
+    const platformAdmin = useState<boolean>('user-platform-admin', () => false)
+    const currentGymId = useCurrentGymId()
     const nuxtApp = useNuxtApp()
     const { $i18n } = nuxtApp
     const { error: notifyError } = useNotification()
@@ -20,80 +35,95 @@ export function usePermissions() {
         return !!err?.isAbort || err?.status === 0
     }
 
-    function currentRoleId(): string {
-        return (pb.authStore.isValid && pb.authStore.record?.role) || ''
+    function currentUserId(): string {
+        return (pb.authStore.isValid && pb.authStore.record?.id) || ''
     }
 
-    async function fetchRole(roleId: string) {
+    async function fetchMemberships(userId: string) {
         try {
-            const roleRecord = await pb.collection('roles').getOne(roleId, {
-                expand: 'permissions',
-                requestKey: 'userPermissions',
-            })
-            if (currentRoleId() !== roleId) return
-            roleName.value = roleRecord.name
-            const perms = (roleRecord.expand?.permissions as any[]) ?? []
-            permissions.value = perms.map((p) => p.name)
+            const user = await pb
+                .collection('users')
+                .getOne<UserRecord>(userId, {
+                    expand: MEMBERSHIPS_EXPAND,
+                    requestKey: 'userPermissions',
+                })
+            if (currentUserId() !== userId) return
+            platformAdmin.value = !!user.platform_admin
+            memberships.value =
+                (user.expand?.memberships_via_user as MembershipRecord[]) ?? []
         } catch (err) {
-            if (isAutoCancelled(err) || currentRoleId() !== roleId) return
+            if (isAutoCancelled(err) || currentUserId() !== userId) return
             console.error('Failed to fetch permissions:', err)
-            permissions.value = []
-            roleName.value = ''
+            memberships.value = []
+            platformAdmin.value = false
             notifyError($i18n.t('permissions.loadError'))
         }
-        loadedForRole.value = roleId
+        loadedForUser.value = userId
         loaded.value = true
     }
 
-    function startFetch(roleId: string) {
-        const roleFetch: RoleFetch = {
-            roleId,
-            promise: fetchRole(roleId).finally(() => {
-                if (roleFetches.get(nuxtApp) === roleFetch)
-                    roleFetches.delete(nuxtApp)
+    function startFetch(userId: string) {
+        const membershipFetch: MembershipFetch = {
+            userId,
+            promise: fetchMemberships(userId).finally(() => {
+                if (membershipFetches.get(nuxtApp) === membershipFetch)
+                    membershipFetches.delete(nuxtApp)
             }),
         }
-        roleFetches.set(nuxtApp, roleFetch)
+        membershipFetches.set(nuxtApp, membershipFetch)
     }
 
     async function awaitLatestFetch() {
         loading.value = true
-        let pending: RoleFetch | undefined
-        while ((pending = roleFetches.get(nuxtApp))) await pending.promise
+        let pending: MembershipFetch | undefined
+        while ((pending = membershipFetches.get(nuxtApp))) await pending.promise
         loading.value = false
     }
 
     async function refreshPermissions() {
-        const roleId = currentRoleId()
-        if (!roleId) {
+        const userId = currentUserId()
+        if (!userId) {
             pb.cancelRequest('userPermissions')
-            roleFetches.delete(nuxtApp)
-            permissions.value = []
-            roleName.value = ''
-            loadedForRole.value = ''
+            membershipFetches.delete(nuxtApp)
+            memberships.value = []
+            platformAdmin.value = false
+            loadedForUser.value = ''
             loaded.value = true
             return
         }
-        startFetch(roleId)
+        startFetch(userId)
         await awaitLatestFetch()
     }
 
     async function ensureLoaded() {
-        const roleId = currentRoleId()
-        const pending = roleFetches.get(nuxtApp)
-        if (pending?.roleId === roleId) return awaitLatestFetch()
-        if (!pending && loaded.value && loadedForRole.value === roleId) return
+        const userId = currentUserId()
+        const pending = membershipFetches.get(nuxtApp)
+        if (pending?.userId === userId) return awaitLatestFetch()
+        if (!pending && loaded.value && loadedForUser.value === userId) return
         await refreshPermissions()
     }
 
-    function can(featureName: string): boolean {
+    const gymMemberships = computed(() => activeMemberships(memberships.value))
+
+    const isPlatformAdmin = computed(() => loaded.value && platformAdmin.value)
+
+    function can(featureName: string, gymId = currentGymId.value): boolean {
         if (!loaded.value) return false
-        return permissions.value.includes(featureName)
+        if (featureName === PLATFORM_ADMIN) return platformAdmin.value
+        if (platformAdmin.value && PLATFORM_ADMIN_GRANTS.includes(featureName))
+            return true
+        return permissionsIn(memberships.value, gymId).includes(featureName)
+    }
+
+    function roleName(gymId = currentGymId.value): string {
+        return membershipIn(memberships.value, gymId)?.expand?.role?.name ?? ''
     }
 
     return {
-        permissions,
+        memberships,
+        gymMemberships,
         roleName,
+        isPlatformAdmin,
         loading,
         loaded,
         can,

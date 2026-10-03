@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { authHeader, gotoSettled } from '../../support/nav'
+import { e2eGymId } from '../../support/seed'
 
 const locationRow = (page: Page, name: string) =>
     page.locator(`[data-testid="settings-location"][data-name="${name}"]`)
@@ -50,7 +51,9 @@ test('a location that still has routes cannot be deleted', async ({
     createRoute,
 }) => {
     const name = `${testPrefix} Busy`
-    const location = await root.collection('locations').create({ name })
+    const location = await root
+        .collection('locations')
+        .create({ name, gym: await e2eGymId(root) })
     const route = await createRoute({ location: location.id })
 
     await gotoSettled(page, '/admin/settings?section=locations')

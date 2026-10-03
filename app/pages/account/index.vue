@@ -54,6 +54,47 @@
             </div>
         </template>
 
+        <template v-if="user">
+            <section data-testid="me-gyms">
+                <p class="native-heading">{{ $t('account.myGyms') }}</p>
+                <div class="native-group">
+                    <p
+                        v-if="!memberships.length"
+                        class="native-row text-muted"
+                        data-testid="me-gyms-empty"
+                    >
+                        {{ $t('account.noGyms') }}
+                    </p>
+                    <NuxtLink
+                        v-for="membership in memberships"
+                        :key="membership.id"
+                        :to="`/${membership.expand?.gym?.slug}`"
+                        class="native-row"
+                        style="--native-tint: var(--ui-primary)"
+                        :data-testid="`me-gym-${membership.expand?.gym?.slug}`"
+                    >
+                        <span class="native-row__icon">
+                            <UIcon name="i-lucide-building-2" />
+                        </span>
+                        <span class="native-row__text">{{
+                            membership.expand?.gym?.name
+                        }}</span>
+                        <UBadge
+                            color="neutral"
+                            variant="soft"
+                            data-testid="me-gym-role"
+                        >
+                            {{ membership.expand?.role?.name }}
+                        </UBadge>
+                        <UIcon
+                            name="i-lucide-chevron-right"
+                            class="native-row__chevron"
+                        />
+                    </NuxtLink>
+                </div>
+            </section>
+        </template>
+
         <section class="lg:hidden" data-testid="me-pages">
             <p class="native-heading">{{ $t('me.pages') }}</p>
             <div class="native-group">
@@ -63,7 +104,7 @@
                     :to="link.to"
                     class="native-row"
                     style="--native-tint: var(--ui-primary)"
-                    :data-testid="`me-page-${navTestId(link.to)}`"
+                    :data-testid="`me-page-${navTestId(link.path ?? link.to)}`"
                 >
                     <span class="native-row__icon">
                         <UIcon :name="link.icon" />
@@ -92,7 +133,7 @@
                         :to="link.to"
                         class="native-row"
                         :style="{ '--native-tint': SECTION_TINTS[section.key] }"
-                        :data-testid="`me-staff-${navTestId(link.to)}`"
+                        :data-testid="`me-staff-${navTestId(link.path ?? link.to)}`"
                     >
                         <span class="native-row__icon">
                             <UIcon :name="link.icon" />
@@ -108,7 +149,7 @@
                 </div>
             </section>
         </template>
-        <LayoutInfoList v-if="!lgAndUp" :settings="settings" />
+        <LayoutInfoList v-if="!lgAndUp" :settings="settings" :gym="gym" />
         <div v-if="user" class="native-group mt-6 mb-4">
             <button
                 type="button"
@@ -139,7 +180,7 @@ import { pageLinks, staffSections } from '~/utils/navigation'
 const { t } = useI18n()
 const pb = usePocketbase()
 const router = useRouter()
-const { can } = usePermissions()
+const { can, gymMemberships: memberships } = usePermissions()
 const { lgAndUp } = useDisplay()
 const { data: settings } = useNuxtData<SettingsRecord>('settings')
 
@@ -170,10 +211,12 @@ const SECTION_TINTS: Record<string, string> = {
     manage: 'var(--ui-info)',
     moderation: 'var(--ui-warning)',
     admin: '#64748b',
+    platform: 'var(--ui-primary)',
 }
 
-const sections = computed(() => staffSections(can))
-const pages = computed(() => pageLinks(!!user.value))
+const { gym, slug: gymSlug } = useGym()
+const sections = computed(() => staffSections(can, gymSlug.value))
+const pages = computed(() => pageLinks(!!user.value, gymSlug.value))
 
 async function logout() {
     loggingOut.value = true

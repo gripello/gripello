@@ -94,17 +94,47 @@ function escapeFilterValue(value: string): string {
     return value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')
 }
 
+export const AUDIT_ACTOR_GUESTS = 'guests'
+export const AUDIT_ACTOR_PLATFORM = 'platform'
+
+const PLATFORM_ACTOR_FILTER =
+    '(actor_label = "superuser" || actor_label ~ "superuser:%")'
+
+function actorFilter(actor: string): string {
+    if (actor === AUDIT_ACTOR_PLATFORM) return PLATFORM_ACTOR_FILTER
+    if (actor === AUDIT_ACTOR_GUESTS)
+        return `actor = "" && !${PLATFORM_ACTOR_FILTER}`
+    return `actor = "${escapeFilterValue(actor)}"`
+}
+
+export function matchesAuditActor(
+    entry: Pick<AuditLogRecord, 'actor' | 'actor_label'>,
+    actor: string | null | undefined,
+): boolean {
+    if (!actor) return true
+    if (actor === AUDIT_ACTOR_PLATFORM) return isSuperuserEntry(entry)
+    if (actor === AUDIT_ACTOR_GUESTS)
+        return !entry.actor && !isSuperuserEntry(entry)
+    return entry.actor === actor
+}
+
 export function buildAuditFilter(options: {
     search?: string
     action?: AuditAction | null
     collection?: string | null
     period?: AuditPeriod | null
     actorId?: RecordId | null
+    actor?: string | null
+    gym?: RecordId | null
 }): string {
     const parts: string[] = []
 
     if (options.actorId) {
         parts.push(`actor = "${escapeFilterValue(options.actorId)}"`)
+    }
+    if (options.actor) parts.push(actorFilter(options.actor))
+    if (options.gym) {
+        parts.push(`gym = "${escapeFilterValue(options.gym)}"`)
     }
     if (options.action) {
         parts.push(`action = "${escapeFilterValue(options.action)}"`)
@@ -132,19 +162,26 @@ export function buildAuditFilter(options: {
     return parts.join(' && ')
 }
 
+const AUDIT_TARGET_PATHS: Record<string, string> = {
+    users: '/admin/users',
+    ratings: '/manage/comments',
+    reports: '/manage/reports',
+    tasks: '/manage/tasks',
+}
+
 export function auditTargetUrl(
     collectionName?: string | null,
     recordId?: string | null,
+    gymSlug?: string | null,
 ): string | null {
     if (!collectionName || !recordId) return null
     if (collectionName === 'routes') return `/route?id=${recordId}`
-    if (collectionName === 'users') return '/admin/users'
-    if (collectionName === 'ratings') return '/manage/comments'
-    if (collectionName === 'reports') return '/manage/reports'
-    if (collectionName === 'tasks') return '/manage/tasks'
-    return null
+    const path = AUDIT_TARGET_PATHS[collectionName]
+    if (!path) return null
+    return gymSlug ? `/${gymSlug}${path}` : path
 }
 
 export function isSuperuserEntry(entry: Pick<AuditLogRecord, 'actor_label'>) {
-    return (entry.actor_label ?? '').startsWith('superuser')
+    const label = entry.actor_label ?? ''
+    return label === 'superuser' || label.startsWith('superuser:')
 }

@@ -181,3 +181,49 @@ test('an anonymous caller cannot read the audit log', async ({
     const body = await fetchAuditRowsAnonymously(page)
     expect(body.totalItems ?? 0).toBe(0)
 })
+
+test('admins narrow the audit log down to one member', async ({
+    adminPage: page,
+    setterPage,
+    root,
+    testPrefix,
+    route,
+}) => {
+    await gotoSettled(setterPage, '/manage/routes', /\/manage\/routes/)
+    await gotoSettled(page, '/account/activity')
+    const commentId = await createComment(
+        setterPage,
+        route.id,
+        `${testPrefix}-by-setter`,
+    )
+    const [row] = await waitForAuditRow(
+        page,
+        `record_id = "${commentId}" && action = "create"`,
+    )
+    const setter = await root.collection('users').getOne(row!.actor, {
+        requestKey: null,
+    })
+
+    await gotoSettled(page, '/account/activity')
+    await page.getByTestId('audit-filter-actor').click()
+    await page
+        .getByRole('option', {
+            name:
+                [setter.firstname, setter.name].filter(Boolean).join(' ') ||
+                setter.username,
+            exact: true,
+        })
+        .click()
+
+    await expect
+        .poll(
+            async () =>
+                new Set(
+                    await page
+                        .getByTestId('audit-card-actor')
+                        .allTextContents(),
+                ),
+        )
+        .toEqual(new Set([row!.actor_label]))
+    await expect(page.getByTestId(`audit-card-${row!.id}`)).toBeVisible()
+})

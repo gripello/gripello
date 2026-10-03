@@ -16,20 +16,6 @@ test('the profile avatar upload opens with the keyboard', async ({
     await chooser
 })
 
-test('the admin avatar uploads are keyboard buttons', async ({
-    adminPage: page,
-}) => {
-    await gotoSettled(page, '/admin/users')
-    await page.getByTestId('user-create-open').click()
-
-    const upload = page.getByTestId('user-create-avatar-upload')
-    await expect(upload).toHaveAttribute('role', 'button')
-    await upload.focus()
-    const chooser = page.waitForEvent('filechooser')
-    await page.keyboard.press('Space')
-    await chooser
-})
-
 const ONE_PIXEL_PNG = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
     'base64',

@@ -1,6 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import PocketBase from 'pocketbase'
-import { ensureUser, getRoleIds } from '../../support/seed'
+import { e2eGym, ensureUser, getRoleIds } from '../../support/seed'
 
 const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
 
@@ -20,7 +20,7 @@ test('a climber without manage_routes cannot generate exports', async ({
     for (const format of ['pdf', 'xlsx', 'json']) {
         const response = await request.post(`/api/ui/${format}`, {
             headers: { Authorization: client.authStore.token },
-            data: { ids: ['any-route'] },
+            data: { gym: await e2eGym(), ids: ['any-route'] },
         })
         expect(response.status(), format).toBe(403)
     }

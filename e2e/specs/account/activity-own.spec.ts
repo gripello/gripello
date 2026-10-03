@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled, authHeader } from '../../support/nav'
+import { authHeader, gotoSettled, gymPath } from '../../support/nav'
 import { uiaa } from '../../support/seed'
 import { fetchAuditRows } from '../../support/audit'
 
@@ -9,7 +9,7 @@ test('a user sees their own entries and nobody else’s', async ({
     testPrefix,
 }) => {
     const page = await pageAs(await createUser())
-    await gotoSettled(page, '/', /\//)
+    await gotoSettled(page, gymPath('/'), /\//)
 
     const headers = await authHeader(page)
     const me = await page.request.post('/api/collections/users/auth-refresh', {
@@ -42,7 +42,7 @@ test('the activity page is reachable without any admin permission', async ({
 test('a plain user reaches their activity from the user menu', async ({
     userPage: page,
 }) => {
-    await gotoSettled(page, '/', /\//)
+    await gotoSettled(page, gymPath('/'), /\//)
 
     await page.getByTestId('user-menu-activator').click()
     const entry = page.getByTestId('user-menu-activity')

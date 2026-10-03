@@ -20,6 +20,7 @@ export function ssrCacheRequest(event: H3Event) {
             acceptLanguage: getHeader(event, 'accept-language'),
             viewportWidth: getHeader(event, 'sec-ch-viewport-width'),
             sidebarOpen: getCookie(event, 'sidebar-open'),
+            gym: getCookie(event, 'gym'),
         }),
     }
 }

@@ -128,7 +128,8 @@ function networkFirst(request, cacheName) {
         fetch(request)
             .then((response) => {
                 clearTimeout(timer)
-                if (response.ok) store(cacheName, request, response)
+                if (response.ok || response.type === 'opaqueredirect')
+                    store(cacheName, request, response)
                 settle(response)
             })
             .catch(async () => {

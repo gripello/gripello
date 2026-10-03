@@ -10,7 +10,7 @@
 
         <AuthGuestCta
             v-if="!userId"
-            :redirect="`/competitions/${competition.id}`"
+            :redirect="gymPath(`/competitions/${competition.id}`)"
             test-id-prefix="competition"
         />
 
@@ -198,6 +198,8 @@ import type {
     CompetitionRecord,
     UserRecord,
 } from '~/types/models'
+
+const gymPath = useGymPath()
 
 const props = defineProps<{
     competition: CompetitionRecord

@@ -1,47 +1,26 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
+import { e2eGymId } from '../../support/seed'
 
 test('saving settings only sends the fields that were edited', async ({
     adminPage: page,
+    root,
     testPrefix,
 }) => {
     await gotoSettled(page, '/admin/settings?section=organization')
-    const current = await (
-        await page.request.get(
-            '/api/collections/settings/records/settings_123456',
-        )
-    ).json()
+    const current = await root.collection('gyms').getOne(await e2eGymId(root))
 
     let sentFields: string[] = []
-    await page.route(
-        '**/api/collections/settings/records/**',
-        async (route) => {
-            if (route.request().method() !== 'PATCH') return route.fallback()
-            const body = route.request().postDataJSON()
-            sentFields = Object.keys(body)
-            await route.fulfill({ json: { ...current, ...body } })
-        },
-    )
+    await page.route('**/api/collections/gyms/records/**', async (route) => {
+        if (route.request().method() !== 'PATCH') return route.fallback()
+        const body = route.request().postDataJSON()
+        sentFields = Object.keys(body)
+        await route.fulfill({ json: { ...current, ...body } })
+    })
 
     await page.getByTestId('settings-org-name').fill(`${testPrefix}-org`)
     await page.getByTestId('settings-save').click()
     await expect(page.getByTestId('settings-save')).toBeHidden()
 
-    expect(sentFields).toEqual(['organization_name'])
-})
-
-test('an out of range audit retention cannot be saved', async ({
-    adminPage: page,
-}) => {
-    await gotoSettled(page, '/admin/settings?section=organization')
-    const retention = page.getByTestId('settings-audit-retention')
-
-    await retention.fill('0')
-    await expect(retention).toHaveAccessibleDescription(
-        /whole number from 1 to 3650/,
-    )
-    await expect(page.getByTestId('settings-save')).toBeDisabled()
-
-    await retention.fill('3649')
-    await expect(page.getByTestId('settings-save')).toBeEnabled()
+    expect(sentFields).toEqual(['name'])
 })

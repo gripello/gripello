@@ -1,7 +1,5 @@
 <template>
     <LayoutAuthLayout
-        :org-name="orgName"
-        :org-unit-name="orgUnitName"
         :loading="loading"
         :eyebrow="heading.eyebrow"
         :title="heading.title"
@@ -128,7 +126,6 @@ const props = withDefaults(
 
 const { t } = useI18n()
 const route = useRoute()
-const { orgName, orgUnitName } = useOrgSettings()
 const { error: notifyError } = useNotification()
 
 const token = String(route.params.token ?? '')

@@ -4,6 +4,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
     authAsSuperuser,
+    E2E_GYM_SLUG,
+    ensureGym,
     ensureUser,
     getRoleIds,
     seedRatings,
@@ -48,6 +50,16 @@ function saveStorageState(baseURL: string, cookieValue: string, file: string) {
                 secure: url.protocol === 'https:',
                 sameSite: 'Lax',
             },
+            {
+                name: 'gym',
+                value: E2E_GYM_SLUG,
+                domain: url.hostname,
+                path: '/',
+                expires: -1,
+                httpOnly: false,
+                secure: url.protocol === 'https:',
+                sameSite: 'Lax',
+            },
         ],
         origins: [],
     }
@@ -58,7 +70,9 @@ async function warmUpPages(baseURL: string, adminCookie: string) {
     for (const pagePath of ['/', '/auth/login', '/route', '/manage/routes']) {
         await withRetry(async () => {
             const response = await fetch(new URL(pagePath, baseURL), {
-                headers: { cookie: `pb_auth=${adminCookie}` },
+                headers: {
+                    cookie: `pb_auth=${adminCookie}; gym=${E2E_GYM_SLUG}`,
+                },
             })
             if (response.status >= 500) {
                 throw new Error(`${pagePath} answered ${response.status}`)
@@ -75,6 +89,7 @@ export default async function globalSetup(config: FullConfig) {
     const pb = new PocketBase(PB_URL)
     pb.autoCancellation(false)
     await withRetry(() => authAsSuperuser(pb))
+    await ensureGym(pb)
     await takeSnapshot(pb)
     await relaxRateLimits(pb)
     await sweepTestData(pb, 'e2e-w')
@@ -88,8 +103,11 @@ export default async function globalSetup(config: FullConfig) {
             'routesetter',
             PREFIX,
         ),
-        user: await ensureUser(pb, roleIds.user, 'user', PREFIX),
+        user: await ensureUser(pb, undefined, 'user', PREFIX),
     }
+    await pb
+        .collection('users')
+        .update(seededUsers.admin.id, { platform_admin: true })
 
     const routes = await seedRoutes(pb, PREFIX)
     await seedRatings(pb, PREFIX, routes)

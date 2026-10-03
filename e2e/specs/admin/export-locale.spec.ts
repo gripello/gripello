@@ -1,7 +1,7 @@
 import { Workbook } from '@cj-tech-master/excelts'
 import { test, expect } from '../../support/fixtures'
 import { authHeader, gotoSettled } from '../../support/nav'
-import { LOCATIONS } from '../../support/seed'
+import { LOCATIONS, e2eGym } from '../../support/seed'
 
 test('xlsx export formats dates in the requested locale and prints the location name', async ({
     adminPage: page,
@@ -17,6 +17,7 @@ test('xlsx export formats dates in the requested locale and prints the location 
     const response = await page.request.post('/api/ui/xlsx', {
         headers,
         data: {
+            gym: await e2eGym(),
             ids: [routeId],
             locale: 'de',
             columns: ['location', 'screw_date'],

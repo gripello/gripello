@@ -4,8 +4,7 @@ import { fillLogin } from '../../support/auth'
 import { gotoSettled } from '../../support/nav'
 import { waitForMail, linkPath, mailbox, mailCount } from '../../support/mail'
 import PocketBase from 'pocketbase'
-import { getRoleIds } from '../../support/seed'
-import { SETTINGS_ID } from '../../support/state-snapshot'
+import { PLATFORM_SETTINGS_ID } from '../../../shared/utils/platform'
 
 const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
 const PASSWORD = 'E2eSignup!123'
@@ -14,14 +13,14 @@ const VERIFY_LINK = /https?:\/\/[^"'\s]*\/auth\/confirm-verification\/[^"'\s]+/
 async function registrationAllowed(root: PocketBase) {
     const settings = await root
         .collection('settings')
-        .getOne(SETTINGS_ID, { requestKey: null })
+        .getOne(PLATFORM_SETTINGS_ID, { requestKey: null })
     return settings.allow_registration
 }
 
 async function setRegistration(root: PocketBase, allowed: boolean) {
     await root
         .collection('settings')
-        .update(SETTINGS_ID, { allow_registration: allowed })
+        .update(PLATFORM_SETTINGS_ID, { allow_registration: allowed })
 }
 
 function signup(email: string, username: string, extra = {}) {
@@ -64,37 +63,6 @@ test('closed registration hides the link and rejects sign-ups', async ({
     )
 })
 
-test('an admin opens registration from the settings page', async ({
-    adminPage,
-    page,
-    root,
-}) => {
-    await setRegistration(root, false)
-    await gotoSettled(adminPage, '/admin/settings?section=organization')
-    await adminPage.getByTestId('settings-allow-registration').check()
-    await adminPage.getByTestId('settings-save').click()
-    await expect.poll(() => registrationAllowed(root)).toBe(true)
-
-    await gotoSettled(page, '/auth/login')
-    await expect(page.getByTestId('login-goto-register')).toBeVisible()
-})
-
-test('a guest cannot pick their own role when signing up', async ({
-    root,
-    testPrefix,
-}) => {
-    await setRegistration(root, true)
-    const { admin } = await getRoleIds(root)
-
-    await expectRejected(
-        signup(
-            mailbox(testPrefix, 'escalate'),
-            `${testPrefix}esc`.replace(/-/g, ''),
-            { role: admin },
-        ),
-    )
-})
-
 test('a climber signs up, verifies the email and signs in', async ({
     page,
     root,
@@ -127,7 +95,11 @@ test('a climber signs up, verifies the email and signs in', async ({
         .collection('users')
         .getFirstListItem(`email = "${email}"`, { requestKey: null })
     expect(created.verified).toBe(false)
-    expect(created.role).toBe((await getRoleIds(root)).user)
+    const staff = await root.collection('memberships').getList(1, 1, {
+        filter: root.filter('user = {:id}', { id: created.id }),
+        requestKey: null,
+    })
+    expect(staff.totalItems).toBe(0)
 
     const mail = await waitForMail(page, email, { subject: /verify/i })
     await gotoSettled(page, linkPath(mail, VERIFY_LINK))
@@ -149,7 +121,6 @@ test('an unverified climber resends the verification mail from the sign-in page'
         username: `${testPrefix}resend`.replace(/-/g, ''),
         password: PASSWORD,
         passwordConfirm: PASSWORD,
-        role: (await getRoleIds(root)).user,
     })
     expect(await mailCount(page, email)).toBe(0)
 

@@ -1,5 +1,6 @@
 import { Workbook } from '@cj-tech-master/excelts'
 import { test, expect } from '../../support/fixtures'
+import { e2eGym } from '../../support/seed'
 import { authHeader, gotoSettled } from '../../support/nav'
 
 test('xlsx export writes the translated route type and a 6-digit colour fill', async ({
@@ -16,6 +17,7 @@ test('xlsx export writes the translated route type and a 6-digit colour fill', a
     const response = await page.request.post('/api/ui/xlsx', {
         headers,
         data: {
+            gym: await e2eGym(),
             ids: [routeId],
             locale: 'de',
             columns: ['color', 'type'],

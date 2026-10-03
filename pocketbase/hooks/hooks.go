@@ -4,10 +4,12 @@ import "github.com/pocketbase/pocketbase/core"
 
 func Register(app core.App) {
 	registerAudit(app)
+	registerGyms(app)
 	registerBatchHeaderGuard(app)
 	registerCaptcha(app)
 	registerUserGuards(app)
 	registerAdminRoleGuard(app)
+	registerMemberships(app)
 	registerLocationGuards(app)
 	registerMapGuards(app)
 	registerRouteArchiveStamp(app)

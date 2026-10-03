@@ -5,7 +5,7 @@ import os from 'node:os'
 import { generateRouteQrY4m } from '../../support/qr'
 import { gotoSettled } from '../../support/nav'
 import { PB_URL } from '../../support/map'
-import { authAsSuperuser, uiaa } from '../../support/seed'
+import { authAsSuperuser, e2eGymId, uiaa } from '../../support/seed'
 
 const AUTH_FILE = path.join(__dirname, '..', '..', '.auth', 'admin.json')
 
@@ -18,7 +18,7 @@ test('a code shown again after undo is scanned again', async ({
     await authAsSuperuser(root)
     const location = await root
         .collection('locations')
-        .create({ name: `${prefix}-rescan` })
+        .create({ name: `${prefix}-rescan`, gym: await e2eGymId(root) })
     const route = await root.collection('routes').create({
         name: `${prefix}-rescan`,
         ...uiaa('5'),

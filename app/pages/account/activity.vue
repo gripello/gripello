@@ -36,6 +36,29 @@
                         data-testid="audit-filter-collection"
                     />
                     <FilterSelect
+                        v-if="auditGyms.length > 1"
+                        :label="t('audit.filter.gym')"
+                        v-model="gymFilter"
+                        :items="gymItems"
+                        label-key="title"
+                        value-key="value"
+                        clear
+                        :placeholder="t('filter.all')"
+                        data-testid="audit-filter-gym"
+                    />
+                    <FilterSelect
+                        v-if="auditGyms.length"
+                        :label="t('audit.filter.actor')"
+                        v-model="actorFilter"
+                        :items="actorItems"
+                        label-key="title"
+                        value-key="value"
+                        :search-input="{ placeholder: t('actions.search') }"
+                        clear
+                        :placeholder="t('filter.all')"
+                        data-testid="audit-filter-actor"
+                    />
+                    <FilterSelect
                         :label="t('audit.filterPeriod')"
                         v-model="periodFilter"
                         :items="periodItems"
@@ -93,9 +116,19 @@
 </template>
 
 <script setup lang="ts">
-import type { AuditAction, AuditLogRecord, ListResult } from '~/types/models'
+import type {
+    AuditAction,
+    AuditLogRecord,
+    GymRecord,
+    ListResult,
+    MembershipRecord,
+} from '~/types/models'
+import { gymTitle } from '~/utils/gymNames'
 import {
+    AUDIT_ACTOR_GUESTS,
+    AUDIT_ACTOR_PLATFORM,
     AUDIT_ACTIONS,
+    matchesAuditActor,
     AUDIT_PERIODS,
     AUDITED_COLLECTIONS,
     buildAuditFilter,
@@ -104,7 +137,9 @@ import {
 
 const { t } = useI18n()
 const pb = usePocketbase()
-const { can } = usePermissions()
+const { can, isPlatformAdmin, gymMemberships } = usePermissions()
+const { id: cookieGymId } = useGym()
+const currentUserId = pb.authStore.record?.id ?? ''
 
 const PER_PAGE = 48
 
@@ -121,13 +156,79 @@ const actionFilter = ref<AuditAction | null>(null)
 const collectionFilter = ref<string | null>(null)
 const periodFilter = ref<AuditPeriod>('30d')
 
+const { data: auditGyms } = await useAsyncData(
+    'audit-gyms',
+    async () =>
+        isPlatformAdmin.value
+            ? pb.collection('gyms').getFullList<GymRecord>({
+                  filter: 'active = true',
+                  fields: 'id,name,unit_name',
+                  sort: 'name',
+                  requestKey: null,
+              })
+            : gymMemberships.value.flatMap((membership) =>
+                  membership.expand?.gym &&
+                  can('view_audit_log', membership.gym)
+                      ? [membership.expand.gym]
+                      : [],
+              ),
+    { default: () => [] },
+)
+
+const gymFilter = ref<string | null>(
+    auditGyms.value.some((gym) => gym.id === cookieGymId.value)
+        ? cookieGymId.value
+        : null,
+)
+const actorFilter = ref<string | null>(null)
+const defaultGym = gymFilter.value
+
+const gymItems = computed(() =>
+    auditGyms.value.map((gym) => ({ value: gym.id, title: gymTitle(gym) })),
+)
+
+const { data: auditMembers } = useAsyncData(
+    'audit-members',
+    () =>
+        pb.collection('memberships').getFullList<MembershipRecord>({
+            filter: pb.filter('gym = {:gym}', {
+                gym: gymFilter.value ?? cookieGymId.value,
+            }),
+            expand: 'user',
+            fields: 'id,user,expand.user.id,expand.user.firstname,expand.user.name,expand.user.username',
+            requestKey: null,
+        }),
+    {
+        default: () => [],
+        server: false,
+        watch: [gymFilter],
+        enabled: () =>
+            auditGyms.value.length > 0 &&
+            !!(gymFilter.value ?? cookieGymId.value),
+    },
+)
+
+const actorItems = computed(() => [
+    { value: currentUserId, title: t('audit.actor.me') },
+    { value: AUDIT_ACTOR_GUESTS, title: t('audit.actor.guests') },
+    { value: AUDIT_ACTOR_PLATFORM, title: t('audit.superuser') },
+    ...auditMembers.value.flatMap((membership) => {
+        const user = membership.expand?.user
+        if (!user || user.id === currentUserId) return []
+        const fullName = [user.firstname, user.name].filter(Boolean).join(' ')
+        return [{ value: user.id, title: fullName || user.username }]
+    }),
+])
+
 const seesEverything = computed(() => can('view_audit_log'))
 
 const activeFilterCount = computed(
     () =>
         (actionFilter.value ? 1 : 0) +
         (collectionFilter.value ? 1 : 0) +
-        (periodFilter.value !== '30d' ? 1 : 0),
+        (periodFilter.value !== '30d' ? 1 : 0) +
+        (actorFilter.value ? 1 : 0) +
+        (gymFilter.value !== defaultGym ? 1 : 0),
 )
 
 const actionItems = computed(() =>
@@ -154,11 +255,14 @@ async function fetchList(target = 1) {
         .collection('audit_logs')
         .getList<AuditLogRecord>(target, PER_PAGE, {
             sort: '-created',
+            expand: 'gym',
             filter: buildAuditFilter({
                 search: search.value,
                 action: actionFilter.value,
                 collection: collectionFilter.value,
                 period: periodFilter.value,
+                actor: actorFilter.value,
+                gym: gymFilter.value,
             }),
             requestKey: 'auditList',
         })) as ListResult<AuditLogRecord>
@@ -198,6 +302,8 @@ onMounted(async () => {
 
 function matchesFilters(record: AuditLogRecord) {
     if (actionFilter.value && record.action !== actionFilter.value) return false
+    if (!matchesAuditActor(record, actorFilter.value)) return false
+    if (gymFilter.value && record.gym !== gymFilter.value) return false
     if (
         collectionFilter.value &&
         record.collection_name !== collectionFilter.value
@@ -227,7 +333,10 @@ watch(search, () => {
     searchDebounce = setTimeout(() => void reload(), 300)
 })
 
-watch([actionFilter, collectionFilter, periodFilter], () => void reload())
+watch(
+    [actionFilter, collectionFilter, periodFilter, actorFilter, gymFilter],
+    () => void reload(),
+)
 
 onBeforeUnmount(() => clearTimeout(searchDebounce))
 
@@ -257,5 +366,7 @@ function clearFilters() {
     actionFilter.value = null
     collectionFilter.value = null
     periodFilter.value = '30d'
+    actorFilter.value = null
+    gymFilter.value = defaultGym
 }
 </script>

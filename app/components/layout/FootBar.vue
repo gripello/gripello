@@ -8,7 +8,12 @@
             <!-- Left: legal links -->
             <div class="footer-left">
                 <UButton
-                    v-bind="legalLinkProps(settings.privacy_url, '/privacy')"
+                    v-bind="
+                        legalLinkProps(
+                            settings.privacy_url,
+                            `${gymBase}/privacy`,
+                        )
+                    "
                     variant="link"
                     color="neutral"
                     class="px-1.5 text-[13px] font-medium text-muted hover:text-highlighted"
@@ -20,7 +25,12 @@
                 <span class="link-sep">·</span>
 
                 <UButton
-                    v-bind="legalLinkProps(settings.imprint_url, '/imprint')"
+                    v-bind="
+                        legalLinkProps(
+                            settings.imprint_url,
+                            `${gymBase}/imprint`,
+                        )
+                    "
                     variant="link"
                     color="neutral"
                     class="px-1.5 text-[13px] font-medium text-muted hover:text-highlighted"
@@ -125,11 +135,16 @@
 </template>
 
 <script setup lang="ts">
-import type { SettingsRecord } from '~/types/models'
+import type { GymRecord, SettingsRecord } from '~/types/models'
 import { legalLinkProps } from '~/utils/legal'
-withDefaults(defineProps<{ settings?: Partial<SettingsRecord> }>(), {
-    settings: () => ({}),
-})
+const props = withDefaults(
+    defineProps<{
+        settings?: Partial<SettingsRecord> | Partial<GymRecord>
+        gymSlug?: string
+    }>(),
+    { settings: () => ({}), gymSlug: '' },
+)
+const gymBase = computed(() => (props.gymSlug ? `/${props.gymSlug}` : ''))
 
 const {
     appVersionLabel,

@@ -121,7 +121,7 @@ import {
     validateRules,
 } from '~/utils/validation'
 import { REPORT_REASONS } from '~/utils/reports'
-import type { ReportContentType, SettingsRecord } from '~/types/models'
+import type { ReportContentType } from '~/types/models'
 
 const props = defineProps<{
     contentType: ReportContentType
@@ -171,8 +171,9 @@ const reasonItems = computed(() =>
     })),
 )
 
-const { data: settings } = useNuxtData<SettingsRecord>('settings')
-const privacyUrl = computed(() => settings.value?.privacy_url || '/privacy')
+const { gym } = useGym()
+const gymPath = useGymPath()
+const privacyUrl = computed(() => gym.value?.privacy_url || gymPath('/privacy'))
 
 const rules = {
     required: required(t),

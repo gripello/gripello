@@ -1,4 +1,9 @@
 import type { Page } from '@playwright/test'
+import { E2E_GYM_SLUG } from './seed'
+
+export function gymPath(path: string) {
+    return path === '/' ? `/${E2E_GYM_SLUG}` : `/${E2E_GYM_SLUG}${path}`
+}
 
 export async function gotoSettled(
     page: Page,

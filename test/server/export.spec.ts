@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
     attachmentHeader,
     resolveApplicationUrl,
+    resolveExportGymId,
     resolveExportColumns,
     resolveRouteIds,
 } from '../../server/utils/export'
@@ -16,6 +17,8 @@ vi.mock('h3', async () => {
             return event.body
         },
         getRequestURL: () => new URL('https://request.example/manage/routes'),
+        createError: (input: { statusMessage: string }) =>
+            Object.assign(new Error(input.statusMessage), input),
     }
 })
 
@@ -134,18 +137,22 @@ describe('resolveRouteIds', () => {
 })
 
 describe('resolveApplicationUrl', () => {
-    it('prefers the configured URL and strips trailing slashes', () => {
-        expect(
-            resolveApplicationUrl({} as never, {
-                application_url: 'https://dav.example//',
-            }),
-        ).toBe('https://dav.example')
-    })
-
-    it('falls back to the request origin', () => {
-        expect(resolveApplicationUrl({} as never, {})).toBe(
+    it('uses the request origin', () => {
+        expect(resolveApplicationUrl({} as never)).toBe(
             'https://request.example',
         )
+    })
+})
+
+describe('resolveExportGymId', () => {
+    it('reads the gym from the body', async () => {
+        expect(await resolveExportGymId(eventWith({ gym: ' g1 ' }))).toBe('g1')
+    })
+
+    it('rejects a missing gym', async () => {
+        await expect(resolveExportGymId(eventWith({}))).rejects.toMatchObject({
+            statusCode: 400,
+        })
     })
 })
 

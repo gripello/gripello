@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { uiaa } from '../../support/seed'
+import { e2eGymId, uiaa } from '../../support/seed'
 import { authHeader, gotoSettled } from '../../support/nav'
 import { seedMap } from '../../support/map'
 
@@ -53,7 +53,7 @@ test('walls must fit the floor plan and routes must stay in their location', asy
     const seeded = await seedMap(root, testPrefix, { routes: 1 })
     const otherLocation = await root
         .collection('locations')
-        .create({ name: `${testPrefix} Plain Hall` })
+        .create({ name: `${testPrefix} Plain Hall`, gym: await e2eGymId(root) })
     try {
         await expect(
             root.collection('walls').create({

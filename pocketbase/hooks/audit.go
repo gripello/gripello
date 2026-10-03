@@ -23,6 +23,7 @@ type auditEntry struct {
 	Action         string
 	CollectionName string
 	RecordID       string
+	Gym            string
 	ChangedFields  []string
 	IP             string
 }
@@ -37,6 +38,7 @@ func registerAudit(app core.App) {
 			return err
 		}
 		entry.RecordID = e.Record.Id
+		entry.Gym = e.Record.GetString("gym")
 		writeAuditEntry(e.App, entry)
 		return nil
 	})
@@ -47,6 +49,7 @@ func registerAudit(app core.App) {
 		}
 		entry := requestAuditEntry(e.RequestEvent, "update", e.Collection.Name)
 		entry.RecordID = e.Record.Id
+		entry.Gym = e.Record.GetString("gym")
 		entry.ChangedFields = changedFieldNames(e.Record.Original().FieldsData(), e.Record.FieldsData())
 		if err := e.Next(); err != nil {
 			return err
@@ -61,6 +64,7 @@ func registerAudit(app core.App) {
 		}
 		entry := requestAuditEntry(e.RequestEvent, "delete", e.Collection.Name)
 		entry.RecordID = e.Record.Id
+		entry.Gym = e.Record.GetString("gym")
 		if e.Collection.Name == "users" && entry.Actor == e.Record.Id {
 			entry.Actor = ""
 		}
@@ -198,6 +202,7 @@ func writeAuditEntry(app core.App, entry auditEntry) {
 	record.Set("action", entry.Action)
 	record.Set("collection_name", entry.CollectionName)
 	record.Set("record_id", entry.RecordID)
+	record.Set("gym", entry.Gym)
 	record.Set("changed_fields", entry.ChangedFields)
 	record.Set("ip", entry.IP)
 
@@ -223,7 +228,7 @@ func changedFieldNames(before map[string]any, after map[string]any) []string {
 }
 
 func auditRetentionDays(app core.App) int {
-	settings, err := app.FindRecordById("settings", "settings_123456")
+	settings, err := app.FindRecordById("settings", platformSettingsID)
 	if err != nil {
 		return defaultAuditRetentionDays
 	}

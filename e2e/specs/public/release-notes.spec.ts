@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 
 const ROLLING_PAYLOAD = {
     installed: {
@@ -34,7 +34,7 @@ test('release notes list new commits and filter the release changes', async ({
     await page.route('**/api/version', (route) =>
         route.fulfill({ json: ROLLING_PAYLOAD }),
     )
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     await page.getByTestId('footer-version').click()
 
     const dialog = page.getByTestId('release-notes-dialog')

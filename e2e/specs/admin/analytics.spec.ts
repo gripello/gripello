@@ -1,7 +1,12 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
-import { authHeader, gotoSettled, gotoSubscribed } from '../../support/nav'
-import { gradeOf, uiaa } from '../../support/seed'
+import {
+    authHeader,
+    gotoSettled,
+    gotoSubscribed,
+    gymPath,
+} from '../../support/nav'
+import { e2eGym, gradeOf, uiaa } from '../../support/seed'
 
 function stat(page: Page, key: string) {
     return page
@@ -72,7 +77,7 @@ test('analytics api rejects users without the view_analytics permission', async 
     userPage: page,
     request,
 }) => {
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     const forbidden = await page.request.get('/api/manage/analytics', {
         headers: await authHeader(page),
     })
@@ -115,6 +120,7 @@ test('grade charts switch discipline in place and follow the type filter', async
 }) => {
     for (const type of ['Route', 'Boulder']) {
         await root.collection('routes').create({
+            gym: await e2eGym(),
             name: `${testPrefix}-${type}`,
             ...(type === 'Boulder' ? gradeOf('font', '6A') : uiaa('6')),
             type,
@@ -199,6 +205,7 @@ test('updates live when a route is created elsewhere', async ({
         analyticsListsSetter(response, setter),
     )
     await root.collection('routes').create({
+        gym: await e2eGym(),
         name: `${testPrefix}-live-route`,
         ...uiaa('5'),
         type: 'Route',
@@ -226,6 +233,7 @@ test('refreshes during a steady stream of route changes', async ({
             async () => {
                 if (!refreshed) {
                     await root.collection('routes').create({
+                        gym: await e2eGym(),
                         name: `${testPrefix}-stream-route-${index++}`,
                         ...uiaa('5'),
                         type: 'Route',
@@ -263,6 +271,7 @@ test('heatmap switches years and shows day counts', async ({
     testPrefix,
 }) => {
     await root.collection('routes').create({
+        gym: await e2eGym(),
         name: `${testPrefix}-heatmap-route`,
         ...uiaa('5'),
         type: 'Route',
@@ -295,6 +304,7 @@ test('reports routes whose grade votes are harder than the set grade', async ({
     testPrefix,
 }) => {
     const route = await root.collection('routes').create({
+        gym: await e2eGym(),
         name: `${testPrefix}-sandbag`,
         ...uiaa('1'),
         type: 'Route',
@@ -313,9 +323,12 @@ test('reports routes whose grade votes are harder than the set grade', async ({
         page.getByTestId('analytics-chart-grade-feedback'),
     ).toBeVisible()
 
-    const response = await page.request.get('/api/manage/analytics?range=all', {
-        headers: await authHeader(page),
-    })
+    const response = await page.request.get(
+        `/api/manage/analytics?range=all&gym=${await e2eGym()}`,
+        {
+            headers: await authHeader(page),
+        },
+    )
     const { grades } = await response.json()
     const gradeFeedback = grades.Route.gradeFeedback
     const sandbag = gradeFeedback.find(
@@ -332,6 +345,7 @@ test('archiving a route stamps archived_at and restoring clears it', async ({
 }) => {
     const routes = root.collection('routes')
     const route = await routes.create({
+        gym: await e2eGym(),
         name: `${testPrefix}-archive`,
         ...uiaa('4'),
         type: 'Boulder',
@@ -358,6 +372,7 @@ test('archived routes are left out like on the routes page unless included', asy
 }) => {
     const setter = `${testPrefix}-archived-setter`
     await root.collection('routes').create({
+        gym: await e2eGym(),
         name: `${testPrefix}-archived-analytics`,
         ...uiaa('5'),
         type: 'Boulder',
@@ -367,7 +382,7 @@ test('archived routes are left out like on the routes page unless included', asy
     await gotoSettled(page, '/manage/analytics')
     const settersFor = async (query: string) => {
         const response = await page.request.get(
-            `/api/manage/analytics?range=all${query}`,
+            `/api/manage/analytics?range=all&gym=${await e2eGym()}${query}`,
             { headers: await authHeader(page) },
         )
         const body = (await response.json()) as {

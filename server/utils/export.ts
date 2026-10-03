@@ -1,6 +1,12 @@
-import { getQuery, readBody, getRequestURL, type H3Event } from 'h3'
+import {
+    createError,
+    getQuery,
+    readBody,
+    getRequestURL,
+    type H3Event,
+} from 'h3'
 import type PocketBase from 'pocketbase'
-import type { RouteRecord, SettingsRecord } from '../../types/models'
+import type { RouteRecord } from '../../types/models'
 import {
     formatDate,
     locationName,
@@ -11,6 +17,7 @@ import { formatGrade } from '#shared/utils/grades'
 
 interface ExportBody {
     ids?: unknown[]
+    gym?: unknown
     locale?: unknown
     labels?: Record<string, unknown>
     typeLabels?: Record<string, unknown>
@@ -24,6 +31,7 @@ interface FetchByIdsOptions {
     field: string
     requestKey: string
     expand?: string
+    gym: string
 }
 
 export interface ExportColumn {
@@ -81,7 +89,7 @@ export async function fetchRecordsByIds<T = RouteRecord>(
     pb: PocketBase,
     options: FetchByIdsOptions,
 ): Promise<T[]> {
-    const { collection, ids, field, requestKey, expand } = options
+    const { collection, ids, field, requestKey, expand, gym } = options
     if (ids.length === 0) {
         return []
     }
@@ -89,7 +97,7 @@ export async function fetchRecordsByIds<T = RouteRecord>(
     const chunks = chunk(ids, 25)
     const requests = chunks.map((chunkIds, index) => {
         return pb.collection(collection).getFullList<T>({
-            filter: buildIdFilter(pb, chunkIds, field),
+            filter: `(${buildIdFilter(pb, chunkIds, field)}) && ${pb.filter('gym = {:gym}', { gym })}`,
             expand,
             requestKey: `${requestKey}-${index}`,
         })
@@ -99,17 +107,22 @@ export async function fetchRecordsByIds<T = RouteRecord>(
     return results.flat()
 }
 
-export function resolveApplicationUrl(
-    event: H3Event,
-    settings: SettingsRecord | null | undefined,
-) {
-    return (
-        settings?.application_url ||
-        getRequestURL(event, {
-            xForwardedHost: true,
-            xForwardedProto: true,
-        }).origin
-    ).replace(/\/+$/, '')
+export function resolveApplicationUrl(event: H3Event) {
+    return getRequestURL(event, {
+        xForwardedHost: true,
+        xForwardedProto: true,
+    }).origin.replace(/\/+$/, '')
+}
+
+export async function resolveExportGymId(event: H3Event) {
+    const gym = (await readExportBody(event))?.gym
+    if (typeof gym !== 'string' || !gym.trim()) {
+        throw createError({
+            statusCode: 400,
+            statusMessage: 'No gym provided.',
+        })
+    }
+    return gym.trim()
 }
 
 export async function resolveExportLocale(event: H3Event): Promise<string> {

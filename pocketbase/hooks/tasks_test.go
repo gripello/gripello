@@ -138,14 +138,21 @@ func TestUrgentDefectAlertEscapesClimberText(t *testing.T) {
 	task.Set("route", "r1")
 	task.Set("description", "<script>alert(1)</script>")
 
-	body := urgentDefectAlertHTML("https://gym.example", "<b>Arete</b>", task)
+	body := urgentDefectAlertHTML("https://gym.example", "/demo/manage/tasks", "<b>Arete</b>", task)
 
 	if strings.Contains(body, "<script>") || strings.Contains(body, "<b>Arete</b>") {
 		t.Errorf("unescaped climber text in mail: %s", body)
 	}
-	for _, want := range []string{"Loose bolt / screw", "https://gym.example/route?id=r1", "https://gym.example/manage/tasks"} {
+	for _, want := range []string{"Loose bolt / screw", "https://gym.example/route?id=r1", "https://gym.example/demo/manage/tasks"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("mail lacks %q: %s", want, body)
 		}
+	}
+}
+
+func TestDefectFiledParamsNameTheGym(t *testing.T) {
+	params := defectFiledParams("Crimp line", "Boulderhalle Nord")
+	if params["route"] != "Crimp line" || params["gym"] != "Boulderhalle Nord" {
+		t.Fatalf("params = %v", params)
 	}
 }

@@ -12,7 +12,7 @@ test('fetches the role list once per page load', async ({
     })
 
     await gotoSettled(page, '/admin/users')
-    await expect(page.getByTestId('user-create-open')).toBeVisible()
+    await expect(page.getByTestId('member-invite-open')).toBeVisible()
 
     expect(roleRequests.length).toBeLessThanOrEqual(1)
 })
@@ -21,9 +21,9 @@ test('the role picker is populated without a fetch of its own', async ({
     adminPage: page,
 }) => {
     await gotoSettled(page, '/admin/users')
-    await page.getByTestId('user-create-open').click()
-    await expect(page.getByTestId('user-create-dialog')).toBeVisible()
+    await page.getByTestId('member-invite-open').click()
+    await expect(page.getByTestId('member-invite-dialog')).toBeVisible()
 
-    await page.getByTestId('user-create-role').click()
+    await page.getByTestId('member-invite-role').click()
     await expect(page.getByRole('option').first()).toBeVisible()
 })

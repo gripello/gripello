@@ -1,5 +1,9 @@
 import { createError, eventHandler, getHeader, getQuery } from 'h3'
-import { createPocketBase, requirePermission } from '../../utils/pb-server'
+import {
+    createPocketBase,
+    getAuthenticatedPb,
+    requirePermission,
+} from '../../utils/pb-server'
 import {
     cachedResultsUsable,
     loadResults,
@@ -12,9 +16,16 @@ const publicCache = new Map<
     { at: number; results: Promise<CompetitionResults> }
 >()
 
-async function staffClient(event: Parameters<typeof getHeader>[0]) {
+async function staffClient(event: Parameters<typeof getHeader>[0], id: string) {
     if (!getHeader(event, 'authorization')) return null
-    return requirePermission(event, 'manage_competitions').catch(() => null)
+    try {
+        const { gym } = await getAuthenticatedPb(event)
+            .collection('competitions')
+            .getOne<CompetitionRecord>(id, { fields: 'gym', requestKey: null })
+        return await requirePermission(event, 'manage_competitions', gym ?? '')
+    } catch {
+        return null
+    }
 }
 
 export default eventHandler(async (event) => {
@@ -25,7 +36,7 @@ export default eventHandler(async (event) => {
         throw createError({ statusCode: 400, statusMessage: 'Missing id.' })
     }
 
-    const staffPb = await staffClient(event)
+    const staffPb = await staffClient(event, id)
     const cached = publicCache.get(id)
     if (
         !staffPb &&

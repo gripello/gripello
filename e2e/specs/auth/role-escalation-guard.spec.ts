@@ -1,6 +1,19 @@
 import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { ensureUser, getRoleIds } from '../../support/seed'
+import { e2eGymId, ensureUser, getRoleIds } from '../../support/seed'
+
+async function membershipOf(root: PocketBase, user: string) {
+    return root
+        .collection('memberships')
+        .getFirstListItem(
+            root.filter('user = {:user} && gym = {:gym}', {
+                user,
+                gym: await e2eGymId(root),
+            }),
+            { requestKey: null },
+        )
+        .catch(() => null)
+}
 
 const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
 
@@ -23,15 +36,18 @@ test.describe('role escalation guard', () => {
         root,
         testPrefix,
     }) => {
-        const { pb, id, roleId } = await throwaway(root, 'user', testPrefix)
+        const { pb, id } = await throwaway(root, 'user', testPrefix)
         const adminRole = (await getRoleIds(root)).admin
 
         await expect(
-            pb.collection('users').update(id, { role: adminRole }),
-        ).rejects.toMatchObject({ status: 403 })
+            pb.collection('memberships').create({
+                user: id,
+                gym: await e2eGymId(root),
+                role: adminRole,
+            }),
+        ).rejects.toMatchObject({ status: 400 })
 
-        const after = await root.collection('users').getOne(id)
-        expect(after.role).toBe(roleId)
+        expect(await membershipOf(root, id)).toBeNull()
     })
 
     test('a plain member can still edit their own profile', async ({
@@ -57,9 +73,11 @@ test.describe('role escalation guard', () => {
         const setterRole = (await getRoleIds(root)).routesetter
         expect(target.roleId).not.toBe(setterRole)
 
-        const moved = await manager.pb
-            .collection('users')
-            .update(target.id, { role: setterRole })
+        const moved = await manager.pb.collection('memberships').create({
+            user: target.id,
+            gym: await e2eGymId(root),
+            role: setterRole,
+        })
 
         expect(moved.role).toBe(setterRole)
     })
@@ -83,10 +101,12 @@ test.describe('user manager without admin role', () => {
 
     async function managerSetup(prefix: string) {
         const managerRole = await root.collection('roles').create({
+            gym: await e2eGymId(root),
             name: `${prefix}-mgr-role`,
             permissions: await permissionIds(['manage_users']),
         })
         const narrowRole = await root.collection('roles').create({
+            gym: await e2eGymId(root),
             name: `${prefix}-narrow-role`,
             permissions: [],
         })
@@ -130,30 +150,36 @@ test.describe('user manager without admin role', () => {
         )
         try {
             const adminRole = (await getRoleIds(root)).admin
+            const memberships = setup.pb.collection('memberships')
+            const own = await membershipOf(root, setup.manager.id)
+            const target = await membershipOf(root, setup.target.id)
 
             await expect(
-                setup.pb
-                    .collection('users')
-                    .update(setup.manager.id, { role: adminRole }),
+                memberships.update(own!.id, { role: adminRole }),
             ).rejects.toMatchObject({ status: 403 })
             await expect(
-                setup.pb
-                    .collection('users')
-                    .update(setup.target.id, { role: adminRole }),
+                memberships.update(target!.id, { role: adminRole }),
             ).rejects.toMatchObject({ status: 403 })
-            await expect(
-                setup.pb.collection('users').create({
-                    email: `${setup.managerRole.name}-new@gripello.test`,
-                    password: 'E2ePassw0rd!',
-                    passwordConfirm: 'E2ePassw0rd!',
-                    role: adminRole,
-                }),
-            ).rejects.toMatchObject({ status: 403 })
+            const outsider = await ensureUser(
+                root,
+                undefined,
+                'user',
+                `${setup.managerRole.name}-out`,
+            )
+            try {
+                await expect(
+                    setup.pb.send(`/api/gyms/${await e2eGymId(root)}/members`, {
+                        method: 'POST',
+                        body: { email: outsider.email, role: adminRole },
+                    }),
+                ).rejects.toMatchObject({ status: 403 })
+                expect(await membershipOf(root, outsider.id)).toBeNull()
+            } finally {
+                await root.collection('users').delete(outsider.id)
+            }
 
-            const target = await root
-                .collection('users')
-                .getOne(setup.target.id)
-            expect(target.role).toBe(setup.narrowRole.id)
+            const after = await membershipOf(root, setup.target.id)
+            expect(after?.role).toBe(setup.narrowRole.id)
         } finally {
             await teardown(setup)
         }
@@ -188,9 +214,10 @@ test.describe('user manager without admin role', () => {
             `guard-sub-w${info.workerIndex}-${Date.now()}`,
         )
         try {
+            const target = await membershipOf(root, setup.target.id)
             const moved = await setup.pb
-                .collection('users')
-                .update(setup.target.id, { role: setup.managerRole.id })
+                .collection('memberships')
+                .update(target!.id, { role: setup.managerRole.id })
 
             expect(moved.role).toBe(setup.managerRole.id)
         } finally {

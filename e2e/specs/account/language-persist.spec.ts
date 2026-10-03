@@ -1,6 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import { fillLogin } from '../../support/auth'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 
 test('the chosen language is saved on the user and restored on the next login', async ({
     page: secondSession,
@@ -34,6 +34,6 @@ test('the chosen language is saved on the user and restored on the next login', 
     )
     await expect(secondSession.locator('html')).toHaveAttribute('lang', 'de')
 
-    const ssrResponse = await secondSession.goto('/')
+    const ssrResponse = await secondSession.goto(gymPath('/'))
     expect(await ssrResponse!.text()).toContain('lang="de"')
 })
