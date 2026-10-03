@@ -1,5 +1,8 @@
+import { navTestId } from '~/utils/nav'
+
 export interface NavLink {
     to: string
+    path?: string
     icon: string
     label: string
     permission?: string
@@ -14,6 +17,9 @@ export interface NavItem extends Partial<NavLink> {
 }
 
 type Can = (permission: string) => boolean
+
+export const PLATFORM_ADMIN = 'platform_admin'
+export const PLATFORM_ADMIN_GRANTS = ['manage_settings', 'manage_users']
 
 export const BOTTOM_NAV: NavLink[] = [
     { to: '/map', icon: 'i-lucide-map', label: 'routes.map' },
@@ -151,13 +157,88 @@ export const NAV_ITEMS: NavItem[] = [
             },
         ],
     },
+    {
+        key: 'platform',
+        icon: 'i-lucide-building-2',
+        label: 'nav.platform',
+        children: [
+            {
+                to: '/platform',
+                icon: 'i-lucide-layout-dashboard',
+                label: 'platform.overview.title',
+                permission: PLATFORM_ADMIN,
+            },
+            {
+                to: '/platform/gyms',
+                icon: 'i-lucide-building-2',
+                label: 'platform.gyms.title',
+                permission: PLATFORM_ADMIN,
+            },
+            {
+                to: '/platform/settings',
+                icon: 'i-lucide-sliders-horizontal',
+                label: 'platform.settings.title',
+                permission: PLATFORM_ADMIN,
+            },
+        ],
+    },
 ]
+
+const GYMLESS_PATHS = ['/logbook', '/account', '/scan', '/platform']
+
+const isGymless = (to: string) =>
+    GYMLESS_PATHS.some((path) => to === path || to.startsWith(`${path}/`))
+
+export function gymLink(to: string, slug: string) {
+    if (isGymless(to) || !slug) return to
+    return to === '/' ? `/${slug}` : `/${slug}${to}`
+}
+
+export function withGymSlug(fullPath: string, slug: string) {
+    return fullPath.replace(/^\/[^/?#]+/, `/${slug}`)
+}
+
+export function gymSwitchPath(
+    path: string,
+    slug: string,
+    opensRecord: boolean,
+) {
+    const rest = path.split('/').slice(2).filter(Boolean)
+    if (!opensRecord) return `/${[slug, ...rest].join('/')}`
+    const section = rest.slice(
+        0,
+        ['manage', 'admin'].includes(rest[0]!) ? 2 : 1,
+    )
+    if (section[0] === 'route') section[0] = 'routes'
+    return `/${[slug, ...section].join('/')}`
+}
+
+export function withGym<T extends { to?: string; children?: NavLink[] }>(
+    items: T[],
+    slug: string,
+): T[] {
+    const available = (to: string) => !!slug || to === '/' || isGymless(to)
+    return items
+        .filter((item) => !item.to || available(item.to))
+        .map((item) => ({
+            ...item,
+            ...(item.to && { to: gymLink(item.to, slug), path: item.to }),
+            ...(item.children && {
+                children: withGym(item.children, slug),
+            }),
+        }))
+}
 
 const allowed = (can: Can) => (link: { permission?: string }) =>
     !link.permission || can(link.permission)
 
-export function visibleNavItems(can: Can, signedIn = true): NavItem[] {
-    return NAV_ITEMS.filter((item) => signedIn || !item.signedIn)
+export function visibleNavItems(
+    can: Can,
+    signedIn = true,
+    slug = '',
+): NavItem[] {
+    return withGym(NAV_ITEMS, slug)
+        .filter((item) => signedIn || !item.signedIn)
         .map((item) =>
             item.children
                 ? { ...item, children: item.children.filter(allowed(can)) }
@@ -170,24 +251,75 @@ export function visibleNavItems(can: Can, signedIn = true): NavItem[] {
 
 export function staffSections(
     can: Can,
-): { key: string; label: string; links: NavLink[] }[] {
-    return NAV_ITEMS.filter((item) => item.children)
+    slug = '',
+): { key: string; label: string; icon: string; links: NavLink[] }[] {
+    return withGym(NAV_ITEMS, slug)
+        .filter((item) => item.children)
         .map((group) => ({
             key: group.key,
             label: group.label,
+            icon: group.icon,
             links: group.children!.filter(allowed(can)),
         }))
         .filter((section) => section.links.length > 0)
 }
 
-export function pageLinks(signedIn: boolean): NavLink[] {
+export interface SidebarItem {
+    label: string
+    icon: string
+    to?: string
+    testid: string
+    current?: boolean
+    defaultOpen?: boolean
+    children?: SidebarItem[]
+}
+
+const isWithin = (path: string, to: string) =>
+    path === to || path.startsWith(`${to}/`)
+
+export function sidebarItems(
+    can: Can,
+    signedIn: boolean,
+    slug: string,
+    currentPath: string,
+    t: (key: string) => string,
+): SidebarItem[][] {
+    const toItem = (link: NavLink): SidebarItem => ({
+        label: t(link.label),
+        icon: link.icon,
+        to: link.to,
+        testid: `nav-link-${navTestId(link.path ?? link.to)}`,
+    })
+    const pages = visibleNavItems(can, signedIn, slug)
+        .filter((item) => !item.children && !item.permission)
+        .map((item) => toItem(item as NavLink))
+    const groups = staffSections(can, slug).map((section) => {
+        const current = section.links.some((link) =>
+            isWithin(currentPath, link.to),
+        )
+        return {
+            label: t(section.label),
+            icon: section.icon,
+            testid: `nav-group-${section.key}`,
+            current,
+            defaultOpen: current,
+            children: section.links.map(toItem),
+        }
+    })
+    return [pages, groups]
+}
+
+export function pageLinks(signedIn: boolean, slug = ''): NavLink[] {
     const inBottomNav = new Set(BOTTOM_NAV.map((link) => link.to))
-    return NAV_ITEMS.filter(
-        (item) =>
-            item.to &&
-            !item.children &&
-            !item.permission &&
-            (signedIn || !item.signedIn) &&
-            !inBottomNav.has(item.to),
+    return withGym(
+        NAV_ITEMS.filter(
+            (item) =>
+                item.to &&
+                !item.children &&
+                !item.permission &&
+                (signedIn || !item.signedIn) &&
+                !inBottomNav.has(item.to),
+        ),
+        slug,
     ) as NavLink[]
 }

@@ -103,6 +103,7 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
             icon: 'i-lucide-user-pen',
             to: '/account/settings',
         },
+
         {
             'data-testid': 'user-menu-activity',
             label: t('routes.activity'),

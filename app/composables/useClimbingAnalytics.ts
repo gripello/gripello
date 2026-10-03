@@ -15,6 +15,7 @@ export function useClimbingAnalytics() {
     const router = useRouter()
     const pb = usePocketbase()
     const requestFetch = useRequestFetch()
+    const gymId = useCurrentGymId()
 
     const query = computed<AnalyticsQuery>(() =>
         Object.fromEntries(
@@ -38,12 +39,12 @@ export function useClimbingAnalytics() {
         'climbing-analytics',
         () =>
             requestFetch<AnalyticsResponse>('/api/manage/analytics', {
-                query: query.value,
+                query: { ...query.value, gym: gymId.value },
                 headers: pb.authStore.token
                     ? { Authorization: pb.authStore.token }
                     : undefined,
             }),
-        { watch: [query] },
+        { watch: [query, gymId], enabled: () => !!gymId.value },
     )
 
     const initialLoading = computed(

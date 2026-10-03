@@ -37,6 +37,9 @@ var serverOwnedTaskFields = []string{"kind", "reporter", "done_at", "done_by"}
 func registerTasks(app core.App) {
 	app.OnRecordCreateRequest("tasks").BindFunc(func(e *core.RecordRequestEvent) error {
 		actorID := requestUserID(e)
+		if err := attachTaskTarget(e.App, e.Record, true); err != nil {
+			return err
+		}
 		if !isTaskManager(e) {
 			restrictToDefectReport(e.Record)
 		}
@@ -51,19 +54,16 @@ func registerTasks(app core.App) {
 		if err := validateTask(e.Record); err != nil {
 			return err
 		}
-		if err := attachTaskTarget(e.App, e.Record, true); err != nil {
-			return err
-		}
 		if err := e.Next(); err != nil {
 			return err
 		}
 
 		if e.Record.GetString("kind") == "defect" {
 			pushNotification(e.App, notification{
-				Users:  withoutUser(usersByPermission(e.App, "manage_tasks"), actorID),
+				Users:  withoutUser(usersByPermission(e.App, e.Record.GetString("gym"), "manage_tasks"), actorID),
 				Type:   "task_defect_filed",
-				Params: map[string]any{"route": taskRouteName(e.App, e.Record)},
-				URL:    "/manage/tasks",
+				Params: defectFiledParams(taskRouteName(e.App, e.Record), gymName(e.App, e.Record.GetString("gym"))),
+				URL:    gymPath(e.App, e.Record.GetString("gym"), "/manage/tasks"),
 			})
 			if err := sendUrgentDefectAlert(e.App, e.Record, actorID); err != nil {
 				e.App.Logger().Error("tasks: urgent defect mail failed", "task", e.Record.Id, "error", err)
@@ -123,7 +123,7 @@ func registerTasks(app core.App) {
 }
 
 func isTaskManager(e *core.RecordRequestEvent) bool {
-	return e.HasSuperuserAuth() || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, "manage_tasks"))
+	return e.HasSuperuserAuth() || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, e.Record.GetString("gym"), "manage_tasks"))
 }
 
 func requestUserID(e *core.RecordRequestEvent) string {
@@ -184,10 +184,13 @@ func attachTaskTarget(app core.App, task *core.Record, creating bool) error {
 			return apis.NewBadRequestError("This route has been removed.", nil)
 		}
 		task.Set("location", route.GetString("location"))
-		if task.GetString("wall") == "" {
+		task.Set("gym", route.GetString("gym"))
+		if wallID := task.GetString("wall"); wallID == "" {
 			task.Set("wall", route.GetString("wall"))
+		} else if wall, err := app.FindRecordById("walls", wallID); err != nil || wall.GetString("location") != route.GetString("location") {
+			return apis.NewBadRequestError("The wall is not in the route's location.", nil)
 		}
-		return nil
+		return rejectGymMove(task)
 	}
 	if wallID := task.GetString("wall"); wallID != "" {
 		wall, err := app.FindRecordById("walls", wallID)
@@ -195,8 +198,13 @@ func attachTaskTarget(app core.App, task *core.Record, creating bool) error {
 			return apis.NewBadRequestError("Wall not found.", nil)
 		}
 		task.Set("location", wall.GetString("location"))
+		task.Set("gym", wall.GetString("gym"))
+		return rejectGymMove(task)
 	}
-	return nil
+	if locationID := task.GetString("location"); locationID != "" {
+		return copyGymFrom(app, task, "locations", "location")
+	}
+	return rejectGymMove(task)
 }
 
 func notifyTaskAssignee(app core.App, task *core.Record, actorID string) {
@@ -212,7 +220,7 @@ func notifyTaskAssignee(app core.App, task *core.Record, actorID string) {
 		Users:  []*core.Record{assignee},
 		Type:   "task_assigned",
 		Params: map[string]any{"title": taskLabel(app, task)},
-		URL:    "/manage/tasks",
+		URL:    gymPath(app, task.GetString("gym"), "/manage/tasks"),
 	})
 }
 
@@ -266,7 +274,7 @@ func sendUrgentDefectAlert(app core.App, task *core.Record, reporterID string) e
 		return nil
 	}
 	recipients := []string{}
-	for _, user := range withoutUser(usersByPermission(app, "manage_tasks"), reporterID) {
+	for _, user := range withoutUser(usersByPermission(app, task.GetString("gym"), "manage_tasks"), reporterID) {
 		if address := user.GetString("email"); address != "" && !slices.Contains(recipients, address) {
 			recipients = append(recipients, address)
 		}
@@ -276,10 +284,14 @@ func sendUrgentDefectAlert(app core.App, task *core.Record, reporterID string) e
 	_, err := sendMail(
 		app,
 		recipients,
-		fmt.Sprintf("Urgent: %s on %s - %s", category, routeName, app.Settings().Meta.AppName),
-		urgentDefectAlertHTML(appURL(app), routeName, task),
+		gymMailSubject(app, task.GetString("gym"), fmt.Sprintf("Urgent: %s on %s", category, routeName)),
+		urgentDefectAlertHTML(appURL(app), gymPath(app, task.GetString("gym"), "/manage/tasks"), routeName, task),
 	)
 	return err
+}
+
+func defectFiledParams(routeName, gymName string) map[string]any {
+	return map[string]any{"route": routeName, "gym": gymName}
 }
 
 func defectCategoryLabel(category string) string {
@@ -289,7 +301,7 @@ func defectCategoryLabel(category string) string {
 	return category
 }
 
-func urgentDefectAlertHTML(baseURL, routeName string, task *core.Record) string {
+func urgentDefectAlertHTML(baseURL, boardPath, routeName string, task *core.Record) string {
 	description := ""
 	if text := task.GetString("description"); text != "" {
 		description = fmt.Sprintf("<p><strong>Details:</strong><br>%s</p>", html.EscapeString(text))
@@ -302,7 +314,7 @@ func urgentDefectAlertHTML(baseURL, routeName string, task *core.Record) string 
              <p><strong>Problem:</strong> %s</p>
              <p><strong>Route:</strong> <a href="%s/route?id=%s">%s</a></p>
              %s%s
-             <p><a href="%s/manage/tasks">Open the task board</a></p>`,
+             <p><a href="%s%s">Open the task board</a></p>`,
 		html.EscapeString(defectCategoryLabel(task.GetString("category"))),
 		html.EscapeString(baseURL),
 		html.EscapeString(task.GetString("route")),
@@ -310,5 +322,6 @@ func urgentDefectAlertHTML(baseURL, routeName string, task *core.Record) string 
 		description,
 		photo,
 		html.EscapeString(baseURL),
+		html.EscapeString(boardPath),
 	)
 }

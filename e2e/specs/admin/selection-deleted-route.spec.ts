@@ -2,14 +2,14 @@ import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { PB_URL } from '../../support/map'
-import { authAsSuperuser, uiaa } from '../../support/seed'
+import { authAsSuperuser, e2eGymId, uiaa } from '../../support/seed'
 
 async function seedSite(prefix: string, routeCount: number) {
     const root = new PocketBase(PB_URL)
     await authAsSuperuser(root)
     const location = await root
         .collection('locations')
-        .create({ name: `${prefix}-hall` })
+        .create({ name: `${prefix}-hall`, gym: await e2eGymId(root) })
     const routeIds: string[] = []
     for (let index = 0; index < routeCount; index++) {
         const route = await root.collection('routes').create({

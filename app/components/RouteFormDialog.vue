@@ -281,6 +281,7 @@ import {
 const { t } = useI18n()
 const { error: notifyError } = useNotification()
 const pb = usePocketbase() as PocketBase
+const gymId = useCurrentGymId()
 
 const fallbackColors = [
     '#F44336',
@@ -349,7 +350,10 @@ async function fetchUsedColors() {
     try {
         const records = await pb
             .collection('usedColors')
-            .getFullList<{ color: string }>({ fields: 'color' })
+            .getFullList<{ color: string }>({
+                fields: 'color',
+                filter: pb.filter('gym = {:gym}', { gym: gymId.value }),
+            })
         usedColorsList.value = records.map((r) => r.color).filter(Boolean)
     } catch {
         usedColorsList.value = []

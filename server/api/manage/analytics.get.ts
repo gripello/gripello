@@ -16,19 +16,24 @@ const RATING_FIELDS =
     'id,route_id,rating,grade,grade_system,grade_index,comment,created'
 
 export default eventHandler(async (event) => {
-    const pb = await requirePermission(event, 'view_analytics')
-    const filters = resolveFilters(getQuery(event) as AnalyticsQuery)
+    const query = getQuery(event)
+    const gym = typeof query.gym === 'string' ? query.gym : ''
+    const pb = await requirePermission(event, 'view_analytics', gym)
+    const filters = resolveFilters(query as AnalyticsQuery)
+    const filter = pb.filter('gym = {:gym}', { gym })
 
     try {
         const [routes, ratings] = await Promise.all([
             pb.collection('routes').getFullList<RouteRecord>({
                 batch: 500,
+                filter,
                 expand: 'location',
                 fields: ROUTE_FIELDS,
                 requestKey: null,
             }),
             pb.collection('ratings').getFullList<RatingRecord>({
                 batch: 500,
+                filter,
                 fields: RATING_FIELDS,
                 requestKey: null,
             }),

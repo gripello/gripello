@@ -23,7 +23,7 @@ func registerRouteArchiveStamp(app core.App) {
 	app.OnRecordUpdate("routes").BindFunc(stamp)
 
 	app.OnRecordUpdateRequest("routes").BindFunc(func(e *core.RecordRequestEvent) error {
-		if e.HasSuperuserAuth() || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, "manage_routes")) {
+		if e.HasSuperuserAuth() || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, e.Record.Original().GetString("gym"), "manage_routes")) {
 			return e.Next()
 		}
 		if !onlyArchiveChanged(changedFieldNames(e.Record.Original().FieldsData(), e.Record.FieldsData())) {
@@ -52,14 +52,15 @@ func archivedAt(wasArchived, isArchived bool, current, now types.DateTime) types
 func registerRatingImport(app core.App) {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.POST("/api/import/ratings", func(e *core.RequestEvent) error {
-			if !hasPermission(e.App, e.Auth.Id, "manage_routes") {
-				return e.ForbiddenError("Importing ratings requires manage_routes.", nil)
-			}
 			var body struct {
+				Gym     string           `json:"gym"`
 				Ratings []map[string]any `json:"ratings"`
 			}
 			if err := e.BindBody(&body); err != nil {
 				return e.BadRequestError("Invalid import payload.", err)
+			}
+			if !hasPermission(e.App, e.Auth.Id, body.Gym, "manage_routes") {
+				return e.ForbiddenError("Importing ratings requires manage_routes.", nil)
 			}
 			collection, err := e.App.FindCachedCollectionByNameOrId("ratings")
 			if err != nil {
@@ -68,8 +69,13 @@ func registerRatingImport(app core.App) {
 			failed := 0
 			for _, data := range body.Ratings {
 				delete(data, "id")
+				delete(data, "gym")
 				record := core.NewRecord(collection)
 				record.Load(data)
+				if route, err := e.App.FindRecordById("routes", record.GetString("route_id")); err != nil || route.GetString("gym") != body.Gym {
+					failed++
+					continue
+				}
 				if err := e.App.Save(record); err != nil {
 					failed++
 				}

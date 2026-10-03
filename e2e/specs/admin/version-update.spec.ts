@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 import type { Page } from '@playwright/test'
 
 const RELEASE_PAYLOAD = {
@@ -72,7 +72,7 @@ test('announces a new release next to the version and opens its notes', async ({
     adminPage: page,
 }) => {
     await stubVersion(page, RELEASE_PAYLOAD)
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
 
     await page.getByTestId('footer-update').click()
 
@@ -86,7 +86,7 @@ test('announces a new release next to the version and opens its notes', async ({
 
 test('announces new commits and lists them', async ({ adminPage: page }) => {
     await stubVersion(page, COMMIT_PAYLOAD)
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
 
     await page.getByTestId('footer-update').click()
 
@@ -104,7 +104,7 @@ test('stays hidden when the deployment is current', async ({
     adminPage: page,
 }) => {
     await stubVersion(page, UP_TO_DATE)
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
 
     await expect(page.getByTestId('user-menu-activator')).toBeVisible()
     await expect(page.getByTestId('footer-update')).toBeHidden()
@@ -112,7 +112,7 @@ test('stays hidden when the deployment is current', async ({
 
 test('stays hidden for climbers', async ({ userPage: page }) => {
     await stubVersion(page, RELEASE_PAYLOAD)
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
 
     await expect(page.getByTestId('footer-version')).toBeVisible()
     await expect(page.getByTestId('footer-update')).toBeHidden()
@@ -122,7 +122,7 @@ test('the footer pill shows the installed release notes to a logged-out visitor'
     page,
 }) => {
     await stubVersion(page, UP_TO_DATE)
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
 
     await expect(page.getByTestId('footer-update')).toBeHidden()
 

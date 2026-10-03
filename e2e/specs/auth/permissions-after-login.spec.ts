@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { fillLogin } from '../../support/auth'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 
 async function signIn(page: Page) {
     await fillLogin(page, 'e2e-routesetter@gripello.test', 'E2ePassw0rd!')
@@ -22,7 +22,7 @@ async function logOut(page: Page) {
 test('a guest who signs in keeps the redirect to a permission-guarded page', async ({
     page,
 }) => {
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     await page.waitForLoadState('networkidle')
     await gotoSettled(page, '/manage/comments', /\/auth\/login/)
     await signIn(page)
@@ -34,7 +34,10 @@ test('a guest who signs in keeps the redirect to a permission-guarded page', asy
 test('signing in again after a logout in the same session reaches the dashboard', async ({
     page,
 }) => {
-    await gotoSettled(page, '/auth/login?redirect=/manage/comments')
+    await gotoSettled(
+        page,
+        `/auth/login?redirect=${gymPath('/manage/comments')}`,
+    )
     await signIn(page)
     await page.waitForURL('**/manage/comments')
 

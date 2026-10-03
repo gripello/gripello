@@ -150,11 +150,26 @@ func registerCompetitions(app core.App) {
 }
 
 func isCompetitionManager(e *core.RecordRequestEvent) bool {
-	return e.HasSuperuserAuth() || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, "manage_competitions"))
+	return e.HasSuperuserAuth() || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, competitionGym(e.App, e.Record), "manage_competitions"))
 }
 
 func isCompetitionStaff(e *core.RecordRequestEvent) bool {
-	return isCompetitionManager(e) || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, "judge_competitions"))
+	return isCompetitionManager(e) || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, competitionGym(e.App, e.Record), "judge_competitions"))
+}
+
+func competitionGym(app core.App, record *core.Record) string {
+	if record.Collection().Name == "competitions" {
+		return record.GetString("gym")
+	}
+	source := record
+	if original := record.Original(); original.Id != "" {
+		source = original
+	}
+	competition, err := app.FindRecordById("competitions", source.GetString("competition"))
+	if err != nil {
+		return ""
+	}
+	return competition.GetString("gym")
 }
 
 func stampFreezeAt(competition *core.Record) {
@@ -183,6 +198,9 @@ func validateCompetitionRoute(app core.App, compRoute *core.Record) error {
 	route, err := app.FindRecordById("routes", compRoute.GetString("route"))
 	if err != nil || route.GetString("type") != routeTypeByDiscipline[competition.GetString("discipline")] {
 		return apis.NewBadRequestError("This route does not fit the discipline.", nil)
+	}
+	if route.GetString("gym") != competition.GetString("gym") {
+		return apis.NewBadRequestError("The route belongs to another gym.", nil)
 	}
 	if competition.GetString("discipline") == "rope" {
 		compRoute.Set("zone", false)

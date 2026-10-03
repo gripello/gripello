@@ -1,6 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { gradeOf } from '../../support/seed'
+import { e2eGymId, gradeOf } from '../../support/seed'
 
 test('settings show the grading scale per route type', async ({
     adminPage: page,
@@ -84,6 +84,7 @@ test('editing keeps the route scale and switching type resets the grade', async 
 }) => {
     const name = `${testPrefix}-french-route`
     await root.collection('routes').create({
+        gym: await e2eGymId(root),
         name,
         ...gradeOf('french', '6b'),
         type: 'Route',
@@ -119,6 +120,7 @@ test('route page links its grade to the IRCRA conversion table', async ({
     testPrefix,
 }) => {
     const route = await root.collection('routes').create({
+        gym: await e2eGymId(root),
         name: `${testPrefix}-conversion`,
         ...gradeOf('french', '7a'),
         type: 'Route',

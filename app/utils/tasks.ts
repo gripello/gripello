@@ -161,6 +161,7 @@ export function statusesFilter(statuses: readonly string[]): string {
 }
 
 export function tasksFilter(options: {
+    gym?: string | null
     kind?: string | null
     assignee?: string | null
     location?: string | null
@@ -168,6 +169,7 @@ export function tasksFilter(options: {
     overdue?: boolean
 }): string {
     const parts: string[] = []
+    if (options.gym) parts.push(`gym = "${options.gym}"`)
     if (options.kind) parts.push(`kind = "${options.kind}"`)
     if (options.assignee) parts.push(`assignee = "${options.assignee}"`)
     if (options.location) parts.push(`location = "${options.location}"`)

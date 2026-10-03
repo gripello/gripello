@@ -159,6 +159,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const pb = usePocketbase()
+const gymId = useCurrentGymId()
 const { error: notifyError } = useNotification()
 
 const dialog = ref(false)
@@ -250,7 +251,9 @@ async function save() {
         if (isEdit.value) {
             await pb.collection('roles').update(props.role!.id!, payload)
         } else {
-            await pb.collection('roles').create(payload)
+            await pb
+                .collection('roles')
+                .create({ ...payload, gym: gymId.value })
         }
         emit('saved', isEdit.value ? 'updated' : 'created')
         close()

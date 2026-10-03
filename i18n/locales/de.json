@@ -127,7 +127,9 @@
         "resendVerificationInfo": "Wir senden dir einen neuen Bestätigungslink an deine E-Mail-Adresse.",
         "confirmPassword": "Passwort bestätigen",
         "showPassword": "Passwort anzeigen",
-        "hidePassword": "Passwort verbergen"
+        "hidePassword": "Passwort verbergen",
+        "myGyms": "Meine Hallen",
+        "noGyms": "Du gehörst zu keinem Hallenteam."
     },
     "routes": {
         "home": "Übersicht",
@@ -444,7 +446,8 @@
                 "report_decided_kept": "Eine Meldung wurde entschieden — Inhalt bleibt online",
                 "task_defect_filed": "Neuer Defekt gemeldet an „{route}“",
                 "task_assigned": "Dir zugewiesen: „{title}“",
-                "task_defect_fixed": "Das gemeldete Problem an „{route}“ wurde behoben — danke!"
+                "task_defect_fixed": "Das gemeldete Problem an „{route}“ wurde behoben — danke!",
+                "task_defect_filed_gym": "Neuer Defekt gemeldet an „{route}“ in {gym}"
             }
         }
     },
@@ -543,13 +546,24 @@
                 "inventorySession": "Speichert den Fortschritt einer Inventur",
                 "inventoryInstructions": "Merkt sich, dass die Inventur-Anleitung angezeigt wurde",
                 "offlineLogbook": "Hält dein Logbuch und noch nicht gesendete Begehungen offline verfügbar",
-                "offlineScores": "Speichert Wettkampfergebnisse, die du ohne Netz eingetragen hast, bis sie gesendet sind"
+                "offlineScores": "Speichert Wettkampfergebnisse, die du ohne Netz eingetragen hast, bis sie gesendet sind",
+                "gym": "Merkt sich die zuletzt geöffnete Halle",
+                "recentGyms": "Zeigt die zuletzt besuchten Hallen auf der Startseite"
             },
             "durations": {
                 "session": "Bis zur Abmeldung",
                 "oneYear": "1 Jahr",
                 "persistent": "Bis zur Löschung im Browser"
             }
+        },
+        "gymImprint": "Impressum von {name}",
+        "gymPage": {
+            "incomplete": "Die Halle hat ihr Impressum noch nicht vervollständigt.",
+            "platformImprint": "Impressum der Plattform",
+            "platformPrivacy": "Datenschutzerklärung der Plattform",
+            "platformTitle": "Plattformbetreiber",
+            "platformBody": "Die Halle betreibt diese Seite auf Gripello. Der Plattformbetreiber verarbeitet Daten im Auftrag der Halle und ist für dein Konto und dein Logbuch über alle Hallen hinweg verantwortlich.",
+            "extraTitle": "Weitere Hinweise der Halle"
         }
     },
     "page": {
@@ -652,7 +666,10 @@
         "manage": "Verwalten",
         "moderation": "Moderation",
         "admin": "Administration",
-        "quickNavigation": "Schnellnavigation"
+        "quickNavigation": "Schnellnavigation",
+        "platform": "Plattform",
+        "allGyms": "Alle Hallen…",
+        "manageGyms": "Hallen verwalten"
     },
     "users": {
         "create": "Benutzer hinzufügen",
@@ -734,22 +751,18 @@
         "replace": "Ersetzen",
         "clickToUpload": "Zum Hochladen klicken",
         "loadError": "Einstellungen konnten nicht geladen werden.",
-        "initError": "Einstellungen konnten nicht angelegt werden.",
         "organization": "Organisation",
         "organizationName": "Name der Organisation",
         "organizationNamePlaceholder": "z. B. Bergsportverein",
         "organizationUnit": "Organisationseinheit",
         "organizationUnitPlaceholder": "z. B. Kletterhalle Nord",
         "publicUrls": "Öffentliche URLs",
-        "applicationUrl": "Anwendungs-URL",
         "imprintUrl": "Impressum-URL",
         "privacyUrl": "Datenschutz-URL",
         "saveSuccess": "Einstellungen gespeichert.",
         "saveError": "Einstellungen konnten nicht gespeichert werden. Bitte erneut versuchen.",
         "contactEmail": "Kontakt-E-Mail",
         "contactEmailHint": "Wird als Kontaktstelle veröffentlicht und über neue Inhaltsmeldungen benachrichtigt.",
-        "auditRetention": "Aufbewahrung des Audit-Protokolls (Tage)",
-        "auditRetentionHint": "Ältere Einträge werden automatisch gelöscht. Standard: 90 Tage.",
         "mailNotConfigured": "E-Mail ist nicht konfiguriert, daher können Passwort-Zurücksetzungen und Meldungsbenachrichtigungen nicht zugestellt werden. SMTP wird in PocketBase konfiguriert, nicht hier.",
         "mailNotConfiguredAction": "PocketBase-E-Mail-Einstellungen öffnen",
         "legalTitle": "Impressum",
@@ -786,8 +799,6 @@
         "routeGradeSystem": "Skala für Routen",
         "boulderGradeSystem": "Skala für Boulder",
         "gradingHint": "Gilt für neu geschraubte Routen. Bestehende Routen behalten ihre Skala bis zur Bearbeitung.",
-        "allowRegistration": "Öffentliche Registrierung erlauben",
-        "allowRegistrationHint": "Jede Person kann ein Kletterkonto ohne Berechtigungen anlegen. Erfordert einen funktionierenden Mailserver für die E-Mail-Bestätigung.",
         "description": "Verwalte Organisation, Branding, Bewertungsskalen und rechtliche Angaben.",
         "sections": "Einstellungsbereiche",
         "branding": "Branding",
@@ -1022,7 +1033,7 @@
         "empty": "Noch nichts aufgezeichnet",
         "emptyHint": "Aktionen erscheinen hier, sobald sie passieren.",
         "anonymous": "Anonym",
-        "superuser": "Administrator (PocketBase)",
+        "superuser": "Plattform-Administrator",
         "retentionNote": "Einträge werden nach {days} Tag automatisch gelöscht. | Einträge werden nach {days} Tagen automatisch gelöscht.",
         "period": {
             "24h": "Letzte 24 Stunden",
@@ -1061,7 +1072,15 @@
             "reports": "Meldung",
             "tasks": "Aufgabe"
         },
-        "changedLabel": "Geändert"
+        "changedLabel": "Geändert",
+        "filter": {
+            "actor": "Akteur",
+            "gym": "Halle"
+        },
+        "actor": {
+            "guests": "Gäste",
+            "me": "Ich"
+        }
     },
     "gradeSystems": {
         "uiaa": "UIAA",
@@ -1178,7 +1197,9 @@
         },
         "pendingSync": "Noch nicht synchronisiert",
         "savedOffline": "Begehung offline gespeichert. Sie wird synchronisiert, sobald du wieder online bist.",
-        "syncFailed": "Synchronisierung fehlgeschlagen"
+        "syncFailed": "Synchronisierung fehlgeschlagen",
+        "gym": "Halle",
+        "allGyms": "Alle Hallen"
     },
     "map": {
         "title": "Hallenplan",
@@ -1676,5 +1697,65 @@
             "entryFee": "Es gibt eine Startgebühr. Bezahle über den Link auf der Wettkampfseite; das Team markiert dich als bezahlt."
         },
         "requiresPayment": "Startgebühr erforderlich"
+    },
+    "members": {
+        "title": "Mitglieder",
+        "invite": "Mitglied hinzufügen",
+        "email": "E-Mail des Kontos",
+        "role": "Rolle",
+        "search": "Mitglieder suchen…",
+        "noMembers": "Keine Mitglieder gefunden",
+        "remove": "Mitglied entfernen",
+        "removeConfirm": "Diese Person aus dem Team der Halle entfernen? Das Konto bleibt bestehen.",
+        "removed": "Mitglied entfernt.",
+        "alreadyMember": "Diese Person ist bereits Mitglied.",
+        "invited": "Konto zur Halle hinzugefügt.",
+        "invitedByMail": "Neues Konto angelegt. Eine E-Mail zum Setzen des Passworts ist unterwegs."
+    },
+    "landing": {
+        "title": "Finde deine Halle",
+        "search": "Hallen suchen",
+        "myGyms": "Meine Hallen",
+        "recent": "Zuletzt besucht",
+        "allGyms": "Alle Hallen",
+        "empty": "Keine Hallen gefunden"
+    },
+    "gym": {
+        "notFound": "Diese Halle gibt es nicht oder sie ist nicht aktiv."
+    },
+    "platform": {
+        "gyms": {
+            "title": "Hallen",
+            "create": "Neue Halle",
+            "delete": "Halle löschen",
+            "name": "Name",
+            "slug": "URL",
+            "active": "Aktiv",
+            "adminEmail": "E-Mail des ersten Admins",
+            "invalidSlug": "3 bis 40 Kleinbuchstaben, Ziffern oder Bindestriche; kein reserviertes Wort.",
+            "created": "Halle angelegt, Einladung verschickt",
+            "inviteFailed": "Halle angelegt, aber die Einladung ist fehlgeschlagen",
+            "deleted": "Halle gelöscht",
+            "deleteConfirm": "„{name}“ mit allen Routen, Wänden, Wettkämpfen und Mitgliedschaften löschen? Das kann nicht rückgängig gemacht werden.",
+            "previousSlugs": "Frühere Adressen",
+            "venue": "Halle",
+            "createdAt": "Angelegt",
+            "open": "Halle öffnen"
+        },
+        "settings": {
+            "title": "Plattform-Einstellungen",
+            "access": "Zugang",
+            "allowRegistration": "Registrierung erlauben",
+            "auditRetentionDays": "Audit-Log aufbewahren (Tage)",
+            "links": "Kontakt & Links"
+        },
+        "overview": {
+            "title": "Übersicht",
+            "activeGyms": "Aktive Hallen",
+            "memberships": "Mitgliedschaften",
+            "routes": "Routen",
+            "admins": "Plattform-Admins",
+            "dashboard": "PocketBase-Dashboard"
+        }
     }
 }

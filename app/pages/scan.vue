@@ -83,7 +83,7 @@
         </p>
         <div class="scan-actions">
             <UButton
-                to="/map"
+                :to="gymSlug ? `/${gymSlug}/map` : '/'"
                 color="neutral"
                 variant="ghost"
                 icon="i-lucide-map"
@@ -100,6 +100,8 @@ import { extractRouteId } from '~/utils/inventory'
 import { centeredCode, type ScannedCode, type Size } from '~/utils/qr'
 import { formatGrade } from '#shared/utils/grades'
 import type { RouteRecord } from '~/types/models'
+
+const { slug: gymSlug } = useGym()
 
 definePageMeta({ footer: false })
 

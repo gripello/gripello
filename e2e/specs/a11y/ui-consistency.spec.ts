@@ -64,9 +64,9 @@ test('dialogs share the same shell: role, title and escape-to-close', async ({
     await expect(page.getByTestId('route-form-dialog')).toBeHidden()
 
     await gotoSettled(page, '/admin/users')
-    await page.getByTestId('user-create-open').click()
-    await expect(page.getByTestId('user-create-dialog')).toBeVisible()
-    await expect(page.getByTestId('user-create-cancel')).toBeVisible()
+    await page.getByTestId('member-invite-open').click()
+    await expect(page.getByTestId('member-invite-dialog')).toBeVisible()
+    await expect(page.getByTestId('member-invite-cancel')).toBeVisible()
 })
 
 test('an empty result set renders the shared empty state as a real card', async ({

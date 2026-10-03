@@ -176,7 +176,7 @@
                     </p>
                 </div>
                 <UButton
-                    :to="`/route?id=${targetRoute.id}`"
+                    :to="gymPath(`/route?id=${targetRoute.id}`)"
                     icon="i-lucide-external-link"
                     color="neutral"
                     variant="ghost"
@@ -351,6 +351,8 @@ import type {
     WallRecord,
 } from '~/types/models'
 
+const gymPath = useGymPath()
+
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
 const KIND_ICONS = {
@@ -377,6 +379,7 @@ const emit = defineEmits<{ saved: [task: TaskRecord] }>()
 const open = defineModel<boolean>({ default: false })
 
 const pb = usePocketbase()
+const gymId = useCurrentGymId()
 const { t, locale } = useI18n()
 const { warning } = useNotification()
 const { pending, run } = useAsyncAction()
@@ -432,7 +435,7 @@ const wallItems = computed(() =>
 )
 const assigneeItems = computed(() =>
     assignees.value.map((assignee) => ({
-        value: assignee.id,
+        value: assignee.user,
         label: assignee.name,
         avatar: { alt: assignee.name },
     })),
@@ -443,7 +446,7 @@ const selectedAssigneeAvatar = computed(
             ?.avatar,
 )
 const myAssigneeId = computed(() =>
-    assignees.value.some((item) => item.id === pb.authStore.record?.id)
+    assignees.value.some((item) => item.user === pb.authStore.record?.id)
         ? pb.authStore.record?.id
         : undefined,
 )
@@ -514,13 +517,18 @@ watch(open, async (isOpen) => {
     const [loadedAssignees, loadedWalls] = await Promise.all([
         pb
             .collection('task_assignees')
-            .getFullList<TaskAssigneeRecord>({ sort: 'name', requestKey: null })
+            .getFullList<TaskAssigneeRecord>({
+                filter: pb.filter('gym = {:gym}', { gym: gymId.value }),
+                sort: 'name',
+                requestKey: null,
+            })
             .catch(() => []),
         walls.value.length || targetRouteId.value
             ? walls.value
             : pb
                   .collection('walls')
                   .getFullList<WallRecord>({
+                      filter: gymFilter(pb, gymId.value),
                       sort: 'sort,name',
                       requestKey: null,
                   })
@@ -532,7 +540,10 @@ watch(open, async (isOpen) => {
 
 function buildBody() {
     const body = new FormData()
-    if (!props.task) body.append('kind', form.kind)
+    if (!props.task) {
+        body.append('kind', form.kind)
+        body.append('gym', gymId.value)
+    }
     if (isDefect.value) body.append('category', form.category)
     else body.append('title', form.title.trim())
     body.append('priority', String(form.priority))

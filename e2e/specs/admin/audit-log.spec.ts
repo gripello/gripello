@@ -2,6 +2,11 @@ import { createHash } from 'node:crypto'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, authHeader } from '../../support/nav'
 import { uiaa } from '../../support/seed'
+import {
+    AUDIT_ACTOR_GUESTS,
+    AUDIT_ACTOR_PLATFORM,
+    buildAuditFilter,
+} from '../../../app/utils/audit'
 import { createComment, deleteComment } from '../../support/comments'
 import {
     fetchAuditRows,
@@ -77,10 +82,10 @@ test('an update records the changed field names and none of the values', async (
 })
 
 test('a failed sign-in is recorded without the attempted password', async ({
-    adminPage: page,
+    platformPage: page,
     testPrefix,
 }) => {
-    await gotoSettled(page, '/manage/routes', /\/manage\/routes/)
+    await gotoSettled(page, '/platform')
 
     const identity = `ghost-${testPrefix}@example.test`
     const badPassword = `wrong-${testPrefix}`
@@ -180,4 +185,61 @@ test('an anonymous caller cannot read the audit log', async ({
 
     const body = await fetchAuditRowsAnonymously(page)
     expect(body.totalItems ?? 0).toBe(0)
+})
+
+test('admins narrow the audit log down to one member', async ({
+    adminPage: page,
+    setterPage,
+    root,
+    testPrefix,
+    route,
+}) => {
+    await gotoSettled(setterPage, '/manage/routes', /\/manage\/routes/)
+    await gotoSettled(page, '/account/activity')
+    const commentId = await createComment(
+        setterPage,
+        route.id,
+        `${testPrefix}-by-setter`,
+    )
+    const [row] = await waitForAuditRow(
+        page,
+        `record_id = "${commentId}" && action = "create"`,
+    )
+    const setter = await root.collection('users').getOne(row!.actor, {
+        requestKey: null,
+    })
+
+    await gotoSettled(page, '/account/activity')
+    await page.getByTestId('audit-filter-actor').click()
+    await page
+        .getByRole('option', {
+            name:
+                [setter.firstname, setter.name].filter(Boolean).join(' ') ||
+                setter.username,
+            exact: true,
+        })
+        .click()
+
+    await expect
+        .poll(
+            async () =>
+                new Set(
+                    await page
+                        .getByTestId('audit-card-actor')
+                        .allTextContents(),
+                ),
+        )
+        .toEqual(new Set([row!.actor_label]))
+    await expect(page.getByTestId(`audit-card-${row!.id}`)).toBeVisible()
+})
+
+test('every actor filter parses on the server', async ({ adminPage: page }) => {
+    await gotoSettled(page, '/manage/routes', /\/manage\/routes/)
+    for (const actor of [AUDIT_ACTOR_GUESTS, AUDIT_ACTOR_PLATFORM]) {
+        const res = await page.request.get(
+            `/api/collections/audit_logs/records?perPage=1&filter=${encodeURIComponent(buildAuditFilter({ actor }))}`,
+            { headers: await authHeader(page) },
+        )
+        expect(res.status(), actor).toBe(200)
+    }
 })

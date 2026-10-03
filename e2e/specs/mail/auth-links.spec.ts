@@ -3,7 +3,7 @@ import { fillLogin } from '../../support/auth'
 import { gotoSettled } from '../../support/nav'
 import { waitForMail, linkPath, mailbox } from '../../support/mail'
 import PocketBase from 'pocketbase'
-import { authAsSuperuser, getRoleIds } from '../../support/seed'
+import { authAsSuperuser } from '../../support/seed'
 
 const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
 const PASSWORD = 'E2eLinks!123'
@@ -15,7 +15,6 @@ async function createVerifiableUser(
 ) {
     const pb = new PocketBase(PB_URL)
     await authAsSuperuser(pb)
-    const roleIds = await getRoleIds(pb)
     const email = mailbox(prefix, label)
 
     const record = await pb.collection('users').create({
@@ -27,7 +26,6 @@ async function createVerifiableUser(
         username: `${prefix}${label}`.replace(/[^a-z0-9]/g, ''),
         firstname: 'E2E',
         name: 'Links',
-        role: roleIds.user,
     })
 
     return { pb, email, id: record.id }

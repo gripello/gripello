@@ -30,6 +30,23 @@
                     class="native-row__chevron"
                 />
             </NuxtLink>
+            <NuxtLink
+                v-if="gym?.slug"
+                v-bind="legalLinkProps(gym.imprint_url, `/${gym.slug}/imprint`)"
+                class="native-row"
+                data-testid="me-gym-imprint"
+            >
+                <span class="native-row__icon"
+                    ><UIcon name="i-lucide-building-2"
+                /></span>
+                <span class="native-row__text">{{
+                    $t('legal.gymImprint', { name: gym.name })
+                }}</span>
+                <UIcon
+                    name="i-lucide-chevron-right"
+                    class="native-row__chevron"
+                />
+            </NuxtLink>
             <a
                 v-if="settings?.contact_email"
                 :href="`mailto:${settings.contact_email}`"
@@ -132,10 +149,13 @@
 </template>
 
 <script setup lang="ts">
-import type { SettingsRecord } from '~/types/models'
+import type { GymRecord, SettingsRecord } from '~/types/models'
 import { legalLinkProps } from '~/utils/legal'
 
-defineProps<{ settings?: Partial<SettingsRecord> | null }>()
+defineProps<{
+    settings?: Partial<SettingsRecord> | null
+    gym?: Partial<GymRecord> | null
+}>()
 
 const {
     appVersionLabel,

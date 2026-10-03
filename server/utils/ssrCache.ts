@@ -1,6 +1,12 @@
 import { viewportBucket } from '../../shared/utils/breakpoints'
+import { RESERVED_GYM_SLUGS } from '../../shared/utils/gymSlug'
 
-export const SSR_CACHED_PATHS = new Set(['/', '/routes', '/map', '/route'])
+const SSR_CACHED_PATH = /^\/(?:([a-z0-9-]{3,40})(?:\/(?:routes|map|route))?)?$/
+
+export function isSsrCachedPath(pathname: string) {
+    const match = SSR_CACHED_PATH.exec(pathname)
+    return !!match && !RESERVED_GYM_SLUGS.includes(match[1] ?? '')
+}
 export const SSR_AGE_ATTRIBUTE = 'data-ssr-age'
 
 export interface SsrCacheEntry {
@@ -23,7 +29,7 @@ export function isSsrCacheable(request: {
         request.ttlMs > 0 &&
         request.method === 'GET' &&
         !request.hasAuthCookie &&
-        SSR_CACHED_PATHS.has(request.pathname)
+        isSsrCachedPath(request.pathname)
     )
 }
 
@@ -33,12 +39,13 @@ export function ssrCacheKey(request: {
     acceptLanguage?: string
     viewportWidth?: string
     sidebarOpen?: string
+    gym?: string
 }) {
     const lang =
         (request.acceptLanguage || '').split(',')[0]?.trim().slice(0, 2) || ''
     const viewport = viewportBucket(Number(request.viewportWidth) || 0)
     const sidebar = request.sidebarOpen === 'false' ? 'c' : 'o'
-    return `${lang}|v${viewport}|${sidebar}|${request.pathname}${request.search}`
+    return `${lang}|v${viewport}|${sidebar}|${request.gym ?? ''}|${request.pathname}${request.search}`
 }
 
 export function withCacheAge(body: string, ageMs: number) {

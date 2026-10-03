@@ -1,10 +1,11 @@
 import { test, expect } from '../../support/fixtures'
 import { authHeader, gotoSettled } from '../../support/nav'
-import { uiaa } from '../../support/seed'
+import { e2eGymId, uiaa } from '../../support/seed'
 
 test('pdf labels embed a unicode font for cyrillic and turkish text', async ({
     adminPage: page,
     createRoute,
+    root,
     testPrefix,
 }) => {
     const route = await createRoute({
@@ -19,7 +20,11 @@ test('pdf labels embed a unicode font for cyrillic and turkish text', async ({
 
     const response = await page.request.post('/api/ui/pdf', {
         headers,
-        data: { ids: [route.id], labels: { anchor: 'Станция' } },
+        data: {
+            ids: [route.id],
+            gym: await e2eGymId(root),
+            labels: { anchor: 'Станция' },
+        },
     })
     expect(response.ok()).toBe(true)
     const pdf = (await response.body()).toString('latin1')

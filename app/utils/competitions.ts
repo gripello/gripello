@@ -232,8 +232,12 @@ export function needsGuardianConsent(
     return !!birthYear && now.getFullYear() - birthYear < GUARDIAN_CONSENT_AGE
 }
 
-export function competitionShareUrl(origin: string, competitionId: string) {
-    return `${origin}/competitions/${competitionId}`
+export function competitionShareUrl(
+    origin: string,
+    gymSlug: string,
+    competitionId: string,
+) {
+    return `${origin}/${gymSlug}/competitions/${competitionId}`
 }
 
 export function formatCompetitionWindow(

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     finishRender,
     isSsrCacheable,
+    isSsrCachedPath,
     joinRender,
     readSsrCache,
     ssrCache,
@@ -24,27 +25,51 @@ describe('ssr cache', () => {
     it('only caches guest GETs of the public pages', () => {
         const base = {
             method: 'GET',
-            pathname: '/routes',
+            pathname: '/gym-a/routes',
             hasAuthCookie: false,
             ttlMs: 5000,
         }
         expect(isSsrCacheable(base)).toBe(true)
         expect(isSsrCacheable({ ...base, hasAuthCookie: true })).toBe(false)
         expect(isSsrCacheable({ ...base, pathname: '/logbook' })).toBe(false)
+        expect(isSsrCacheable({ ...base, pathname: '/routes' })).toBe(false)
         expect(isSsrCacheable({ ...base, method: 'POST' })).toBe(false)
         expect(isSsrCacheable({ ...base, ttlMs: 0 })).toBe(false)
     })
 
-    it('keys by language, viewport class, sidebar state, path and query', () => {
+    it('caches the landing page and the public gym pages only', () => {
+        for (const path of [
+            '/',
+            '/gym-a',
+            '/gym-a/routes',
+            '/gym-a/map',
+            '/gym-a/route',
+        ])
+            expect(isSsrCachedPath(path), path).toBe(true)
+        for (const path of [
+            '/logbook',
+            '/scan',
+            '/privacy',
+            '/route',
+            '/gym-a/manage/routes',
+            '/gym-a/logbook',
+            '/gym-a/',
+            '/ab',
+            '/Gym-A',
+        ])
+            expect(isSsrCachedPath(path), path).toBe(false)
+    })
+
+    it('keys by language, viewport class, sidebar state, gym cookie, path and query', () => {
         const phone = ssrCacheKey({
             pathname: '/route',
             search: '?id=a',
             acceptLanguage: 'de-DE,de;q=0.9',
         })
-        expect(phone).toBe('de|v0|o|/route?id=a')
+        expect(phone).toBe('de|v0|o||/route?id=a')
         expect(
             ssrCacheKey({ pathname: '/', search: '', viewportWidth: '1400' }),
-        ).toBe('|v4|o|/')
+        ).toBe('|v4|o||/')
         expect(
             ssrCacheKey({
                 pathname: '/',
@@ -52,7 +77,10 @@ describe('ssr cache', () => {
                 viewportWidth: '1400',
                 sidebarOpen: 'false',
             }),
-        ).toBe('|v4|c|/')
+        ).toBe('|v4|c||/')
+        expect(ssrCacheKey({ pathname: '/', search: '', gym: 'gym-a' })).toBe(
+            '|v0|o|gym-a|/',
+        )
     })
 
     it('buckets widths on the tailwind breakpoints', () => {

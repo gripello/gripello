@@ -34,6 +34,7 @@ type JsonArray<T> = T[] | readonly T[]
 type JsonValue<T> = T | JsonArray<T>
 
 export interface RouteRecord extends BaseRecord {
+    gym?: RecordId
     name: string
     grade: string
     grade_system?: string | null
@@ -52,12 +53,14 @@ export interface RouteRecord extends BaseRecord {
 }
 
 export interface LocationRecord extends BaseRecord {
+    gym?: RecordId
     name: string
     map?: GymMap | null
     map_trace?: string | null
 }
 
 export interface WallRecord extends BaseRecord {
+    gym?: RecordId
     location: RecordId
     name: string
     outline: MapPoint[]
@@ -76,6 +79,7 @@ export interface RouteListItem extends Omit<RouteRecord, 'creator'> {
 }
 
 export interface RatingRecord extends BaseRecord {
+    gym?: RecordId
     route_id?: RecordId | null
     rating?: number | null
     grade?: string | null
@@ -106,6 +110,7 @@ export interface PermissionRecord extends BaseRecord {
 }
 
 export interface RoleRecord extends BaseRecord {
+    gym?: RecordId
     name: string
     description?: string | null
     color?: string | null
@@ -121,31 +126,51 @@ export interface UserRecord extends BaseRecord {
     lastname?: string | null
     name?: string | null
     avatar?: string | null
-    role?: RecordId | null
     language?: string | null
+    platform_admin?: boolean
 }
 
-export interface SettingsRecord extends BaseRecord {
-    page_logo?: string | null
-    page_icon?: string | null
-    sign_image?: string | null
+export interface LegalFields {
+    contact_email?: string | null
     imprint_url?: string | null
     privacy_url?: string | null
-    application_url?: string | null
-    organization_name?: string | null
-    organization_unit_name?: string | null
-    contact_email?: string | null
-    audit_retention_days?: number | null
     legal_address?: string | null
     legal_phone?: string | null
     legal_register?: string | null
     legal_vat_id?: string | null
     legal_editorial?: string | null
     legal_representatives?: LegalPerson[] | null
+}
+
+export interface SettingsRecord extends BaseRecord, LegalFields {
+    audit_retention_days?: number | null
+    allow_registration?: boolean
+}
+
+export interface GymRecord extends BaseRecord, LegalFields {
+    slug: string
+    previous_slugs?: string[] | null
+    name: string
+    unit_name?: string | null
+    active?: boolean
+    page_logo?: string | null
+    page_icon?: string | null
+    sign_image?: string | null
     route_grade_system?: string | null
     boulder_grade_system?: string | null
     boulder_bands?: BoulderBandSetting[] | null
-    allow_registration?: boolean
+    privacy_extra?: string | null
+}
+
+export interface MembershipRecord extends BaseRecord {
+    user: RecordId
+    gym: RecordId
+    role: RecordId
+    expand?: {
+        user?: UserRecord
+        gym?: GymRecord
+        role?: RoleRecord & { expand?: { permissions?: PermissionRecord[] } }
+    }
 }
 
 export interface LegalPerson {
@@ -159,6 +184,7 @@ export type ReportStatus = (typeof REPORT_STATUSES)[number]
 export type ReportDecision = 'content_removed' | 'content_kept'
 
 export interface ReportRecord extends BaseRecord {
+    gym?: RecordId
     content_type: ReportContentType
     content_id: RecordId
     content_url: string
@@ -183,6 +209,7 @@ export type TaskPriorityName = (typeof TASK_PRIORITIES)[number]
 export type TaskStatus = (typeof TASK_STATUSES)[number]
 
 export interface TaskRecord extends BaseRecord {
+    gym?: RecordId
     kind: TaskKind
     title?: string | null
     category?: DefectCategory | '' | null
@@ -206,6 +233,7 @@ export type CompetitionEntryStatus =
     'registered' | 'checked_in' | 'disqualified' | 'withdrawn'
 
 export interface CompetitionRecord extends BaseRecord {
+    gym?: RecordId
     name: string
     description?: string | null
     location: RecordId
@@ -266,17 +294,21 @@ export interface CompetitionScoreRecord extends BaseRecord {
 }
 
 export interface OpenRouteDefectRecord extends BaseRecord {
+    gym?: RecordId
     route: RecordId
     category: DefectCategory
 }
 
 export interface TaskAssigneeRecord extends BaseRecord {
+    user: RecordId
+    gym: RecordId
     name: string
 }
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
 
 export interface AuditLogRecord extends BaseRecord {
+    gym?: RecordId
     actor?: RecordId | null
     actor_label?: string | null
     action: AuditAction
@@ -284,6 +316,7 @@ export interface AuditLogRecord extends BaseRecord {
     record_id?: string | null
     changed_fields?: string[] | null
     ip?: string | null
+    expand?: { gym?: Pick<GymRecord, 'id' | 'slug'> }
 }
 
 export interface NotificationRecord extends BaseRecord {
@@ -309,6 +342,8 @@ export type PocketBaseRecord =
     | RoleRecord
     | UserRecord
     | SettingsRecord
+    | GymRecord
+    | MembershipRecord
     | ReportRecord
     | AuditLogRecord
     | NotificationRecord

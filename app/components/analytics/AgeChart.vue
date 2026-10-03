@@ -11,6 +11,8 @@
 import type { AgedRoute } from '#shared/utils/analytics'
 import { escapeHtml, gridBase, itemTooltip, yAxisBase } from '~/utils/echarts'
 
+const gymPath = useGymPath()
+
 const props = defineProps<{ routes: AgedRoute[] }>()
 
 const { t } = useI18n()
@@ -67,6 +69,6 @@ const option = computed(() => ({
 
 function openRoute({ data }: { data?: unknown }) {
     const route = (data as { route?: AgedRoute } | undefined)?.route
-    if (route) void navigateTo(`/route?id=${route.id}`)
+    if (route) void navigateTo(gymPath(`/route?id=${route.id}`))
 }
 </script>

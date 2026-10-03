@@ -4,12 +4,14 @@ import { defectSeverityByRoute } from '~/utils/tasks'
 
 export function useOpenDefects() {
     const pb = usePocketbase()
+    const gymId = useCurrentGymId()
     const { data, refresh } = useAsyncData(
         cacheKeys.openDefects,
         () =>
             pb
                 .collection('open_route_defects')
                 .getFullList<OpenRouteDefectRecord>({
+                    filter: gymFilter(pb, gymId.value),
                     fields: 'route,category',
                     requestKey: null,
                 })

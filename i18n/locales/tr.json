@@ -127,7 +127,9 @@
         "resendVerificationInfo": "E-posta adresine yeni bir doğrulama bağlantısı göndereceğiz.",
         "confirmPassword": "Şifreyi onayla",
         "showPassword": "Şifreyi göster",
-        "hidePassword": "Şifreyi gizle"
+        "hidePassword": "Şifreyi gizle",
+        "myGyms": "Salonlarım",
+        "noGyms": "Hiçbir salonun ekibinde değilsiniz."
     },
     "routes": {
         "home": "Genel bakış",
@@ -444,7 +446,8 @@
                 "report_decided_kept": "Bir şikâyet karara bağlandı — içerik yayında kaldı",
                 "task_defect_filed": "“{route}” rotasında yeni arıza bildirildi",
                 "task_assigned": "Size görev atandı: “{title}”",
-                "task_defect_fixed": "“{route}” rotasında bildirdiğiniz sorun giderildi — teşekkürler!"
+                "task_defect_fixed": "“{route}” rotasında bildirdiğiniz sorun giderildi — teşekkürler!",
+                "task_defect_filed_gym": "{gym} salonunda “{route}” rotasında yeni arıza bildirildi"
             }
         }
     },
@@ -543,13 +546,24 @@
                 "inventorySession": "Envanter taramasının ilerlemesini saklar",
                 "inventoryInstructions": "Envanter talimatlarının gösterildiğini hatırlar",
                 "offlineLogbook": "Günlüğünü ve gönderilmemiş tırmanışları çevrimdışı kullanılabilir tutar",
-                "offlineScores": "Sinyal yokken girdiğin yarışma sonuçlarını gönderilene kadar saklar"
+                "offlineScores": "Sinyal yokken girdiğin yarışma sonuçlarını gönderilene kadar saklar",
+                "gym": "Son açtığınız salonu hatırlar",
+                "recentGyms": "Son ziyaret ettiğiniz salonları başlangıç sayfasında listeler"
             },
             "durations": {
                 "session": "Çıkış yapılana kadar",
                 "oneYear": "1 yıl",
                 "persistent": "Tarayıcıda silinene kadar"
             }
+        },
+        "gymImprint": "{name} künyesi",
+        "gymPage": {
+            "incomplete": "Salon künyesini henüz tamamlamadı.",
+            "platformImprint": "Platform künyesi",
+            "platformPrivacy": "Platform gizlilik politikası",
+            "platformTitle": "Platform işletmecisi",
+            "platformBody": "Salon bu sayfayı Gripello üzerinde işletir. Platform işletmecisi verileri salon adına işler ve tüm salonlardaki hesabınızdan ve tırmanış günlüğünüzden sorumludur.",
+            "extraTitle": "Salondan ek bilgiler"
         }
     },
     "page": {
@@ -652,7 +666,10 @@
         "manage": "Yönetim",
         "moderation": "Moderasyon",
         "admin": "Yönetici",
-        "quickNavigation": "Hızlı gezinme"
+        "quickNavigation": "Hızlı gezinme",
+        "platform": "Platform",
+        "allGyms": "Tüm salonlar…",
+        "manageGyms": "Salonları yönet"
     },
     "permissions": {
         "title": "Roller ve yetkiler",
@@ -734,22 +751,18 @@
         "replace": "Değiştir",
         "clickToUpload": "Yüklemek için tıklayın",
         "loadError": "Ayarlar yüklenemedi.",
-        "initError": "Ayarlar başlatılamadı.",
         "organization": "Organizasyon",
         "organizationName": "Organizasyon adı",
         "organizationNamePlaceholder": "ör. Dağcılık Kulübü",
         "organizationUnit": "Organizasyon birimi",
         "organizationUnitPlaceholder": "ör. Kuzey Tırmanış Salonu",
         "publicUrls": "Herkese açık URL'ler",
-        "applicationUrl": "Uygulama URL'si",
         "imprintUrl": "Künye URL'si",
         "privacyUrl": "Gizlilik URL'si",
         "saveSuccess": "Ayarlar başarıyla kaydedildi.",
         "saveError": "Ayarlar kaydedilemedi. Lütfen tekrar deneyin.",
         "contactEmail": "İletişim e-postası",
         "contactEmailHint": "İletişim adresiniz olarak yayımlanır ve yeni içerik şikâyetlerinde bilgilendirilir.",
-        "auditRetention": "Denetim günlüğü saklama süresi (gün)",
-        "auditRetentionHint": "Daha eski kayıtlar otomatik olarak silinir. Varsayılan 90 gün.",
         "mailNotConfigured": "E-posta yapılandırılmadığı için şifre sıfırlama ve içerik şikâyeti e-postaları gönderilemiyor. SMTP burada değil, PocketBase üzerinde yapılandırılır.",
         "mailNotConfiguredAction": "PocketBase e-posta ayarlarını aç",
         "legalTitle": "Künye",
@@ -786,8 +799,6 @@
         "routeGradeSystem": "Rota skalası",
         "boulderGradeSystem": "Boulder skalası",
         "gradingHint": "Yeni kurulan rotalara uygulanır. Mevcut rotalar düzenlenene kadar skalalarını korur.",
-        "allowRegistration": "Herkese açık kayda izin ver",
-        "allowRegistrationHint": "Herkes yetkisiz bir tırmanıcı hesabı oluşturabilir. E-posta doğrulaması için çalışan bir posta sunucusu gerekir.",
         "description": "Kuruluşunu, marka görünümünü, derece sistemlerini ve yasal bilgileri yönet.",
         "sections": "Ayar bölümleri",
         "branding": "Marka",
@@ -1022,7 +1033,7 @@
         "empty": "Henüz kayıt yok",
         "emptyHint": "İşlemler gerçekleştikçe burada görünür.",
         "anonymous": "Anonim",
-        "superuser": "Yönetici (PocketBase)",
+        "superuser": "Platform yöneticisi",
         "retentionNote": "Kayıtlar {days} gün sonra otomatik olarak silinir.",
         "period": {
             "24h": "Son 24 saat",
@@ -1061,7 +1072,15 @@
             "reports": "Şikâyet",
             "tasks": "Görev"
         },
-        "changedLabel": "Değişen"
+        "changedLabel": "Değişen",
+        "filter": {
+            "actor": "Kişi",
+            "gym": "Salon"
+        },
+        "actor": {
+            "guests": "Misafirler",
+            "me": "Ben"
+        }
     },
     "gradeSystems": {
         "uiaa": "UIAA",
@@ -1178,7 +1197,9 @@
         },
         "pendingSync": "Henüz eşitlenmedi",
         "savedOffline": "Tırmanış çevrimdışı kaydedildi. Tekrar çevrimiçi olunca eşitlenir.",
-        "syncFailed": "Eşitleme başarısız"
+        "syncFailed": "Eşitleme başarısız",
+        "gym": "Salon",
+        "allGyms": "Tüm salonlar"
     },
     "map": {
         "title": "Salon haritası",
@@ -1676,5 +1697,65 @@
             "entryFee": "Katılım ücreti vardır. Yarışma sayfasındaki bağlantıdan öde; ekip seni ödendi olarak işaretler."
         },
         "requiresPayment": "Katılım ücreti gerekli"
+    },
+    "members": {
+        "title": "Üyeler",
+        "invite": "Üye ekle",
+        "email": "Hesabın e-posta adresi",
+        "role": "Rol",
+        "search": "Üye ara…",
+        "noMembers": "Üye bulunamadı",
+        "remove": "Üyeyi çıkar",
+        "removeConfirm": "Bu kişi salon ekibinden çıkarılsın mı? Hesabı kalır.",
+        "removed": "Üye çıkarıldı.",
+        "alreadyMember": "Bu kişi zaten üye.",
+        "invited": "Hesap salona eklendi.",
+        "invitedByMail": "Yeni hesap oluşturuldu. Şifre belirleme e-postası gönderildi."
+    },
+    "landing": {
+        "title": "Salonunu bul",
+        "search": "Salon ara",
+        "myGyms": "Salonlarım",
+        "recent": "Son ziyaret edilenler",
+        "allGyms": "Tüm salonlar",
+        "empty": "Salon bulunamadı"
+    },
+    "gym": {
+        "notFound": "Bu salon yok veya aktif değil."
+    },
+    "platform": {
+        "gyms": {
+            "title": "Salonlar",
+            "create": "Yeni salon",
+            "delete": "Salonu sil",
+            "name": "Ad",
+            "slug": "URL",
+            "active": "Aktif",
+            "adminEmail": "İlk yöneticinin e-postası",
+            "invalidSlug": "3 ile 40 arasında küçük harf, rakam veya tire; ayrılmış bir kelime olamaz.",
+            "created": "Salon oluşturuldu, davet gönderildi",
+            "inviteFailed": "Salon oluşturuldu, ancak davet gönderilemedi",
+            "deleted": "Salon silindi",
+            "deleteConfirm": "“{name}” tüm rotaları, duvarları, yarışmaları ve üyelikleriyle silinsin mi? Bu geri alınamaz.",
+            "previousSlugs": "Önceki adresler",
+            "venue": "Salon",
+            "createdAt": "Oluşturuldu",
+            "open": "Salonu aç"
+        },
+        "settings": {
+            "title": "Platform ayarları",
+            "access": "Erişim",
+            "allowRegistration": "Kayda izin ver",
+            "auditRetentionDays": "Denetim kaydını sakla (gün)",
+            "links": "İletişim ve bağlantılar"
+        },
+        "overview": {
+            "title": "Genel bakış",
+            "activeGyms": "Aktif salonlar",
+            "memberships": "Üyelikler",
+            "routes": "Rotalar",
+            "admins": "Platform yöneticileri",
+            "dashboard": "PocketBase paneli"
+        }
     }
 }

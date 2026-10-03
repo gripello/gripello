@@ -2,26 +2,33 @@ import { describe, expect, it, vi } from 'vitest'
 import {
     attachmentHeader,
     resolveApplicationUrl,
+    resolveExportGymId,
     resolveExportColumns,
     resolveRouteIds,
 } from '../../server/utils/export'
 
 vi.mock('h3', async () => {
     return {
-        getQuery: (event: any) => event.query ?? {},
         readBody: async (event: any) => {
             if (event.body === undefined) {
                 throw new Error('no body')
             }
             return event.body
         },
-        getRequestURL: () => new URL('https://request.example/manage/routes'),
+        getRequestURL: (
+            event: any,
+            options: { xForwardedHost?: boolean } = {},
+        ) =>
+            new URL(
+                `https://${(options.xForwardedHost && event?.headers?.['x-forwarded-host']) || 'request.example'}/manage/routes`,
+            ),
+        createError: (input: { statusMessage: string }) =>
+            Object.assign(new Error(input.statusMessage), input),
     }
 })
 
-const eventWith = (body: unknown, query: Record<string, string> = {}) => ({
+const eventWith = (body: unknown) => ({
     body,
-    query,
     context: {} as Record<string, unknown>,
 })
 
@@ -126,26 +133,36 @@ describe('resolveRouteIds', () => {
         expect((await resolveExportColumns(event))[0].key).toBe('name')
     })
 
-    it('falls back to the comma-separated query parameter', async () => {
-        expect(
-            await resolveRouteIds(eventWith(undefined, { id: 'a, b ,' })),
-        ).toEqual(['a', 'b'])
+    it('ignores the query string', async () => {
+        expect(await resolveRouteIds(eventWith(undefined))).toEqual([])
     })
 })
 
 describe('resolveApplicationUrl', () => {
-    it('prefers the configured URL and strips trailing slashes', () => {
-        expect(
-            resolveApplicationUrl({} as never, {
-                application_url: 'https://dav.example//',
-            }),
-        ).toBe('https://dav.example')
-    })
-
-    it('falls back to the request origin', () => {
-        expect(resolveApplicationUrl({} as never, {})).toBe(
+    it('uses the request origin', () => {
+        expect(resolveApplicationUrl({} as never)).toBe(
             'https://request.example',
         )
+    })
+
+    it('ignores a forwarded host', () => {
+        expect(
+            resolveApplicationUrl({
+                headers: { 'x-forwarded-host': 'evil.example' },
+            } as never),
+        ).toBe('https://request.example')
+    })
+})
+
+describe('resolveExportGymId', () => {
+    it('reads the gym from the body', async () => {
+        expect(await resolveExportGymId(eventWith({ gym: ' g1 ' }))).toBe('g1')
+    })
+
+    it('rejects a missing gym', async () => {
+        await expect(resolveExportGymId(eventWith({}))).rejects.toMatchObject({
+            statusCode: 400,
+        })
     })
 })
 

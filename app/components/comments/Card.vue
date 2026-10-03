@@ -105,7 +105,7 @@
                 />
                 <NuxtLink
                     v-if="comment.routeId"
-                    :to="`/route?id=${comment.routeId}`"
+                    :to="gymPath(`/route?id=${comment.routeId}`)"
                     class="comment-card__route-link text-sm font-medium text-primary no-underline"
                 >
                     {{ comment.routeName }}
@@ -145,6 +145,9 @@
 <script setup lang="ts">
 import { avatarColor, nameInitials } from '~/utils/avatar'
 import { formatDate, timeAgo as sharedTimeAgo } from '#shared/utils/formatting'
+
+const gymPath = useGymPath()
+
 export interface CommentCardItem {
     id: string
     userName: string

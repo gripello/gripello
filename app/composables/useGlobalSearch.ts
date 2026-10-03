@@ -42,14 +42,12 @@ const SETTINGS_SECTIONS = [
             'settings.organizationName',
             'settings.organizationUnit',
             'settings.contactEmail',
-            'settings.auditRetention',
         ],
     },
     {
         section: 'urls',
         labels: [
             'settings.publicUrls',
-            'settings.applicationUrl',
             'settings.imprintUrl',
             'settings.privacyUrl',
         ],
@@ -68,20 +66,22 @@ const shorten = (text: string | null | undefined, length = 80) => {
 export function useGlobalSearch() {
     const { t } = useI18n()
     const pb = usePocketbase()
+    const gymId = useCurrentGymId()
+    const gymPath = useGymPath()
     const { can } = usePermissions()
 
     const searchRoutes = async (query: string): Promise<SearchResult[]> => {
         const filter = routeSearchFilter(query)
         if (!filter) return []
         const res = await pb.collection('routes').getList<RouteRecord>(1, 8, {
-            filter: `archived = false && ${filter}`,
+            filter: gymFilter(pb, gymId.value, `archived = false && ${filter}`),
             sort: 'name',
             skipTotal: true,
             requestKey: null,
         })
         return res.items.map((route) => ({
             key: `route-${route.id}`,
-            to: `/route?id=${route.id}`,
+            to: gymPath(`/route?id=${route.id}`),
             icon: 'i-lucide-waypoints',
             title: route.name,
             subtitle: [
@@ -105,7 +105,9 @@ export function useGlobalSearch() {
             })
         return res.items.map((user) => ({
             key: `user-${user.id}`,
-            to: `/admin/users?search=${encodeURIComponent(user.email ?? user.username ?? '')}`,
+            to: gymPath(
+                `/admin/users?search=${encodeURIComponent(user.email ?? user.username ?? '')}`,
+            ),
             icon: 'i-lucide-user',
             title:
                 [user.firstname, user.name].filter(Boolean).join(' ') ||
@@ -120,13 +122,13 @@ export function useGlobalSearch() {
         const res = await pb
             .collection('roles')
             .getList<RoleRecord>(1, RESULTS_PER_GROUP, {
-                filter: `name ~ ${quote(query)}`,
+                filter: `name ~ ${quote(query)} && ${pb.filter('gym = {:gym}', { gym: gymId.value })}`,
                 skipTotal: true,
                 requestKey: null,
             })
         return res.items.map((role) => ({
             key: `role-${role.id}`,
-            to: '/admin/users#roles',
+            to: gymPath('/admin/users#roles'),
             icon: 'i-lucide-shield-user',
             title: role.name,
             color: role.color,
@@ -138,7 +140,11 @@ export function useGlobalSearch() {
         const res = await pb
             .collection('ratings')
             .getList<RatingRecord>(1, RESULTS_PER_GROUP, {
-                filter: `(comment ~ ${term} || route_id.name ~ ${term})`,
+                filter: gymFilter(
+                    pb,
+                    gymId.value,
+                    `(comment ~ ${term} || route_id.name ~ ${term})`,
+                ),
                 expand: 'route_id',
                 sort: '-created',
                 skipTotal: true,
@@ -146,7 +152,7 @@ export function useGlobalSearch() {
             })
         return res.items.map((rating) => ({
             key: `review-${rating.id}`,
-            to: `/manage/comments?search=${encodeURIComponent(query)}`,
+            to: gymPath(`/manage/comments?search=${encodeURIComponent(query)}`),
             icon: 'i-lucide-message-square',
             title: shorten(rating.comment) || '—',
             subtitle: (rating.expand?.route_id as RouteRecord | undefined)
@@ -159,14 +165,18 @@ export function useGlobalSearch() {
         const res = await pb
             .collection('reports')
             .getList<ReportRecord>(1, RESULTS_PER_GROUP, {
-                filter: `(explanation ~ ${term} || notifier_name ~ ${term})`,
+                filter: gymFilter(
+                    pb,
+                    gymId.value,
+                    `(explanation ~ ${term} || notifier_name ~ ${term})`,
+                ),
                 sort: '-created',
                 skipTotal: true,
                 requestKey: null,
             })
         return res.items.map((report) => ({
             key: `report-${report.id}`,
-            to: `/manage/reports?search=${encodeURIComponent(query)}`,
+            to: gymPath(`/manage/reports?search=${encodeURIComponent(query)}`),
             icon: 'i-lucide-flag',
             title: shorten(report.explanation) || '—',
             subtitle: report.notifier_name ?? undefined,
@@ -180,7 +190,7 @@ export function useGlobalSearch() {
                 .filter((label) => t(label).toLowerCase().includes(needle))
                 .map((label) => ({
                     key: `setting-${label}`,
-                    to: `/admin/settings?section=${section.section}`,
+                    to: gymPath(`/admin/settings?section=${section.section}`),
                     icon: 'i-lucide-settings',
                     title: t(label),
                     subtitle: t(section.labels[0]!),

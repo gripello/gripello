@@ -12,6 +12,8 @@ import { formatNumber } from '#shared/utils/number'
 import type { RatedRoute } from '#shared/utils/analytics'
 import { escapeHtml, gridBase, itemTooltip, yAxisBase } from '~/utils/echarts'
 
+const gymPath = useGymPath()
+
 const props = defineProps<{
     top: RatedRoute[]
     lowest: RatedRoute[]
@@ -104,6 +106,6 @@ const option = computed(() => ({
 
 function openRoute({ data }: { data?: unknown }) {
     const route = (data as { route?: RatedRoute } | undefined)?.route
-    if (route) void navigateTo(`/route?id=${route.id}`)
+    if (route) void navigateTo(gymPath(`/route?id=${route.id}`))
 }
 </script>

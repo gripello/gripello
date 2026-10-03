@@ -3,6 +3,7 @@ import { test, expect } from '../../support/fixtures'
 test('a batch sub-request cannot pick its own IP through X-Real-IP', async ({
     request,
     root,
+    route,
     testPrefix,
 }) => {
     const spoofedIp = '127.0.0.1'
@@ -16,7 +17,7 @@ test('a batch sub-request cannot pick its own IP through X-Real-IP', async ({
                     headers: { 'X-Real-IP': spoofedIp },
                     body: {
                         content_type: 'route',
-                        content_id: testPrefix.replace(/\D/g, '').slice(-15),
+                        content_id: route.id,
                         reason: 'other',
                         explanation: `${testPrefix} batch real ip`,
                         notifier_name: 'E2E Reporter',

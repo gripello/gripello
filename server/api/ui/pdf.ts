@@ -3,6 +3,7 @@ import { requirePermission } from '../../utils/pb-server'
 import {
     resolveRouteIds,
     resolveApplicationUrl,
+    resolveExportGymId,
     fetchRecordsByIds,
     resolveExportLocale,
     resolveExportLabel,
@@ -11,12 +12,13 @@ import {
 } from '../../utils/export'
 import { drawRouteTag } from '../../utils/routeTag'
 import { gymBandsFrom } from '#shared/utils/gradeReference'
-import type { SettingsRecord } from '../../../types/models'
+import type { GymRecord } from '../../../types/models'
 
 export default eventHandler(async (event) => {
     const { default: QRCode } = await import('qrcode')
     const { default: PDFDocument } = await import('pdfkit')
-    const pb = await requirePermission(event, 'manage_routes')
+    const gymId = await resolveExportGymId(event)
+    const pb = await requirePermission(event, 'manage_routes', gymId)
     const res = event.node.res
 
     const ids = await resolveRouteIds(event)
@@ -28,19 +30,17 @@ export default eventHandler(async (event) => {
     }
 
     try {
-        const settings = await pb
-            .collection('settings')
-            .getOne<SettingsRecord>('settings_123456')
+        const gym = await pb.collection('gyms').getOne<GymRecord>(gymId)
 
         const show = await resolveExportShow(event)
         let logo: Buffer | null = null
-        if (settings.sign_image && show.logo) {
-            const logoUrl = pb.files.getURL(settings, settings.sign_image)
+        if (gym.sign_image && show.logo) {
+            const logoUrl = pb.files.getURL(gym, gym.sign_image)
             logo = await fetchLogo(logoUrl)
         }
 
-        const applicationUrl = resolveApplicationUrl(event, settings)
-        const bands = gymBandsFrom(settings.boulder_bands)
+        const applicationUrl = resolveApplicationUrl(event)
+        const bands = gymBandsFrom(gym.boulder_bands)
         const locale = await resolveExportLocale(event)
         const anchorLabel = await resolveExportLabel(event, 'anchor', 'Anchor')
         const fonts = useStorage('assets:server')
@@ -57,6 +57,7 @@ export default eventHandler(async (event) => {
             ids,
             field: 'id',
             requestKey: 'pdfExport',
+            gym: gymId,
         })
         const byId = new Map(records.map((record) => [record.id, record]))
         const routes = ids

@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
+import { e2eGymId } from '../../support/seed'
 
 async function isArchived(page: Page, id: string) {
     const res = await page.request.get(`/api/collections/routes/records/${id}`)
@@ -33,7 +34,7 @@ test('archives only the checked routes at the scanned location', async ({
     for (let index = 0; index < 4; index++) hallA.push(await createRoute())
     const otherHall = await root
         .collection('locations')
-        .create({ name: `${testPrefix} Other Hall` })
+        .create({ name: `${testPrefix} Other Hall`, gym: await e2eGymId(root) })
     const hallB = [await createRoute({ location: otherHall.id })]
 
     const missing = hallA.slice(-2)

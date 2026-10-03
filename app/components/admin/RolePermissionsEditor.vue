@@ -251,6 +251,7 @@ import { coalesce } from '~/utils/realtimeCache'
 
 const { t } = useI18n()
 const pb = usePocketbase()
+const gymId = useCurrentGymId()
 
 const REASSIGN_BATCH_SIZE = 200
 
@@ -372,7 +373,7 @@ async function confirmDelete(role: RoleRecord) {
     deleteDialog.value = true
 
     try {
-        const held = await pb.collection('users').getList(1, 1, {
+        const held = await pb.collection('memberships').getList(1, 1, {
             filter: pb.filter('role = {:id}', { id: role.id }),
             fields: 'id',
             requestKey: 'roleHolderCount',
@@ -395,7 +396,7 @@ async function deleteRole() {
     await runDelete(
         async () => {
             if (holderCount.value > 0) {
-                const holders = await pb.collection('users').getFullList({
+                const holders = await pb.collection('memberships').getFullList({
                     filter: pb.filter('role = {:id}', { id: role.id }),
                     fields: 'id',
                     requestKey: 'roleHolders',
@@ -403,7 +404,7 @@ async function deleteRole() {
                 for (let i = 0; i < holders.length; i += REASSIGN_BATCH_SIZE) {
                     const batch = pb.createBatch()
                     for (const u of holders.slice(i, i + REASSIGN_BATCH_SIZE)) {
-                        batch.collection('users').update(u.id, {
+                        batch.collection('memberships').update(u.id, {
                             role: reassignTo.value,
                         })
                     }
@@ -430,6 +431,7 @@ async function fetchData({ silent = false } = {}) {
     try {
         const [rolesData, permsData] = await Promise.all([
             pb.collection('roles').getFullList<RoleRecord>({
+                filter: pb.filter('gym = {:gym}', { gym: gymId.value }),
                 sort: 'name',
                 requestKey: 'rolePermEditor_roles',
             }),
@@ -449,10 +451,14 @@ async function fetchData({ silent = false } = {}) {
     }
 }
 
-const { data: initial } = useAsyncData('role-permissions', async () => {
-    await fetchData()
-    return { roles: roles.value, permissions: allPermissions.value }
-})
+const { data: initial } = useAsyncData(
+    'role-permissions',
+    async () => {
+        await fetchData()
+        return { roles: roles.value, permissions: allPermissions.value }
+    },
+    { watch: [gymId] },
+)
 
 if (initial.value) {
     roles.value = initial.value.roles

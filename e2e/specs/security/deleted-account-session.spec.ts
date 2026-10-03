@@ -1,4 +1,5 @@
 import { test, expect } from '../../support/fixtures'
+import { gymPath } from '../../support/nav'
 import PocketBase from 'pocketbase'
 import { ensureUser, getRoleIds } from '../../support/seed'
 
@@ -28,7 +29,7 @@ test('a leftover session of a deleted account still renders the site', async ({
         },
     ])
 
-    const response = await page.goto('/')
+    const response = await page.goto(gymPath('/'))
     expect(response?.status()).toBe(200)
     await expect(page.getByTestId('nav-login')).toBeVisible()
 })
