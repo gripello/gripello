@@ -37,7 +37,7 @@
             :get-row-id="(row: GymRecord) => row.id"
             :empty="t('table.no_data')"
             class="rounded-lg border border-default bg-default"
-            :ui="{ root: 'overflow-x-auto' }"
+            :ui="{ root: 'overflow-x-auto', tr: 'cursor-pointer' }"
             data-testid="platform-gym-table"
             @select="(_event, row) => navigateTo(detailPath(row.original))"
         >
@@ -74,6 +74,18 @@
                     @update:model-value="
                         (active) => setActive(row.original, active)
                     "
+                />
+            </template>
+            <template #edit-cell="{ row }">
+                <UButton
+                    :to="detailPath(row.original)"
+                    icon="i-lucide-pencil"
+                    variant="ghost"
+                    color="neutral"
+                    class="icon-btn"
+                    :aria-label="t('actions.edit')"
+                    :data-testid="`platform-gym-edit-${row.original.slug}`"
+                    @click.stop
                 />
             </template>
             <template #created-cell="{ row }">
@@ -203,6 +215,7 @@ const columns = computed<TableColumn<GymRecord>[]>(() => [
     { id: 'slug', header: t('platform.gyms.slug'), meta: wideOnly },
     { id: 'active', header: t('platform.gyms.active') },
     { id: 'created', header: t('platform.gyms.createdAt'), meta: wideOnly },
+    { id: 'edit', header: '', meta: { class: { td: 'w-12 text-end' } } },
 ])
 
 const dialogOpen = ref(false)
