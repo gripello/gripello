@@ -9,22 +9,26 @@ import {
 
 vi.mock('h3', async () => {
     return {
-        getQuery: (event: any) => event.query ?? {},
         readBody: async (event: any) => {
             if (event.body === undefined) {
                 throw new Error('no body')
             }
             return event.body
         },
-        getRequestURL: () => new URL('https://request.example/manage/routes'),
+        getRequestURL: (
+            event: any,
+            options: { xForwardedHost?: boolean } = {},
+        ) =>
+            new URL(
+                `https://${(options.xForwardedHost && event?.headers?.['x-forwarded-host']) || 'request.example'}/manage/routes`,
+            ),
         createError: (input: { statusMessage: string }) =>
             Object.assign(new Error(input.statusMessage), input),
     }
 })
 
-const eventWith = (body: unknown, query: Record<string, string> = {}) => ({
+const eventWith = (body: unknown) => ({
     body,
-    query,
     context: {} as Record<string, unknown>,
 })
 
@@ -129,10 +133,8 @@ describe('resolveRouteIds', () => {
         expect((await resolveExportColumns(event))[0].key).toBe('name')
     })
 
-    it('falls back to the comma-separated query parameter', async () => {
-        expect(
-            await resolveRouteIds(eventWith(undefined, { id: 'a, b ,' })),
-        ).toEqual(['a', 'b'])
+    it('ignores the query string', async () => {
+        expect(await resolveRouteIds(eventWith(undefined))).toEqual([])
     })
 })
 
@@ -141,6 +143,14 @@ describe('resolveApplicationUrl', () => {
         expect(resolveApplicationUrl({} as never)).toBe(
             'https://request.example',
         )
+    })
+
+    it('ignores a forwarded host', () => {
+        expect(
+            resolveApplicationUrl({
+                headers: { 'x-forwarded-host': 'evil.example' },
+            } as never),
+        ).toBe('https://request.example')
     })
 })
 

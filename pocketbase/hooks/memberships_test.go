@@ -226,6 +226,15 @@ func TestInviteMemberCreatesAccount(t *testing.T) {
 			if app.TestMailer.TotalSend() != 1 || app.TestMailer.LastMessage().To[0].Address != "new@example.com" {
 				t.Errorf("password mail not sent: %d", app.TestMailer.TotalSend())
 			}
+			membership := membershipOf(app, user.Id, f.gymA.Id)
+			for collection, recordID := range map[string]string{"users": user.Id, "memberships": membership.Id} {
+				total, err := app.CountRecords("audit_logs", dbx.HashExp{
+					"collection_name": collection, "record_id": recordID, "action": "create", "actor": f.adminA.Id, "gym": f.gymA.Id,
+				})
+				if err != nil || total != 1 {
+					t.Errorf("%s audit rows = %d (%v)", collection, total, err)
+				}
+			}
 		},
 	}
 	scenario.Test(t)
@@ -265,4 +274,36 @@ func TestPlatformAdminManagesAnyGym(t *testing.T) {
 		},
 	}
 	scenario.Test(t)
+}
+
+func TestAdminRoleCannotBeDeleted(t *testing.T) {
+	f := newMemberFixture(t)
+	operator := saveUser(t, f.app, "operator@example.com")
+	operator.Set("platform_admin", true)
+	if err := f.app.Save(operator); err != nil {
+		t.Fatal(err)
+	}
+	token, err := operator.NewAuthToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario := tests.ApiScenario{
+		Name:            "platform admin may not delete the admin role",
+		Method:          http.MethodDelete,
+		URL:             "/api/collections/roles/records/" + f.adminRoleA.Id,
+		Headers:         map[string]string{"Authorization": token},
+		ExpectedStatus:  http.StatusNotFound,
+		ExpectedContent: []string{"{"},
+		TestAppFactory:  func(testing.TB) *tests.TestApp { return f.app },
+		AfterTestFunc: func(t testing.TB, app *tests.TestApp, _ *http.Response) {
+			if _, err := app.FindRecordById("roles", f.adminRoleA.Id); err != nil {
+				t.Errorf("admin role deleted: %v", err)
+			}
+		},
+	}
+	scenario.Test(t)
+
+	if roleDeletable(adminRoleName, false) || !roleDeletable(adminRoleName, true) || !roleDeletable("routesetter", false) {
+		t.Error("roleDeletable guards the wrong roles")
+	}
 }

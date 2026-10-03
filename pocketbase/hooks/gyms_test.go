@@ -319,3 +319,40 @@ func TestOnlyPlatformAdminsReleaseSlugs(t *testing.T) {
 		scenario.Test(t)
 	}
 }
+
+func TestOnlyPlatformAdminsChangeSlugs(t *testing.T) {
+	cases := []struct {
+		name          string
+		platformAdmin bool
+		status        int
+	}{
+		{"gym admin may not change the slug", false, http.StatusForbidden},
+		{"platform admin changes the slug", true, http.StatusOK},
+	}
+	for _, c := range cases {
+		f := newMemberFixture(t)
+		caller := f.adminA
+		if c.platformAdmin {
+			caller = saveUser(t, f.app, "operator@example.com")
+			caller.Set("platform_admin", true)
+			if err := f.app.Save(caller); err != nil {
+				t.Fatal(err)
+			}
+		}
+		token, err := caller.NewAuthToken()
+		if err != nil {
+			t.Fatal(err)
+		}
+		scenario := tests.ApiScenario{
+			Name:            c.name,
+			Method:          http.MethodPatch,
+			URL:             "/api/collections/gyms/records/" + f.gymA.Id,
+			Body:            strings.NewReader(`{"slug":"gym-a-renamed"}`),
+			Headers:         map[string]string{"Authorization": token},
+			ExpectedStatus:  c.status,
+			ExpectedContent: []string{"{"},
+			TestAppFactory:  func(testing.TB) *tests.TestApp { return f.app },
+		}
+		scenario.Test(t)
+	}
+}

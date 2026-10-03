@@ -1,10 +1,4 @@
-import {
-    createError,
-    getQuery,
-    readBody,
-    getRequestURL,
-    type H3Event,
-} from 'h3'
+import { createError, readBody, getRequestURL, type H3Event } from 'h3'
 import type PocketBase from 'pocketbase'
 import type { RouteRecord } from '../../types/models'
 import {
@@ -59,14 +53,6 @@ export async function resolveRouteIds(event: H3Event): Promise<string[]> {
             .filter(Boolean)
     }
 
-    const params = getQuery(event)
-    if (typeof params?.id === 'string') {
-        return params.id
-            .split(',')
-            .map((value) => value.trim())
-            .filter(Boolean)
-    }
-
     return []
 }
 
@@ -108,10 +94,10 @@ export async function fetchRecordsByIds<T = RouteRecord>(
 }
 
 export function resolveApplicationUrl(event: H3Event) {
-    return getRequestURL(event, {
-        xForwardedHost: true,
-        xForwardedProto: true,
-    }).origin.replace(/\/+$/, '')
+    return getRequestURL(event, { xForwardedProto: true }).origin.replace(
+        /\/+$/,
+        '',
+    )
 }
 
 export async function resolveExportGymId(event: H3Event) {

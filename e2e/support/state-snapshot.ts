@@ -50,10 +50,7 @@ export async function restoreSnapshot(pb: PocketBase) {
         .collection('settings')
         .update(PLATFORM_SETTINGS_ID, snapshot.settings)
     if (snapshot.gym) {
-        await pb
-            .collection('gyms')
-            .update(await e2eGymId(pb), snapshot.gym)
-            .catch(() => {})
+        await pb.collection('gyms').update(await e2eGymId(pb), snapshot.gym)
     }
     await pb.settings.update({
         rateLimits: { enabled: snapshot.rateLimitsEnabled },

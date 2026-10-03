@@ -198,6 +198,21 @@ export function withGymSlug(fullPath: string, slug: string) {
     return fullPath.replace(/^\/[^/?#]+/, `/${slug}`)
 }
 
+export function gymSwitchPath(
+    path: string,
+    slug: string,
+    opensRecord: boolean,
+) {
+    const rest = path.split('/').slice(2).filter(Boolean)
+    if (!opensRecord) return `/${[slug, ...rest].join('/')}`
+    const section = rest.slice(
+        0,
+        ['manage', 'admin'].includes(rest[0]!) ? 2 : 1,
+    )
+    if (section[0] === 'route') section[0] = 'routes'
+    return `/${[slug, ...section].join('/')}`
+}
+
 export function withGym<T extends { to?: string; children?: NavLink[] }>(
     items: T[],
     slug: string,

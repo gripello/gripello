@@ -1734,6 +1734,7 @@
             "adminEmail": "First admin email",
             "invalidSlug": "3 to 40 lowercase letters, digits or dashes; not a reserved word.",
             "created": "Gym created, invitation sent",
+            "inviteFailed": "Gym created, but the invitation failed",
             "deleted": "Gym deleted",
             "deleteConfirm": "Delete “{name}” with all its routes, walls, competitions and memberships? This cannot be undone.",
             "previousSlugs": "Previous addresses",

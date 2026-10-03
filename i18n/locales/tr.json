@@ -1734,6 +1734,7 @@
             "adminEmail": "İlk yöneticinin e-postası",
             "invalidSlug": "3 ile 40 arasında küçük harf, rakam veya tire; ayrılmış bir kelime olamaz.",
             "created": "Salon oluşturuldu, davet gönderildi",
+            "inviteFailed": "Salon oluşturuldu, ancak davet gönderilemedi",
             "deleted": "Salon silindi",
             "deleteConfirm": "“{name}” tüm rotaları, duvarları, yarışmaları ve üyelikleriyle silinsin mi? Bu geri alınamaz.",
             "previousSlugs": "Önceki adresler",

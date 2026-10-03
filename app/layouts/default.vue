@@ -25,7 +25,7 @@ const hydrated = useHydrated()
 
 const pb = usePocketbase()
 const isLoggedIn = ref(pb.authStore.isValid)
-const { refreshPermissions } = usePermissions()
+const { refreshPermissions, memberships } = usePermissions()
 
 const { data: settingsData } = await useSettingsRecord()
 const { gym } = useGym()
@@ -74,6 +74,7 @@ let unsubAuthChange: (() => void) | null = null
 let unsubUser: UnsubscribeFunc | null = null
 let unsubGym: UnsubscribeFunc | null = null
 let unsubMemberships: UnsubscribeFunc | null = null
+let unsubRoles: UnsubscribeFunc | null = null
 let unmounted = false
 
 function releaseIfUnmounted(unsub: UnsubscribeFunc): UnsubscribeFunc | null {
@@ -82,15 +83,41 @@ function releaseIfUnmounted(unsub: UnsubscribeFunc): UnsubscribeFunc | null {
     return null
 }
 
-async function subscribeToMemberships() {
+function unsubscribeFromMemberships() {
     unsubMemberships?.()?.catch?.(() => {})
     unsubMemberships = null
+    unsubRoles?.()?.catch?.(() => {})
+    unsubRoles = null
+}
+
+async function subscribeToMemberships() {
+    unsubscribeFromMemberships()
     if (!pb.authStore.isValid) return
     unsubMemberships = releaseIfUnmounted(
         await pb.collection('memberships').subscribe('*', (e) => {
             if (e.record.user === pb.authStore.record?.id) refreshPermissions()
         }),
     )
+    unsubRoles = releaseIfUnmounted(
+        await pb.collection('roles').subscribe('*', (e) => {
+            if (memberships.value.some((m) => m.role === e.record.id))
+                refreshPermissions()
+        }),
+    )
+}
+
+async function subscribeToGym(gymId: string | undefined) {
+    unsubGym?.()?.catch?.(() => {})
+    unsubGym = null
+    if (!gymId) return
+    const unsub = await pb.collection('gyms').subscribe(gymId, (e) => {
+        if (e.action === 'update') gym.value = e.record as GymRecord
+    })
+    if (gym.value?.id !== gymId) {
+        unsub().catch(() => {})
+        return
+    }
+    unsubGym = releaseIfUnmounted(unsub)
 }
 
 async function subscribeToUser(userId: string) {
@@ -108,6 +135,11 @@ async function subscribeToUser(userId: string) {
     )
 }
 
+watch(
+    () => gym.value?.id,
+    (gymId) => void subscribeToGym(gymId),
+)
+
 onMounted(async () => {
     try {
         if (pb.authStore.isValid) {
@@ -123,8 +155,7 @@ onMounted(async () => {
             } else {
                 unsubUser?.()?.catch?.(() => {})
                 unsubUser = null
-                unsubMemberships?.()?.catch?.(() => {})
-                unsubMemberships = null
+                unsubscribeFromMemberships()
             }
         })
 
@@ -134,13 +165,7 @@ onMounted(async () => {
 
         await subscribeToMemberships()
 
-        if (gym.value?.id) {
-            unsubGym = releaseIfUnmounted(
-                await pb.collection('gyms').subscribe(gym.value.id, (e) => {
-                    if (e.action === 'update') gym.value = e.record as GymRecord
-                }),
-            )
-        }
+        await subscribeToGym(gym.value?.id)
     } catch (error) {
         console.error('Error during initialization:', error)
     }
@@ -150,7 +175,7 @@ onBeforeUnmount(() => {
     unmounted = true
     unsubAuthChange?.()
     unsubUser?.()?.catch?.(() => {})
-    unsubMemberships?.()?.catch?.(() => {})
+    unsubscribeFromMemberships()
     unsubGym?.()?.catch?.(() => {})
 })
 </script>

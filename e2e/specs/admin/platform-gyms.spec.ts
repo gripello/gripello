@@ -12,7 +12,7 @@ async function gymBySlug(root: PocketBase, slug: string) {
 }
 
 test('platform admin creates, manages, deactivates and deletes a gym', async ({
-    adminPage: page,
+    platformPage: page,
     root,
 }) => {
     const slug = `e2e-pg-${Date.now()}`
@@ -92,7 +92,7 @@ test('platform admin creates, manages, deactivates and deletes a gym', async ({
 })
 
 test('renamed gym slugs redirect and stay taken until released', async ({
-    adminPage: page,
+    platformPage: page,
     root,
 }) => {
     const stamp = Date.now()
@@ -152,7 +152,7 @@ test('renamed gym slugs redirect and stay taken until released', async ({
 })
 
 test('the platform overview counts gyms and lists platform admins', async ({
-    adminPage: page,
+    platformPage: page,
     root,
 }) => {
     await gotoSettled(page, '/platform')
@@ -171,7 +171,7 @@ test('the platform overview counts gyms and lists platform admins', async ({
 })
 
 test('inactive gyms drop out of every gym picker', async ({
-    adminPage,
+    platformPage: adminPage,
     root,
     createUser,
     pageAs,
@@ -225,9 +225,45 @@ test('inactive gyms drop out of every gym picker', async ({
     }
 })
 
-test('climbers are sent away from the platform page', async ({
-    userPage: page,
+test('climbers and gym admins are sent away from the platform page', async ({
+    userPage,
+    adminPage,
 }) => {
-    await gotoSettled(page, '/platform/gyms', /^https?:\/\/[^/]+\/$/)
-    await expect(page.getByTestId('platform-gym-table')).toHaveCount(0)
+    for (const page of [userPage, adminPage]) {
+        await gotoSettled(page, '/platform/gyms', /^https?:\/\/[^/]+\/$/)
+        await expect(page.getByTestId('platform-gym-table')).toHaveCount(0)
+    }
+})
+
+test('a failed first-admin invite still opens the new gym', async ({
+    platformPage: page,
+    root,
+}) => {
+    const slug = `e2e-invite-${Date.now()}`
+    try {
+        await page.route('**/api/gyms/*/members', (request) =>
+            request.fulfill({ status: 500, json: { message: 'down' } }),
+        )
+        await gotoSettled(page, '/platform/gyms')
+        await page.getByTestId('platform-gym-create').click()
+        await page.getByTestId('platform-gym-name').fill('E2E Invite Gym')
+        await page.getByTestId('platform-gym-slug').fill(slug)
+        await page
+            .getByTestId('platform-gym-admin-email')
+            .fill(`${slug}@gripello.test`)
+        await page.getByTestId('platform-gym-submit').click()
+
+        await expect.poll(() => gymBySlug(root, slug)).not.toBeNull()
+        const gym = await gymBySlug(root, slug)
+        await page.waitForURL(`**/platform/gyms/${gym!.id}`)
+        await expect(page.getByTestId('platform-gym-dialog')).toHaveCount(0)
+        await expect(page.getByTestId('platform-gym-open')).toBeVisible()
+
+        await root.collection('gyms').update(gym!.id, { active: false })
+        await gotoSettled(page, `/platform/gyms/${gym!.id}`)
+        await expect(page.getByTestId('platform-gym-open')).toHaveCount(0)
+    } finally {
+        const gym = await gymBySlug(root, slug)
+        if (gym) await root.collection('gyms').delete(gym.id)
+    }
 })

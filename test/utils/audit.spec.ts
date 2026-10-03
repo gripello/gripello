@@ -38,7 +38,7 @@ describe('buildAuditFilter', () => {
             '(actor_label = "superuser" || actor_label ~ "superuser:%")',
         )
         expect(buildAuditFilter({ actor: AUDIT_ACTOR_GUESTS })).toBe(
-            'actor = "" && !(actor_label = "superuser" || actor_label ~ "superuser:%")',
+            'actor = "" && actor_label != "superuser" && actor_label !~ "superuser:%"',
         )
     })
 

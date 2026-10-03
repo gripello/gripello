@@ -38,7 +38,7 @@ func registerAudit(app core.App) {
 			return err
 		}
 		entry.RecordID = e.Record.Id
-		entry.Gym = e.Record.GetString("gym")
+		entry.Gym = auditGym(e.App, e.Record)
 		writeAuditEntry(e.App, entry)
 		return nil
 	})
@@ -49,7 +49,7 @@ func registerAudit(app core.App) {
 		}
 		entry := requestAuditEntry(e.RequestEvent, "update", e.Collection.Name)
 		entry.RecordID = e.Record.Id
-		entry.Gym = e.Record.GetString("gym")
+		entry.Gym = auditGym(e.App, e.Record)
 		entry.ChangedFields = changedFieldNames(e.Record.Original().FieldsData(), e.Record.FieldsData())
 		if err := e.Next(); err != nil {
 			return err
@@ -64,7 +64,7 @@ func registerAudit(app core.App) {
 		}
 		entry := requestAuditEntry(e.RequestEvent, "delete", e.Collection.Name)
 		entry.RecordID = e.Record.Id
-		entry.Gym = e.Record.GetString("gym")
+		entry.Gym = auditGym(e.App, e.Record)
 		if e.Collection.Name == "users" && entry.Actor == e.Record.Id {
 			entry.Actor = ""
 		}
@@ -154,6 +154,17 @@ func requestAuditEntry(e *core.RequestEvent, action string, collectionName strin
 		entry.Actor = e.Auth.Id
 	}
 	return entry
+}
+
+func auditGym(app core.App, record *core.Record) string {
+	name := record.Collection().Name
+	switch {
+	case name == "gyms":
+		return record.Id
+	case strings.HasPrefix(name, "competition_"):
+		return competitionGym(app, record)
+	}
+	return record.GetString("gym")
 }
 
 func writeAuthEvent(e *core.RequestEvent, collection *core.Collection, record *core.Record, action string, fallbackLabel string) {

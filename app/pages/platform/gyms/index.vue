@@ -261,19 +261,27 @@ async function inviteFirstAdmin(gymId: string) {
 }
 
 async function createGym() {
-    await runSave(
-        async () => {
-            const gym = await pb.collection('gyms').create<GymRecord>({
-                name: form.name.trim(),
-                slug: form.slug,
-                active: true,
-            })
-            await inviteFirstAdmin(gym.id)
-            dialogOpen.value = false
-        },
-        { success: t('platform.gyms.created') },
+    const gym = await runSave(() =>
+        pb.collection('gyms').create<GymRecord>({
+            name: form.name.trim(),
+            slug: form.slug,
+            active: true,
+        }),
     )
+    if (!gym) return
+    dialogOpen.value = false
     await refresh()
+    const invited = await runSave(
+        async () => {
+            await inviteFirstAdmin(gym.id)
+            return true
+        },
+        {
+            success: t('platform.gyms.created'),
+            error: t('platform.gyms.inviteFailed'),
+        },
+    )
+    if (!invited) await navigateTo(detailPath(gym))
 }
 
 const { run: runToggle } = useAsyncAction()

@@ -104,10 +104,14 @@ export default async function globalSetup(config: FullConfig) {
             PREFIX,
         ),
         user: await ensureUser(pb, undefined, 'user', PREFIX),
+        platform: await ensureUser(pb, undefined, 'platform', PREFIX),
     }
     await pb
         .collection('users')
-        .update(seededUsers.admin.id, { platform_admin: true })
+        .update(seededUsers.admin.id, { platform_admin: false })
+    await pb
+        .collection('users')
+        .update(seededUsers.platform.id, { platform_admin: true })
 
     const routes = await seedRoutes(pb, PREFIX)
     await seedRatings(pb, PREFIX, routes)

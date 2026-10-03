@@ -17,6 +17,7 @@ import {
     defaultDisplayName,
     formatCompetitionWindow,
     suggestedEnd,
+    competitionShareUrl,
 } from '~/utils/competitions'
 import type { CompetitionRecord } from '~/types/models'
 
@@ -307,5 +308,13 @@ describe('defaultDisplayName', () => {
         ).toBe('Jane')
         expect(defaultDisplayName({ username: 'jdoe' })).toBe('jdoe')
         expect(defaultDisplayName(null)).toBe('')
+    })
+})
+
+describe('competitionShareUrl', () => {
+    it('links into the gym', () => {
+        expect(competitionShareUrl('https://gripello.app', 'gym-a', 'c1')).toBe(
+            'https://gripello.app/gym-a/competitions/c1',
+        )
     })
 })

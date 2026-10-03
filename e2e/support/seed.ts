@@ -14,7 +14,7 @@ export interface SeededUser {
     id: string
     email: string
     password: string
-    role: 'admin' | 'routesetter' | 'user'
+    role: 'admin' | 'routesetter' | 'user' | 'platform'
 }
 
 export async function authAsSuperuser(pb: PocketBase) {
@@ -46,6 +46,10 @@ export function e2eGymId(pb: PocketBase) {
             requestKey: null,
         })
         .then((gym) => gym.id)
+        .catch((error) => {
+            cachedE2eGymId = null
+            throw error
+        })
     return cachedE2eGymId
 }
 

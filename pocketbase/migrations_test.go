@@ -735,3 +735,34 @@ func TestPlatformSettingsMigration(t *testing.T) {
 		}
 	}
 }
+
+func TestGymsMigrationDownRefusesSeveralGyms(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+
+	jsvm.MustRegister(app, jsvm.Config{MigrationsDir: "pb_migrations"})
+	runner := core.NewMigrationsRunner(app, *latestMigrations())
+	if _, err := runner.Up(); err != nil {
+		t.Fatal(err)
+	}
+	gyms, err := app.FindCollectionByNameOrId("gyms")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, slug := range []string{"gym-a", "gym-b"} {
+		gym := core.NewRecord(gyms)
+		gym.Load(map[string]any{"slug": slug, "name": slug})
+		if err := app.Save(gym); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := runner.Down(migrationsSince("1791800001_gyms.js")); err == nil || !strings.Contains(err.Error(), "more than one gym") {
+		t.Fatalf("revert with two gyms: %v", err)
+	}
+	if _, err := app.FindCollectionByNameOrId("memberships"); err != nil {
+		t.Errorf("failed revert left no memberships: %v", err)
+	}
+}

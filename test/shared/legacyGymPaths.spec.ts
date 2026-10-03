@@ -40,6 +40,12 @@ describe('legacyGymRedirect', () => {
         expect(legacyGymRedirect('/manage/routes', '?x=1', '')).toBe('/')
     })
 
+    it('ignores slugs that are not valid gym slugs', () => {
+        for (const slug of ['/evil.com', 'evil.com', '//x', 'admin', 'ab']) {
+            expect(legacyGymRedirect('/routes', '', slug), slug).toBe('/')
+        }
+    })
+
     it('leaves every other path alone', () => {
         for (const path of [
             '/',

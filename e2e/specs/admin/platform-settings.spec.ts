@@ -12,7 +12,7 @@ async function setRegistration(page: Page, allowed: boolean) {
 }
 
 test('platform admin opens and closes registration', async ({
-    adminPage,
+    platformPage: adminPage,
     page,
     root,
 }) => {

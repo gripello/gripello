@@ -1,3 +1,4 @@
+import { isValidGymSlug } from '#shared/utils/gymSlug'
 import { legacyGymRedirect } from '#shared/utils/legacyGymPaths'
 
 export default defineNuxtRouteMiddleware(async (to) => {
@@ -7,7 +8,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
     const legacyTarget = legacyGymRedirect(
         to.path,
         to.fullPath.slice(to.path.length),
-        cookie.value || gym.value?.slug || '',
+        isValidGymSlug(cookie.value ?? '')
+            ? cookie.value!
+            : gym.value?.slug || '',
     )
     if (legacyTarget) return navigateTo(legacyTarget, { redirectCode: 302 })
 

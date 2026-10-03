@@ -72,7 +72,11 @@ func registerGyms(app core.App) {
 		if err := recordSlugHistory(e.Record); err != nil {
 			return err
 		}
-		if slugUsedByAnotherGym(e.App, e.Record.Id, e.Record.GetString("slug")) {
+		used, err := slugUsedByAnotherGym(e.App, e.Record.Id, e.Record.GetString("slug"))
+		if err != nil {
+			return err
+		}
+		if used {
 			return apis.NewBadRequestError("This slug was used by another gym.", nil)
 		}
 		return e.Next()
@@ -84,6 +88,9 @@ func registerGyms(app core.App) {
 		if e.HasSuperuserAuth() || isPlatformAdmin(e.Auth) {
 			return e.Next()
 		}
+		if e.Record.GetString("slug") != e.Record.Original().GetString("slug") {
+			return apis.NewForbiddenError("Only platform admins may change the slug.", nil)
+		}
 		before, _ := previousSlugs(e.Record.Original())
 		after, _ := previousSlugs(e.Record)
 		if !slices.Equal(before, after) {
@@ -92,14 +99,14 @@ func registerGyms(app core.App) {
 		return e.Next()
 	})
 
-	app.OnRecordAfterCreateSuccess("gyms").BindFunc(func(e *core.RecordEvent) error {
+	app.OnRecordCreateExecute("gyms").BindFunc(func(e *core.RecordEvent) error {
+		if err := e.Next(); err != nil {
+			return err
+		}
 		if err := adoptOrphans(e.App, e.Record.Id); err != nil {
-			e.App.Logger().Error("gyms: adopting orphaned records failed", "gym", e.Record.Id, "error", err)
+			return err
 		}
-		if err := seedGymRoles(e.App, e.Record.Id); err != nil {
-			e.App.Logger().Error("gyms: seeding roles failed", "gym", e.Record.Id, "error", err)
-		}
-		return e.Next()
+		return seedGymRoles(e.App, e.Record.Id)
 	})
 
 	for collection, parent := range gymParents {
@@ -164,13 +171,13 @@ func recordSlugHistory(record *core.Record) error {
 	return nil
 }
 
-func slugUsedByAnotherGym(app core.App, gymID, slug string) bool {
+func slugUsedByAnotherGym(app core.App, gymID, slug string) (bool, error) {
 	var used bool
 	err := app.DB().NewQuery(
 		"SELECT EXISTS (SELECT 1 FROM {{gyms}} g, json_each(CASE WHEN json_valid(g.previous_slugs) THEN g.previous_slugs ELSE '[]' END) " +
 			"WHERE g.id != {:id} AND json_each.value = {:slug})",
 	).Bind(dbx.Params{"id": gymID, "slug": slug}).Row(&used)
-	return err == nil && used
+	return used, err
 }
 
 func copyGymFrom(app core.App, record *core.Record, parentCollection, parentField string) error {

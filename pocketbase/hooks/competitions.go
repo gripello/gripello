@@ -161,7 +161,11 @@ func competitionGym(app core.App, record *core.Record) string {
 	if record.Collection().Name == "competitions" {
 		return record.GetString("gym")
 	}
-	competition, err := app.FindRecordById("competitions", record.GetString("competition"))
+	source := record
+	if original := record.Original(); original.Id != "" {
+		source = original
+	}
+	competition, err := app.FindRecordById("competitions", source.GetString("competition"))
 	if err != nil {
 		return ""
 	}
@@ -194,6 +198,9 @@ func validateCompetitionRoute(app core.App, compRoute *core.Record) error {
 	route, err := app.FindRecordById("routes", compRoute.GetString("route"))
 	if err != nil || route.GetString("type") != routeTypeByDiscipline[competition.GetString("discipline")] {
 		return apis.NewBadRequestError("This route does not fit the discipline.", nil)
+	}
+	if route.GetString("gym") != competition.GetString("gym") {
+		return apis.NewBadRequestError("The route belongs to another gym.", nil)
 	}
 	if competition.GetString("discipline") == "rope" {
 		compRoute.Set("zone", false)

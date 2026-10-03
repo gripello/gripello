@@ -185,8 +185,10 @@ func attachTaskTarget(app core.App, task *core.Record, creating bool) error {
 		}
 		task.Set("location", route.GetString("location"))
 		task.Set("gym", route.GetString("gym"))
-		if task.GetString("wall") == "" {
+		if wallID := task.GetString("wall"); wallID == "" {
 			task.Set("wall", route.GetString("wall"))
+		} else if wall, err := app.FindRecordById("walls", wallID); err != nil || wall.GetString("location") != route.GetString("location") {
+			return apis.NewBadRequestError("The wall is not in the route's location.", nil)
 		}
 		return rejectGymMove(task)
 	}

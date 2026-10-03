@@ -300,6 +300,9 @@ const { data: competition } = await useAsyncData(
     { enabled: () => !!competitionId.value },
 )
 
+if (competition.value && competition.value.gym !== useCurrentGymId().value)
+    throw createError({ status: 404, fatal: true })
+
 const { data: results } = useCompetitionResults(competitionId)
 
 const phase = computed(() =>
@@ -421,7 +424,11 @@ onMounted(async () => {
     )
     const { default: QRCode } = await import('qrcode')
     qrDataUrl.value = await QRCode.toDataURL(
-        competitionShareUrl(requestUrl.origin, competitionId.value),
+        competitionShareUrl(
+            requestUrl.origin,
+            gym.value?.slug ?? '',
+            competitionId.value,
+        ),
         { width: 768, margin: 1 },
     )
 })

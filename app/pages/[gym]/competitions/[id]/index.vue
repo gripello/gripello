@@ -183,6 +183,9 @@ const {
     { enabled: () => !!competitionId.value },
 )
 
+if (competition.value && competition.value.gym !== useCurrentGymId().value)
+    throw createError({ status: 404, fatal: true })
+
 const now = useNow()
 const phase = computed(() =>
     competition.value

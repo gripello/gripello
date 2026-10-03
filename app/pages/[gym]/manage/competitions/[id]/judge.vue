@@ -383,6 +383,9 @@ const { data: competition } = await useAsyncData(
     { enabled: () => !!competitionId.value },
 )
 
+if (competition.value && competition.value.gym !== useCurrentGymId().value)
+    throw createError({ status: 404, fatal: true })
+
 const competitionFilter = computed(() =>
     pb.filter('competition = {:id}', { id: competitionId.value }),
 )

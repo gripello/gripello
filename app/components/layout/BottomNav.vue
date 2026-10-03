@@ -38,10 +38,12 @@ import { BOTTOM_NAV } from '~/utils/navigation'
 const { t } = useI18n()
 const route = useRoute()
 const gymCookie = useGymCookie()
+const { slug: gymSlug } = useGym()
 
 function linkTarget(to: string) {
     if (to !== '/map') return to
-    return gymCookie.value ? `/${gymCookie.value}/map` : '/'
+    const slug = gymSlug.value || gymCookie.value
+    return slug ? `/${slug}/map` : '/'
 }
 const items = computed<NavigationMenuItem[]>(() =>
     BOTTOM_NAV.map((link) => ({

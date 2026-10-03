@@ -420,7 +420,7 @@ const sortOptions = computed(() => [
 // ── Query builders ─────────────────────────────────────────────────────────
 
 function buildFilter(searchTerm: string) {
-    const parts = []
+    const parts = [gymFilter(pb, gymId.value)]
     if (selectedRating.value !== 0)
         parts.push(`rating = ${selectedRating.value}`)
     if (selectedLocation.value)
@@ -651,7 +651,7 @@ async function fetchCommentIfVisible(id: string) {
     const filter = buildFilter(search.value.trim())
     const idClause = pb.filter('id = {:id}', { id })
     const result = await pb.collection('ratings').getList<RatingRecord>(1, 1, {
-        filter: filter ? `${idClause} && (${filter})` : idClause,
+        filter: `${idClause} && (${filter})`,
         expand: 'route_id.location,user',
         fields: LIST_FIELDS,
         skipTotal: true,

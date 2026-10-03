@@ -24,7 +24,7 @@ import {
 
 const AUTH_DIR = path.join(__dirname, '..', '.auth')
 
-type Role = 'admin' | 'routesetter' | 'user'
+type Role = 'admin' | 'routesetter' | 'user' | 'platform'
 
 export const authFile = (role: Role) => path.join(AUTH_DIR, `${role}.json`)
 
@@ -42,6 +42,7 @@ interface Fixtures {
     adminPage: Page
     setterPage: Page
     userPage: Page
+    platformPage: Page
     testPrefix: string
     deviceOptions: BrowserContextOptions
     route: RecordModel
@@ -127,6 +128,8 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
         useRolePage(browser, deviceOptions, 'routesetter', use),
     userPage: async ({ browser, deviceOptions }, use) =>
         useRolePage(browser, deviceOptions, 'user', use),
+    platformPage: async ({ browser, deviceOptions }, use) =>
+        useRolePage(browser, deviceOptions, 'platform', use),
     testPrefix: async ({ root, workerLocation }, use, testInfo) => {
         const prefix = `e2e-w${testInfo.workerIndex}-${Date.now()}`
         await use(prefix)

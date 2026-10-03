@@ -1,7 +1,7 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { signInAs } from '../../support/auth'
-import { ensureUser, getRoleIds, uiaa } from '../../support/seed'
+import { E2E_GYM_SLUG, ensureUser, getRoleIds, uiaa } from '../../support/seed'
 
 test.use({
     launchOptions: { args: ['--ignore-certificate-errors'] },
@@ -25,7 +25,7 @@ test('an ascent logged offline syncs when the connection returns', async ({
         creator: ['E2E'],
         screw_date: '2026-09-01',
     })
-    const routeUrl = `/route?id=${route.id}`
+    const routeUrl = `/${E2E_GYM_SLUG}/route?id=${route.id}`
 
     await signInAs(page, climber.email, climber.password)
     await gotoSettled(page, routeUrl)

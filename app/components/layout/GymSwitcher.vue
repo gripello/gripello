@@ -84,7 +84,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { gymTitle } from '~/utils/gymNames'
-import { withGymSlug } from '~/utils/navigation'
+import { gymSwitchPath } from '~/utils/navigation'
 import { readRecentGyms } from '~/utils/recentGyms'
 
 type GymItem = DropdownMenuItem & { role?: string }
@@ -127,7 +127,13 @@ function loadGyms() {
 
 function switchTo(slug: string) {
     return navigateTo(
-        route.params.gym ? withGymSlug(route.fullPath, slug) : `/${slug}`,
+        route.params.gym
+            ? gymSwitchPath(
+                  route.path,
+                  slug,
+                  !!route.params.id || !!route.query.id,
+              )
+            : `/${slug}`,
     )
 }
 

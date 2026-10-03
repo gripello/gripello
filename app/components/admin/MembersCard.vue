@@ -78,7 +78,7 @@
                     <div class="mt-auto flex items-center gap-2 px-4 pb-3 pt-2">
                         <USelect
                             :model-value="member.role"
-                            :items="roleOptions"
+                            :items="assignableRoleOptions"
                             value-key="value"
                             :aria-label="t('members.role')"
                             class="min-w-0 flex-1"
@@ -165,7 +165,11 @@
                 <UFormField :label="t('members.role')" name="role">
                     <USelect
                         v-model="invite.role"
-                        :items="roleOptions"
+                        :items="
+                            assignableRoleOptions.filter(
+                                (option) => !option.disabled,
+                            )
+                        "
                         value-key="value"
                         class="w-full"
                         data-testid="member-invite-role"
@@ -209,6 +213,7 @@ import type { Form } from '@nuxt/ui'
 import { avatarColor } from '~/utils/avatar'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import type { MembershipRecord } from '~/types/models'
+import { canGrantRole, membershipIn } from '#shared/utils/memberships'
 import { coalesce } from '~/utils/realtimeCache'
 
 type Member = MembershipRecord & {
@@ -233,8 +238,26 @@ const selectedRole = ref<string | null>(null)
 const currentUserId = computed(() => pb.authStore.record?.id ?? null)
 
 const { data: roles, refresh: refreshRoles } = useRoles(gymId)
+const { memberships: ownMemberships, isPlatformAdmin } = usePermissions()
 const roleOptions = computed(() =>
     roles.value.map((role) => ({ label: role.name, value: role.id })),
+)
+const grantableRoleIds = computed(() => {
+    const ownRole = membershipIn(ownMemberships.value, gymId.value)?.expand
+        ?.role
+    return new Set(
+        roles.value
+            .filter((role) =>
+                canGrantRole(role, ownRole, isPlatformAdmin.value),
+            )
+            .map((role) => role.id),
+    )
+})
+const assignableRoleOptions = computed(() =>
+    roleOptions.value.map((option) => ({
+        ...option,
+        disabled: !grantableRoleIds.value.has(option.value),
+    })),
 )
 
 function mapMember(membership: MembershipRecord): Member {
@@ -336,9 +359,12 @@ function openInvite() {
     invite.email = ''
     invite.firstname = ''
     invite.name = ''
+    const grantable = roles.value.filter((role) =>
+        grantableRoleIds.value.has(role.id),
+    )
     invite.role =
-        roles.value.find((role) => role.name !== 'admin')?.id ??
-        roles.value[0]?.id ??
+        grantable.find((role) => role.name !== 'admin')?.id ??
+        grantable[0]?.id ??
         ''
     inviteDialog.value = true
 }

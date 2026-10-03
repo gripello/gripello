@@ -103,7 +103,7 @@ const PLATFORM_ACTOR_FILTER =
 function actorFilter(actor: string): string {
     if (actor === AUDIT_ACTOR_PLATFORM) return PLATFORM_ACTOR_FILTER
     if (actor === AUDIT_ACTOR_GUESTS)
-        return `actor = "" && !${PLATFORM_ACTOR_FILTER}`
+        return 'actor = "" && actor_label != "superuser" && actor_label !~ "superuser:%"'
     return `actor = "${escapeFilterValue(actor)}"`
 }
 

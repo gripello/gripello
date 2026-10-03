@@ -119,6 +119,9 @@ const {
     { enabled: () => !!competitionId.value },
 )
 
+if (competition.value && competition.value.gym !== useCurrentGymId().value)
+    throw createError({ status: 404, fatal: true })
+
 const rules = computed(() =>
     competition.value ? competitionRules(competition.value) : [],
 )

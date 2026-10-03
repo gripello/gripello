@@ -483,6 +483,11 @@ migrate(
         setViews(app, true)
     },
     (app) => {
+        if (app.countRecords('gyms') > 1) {
+            throw new Error(
+                'Cannot revert multi-tenancy while more than one gym exists. Delete all but one gym first.',
+            )
+        }
         setViews(app, false)
         for (const [name, [from, to]] of Object.entries(GYM_NAMED_INDEXES)) {
             swapIndex(app, name, to, from)

@@ -27,6 +27,7 @@
                         @update:model-value="setActive"
                     />
                     <UButton
+                        v-if="gym.active"
                         :to="`/${gym.slug}`"
                         color="neutral"
                         variant="outline"

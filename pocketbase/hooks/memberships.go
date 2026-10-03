@@ -84,6 +84,10 @@ func inviteMember(e *core.RequestEvent) error {
 	if err != nil {
 		return e.BadRequestError("The membership could not be saved.", err)
 	}
+	if created {
+		auditInvite(e, "users", user.Id, gymID)
+	}
+	auditInvite(e, "memberships", membership.Id, gymID)
 	if !created {
 		return e.JSON(http.StatusOK, membership)
 	}
@@ -91,6 +95,13 @@ func inviteMember(e *core.RequestEvent) error {
 		e.App.Logger().Error("memberships: invitation mail failed", "user", user.Id, "error", err)
 	}
 	return e.JSON(http.StatusCreated, map[string]bool{"created": true})
+}
+
+func auditInvite(e *core.RequestEvent, collection, recordID, gymID string) {
+	entry := requestAuditEntry(e, "create", collection)
+	entry.RecordID = recordID
+	entry.Gym = gymID
+	writeAuditEntry(e.App, entry)
 }
 
 func validateMembership(app core.App, caller *core.Record, membership *core.Record) error {
@@ -237,6 +248,17 @@ func registerAdminRoleGuard(app core.App) {
 		}
 		return e.Next()
 	})
+
+	app.OnRecordDeleteRequest("roles").BindFunc(func(e *core.RecordRequestEvent) error {
+		if !roleDeletable(e.Record.GetString("name"), e.HasSuperuserAuth()) {
+			return apis.NewForbiddenError("The admin role cannot be deleted.", nil)
+		}
+		return e.Next()
+	})
+}
+
+func roleDeletable(name string, superuser bool) bool {
+	return superuser || name != adminRoleName
 }
 
 func addedPermissions(before, after []string) []string {

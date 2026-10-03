@@ -207,6 +207,9 @@ const {
     { enabled: () => !!competitionId.value },
 )
 
+if (competition.value && competition.value.gym !== useCurrentGymId().value)
+    throw createError({ status: 404, fatal: true })
+
 const { data: setup, refresh: refreshSetup } = useAsyncData(
     () => `manage-competition-setup:${competitionId.value}`,
     async () => {

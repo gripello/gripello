@@ -1734,6 +1734,7 @@
             "adminEmail": "E-Mail des ersten Admins",
             "invalidSlug": "3 bis 40 Kleinbuchstaben, Ziffern oder Bindestriche; kein reserviertes Wort.",
             "created": "Halle angelegt, Einladung verschickt",
+            "inviteFailed": "Halle angelegt, aber die Einladung ist fehlgeschlagen",
             "deleted": "Halle gelöscht",
             "deleteConfirm": "„{name}“ mit allen Routen, Wänden, Wettkämpfen und Mitgliedschaften löschen? Das kann nicht rückgängig gemacht werden.",
             "previousSlugs": "Frühere Adressen",

@@ -8,6 +8,7 @@ import {
     visibleNavItems,
     withGym,
     withGymSlug,
+    gymSwitchPath,
 } from '~/utils/navigation'
 
 const allowing =
@@ -180,6 +181,25 @@ describe('withGymSlug', () => {
             '/new/manage/tasks?status=open#top',
         )
         expect(withGymSlug('/old?tab=1', 'new')).toBe('/new?tab=1')
+    })
+})
+
+describe('gymSwitchPath', () => {
+    it('keeps the page but drops the query', () => {
+        expect(gymSwitchPath('/old', 'new', false)).toBe('/new')
+        expect(gymSwitchPath('/old/manage/tasks', 'new', false)).toBe(
+            '/new/manage/tasks',
+        )
+    })
+
+    it('opens the section root instead of a record of the old gym', () => {
+        expect(gymSwitchPath('/old/competitions/c1/tv', 'new', true)).toBe(
+            '/new/competitions',
+        )
+        expect(gymSwitchPath('/old/route', 'new', true)).toBe('/new/routes')
+        expect(
+            gymSwitchPath('/old/manage/competitions/c1/judge', 'new', true),
+        ).toBe('/new/manage/competitions')
     })
 })
 
