@@ -199,6 +199,10 @@ func recordSlugHistory(record *core.Record) error {
 }
 
 func slugUsedByAnotherGym(app core.App, gymID, slug string) (bool, error) {
+	// the gyms migration saves the default gym before the slug history migrations ran
+	if !app.HasTable("retired_slugs") {
+		return false, nil
+	}
 	var used bool
 	err := app.DB().NewQuery(
 		"SELECT EXISTS (SELECT 1 FROM {{gyms}} g, json_each(CASE WHEN json_valid(g.previous_slugs) THEN g.previous_slugs ELSE '[]' END) " +
