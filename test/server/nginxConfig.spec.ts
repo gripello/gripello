@@ -23,4 +23,13 @@ describe('docker nginx config', () => {
             largestMaxSize,
         )
     })
+
+    it('keeps SSR pages in memory instead of spilling them to temp files', () => {
+        const [, count, sizeKb] =
+            readFileSync('.docker/nginx.conf', 'utf8').match(
+                /proxy_buffers (\d+) (\d+)k;/,
+            ) ?? []
+
+        expect(Number(count) * Number(sizeKb)).toBeGreaterThanOrEqual(512)
+    })
 })
