@@ -14,6 +14,7 @@ func Register(app core.App) {
 	registerMapGuards(app)
 	registerRouteArchiveStamp(app)
 	registerRatingImport(app)
+	registerAccountExport(app)
 	registerTicks(app)
 	registerReports(app)
 	registerTasks(app)
