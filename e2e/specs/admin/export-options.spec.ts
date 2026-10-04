@@ -13,7 +13,7 @@ test('pdf export asks for language and fields before printing', async ({
     await expect(page.getByTestId('export-column-name')).toHaveCount(0)
 
     await page.getByTestId('export-locale').click()
-    await page.getByRole('option', { name: 'Українська' }).click()
+    await page.getByRole('option', { name: 'Nederlands' }).click()
     await page.getByTestId('export-show-logo').uncheck()
 
     const request = page.waitForRequest('**/api/ui/pdf')
@@ -21,8 +21,8 @@ test('pdf export asks for language and fields before printing', async ({
     await page.getByTestId('export-confirm').click()
 
     const body = (await request).postDataJSON()
-    expect(body.locale).toBe('uk')
-    expect(body.labels.anchor).toBe('Станція')
+    expect(body.locale).toBe('nl')
+    expect(body.labels.anchor).toBe('Ankerpunt')
     expect(body.show).toEqual({ creators: true, date: true, logo: false })
     const fs = await import('node:fs')
     const bytes = fs.readFileSync((await (await download).path())!)

@@ -450,10 +450,10 @@
                 "report_filed": "Neue Inhaltsmeldung: „{snippet}“",
                 "report_decided_removed": "Eine Meldung wurde entschieden — Inhalt entfernt",
                 "report_decided_kept": "Eine Meldung wurde entschieden — Inhalt bleibt online",
-                "task_defect_filed": "Neuer Defekt gemeldet an „{route}“",
+                "task_defect_filed": "Neuer Defekt an „{route}“ gemeldet",
                 "task_assigned": "Dir zugewiesen: „{title}“",
                 "task_defect_fixed": "Das gemeldete Problem an „{route}“ wurde behoben — danke!",
-                "task_defect_filed_gym": "Neuer Defekt gemeldet an „{route}“ in {gym}",
+                "task_defect_filed_gym": "Neuer Defekt an „{route}“ in {gym} gemeldet",
                 "wall_new_routes": "Neue Routen an {wall}: {count}",
                 "competition_published": "Ergebnisse von „{competition}“ sind online"
             }
@@ -476,7 +476,7 @@
             "email": "E-Mail",
             "register": "Register- und Steuerangaben",
             "disputeTitle": "Verbraucherstreitbeilegung",
-            "dispute": "Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.",
+            "dispute": "Wir sind weder bereit noch verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.",
             "editorial": "Redaktionell verantwortlich",
             "registerEntry": "Registereintrag",
             "vatId": "USt-IdNr.",
@@ -574,7 +574,7 @@
             "platformImprint": "Impressum der Plattform",
             "platformPrivacy": "Datenschutzerklärung der Plattform",
             "platformTitle": "Plattformbetreiber",
-            "platformBody": "Die Halle betreibt diese Seite auf Gripello. Der Plattformbetreiber verarbeitet Daten im Auftrag der Halle und ist für dein Konto und dein Logbuch über alle Hallen hinweg verantwortlich.",
+            "platformBody": "Die Halle betreibt diese Seite auf Gripello. Der Plattformbetreiber verarbeitet Daten im Auftrag der Halle und ist für dein Konto und dein Logbuch hallenübergreifend Verantwortlicher.",
             "extraTitle": "Weitere Hinweise der Halle"
         }
     },
@@ -606,7 +606,7 @@
             "accountSettings": "Einstellungen - Gripello",
             "competitions": "Wettkämpfe - Gripello",
             "competition": "{name} - Wettkämpfe - Gripello",
-            "judge": "Schiedsrichter - Gripello",
+            "judge": "Werten - Gripello",
             "competitionRules": "{name} - Regeln - Gripello"
         },
         "content": {
@@ -941,7 +941,7 @@
         "wall": "Wand",
         "assignee": "Zugewiesen an",
         "dueDate": "Fällig am",
-        "dueOn": "Fällig {date}",
+        "dueOn": "Fällig am {date}",
         "description": "Beschreibung",
         "resolutionNote": "Erledigungsnotiz",
         "photo": "Foto",
@@ -1000,7 +1000,7 @@
             "dialogTitle": "Problem melden",
             "dialogIntro": "Stimmt etwas mit dieser Route nicht? Sag dem Schrauber-Team Bescheid, damit es behoben wird.",
             "alreadyReported": "Bereits gemeldet",
-            "whatsWrong": "Was ist los?",
+            "whatsWrong": "Was stimmt nicht?",
             "details": "Details",
             "detailsPlaceholder": "z. B. zweiter Griff von oben dreht sich",
             "submit": "Meldung senden",
@@ -1099,7 +1099,7 @@
         "french": "Französisch",
         "yds": "YDS",
         "font": "Fontainebleau",
-        "v": "V-Scale"
+        "v": "V-Skala"
     },
     "gradeConversion": {
         "title": "Grad-Umrechnung",
@@ -1236,7 +1236,7 @@
         "boulders": "Boulder",
         "routes": "Routen",
         "wallHint": "Wo die Route auf dem Hallenplan liegt. Feinjustieren unter „Routen platzieren“.",
-        "resizeList": "Liste vergrößern oder verkleinern",
+        "resizeList": "Listengröße ändern",
         "backToList": "Zurück zur Liste",
         "clusterLabel": "{count} Route hier, tippen zum Anzeigen | {count} Routen hier, tippen zum Anzeigen",
         "followWall": "{wall} folgen",
@@ -1343,10 +1343,10 @@
         "lastReset": "zuletzt umgeschraubt {date}",
         "resetWall": "Wand umschrauben",
         "resetNeedsSave": "Speichere oder verwirf zuerst deine Änderungen.",
-        "resetConfirm": "Alle {n} Routen an {wall} archivieren? Sie verschwinden von der Karte und aus der Routenliste.",
+        "resetConfirm": "Alle {n} Routen an {wall} archivieren? Sie verschwinden vom Plan und aus der Routenliste.",
         "resetDone": "{n} Route archiviert. | {n} Routen archiviert.",
-        "unplacedBanner": "{n} Route ist noch nicht auf der Karte. | {n} Routen sind noch nicht auf der Karte.",
-        "placeThis": "Auf Karte platzieren",
+        "unplacedBanner": "{n} Route ist noch nicht auf dem Plan. | {n} Routen sind noch nicht auf dem Plan.",
+        "placeThis": "Auf dem Plan platzieren",
         "more": "Weitere Aktionen",
         "routes": "Routen"
     },
@@ -1617,8 +1617,8 @@
         "bib": "Nr.",
         "scorecard": {
             "title": "Meine Wertungskarte",
-            "tops": "{n} Tops",
-            "flashes": "{n} Flashes",
+            "tops": "{n} Top | {n} Tops",
+            "flashes": "{n} Flash | {n} Flashes",
             "offline": "{n} noch nicht gesendet – kein Netz",
             "saving": "Speichert…",
             "nothingHere": "Nichts hier",
@@ -1683,7 +1683,7 @@
         "tv": {
             "live": "Live",
             "endsIn": "Endet in",
-            "startsIn": "Start in"
+            "startsIn": "Beginnt in"
         },
         "rules": {
             "title": "Regeln",

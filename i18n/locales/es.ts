@@ -1,4 +1,4 @@
-import messages from './ru.json'
+import messages from './es.json'
 
 export default defineI18nLocale(async (locale) => {
     return {
