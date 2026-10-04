@@ -22,7 +22,7 @@ test('pdf export asks for language and fields before printing', async ({
 
     const body = (await request).postDataJSON()
     expect(body.locale).toBe('nl')
-    expect(body.labels.anchor).toBe('Ankerpunt')
+    expect(body.labels.anchor).toBe('Lijn')
     expect(body.show).toEqual({ creators: true, date: true, logo: false })
     const fs = await import('node:fs')
     const bytes = fs.readFileSync((await (await download).path())!)

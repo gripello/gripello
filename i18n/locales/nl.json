@@ -273,7 +273,7 @@
         "customColor": "Eigen kleur",
         "routename": "Routenaam",
         "difficulty": "Graad",
-        "anchor_point": "Ankerpunt",
+        "anchor_point": "Lijn",
         "location": "Locatie",
         "searchRouteName": "Routes zoeken",
         "type": "Type",
@@ -622,7 +622,7 @@
     },
     "validation": {
         "required": "Dit veld is verplicht.",
-        "anchorPointRange": "Het ankerpunt moet tussen 1 en 100 liggen (0 voor boulders).",
+        "anchorPointRange": "De lijn moet tussen 1 en 100 liggen (0 voor boulders).",
         "minLength": "Minimaal {n} teken. | Minimaal {n} tekens.",
         "maxLength": "Maximaal {n} teken. | Maximaal {n} tekens.",
         "passwordMismatch": "Wachtwoorden komen niet overeen.",
@@ -1308,9 +1308,9 @@
             "outline": "Teken de omtrek van “{name}”: klik de hoeken aan, klik dan op het eerste punt, dubbelklik of druk op Enter.",
             "incomplete": "“{name}” is nog niet af ({missing}). Selecteer de wand en gebruik de gemarkeerde knop voordat je opslaat."
         },
-        "anchorFrom": "Ankerpunten van",
+        "anchorFrom": "Lijnen van",
         "anchorTo": "tot",
-        "anchorHint": "Routes met deze ankerpuntnummers worden automatisch op deze wand geplaatst.",
+        "anchorHint": "Routes met deze lijnnummers worden automatisch op deze wand geplaatst.",
         "finish": "Klaar",
         "deletePoint": "Punt verwijderen",
         "panel": "Wanden en vormen"
@@ -1322,7 +1322,7 @@
         "save": "Opslaan ({n})",
         "saved": "Routeposities opgeslagen.",
         "wallRoutes": "{n} routes op deze wand",
-        "distribute": "Gelijkmatig verdelen op ankerpunt",
+        "distribute": "Gelijkmatig verdelen op lijnnummer",
         "unplaced": "Niet geplaatst ({n})",
         "placed": "Op de plattegrond ({n})",
         "remove": "Van plattegrond verwijderen",
@@ -1331,7 +1331,7 @@
             "idle": "Tik op een route en dan op de plek op de wand — de volgende route volgt automatisch. Vink meerdere routes aan om ze in één keer op een wand te zetten. Sleep stippen om ze te verplaatsen.",
             "armed": "Klik op een wand om “{name}” te plaatsen. Esc annuleert.",
             "selected": "Sleep de stip van “{name}” naar de juiste plek op de wand, of naar een andere wand. Delete haalt hem van de plattegrond.",
-            "checked": "Tik op een wand om er {n} route te plaatsen, op volgorde van ankerpunt. | Tik op een wand om er {n} routes te plaatsen, op volgorde van ankerpunt."
+            "checked": "Tik op een wand om er {n} route te plaatsen, op volgorde van lijnnummer. | Tik op een wand om er {n} routes te plaatsen, op volgorde van lijnnummer."
         },
         "skip": "Overslaan",
         "nudgeBack": "Terug langs de wand",
@@ -1412,7 +1412,7 @@
             "topicsTitle": "Meld me bij",
             "topics": {
                 "new_routes": "Nieuwe routes op wanden die ik volg",
-                "defect_fixed": "Door mij gemelde defecten zijn verholpen",
+                "defect_fixed": "Door mij gemelde problemen zijn verholpen",
                 "competition_results": "Wedstrijduitslagen",
                 "tasks": "Taken en gemelde defecten",
                 "reports": "Inhoudsmeldingen (DSA)"

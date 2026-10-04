@@ -168,7 +168,7 @@
         "selectedCount": "Sélection : {n}",
         "list": "Voies",
         "competitions": "Compétitions",
-        "judge": "Arbitrage"
+        "judge": "Jugement"
     },
     "dashboard": {
         "online": "{0} en ligne"
@@ -966,7 +966,7 @@
             "damaged_volume": "Volume endommagé",
             "sharp_edge": "Arête coupante",
             "missing_hold": "Prise manquante",
-            "label_tag": "Étiquette / plaquette",
+            "label_tag": "Étiquette / fiche",
             "other": "Autre"
         },
         "priorities": {
@@ -1328,7 +1328,7 @@
         "remove": "Retirer du plan",
         "canvasLabel": "Plan de placement des voies",
         "hints": {
-            "idle": "Touchez une voie, puis son emplacement sur le mur — la voie suivante enchaîne automatiquement. Cochez plusieurs voies pour les placer d'un coup sur un mur. Faites glisser les points pour les déplacer.",
+            "idle": "Touchez une voie, puis son emplacement sur le mur — la voie suivante est sélectionnée automatiquement. Cochez plusieurs voies pour les placer d'un coup sur un mur. Faites glisser les points pour les déplacer.",
             "armed": "Cliquez sur un mur pour placer « {name} ». Échap annule.",
             "selected": "Faites glisser le point de « {name} » à sa place sur le mur, ou sur un autre mur. Suppr le retire du plan.",
             "checked": "Touchez un mur pour y placer {n} voie, dans l'ordre des relais. | Touchez un mur pour y placer {n} voies, dans l'ordre des relais."

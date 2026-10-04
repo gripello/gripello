@@ -998,7 +998,7 @@
         "defect": {
             "reportAction": "Problem melden",
             "dialogTitle": "Problem melden",
-            "dialogIntro": "Stimmt etwas mit dieser Route nicht? Sag dem Schrauber-Team Bescheid, damit es behoben wird.",
+            "dialogIntro": "Stimmt etwas mit dieser Route nicht? Sag dem Schrauberteam Bescheid, damit es behoben wird.",
             "alreadyReported": "Bereits gemeldet",
             "whatsWrong": "Was stimmt nicht?",
             "details": "Details",
@@ -1031,7 +1031,7 @@
         "assignToMe": "Mir zuweisen",
         "unassigned": "Nicht zugewiesen",
         "forThisRoute": "Für diese Route",
-        "newSubtitle": "Arbeit für das Schrauber-Team festhalten"
+        "newSubtitle": "Arbeit für das Schrauberteam festhalten"
     },
     "audit": {
         "title": "Aktivitätsprotokoll",
@@ -1448,7 +1448,7 @@
             "ifsc": "IFSC",
             "tops": "Tops & Zonen",
             "route_points": "Routenpunkte",
-            "lead_height": "Vorstieg-Höhe"
+            "lead_height": "Vorstiegshöhe"
         },
         "formatHints": {
             "fixed": "Jeder Boulder hat eigene Punkte, die mit jedem weiteren Versuch sinken.",
