@@ -173,6 +173,25 @@ export interface GymStatsRecord extends BaseRecord {
     routes: number
 }
 
+export interface InviteRecord extends BaseRecord {
+    gym: RecordId
+    role: RecordId
+    email: string
+    firstname: string
+    name: string
+    expires_at: string
+    expand?: { role?: RoleRecord }
+}
+
+export interface InviteDetails {
+    email: string
+    firstname: string
+    name: string
+    gym: { name: string; slug: string }
+    role: string
+    hasAccount: boolean
+}
+
 export interface MembershipRecord extends BaseRecord {
     user: RecordId
     gym: RecordId

@@ -56,7 +56,6 @@ type mailView struct {
 	Language    string
 	Subject     string
 	Brand       string
-	LogoURL     string
 	Greeting    string
 	Paragraphs  []string
 	Details     []mailDetail
@@ -72,7 +71,6 @@ type mailView struct {
 type mailBrand struct {
 	Name       string
 	Subject    string
-	LogoURL    string
 	Language   string
 	ReplyTo    string
 	ImprintURL string
@@ -94,7 +92,6 @@ func loadMailBrand(app core.App, gymID string) mailBrand {
 	}
 	settings, _ := app.FindRecordById("settings", platformSettingsID)
 	if settings != nil {
-		brand.LogoURL = recordFileURL(base, settings, "page_logo")
 		brand.ReplyTo = settings.GetString("contact_email")
 	}
 	gym, _ := app.FindRecordById("gyms", gymID)
@@ -103,20 +100,11 @@ func loadMailBrand(app core.App, gymID string) mailBrand {
 	}
 	brand.Name = firstNonEmpty(gym.GetString("name"), brand.Name)
 	brand.Subject = gym.GetString("name")
-	brand.LogoURL = firstNonEmpty(recordFileURL(base, gym, "page_logo"), brand.LogoURL)
 	brand.Language = gym.GetString("language")
 	brand.ReplyTo = firstNonEmpty(gym.GetString("contact_email"), brand.ReplyTo)
 	brand.ImprintURL = base + gymPath(app, gymID, "/imprint")
 	brand.PrivacyURL = base + gymPath(app, gymID, "/privacy")
 	return brand
-}
-
-func recordFileURL(base string, record *core.Record, field string) string {
-	file := record.GetString(field)
-	if file == "" {
-		return ""
-	}
-	return base + "/api/files/" + record.Collection().Id + "/" + record.Id + "/" + file
 }
 
 func absoluteURL(base, target string) string {
@@ -143,7 +131,6 @@ func renderMail(messages localeMessages, brand mailBrand, base, appName, languag
 		Language: language,
 		Subject:  mailSubject(t(key+".subject", params), brand.Subject, appName),
 		Brand:    brand.Name,
-		LogoURL:  brand.LogoURL,
 		Code:     content.Code,
 		Note:     t(key+".note", params),
 		FooterLinks: []mailLink{

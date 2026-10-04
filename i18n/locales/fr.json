@@ -610,7 +610,8 @@
             "competitions": "Compétitions - Gripello",
             "competition": "{name} - Compétitions - Gripello",
             "judge": "Jugement - Gripello",
-            "competitionRules": "{name} - Règlement - Gripello"
+            "competitionRules": "{name} - Règlement - Gripello",
+            "invite": "Invitation - Gripello"
         },
         "content": {
             "settings": "Paramètres",
@@ -1748,8 +1749,8 @@
     },
     "members": {
         "title": "Membres",
-        "invite": "Ajouter un membre",
-        "email": "E-mail du compte",
+        "invite": "Inviter un membre",
+        "email": "E-mail",
         "role": "Rôle",
         "search": "Rechercher des membres…",
         "noMembers": "Aucun membre trouvé",
@@ -1757,8 +1758,22 @@
         "removeConfirm": "Retirer cette personne de l’équipe de la salle ? Son compte est conservé.",
         "removed": "Membre retiré.",
         "alreadyMember": "Cette personne est déjà membre.",
-        "invited": "Compte ajouté à la salle.",
-        "invitedByMail": "Nouveau compte créé. Un e-mail pour définir le mot de passe est en route."
+        "invited": "Invitation envoyée."
+    },
+    "invites": {
+        "eyebrow": "INVITATION",
+        "title": "Rejoindre {gym}",
+        "subtitle": "Invitation pour {email} en tant que {role}.",
+        "wrongAccount": "Vous êtes connecté en tant que {current}. Cette invitation est destinée à {email}.",
+        "accept": "Accepter l’invitation",
+        "signIn": "Se connecter pour accepter",
+        "signOut": "Se déconnecter",
+        "invalid": "Cette invitation n’est pas valide ou a expiré.",
+        "pending": "Invitations en attente",
+        "expires": "Expire le {date}",
+        "resend": "Renvoyer",
+        "revoke": "Retirer l’invitation",
+        "revoked": "Invitation retirée."
     },
     "landing": {
         "title": "Trouvez votre salle",
@@ -1871,10 +1886,10 @@
             "note": "Si ce n’était pas vous, changez immédiatement votre mot de passe. Tous les autres appareils seront alors déconnectés."
         },
         "invite": {
-            "subject": "Vous êtes invité à rejoindre {gym}",
-            "body": "{gym} vous a ajouté à son équipe sur {app}. Choisissez un mot de passe pour activer votre compte.",
-            "action": "Choisir un mot de passe",
-            "note": "Si vous n’attendiez pas cette invitation, vous pouvez ignorer cet e-mail."
+            "subject": "Invitation à rejoindre l’équipe",
+            "body": "{gym} vous invite à rejoindre son équipe sur {app} en tant que {role}.",
+            "action": "Accepter l’invitation",
+            "note": "L’invitation est valable 7 jours. Si vous ne l’attendiez pas, vous pouvez ignorer cet e-mail."
         },
         "reportReceipt": {
             "subject": "Nous avons reçu votre signalement",

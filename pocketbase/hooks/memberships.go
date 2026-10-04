@@ -4,14 +4,20 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/security"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
-const adminRoleName = "admin"
+const (
+	adminRoleName     = "admin"
+	inviteTokenLength = 40
+	inviteLifetime    = 7 * 24 * time.Hour
+)
 
 func registerMemberships(app core.App) {
 	guard := func(e *core.RecordRequestEvent) error {
@@ -52,8 +58,16 @@ func registerMemberships(app core.App) {
 		return e.Next()
 	})
 
+	app.Cron().MustAdd("inviteRetention", "29 3 * * *", func() {
+		if _, err := pruneRows(app, "DELETE FROM invites WHERE expires_at < {:now}", dbx.Params{"now": types.NowDateTime().String()}); err != nil {
+			app.Logger().Error("invites: prune failed", "error", err)
+		}
+	})
+
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.POST("/api/gyms/{gym}/members", inviteMember).Bind(apis.RequireAuth("users"))
+		se.Router.GET("/api/invites/{token}", showInvite)
+		se.Router.POST("/api/invites/{token}/accept", acceptInvite)
 		return se.Next()
 	})
 }
@@ -72,73 +86,168 @@ func inviteMember(e *core.RequestEvent) error {
 	if err := e.BindBody(&body); err != nil {
 		return e.BadRequestError("Invalid invitation.", err)
 	}
-	email := strings.TrimSpace(body.Email)
-	user, err := e.App.FindAuthRecordByEmail("users", email)
-	created := err != nil
-	if !created && membershipOf(e.App, user.Id, gymID) != nil {
+	email := strings.ToLower(strings.TrimSpace(body.Email))
+	if user, err := e.App.FindAuthRecordByEmail("users", email); err == nil && membershipOf(e.App, user.Id, gymID) != nil {
 		return apis.NewApiError(http.StatusConflict, "This person is already a member.", nil)
 	}
-	collection, err := e.App.FindCachedCollectionByNameOrId("memberships")
+	memberships, err := e.App.FindCachedCollectionByNameOrId("memberships")
 	if err != nil {
 		return err
 	}
-	membership := core.NewRecord(collection)
+	membership := core.NewRecord(memberships)
 	membership.Set("gym", gymID)
 	membership.Set("role", body.Role)
 	if err := validateMembership(e.App, e.Auth, membership); err != nil {
 		return err
 	}
+	auditAction := "update"
+	invite, err := e.App.FindFirstRecordByFilter("invites", "gym = {:gym} && email = {:email}", dbx.Params{"gym": gymID, "email": email})
+	if err != nil {
+		auditAction = "create"
+		collection, err := e.App.FindCachedCollectionByNameOrId("invites")
+		if err != nil {
+			return err
+		}
+		invite = core.NewRecord(collection)
+		invite.Set("gym", gymID)
+		invite.Set("email", email)
+	}
+	token := security.RandomString(inviteTokenLength)
+	invite.Set("role", body.Role)
+	invite.Set("firstname", body.Firstname)
+	invite.Set("name", body.Name)
+	invite.Set("token_hash", security.SHA256(token))
+	invite.Set("expires_at", types.NowDateTime().Add(inviteLifetime))
+	if err := e.App.Save(invite); err != nil {
+		return e.BadRequestError("The invitation could not be saved.", err)
+	}
+	auditInvite(e, auditAction, "invites", invite.Id, gymID)
+	if err := sendInviteMail(e.App, invite, token); err != nil {
+		e.App.Logger().Error("invites: mail failed", "invite", invite.Id, "error", err)
+	}
+	return e.NoContent(http.StatusAccepted)
+}
+
+func findInvite(app core.App, token string) (*core.Record, error) {
+	return app.FindFirstRecordByFilter("invites", "token_hash = {:hash} && expires_at > @now", dbx.Params{"hash": security.SHA256(token)})
+}
+
+func showInvite(e *core.RequestEvent) error {
+	invite, err := findInvite(e.App, e.Request.PathValue("token"))
+	if err != nil {
+		return e.NotFoundError("This invitation is invalid or has expired.", nil)
+	}
+	gym, gymErr := e.App.FindRecordById("gyms", invite.GetString("gym"))
+	role, roleErr := e.App.FindRecordById("roles", invite.GetString("role"))
+	if gymErr != nil || roleErr != nil {
+		return e.NotFoundError("This invitation is invalid or has expired.", nil)
+	}
+	_, accountErr := e.App.FindAuthRecordByEmail("users", invite.GetString("email"))
+	return e.JSON(http.StatusOK, map[string]any{
+		"email":      invite.GetString("email"),
+		"firstname":  invite.GetString("firstname"),
+		"name":       invite.GetString("name"),
+		"gym":        map[string]string{"name": gym.GetString("name"), "slug": gym.GetString("slug")},
+		"role":       role.GetString("name"),
+		"hasAccount": accountErr == nil,
+	})
+}
+
+func acceptInvite(e *core.RequestEvent) error {
+	invite, err := findInvite(e.App, e.Request.PathValue("token"))
+	if err != nil {
+		return e.NotFoundError("This invitation is invalid or has expired.", nil)
+	}
+	email := invite.GetString("email")
+	user := e.Auth
+	if user != nil && !strings.EqualFold(user.Email(), email) {
+		return e.ForbiddenError("This invitation is for another account.", nil)
+	}
+	if user == nil {
+		if _, err := e.App.FindAuthRecordByEmail("users", email); err == nil {
+			return apis.NewApiError(http.StatusConflict, "Sign in to accept this invitation.", nil)
+		}
+		var body struct {
+			Password        string `json:"password"`
+			PasswordConfirm string `json:"passwordConfirm"`
+			Firstname       string `json:"firstname"`
+			Name            string `json:"name"`
+		}
+		if err := e.BindBody(&body); err != nil {
+			return e.BadRequestError("Invalid request.", err)
+		}
+		users, err := e.App.FindCachedCollectionByNameOrId("users")
+		if err != nil {
+			return err
+		}
+		user = core.NewRecord(users)
+		user.SetEmail(email)
+		user.SetPassword(body.Password)
+		user.Set("passwordConfirm", body.PasswordConfirm)
+		user.SetVerified(true)
+		user.Set("firstname", body.Firstname)
+		user.Set("name", body.Name)
+	}
+	gymID := invite.GetString("gym")
+	created := user.IsNew()
+	var membership *core.Record
 	err = e.App.RunInTransaction(func(txApp core.App) error {
 		if created {
-			users, err := txApp.FindCachedCollectionByNameOrId("users")
-			if err != nil {
-				return err
-			}
-			user = core.NewRecord(users)
-			user.SetEmail(email)
-			user.SetPassword(security.RandomString(30))
-			user.SetVerified(false)
-			user.Set("firstname", body.Firstname)
-			user.Set("name", body.Name)
 			if err := txApp.Save(user); err != nil {
 				return err
 			}
 		}
-		membership.Set("user", user.Id)
-		return txApp.Save(membership)
+		if membershipOf(txApp, user.Id, gymID) == nil {
+			memberships, err := txApp.FindCachedCollectionByNameOrId("memberships")
+			if err != nil {
+				return err
+			}
+			membership = core.NewRecord(memberships)
+			membership.Set("user", user.Id)
+			membership.Set("gym", gymID)
+			membership.Set("role", invite.GetString("role"))
+			if err := txApp.Save(membership); err != nil {
+				return err
+			}
+		}
+		return txApp.Delete(invite)
 	})
 	if err != nil {
-		return e.BadRequestError("The membership could not be saved.", err)
+		return e.BadRequestError("The invitation could not be accepted.", err)
 	}
 	if created {
-		auditInvite(e, "users", user.Id, gymID)
+		auditInvite(e, "create", "users", user.Id, gymID)
 	}
-	auditInvite(e, "memberships", membership.Id, gymID)
-	if !created {
-		return e.JSON(http.StatusOK, membership)
+	if membership != nil {
+		auditInvite(e, "create", "memberships", membership.Id, gymID)
 	}
-	if err := sendInviteMail(e.App, user, gymID); err != nil {
-		e.App.Logger().Error("memberships: invitation mail failed", "user", user.Id, "error", err)
+	result := map[string]string{"gym": ""}
+	if gym, err := e.App.FindRecordById("gyms", gymID); err == nil {
+		result["gym"] = gym.GetString("slug")
 	}
-	return e.JSON(http.StatusCreated, map[string]bool{"created": true})
+	if created {
+		return apis.RecordAuthResponse(e, user, core.MFAMethodPassword, result)
+	}
+	return e.JSON(http.StatusOK, result)
 }
 
-func sendInviteMail(app core.App, user *core.Record, gymID string) error {
-	token, err := user.NewPasswordResetToken()
+func sendInviteMail(app core.App, invite *core.Record, token string) error {
+	role, err := app.FindRecordById("roles", invite.GetString("role"))
 	if err != nil {
 		return err
 	}
 	_, err = sendGymMail(app, mailContent{
 		Key:    "invite",
-		Gym:    gymID,
-		Name:   user.GetString("firstname"),
-		Action: "/auth/confirm-password-reset/" + token,
-	}, usersAsRecipients([]*core.Record{user}))
+		Gym:    invite.GetString("gym"),
+		Name:   invite.GetString("firstname"),
+		Params: map[string]any{"role": role.GetString("name")},
+		Action: "/auth/invite/" + token,
+	}, []mailRecipient{{Address: invite.GetString("email")}})
 	return err
 }
 
-func auditInvite(e *core.RequestEvent, collection, recordID, gymID string) {
-	entry := requestAuditEntry(e, "create", collection)
+func auditInvite(e *core.RequestEvent, action, collection, recordID, gymID string) {
+	entry := requestAuditEntry(e, action, collection)
 	entry.RecordID = recordID
 	entry.Gym = gymID
 	writeAuditEntry(e.App, entry)
