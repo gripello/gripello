@@ -18,6 +18,12 @@ describe('docker ui build', () => {
         }
     })
 
+    it('gives the go tests the locales they check against', () => {
+        expect(read('Dockerfile')).toMatch(
+            /^COPY i18n\/locales\/\*\.json \/i18n\/locales\/$/m,
+        )
+    })
+
     it('ships the locales pocketbase renders push texts from', () => {
         expect(read('Dockerfile')).toMatch(
             /^COPY i18n\/locales\/\*\.json \/pb\/locales\/$/m,
