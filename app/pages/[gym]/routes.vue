@@ -2,6 +2,21 @@
     <div class="mx-auto w-full p-4">
         <LayoutPageHeader :title="$t('page.content.index')" inline-actions>
             <template #actions>
+                <UButton
+                    color="neutral"
+                    variant="soft"
+                    icon="i-lucide-sparkles"
+                    :aria-label="$t('tasks.wish.action')"
+                    :title="$t('tasks.wish.action')"
+                    data-testid="index-wish-open"
+                    square
+                    class="sm:px-2.5"
+                    @click="wishDialog = true"
+                >
+                    <span class="hidden sm:inline">{{
+                        $t('tasks.wish.action')
+                    }}</span>
+                </UButton>
                 <GradeConversionDialog>
                     <template #activator="{ props: activator }">
                         <UButton
@@ -83,9 +98,22 @@
                 :get-row-id="(row: RouteListItem) => row.id"
                 :columns="columnsDesktop"
                 :loading="loading"
-                :empty="$t('table.no_data')"
                 :ui="tableUi"
             >
+                <template #empty>
+                    <LayoutEmptyState :title="$t('table.no_data')">
+                        <template #actions>
+                            <UButton
+                                color="primary"
+                                variant="soft"
+                                icon="i-lucide-sparkles"
+                                data-testid="index-empty-wish"
+                                @click="wishDialog = true"
+                                >{{ $t('tasks.wish.action') }}</UButton
+                            >
+                        </template>
+                    </LayoutEmptyState>
+                </template>
                 <template #color-cell="{ row }">
                     <RouteColorDot
                         :color="row.original.color"
@@ -197,6 +225,25 @@
             v-if="!loading && routes.length === 0 && !isWideLayout"
             class="mt-4"
             :title="$t('table.no_data')"
+        >
+            <template #actions>
+                <UButton
+                    color="primary"
+                    variant="soft"
+                    icon="i-lucide-sparkles"
+                    data-testid="index-empty-wish"
+                    @click="wishDialog = true"
+                    >{{ $t('tasks.wish.action') }}</UButton
+                >
+            </template>
+        </LayoutEmptyState>
+
+        <TaskWishDialog
+            v-model="wishDialog"
+            :location-id="selectedLocation"
+            :wall-id="selectedWall"
+            :route-type="selectedType"
+            :grade="selectedDifficulty.split(':')[1]"
         />
     </div>
 </template>
@@ -222,6 +269,7 @@ const gymId = useCurrentGymId()
 const { lgAndUp } = useDisplay()
 
 const isWideLayout = computed(() => lgAndUp.value)
+const wishDialog = ref(false)
 const { error: notifyError } = useNotification()
 const { polite: announce } = useAnnouncer()
 

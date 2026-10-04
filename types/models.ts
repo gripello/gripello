@@ -234,6 +234,8 @@ export interface TaskRecord extends BaseRecord {
     photo?: string | null
     reporter?: RecordId | null
     assignee?: RecordId | null
+    route_type?: RouteType | '' | null
+    grade?: string | null
     due_date?: string | null
     resolution_note?: string | null
     done_at?: string | null

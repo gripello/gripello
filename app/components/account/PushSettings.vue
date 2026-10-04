@@ -213,6 +213,7 @@ const LIST = 'p-0 sm:p-0 gap-y-0 divide-y divide-default'
 const TOPIC_ICONS: Record<string, string> = {
     new_routes: 'i-lucide-sparkles',
     defect_fixed: 'i-lucide-wrench',
+    wish_done: 'i-lucide-sparkles',
     competition_results: 'i-lucide-trophy',
     tasks: 'i-lucide-clipboard-list',
     reports: 'i-lucide-flag',

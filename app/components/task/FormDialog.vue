@@ -356,6 +356,7 @@ const gymPath = useGymPath()
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
 const KIND_ICONS = {
+    wish: 'i-lucide-sparkles',
     reset: 'i-lucide-refresh-cw',
     maintenance: 'i-lucide-wrench',
     other: 'i-lucide-list-todo',
@@ -410,7 +411,10 @@ const isDefect = computed(() => form.kind === 'defect')
 const targetRouteId = computed(() => props.task?.route || props.routeId || '')
 
 const formRules = computed(() => ({
-    title: isDefect.value ? [] : [nonBlank(t), maxLength(t, 200)],
+    title:
+        isDefect.value || form.kind === 'wish'
+            ? [maxLength(t, 200)]
+            : [nonBlank(t), maxLength(t, 200)],
     description: [maxLength(t, 2000)],
     resolutionNote: [maxLength(t, 1000)],
 }))

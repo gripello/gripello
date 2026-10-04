@@ -454,6 +454,8 @@
                 "task_assigned": "Tâche qui vous est attribuée : « {title} »",
                 "task_defect_fixed": "Le problème que vous avez signalé sur « {route} » a été corrigé — merci !",
                 "task_defect_filed_gym": "Nouveau défaut signalé sur « {route} » à {gym}",
+                "task_wish_filed": "Nouveau souhait de voie pour {location}",
+                "task_wish_done": "Votre souhait de voie pour {location} a été ouvert — amusez-vous bien !",
                 "wall_new_routes": "Nouvelles voies sur {wall} : {count}",
                 "competition_published": "Les résultats de « {competition} » sont en ligne"
             }
@@ -962,6 +964,7 @@
         "loadError": "Impossible de charger les tâches.",
         "kinds": {
             "defect": "Défaut",
+            "wish": "Souhait de voie",
             "reset": "Réouverture",
             "maintenance": "Maintenance",
             "other": "Autre"
@@ -1015,6 +1018,14 @@
             "submitted": "Merci ! Les ouvreurs ont été prévenus.",
             "bannerTitle": "{n} problème connu | {n} problèmes connus",
             "marker": "Problème connu"
+        },
+        "wish": {
+            "action": "Souhaiter une voie",
+            "dialogTitle": "Souhaiter une voie",
+            "details": "Qu'aimeriez-vous ?",
+            "detailsPlaceholder": "ex. une dalle avec petites réglettes",
+            "submit": "Envoyer le souhait",
+            "submitted": "Merci ! Les ouvreurs ont reçu votre souhait."
         },
         "board": {
             "recentlyDone": "30 dernières",
@@ -1411,6 +1422,7 @@
             "topics": {
                 "new_routes": "Nouvelles voies sur les murs que je suis",
                 "defect_fixed": "Défauts que j'ai signalés corrigés",
+                "wish_done": "Mes souhaits de voies sont ouverts",
                 "competition_results": "Résultats des compétitions",
                 "tasks": "Tâches et défauts signalés",
                 "reports": "Signalements de contenu (DSA)"

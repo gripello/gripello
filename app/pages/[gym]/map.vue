@@ -158,6 +158,15 @@
                             @click="toggleFollowWall"
                         />
                         <UButton
+                            color="neutral"
+                            variant="ghost"
+                            icon="i-lucide-sparkles"
+                            class="icon-btn"
+                            :aria-label="$t('tasks.wish.action')"
+                            data-testid="map-wish-open"
+                            @click="wishDialog = true"
+                        />
+                        <UButton
                             v-if="selectedWallId"
                             color="neutral"
                             variant="ghost"
@@ -241,6 +250,13 @@
             v-model="tickOpen"
             :route-id="tickRouteId"
             @saved="refreshTickedRoutes()"
+        />
+
+        <TaskWishDialog
+            v-model="wishDialog"
+            :location-id="locationId ?? undefined"
+            :wall-id="selectedWallId ?? undefined"
+            :route-type="mapType"
         />
     </div>
 </template>
@@ -437,6 +453,7 @@ function toggleSent(value: 'sent' | 'unsent') {
     sentFilter.value = sentFilter.value === value ? 'all' : value
 }
 
+const wishDialog = ref(false)
 const selectedWallId = computed(() => (route.query.wall as string) || null)
 const selectedRouteId = computed(() => (route.query.route as string) || null)
 const selectedRoute = computed(

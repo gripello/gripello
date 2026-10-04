@@ -221,6 +221,7 @@ const emit = defineEmits<{
 }>()
 
 const KIND_ICONS = {
+    wish: 'i-lucide-sparkles',
     reset: 'i-lucide-refresh-cw',
     maintenance: 'i-lucide-wrench',
     other: 'i-lucide-list-todo',

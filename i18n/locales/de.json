@@ -454,6 +454,8 @@
                 "task_assigned": "Dir zugewiesen: „{title}“",
                 "task_defect_fixed": "Das gemeldete Problem an „{route}“ wurde behoben — danke!",
                 "task_defect_filed_gym": "Neuer Defekt an „{route}“ in {gym} gemeldet",
+                "task_wish_filed": "Neuer Routenwunsch für {location}",
+                "task_wish_done": "Dein Routenwunsch für {location} wurde geschraubt – viel Spaß!",
                 "wall_new_routes": "Neue Routen an {wall}: {count}",
                 "competition_published": "Ergebnisse von „{competition}“ sind online"
             }
@@ -962,6 +964,7 @@
         "loadError": "Aufgaben konnten nicht geladen werden.",
         "kinds": {
             "defect": "Defekt",
+            "wish": "Routenwunsch",
             "reset": "Umschrauben",
             "maintenance": "Wartung",
             "other": "Sonstiges"
@@ -1015,6 +1018,14 @@
             "submitted": "Danke! Das Team wurde informiert.",
             "bannerTitle": "{n} bekanntes Problem | {n} bekannte Probleme",
             "marker": "Bekanntes Problem"
+        },
+        "wish": {
+            "action": "Route wünschen",
+            "dialogTitle": "Route wünschen",
+            "details": "Was wünschst du dir?",
+            "detailsPlaceholder": "z. B. eine Platte mit kleinen Leisten",
+            "submit": "Wunsch senden",
+            "submitted": "Danke! Die Routenbauer haben deinen Wunsch."
         },
         "board": {
             "recentlyDone": "letzte 30",
@@ -1411,6 +1422,7 @@
             "topics": {
                 "new_routes": "Neue Routen an Wänden, denen ich folge",
                 "defect_fixed": "Von mir gemeldete Defekte sind behoben",
+                "wish_done": "Meine Routenwünsche sind geschraubt",
                 "competition_results": "Wettkampfergebnisse",
                 "tasks": "Aufgaben und gemeldete Defekte",
                 "reports": "Inhaltsmeldungen (DSA)"
