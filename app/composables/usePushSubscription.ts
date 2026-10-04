@@ -1,10 +1,9 @@
 import type { PushSubscriptionRecord } from '~/types/models'
 import type { NotificationTopic } from '~/utils/notificationPrefs'
 import {
+    applyDeviceEvent,
     browserPushSupport,
-    deviceLabel,
-    subscriptionKeys,
-    urlBase64ToUint8Array,
+    setPushDeclined,
     type PushSupport,
 } from '~/utils/push'
 
@@ -59,26 +58,14 @@ export function usePushSubscription() {
     async function addThisDevice() {
         busy.value = true
         try {
-            if ((await Notification.requestPermission()) !== 'granted')
-                return false
-            const registration = await navigator.serviceWorker.ready
-            const subscription =
-                (await registration.pushManager.getSubscription()) ??
-                (await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(
-                        publicKey.value,
-                    ),
-                }))
-            const device = await pb
-                .collection('push_subscriptions')
-                .create<PushSubscriptionRecord>({
-                    user: pb.authStore.record?.id,
-                    device: deviceLabel(navigator.userAgent),
-                    ...subscriptionKeys(subscription),
-                })
+            const added = await subscribeThisDevice(pb, publicKey.value)
+            if (!added) return false
+            const { device, subscription } = added
             currentEndpoint.value = subscription.endpoint
-            devices.value = [device, ...devices.value]
+            devices.value = applyDeviceEvent(devices.value, {
+                action: 'create',
+                record: device,
+            })
             return true
         } finally {
             busy.value = false
@@ -95,13 +82,21 @@ export function usePushSubscription() {
             if (device.endpoint === currentEndpoint.value) {
                 await (await browserSubscription())?.unsubscribe()
                 currentEndpoint.value = ''
+                setPushDeclined(pb.authStore.record?.id, true)
             }
         } finally {
             busy.value = false
         }
     }
 
-    onMounted(refresh)
+    const { subscribe } = usePbSubscription(refresh)
+
+    onMounted(() => {
+        void refresh()
+        void subscribe('push_subscriptions', (event) => {
+            devices.value = applyDeviceEvent(devices.value, event)
+        })
+    })
 
     return {
         support,

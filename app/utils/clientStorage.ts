@@ -1,6 +1,7 @@
 import { INVENTORY_INSTRUCTIONS_KEY, INVENTORY_STORAGE_KEY } from './inventory'
 import { TICKS_DB } from './tickOutbox'
 import { RECENT_GYMS_KEY } from './recentGyms'
+import { PUSH_DECLINED_KEY } from './push'
 
 export const AUTH_COOKIE = 'pb_auth'
 export const SESSION_ONLY_AUTH_COOKIE = 'pb_auth_session'
@@ -73,6 +74,12 @@ export const CLIENT_STORAGE: ClientStorageEntry[] = [
         name: COMPETITION_SCORES_KEY,
         kind: 'localStorage',
         purpose: 'offlineScores',
+        duration: 'persistent',
+    },
+    {
+        name: PUSH_DECLINED_KEY,
+        kind: 'localStorage',
+        purpose: 'pushDeclined',
         duration: 'persistent',
     },
     {

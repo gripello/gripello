@@ -12,13 +12,13 @@
             data-testid="notification-bell"
         >
             <UChip
-                :show="unreadCount > 0"
-                color="error"
-                size="3xl"
-                :ui="{ base: 'px-1 py-2 text-[10px]' }"
+                :show="unreadCount > 0 || pushOffered"
+                :color="unreadCount ? 'error' : 'primary'"
+                :size="unreadCount ? '3xl' : 'md'"
+                :ui="unreadCount ? { base: 'px-1 py-2 text-[10px]' } : {}"
             >
                 <template #content>
-                    <span data-testid="notification-badge">{{
+                    <span v-if="unreadCount" data-testid="notification-badge">{{
                         unreadCount
                     }}</span>
                 </template>
@@ -48,6 +48,17 @@
                 </div>
 
                 <USeparator />
+
+                <div v-if="pushOffered" class="px-4 py-2">
+                    <UButton
+                        icon="i-lucide-bell-ring"
+                        block
+                        data-testid="notification-push-offer"
+                        @click="turnOnPush"
+                    >
+                        {{ $t('accountSettings.push.addDevice') }}
+                    </UButton>
+                </div>
 
                 <ul class="max-h-[400px] overflow-y-auto py-1">
                     <li
@@ -121,7 +132,10 @@ const {
     dismiss,
 } = useNotificationQueue()
 
+const { error: notifyError } = useNotification()
+
 const open = ref(false)
+const { offered: pushOffered, turnOn } = usePushOffer()
 
 function label(item: NotificationRecord) {
     return t(notificationLabelKey(item), item.params ?? {})
@@ -132,6 +146,15 @@ async function openItem(item: NotificationRecord) {
     if (item.url) {
         open.value = false
         await navigateTo(item.url)
+    }
+}
+
+async function turnOnPush() {
+    try {
+        await turnOn()
+    } catch (err) {
+        console.error('Push subscription failed:', err)
+        notifyError(t('notifications.error.edit'))
     }
 }
 
