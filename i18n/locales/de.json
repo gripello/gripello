@@ -1258,6 +1258,8 @@
         "routes": "Routen",
         "wallHint": "Wo die Route auf dem Hallenplan liegt. Feinjustieren unter „Routen platzieren“.",
         "resizeList": "Listengröße ändern",
+        "hideList": "Liste ausblenden",
+        "showList": "Liste einblenden",
         "backToList": "Zurück zur Liste",
         "clusterLabel": "{count} Route hier, tippen zum Anzeigen | {count} Routen hier, tippen zum Anzeigen",
         "followWall": "{wall} folgen",
@@ -1351,7 +1353,6 @@
         "hints": {
             "idle": "Tippe eine Route an und dann ihre Stelle an der Wand – die nächste Route folgt automatisch. Hake mehrere Routen an, um sie gemeinsam an eine Wand zu setzen. Punkte lassen sich verschieben.",
             "armed": "Klicke auf eine Wand, um „{name}“ zu platzieren. Esc bricht ab.",
-            "selected": "Ziehe den Punkt von „{name}“ an die richtige Stelle der Wand oder an eine andere Wand. Entf entfernt ihn vom Plan.",
             "checked": "Tippe auf eine Wand, um {n} Route dort nach Umlenker zu platzieren. | Tippe auf eine Wand, um {n} Routen dort nach Umlenker zu platzieren."
         },
         "skip": "Überspringen",

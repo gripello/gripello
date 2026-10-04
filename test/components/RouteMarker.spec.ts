@@ -24,7 +24,19 @@ describe('MapRouteMarker', () => {
         const grade = wrapper.get('[data-testid="map-dot-grade"]')
         expect(grade.text()).toBe('6A')
         expect(grade.attributes('fill')).toBe('#FFFFFF')
-        expect(grade.attributes('font-size')).toBe('1.1')
+        expect(grade.attributes('font-size')).toBe('11')
+        expect(grade.element.parentElement?.getAttribute('transform')).toBe(
+            'translate(10 20) scale(0.1)',
+        )
+    })
+
+    it('keeps the tap area of a grade circle inside its own spacing', () => {
+        const hit = (hitRadiusPx: number) =>
+            createWrapper({ asGrade: true, hitRadiusPx })
+                .get('.map-dot-hit')
+                .attributes('r')
+        expect(hit(22)).toBe('1.6')
+        expect(hit(13)).toBe('1.4')
     })
 
     it('draws a small dot without the grade', () => {
@@ -50,6 +62,28 @@ describe('MapRouteMarker', () => {
             'ticks.suggestions.new',
         ])
         expect(wrapper.find('.map-dot-badge--defect-minor').exists()).toBe(true)
+    })
+
+    it('keeps every badge on the top rim, clear of the grade', () => {
+        const wrapper = createWrapper({
+            asGrade: true,
+            sent: true,
+            defect: 'minor',
+            isNew: true,
+        })
+        const badges = wrapper.findAll('.map-dot-badge')
+        for (const badge of badges) {
+            expect(Number(badge.get('circle').attributes('cy'))).toBeLessThan(
+                19.2,
+            )
+            expect(
+                badge.get('.map-dot-badge-glyph').attributes('d'),
+            ).toBeTruthy()
+        }
+        const xs = badges.map((badge) =>
+            Number(badge.get('circle').attributes('cx')),
+        )
+        expect(new Set(xs).size).toBe(3)
     })
 
     it('marks a dot as sent, defective and new without badges', () => {

@@ -323,18 +323,20 @@ export function gradeFontPx(grade: string): number {
 
 export const DOT_RADIUS_PX = 5.5
 export const GRADE_RADIUS_PX = 14
-export const BADGE_RADIUS_PX = 5
-const GRADE_GAP_PX = 12
-const GRADE_SPACING_PX = Math.max(
-    GRADE_RADIUS_PX * 2 + GRADE_GAP_PX,
-    GRADE_RADIUS_PX * 1.95 + BADGE_RADIUS_PX + GRADE_GAP_PX / 2,
-)
+export const BADGE_RADIUS_PX = 6
+export const GRADE_SPACING_PX = GRADE_RADIUS_PX * 2 + 4
 export const HIT_RADIUS_PX = { fine: 13, coarse: 22 }
-
-export function gradeSpacingPx(hitRadiusPx: number): number {
-    return Math.max(hitRadiusPx * 2, GRADE_SPACING_PX)
-}
 
 export function checkPath([x, y]: MapPoint, r: number): string {
     return `M${x - r * 0.5} ${y} L${x - r * 0.1} ${y + r * 0.4} L${x + r * 0.55} ${y - r * 0.45}`
+}
+
+export function exclamationPath([x, y]: MapPoint, r: number): string {
+    return `M${x} ${y - r * 0.5} L${x} ${y + r * 0.1} M${x} ${y + r * 0.45} L${x} ${y + r * 0.46}`
+}
+
+export function sparklePath([x, y]: MapPoint, r: number): string {
+    const tip = r * 0.6
+    const waist = r * 0.15
+    return `M${x} ${y - tip} L${x + waist} ${y - waist} L${x + tip} ${y} L${x + waist} ${y + waist} L${x} ${y + tip} L${x - waist} ${y + waist} L${x - tip} ${y} L${x - waist} ${y - waist} Z`
 }

@@ -121,6 +121,7 @@ test('dragging a dot onto another wall moves the route there', async ({
             steps: 10,
         },
     )
+    await expect(page.getByTestId('placement-ghost')).toBeVisible()
     await page.mouse.up()
 
     await page.getByTestId('placement-save').click()
@@ -129,6 +130,30 @@ test('dragging a dot onto another wall moves the route there', async ({
     )
     const saved = await seeded.root.collection('routes').getOne(islandRoute)
     expect(saved.wall).toBe(seeded.northWallId)
+})
+
+test('selecting a dot on the map shows its route in the placed list', async ({
+    setterPage: page,
+    testPrefix,
+}) => {
+    await gotoSettled(page, `/manage/map?location=${seeded.locationId}`)
+    const routeId = seeded.routeIds[2]!
+    await page
+        .locator(`[data-testid="placement-dot"][data-route-id="${routeId}"]`)
+        .click()
+
+    await expect(page.getByTestId('placement-tab-placed')).toHaveAttribute(
+        'aria-selected',
+        'true',
+    )
+    await expect(page.getByTestId('placement-selected')).toContainText(
+        `${testPrefix}-map-route-3`,
+    )
+    await expect(
+        page.locator(
+            `[data-testid="placement-route"][data-route-id="${routeId}"]`,
+        ),
+    ).toBeInViewport()
 })
 
 test('a placed dot can be dragged along its wall', async ({
