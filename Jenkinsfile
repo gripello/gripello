@@ -11,7 +11,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = "ghcr.io/gripello/gripello"
-        GHCR_CREDENTIALS_ID = "ghcr"
+        GHCR_CREDENTIALS_ID = "gripello-app"
         DOCKER_BUILDKIT = 1
         CI_ID = "${JOB_NAME}-${BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9]+/, '-').toLowerCase()
         DOCKER_CLI_EXPERIMENTAL = 'enabled'
