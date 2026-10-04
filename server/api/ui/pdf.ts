@@ -12,6 +12,7 @@ import {
     resolveExportLabel,
     resolveExportShow,
     TAG_QR_ERROR_CORRECTION,
+    fetchLogo,
 } from '../../utils/export'
 import { drawRouteTag } from '../../utils/routeTag'
 import { gymBandsFrom } from '#shared/utils/gradeReference'
@@ -93,17 +94,3 @@ export default eventHandler(async (event) => {
         throw createError({ statusCode: 500, statusMessage: 'Server error' })
     }
 })
-
-async function fetchLogo(url: string) {
-    if (!url) {
-        return null
-    }
-    try {
-        const response = await fetch(url)
-        if (!response.ok) throw new Error('Failed to fetch logo')
-        return Buffer.from(await response.arrayBuffer())
-    } catch (error) {
-        console.error('Failed to fetch logo:', error)
-        return null
-    }
-}

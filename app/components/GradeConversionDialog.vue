@@ -81,6 +81,20 @@
         <p class="mt-3 text-xs text-dimmed">
             {{ $t('gradeConversion.source') }}
         </p>
+
+        <template #actions>
+            <UButton
+                :to="`/api/ui/grade-scale?gym=${gymId}`"
+                external
+                download
+                color="neutral"
+                variant="soft"
+                icon="i-lucide-file-down"
+                data-testid="grade-conversion-pdf"
+            >
+                {{ $t('gradeConversion.downloadPdf') }}
+            </UButton>
+        </template>
     </LayoutDialogShell>
 </template>
 
@@ -119,6 +133,7 @@ const IRCRA_STEPS = 32
 const NOTES = ['fontVsFrench', 'beginner', 'orientation', 'bands']
 
 const { t } = useI18n()
+const gymId = useCurrentGymId()
 const open = ref(false)
 
 function isSourceGrade(system: GradeSystem, label: string) {
