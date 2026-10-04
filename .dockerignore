@@ -2,6 +2,9 @@
 !.docker
 !.dockerignore
 !Dockerfile
+!Jenkinsfile
+!docker-compose.yml
+!README.md
 !LICENSE
 !.yarnrc.yml
 !package.json

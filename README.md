@@ -30,7 +30,7 @@ wget https://raw.githubusercontent.com/gripello/gripello/main/docker-compose.yml
 services:
     gripello:
         container_name: gripello-app
-        image: tilalx/verti-grade:latest
+        image: ghcr.io/gripello/gripello:latest
         ports:
             - '80:80'
             - '443:443'

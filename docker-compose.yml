@@ -1,7 +1,7 @@
 services:
     gripello:
         container_name: gripello
-        image: tilalx/verti-grade:rolling
+        image: ghcr.io/gripello/gripello:rolling
         ports:
             - '80:80'
             - '443:443'
