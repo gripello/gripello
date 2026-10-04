@@ -66,6 +66,7 @@
 import type { LocationRecord } from '~/types/models'
 
 const pb = usePocketbase()
+const gymId = useCurrentGymId()
 const { t } = useI18n()
 const { run: runAction } = useAsyncAction()
 const { data: locations, refresh } = useLocations()
@@ -107,7 +108,11 @@ async function run(id: string, action: () => Promise<unknown>) {
 async function add() {
     const name = newName.value.trim()
     if (!name) return
-    if (await run('new', () => pb.collection('locations').create({ name }))) {
+    if (
+        await run('new', () =>
+            pb.collection('locations').create({ name, gym: gymId.value }),
+        )
+    ) {
         newName.value = ''
     }
 }

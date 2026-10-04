@@ -14,8 +14,8 @@
             >
                 {{ route.name }}
             </NuxtLink>
-            <span v-else class="text-muted">
-                {{ $t('ticks.removedRoute') }}
+            <span v-else class="text-muted" data-testid="logbook-tick-removed">
+                {{ tick.route_name || $t('ticks.removedRoute') }}
             </span>
             <div class="flex items-center gap-2 mt-1 flex-wrap">
                 <UBadge

@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 
 const THEME_OPTION = {
     light: /^Light theme/,
@@ -21,7 +21,7 @@ test.describe('dark OS preference', () => {
     test.use({ colorScheme: 'dark' })
 
     test('applies the dark theme on first load', async ({ page }) => {
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await expect(page.locator(appRoot)).toHaveClass(/(^|\s)dark(\s|$)/)
     })
 
@@ -49,7 +49,7 @@ test.describe('dark OS preference', () => {
                 url: baseURL!,
             },
         ])
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await expect(page.locator(appRoot)).toHaveClass(/(^|\s)dark(\s|$)/)
     })
 })
@@ -58,7 +58,7 @@ test.describe('light OS preference', () => {
     test.use({ colorScheme: 'light' })
 
     test('applies the light theme on first load', async ({ page }) => {
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await expect(page.locator(appRoot)).toHaveClass(/(^|\s)light(\s|$)/)
     })
 })
@@ -69,7 +69,7 @@ test.describe('theme toggle', () => {
     test('cycles system → light → dark and persists across reload', async ({
         page,
     }) => {
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         const toggle = page.getByTestId('nav-theme-toggle')
         await expect(toggle).toHaveAttribute('data-theme-mode', 'system')
 
@@ -81,7 +81,7 @@ test.describe('theme toggle', () => {
         await expect(toggle).toHaveAttribute('data-theme-mode', 'dark')
         await expect(page.locator(appRoot)).toHaveClass(/(^|\s)dark(\s|$)/)
 
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await expect(page.locator(appRoot)).toHaveClass(/(^|\s)dark(\s|$)/)
     })
 
@@ -92,7 +92,7 @@ test.describe('theme toggle', () => {
         await page
             .context()
             .addCookies([{ name: 'theme-mode', value: 'dark', url: baseURL! }])
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await expect(page.locator(appRoot)).toHaveClass(/(^|\s)dark(\s|$)/)
     })
 })
@@ -129,7 +129,7 @@ test.describe('browser bars', () => {
         page,
     }) => {
         await page.setViewportSize({ width: 390, height: 844 })
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await expect(page.locator('body')).toHaveCSS(
             'background-color',
             'rgb(255, 255, 255)',
@@ -142,7 +142,7 @@ test.describe('browser bars', () => {
 
     test('follows a theme switch', async ({ page }) => {
         await page.setViewportSize({ width: 1440, height: 900 })
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         const toggle = page.getByTestId('nav-theme-toggle')
         await chooseTheme(page, 'dark')
         await expect(toggle).toHaveAttribute('data-theme-mode', 'dark')
@@ -157,7 +157,7 @@ test.describe('browser bars', () => {
     })
 
     test('follows the OS appearance live in system mode', async ({ page }) => {
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await page.emulateMedia({ colorScheme: 'dark' })
         await expect(page.locator(appRoot)).toHaveClass(/(^|\s)dark(\s|$)/)
         await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute(
@@ -171,7 +171,7 @@ test.describe('browser bars', () => {
     test('an explicit choice ignores OS appearance changes', async ({
         page,
     }) => {
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await chooseTheme(page, 'light')
         await expect(page.getByTestId('nav-theme-toggle')).toHaveAttribute(
             'data-theme-mode',
@@ -184,7 +184,7 @@ test.describe('browser bars', () => {
 
     test('an open dialog dims the bars with its scrim', async ({ page }) => {
         await page.setViewportSize({ width: 1440, height: 900 })
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await chooseTheme(page, 'light')
         const bar = page.locator('meta[name="theme-color"]')
         await expect(bar).toHaveAttribute('content', /^#FFFFFF$/i)
@@ -199,7 +199,7 @@ test.describe('browser bars', () => {
     }) => {
         const first = await context.newPage()
         const second = await context.newPage()
-        await gotoSettled(first, '/')
+        await gotoSettled(first, gymPath('/'))
         await gotoSettled(second, '/routes')
         await chooseTheme(second, 'dark')
         await expect(second.locator(appRoot)).toHaveClass(/(^|\s)dark(\s|$)/)
@@ -211,7 +211,7 @@ test.describe('browser bars', () => {
     })
 
     test('the installed app draws its own status bar', async ({ page }) => {
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await expect(
             page.locator('meta[name="apple-mobile-web-app-status-bar-style"]'),
         ).toHaveAttribute('content', 'black-translucent')
@@ -226,7 +226,7 @@ test.describe('browser bars', () => {
             { name: 'theme-mode', value: 'light', url: baseURL! },
         ])
         const page = await context.newPage()
-        await gotoSettled(page, '/')
+        await gotoSettled(page, gymPath('/'))
         await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute(
             'content',
             'light',

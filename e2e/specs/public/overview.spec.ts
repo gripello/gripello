@@ -1,7 +1,7 @@
 import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
 import { authAsSuperuser, uiaa } from '../../support/seed'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 import { PB_URL, seedMap, type SeededMap } from '../../support/map'
 
 let seeded: SeededMap
@@ -34,7 +34,7 @@ test('the overview shows new routes and walls that lead to the map', async ({
     page,
     testPrefix,
 }) => {
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     await expect(page.getByTestId('overview-stats')).toBeVisible()
 
     const fresh = page.locator(
@@ -53,12 +53,12 @@ test('the overview shows new routes and walls that lead to the map', async ({
 test('signed-in climbers see how many current routes they have sent', async ({
     userPage: page,
 }) => {
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     await expect(page.getByTestId('overview-progress')).toBeVisible()
 })
 
 test('guests are invited to sign in for the logbook', async ({ page }) => {
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     await expect(page.getByTestId('overview-progress')).toHaveCount(0)
     await page.getByTestId('overview-login').click()
     await page.waitForURL(/\/auth\/login\?redirect=(%2F|\/)logbook/)
@@ -66,7 +66,7 @@ test('guests are invited to sign in for the logbook', async ({ page }) => {
 
 test('hovering a grade bar shows its route count', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     const bar = page.getByTestId('overview-grade-bar').first()
     await bar.hover()
     await expect(
@@ -77,7 +77,7 @@ test('hovering a grade bar shows its route count', async ({ page }) => {
 
 test('grade bars share one baseline on a phone', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 780 })
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     const bottoms = await page
         .getByTestId('overview-grades')
         .first()
@@ -94,7 +94,7 @@ test('grade bars share one baseline on a phone', async ({ page }) => {
 
 test('guests get the public nav and an all-routes link', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     const nav = page.getByTestId('nav-desktop-links')
     await expect(nav.getByTestId('nav-link-map')).toBeVisible()
     await expect(nav.getByTestId('nav-link-routes')).toBeVisible()
@@ -108,7 +108,7 @@ test('new routes appear on the overview without a reload', async ({
     page,
     testPrefix,
 }) => {
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     await expect(page.getByTestId('overview-stats')).toBeVisible()
 
     const root = new PocketBase(PB_URL)

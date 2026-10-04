@@ -1,5 +1,6 @@
 export interface CompetitionChange {
     competition: string
+    gym?: string
     kind:
         | 'competition'
         | 'routes'

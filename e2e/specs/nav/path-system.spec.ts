@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 
 const TOP_LEVEL = [
     'nav-link-home',
@@ -17,7 +17,7 @@ test('the desktop sidebar lists every page in labelled sections', async ({
 
     const sidebar = page.getByTestId('nav-desktop-links')
     await expect(sidebar).toBeVisible()
-    for (const id of [...TOP_LEVEL, ...GROUPS, 'nav-link-admin-settings']) {
+    for (const id of [...TOP_LEVEL, ...GROUPS]) {
         await expect(sidebar.getByTestId(id)).toBeVisible()
     }
 
@@ -46,12 +46,27 @@ test('collapsing the sidebar keeps the icons and survives a reload', async ({
     await expect(sidebar).toHaveAttribute('data-state', 'expanded')
 })
 
+test('only the section of the open page starts expanded', async ({
+    adminPage: page,
+}) => {
+    await gotoSettled(page, '/manage/routes', /\/manage\/routes/)
+    const sidebar = page.getByTestId('nav-desktop-links')
+
+    await expect(sidebar.getByTestId('nav-link-manage-tasks')).toBeVisible()
+    await expect(sidebar.getByTestId('nav-link-admin-settings')).toBeHidden()
+
+    await sidebar.getByTestId('nav-group-admin').click()
+    await expect(sidebar.getByTestId('nav-link-admin-settings')).toBeVisible()
+})
+
 test('section links navigate to their pages', async ({ adminPage: page }) => {
     await gotoSettled(page, '/manage/routes', /\/manage\/routes/)
 
+    await page.getByTestId('nav-group-moderation').click()
     await page.getByTestId('nav-link-manage-comments').click()
     await page.waitForURL('**/manage/comments')
 
+    await page.getByTestId('nav-group-admin').click()
     await page.getByTestId('nav-link-admin-settings').click()
     await page.waitForURL('**/admin/settings')
 })
@@ -79,11 +94,11 @@ test('a group with no permitted page is left out entirely', async ({
 })
 
 const MOVED = [
-    ['/admin/routes', '/manage/routes'],
-    ['/admin/comments', '/manage/comments'],
-    ['/admin/reports', '/manage/reports'],
-    ['/admin/analytics', '/manage/analytics'],
-    ['/admin/inventory', '/manage/inventory'],
+    ['/admin/routes', gymPath('/manage/routes')],
+    ['/admin/comments', gymPath('/manage/comments')],
+    ['/admin/reports', gymPath('/manage/reports')],
+    ['/admin/analytics', gymPath('/manage/analytics')],
+    ['/admin/inventory', gymPath('/manage/inventory')],
     ['/admin/activity', '/account/activity'],
 ]
 

@@ -1,9 +1,10 @@
 import { test, expect } from '../../support/fixtures'
+import { gymPath } from '../../support/nav'
 
 test.use({ launchOptions: { args: ['--ignore-certificate-errors'] } })
 
 test('links an installable web app manifest', async ({ page, request }) => {
-    const response = await page.goto('/')
+    const response = await page.goto(gymPath('/'))
     const html = (await response?.text()) ?? ''
 
     expect(html).toContain('rel="manifest" href="/manifest.webmanifest"')
@@ -40,7 +41,7 @@ test.describe('service worker', () => {
         page,
         context,
     }) => {
-        await page.goto('/')
+        await page.goto(gymPath('/'))
         await page.waitForFunction(
             () => navigator.serviceWorker?.controller !== null,
         )

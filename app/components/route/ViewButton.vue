@@ -1,7 +1,7 @@
 <template>
     <UTooltip v-if="compact" :text="$t('routes.view')">
         <UButton
-            :to="`/route?id=${routeId}`"
+            :to="gymPath(`/route?id=${routeId}`)"
             variant="soft"
             color="neutral"
             icon="i-lucide-chevron-right"
@@ -11,7 +11,7 @@
     </UTooltip>
     <UButton
         v-else
-        :to="`/route?id=${routeId}`"
+        :to="gymPath(`/route?id=${routeId}`)"
         variant="soft"
         color="neutral"
         trailing-icon="i-lucide-chevron-right"
@@ -22,5 +22,6 @@
 </template>
 
 <script setup lang="ts">
+const gymPath = useGymPath()
 defineProps<{ routeId: string; compact?: boolean }>()
 </script>

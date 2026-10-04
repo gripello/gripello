@@ -21,4 +21,5 @@
 !pocketbase/migrations_test.go
 !pocketbase/hooks
 !pocketbase/pb_migrations
+!pocketbase/testdata
 **/node_modules

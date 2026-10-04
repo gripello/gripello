@@ -37,6 +37,9 @@ var serverOwnedTaskFields = []string{"kind", "reporter", "done_at", "done_by"}
 func registerTasks(app core.App) {
 	app.OnRecordCreateRequest("tasks").BindFunc(func(e *core.RecordRequestEvent) error {
 		actorID := requestUserID(e)
+		if err := attachTaskTarget(e.App, e.Record, true); err != nil {
+			return err
+		}
 		if !isTaskManager(e) {
 			restrictToDefectReport(e.Record)
 		}
@@ -51,7 +54,7 @@ func registerTasks(app core.App) {
 		if err := validateTask(e.Record); err != nil {
 			return err
 		}
-		if err := attachTaskTarget(e.App, e.Record, true); err != nil {
+		if err := validateAssignee(e.App, e.Record); err != nil {
 			return err
 		}
 		if err := e.Next(); err != nil {
@@ -60,10 +63,10 @@ func registerTasks(app core.App) {
 
 		if e.Record.GetString("kind") == "defect" {
 			pushNotification(e.App, notification{
-				Users:  withoutUser(usersByPermission(e.App, "manage_tasks"), actorID),
+				Users:  withoutUser(usersByPermission(e.App, e.Record.GetString("gym"), "manage_tasks"), actorID),
 				Type:   "task_defect_filed",
-				Params: map[string]any{"route": taskRouteName(e.App, e.Record)},
-				URL:    "/manage/tasks",
+				Params: defectFiledParams(taskRouteName(e.App, e.Record), gymName(e.App, e.Record.GetString("gym"))),
+				URL:    gymPath(e.App, e.Record.GetString("gym"), "/manage/tasks"),
 			})
 			if err := sendUrgentDefectAlert(e.App, e.Record, actorID); err != nil {
 				e.App.Logger().Error("tasks: urgent defect mail failed", "task", e.Record.Id, "error", err)
@@ -88,6 +91,11 @@ func registerTasks(app core.App) {
 		if err := attachTaskTarget(e.App, e.Record, false); err != nil {
 			return err
 		}
+		if e.Record.GetString("assignee") != previousAssignee {
+			if err := validateAssignee(e.App, e.Record); err != nil {
+				return err
+			}
+		}
 		if err := e.Next(); err != nil {
 			return err
 		}
@@ -110,6 +118,23 @@ func registerTasks(app core.App) {
 		return nil
 	})
 
+	unassignFormerManager := func(e *core.RecordEvent) error {
+		unassignTasksWithoutPermission(e.App, e.Record.GetString("user"), e.Record.GetString("gym"))
+		return e.Next()
+	}
+	app.OnRecordAfterUpdateSuccess("memberships").BindFunc(unassignFormerManager)
+	app.OnRecordAfterDeleteSuccess("memberships").BindFunc(unassignFormerManager)
+	app.OnRecordAfterUpdateSuccess("roles").BindFunc(func(e *core.RecordEvent) error {
+		memberships, err := e.App.FindAllRecords("memberships", dbx.HashExp{"role": e.Record.Id})
+		if err != nil {
+			return err
+		}
+		for _, membership := range memberships {
+			unassignTasksWithoutPermission(e.App, membership.GetString("user"), membership.GetString("gym"))
+		}
+		return e.Next()
+	})
+
 	app.OnRecordUpdate("routes").BindFunc(func(e *core.RecordEvent) error {
 		wasArchived := e.Record.Original().GetBool("archived")
 		if err := e.Next(); err != nil {
@@ -123,7 +148,7 @@ func registerTasks(app core.App) {
 }
 
 func isTaskManager(e *core.RecordRequestEvent) bool {
-	return e.HasSuperuserAuth() || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, "manage_tasks"))
+	return e.HasSuperuserAuth() || (e.Auth != nil && hasPermission(e.App, e.Auth.Id, e.Record.GetString("gym"), "manage_tasks"))
 }
 
 func requestUserID(e *core.RecordRequestEvent) string {
@@ -184,10 +209,13 @@ func attachTaskTarget(app core.App, task *core.Record, creating bool) error {
 			return apis.NewBadRequestError("This route has been removed.", nil)
 		}
 		task.Set("location", route.GetString("location"))
-		if task.GetString("wall") == "" {
+		task.Set("gym", route.GetString("gym"))
+		if wallID := task.GetString("wall"); wallID == "" {
 			task.Set("wall", route.GetString("wall"))
+		} else if wall, err := app.FindRecordById("walls", wallID); err != nil || wall.GetString("location") != route.GetString("location") {
+			return apis.NewBadRequestError("The wall is not in the route's location.", nil)
 		}
-		return nil
+		return rejectGymMove(task)
 	}
 	if wallID := task.GetString("wall"); wallID != "" {
 		wall, err := app.FindRecordById("walls", wallID)
@@ -195,8 +223,45 @@ func attachTaskTarget(app core.App, task *core.Record, creating bool) error {
 			return apis.NewBadRequestError("Wall not found.", nil)
 		}
 		task.Set("location", wall.GetString("location"))
+		task.Set("gym", wall.GetString("gym"))
+		return rejectGymMove(task)
+	}
+	if locationID := task.GetString("location"); locationID != "" {
+		return copyGymFrom(app, task, "locations", "location")
+	}
+	return rejectGymMove(task)
+}
+
+func validateAssignee(app core.App, task *core.Record) error {
+	assigneeID := task.GetString("assignee")
+	if assigneeID != "" && !hasPermission(app, assigneeID, task.GetString("gym"), "manage_tasks") {
+		return apis.NewBadRequestError("The assignee cannot manage tasks in this gym.", nil)
 	}
 	return nil
+}
+
+func unassignTasksWithoutPermission(app core.App, userID, gymID string) {
+	if hasPermission(app, userID, gymID, "manage_tasks") {
+		return
+	}
+	tasks, err := app.FindRecordsByFilter(
+		"tasks",
+		"gym = {:gym} && assignee = {:user} && status != 'done' && status != 'dismissed'",
+		"",
+		0,
+		0,
+		dbx.Params{"gym": gymID, "user": userID},
+	)
+	if err != nil {
+		app.Logger().Error("tasks: failed to load tasks of a former manager", "user", userID, "gym", gymID, "error", err)
+		return
+	}
+	for _, task := range tasks {
+		task.Set("assignee", "")
+		if err := app.Save(task); err != nil {
+			app.Logger().Error("tasks: failed to unassign task", "task", task.Id, "error", err)
+		}
+	}
 }
 
 func notifyTaskAssignee(app core.App, task *core.Record, actorID string) {
@@ -212,7 +277,7 @@ func notifyTaskAssignee(app core.App, task *core.Record, actorID string) {
 		Users:  []*core.Record{assignee},
 		Type:   "task_assigned",
 		Params: map[string]any{"title": taskLabel(app, task)},
-		URL:    "/manage/tasks",
+		URL:    gymPath(app, task.GetString("gym"), "/manage/tasks"),
 	})
 }
 
@@ -266,7 +331,7 @@ func sendUrgentDefectAlert(app core.App, task *core.Record, reporterID string) e
 		return nil
 	}
 	recipients := []string{}
-	for _, user := range withoutUser(usersByPermission(app, "manage_tasks"), reporterID) {
+	for _, user := range withoutUser(usersByPermission(app, task.GetString("gym"), "manage_tasks"), reporterID) {
 		if address := user.GetString("email"); address != "" && !slices.Contains(recipients, address) {
 			recipients = append(recipients, address)
 		}
@@ -276,10 +341,14 @@ func sendUrgentDefectAlert(app core.App, task *core.Record, reporterID string) e
 	_, err := sendMail(
 		app,
 		recipients,
-		fmt.Sprintf("Urgent: %s on %s - %s", category, routeName, app.Settings().Meta.AppName),
-		urgentDefectAlertHTML(appURL(app), routeName, task),
+		gymMailSubject(app, task.GetString("gym"), fmt.Sprintf("Urgent: %s on %s", category, routeName)),
+		urgentDefectAlertHTML(appURL(app), gymPath(app, task.GetString("gym"), "/manage/tasks"), routeName, task),
 	)
 	return err
+}
+
+func defectFiledParams(routeName, gymName string) map[string]any {
+	return map[string]any{"route": routeName, "gym": gymName}
 }
 
 func defectCategoryLabel(category string) string {
@@ -289,7 +358,7 @@ func defectCategoryLabel(category string) string {
 	return category
 }
 
-func urgentDefectAlertHTML(baseURL, routeName string, task *core.Record) string {
+func urgentDefectAlertHTML(baseURL, boardPath, routeName string, task *core.Record) string {
 	description := ""
 	if text := task.GetString("description"); text != "" {
 		description = fmt.Sprintf("<p><strong>Details:</strong><br>%s</p>", html.EscapeString(text))
@@ -302,7 +371,7 @@ func urgentDefectAlertHTML(baseURL, routeName string, task *core.Record) string 
              <p><strong>Problem:</strong> %s</p>
              <p><strong>Route:</strong> <a href="%s/route?id=%s">%s</a></p>
              %s%s
-             <p><a href="%s/manage/tasks">Open the task board</a></p>`,
+             <p><a href="%s%s">Open the task board</a></p>`,
 		html.EscapeString(defectCategoryLabel(task.GetString("category"))),
 		html.EscapeString(baseURL),
 		html.EscapeString(task.GetString("route")),
@@ -310,5 +379,6 @@ func urgentDefectAlertHTML(baseURL, routeName string, task *core.Record) string 
 		description,
 		photo,
 		html.EscapeString(baseURL),
+		html.EscapeString(boardPath),
 	)
 }

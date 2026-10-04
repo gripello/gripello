@@ -1,19 +1,20 @@
 import { Workbook } from '@cj-tech-master/excelts'
 import { test, expect } from '../../support/fixtures'
+import { e2eGym } from '../../support/seed'
 import { authHeader, gotoSettled } from '../../support/nav'
 
-test('duplicate email on user creation shows a readable message', async ({
+test('adding an existing member shows a readable message', async ({
     adminPage: page,
 }) => {
     await gotoSettled(page, '/admin/users')
-    await page.getByTestId('user-create-open').click()
-    await page.getByTestId('user-create-firstname').fill('E2E')
-    await page.getByTestId('user-create-lastname').fill('Duplicate')
-    await page.getByTestId('user-create-email').fill('e2e-admin@gripello.test')
-    await page.getByTestId('user-create-submit').click()
+    await page.getByTestId('member-invite-open').click()
+    await page
+        .getByTestId('member-invite-email')
+        .fill('e2e-routesetter@gripello.test')
+    await page.getByTestId('member-invite-submit').click()
 
     await expect(page.getByTestId('global-snackbar').last()).toContainText(
-        'A user with this email already exists.',
+        'This person is already a member.',
     )
 })
 
@@ -46,6 +47,7 @@ test('xlsx worksheet is named from the sent label without invalid characters', a
     const response = await page.request.post('/api/ui/xlsx', {
         headers,
         data: {
+            gym: await e2eGym(),
             ids: [route.id],
             columns: ['name'],
             labels: {

@@ -2,7 +2,7 @@ import PocketBase from 'pocketbase'
 import type { Locator } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { authAsSuperuser, uiaa } from '../../support/seed'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, gymPath } from '../../support/nav'
 import { PB_URL, seedMap, type SeededMap } from '../../support/map'
 
 let seeded: SeededMap
@@ -61,7 +61,7 @@ test('the map list shows the color dot and grade', async ({ page }) => {
 test('the overview shows the color dot and grade for new routes', async ({
     page,
 }) => {
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     const tile = page.locator(
         `[data-testid="overview-new-route"][data-route-id="${routeId}"]`,
     )

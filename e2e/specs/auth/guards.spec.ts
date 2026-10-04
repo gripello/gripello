@@ -1,6 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import { uiaa } from '../../support/seed'
-import { gotoSettled, authHeader } from '../../support/nav'
+import { authHeader, gotoSettled, gymPath } from '../../support/nav'
 
 const ADMIN_PATHS = [
     '/manage/routes',
@@ -18,7 +18,7 @@ test.describe('unauthenticated guard', () => {
             await page.waitForURL(
                 (url) =>
                     url.pathname === '/auth/login' &&
-                    url.searchParams.get('redirect') === path,
+                    url.searchParams.get('redirect') === gymPath(path),
             )
         })
     }

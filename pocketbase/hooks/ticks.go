@@ -17,6 +17,7 @@ func registerTicks(app core.App) {
 			for _, field := range tickGradeFields {
 				e.Record.Set(field, route.Get(field))
 			}
+			e.Record.Set("route_name", route.GetString("name"))
 		}
 		return saveTick(e)
 	})

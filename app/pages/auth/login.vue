@@ -1,7 +1,5 @@
 <template>
     <LayoutAuthLayout
-        :org-name="orgName"
-        :org-unit-name="orgUnitName"
         :loading="loading"
         :eyebrow="viewEyebrow"
         :title="viewTitle"
@@ -363,14 +361,21 @@ import {
     validateRules,
 } from '~/utils/validation'
 import type { Rule } from '~/utils/validation'
-import { safeRedirect } from '~/utils/nav'
+import { safeRedirect, staffLandingPath } from '~/utils/nav'
 defineOptions({ name: 'LoginPage' })
 
 const { t } = useI18n()
 const pb = usePocketbase()
 const { capHeaders } = useCapToken()
 const route = useRoute()
-const afterLoginPath = safeRedirect(route.query.redirect) ?? '/manage/routes'
+const requestedRedirect = safeRedirect(route.query.redirect)
+const { memberships, ensureLoaded } = usePermissions()
+
+async function afterLoginPath() {
+    if (requestedRedirect) return requestedRedirect
+    await ensureLoaded()
+    return staffLandingPath(memberships.value)
+}
 
 definePageMeta({ layout: 'blank', auth: false })
 
@@ -381,7 +386,7 @@ useHead({
 if (pb.authStore.isValid) {
     try {
         await pb.collection('users').authRefresh()
-        await navigateTo(afterLoginPath, { replace: true })
+        await navigateTo(await afterLoginPath(), { replace: true })
     } catch {
         pb.authStore.clear()
     }
@@ -392,7 +397,7 @@ const hasAnyAuth = !!(
     authMethods?.password?.enabled || authMethods?.oauth2?.enabled
 )
 
-const { orgName, orgUnitName, allowRegistration } = useOrgSettings()
+const { allowRegistration } = useOrgSettings()
 const canRegister = computed(
     () => allowRegistration.value && !!authMethods?.password?.enabled,
 )
@@ -542,7 +547,9 @@ async function focusFirstInput() {
 
 watch(view, focusFirstInput)
 onMounted(focusFirstInput)
-onNuxtReady(() => preloadRouteComponents(afterLoginPath))
+onNuxtReady(() =>
+    preloadRouteComponents(requestedRedirect ?? '/gym/manage/routes'),
+)
 
 const isEmailRequestView = computed(() =>
     ['requestReset', 'resendVerification'].includes(view.value),
@@ -585,7 +592,7 @@ async function submitLogin() {
             .authWithPassword(identity.value, password.value, {
                 headers: await capHeaders('login'),
             })
-        await navigateTo(afterLoginPath, { replace: true })
+        await navigateTo(await afterLoginPath(), { replace: true })
     } catch (err) {
         unverified.value = isUnverifiedError(err)
         notifyError(resolveAuthError(err))
@@ -685,7 +692,7 @@ async function loginWithOAuth(provider: string) {
     setAuthPersistent(rememberMe.value)
     try {
         await pb.collection('users').authWithOAuth2({ provider })
-        await navigateTo(afterLoginPath, { replace: true })
+        await navigateTo(await afterLoginPath(), { replace: true })
     } catch (err) {
         notifyError(resolveAuthError(err))
     } finally {

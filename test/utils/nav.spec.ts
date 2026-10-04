@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { safeRedirect } from '~/utils/nav'
+import { safeRedirect, staffLandingPath } from '~/utils/nav'
 
 describe('safeRedirect', () => {
     it('keeps same-origin paths', () => {
@@ -13,5 +13,29 @@ describe('safeRedirect', () => {
         expect(safeRedirect('https://evil.test')).toBeNull()
         expect(safeRedirect(['/logbook'])).toBeNull()
         expect(safeRedirect(undefined)).toBeNull()
+    })
+})
+
+describe('staffLandingPath', () => {
+    it('opens route management of the first membership gym', () => {
+        expect(
+            staffLandingPath([
+                { expand: { gym: { slug: 'gym-a', active: true } } },
+                { expand: { gym: { slug: 'gym-b', active: true } } },
+            ]),
+        ).toBe('/gym-a/manage/routes')
+    })
+
+    it('skips inactive gyms', () => {
+        expect(
+            staffLandingPath([
+                { expand: { gym: { slug: 'gym-a', active: false } } },
+                { expand: { gym: { slug: 'gym-b', active: true } } },
+            ]),
+        ).toBe('/gym-b/manage/routes')
+    })
+
+    it('falls back to the landing page', () => {
+        expect(staffLandingPath([])).toBe('/')
     })
 })

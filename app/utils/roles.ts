@@ -17,9 +17,10 @@ export function defaultReassignTarget(
     roles: RoleRecord[],
     deletingId: RecordId,
 ): RecordId | null {
-    const targets = reassignTargets(roles, deletingId)
-    const fallback = targets.find((r) => r.name === 'user')
-    return fallback?.id ?? targets[0]?.id ?? null
+    const [leastPrivileged] = reassignTargets(roles, deletingId).sort(
+        (a, b) => (a.permissions?.length ?? 0) - (b.permissions?.length ?? 0),
+    )
+    return leastPrivileged?.id ?? null
 }
 
 export const PERMISSION_GROUPS = [

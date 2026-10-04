@@ -28,6 +28,8 @@
 import type { RouteListItem } from '~/types/models'
 import { formatDate } from '#shared/utils/formatting'
 
+const gymPath = useGymPath()
+
 const props = defineProps<{
     routes: RouteListItem[]
     wallNames: ReadonlyMap<string, string>
@@ -38,10 +40,10 @@ const { locale } = useI18n()
 function targetFor(route: RouteListItem) {
     return route.wall && route.location
         ? {
-              path: '/map',
+              path: gymPath('/map'),
               query: { location: route.location, route: route.id },
           }
-        : { path: '/route', query: { id: route.id } }
+        : { path: gymPath('/route'), query: { id: route.id } }
 }
 
 function metaFor(route: RouteListItem) {

@@ -3,17 +3,22 @@ import type { LocationRecord, RouteRecord, WallRecord } from '~/types/models'
 import { sanitizeGymMap } from '#shared/utils/mapGeometry'
 import { cacheKeys } from '~/utils/realtimeCache'
 
+const gymPath = useGymPath()
+
 const pb = usePocketbase()
+const gymId = useCurrentGymId()
 
 const { data: unplaced } = useAsyncData(
     cacheKeys.unplacedRoutes,
     async () => {
         const [walls, locations] = await Promise.all([
             pb.collection('walls').getFullList<WallRecord>({
+                filter: gymFilter(pb, gymId.value),
                 fields: 'location',
                 requestKey: 'unplacedWalls',
             }),
             pb.collection('locations').getFullList<LocationRecord>({
+                filter: gymFilter(pb, gymId.value),
                 fields: 'id,map',
                 requestKey: 'unplacedLocations',
             }),
@@ -76,7 +81,7 @@ const { data: unplaced } = useAsyncData(
                     color="info"
                     variant="soft"
                     :to="{
-                        path: '/manage/map',
+                        path: gymPath('/manage/map'),
                         query: { location: unplaced.location },
                     }"
                     data-testid="unplaced-banner-open"

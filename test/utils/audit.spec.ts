@@ -8,6 +8,9 @@ import {
     auditTargetUrl,
     buildAuditFilter,
     isSuperuserEntry,
+    matchesAuditActor,
+    AUDIT_ACTOR_GUESTS,
+    AUDIT_ACTOR_PLATFORM,
     pbDateString,
 } from '~/utils/audit'
 
@@ -27,6 +30,22 @@ describe('buildAuditFilter', () => {
 
     it('scopes to one actor', () => {
         expect(buildAuditFilter({ actorId: 'usr123' })).toBe('actor = "usr123"')
+    })
+
+    it('filters by actor, guests or platform administrators', () => {
+        expect(buildAuditFilter({ actor: 'usr123' })).toBe('actor = "usr123"')
+        expect(buildAuditFilter({ actor: AUDIT_ACTOR_PLATFORM })).toBe(
+            '(actor_label = "superuser" || actor_label ~ "superuser:%")',
+        )
+        expect(buildAuditFilter({ actor: AUDIT_ACTOR_GUESTS })).toBe(
+            'actor = "" && actor_label != "superuser" && actor_label !~ "superuser:%"',
+        )
+    })
+
+    it('scopes to one gym', () => {
+        expect(buildAuditFilter({ gym: 'gym1', actor: 'usr1' })).toBe(
+            'actor = "usr1" && gym = "gym1"',
+        )
     })
 
     it('escapes backslashes and double quotes in the search term', () => {
@@ -159,6 +178,17 @@ describe('auditTargetUrl', () => {
         expect(auditTargetUrl('routes', 'rt1')).toBe('/route?id=rt1')
     })
 
+    it('opens staff pages inside the gym of the entry', () => {
+        expect(auditTargetUrl('tasks', 't1', 'north')).toBe(
+            '/north/manage/tasks',
+        )
+        expect(auditTargetUrl('users', 'u1', 'north')).toBe(
+            '/north/admin/users',
+        )
+        expect(auditTargetUrl('ratings', 'x1')).toBe('/manage/comments')
+        expect(auditTargetUrl('routes', 'rt1', 'north')).toBe('/route?id=rt1')
+    })
+
     it('returns null when there is nowhere to go', () => {
         expect(auditTargetUrl('roles', 'r1')).toBeNull()
         expect(auditTargetUrl('routes', null)).toBeNull()
@@ -173,5 +203,20 @@ describe('isSuperuserEntry', () => {
         )
         expect(isSuperuserEntry({ actor_label: 'a@b.test' })).toBe(false)
         expect(isSuperuserEntry({ actor_label: null })).toBe(false)
+    })
+})
+
+describe('matchesAuditActor', () => {
+    const user = { actor: 'usr1', actor_label: 'a@b.test' }
+    const guest = { actor: '', actor_label: '1.2.3.4' }
+    const platform = { actor: '', actor_label: 'superuser:root@b.test' }
+
+    it('matches live rows the same way as the filter', () => {
+        expect(matchesAuditActor(user, null)).toBe(true)
+        expect(matchesAuditActor(user, 'usr1')).toBe(true)
+        expect(matchesAuditActor(guest, 'usr1')).toBe(false)
+        expect(matchesAuditActor(guest, AUDIT_ACTOR_GUESTS)).toBe(true)
+        expect(matchesAuditActor(platform, AUDIT_ACTOR_GUESTS)).toBe(false)
+        expect(matchesAuditActor(platform, AUDIT_ACTOR_PLATFORM)).toBe(true)
     })
 })

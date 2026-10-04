@@ -29,24 +29,6 @@ export default defineNuxtConfig({
     ssr: true,
     routeRules: {
         '/logbook': { ssr: false },
-        '/admin/routes': {
-            redirect: { to: '/manage/routes', statusCode: 301 },
-        },
-        '/admin/inventory': {
-            redirect: { to: '/manage/inventory', statusCode: 301 },
-        },
-        '/admin/comments': {
-            redirect: { to: '/manage/comments', statusCode: 301 },
-        },
-        '/admin/reports': {
-            redirect: { to: '/manage/reports', statusCode: 301 },
-        },
-        '/admin/analytics': {
-            redirect: { to: '/manage/analytics', statusCode: 301 },
-        },
-        '/admin/activity': {
-            redirect: { to: '/account/activity', statusCode: 301 },
-        },
     },
     experimental: {
         viewTransition: true,

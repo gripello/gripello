@@ -59,7 +59,7 @@ describe('GradeLabel', () => {
         )
     })
 
-    it('uses the gym colours from the settings', () => {
+    it('uses the gym colours', () => {
         bands = gymBandsFrom([
             { name: 'Mint', color: '#3eb489', to: '7A' },
             { name: 'Pink', color: '#ff69b4', to: '' },

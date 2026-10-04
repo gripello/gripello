@@ -45,6 +45,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     // ponytail: grows by one small entry per rating seen this session
     const ratingLedger: RatingLedger = new Map()
     const routesToRescore = new Set<string>()
+    const { id: liveGym } = useGym()
+    const inLiveGym = (record: { gym?: string }) =>
+        !!record.gym && record.gym === liveGym.value
     const keyLocations = useState<KeyLocations>(
         cacheKeys.keyLocations,
         () => ({}),
@@ -186,6 +189,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
 
     function onRating({ action, record }: RecordSubscription<RatingRecord>) {
+        if (!inLiveGym(record)) return
         if (action === 'create') return applyRating(record)
         if (action === 'delete') return revertRating(record)
         const change = trackRating(
@@ -206,6 +210,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
 
     function onRoute({ action, record }: RecordSubscription<RouteRecord>) {
+        if (!inLiveGym(record)) return
         const removed = action === 'delete' || !!record.archived
         patchRouteRows((rows, inScope) =>
             relinkRow(
@@ -228,6 +233,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
 
     function onWall({ action, record }: RecordSubscription<WallRecord>) {
+        if (!inLiveGym(record)) return
         for (const key of loadedKeys()) {
             const inScope = wallsScope(key, keyLocations.value)
             if (!inScope) continue
@@ -246,6 +252,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         action,
         record,
     }: RecordSubscription<LocationRecord>) {
+        if (!inLiveGym(record)) return
         const data = read<LocationRecord[] | undefined>(cacheKeys.locations)
         if (data) {
             const next = patchList(data, record, action !== 'delete')
@@ -259,7 +266,12 @@ export default defineNuxtPlugin((nuxtApp) => {
             const inScope = defectsScope(key)
             if (!inScope) continue
             const data = read<OpenRouteDefectRecord[]>(key)
-            const next = replaceRouteDefects(data, change, inScope)
+            const next = replaceRouteDefects(
+                data,
+                change,
+                inScope,
+                liveGym.value,
+            )
             if (next !== data) write(key, next)
         }
     }

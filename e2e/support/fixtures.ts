@@ -13,6 +13,8 @@ import { signInAs } from './auth'
 import {
     adminClient,
     authAsSuperuser,
+    E2E_GYM_SLUG,
+    e2eGymId,
     ensureUser,
     getRoleIds,
     sweepTestData,
@@ -22,7 +24,7 @@ import {
 
 const AUTH_DIR = path.join(__dirname, '..', '.auth')
 
-type Role = 'admin' | 'routesetter' | 'user'
+type Role = 'admin' | 'routesetter' | 'user' | 'platform'
 
 export const authFile = (role: Role) => path.join(AUTH_DIR, `${role}.json`)
 
@@ -40,12 +42,24 @@ interface Fixtures {
     adminPage: Page
     setterPage: Page
     userPage: Page
+    platformPage: Page
     testPrefix: string
     deviceOptions: BrowserContextOptions
     route: RecordModel
     createRoute: (data?: Record<string, unknown>) => Promise<RecordModel>
     createUser: (role?: string, label?: string) => Promise<SeededUser>
     pageAs: (user: Pick<SeededUser, 'email' | 'password'>) => Promise<Page>
+}
+
+export async function withGymCookie(
+    context: BrowserContext,
+    baseURL: string | undefined,
+) {
+    if (!baseURL) return context
+    await context.addCookies([
+        { name: 'gym', value: E2E_GYM_SLUG, url: baseURL, sameSite: 'Lax' },
+    ])
+    return context
 }
 
 async function useRolePage(
@@ -74,12 +88,17 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
     workerLocation: [
         async ({ root }, use, workerInfo) => {
             const name = `e2e-w${workerInfo.workerIndex}-${randomUUID().slice(0, 8)} Hall`
-            const location = await root.collection('locations').create({ name })
+            const location = await root
+                .collection('locations')
+                .create({ name, gym: await e2eGymId(root) })
             await use({ id: location.id, name })
             await sweepTestData(root, name)
         },
         { scope: 'worker' },
     ],
+    context: async ({ context, baseURL }, use) => {
+        await use(await withGymCookie(context, baseURL))
+    },
     deviceOptions: async (
         {
             baseURL,
@@ -109,6 +128,8 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
         useRolePage(browser, deviceOptions, 'routesetter', use),
     userPage: async ({ browser, deviceOptions }, use) =>
         useRolePage(browser, deviceOptions, 'user', use),
+    platformPage: async ({ browser, deviceOptions }, use) =>
+        useRolePage(browser, deviceOptions, 'platform', use),
     testPrefix: async ({ root, workerLocation }, use, testInfo) => {
         const prefix = `e2e-w${testInfo.workerIndex}-${Date.now()}`
         await use(prefix)
@@ -138,7 +159,7 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
         await use(async (role = 'user', label = role) =>
             ensureUser(
                 root,
-                roleIds[role] ?? role,
+                role === 'user' ? undefined : (roleIds[role] ?? role),
                 'user',
                 `${testPrefix}-${label}`,
             ),
@@ -147,7 +168,10 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
     pageAs: async ({ browser, deviceOptions }, use) => {
         const contexts: BrowserContext[] = []
         await use(async (user) => {
-            const context = await browser.newContext(deviceOptions)
+            const context = await withGymCookie(
+                await browser.newContext(deviceOptions),
+                deviceOptions.baseURL,
+            )
             contexts.push(context)
             const page = await context.newPage()
             await signInAs(page, user.email, user.password)

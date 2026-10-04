@@ -151,6 +151,7 @@ interface ImportedRoute extends ImportedGrading {
 }
 
 const pb = usePocketbase()
+const gymId = useCurrentGymId()
 const emit = defineEmits<{ closed: [] }>()
 const currentUser = pb.authStore.record as UserRecord | null
 
@@ -248,9 +249,10 @@ const confirmImport = async () => {
                 location.id,
             ]),
         )
-        const walls = await pb
-            .collection('walls')
-            .getFullList<WallRecord>({ fields: 'id,name,location' })
+        const walls = await pb.collection('walls').getFullList<WallRecord>({
+            filter: gymFilter(pb, gymId.value),
+            fields: 'id,name,location',
+        })
         const wallIdByKey = new Map(
             walls.map((wall) => [wallKey(wall.location, wall.name), wall.id]),
         )
@@ -259,16 +261,15 @@ const confirmImport = async () => {
 
         for (const route of jsonData) {
             try {
-                const createdRoute = await pb
-                    .collection('routes')
-                    .create(
-                        sanitizeRoutePayload(
-                            route,
-                            fallbackCreator,
-                            locationIdByName,
-                            wallIdByKey,
-                        ),
-                    )
+                const createdRoute = await pb.collection('routes').create({
+                    ...sanitizeRoutePayload(
+                        route,
+                        fallbackCreator,
+                        locationIdByName,
+                        wallIdByKey,
+                    ),
+                    gym: gymId.value,
+                })
 
                 if (Array.isArray(route.ratings) && route.ratings.length > 0) {
                     const ratings = route.ratings.map((rating) =>
@@ -281,7 +282,10 @@ const confirmImport = async () => {
                     try {
                         const { failed } = await pb.send<{ failed: number }>(
                             '/api/import/ratings',
-                            { method: 'POST', body: { ratings } },
+                            {
+                                method: 'POST',
+                                body: { gym: gymId.value, ratings },
+                            },
                         )
                         failedRatings += failed
                     } catch (ratingError) {

@@ -1,5 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
+import { e2eRole } from '../../support/seed'
 
 test('creates a role with a color, toggles a permission, then deletes it', async ({
     adminPage: page,
@@ -54,12 +55,13 @@ test('creates a role with a color, toggles a permission, then deletes it', async
 
 test('moves the holders of a deleted role to the role picked in the dialog', async ({
     adminPage: page,
+    root,
     testPrefix,
+    createUser,
 }) => {
     await gotoSettled(page, '/admin/users')
 
     const roleName = `${testPrefix}-doomed`
-    const email = `${testPrefix}-reassign@gripello.test`
 
     await page.getByTestId('role-create-open').click()
     await page.getByTestId('role-form-name').fill(roleName)
@@ -69,19 +71,14 @@ test('moves the holders of a deleted role to the role picked in the dialog', asy
         page.getByTestId(`role-permissions-row-${roleName}`),
     ).toBeVisible()
 
-    await page.getByTestId('user-create-open').click()
-    await page.getByTestId('user-create-firstname').fill('E2E')
-    await page.getByTestId('user-create-lastname').fill('Reassign')
-    await page.getByTestId('user-create-email').fill(email)
-    await page.getByTestId('user-create-role').click()
-    await page.getByRole('option', { name: roleName, exact: true }).click()
-    await page.getByTestId('user-create-submit').click()
-    await expect(page.getByTestId('user-create-dialog')).toBeHidden()
+    const doomed = await e2eRole(root, roleName)
+    const holder = await createUser(doomed.id, 'reassign')
 
     await page.getByTestId(`role-delete-${roleName}`).click()
     await expect(page.getByTestId('role-delete-dialog')).toBeVisible()
     await expect(page.getByTestId('role-delete-holders')).toBeVisible()
-    await expect(page.getByTestId('role-delete-reassign')).toBeVisible()
+    await page.getByTestId('role-delete-reassign').click()
+    await page.getByRole('option', { name: 'routesetter', exact: true }).click()
     await page.getByTestId('role-delete-confirm').click()
     await expect(page.getByTestId('role-delete-dialog')).toBeHidden()
 
@@ -89,12 +86,10 @@ test('moves the holders of a deleted role to the role picked in the dialog', asy
         page.getByTestId(`role-permissions-row-${roleName}`),
     ).toBeHidden()
 
-    await page.getByTestId('filter-search').fill(email)
-    const card = page
-        .locator('[data-testid^="user-card-"]')
-        .filter({ hasText: email })
+    await page.getByTestId('filter-search').fill(holder.email)
+    const card = page.getByTestId(`member-card-${holder.id}`)
     await expect(card).toBeVisible()
-    await expect(card.getByTestId('user-card-role')).toHaveText('user')
+    await expect(card.getByTestId('member-card-role')).toHaveText('routesetter')
 })
 
 test('the admin role cannot be deleted and its permissions are locked', async ({
@@ -129,7 +124,7 @@ test('rejects a role name that is already taken', async ({
     ).toHaveAccessibleDescription(/already/)
 })
 
-test('add role button looks like the add user button', async ({
+test('add role button looks like the add member button', async ({
     adminPage: page,
 }) => {
     await gotoSettled(page, '/admin/users')
@@ -145,7 +140,7 @@ test('add role button looks like the add user button', async ({
         })
 
     await expect(page.getByTestId('role-create-open')).toBeVisible()
-    await expect(page.getByTestId('user-create-open')).toBeVisible()
-    const userButton = await style('user-create-open')
+    await expect(page.getByTestId('member-invite-open')).toBeVisible()
+    const userButton = await style('member-invite-open')
     await expect.poll(() => style('role-create-open')).toEqual(userButton)
 })

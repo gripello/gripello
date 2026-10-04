@@ -5,13 +5,22 @@ const navigateToMock = vi.fn()
 vi.stubGlobal('defineNuxtRouteMiddleware', (handler: Function) => handler)
 vi.stubGlobal('navigateTo', navigateToMock)
 
-// usePermissions mock
 const canMock = vi.fn().mockReturnValue(true)
 const ensureLoadedMock = vi.fn().mockResolvedValue(undefined)
+const memberships = { value: [] as unknown[] }
+const isPlatformAdmin = { value: false }
 vi.stubGlobal('usePermissions', () => ({
     can: canMock,
     ensureLoaded: ensureLoadedMock,
+    memberships,
+    isPlatformAdmin,
 }))
+
+const cachedGym = { value: null as { id: string; slug: string } | null }
+const loadGymMock = vi.fn()
+vi.stubGlobal('useNuxtData', () => ({ data: cachedGym }))
+vi.stubGlobal('useCookie', () => ({ value: 'cookie-gym' }))
+vi.stubGlobal('loadGym', loadGymMock)
 
 describe('auth middleware', () => {
     beforeEach(() => {
@@ -19,6 +28,12 @@ describe('auth middleware', () => {
         navigateToMock.mockReset()
         canMock.mockReset().mockReturnValue(true)
         ensureLoadedMock.mockReset().mockResolvedValue(undefined)
+        memberships.value = [
+            { gym: 'gym1', expand: { gym: { slug: 'home', active: true } } },
+        ]
+        cachedGym.value = { id: 'gym1', slug: 'home' }
+        loadGymMock.mockReset().mockResolvedValue({ id: 'gym2', slug: 'x' })
+        isPlatformAdmin.value = false
         process.client = true
     })
 
@@ -88,7 +103,17 @@ describe('auth middleware', () => {
 
         await middleware({ path: '/auth/login', meta: { auth: false } }, {})
 
-        expect(navigateToMock).toHaveBeenCalledWith('/manage/routes')
+        expect(navigateToMock).toHaveBeenCalledWith('/home/manage/routes')
+    })
+
+    it('sends signed-in climbers without memberships home from auth: false pages', async () => {
+        globalThis.__POCKETBASE_CLIENT__ = { authStore: { isValid: true } }
+        memberships.value = []
+        const { default: middleware } = await import('~/middleware/auth')
+
+        await middleware({ path: '/auth/login', meta: { auth: false } }, {})
+
+        expect(navigateToMock).toHaveBeenCalledWith('/')
     })
 
     it('allows unauthenticated access to password reset with auth: false', async () => {
@@ -116,13 +141,14 @@ describe('auth middleware', () => {
         await middleware(
             {
                 path: '/admin/users',
+                params: {},
                 meta: { requiredPermission: 'manage_users' },
             },
             {},
         )
 
         expect(ensureLoadedMock).toHaveBeenCalled()
-        expect(canMock).toHaveBeenCalledWith('manage_users')
+        expect(canMock).toHaveBeenCalledWith('manage_users', 'gym1')
         expect(navigateToMock).not.toHaveBeenCalled()
     })
 
@@ -134,14 +160,38 @@ describe('auth middleware', () => {
         await middleware(
             {
                 path: '/admin/users',
+                params: {},
                 meta: { requiredPermission: 'manage_users' },
             },
             {},
         )
 
         expect(ensureLoadedMock).toHaveBeenCalled()
-        expect(canMock).toHaveBeenCalledWith('manage_users')
+        expect(canMock).toHaveBeenCalledWith('manage_users', 'gym1')
         expect(navigateToMock).toHaveBeenCalledWith('/')
+    })
+
+    it('loads the gym when it is not cached yet', async () => {
+        globalThis.__POCKETBASE_CLIENT__ = { authStore: { isValid: true } }
+        cachedGym.value = null
+        const { default: middleware } = await import('~/middleware/auth')
+
+        await middleware(
+            {
+                path: '/admin/users',
+                params: {},
+                params: {},
+                meta: { requiredPermission: 'manage_users' },
+            },
+            {},
+        )
+
+        expect(loadGymMock).toHaveBeenCalledWith(
+            globalThis.__POCKETBASE_CLIENT__,
+            '',
+            'cookie-gym',
+        )
+        expect(canMock).toHaveBeenCalledWith('manage_users', 'gym2')
     })
 
     it('does not check permissions when none is required', async () => {
@@ -169,6 +219,7 @@ describe('auth middleware', () => {
         await middleware(
             {
                 path: '/admin/settings',
+                params: {},
                 meta: { requiredPermission: 'manage_settings' },
             },
             {},
@@ -196,12 +247,38 @@ describe('auth middleware', () => {
             const { default: middleware } = await import('~/middleware/auth')
 
             await middleware(
-                { path, meta: { requiredPermission: permission } },
+                { path, params: {}, meta: { requiredPermission: permission } },
                 {},
             )
 
-            expect(canMock).toHaveBeenCalledWith(permission)
+            expect(canMock).toHaveBeenCalledWith(permission, 'gym1')
             expect(navigateToMock).toHaveBeenCalledWith('/')
         }
+    })
+
+    it('sends non platform admins away from platform pages', async () => {
+        globalThis.__POCKETBASE_CLIENT__ = { authStore: { isValid: true } }
+        const { default: middleware } = await import('~/middleware/auth')
+
+        await middleware(
+            { path: '/platform/gyms', meta: { platformAdmin: true } },
+            {},
+        )
+
+        expect(ensureLoadedMock).toHaveBeenCalled()
+        expect(navigateToMock).toHaveBeenCalledWith('/')
+    })
+
+    it('lets platform admins open platform pages', async () => {
+        globalThis.__POCKETBASE_CLIENT__ = { authStore: { isValid: true } }
+        isPlatformAdmin.value = true
+        const { default: middleware } = await import('~/middleware/auth')
+
+        await middleware(
+            { path: '/platform/gyms', meta: { platformAdmin: true } },
+            {},
+        )
+
+        expect(navigateToMock).not.toHaveBeenCalled()
     })
 })

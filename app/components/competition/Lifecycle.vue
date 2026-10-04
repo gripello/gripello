@@ -202,10 +202,16 @@ const phaseItems = computed(() =>
     })),
 )
 
+const { slug: gymSlug } = useGym()
+
 const shareUrl = computed(() =>
     props.competition.status === 'draft'
         ? ''
-        : competitionShareUrl(requestUrl.origin, props.competition.id),
+        : competitionShareUrl(
+              requestUrl.origin,
+              gymSlug.value,
+              props.competition.id,
+          ),
 )
 
 let clock: ReturnType<typeof setInterval> | undefined

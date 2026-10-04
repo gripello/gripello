@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
-import { gotoSubscribed, searchRoutes } from '../../support/nav'
+import { gotoSubscribed, gymPath, searchRoutes } from '../../support/nav'
 import { uiaa } from '../../support/seed'
 
 function trackRefetches(page: Page) {
@@ -48,7 +48,7 @@ test('a rating from another visitor updates the open overview in place', async (
         .collection('ratings')
         .create({ route_id: route.id, rating: 5, ...uiaa('5') })
 
-    await gotoSubscribed(page, '/', 'ratings')
+    await gotoSubscribed(page, gymPath('/'), 'ratings')
     const popularRow = page.locator(
         `[data-testid="overview-popular"] [data-route-id="${route.id}"]`,
     )

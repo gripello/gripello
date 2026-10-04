@@ -1,6 +1,6 @@
 <template>
     <NuxtLink
-        to="/"
+        :to="gymPath('/')"
         class="flex shrink-0 items-center no-underline"
         :aria-label="$t('routes.home')"
         data-testid="nav-logo"
@@ -30,13 +30,14 @@
 </template>
 
 <script setup lang="ts">
-import type { SettingsRecord } from '~/types/models'
+import type { GymRecord } from '~/types/models'
 
-const props = defineProps<{ settings: Partial<SettingsRecord> }>()
+const props = defineProps<{ gym?: Partial<GymRecord> | null }>()
+const gymPath = useGymPath()
 
-const logoAlt = computed(() => props.settings?.organization_name || 'Gripello')
+const logoAlt = computed(() => props.gym?.name || 'Gripello')
 const logoUrl = computed(() =>
-    usePbFileUrl(props.settings, props.settings?.page_logo, { thumb: '0x200' }),
+    usePbFileUrl(props.gym, props.gym?.page_logo, { thumb: '0x200' }),
 )
 </script>
 

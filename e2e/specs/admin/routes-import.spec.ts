@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { authHeader, gotoSettled } from '../../support/nav'
+import { authHeader, gotoSettled, gymPath } from '../../support/nav'
 import { uiaa } from '../../support/seed'
 import fs from 'node:fs'
 
@@ -151,7 +151,7 @@ test('imports more ratings than the per-user rating rate limit', async ({
 test('only route managers may bulk import ratings', async ({
     userPage: page,
 }) => {
-    await gotoSettled(page, '/')
+    await gotoSettled(page, gymPath('/'))
     const response = await page.request.post('/api/import/ratings', {
         headers: await authHeader(page),
         data: { ratings: [] },

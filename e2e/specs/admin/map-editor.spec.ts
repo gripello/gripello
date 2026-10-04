@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser } from '../../support/seed'
+import { authAsSuperuser, e2eGymId } from '../../support/seed'
 import { gotoSettled } from '../../support/nav'
 import { PB_URL, seedMap } from '../../support/map'
 
@@ -19,9 +19,10 @@ test('admins draw a floor plan with a wall and it survives a reload', async ({
 }) => {
     const root = new PocketBase(PB_URL)
     await authAsSuperuser(root)
-    const location = await root
-        .collection('locations')
-        .create({ name: `${testPrefix} Editor Hall` })
+    const location = await root.collection('locations').create({
+        name: `${testPrefix} Editor Hall`,
+        gym: await e2eGymId(root),
+    })
     const wallName = `${testPrefix} Cave`
     try {
         await gotoSettled(page, `/admin/map?location=${location.id}`)
@@ -83,9 +84,10 @@ test('creating a floor plan with the default size opens the editor', async ({
 }) => {
     const root = new PocketBase(PB_URL)
     await authAsSuperuser(root)
-    const location = await root
-        .collection('locations')
-        .create({ name: `${testPrefix} Default Hall` })
+    const location = await root.collection('locations').create({
+        name: `${testPrefix} Default Hall`,
+        gym: await e2eGymId(root),
+    })
     try {
         await gotoSettled(page, `/admin/map?location=${location.id}`)
         await page.getByTestId('map-editor-create').click()

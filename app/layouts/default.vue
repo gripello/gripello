@@ -1,13 +1,16 @@
 <template>
     <a href="#main-content" class="skip-link">{{ $t('nav.skipToContent') }}</a>
     <div class="app-frame">
-        <LayoutSideBar :loggedIn="isLoggedIn" :settings="settings" />
+        <LayoutSideBar :loggedIn="isLoggedIn" />
         <div class="page-body">
-            <LayoutNavBar :loggedIn="isLoggedIn" :settings="settings" />
+            <LayoutNavBar :loggedIn="isLoggedIn" />
             <main id="main-content" class="app-main" tabindex="-1">
                 <slot />
             </main>
-            <LayoutFootBar :settings="settings" />
+            <LayoutFootBar
+                :settings="gymSlug && gym ? gym : settings"
+                :gym-slug="gymSlug"
+            />
         </div>
     </div>
     <LayoutBottomNav />
@@ -16,15 +19,16 @@
 
 <script setup lang="ts">
 import type { ClientResponseError, UnsubscribeFunc } from 'pocketbase'
-import type { SettingsRecord } from '~/types/models'
+import type { GymRecord, SettingsRecord } from '~/types/models'
 
 const hydrated = useHydrated()
 
 const pb = usePocketbase()
 const isLoggedIn = ref(pb.authStore.isValid)
-const { refreshPermissions } = usePermissions()
+const { refreshPermissions, memberships } = usePermissions()
 
 const { data: settingsData } = await useSettingsRecord()
+const { gym } = useGym()
 
 const settings = ref<Partial<SettingsRecord>>(settingsData.value ?? {})
 watch(settingsData, (val) => {
@@ -45,14 +49,22 @@ const refreshSession = async () => {
     }
 }
 
+const route = useRoute()
+const gymSlug = computed(() => (route.params.gym ? gym.value?.slug : ''))
+
 useHead(
     computed(() => ({
+        titleTemplate: (title?: string) =>
+            [gymSlug.value && gym.value?.name, title]
+                .filter(Boolean)
+                .join(' · ') || 'Gripello',
         link: [
             {
                 rel: 'icon',
-                href: settings.value?.page_icon
-                    ? usePbFileUrl(settings.value, settings.value.page_icon)
-                    : '/favicon.ico',
+                href:
+                    gymSlug.value && gym.value?.page_icon
+                        ? usePbFileUrl(gym.value, gym.value.page_icon)
+                        : '/favicon.ico',
             },
         ],
     })),
@@ -60,8 +72,9 @@ useHead(
 
 let unsubAuthChange: (() => void) | null = null
 let unsubUser: UnsubscribeFunc | null = null
-let unsubSettings: UnsubscribeFunc | null = null
-let unsubRole: UnsubscribeFunc | null = null
+let unsubGym: UnsubscribeFunc | null = null
+let unsubMemberships: UnsubscribeFunc | null = null
+let unsubRoles: UnsubscribeFunc | null = null
 let unmounted = false
 
 function releaseIfUnmounted(unsub: UnsubscribeFunc): UnsubscribeFunc | null {
@@ -70,16 +83,41 @@ function releaseIfUnmounted(unsub: UnsubscribeFunc): UnsubscribeFunc | null {
     return null
 }
 
-async function subscribeToRole(roleId: string | null | undefined) {
-    unsubRole?.()?.catch?.(() => {})
-    unsubRole = null
-    if (!roleId) return
-    unsubRole = releaseIfUnmounted(
-        await pb.collection('roles').subscribe(roleId, (e) => {
-            if (e.action === 'update' || e.action === 'delete')
+function unsubscribeFromMemberships() {
+    unsubMemberships?.()?.catch?.(() => {})
+    unsubMemberships = null
+    unsubRoles?.()?.catch?.(() => {})
+    unsubRoles = null
+}
+
+async function subscribeToMemberships() {
+    unsubscribeFromMemberships()
+    if (!pb.authStore.isValid) return
+    unsubMemberships = releaseIfUnmounted(
+        await pb.collection('memberships').subscribe('*', (e) => {
+            if (e.record.user === pb.authStore.record?.id) refreshPermissions()
+        }),
+    )
+    unsubRoles = releaseIfUnmounted(
+        await pb.collection('roles').subscribe('*', (e) => {
+            if (memberships.value.some((m) => m.role === e.record.id))
                 refreshPermissions()
         }),
     )
+}
+
+async function subscribeToGym(gymId: string | undefined) {
+    unsubGym?.()?.catch?.(() => {})
+    unsubGym = null
+    if (!gymId) return
+    const unsub = await pb.collection('gyms').subscribe(gymId, (e) => {
+        if (e.action === 'update') gym.value = e.record as GymRecord
+    })
+    if (gym.value?.id !== gymId) {
+        unsub().catch(() => {})
+        return
+    }
+    unsubGym = releaseIfUnmounted(unsub)
 }
 
 async function subscribeToUser(userId: string) {
@@ -90,14 +128,17 @@ async function subscribeToUser(userId: string) {
             if (e.action === 'delete') {
                 pb.authStore.clear()
             } else {
-                const oldRole = pb.authStore.record?.role
                 pb.authStore.save(pb.authStore.token, e.record)
                 isLoggedIn.value = true
-                if (e.record.role !== oldRole) subscribeToRole(e.record.role)
             }
         }),
     )
 }
+
+watch(
+    () => gym.value?.id,
+    (gymId) => void subscribeToGym(gymId),
+)
 
 onMounted(async () => {
     try {
@@ -110,9 +151,11 @@ onMounted(async () => {
             isLoggedIn.value = !!token
             if (token && record?.id) {
                 subscribeToUser(record.id)
+                subscribeToMemberships()
             } else {
                 unsubUser?.()?.catch?.(() => {})
                 unsubUser = null
+                unsubscribeFromMemberships()
             }
         })
 
@@ -120,17 +163,9 @@ onMounted(async () => {
             await subscribeToUser(pb.authStore.record.id)
         }
 
-        if (pb.authStore.isValid && pb.authStore.record?.role) {
-            await subscribeToRole(pb.authStore.record.role)
-        }
+        await subscribeToMemberships()
 
-        unsubSettings = releaseIfUnmounted(
-            await pb
-                .collection('settings')
-                .subscribe('settings_123456', (e) => {
-                    settingsData.value = e.record as SettingsRecord
-                }),
-        )
+        await subscribeToGym(gym.value?.id)
     } catch (error) {
         console.error('Error during initialization:', error)
     }
@@ -140,8 +175,8 @@ onBeforeUnmount(() => {
     unmounted = true
     unsubAuthChange?.()
     unsubUser?.()?.catch?.(() => {})
-    unsubRole?.()?.catch?.(() => {})
-    unsubSettings?.()?.catch?.(() => {})
+    unsubscribeFromMemberships()
+    unsubGym?.()?.catch?.(() => {})
 })
 </script>
 
