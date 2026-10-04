@@ -775,6 +775,7 @@
         "saveError": "Einstellungen konnten nicht gespeichert werden. Bitte erneut versuchen.",
         "contactEmail": "Kontakt-E-Mail",
         "contactEmailHint": "Wird als Kontaktstelle veröffentlicht und über neue Inhaltsmeldungen benachrichtigt.",
+        "mailLanguage": "Sprache für E-Mails",
         "mailNotConfigured": "E-Mail ist nicht konfiguriert, daher können Passwort-Zurücksetzungen und Meldungsbenachrichtigungen nicht zugestellt werden. SMTP wird in PocketBase konfiguriert, nicht hier.",
         "mailNotConfiguredAction": "PocketBase-E-Mail-Einstellungen öffnen",
         "legalTitle": "Impressum",
@@ -1790,6 +1791,84 @@
             "routes": "Routen",
             "admins": "Plattform-Admins",
             "dashboard": "PocketBase-Dashboard"
+        }
+    },
+    "mails": {
+        "greeting": "Hallo {name},",
+        "greetingAnonymous": "Hallo,",
+        "linkHint": "Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:",
+        "imprint": "Impressum",
+        "privacy": "Datenschutz",
+        "unavailable": "nicht verfügbar",
+        "labels": {
+            "reason": "Grund",
+            "reference": "Referenz",
+            "content": "Gemeldeter Inhalt",
+            "explanation": "Begründung",
+            "snapshot": "Inhalt zum Zeitpunkt der Meldung",
+            "reportedBy": "Gemeldet von",
+            "reasoning": "Begründung der Entscheidung",
+            "problem": "Problem",
+            "route": "Route",
+            "details": "Details",
+            "location": "Anmeldung"
+        },
+        "verification": {
+            "subject": "Bestätige deine E-Mail-Adresse",
+            "body": "Danke für deine Registrierung bei {app}. Bestätige deine E-Mail-Adresse, um dein Konto fertig einzurichten.",
+            "action": "E-Mail-Adresse bestätigen",
+            "note": "Falls du dich nicht registriert hast, kannst du diese E-Mail ignorieren."
+        },
+        "passwordReset": {
+            "subject": "Passwort zurücksetzen",
+            "body": "Wir haben eine Anfrage erhalten, das Passwort deines {app}-Kontos zurückzusetzen.",
+            "action": "Neues Passwort festlegen",
+            "note": "Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren. Dein Passwort bleibt unverändert."
+        },
+        "emailChange": {
+            "subject": "Bestätige deine neue E-Mail-Adresse",
+            "body": "Bestätige diese Adresse, um sie ab jetzt für dein {app}-Konto zu verwenden.",
+            "action": "Neue Adresse bestätigen",
+            "note": "Falls du keine Änderung deiner E-Mail-Adresse angefordert hast, kannst du diese E-Mail ignorieren."
+        },
+        "otp": {
+            "subject": "Dein Anmeldecode",
+            "body": "Mit diesem Code meldest du dich bei {app} an:",
+            "note": "Falls du keinen Code angefordert hast, kannst du diese E-Mail ignorieren."
+        },
+        "authAlert": {
+            "subject": "Neue Anmeldung bei deinem Konto",
+            "body": "Mit deinem {app}-Konto hat sich gerade jemand von einem neuen Gerät oder Ort angemeldet.",
+            "note": "Falls du das nicht warst, ändere sofort dein Passwort. Damit werden alle anderen Geräte abgemeldet."
+        },
+        "invite": {
+            "subject": "Einladung zu {gym}",
+            "body": "{gym} hat dich auf {app} zum Team hinzugefügt. Lege ein Passwort fest, um dein Konto zu aktivieren.",
+            "action": "Passwort festlegen",
+            "note": "Falls du diese Einladung nicht erwartest, kannst du diese E-Mail ignorieren."
+        },
+        "reportReceipt": {
+            "subject": "Deine Meldung ist eingegangen",
+            "body": "Wir haben deine Meldung erhalten und prüfen sie unverzüglich. Wir informieren dich über unsere Entscheidung und darüber, wie du sie anfechten kannst."
+        },
+        "reportAlert": {
+            "subject": "Neue Meldung eines Inhalts",
+            "body": "Eine neue Meldung ist eingegangen und wartet auf Prüfung.",
+            "action": "Meldungen öffnen"
+        },
+        "reportDecision": {
+            "subject": "Entscheidung zu deiner Meldung",
+            "body": "Wir haben deine Meldung geprüft.",
+            "kept": "Der gemeldete Inhalt bleibt online.",
+            "removed": "Der gemeldete Inhalt wurde entfernt.",
+            "redress": "So kannst du die Entscheidung anfechten: Du kannst dich an eine zertifizierte außergerichtliche Streitbeilegungsstelle nach Artikel 21 des Digital Services Act wenden oder den Rechtsweg vor dem zuständigen Gericht beschreiten.",
+            "redressContact": "Du kannst dich außerdem direkt an den Betreiber wenden: {email}."
+        },
+        "urgentDefect": {
+            "subject": "Dringend: {problem} an {route}",
+            "body": "Jemand hat ein sicherheitsrelevantes Problem gemeldet. Bitte prüfe die Route, bevor sie wieder beklettert wird.",
+            "photo": "An der Aufgabe hängt ein Foto.",
+            "action": "Aufgaben öffnen"
         }
     }
 }

@@ -164,6 +164,7 @@ export interface GymRecord extends BaseRecord, LegalFields {
     boulder_grade_system?: string | null
     boulder_bands?: BoulderBandSetting[] | null
     privacy_extra?: string | null
+    language?: string | null
 }
 
 export interface MembershipRecord extends BaseRecord {
@@ -197,6 +198,7 @@ export interface ReportRecord extends BaseRecord {
     explanation: string
     notifier_name: string
     notifier_email: string
+    language?: string | null
     good_faith: boolean
     status: ReportStatus
     decision?: ReportDecision | '' | null

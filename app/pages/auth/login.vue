@@ -364,7 +364,7 @@ import type { Rule } from '~/utils/validation'
 import { safeRedirect, staffLandingPath } from '~/utils/nav'
 defineOptions({ name: 'LoginPage' })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const pb = usePocketbase()
 const { capHeaders } = useCapToken()
 const route = useRoute()
@@ -665,6 +665,7 @@ async function submitRegister() {
                 email: registerEmail.value,
                 password: registerPassword.value,
                 passwordConfirm: registerPasswordConfirm.value,
+                language: locale.value,
             },
             { headers: await capHeaders('register') },
         )

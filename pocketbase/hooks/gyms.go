@@ -328,10 +328,6 @@ func mailSubject(text, gymName, appName string) string {
 	return text + " - " + appName
 }
 
-func gymMailSubject(app core.App, gymID, text string) string {
-	return mailSubject(text, gymName(app, gymID), app.Settings().Meta.AppName)
-}
-
 func gymPath(app core.App, gymID, path string) string {
 	if slug := gymSlug(app, gymID); slug != "" {
 		return "/" + slug + path

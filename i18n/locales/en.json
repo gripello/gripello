@@ -775,6 +775,7 @@
         "saveError": "Could not save settings. Please try again.",
         "contactEmail": "Contact email",
         "contactEmailHint": "Published as your point of contact and notified about new content reports.",
+        "mailLanguage": "Language for e-mails",
         "mailNotConfigured": "Email is not configured, so password resets and content report notices cannot be delivered. SMTP is configured in PocketBase, not here.",
         "mailNotConfiguredAction": "Open PocketBase mail settings",
         "legalTitle": "Legal notice",
@@ -1790,6 +1791,84 @@
             "routes": "Routes",
             "admins": "Platform admins",
             "dashboard": "PocketBase dashboard"
+        }
+    },
+    "mails": {
+        "greeting": "Hello {name},",
+        "greetingAnonymous": "Hello,",
+        "linkHint": "If the button doesn't work, copy this link into your browser:",
+        "imprint": "Imprint",
+        "privacy": "Privacy",
+        "unavailable": "unavailable",
+        "labels": {
+            "reason": "Reason",
+            "reference": "Reference",
+            "content": "Reported content",
+            "explanation": "Explanation",
+            "snapshot": "Content at the time of the report",
+            "reportedBy": "Reported by",
+            "reasoning": "Reasoning",
+            "problem": "Problem",
+            "route": "Route",
+            "details": "Details",
+            "location": "Sign-in"
+        },
+        "verification": {
+            "subject": "Verify your email address",
+            "body": "Thanks for signing up for {app}. Confirm your email address to finish setting up your account.",
+            "action": "Verify email address",
+            "note": "If you didn't sign up, you can ignore this email."
+        },
+        "passwordReset": {
+            "subject": "Reset your password",
+            "body": "We received a request to reset the password for your {app} account.",
+            "action": "Choose a new password",
+            "note": "If you didn't ask for this, you can ignore this email. Your password stays the same."
+        },
+        "emailChange": {
+            "subject": "Confirm your new email address",
+            "body": "Confirm this address to use it for your {app} account from now on.",
+            "action": "Confirm new address",
+            "note": "If you didn't ask to change your email address, you can ignore this email."
+        },
+        "otp": {
+            "subject": "Your sign-in code",
+            "body": "Use this code to sign in to {app}:",
+            "note": "If you didn't ask for a code, you can ignore this email."
+        },
+        "authAlert": {
+            "subject": "New sign-in to your account",
+            "body": "Your {app} account was just used to sign in from a new device or location.",
+            "note": "If this wasn't you, change your password right away. That signs out every other device."
+        },
+        "invite": {
+            "subject": "You're invited to {gym}",
+            "body": "{gym} has added you to its team on {app}. Choose a password to activate your account.",
+            "action": "Choose a password",
+            "note": "If you didn't expect this invitation, you can ignore this email."
+        },
+        "reportReceipt": {
+            "subject": "We received your report",
+            "body": "We have received your report and will review it without undue delay. We will inform you of our decision and of the ways to challenge it."
+        },
+        "reportAlert": {
+            "subject": "New content report",
+            "body": "A new report was submitted and is awaiting review.",
+            "action": "Open the moderation queue"
+        },
+        "reportDecision": {
+            "subject": "Decision on your report",
+            "body": "We have reviewed your report.",
+            "kept": "The reported content stays online.",
+            "removed": "The reported content has been removed.",
+            "redress": "How to challenge this decision: you can turn to a certified out-of-court dispute settlement body under Article 21 of the Digital Services Act, or seek a judicial remedy before the competent court.",
+            "redressContact": "You can also contact the operator directly at {email}."
+        },
+        "urgentDefect": {
+            "subject": "Urgent: {problem} on {route}",
+            "body": "A climber reported a safety-relevant problem. Please check the route before it is climbed again.",
+            "photo": "A photo is attached to the task.",
+            "action": "Open the task board"
         }
     }
 }

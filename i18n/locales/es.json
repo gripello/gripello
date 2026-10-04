@@ -775,6 +775,7 @@
         "saveError": "No se pudieron guardar los ajustes. Inténtalo de nuevo.",
         "contactEmail": "Correo de contacto",
         "contactEmailHint": "Se publica como punto de contacto y recibe avisos de nuevas denuncias de contenido.",
+        "mailLanguage": "Idioma de los correos",
         "mailNotConfigured": "El correo no está configurado, así que no se pueden enviar restablecimientos de contraseña ni avisos de denuncias. El SMTP se configura en PocketBase, no aquí.",
         "mailNotConfiguredAction": "Abrir ajustes de correo de PocketBase",
         "legalTitle": "Aviso legal",
@@ -1790,6 +1791,84 @@
             "routes": "Vías",
             "admins": "Admins de la plataforma",
             "dashboard": "Panel de PocketBase"
+        }
+    },
+    "mails": {
+        "greeting": "Hola, {name}:",
+        "greetingAnonymous": "Hola:",
+        "linkHint": "Si el botón no funciona, copia este enlace en tu navegador:",
+        "imprint": "Aviso legal",
+        "privacy": "Privacidad",
+        "unavailable": "no disponible",
+        "labels": {
+            "reason": "Motivo",
+            "reference": "Referencia",
+            "content": "Contenido denunciado",
+            "explanation": "Explicación",
+            "snapshot": "Contenido en el momento de la denuncia",
+            "reportedBy": "Denunciado por",
+            "reasoning": "Fundamentación",
+            "problem": "Problema",
+            "route": "Vía",
+            "details": "Detalles",
+            "location": "Inicio de sesión"
+        },
+        "verification": {
+            "subject": "Confirma tu dirección de correo",
+            "body": "Gracias por registrarte en {app}. Confirma tu dirección de correo para terminar de configurar tu cuenta.",
+            "action": "Confirmar correo",
+            "note": "Si no te has registrado, puedes ignorar este correo."
+        },
+        "passwordReset": {
+            "subject": "Restablece tu contraseña",
+            "body": "Hemos recibido una solicitud para restablecer la contraseña de tu cuenta de {app}.",
+            "action": "Elegir nueva contraseña",
+            "note": "Si no lo has solicitado, puedes ignorar este correo. Tu contraseña no cambia."
+        },
+        "emailChange": {
+            "subject": "Confirma tu nueva dirección de correo",
+            "body": "Confirma esta dirección para usarla a partir de ahora con tu cuenta de {app}.",
+            "action": "Confirmar nueva dirección",
+            "note": "Si no has pedido cambiar tu dirección de correo, puedes ignorar este correo."
+        },
+        "otp": {
+            "subject": "Tu código de inicio de sesión",
+            "body": "Usa este código para iniciar sesión en {app}:",
+            "note": "Si no has pedido un código, puedes ignorar este correo."
+        },
+        "authAlert": {
+            "subject": "Nuevo inicio de sesión en tu cuenta",
+            "body": "Alguien acaba de iniciar sesión en tu cuenta de {app} desde un dispositivo o lugar nuevo.",
+            "note": "Si no has sido tú, cambia tu contraseña de inmediato. Así se cerrará la sesión en todos los demás dispositivos."
+        },
+        "invite": {
+            "subject": "Te han invitado a {gym}",
+            "body": "{gym} te ha añadido a su equipo en {app}. Elige una contraseña para activar tu cuenta.",
+            "action": "Elegir contraseña",
+            "note": "Si no esperabas esta invitación, puedes ignorar este correo."
+        },
+        "reportReceipt": {
+            "subject": "Hemos recibido tu denuncia",
+            "body": "Hemos recibido tu denuncia y la revisaremos sin demora indebida. Te informaremos de nuestra decisión y de cómo impugnarla."
+        },
+        "reportAlert": {
+            "subject": "Nueva denuncia de contenido",
+            "body": "Se ha presentado una nueva denuncia pendiente de revisión.",
+            "action": "Abrir las denuncias"
+        },
+        "reportDecision": {
+            "subject": "Decisión sobre tu denuncia",
+            "body": "Hemos revisado tu denuncia.",
+            "kept": "El contenido denunciado sigue publicado.",
+            "removed": "El contenido denunciado se ha retirado.",
+            "redress": "Cómo impugnar esta decisión: puedes acudir a un órgano certificado de resolución extrajudicial de litigios conforme al artículo 21 del Reglamento de Servicios Digitales o interponer un recurso ante el tribunal competente.",
+            "redressContact": "También puedes contactar directamente con el operador en {email}."
+        },
+        "urgentDefect": {
+            "subject": "Urgente: {problem} en {route}",
+            "body": "Un escalador ha informado de un problema de seguridad. Revisa la vía antes de que se vuelva a escalar.",
+            "photo": "La tarea incluye una foto.",
+            "action": "Abrir el tablero de tareas"
         }
     }
 }

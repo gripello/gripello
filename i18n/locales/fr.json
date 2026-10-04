@@ -775,6 +775,7 @@
         "saveError": "Impossible d’enregistrer les paramètres. Veuillez réessayer.",
         "contactEmail": "E-mail de contact",
         "contactEmailHint": "Publié comme point de contact et notifié des nouveaux signalements de contenu.",
+        "mailLanguage": "Langue des e-mails",
         "mailNotConfigured": "L’e-mail n’est pas configuré : les réinitialisations de mot de passe et les avis de signalement ne peuvent pas être envoyés. Le SMTP se configure dans PocketBase, pas ici.",
         "mailNotConfiguredAction": "Ouvrir les paramètres e-mail de PocketBase",
         "legalTitle": "Mentions légales",
@@ -1790,6 +1791,84 @@
             "routes": "Voies",
             "admins": "Admins de la plateforme",
             "dashboard": "Tableau de bord PocketBase"
+        }
+    },
+    "mails": {
+        "greeting": "Bonjour {name},",
+        "greetingAnonymous": "Bonjour,",
+        "linkHint": "Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :",
+        "imprint": "Mentions légales",
+        "privacy": "Confidentialité",
+        "unavailable": "indisponible",
+        "labels": {
+            "reason": "Motif",
+            "reference": "Référence",
+            "content": "Contenu signalé",
+            "explanation": "Explication",
+            "snapshot": "Contenu au moment du signalement",
+            "reportedBy": "Signalé par",
+            "reasoning": "Motivation",
+            "problem": "Problème",
+            "route": "Voie",
+            "details": "Détails",
+            "location": "Connexion"
+        },
+        "verification": {
+            "subject": "Confirmez votre adresse e-mail",
+            "body": "Merci de votre inscription sur {app}. Confirmez votre adresse e-mail pour finaliser votre compte.",
+            "action": "Confirmer l’adresse e-mail",
+            "note": "Si vous ne vous êtes pas inscrit, vous pouvez ignorer cet e-mail."
+        },
+        "passwordReset": {
+            "subject": "Réinitialisez votre mot de passe",
+            "body": "Nous avons reçu une demande de réinitialisation du mot de passe de votre compte {app}.",
+            "action": "Choisir un nouveau mot de passe",
+            "note": "Si vous n’êtes pas à l’origine de cette demande, vous pouvez ignorer cet e-mail. Votre mot de passe reste inchangé."
+        },
+        "emailChange": {
+            "subject": "Confirmez votre nouvelle adresse e-mail",
+            "body": "Confirmez cette adresse pour l’utiliser désormais avec votre compte {app}.",
+            "action": "Confirmer la nouvelle adresse",
+            "note": "Si vous n’avez pas demandé à changer d’adresse e-mail, vous pouvez ignorer cet e-mail."
+        },
+        "otp": {
+            "subject": "Votre code de connexion",
+            "body": "Utilisez ce code pour vous connecter à {app} :",
+            "note": "Si vous n’avez pas demandé de code, vous pouvez ignorer cet e-mail."
+        },
+        "authAlert": {
+            "subject": "Nouvelle connexion à votre compte",
+            "body": "Votre compte {app} vient d’être utilisé pour se connecter depuis un nouvel appareil ou un nouveau lieu.",
+            "note": "Si ce n’était pas vous, changez immédiatement votre mot de passe. Tous les autres appareils seront alors déconnectés."
+        },
+        "invite": {
+            "subject": "Vous êtes invité à rejoindre {gym}",
+            "body": "{gym} vous a ajouté à son équipe sur {app}. Choisissez un mot de passe pour activer votre compte.",
+            "action": "Choisir un mot de passe",
+            "note": "Si vous n’attendiez pas cette invitation, vous pouvez ignorer cet e-mail."
+        },
+        "reportReceipt": {
+            "subject": "Nous avons reçu votre signalement",
+            "body": "Nous avons bien reçu votre signalement et l’examinerons dans les meilleurs délais. Nous vous informerons de notre décision et des voies de recours possibles."
+        },
+        "reportAlert": {
+            "subject": "Nouveau signalement de contenu",
+            "body": "Un nouveau signalement a été déposé et attend d’être examiné.",
+            "action": "Ouvrir les signalements"
+        },
+        "reportDecision": {
+            "subject": "Décision concernant votre signalement",
+            "body": "Nous avons examiné votre signalement.",
+            "kept": "Le contenu signalé reste en ligne.",
+            "removed": "Le contenu signalé a été supprimé.",
+            "redress": "Pour contester cette décision, vous pouvez saisir un organisme certifié de règlement extrajudiciaire des litiges au titre de l’article 21 du règlement sur les services numériques, ou former un recours devant la juridiction compétente.",
+            "redressContact": "Vous pouvez aussi contacter directement l’exploitant à l’adresse {email}."
+        },
+        "urgentDefect": {
+            "subject": "Urgent : {problem} sur {route}",
+            "body": "Un grimpeur a signalé un problème de sécurité. Vérifiez la voie avant qu’elle ne soit grimpée à nouveau.",
+            "photo": "Une photo est jointe à la tâche.",
+            "action": "Ouvrir le tableau des tâches"
         }
     }
 }

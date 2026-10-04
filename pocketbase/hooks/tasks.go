@@ -1,8 +1,7 @@
 package hooks
 
 import (
-	"fmt"
-	"html"
+	"net/url"
 	"slices"
 
 	"github.com/pocketbase/dbx"
@@ -17,18 +16,6 @@ const (
 	normalTaskPriority = 2
 	urgentTaskPriority = 4
 )
-
-var defectCategoryLabels = map[string]string{
-	"loose_bolt":     "Loose bolt / screw",
-	"loose_hold":     "Loose hold",
-	"spinning_hold":  "Spinning hold",
-	"broken_hold":    "Broken hold",
-	"damaged_volume": "Damaged volume",
-	"sharp_edge":     "Sharp edge",
-	"missing_hold":   "Missing hold",
-	"label_tag":      "Label / tag",
-	"other":          "Other",
-}
 
 var closedTaskStatuses = []string{"done", "dismissed"}
 
@@ -333,55 +320,36 @@ func sendUrgentDefectAlert(app core.App, task *core.Record, reporterID string) e
 	if !isUrgentDefectTask(task) || !app.Settings().SMTP.Enabled {
 		return nil
 	}
-	recipients := []string{}
-	for _, user := range withoutUser(usersByPermission(app, task.GetString("gym"), "manage_tasks"), reporterID) {
-		if address := user.GetString("email"); address != "" && !slices.Contains(recipients, address) {
-			recipients = append(recipients, address)
-		}
-	}
-	category := defectCategoryLabel(task.GetString("category"))
-	routeName := taskRouteName(app, task)
-	_, err := sendMail(
-		app,
-		recipients,
-		gymMailSubject(app, task.GetString("gym"), fmt.Sprintf("Urgent: %s on %s", category, routeName)),
-		urgentDefectAlertHTML(appURL(app), gymPath(app, task.GetString("gym"), "/manage/tasks"), routeName, task),
-	)
+	recipients := usersAsRecipients(withoutUser(usersByPermission(app, task.GetString("gym"), "manage_tasks"), reporterID))
+	_, err := sendGymMail(app, urgentDefectMail(app, task), recipients)
 	return err
+}
+
+func urgentDefectMail(app core.App, task *core.Record) mailContent {
+	routeName := taskRouteName(app, task)
+	category := "tasks.categories." + task.GetString("category")
+	details := []mailDetail{
+		{Label: "problem", ValueKey: category, Value: task.GetString("category")},
+		{Label: "route", Value: routeName, Link: appURL(app) + "/route?id=" + url.QueryEscape(task.GetString("route"))},
+	}
+	if description := task.GetString("description"); description != "" {
+		details = append(details, mailDetail{Label: "details", Value: description})
+	}
+	var lines []string
+	if task.GetString("photo") != "" {
+		lines = append(lines, "mails.urgentDefect.photo")
+	}
+	return mailContent{
+		Key:       "urgentDefect",
+		Gym:       task.GetString("gym"),
+		Params:    map[string]any{"route": routeName},
+		ParamKeys: map[string]string{"problem": category},
+		Lines:     lines,
+		Details:   details,
+		Action:    gymPath(app, task.GetString("gym"), "/manage/tasks"),
+	}
 }
 
 func defectFiledParams(routeName, gymName string) map[string]any {
 	return map[string]any{"route": routeName, "gym": gymName}
-}
-
-func defectCategoryLabel(category string) string {
-	if label, ok := defectCategoryLabels[category]; ok {
-		return label
-	}
-	return category
-}
-
-func urgentDefectAlertHTML(baseURL, boardPath, routeName string, task *core.Record) string {
-	description := ""
-	if text := task.GetString("description"); text != "" {
-		description = fmt.Sprintf("<p><strong>Details:</strong><br>%s</p>", html.EscapeString(text))
-	}
-	photo := ""
-	if task.GetString("photo") != "" {
-		photo = "<p>A photo is attached to the task.</p>"
-	}
-	return fmt.Sprintf(`<p>A climber reported a safety-relevant problem. Please check the route before it is climbed again.</p>
-             <p><strong>Problem:</strong> %s</p>
-             <p><strong>Route:</strong> <a href="%s/route?id=%s">%s</a></p>
-             %s%s
-             <p><a href="%s%s">Open the task board</a></p>`,
-		html.EscapeString(defectCategoryLabel(task.GetString("category"))),
-		html.EscapeString(baseURL),
-		html.EscapeString(task.GetString("route")),
-		html.EscapeString(routeName),
-		description,
-		photo,
-		html.EscapeString(baseURL),
-		html.EscapeString(boardPath),
-	)
 }

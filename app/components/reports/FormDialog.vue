@@ -136,7 +136,7 @@ const emit = defineEmits<{
 }>()
 
 const pb = usePocketbase()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { notify, error: notifyError } = useNotification()
 const { capHeaders } = useCapToken()
 
@@ -223,6 +223,7 @@ async function submit() {
                 explanation: form.explanation.trim(),
                 notifier_name: form.notifierName.trim(),
                 notifier_email: form.notifierEmail.trim(),
+                language: locale.value,
                 good_faith: form.goodFaith,
             },
             { headers: await capHeaders('report') },

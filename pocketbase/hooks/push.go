@@ -2,14 +2,11 @@ package hooks
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
@@ -33,9 +30,7 @@ var pushServiceHosts = []string{
 
 var (
 	// hooks hand us transaction apps that are dead once the push goes out
-	pushApp          core.App
-	pushMessagesOnce sync.Once
-	pushMessages     map[string]map[string]string
+	pushApp core.App
 )
 
 type pushPayload struct {
@@ -65,42 +60,8 @@ func isPushServiceEndpoint(endpoint string) bool {
 	})
 }
 
-func localesDir() string {
-	return firstNonEmpty(os.Getenv("PB_LOCALES_DIR"), filepath.Join("..", "i18n", "locales"))
-}
-
-func loadPushMessages(dir string) map[string]map[string]string {
-	files, _ := filepath.Glob(filepath.Join(dir, "*.json"))
-	messages := map[string]map[string]string{}
-	for _, file := range files {
-		raw, err := os.ReadFile(file)
-		if err != nil {
-			continue
-		}
-		var locale struct {
-			Notifications struct {
-				Center struct {
-					Types map[string]string `json:"types"`
-				} `json:"center"`
-			} `json:"notifications"`
-		}
-		if json.Unmarshal(raw, &locale) != nil {
-			continue
-		}
-		messages[strings.TrimSuffix(filepath.Base(file), ".json")] = locale.Notifications.Center.Types
-	}
-	return messages
-}
-
-func pushText(messages map[string]map[string]string, language, notificationType string, params map[string]any) string {
-	text := messages[language][notificationType]
-	if text == "" {
-		text = messages["en"][notificationType]
-	}
-	for key, value := range params {
-		text = strings.ReplaceAll(text, "{"+key+"}", fmt.Sprint(value))
-	}
-	return text
+func pushText(messages localeMessages, language, notificationType string, params map[string]any) string {
+	return messages.translate(language, "notifications.center.types."+notificationType, params)
 }
 
 func vapidKeys() (string, string) {
@@ -130,14 +91,7 @@ func sendPush(app core.App, users []*core.Record, message notification) {
 	if publicKey == "" || privateKey == "" {
 		return
 	}
-	pushMessagesOnce.Do(func() {
-		pushMessages = loadPushMessages(localesDir())
-		if len(pushMessages) == 0 {
-			app.Logger().Warn("push: no locale messages found", "dir", localesDir())
-		}
-	})
-
-	deliveries := pushDeliveries(app, pushMessages, users, message)
+	deliveries := pushDeliveries(app, loadedLocales(app), users, message)
 	if len(deliveries) == 0 {
 		return
 	}
@@ -162,7 +116,7 @@ func sendPush(app core.App, users []*core.Record, message notification) {
 	routine.FireAndForget(deliver)
 }
 
-func pushDeliveries(app core.App, messages map[string]map[string]string, users []*core.Record, message notification) []pushDelivery {
+func pushDeliveries(app core.App, messages localeMessages, users []*core.Record, message notification) []pushDelivery {
 	title := firstNonEmpty(gymName(app, message.Gym), app.Settings().Meta.AppName)
 
 	var deliveries []pushDelivery
