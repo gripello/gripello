@@ -15,6 +15,7 @@ func registerCompetitionTicks(app core.App) {
 		}
 		if !wasPublished && e.Record.GetString("status") == "published" {
 			copyCompetitionTicks(e.App, e.Record)
+			notifyCompetitionPublished(e.App, e.Record)
 		}
 		return nil
 	})
@@ -79,4 +80,35 @@ func copyCompetitionTicks(app core.App, competition *core.Record) {
 			app.Logger().Error("competitions: failed to copy top to logbook", "score", score.Id, "error", err)
 		}
 	}
+}
+
+func notifyCompetitionPublished(app core.App, competition *core.Record) {
+	entries, err := app.FindRecordsByFilter(
+		"competition_entries",
+		"competition = {:competition} && status != 'withdrawn'",
+		"",
+		0,
+		0,
+		dbx.Params{"competition": competition.Id},
+	)
+	if err != nil {
+		app.Logger().Error("competitions: failed to load entrants", "competition", competition.Id, "error", err)
+		return
+	}
+	ids := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		ids = append(ids, entry.GetString("user"))
+	}
+	users, err := app.FindRecordsByIds("users", ids)
+	if err != nil {
+		return
+	}
+	gym := competition.GetString("gym")
+	pushNotification(app, notification{
+		Users:  users,
+		Gym:    gym,
+		Type:   "competition_published",
+		Params: map[string]any{"competition": competition.GetString("name")},
+		URL:    gymPath(app, gym, "/competitions/"+competition.Id),
+	})
 }

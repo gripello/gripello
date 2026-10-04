@@ -114,6 +114,7 @@ const textSections = [
     'defects',
     'auditLog',
     'captcha',
+    'push',
     'thirdParties',
 ]
 

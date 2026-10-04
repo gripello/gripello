@@ -17,4 +17,11 @@ describe('docker ui build', () => {
             expect(read('.dockerignore')).toMatch(new RegExp(`^!${dir}$`, 'm'))
         }
     })
+
+    it('ships the locales pocketbase renders push texts from', () => {
+        expect(read('Dockerfile')).toMatch(
+            /^COPY i18n\/locales\/\*\.json \/pb\/locales\/$/m,
+        )
+        expect(read('Dockerfile')).toContain('PB_LOCALES_DIR=/pb/locales')
+    })
 })

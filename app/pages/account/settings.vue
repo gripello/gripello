@@ -196,6 +196,8 @@
                 </UFormField>
             </UPageCard>
 
+            <AccountPushSettings v-else-if="activeTab === 'notifications'" />
+
             <template v-else>
                 <UPageCard variant="subtle" :ui="{ container: 'gap-y-4' }">
                     <UserPasswordChangeFields
@@ -271,7 +273,12 @@ type EditableSelf = UserRecord & {
     passwordConfirm: string
 }
 
-const SECTIONS = ['profile', 'preferences', 'security'] as const
+const SECTIONS = [
+    'profile',
+    'preferences',
+    'notifications',
+    'security',
+] as const
 type Section = (typeof SECTIONS)[number]
 
 definePageMeta({
@@ -380,6 +387,13 @@ const tabs = computed<NavigationMenuItem[]>(() => [
         'data-testid': 'profile-tab-preferences',
     },
     {
+        label: t('account.tabs.notifications'),
+        icon: 'i-lucide-bell',
+        to: { query: { tab: 'notifications' } },
+        active: activeTab.value === 'notifications',
+        'data-testid': 'profile-tab-notifications',
+    },
+    {
         label: t('account.tabs.security'),
         icon: 'i-lucide-shield-check',
         to: { query: { tab: 'security' } },
@@ -394,6 +408,7 @@ const sectionTitle = computed(
         ({
             profile: t('account.tabs.profile'),
             preferences: t('account.tabs.preferences'),
+            notifications: t('account.tabs.notifications'),
             security: t('account.password'),
         })[activeTab.value],
 )
@@ -402,6 +417,7 @@ const sectionDescription = computed(
         ({
             profile: t('accountSettings.profileDescription'),
             preferences: t('accountSettings.preferencesDescription'),
+            notifications: t('accountSettings.notificationsDescription'),
             security: t('accountSettings.passwordDescription'),
         })[activeTab.value],
 )
@@ -440,6 +456,7 @@ const sectionChanged = computed<Record<Section, boolean>>(() => ({
         user.firstname !== original.firstname ||
         user.name !== original.name,
     preferences: user.language !== original.language,
+    notifications: false,
     security: passwordChangeRequested.value,
 }))
 
@@ -456,7 +473,7 @@ function resetSection(section: Section) {
         avatarPreview.value = savedAvatarUrl()
     } else if (section === 'preferences') {
         user.language = original.language
-    } else {
+    } else if (section === 'security') {
         user.oldPassword = ''
         user.password = ''
         user.passwordConfirm = ''

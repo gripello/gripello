@@ -63,6 +63,7 @@ func registerReports(app core.App) {
 	app.OnRecordAfterCreateSuccess("reports").BindFunc(func(e *core.RecordEvent) error {
 		pushNotification(e.App, notification{
 			Users:  usersByPermission(e.App, e.Record.GetString("gym"), "manage_reports"),
+			Gym:    e.Record.GetString("gym"),
 			Type:   "report_filed",
 			Params: map[string]any{"snippet": truncateRunes(e.Record.GetString("content_snapshot"), 140)},
 			URL:    gymPath(e.App, e.Record.GetString("gym"), "/manage/reports"),
@@ -163,7 +164,7 @@ func notifyReportDecided(app core.App, report *core.Record) {
 		notificationType = "report_decided_removed"
 	}
 
-	pushNotification(app, notification{Users: recipients, Type: notificationType, URL: gymPath(app, report.GetString("gym"), "/manage/reports")})
+	pushNotification(app, notification{Users: recipients, Gym: report.GetString("gym"), Type: notificationType, URL: gymPath(app, report.GetString("gym"), "/manage/reports")})
 }
 
 func sendReportReceipt(app core.App, report *core.Record) error {

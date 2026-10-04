@@ -64,6 +64,7 @@ func registerTasks(app core.App) {
 		if e.Record.GetString("kind") == "defect" {
 			pushNotification(e.App, notification{
 				Users:  withoutUser(usersByPermission(e.App, e.Record.GetString("gym"), "manage_tasks"), actorID),
+				Gym:    e.Record.GetString("gym"),
 				Type:   "task_defect_filed",
 				Params: defectFiledParams(taskRouteName(e.App, e.Record), gymName(e.App, e.Record.GetString("gym"))),
 				URL:    gymPath(e.App, e.Record.GetString("gym"), "/manage/tasks"),
@@ -109,6 +110,7 @@ func registerTasks(app core.App) {
 			if reporter, err := e.App.FindRecordById("users", reporterID); err == nil {
 				pushNotification(e.App, notification{
 					Users:  []*core.Record{reporter},
+					Gym:    e.Record.GetString("gym"),
 					Type:   "task_defect_fixed",
 					Params: map[string]any{"route": taskRouteName(e.App, e.Record)},
 					URL:    "/route?id=" + e.Record.GetString("route"),
@@ -275,6 +277,7 @@ func notifyTaskAssignee(app core.App, task *core.Record, actorID string) {
 	}
 	pushNotification(app, notification{
 		Users:  []*core.Record{assignee},
+		Gym:    task.GetString("gym"),
 		Type:   "task_assigned",
 		Params: map[string]any{"title": taskLabel(app, task)},
 		URL:    gymPath(app, task.GetString("gym"), "/manage/tasks"),

@@ -3,6 +3,7 @@ module pocketbase
 go 1.27
 
 require (
+	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/dop251/goja v0.0.0-20260901132549-43234fa61381
 	github.com/pocketbase/dbx v1.12.0
 	github.com/pocketbase/pocketbase v0.40.4

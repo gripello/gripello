@@ -28,8 +28,14 @@ export async function gotoSubscribed(page: Page, path: string, topic: string) {
     await subscribed
 }
 
-export async function assertSettledUrl(page: Page, path: string | RegExp) {
+export async function assertSettledUrl(
+    page: Page,
+    path: Parameters<Page['waitForURL']>[0],
+) {
     await page.waitForURL(path)
+    await page
+        .locator('[data-testid="page-hydrated"]')
+        .waitFor({ state: 'attached' })
 }
 
 export async function authHeader(

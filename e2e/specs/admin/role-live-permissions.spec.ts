@@ -1,6 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import { signInAs } from '../../support/auth'
-import { gotoSettled, gymPath } from '../../support/nav'
+import { gotoSubscribed, gymPath } from '../../support/nav'
 import { e2eGymId, ensureUser } from '../../support/seed'
 
 test('a permission added to the own role shows up without a reload', async ({
@@ -16,7 +16,7 @@ test('a permission added to the own role shows up without a reload', async ({
     const user = await ensureUser(root, role.id, 'user', testPrefix)
     try {
         await signInAs(page, user.email, user.password)
-        await gotoSettled(page, gymPath('/routes'))
+        await gotoSubscribed(page, gymPath('/routes'), 'roles')
         await expect(page.getByTestId('nav-group-moderation')).toHaveCount(0)
 
         const manageComments = await root
