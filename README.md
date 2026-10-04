@@ -213,4 +213,4 @@ Gripello is source-available under the [Business Source License 1.1](LICENSE), n
 - Production use, including self-hosting for a gym, requires a commercial license. Contact hello@gripello.com, or use the hosted version at [gripello.app](https://gripello.app).
 - Each version converts to the Apache License 2.0 four years after its release.
 
-Code published before this license change, including v2.1.0 and earlier, remains available under the GNU General Public License v3.0.
+Version 2.1.1 and earlier remain available under the GNU General Public License v3.0.
