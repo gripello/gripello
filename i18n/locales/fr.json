@@ -931,7 +931,6 @@
     },
     "tasks": {
         "pageTitle": "Tâches",
-        "pageSubtitle": "Défauts signalés par les grimpeurs et travaux à faire dans la salle.",
         "newTitle": "Nouvelle tâche",
         "title": "Titre",
         "kind": "Type",
