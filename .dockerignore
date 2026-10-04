@@ -2,6 +2,7 @@
 !.docker
 !.dockerignore
 !Dockerfile
+!LICENSE
 !.yarnrc.yml
 !package.json
 !yarn.lock

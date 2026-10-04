@@ -2,6 +2,7 @@
     "name": "gripello",
     "version": "2.1.1",
     "private": true,
+    "license": "BUSL-1.1",
     "scripts": {
         "build": "nuxt build",
         "dev": "CAP_SECRET=${CAP_SECRET:-dev-only-cap-secret-not-for-production} concurrently \"nuxt dev\" \"yarn dev:db\"",

@@ -72,6 +72,10 @@ COPY --from=pb-build /out/pocketbase /pb/pocketbase
 COPY --chown=node:node pocketbase/pb_migrations /pb/pb_migrations
 COPY i18n/locales/*.json /pb/locales/
 COPY --from=ui-build /app/.output /app/ui
+COPY LICENSE /app/LICENSE
+
+LABEL org.opencontainers.image.licenses="BUSL-1.1" \
+      org.opencontainers.image.source="https://github.com/gripello/gripello"
 
 ARG APP_VERSION
 ENV NODE_ENV=production APP_VERSION=${APP_VERSION} PB_LOCALES_DIR=/pb/locales
