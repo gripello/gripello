@@ -356,3 +356,16 @@ func TestDeletingAGymRetiresItsSlugs(t *testing.T) {
 		t.Error("deleted gym id reused")
 	}
 }
+
+func TestGymSavesBeforeSlugHistoryMigrations(t *testing.T) {
+	f := newMemberFixture(t)
+	defer f.app.Cleanup()
+	retired, err := f.app.FindCollectionByNameOrId("retired_slugs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.app.Delete(retired); err != nil {
+		t.Fatal(err)
+	}
+	saveRecord(t, f.app, "gyms", map[string]any{"name": "Legacy", "slug": "legacy", "active": true})
+}
