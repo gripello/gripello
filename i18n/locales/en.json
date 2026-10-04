@@ -59,7 +59,8 @@
         "tabs": {
             "profile": "Profile",
             "security": "Security",
-            "preferences": "Preferences"
+            "preferences": "Preferences",
+            "notifications": "Notifications"
         },
         "placeholders": {
             "firstname": "Jane",
@@ -452,7 +453,9 @@
                 "task_defect_filed": "New defect reported on “{route}”",
                 "task_assigned": "Task assigned to you: “{title}”",
                 "task_defect_fixed": "The problem you reported on “{route}” has been fixed — thank you!",
-                "task_defect_filed_gym": "New defect reported on “{route}” at {gym}"
+                "task_defect_filed_gym": "New defect reported on “{route}” at {gym}",
+                "wall_new_routes": "New routes on {wall}: {count}",
+                "competition_published": "Results for “{competition}” are online"
             }
         }
     },
@@ -508,6 +511,10 @@
             "captcha": {
                 "title": "Spam protection",
                 "body": "Some forms use a self-hosted proof-of-work check that runs in your browser. No data is sent to third parties and no tracking cookies are set."
+            },
+            "push": {
+                "title": "Push notifications",
+                "body": "If you turn on push notifications on a device, we store the push address its browser gives us together with your account and send notifications through the browser vendor’s push service (e.g. Google, Apple, Mozilla). The address is deleted when you remove the device in your notification settings, delete your account, or when the push service reports it as expired, which happens after you sign out on that device or revoke the permission."
             },
             "thirdParties": {
                 "title": "No tracking, no third parties",
@@ -1231,7 +1238,9 @@
         "wallHint": "Where the route sits on the gym map. Fine-tune it under Place routes.",
         "resizeList": "Resize list",
         "backToList": "Back to list",
-        "clusterLabel": "{count} route here, tap to show | {count} routes here, tap to show"
+        "clusterLabel": "{count} route here, tap to show | {count} routes here, tap to show",
+        "followWall": "Follow {wall}",
+        "unfollowWall": "Unfollow {wall}"
     },
     "mapEditor": {
         "title": "Map editor",
@@ -1397,7 +1406,27 @@
         "languageDescription": "Used for the interface and for emails you receive.",
         "theme": "Theme",
         "themeDescription": "Follow your system or pick a fixed theme.",
-        "passwordDescription": "Confirm your current password before choosing a new one."
+        "passwordDescription": "Confirm your current password before choosing a new one.",
+        "notificationsDescription": "Choose what Gripello notifies you about.",
+        "push": {
+            "topicsTitle": "Notify me about",
+            "topics": {
+                "new_routes": "New routes on walls I follow",
+                "defect_fixed": "Defects I reported are fixed",
+                "competition_results": "Competition results",
+                "tasks": "Tasks and reported defects",
+                "reports": "Content reports (DSA)"
+            },
+            "devices": "Devices",
+            "thisDevice": "This device",
+            "addDevice": "Turn on push",
+            "removeDevice": "Remove {device}",
+            "unknownDevice": "Unknown device",
+            "install": "Install the app first",
+            "unsupported": "Not available in this browser",
+            "blocked": "Notifications are blocked in your browser settings.",
+            "followedWalls": "Followed walls"
+        }
     },
     "competitions": {
         "pageTitle": "Competitions",

@@ -59,7 +59,8 @@
         "tabs": {
             "profile": "Profil",
             "security": "Güvenlik",
-            "preferences": "Tercihler"
+            "preferences": "Tercihler",
+            "notifications": "Bildirimler"
         },
         "placeholders": {
             "firstname": "Ahmet",
@@ -452,7 +453,9 @@
                 "task_defect_filed": "“{route}” rotasında yeni arıza bildirildi",
                 "task_assigned": "Size görev atandı: “{title}”",
                 "task_defect_fixed": "“{route}” rotasında bildirdiğiniz sorun giderildi — teşekkürler!",
-                "task_defect_filed_gym": "{gym} salonunda “{route}” rotasında yeni arıza bildirildi"
+                "task_defect_filed_gym": "{gym} salonunda “{route}” rotasında yeni arıza bildirildi",
+                "wall_new_routes": "{wall} duvarında yeni rotalar: {count}",
+                "competition_published": "“{competition}” sonuçları yayında"
             }
         }
     },
@@ -508,6 +511,10 @@
             "captcha": {
                 "title": "Spam koruması",
                 "body": "Bazı formlar tarayıcınızda çalışan, kendi sunucumuzda barındırılan bir proof-of-work doğrulaması kullanır. Üçüncü taraflara veri gönderilmez ve izleme çerezi ayarlanmaz."
+            },
+            "push": {
+                "title": "Anlık bildirimler",
+                "body": "Bir cihazda anlık bildirimleri açarsanız, tarayıcısının verdiği push adresini hesabınızla birlikte saklar ve bildirimleri tarayıcı üreticisinin push hizmeti (ör. Google, Apple, Mozilla) üzerinden göndeririz. Adres; cihazı bildirim ayarlarınızdan kaldırdığınızda, hesabınızı sildiğinizde veya push hizmeti adresin süresinin dolduğunu bildirdiğinde silinir. Bu, o cihazda oturumu kapattıktan veya izni geri aldıktan sonra olur."
             },
             "thirdParties": {
                 "title": "İzleme yok, üçüncü taraf yok",
@@ -1231,7 +1238,9 @@
         "wallHint": "Rotanın salon haritasındaki yeri. Ayrıntılı ayar için \"Rotaları yerleştir\"e git.",
         "resizeList": "Listeyi yeniden boyutlandır",
         "backToList": "Listeye dön",
-        "clusterLabel": "Burada {count} rota var, göstermek için dokunun | Burada {count} rota var, göstermek için dokunun"
+        "clusterLabel": "Burada {count} rota var, göstermek için dokunun | Burada {count} rota var, göstermek için dokunun",
+        "followWall": "{wall} duvarını takip et",
+        "unfollowWall": "{wall} duvarını takipten çık"
     },
     "mapEditor": {
         "title": "Harita düzenleyici",
@@ -1397,7 +1406,27 @@
         "languageDescription": "Arayüz ve aldığın e-postalar için kullanılır.",
         "theme": "Tema",
         "themeDescription": "Sistemini takip et veya sabit bir tema seç.",
-        "passwordDescription": "Yeni bir şifre seçmeden önce mevcut şifreni doğrula."
+        "passwordDescription": "Yeni bir şifre seçmeden önce mevcut şifreni doğrula.",
+        "notificationsDescription": "Gripello’nun sizi neyle ilgili bilgilendireceğini seçin.",
+        "push": {
+            "topicsTitle": "Bildirim konuları",
+            "topics": {
+                "new_routes": "Takip ettiğim duvarlarda yeni rotalar",
+                "defect_fixed": "Bildirdiğim arızalar giderildi",
+                "competition_results": "Yarışma sonuçları",
+                "tasks": "Görevler ve bildirilen arızalar",
+                "reports": "İçerik şikâyetleri (DSA)"
+            },
+            "devices": "Cihazlar",
+            "thisDevice": "Bu cihaz",
+            "addDevice": "Bildirimleri aç",
+            "removeDevice": "{device} kaldır",
+            "unknownDevice": "Bilinmeyen cihaz",
+            "install": "Önce uygulamayı yükleyin",
+            "unsupported": "Bu tarayıcıda kullanılamıyor",
+            "blocked": "Bildirimler tarayıcı ayarlarında engellenmiş.",
+            "followedWalls": "Takip edilen duvarlar"
+        }
     },
     "competitions": {
         "pageTitle": "Yarışmalar",

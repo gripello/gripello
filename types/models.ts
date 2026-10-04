@@ -1,4 +1,5 @@
 import type { AUDIT_ACTIONS } from '../app/utils/audit'
+import type { NotificationPrefs } from '../app/utils/notificationPrefs'
 import type { REPORT_REASONS, REPORT_STATUSES } from '../app/utils/reports'
 import type { ROUTE_TYPES } from '../app/utils/routes'
 import type {
@@ -129,6 +130,8 @@ export interface UserRecord extends BaseRecord {
     avatar?: string | null
     language?: string | null
     platform_admin?: boolean
+    notification_prefs?: NotificationPrefs | null
+    followed_walls?: string[]
 }
 
 export interface LegalFields {
@@ -326,6 +329,12 @@ export interface NotificationRecord extends BaseRecord {
     params?: Record<string, unknown> | null
     url?: string | null
     read: boolean
+}
+
+export interface PushSubscriptionRecord extends BaseRecord {
+    user: RecordId
+    endpoint: string
+    device?: string | null
 }
 
 export interface RouteScoreRecord extends RouteRecord {

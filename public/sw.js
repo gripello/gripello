@@ -41,6 +41,41 @@ self.addEventListener('message', (event) => {
         event.waitUntil(caches.delete(PAGES))
 })
 
+self.addEventListener('push', (event) => {
+    let message = {}
+    try {
+        message = event.data?.json() ?? {}
+    } catch {}
+    const { title, body, url, tag } = message
+    event.waitUntil(
+        self.registration.showNotification(title || 'Gripello', {
+            body,
+            tag,
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            data: { url: url || '/' },
+        }),
+    )
+})
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close()
+    const url = new URL(
+        event.notification.data?.url || '/',
+        self.location.origin,
+    ).href
+    event.waitUntil(
+        self.clients
+            .matchAll({ type: 'window' })
+            .then(([open]) =>
+                open
+                    ? open.focus().then((client) => client.navigate(url))
+                    : Promise.reject(),
+            )
+            .catch(() => self.clients.openWindow(url)),
+    )
+})
+
 self.addEventListener('fetch', (event) => {
     const { request } = event
     if (request.method !== 'GET') return

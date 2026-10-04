@@ -77,8 +77,15 @@ test('moves the holders of a deleted role to the role picked in the dialog', asy
     await page.getByTestId(`role-delete-${roleName}`).click()
     await expect(page.getByTestId('role-delete-dialog')).toBeVisible()
     await expect(page.getByTestId('role-delete-holders')).toBeVisible()
-    await page.getByTestId('role-delete-reassign').click()
-    await page.getByRole('option', { name: 'routesetter', exact: true }).click()
+    const reassign = page.getByTestId('role-delete-reassign')
+    // other workers' role changes re-render the open listbox and can swallow the pick
+    await expect(async () => {
+        await reassign.click()
+        await page
+            .getByRole('option', { name: 'routesetter', exact: true })
+            .click()
+        await expect(reassign).toHaveText('routesetter', { timeout: 1000 })
+    }).toPass()
     await page.getByTestId('role-delete-confirm').click()
     await expect(page.getByTestId('role-delete-dialog')).toBeHidden()
 

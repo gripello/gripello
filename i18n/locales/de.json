@@ -59,7 +59,8 @@
         "tabs": {
             "profile": "Profil",
             "security": "Sicherheit",
-            "preferences": "Präferenzen"
+            "preferences": "Präferenzen",
+            "notifications": "Benachrichtigungen"
         },
         "placeholders": {
             "firstname": "Max",
@@ -452,7 +453,9 @@
                 "task_defect_filed": "Neuer Defekt gemeldet an „{route}“",
                 "task_assigned": "Dir zugewiesen: „{title}“",
                 "task_defect_fixed": "Das gemeldete Problem an „{route}“ wurde behoben — danke!",
-                "task_defect_filed_gym": "Neuer Defekt gemeldet an „{route}“ in {gym}"
+                "task_defect_filed_gym": "Neuer Defekt gemeldet an „{route}“ in {gym}",
+                "wall_new_routes": "Neue Routen an {wall}: {count}",
+                "competition_published": "Ergebnisse von „{competition}“ sind online"
             }
         }
     },
@@ -508,6 +511,10 @@
             "captcha": {
                 "title": "Spamschutz",
                 "body": "Einige Formulare nutzen eine selbst gehostete Proof-of-Work-Prüfung, die in deinem Browser läuft. Es werden keine Daten an Dritte übermittelt und keine Tracking-Cookies gesetzt."
+            },
+            "push": {
+                "title": "Push-Benachrichtigungen",
+                "body": "Wenn du Push-Benachrichtigungen auf einem Gerät aktivierst, speichern wir die Push-Adresse seines Browsers zusammen mit deinem Konto und versenden Benachrichtigungen über den Push-Dienst des Browser-Herstellers (z. B. Google, Apple, Mozilla). Die Adresse wird gelöscht, wenn du das Gerät in deinen Benachrichtigungseinstellungen entfernst, dein Konto löschst oder der Push-Dienst sie als abgelaufen meldet – das passiert, nachdem du dich auf dem Gerät abmeldest oder die Berechtigung entziehst."
             },
             "thirdParties": {
                 "title": "Kein Tracking, keine Drittanbieter",
@@ -1231,7 +1238,9 @@
         "wallHint": "Wo die Route auf dem Hallenplan liegt. Feinjustieren unter „Routen platzieren“.",
         "resizeList": "Liste vergrößern oder verkleinern",
         "backToList": "Zurück zur Liste",
-        "clusterLabel": "{count} Route hier, tippen zum Anzeigen | {count} Routen hier, tippen zum Anzeigen"
+        "clusterLabel": "{count} Route hier, tippen zum Anzeigen | {count} Routen hier, tippen zum Anzeigen",
+        "followWall": "{wall} folgen",
+        "unfollowWall": "{wall} nicht mehr folgen"
     },
     "mapEditor": {
         "title": "Plan-Editor",
@@ -1397,7 +1406,27 @@
         "languageDescription": "Für die Oberfläche und für E-Mails, die du erhältst.",
         "theme": "Design",
         "themeDescription": "Folge deinem System oder wähle ein festes Design.",
-        "passwordDescription": "Bestätige dein aktuelles Passwort, bevor du ein neues wählst."
+        "passwordDescription": "Bestätige dein aktuelles Passwort, bevor du ein neues wählst.",
+        "notificationsDescription": "Wähle, worüber Gripello dich benachrichtigt.",
+        "push": {
+            "topicsTitle": "Benachrichtige mich über",
+            "topics": {
+                "new_routes": "Neue Routen an Wänden, denen ich folge",
+                "defect_fixed": "Von mir gemeldete Defekte sind behoben",
+                "competition_results": "Wettkampfergebnisse",
+                "tasks": "Aufgaben und gemeldete Defekte",
+                "reports": "Inhaltsmeldungen (DSA)"
+            },
+            "devices": "Geräte",
+            "thisDevice": "Dieses Gerät",
+            "addDevice": "Push aktivieren",
+            "removeDevice": "{device} entfernen",
+            "unknownDevice": "Unbekanntes Gerät",
+            "install": "Zuerst die App installieren",
+            "unsupported": "In diesem Browser nicht verfügbar",
+            "blocked": "Benachrichtigungen sind in den Browser-Einstellungen blockiert.",
+            "followedWalls": "Gefolgte Wände"
+        }
     },
     "competitions": {
         "pageTitle": "Wettkämpfe",

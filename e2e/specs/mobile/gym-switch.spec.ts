@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled, gymPath } from '../../support/nav'
+import { assertSettledUrl, gotoSettled, gymPath } from '../../support/nav'
 
 test('climbers switch gyms from the header', async ({ page, root }) => {
     const slug = `e2e-switch-${Date.now()}`
@@ -14,7 +14,7 @@ test('climbers switch gyms from the header', async ({ page, root }) => {
         await expect(switcher.getByTestId('gym-switcher-name')).toBeVisible()
         await switcher.click()
         await page.getByTestId(`gym-switcher-item-${slug}`).click()
-        await page.waitForURL((url) => url.pathname === `/${slug}/map`)
+        await assertSettledUrl(page, (url) => url.pathname === `/${slug}/map`)
         await expect(
             page
                 .locator('[data-testid="gym-switcher"]:visible')

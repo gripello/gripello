@@ -136,6 +136,28 @@
                         >
                         <div class="flex-1" />
                         <UButton
+                            v-if="selectedWall && isLoggedIn"
+                            color="neutral"
+                            :variant="followingWall ? 'soft' : 'ghost'"
+                            :icon="
+                                followingWall
+                                    ? 'i-lucide-bell-ring'
+                                    : 'i-lucide-bell-plus'
+                            "
+                            class="icon-btn"
+                            :aria-label="
+                                $t(
+                                    followingWall
+                                        ? 'map.unfollowWall'
+                                        : 'map.followWall',
+                                    { wall: selectedWall.name },
+                                )
+                            "
+                            :aria-pressed="followingWall"
+                            data-testid="map-follow-wall"
+                            @click="toggleFollowWall"
+                        />
+                        <UButton
                             v-if="selectedWallId"
                             color="neutral"
                             variant="ghost"
@@ -459,6 +481,17 @@ function onListSelect(routeId: string) {
 const selectedWall = computed(() =>
     mapWalls.value.find((wall) => wall.id === selectedWallId.value),
 )
+const { isFollowing, setFollowing } = useFollowedWalls()
+const { error: notifyError } = useNotification()
+const followingWall = computed(
+    () => !!selectedWall.value && isFollowing(selectedWall.value.id),
+)
+async function toggleFollowWall() {
+    if (!selectedWall.value) return
+    await setFollowing(selectedWall.value.id, !followingWall.value).catch(() =>
+        notifyError(t('notifications.error.edit')),
+    )
+}
 const listTitle = computed(() =>
     selectedWall.value ? selectedWall.value.name : t('map.allRoutes'),
 )
