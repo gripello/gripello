@@ -218,6 +218,25 @@
                 </UPageCard>
 
                 <UPageCard
+                    :title="t('account.exportData')"
+                    :description="t('account.exportDataHint')"
+                    variant="subtle"
+                    orientation="horizontal"
+                >
+                    <UButton
+                        color="neutral"
+                        variant="soft"
+                        icon="i-lucide-download"
+                        class="w-fit lg:ms-auto"
+                        data-testid="account-export"
+                        :loading="exportPending"
+                        @click="downloadExport"
+                    >
+                        {{ t('account.exportDataDownload') }}
+                    </UButton>
+                </UPageCard>
+
+                <UPageCard
                     :title="t('account.deleteAccount')"
                     :description="t('account.deleteAccountHint')"
                     variant="subtle"
@@ -294,6 +313,7 @@ const activeTab = computed<Section>(
 )
 
 const pb = usePocketbase()
+const { pending: exportPending, download: downloadExport } = useAccountExport()
 const authRecord = pb.authStore.record as UserRecord | null
 
 const user = reactive<EditableSelf>({
