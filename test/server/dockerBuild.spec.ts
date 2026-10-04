@@ -44,6 +44,17 @@ describe('docker ui build', () => {
         }
     })
 
+    it('serves third-party notices for npm and go dependencies', () => {
+        const dockerfile = read('Dockerfile')
+        expect(dockerfile).toContain('go-licenses/v2@v2.0.1 report ./...')
+        expect(dockerfile).toContain(
+            'node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.txt',
+        )
+        expect(
+            dockerfile.indexOf('public/third-party-notices.txt'),
+        ).toBeLessThan(dockerfile.indexOf('RUN yarn build'))
+    })
+
     it('gives the go tests the locales they check against', () => {
         expect(read('Dockerfile')).toMatch(
             /^COPY i18n\/locales\/\*\.json \/i18n\/locales\/$/m,
