@@ -932,7 +932,6 @@
     },
     "tasks": {
         "pageTitle": "Tareas",
-        "pageSubtitle": "Desperfectos que avisan los escaladores y trabajos pendientes en el rocódromo.",
         "newTitle": "Nueva tarea",
         "title": "Título",
         "kind": "Tipo",

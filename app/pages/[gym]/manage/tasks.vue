@@ -1,9 +1,6 @@
 <template>
     <div class="tasks-page mx-auto w-full p-4">
-        <LayoutPageHeader
-            :title="t('tasks.pageTitle')"
-            :subtitle="t('tasks.pageSubtitle')"
-        >
+        <LayoutPageHeader :title="t('tasks.pageTitle')">
             <template #actions>
                 <UButton
                     color="primary"

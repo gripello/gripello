@@ -932,7 +932,6 @@
     },
     "tasks": {
         "pageTitle": "Tasks",
-        "pageSubtitle": "Defects reported by climbers and work to do in the gym.",
         "newTitle": "New task",
         "title": "Title",
         "kind": "Type",
