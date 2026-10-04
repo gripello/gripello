@@ -6,10 +6,12 @@
         :ui="{
             root: 'bg-default lg:bg-(--app-bg)/80 lg:backdrop-blur-md',
             container: 'max-w-none',
+            left: 'min-w-0 flex-1',
+            right: 'shrink-0',
         }"
     >
         <template #left>
-            <LayoutGymSwitcher class="max-w-[55vw] lg:hidden" />
+            <LayoutGymSwitcher class="w-auto min-w-0 lg:hidden" />
             <UButton
                 :icon="
                     sidebarOpen
@@ -51,9 +53,11 @@
                 to="/auth/login"
                 variant="soft"
                 icon="i-lucide-log-in"
+                class="icon-btn whitespace-nowrap max-sm:px-1.5"
+                :aria-label="$t('routes.login')"
                 data-testid="nav-login"
             >
-                {{ $t('routes.login') }}
+                <span class="max-sm:hidden">{{ $t('routes.login') }}</span>
             </UButton>
         </template>
     </UHeader>

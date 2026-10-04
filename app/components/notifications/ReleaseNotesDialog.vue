@@ -259,7 +259,7 @@ const props = withDefaults(
 )
 
 const { locale } = useI18n()
-const dialog = ref(false)
+const dialog = defineModel<boolean>('open', { default: false })
 const category = ref<'all' | ChangeCategory>('all')
 
 const release = computed(() => parseReleaseNotes(props.notes))

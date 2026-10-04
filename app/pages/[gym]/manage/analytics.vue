@@ -1,10 +1,6 @@
 <template>
     <div class="analytics-page mx-auto w-full p-4">
-        <LayoutPageHeader
-            :title="t('analytics.title')"
-            :subtitle="t('analytics.subtitle')"
-            class="mb-6"
-        />
+        <LayoutPageHeader :title="t('analytics.title')" class="mb-6" />
 
         <AnalyticsFilters
             :query="query"
@@ -45,11 +41,10 @@
                     :empty="!grades?.gradeDistribution.length"
                 >
                     <template v-if="disciplines.length > 1" #actions>
-                        <AnalyticsDisciplineToggle
+                        <SegmentedControl
                             v-model="discipline"
-                            section="grades"
-                            :options="disciplines"
-                            :label="disciplineLabel"
+                            :items="disciplineItems"
+                            test-id="analytics-discipline-grades"
                         />
                     </template>
                     <AnalyticsGradeChart
@@ -63,18 +58,16 @@
                     :title="gradeTitle('gradeBalance')"
                     icon="i-lucide-scale"
                     color="warning"
-                    :subtitle="t('analytics.hints.gradeBalance')"
                     :loading="initialLoading"
                     :empty="!hasGradeImbalance"
                     empty-icon="i-lucide-circle-check"
                     :empty-text="t('analytics.empty.gradeBalance')"
                 >
                     <template v-if="disciplines.length > 1" #actions>
-                        <AnalyticsDisciplineToggle
+                        <SegmentedControl
                             v-model="discipline"
-                            section="gradeBalance"
-                            :options="disciplines"
-                            :label="disciplineLabel"
+                            :items="disciplineItems"
+                            test-id="analytics-discipline-gradeBalance"
                         />
                     </template>
                     <AnalyticsGradeBalanceChart
@@ -121,17 +114,15 @@
                     :title="gradeTitle('gradeFeedback')"
                     icon="i-lucide-target"
                     color="error"
-                    :subtitle="t('analytics.hints.gradeFeedback')"
                     :loading="initialLoading"
                     :empty="!grades?.gradeFeedback.length"
                     :empty-text="t('analytics.empty.gradeFeedback')"
                 >
                     <template v-if="disciplines.length > 1" #actions>
-                        <AnalyticsDisciplineToggle
+                        <SegmentedControl
                             v-model="discipline"
-                            section="gradeFeedback"
-                            :options="disciplines"
-                            :label="disciplineLabel"
+                            :items="disciplineItems"
+                            test-id="analytics-discipline-gradeFeedback"
                         />
                     </template>
                     <AnalyticsGradeFeedbackChart
@@ -159,7 +150,6 @@
                     :title="t('analytics.sections.ratedRoutes')"
                     icon="i-lucide-thumbs-up"
                     color="success"
-                    :subtitle="t('analytics.hints.ratedRoutes')"
                     :loading="initialLoading"
                     :empty="!analytics?.topRated.length"
                     :empty-text="t('analytics.empty.ratedRoutes')"
@@ -176,7 +166,6 @@
                     :title="t('analytics.sections.oldestActive')"
                     icon="i-lucide-history"
                     color="warning"
-                    :subtitle="t('analytics.hints.oldestActive')"
                     :loading="initialLoading"
                     :empty="!analytics?.oldestActive.length"
                 >
@@ -195,11 +184,10 @@
                     :empty="!grades?.locationGrades.length"
                 >
                     <template v-if="disciplines.length > 1" #actions>
-                        <AnalyticsDisciplineToggle
+                        <SegmentedControl
                             v-model="discipline"
-                            section="locationGrades"
-                            :options="disciplines"
-                            :label="disciplineLabel"
+                            :items="disciplineItems"
+                            test-id="analytics-discipline-locationGrades"
                         />
                     </template>
                     <AnalyticsLocationGradeChart
@@ -356,6 +344,12 @@ const discipline = computed<Discipline>({
 const grades = computed(() => analytics.value?.grades[discipline.value])
 const disciplineLabel = (option: Discipline) =>
     t(`ticks.kind.${option === 'Boulder' ? 'boulder' : 'route'}`)
+const disciplineItems = computed(() =>
+    disciplines.value.map((value) => ({
+        value,
+        label: disciplineLabel(value),
+    })),
+)
 const gradeTitle = (section: string) =>
     disciplines.value.length > 1
         ? t(`analytics.sections.${section}`)

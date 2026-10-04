@@ -8,6 +8,7 @@ import {
     nonBlank,
     integerBetween,
     validateRules,
+    validUsername,
 } from '~/utils/validation'
 
 // Simple translation stub: just return the key so assertions are readable.
@@ -225,5 +226,21 @@ describe('validateRules', () => {
             { name: 'name', message: 'validation.required' },
             { name: 'email', message: 'validation.email' },
         ])
+    })
+})
+
+describe('validUsername', () => {
+    const check = (value: string) =>
+        validateRules({ username: value }, { username: validUsername(t) })
+
+    it('accepts word characters, dots and dashes after a word character', () => {
+        expect(check('ada.l-1')).toEqual([])
+    })
+
+    it('rejects empty, short and malformed names', () => {
+        expect(check('')[0]?.message).toBe('validation.required')
+        expect(check('ab')[0]?.message).toBe('validation.minLength')
+        expect(check('.ada')[0]?.message).toBe('account.usernameInvalid')
+        expect(check('ad a')[0]?.message).toBe('account.usernameInvalid')
     })
 })

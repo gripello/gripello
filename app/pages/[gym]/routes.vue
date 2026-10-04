@@ -105,10 +105,9 @@
                             :severity="defectsByRoute.get(row.original.id)"
                             class="ml-2"
                         />
-                        <UIcon
+                        <RouteRatedMarker
                             v-if="row.original.has_ratings"
-                            name="i-lucide-badge-check"
-                            class="ml-2 size-4 text-amber-500"
+                            class="ml-2"
                         />
                     </div>
                 </template>
@@ -130,16 +129,10 @@
                     <div class="route-comment">{{ row.original.comment }}</div>
                 </template>
                 <template #creator-cell="{ row }">
-                    <div class="creator-chips" data-testid="index-row-creators">
-                        <UBadge
-                            v-for="c in row.original.creator"
-                            :key="c"
-                            color="neutral"
-                            variant="subtle"
-                            class="rounded-full"
-                            >{{ c }}</UBadge
-                        >
-                    </div>
+                    <RouteCreators
+                        :creators="row.original.creator ?? []"
+                        data-testid="index-row-creators"
+                    />
                 </template>
                 <template #score-cell="{ row }">
                     {{ formatScore(row.original, locale) }}
@@ -524,11 +517,5 @@ onBeforeUnmount(() => {
     overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
-}
-.creator-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding-block: 6px;
 }
 </style>

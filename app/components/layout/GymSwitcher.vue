@@ -20,15 +20,17 @@
             data-testid="gym-switcher"
         >
             <span
-                class="flex shrink-0 items-center"
+                class="flex min-w-0 items-center"
+                :class="{ 'shrink-0': context !== 'platform' }"
                 data-testid="nav-logo"
                 :data-gym="currentGym?.slug"
+                :data-context="context"
             >
                 <img
                     v-if="logoUrl"
                     :src="logoUrl"
                     :alt="title"
-                    class="gym-switcher__custom"
+                    class="gym-switcher__custom logo-mono"
                     :class="collapsed ? 'max-w-8' : 'max-w-20'"
                     data-testid="nav-logo-custom"
                 />
@@ -53,6 +55,15 @@
                     />
                 </template>
             </span>
+            <UBadge
+                v-if="!collapsed && context === 'platform'"
+                color="primary"
+                variant="soft"
+                class="shrink-0"
+                data-testid="gym-switcher-platform"
+            >
+                {{ $t('nav.platform') }}
+            </UBadge>
             <span
                 v-if="!collapsed && currentGym"
                 class="min-w-0 flex-1 truncate text-start font-semibold text-highlighted"
@@ -84,7 +95,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { gymTitle } from '~/utils/gymNames'
-import { gymSwitchPath } from '~/utils/navigation'
+import { gymSwitchPath, navContext } from '~/utils/navigation'
 import { readRecentGyms } from '~/utils/recentGyms'
 
 type GymItem = DropdownMenuItem & { role?: string }
@@ -97,7 +108,10 @@ const route = useRoute()
 const { gym } = useGym()
 const { gymMemberships, isPlatformAdmin } = usePermissions()
 
-const currentGym = computed(() => (route.params.gym ? gym.value : null))
+const context = computed(() =>
+    navContext(route.path, routeGymSlug(route.params)),
+)
+const currentGym = computed(() => (context.value === 'gym' ? gym.value : null))
 const title = computed(() =>
     currentGym.value ? gymTitle(currentGym.value) : 'Gripello',
 )
@@ -187,10 +201,11 @@ const items = computed<DropdownMenuItem[][]>(() => {
             ...(isPlatformAdmin.value
                 ? [
                       {
-                          label: t('nav.manageGyms'),
+                          label: t('nav.platform'),
                           icon: 'i-lucide-building-2',
-                          to: '/platform/gyms',
-                          'data-testid': 'gym-switcher-manage',
+                          to: '/platform',
+                          active: context.value === 'platform',
+                          'data-testid': 'gym-switcher-platform-link',
                       },
                   ]
                 : []),
@@ -202,16 +217,14 @@ const items = computed<DropdownMenuItem[][]>(() => {
 <style scoped>
 .gym-switcher__custom {
     max-height: 36px;
-    filter: brightness(0);
-}
-
-.dark .gym-switcher__custom {
-    filter: brightness(0) invert(1);
 }
 
 .gym-switcher__brand {
+    min-width: 0;
     max-width: 120px;
     height: 32px;
+    object-fit: contain;
+    object-position: left;
 }
 
 .gym-switcher__brand--dark,

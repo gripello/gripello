@@ -79,13 +79,20 @@
                     class="mb-6"
                 />
                 <slot />
+                <LayoutLegalLinks
+                    :settings="platformSettings ?? {}"
+                    class="mt-8 justify-center"
+                />
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import type { SettingsRecord } from '~/types/models'
 defineOptions({ name: 'AuthLayout' })
+
+const { data: platformSettings } = useNuxtData<SettingsRecord>('settings')
 
 withDefaults(
     defineProps<{

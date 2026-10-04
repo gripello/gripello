@@ -8,42 +8,35 @@ const horizontalOverflow = (page: Page) =>
         return el.scrollWidth - el.clientWidth
     })
 
-test('the role permission editor never scrolls sideways on a small phone', async ({
+test('the role list never scrolls sideways on a small phone', async ({
     adminPage: page,
 }) => {
     await page.setViewportSize({ width: 375, height: 667 })
-    await gotoSettled(page, '/admin/users')
+    await gotoSettled(page, '/admin/users#roles')
 
-    const grid = page.getByTestId('role-permissions-table')
-    await expect(grid).toBeVisible()
+    const list = page.getByTestId('role-list')
+    await expect(list).toBeVisible()
+    await expect(page.getByTestId('role-detail')).toBeHidden()
 
     await expect.poll(() => horizontalOverflow(page)).toBeLessThanOrEqual(1)
     await expect
         .poll(async () => {
-            const box = (await grid.boundingBox())!
+            const box = (await list.boundingBox())!
             return box.x + box.width
         })
         .toBeLessThanOrEqual(375)
 })
 
-test('every role card and its permission toggles stay reachable on a phone', async ({
+test('tapping a role opens its permissions full width and back returns to the list', async ({
     adminPage: page,
 }) => {
     await page.setViewportSize({ width: 375, height: 667 })
-    await gotoSettled(page, '/admin/users')
+    await gotoSettled(page, '/admin/users#roles')
 
-    const cards = page.locator('[data-testid^="role-permissions-row-"]')
-    await expect(
-        page.getByTestId('role-permissions-row-routesetter'),
-    ).toBeVisible()
-
-    await expect(async () => {
-        for (const card of await cards.all()) {
-            const box = (await card.boundingBox())!
-            expect(box.x).toBeGreaterThanOrEqual(0)
-            expect(box.x + box.width).toBeLessThanOrEqual(375)
-        }
-    }).toPass()
+    await page.getByTestId('role-permissions-row-routesetter').click()
+    const detail = page.getByTestId('role-detail')
+    await expect(detail).toBeVisible()
+    await expect(page.getByTestId('role-list')).toBeHidden()
 
     const toggle = page.getByTestId(
         'role-permissions-routesetter-view_analytics',
@@ -52,16 +45,21 @@ test('every role card and its permission toggles stay reachable on a phone', asy
     await expect
         .poll(async () => {
             const box = (await toggle.boundingBox())!
-            return box.x + box.width
+            return box.x >= 0 && box.x + box.width <= 375
         })
-        .toBeLessThanOrEqual(375)
+        .toBe(true)
+    await expect.poll(() => horizontalOverflow(page)).toBeLessThanOrEqual(1)
+
+    await page.getByTestId('role-detail-back').click()
+    await expect(page.getByTestId('role-list')).toBeVisible()
+    await expect(detail).toBeHidden()
 })
 
 test('the role create dialog opens as a bottom sheet on a phone', async ({
     adminPage: page,
 }) => {
     await page.setViewportSize({ width: 375, height: 667 })
-    await gotoSettled(page, '/admin/users')
+    await gotoSettled(page, '/admin/users#roles')
 
     await page.getByTestId('role-create-open').click()
     await expect(page.getByTestId('role-form-dialog')).toBeVisible()

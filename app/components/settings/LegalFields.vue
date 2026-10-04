@@ -39,7 +39,7 @@
     </UFormField>
     <UFormField
         :label="$t('settings.legalEditorial')"
-        :description="$t('settings.legalEditorialHint')"
+        :help="$t('settings.legalEditorialHint')"
         :ui="fieldUi"
     >
         <UInput

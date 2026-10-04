@@ -247,11 +247,7 @@
                         <TaskDefectMarker
                             :severity="defectsByRoute.get(row.original.id)"
                         />
-                        <UIcon
-                            v-if="row.original.has_ratings"
-                            name="i-lucide-badge-check"
-                            class="size-4 text-amber-500"
-                        />
+                        <RouteRatedMarker v-if="row.original.has_ratings" />
                         <UBadge
                             v-if="row.original.archived"
                             size="sm"
@@ -274,16 +270,7 @@
                     </div>
                 </template>
                 <template #creator-cell="{ row }">
-                    <div class="route-manager__creator-chips">
-                        <UBadge
-                            v-for="creator in row.original.creator"
-                            :key="creator"
-                            color="neutral"
-                            variant="subtle"
-                            class="rounded-full"
-                            >{{ creator }}</UBadge
-                        >
-                    </div>
+                    <RouteCreators :creators="row.original.creator ?? []" />
                 </template>
                 <template #location-cell="{ row }">
                     {{ locationName(row.original) }}
@@ -1031,13 +1018,6 @@ useHead(() => ({
 
 .route-manager__name-text {
     font-weight: 600;
-}
-
-.route-manager__creator-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding-block: 6px;
 }
 
 .route-manager__row-actions {

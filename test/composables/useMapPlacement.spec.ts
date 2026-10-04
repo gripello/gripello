@@ -51,6 +51,32 @@ describe('useMapPlacement', () => {
         ])
     })
 
+    it('leaves permanent routes out of the wall age', () => {
+        const daysAgo = (days: number) =>
+            new Date(Date.now() - days * 86_400_000).toISOString()
+        const placement = setup([
+            route('a', {
+                wall: 'north',
+                wall_position: 0.2,
+                screw_date: daysAgo(10),
+            }),
+            route('b', {
+                wall: 'north',
+                wall_position: 0.4,
+                screw_date: daysAgo(30),
+            }),
+            route('c', {
+                wall: 'north',
+                wall_position: 0.6,
+                screw_date: daysAgo(7000),
+                permanent: true,
+            }),
+        ])
+        placement.selectedWallId.value = 'north'
+
+        expect(placement.wallAge.value).toEqual({ oldest: 30, average: 20 })
+    })
+
     it('stops after one route when keep going is off', () => {
         const placement = setup([route('a'), route('b')])
         placement.keepGoing.value = false

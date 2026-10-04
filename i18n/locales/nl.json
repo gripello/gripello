@@ -51,7 +51,6 @@
         "changeAvatar": "Avatar wijzigen",
         "emailLocked": "E-mail kan hier niet worden gewijzigd",
         "passwordStrength": "Wachtwoordsterkte",
-        "passwordHint": "Laat de wachtwoordvelden leeg om je huidige wachtwoord te behouden.",
         "unsavedChanges": "Niet-opgeslagen wijzigingen",
         "wrongOldPassword": "Huidig wachtwoord is onjuist",
         "passwordChangedSignInAgain": "Wachtwoord gewijzigd. Log opnieuw in met je nieuwe wachtwoord.",
@@ -172,14 +171,14 @@
         "selectedCount": "{n} geselecteerd",
         "list": "Routes",
         "competitions": "Wedstrijden",
-        "judge": "Jureren"
+        "judge": "Jureren",
+        "rated": "Heeft beoordelingen"
     },
     "dashboard": {
         "online": "{0} online"
     },
     "analytics": {
         "title": "Analyses",
-        "subtitle": "Hoe jullie routes worden gebouwd, beklommen en beoordeeld.",
         "meta": {
             "title": "Analyses - Gripello",
             "description": "Statistieken over routebouw, graden en beoordelingen."
@@ -239,12 +238,6 @@
             "ratedRoutes": "Nog niet genoeg beoordelingen.",
             "gradeBalance": "De huidige graadmix komt overeen met wat jullie normaal bouwen."
         },
-        "hints": {
-            "gradeBalance": "Actieve routes vergeleken met jullie gebruikelijke graadmix – rode graden ontbreken aan de wand.",
-            "gradeFeedback": "Elke stip is een route met minstens 3 graadstemmen. Boven de lijn vinden klimmers hem zwaarder dan de gebouwde graad.",
-            "ratedRoutes": "Sterren vergeleken met het gemiddelde van alle beoordeelde routes.",
-            "oldestActive": "Het langst aan de wand – kandidaten om te vervangen."
-        },
         "columns": {
             "averageRating": "Gem. sterren",
             "averageDeviation": "Graadverschil"
@@ -283,7 +276,10 @@
         "type": "Type",
         "archived": "Gearchiveerd",
         "comment": "Opmerking",
-        "creators": "Routebouwers"
+        "creators": "Routebouwers",
+        "permanent": "Permanent",
+        "permanentHelp": "Vaste structuren zoals randen of scheuren die nooit worden omgebouwd. Tellen niet mee in leeftijdsstatistieken.",
+        "archivedHelp": "Van de wand gehaald. Verborgen voor klimmers."
     },
     "ratings": {
         "ratings": "Beoordelingen",
@@ -745,15 +741,21 @@
         "roleSaveError": "De rol kon niet worden opgeslagen.",
         "roleDeleteError": "De rol kon niet worden verwijderd. Mogelijk is hij nog aan leden toegewezen.",
         "adminRoleLocked": "De beheerdersrol kan niet worden hernoemd of verwijderd.",
-        "subtitle": "Wat elke rol mag. Wijzigingen gelden direct.",
-        "noDescription": "Geen beschrijving",
         "groups": {
             "routes": "Routes",
             "competitions": "Wedstrijden",
             "moderation": "Moderatie",
             "admin": "Beheer",
             "other": "Overig"
-        }
+        },
+        "backToRoles": "Alle rollen",
+        "memberCount": "{n} lid | {n} leden",
+        "duplicateRole": "Rol dupliceren",
+        "copyName": "{name} (kopie)",
+        "cannotGrant": "Je kunt alleen rechten toekennen die je zelf hebt.",
+        "lockoutTitle": "Je eigen toegang verwijderen?",
+        "lockoutConfirm": "Je hebt deze rol. Zonder dit recht verlies je mogelijk de toegang tot deze pagina.",
+        "lockoutConfirmAction": "Verwijderen"
     },
     "time": {
         "justNow": "Zojuist",
@@ -780,7 +782,6 @@
         "saveError": "Instellingen konden niet worden opgeslagen. Probeer het opnieuw.",
         "contactEmail": "Contact-e-mail",
         "contactEmailHint": "Wordt gepubliceerd als aanspreekpunt en ontvangt meldingen over nieuwe inhoudsmeldingen.",
-        "mailLanguage": "Taal voor e-mails",
         "mailNotConfigured": "E-mail is niet geconfigureerd, dus wachtwoordherstel en meldingen over inhoud kunnen niet worden verzonden. SMTP stel je in PocketBase in, niet hier.",
         "mailNotConfiguredAction": "E-mailinstellingen van PocketBase openen",
         "legalTitle": "Colofon",
@@ -835,7 +836,9 @@
         "removeBand": "Kleur verwijderen",
         "resetBands": "Standaard herstellen",
         "splitBand": "Splitsen",
-        "bandBoundary": "Grens tussen {from} en {to}"
+        "bandBoundary": "Grens tussen {from} en {to}",
+        "defaultLanguage": "Standaardtaal",
+        "defaultLanguageHelp": "Wordt standaard gebruikt voor e-mails, exports en andere systeemuitvoer."
     },
     "errors": {
         "notFound": {
@@ -1040,9 +1043,7 @@
     },
     "audit": {
         "title": "Activiteitenlogboek",
-        "subtitle": "Elke vastgelegde actie in de app.",
         "titleOwn": "Jouw activiteit",
-        "subtitleOwn": "Alles wat over je account is vastgelegd.",
         "searchLabel": "Activiteit doorzoeken",
         "filterAction": "Actie",
         "filterCollection": "Onderdeel",
@@ -1401,18 +1402,10 @@
     },
     "accountSettings": {
         "title": "Instellingen",
-        "subtitle": "Beheer je profiel, voorkeuren en beveiliging.",
-        "profileDescription": "Hoe anderen je in de app zien.",
         "avatar": "Avatar",
         "avatarDescription": "JPG, PNG, SVG of WebP.",
-        "emailDescription": "Om in te loggen en meldingen te ontvangen.",
-        "preferencesDescription": "Taal en weergave van de app.",
         "language": "Taal",
-        "languageDescription": "Voor de interface en voor e-mails die je ontvangt.",
         "theme": "Thema",
-        "themeDescription": "Volg je systeem of kies een vast thema.",
-        "passwordDescription": "Bevestig je huidige wachtwoord voordat je een nieuw kiest.",
-        "notificationsDescription": "Kies waarover Gripello je meldingen stuurt.",
         "push": {
             "topicsTitle": "Meld me bij",
             "topics": {
@@ -1665,7 +1658,8 @@
             "flags": {
                 "allFlashes": "Alles geflasht",
                 "uniqueTop": "Enige top op een route"
-            }
+            },
+            "competition": "Wedstrijd"
         },
         "export": {
             "menu": "Exporteren",
@@ -1779,7 +1773,8 @@
             "previousSlugs": "Eerdere adressen",
             "venue": "Hal",
             "createdAt": "Aangemaakt",
-            "open": "Hal openen"
+            "open": "Hal openen",
+            "inactive": "Inactief"
         },
         "settings": {
             "title": "Platforminstellingen",
@@ -1795,6 +1790,21 @@
             "routes": "Routes",
             "admins": "Platformbeheerders",
             "dashboard": "PocketBase-dashboard"
+        },
+        "users": {
+            "title": "Gebruikers",
+            "search": "Zoeken op naam of e-mail…",
+            "show": "Tonen",
+            "verified": "Bevestigd",
+            "unverified": "Niet bevestigd",
+            "platformAdmin": "Platformbeheerder",
+            "memberships": "Hal-lidmaatschappen",
+            "gym": "Hal",
+            "addMembership": "Toevoegen",
+            "sendPasswordReset": "E-mail voor wachtwoordherstel sturen",
+            "passwordResetSent": "E-mail voor wachtwoordherstel verstuurd.",
+            "deleteConfirm": "{name} met alle gegevens verwijderen? Dit kan niet ongedaan worden gemaakt.",
+            "lastAdmin": "Deze persoon is de enige beheerder van een hal. Maak eerst iemand anders beheerder."
         }
     },
     "mails": {

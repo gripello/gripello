@@ -35,6 +35,7 @@ test('release notes list new commits and filter the release changes', async ({
         route.fulfill({ json: ROLLING_PAYLOAD }),
     )
     await gotoSettled(page, gymPath('/'))
+    await page.getByTestId('footer-info').click()
     await page.getByTestId('footer-version').click()
 
     const dialog = page.getByTestId('release-notes-dialog')

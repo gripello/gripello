@@ -105,3 +105,17 @@ test('the gym privacy notice names the gym as controller', async ({ page }) => {
         '/privacy',
     )
 })
+
+test('sign-in and registration link the platform legal notice and privacy policy', async ({
+    page,
+}) => {
+    await gotoSettled(page, '/auth/login')
+    await expect(page.getByTestId('footer-imprint')).toHaveAttribute(
+        'href',
+        '/imprint',
+    )
+    await expect(page.getByTestId('footer-privacy')).toHaveAttribute(
+        'href',
+        '/privacy',
+    )
+})

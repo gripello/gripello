@@ -6,6 +6,7 @@ import {
     type MapPoint,
     type WallGeometry,
 } from '#shared/utils/mapGeometry'
+import { formatGrade } from '#shared/utils/grades'
 import { readableTextOn, routeDotColor } from '~/utils/color'
 
 export const NEW_ROUTE_DAYS = 7
@@ -21,6 +22,7 @@ export interface MapRoute {
     id: string
     name: string
     color?: string | null
+    grade?: string | null
     wall?: string | null
     wall_position?: number | null
     anchor_point?: number | null
@@ -33,6 +35,7 @@ export interface RouteDot {
     point: MapPoint
     fill: string
     stroke: string
+    grade: string
     isNew: boolean
 }
 
@@ -107,6 +110,7 @@ export function placeRoutes(
                 wallId: wall.id,
                 point: pointAt(wall.edge, route.wall_position ?? 0.5),
                 ...dotColors(route.color),
+                grade: formatGrade(route),
                 isNew: isNewRoute(route.screw_date, now),
             },
         ]
@@ -290,4 +294,47 @@ export function spreadAround(
             center[1] + radius * Math.sin(angle),
         ]
     })
+}
+
+export function isolatedIds(
+    dots: { routeId: string; point: MapPoint }[],
+    minDistance: number,
+): Set<string> {
+    return new Set(
+        dots
+            .filter((dot) =>
+                dots.every(
+                    (other) =>
+                        other === dot ||
+                        Math.hypot(
+                            other.point[0] - dot.point[0],
+                            other.point[1] - dot.point[1],
+                        ) >= minDistance,
+                ),
+            )
+            .map((dot) => dot.routeId),
+    )
+}
+
+export function gradeFontPx(grade: string): number {
+    if (grade.length <= 3) return 11
+    return grade.length === 4 ? 9.5 : 8
+}
+
+export const DOT_RADIUS_PX = 5.5
+export const GRADE_RADIUS_PX = 14
+export const BADGE_RADIUS_PX = 5
+const GRADE_GAP_PX = 12
+const GRADE_SPACING_PX = Math.max(
+    GRADE_RADIUS_PX * 2 + GRADE_GAP_PX,
+    GRADE_RADIUS_PX * 1.95 + BADGE_RADIUS_PX + GRADE_GAP_PX / 2,
+)
+export const HIT_RADIUS_PX = { fine: 13, coarse: 22 }
+
+export function gradeSpacingPx(hitRadiusPx: number): number {
+    return Math.max(hitRadiusPx * 2, GRADE_SPACING_PX)
+}
+
+export function checkPath([x, y]: MapPoint, r: number): string {
+    return `M${x - r * 0.5} ${y} L${x - r * 0.1} ${y + r * 0.4} L${x + r * 0.55} ${y - r * 0.45}`
 }

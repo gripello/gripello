@@ -1,0 +1,74 @@
+import { mount } from '@vue/test-utils'
+import { computed, defineComponent, h, ref, useTemplateRef } from 'vue'
+import NavBar from '~/components/layout/NavBar.vue'
+
+vi.stubGlobal('useTemplateRef', useTemplateRef)
+vi.stubGlobal('useThemeMode', () => ({ mode: ref('system'), setMode: vi.fn() }))
+vi.stubGlobal('usePermissions', () => ({ can: () => false }))
+vi.stubGlobal('useGym', () => ({ slug: computed(() => 'e2e') }))
+vi.stubGlobal('useSidebar', () => ({ open: ref(false), toggle: vi.fn() }))
+
+const UHeader = defineComponent({
+    props: { ui: { type: Object, default: () => ({}) } },
+    setup(props, { slots }) {
+        return () =>
+            h('header', [
+                h('div', { class: props.ui.left }, slots.left?.()),
+                h('div', { class: props.ui.right }, slots.right?.()),
+            ])
+    },
+})
+const UButton = defineComponent({
+    setup(_, { slots }) {
+        return () => h('a', slots.default?.())
+    },
+})
+
+function mountNavBar(loggedIn: boolean) {
+    return mount(NavBar, {
+        props: { loggedIn },
+        global: {
+            mocks: { $route: { meta: {} }, $t: (key: string) => key },
+            stubs: {
+                UHeader,
+                UButton,
+                UDropdownMenu: { template: '<div><slot /></div>' },
+                LayoutGymSwitcher: true,
+                LayoutCommandPalette: true,
+                NotificationsBell: true,
+            },
+        },
+    })
+}
+
+describe('NavBar', () => {
+    it('lets the gym switcher shrink while the actions keep their width', () => {
+        const wrapper = mountNavBar(false)
+        const [left, right] = wrapper.findAll('header > div')
+
+        expect(left!.classes()).toEqual(
+            expect.arrayContaining(['min-w-0', 'flex-1']),
+        )
+        expect(right!.classes()).toContain('shrink-0')
+        expect(wrapper.get('layout-gym-switcher-stub').classes()).not.toContain(
+            'max-w-[55vw]',
+        )
+    })
+
+    it('shows the sign-in button icon-only below sm with an accessible name', () => {
+        const login = mountNavBar(false).get('[data-testid="nav-login"]')
+
+        expect(login.attributes('aria-label')).toBe('routes.login')
+        expect(login.classes()).toEqual(
+            expect.arrayContaining(['icon-btn', 'whitespace-nowrap']),
+        )
+        expect(login.get('span').classes()).toContain('max-sm:hidden')
+    })
+
+    it('shows the bell instead of sign-in when logged in', () => {
+        const wrapper = mountNavBar(true)
+
+        expect(wrapper.find('[data-testid="nav-login"]').exists()).toBe(false)
+        expect(wrapper.find('notifications-bell-stub').exists()).toBe(true)
+    })
+})

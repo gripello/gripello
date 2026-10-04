@@ -388,6 +388,29 @@ describe('buildAnalytics', () => {
         ])
     })
 
+    it('leaves permanent routes out of age statistics but keeps them counted', () => {
+        const routes = [
+            route('new'),
+            route('structure', { screw_date: daysAgo(7000), permanent: true }),
+            route('gone', {
+                archived: true,
+                screw_date: daysAgo(40),
+                archived_at: daysAgo(10),
+            }),
+            route('goneStructure', {
+                archived: true,
+                permanent: true,
+                screw_date: daysAgo(5000),
+                archived_at: daysAgo(10),
+            }),
+        ]
+        const result = buildAnalytics(routes, [], allTime, NOW)
+
+        expect(result.oldestActive.map(({ id }) => id)).toEqual(['new'])
+        expect(result.summary.averageLifespanDays).toBe(30)
+        expect(result.grades.Route.gradeDistribution[0]!.total).toBe(2)
+    })
+
     it('keeps top and lowest rated lists disjoint', () => {
         const routes = ['a', 'b'].map((id) => route(id))
         const ratings = [

@@ -22,7 +22,7 @@
             </template>
         </FilterBar>
 
-        <LayoutLoadingState v-if="loading && !members.length" variant="cards" />
+        <LayoutLoadingState v-if="loading && !members.length" />
 
         <LayoutEmptyState
             v-else-if="!loading && !members.length"
@@ -31,78 +31,87 @@
             :hint="t('users.noUsersHint')"
         />
 
-        <div v-else class="grid grid-cols-12 gap-4">
-            <div
+        <UTable
+            v-else-if="mdAndUp"
+            :data="members"
+            :columns="columns"
+            class="rounded-lg border border-default bg-default"
+            data-testid="members-table"
+        >
+            <template #member-cell="{ row }">
+                <AdminMemberIdentity :member="row.original" />
+            </template>
+            <template #role-cell="{ row }">
+                <USelect
+                    :model-value="row.original.role"
+                    :items="assignableRoleOptions"
+                    value-key="value"
+                    :aria-label="t('members.role')"
+                    class="w-44"
+                    :disabled="!canManage(row.original)"
+                    data-testid="member-card-role"
+                    @update:model-value="
+                        (role) => changeRole(row.original, String(role))
+                    "
+                />
+            </template>
+            <template #actions-cell="{ row }">
+                <div class="flex justify-end">
+                    <UTooltip :text="t('members.remove')">
+                        <UButton
+                            icon="i-lucide-user-minus"
+                            color="error"
+                            variant="ghost"
+                            class="icon-btn"
+                            :disabled="!canManage(row.original)"
+                            :aria-label="t('members.remove')"
+                            data-testid="member-card-remove"
+                            @click="confirmRemove(row.original)"
+                        />
+                    </UTooltip>
+                </div>
+            </template>
+        </UTable>
+
+        <ul
+            v-else
+            class="divide-y divide-default rounded-lg border border-default bg-default"
+            data-testid="members-list"
+        >
+            <li
                 v-for="member in members"
                 :key="member.id"
-                class="col-span-12 sm:col-span-6 lg:col-span-4"
+                class="flex flex-col gap-2 p-3"
             >
-                <div
-                    class="user-card flex h-full flex-col rounded-lg border bg-default"
-                    :data-testid="`member-card-${member.user}`"
-                >
-                    <div class="flex items-center gap-3 px-4 pb-1 pt-3">
-                        <img
-                            v-if="member.avatarUrl"
-                            :src="member.avatarUrl"
-                            :alt="member.displayName"
-                            class="size-[42px] shrink-0 rounded-full object-cover"
-                        />
-                        <span
-                            v-else
-                            class="inline-flex size-[42px] shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                            :style="{
-                                backgroundColor: avatarColor(
-                                    member.displayName,
-                                ),
-                            }"
-                        >
-                            {{ member.initials }}
-                        </span>
-
-                        <div class="min-w-0 flex-1">
-                            <div
-                                class="text-sm font-semibold card-title-tight truncate"
-                                data-testid="member-card-name"
-                            >
-                                {{ member.displayName }}
-                            </div>
-                            <div
-                                class="text-xs card-subtitle-muted text-muted truncate"
-                            >
-                                {{ member.email }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-auto flex items-center gap-2 px-4 pb-3 pt-2">
-                        <USelect
-                            :model-value="member.role"
-                            :items="assignableRoleOptions"
-                            value-key="value"
-                            :aria-label="t('members.role')"
-                            class="min-w-0 flex-1"
+                <AdminMemberIdentity :member="member" />
+                <div class="flex items-center gap-2">
+                    <USelect
+                        :model-value="member.role"
+                        :items="assignableRoleOptions"
+                        value-key="value"
+                        :aria-label="t('members.role')"
+                        class="min-w-0 flex-1"
+                        :disabled="!canManage(member)"
+                        data-testid="member-card-role"
+                        @update:model-value="
+                            (role) => changeRole(member, String(role))
+                        "
+                    />
+                    <UTooltip :text="t('members.remove')">
+                        <UButton
+                            icon="i-lucide-user-minus"
+                            color="error"
+                            variant="ghost"
+                            class="icon-btn"
                             :disabled="!canManage(member)"
-                            data-testid="member-card-role"
-                            @update:model-value="
-                                (role) => changeRole(member, String(role))
-                            "
+                            :aria-label="t('members.remove')"
+                            data-testid="member-card-remove"
+                            @click="confirmRemove(member)"
                         />
-                        <UTooltip :text="t('members.remove')">
-                            <UButton
-                                icon="i-lucide-user-minus"
-                                color="error"
-                                variant="ghost"
-                                :disabled="!canManage(member)"
-                                :aria-label="t('members.remove')"
-                                data-testid="member-card-remove"
-                                @click="confirmRemove(member)"
-                            />
-                        </UTooltip>
-                    </div>
+                    </UTooltip>
                 </div>
-            </div>
-        </div>
+            </li>
+        </ul>
 
         <div v-if="!loading && members.length" class="text-center mt-4">
             <UButton
@@ -209,8 +218,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Form } from '@nuxt/ui'
-import { avatarColor } from '~/utils/avatar'
+import type { Form, TableColumn } from '@nuxt/ui'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import type { MembershipRecord } from '~/types/models'
 import { canGrantRole, membershipIn } from '#shared/utils/memberships'
@@ -235,6 +243,20 @@ watch(
     (value) => (search.value = String(value ?? '')),
 )
 const selectedRole = ref<string | null>(null)
+const { mdAndUp } = useDisplay()
+const columns = computed<TableColumn<Member>[]>(() => [
+    {
+        id: 'member',
+        header: t('members.title'),
+        meta: { class: { th: 'w-full', td: 'w-full max-w-0' } },
+    },
+    {
+        id: 'role',
+        header: t('members.role'),
+        meta: { class: { th: 'w-px', td: 'w-px' } },
+    },
+    { id: 'actions', meta: { class: { th: 'w-px', td: 'w-px' } } },
+])
 const currentUserId = computed(() => pb.authStore.record?.id ?? null)
 
 const { data: roles, refresh: refreshRoles } = useRoles(gymId)
@@ -453,15 +475,3 @@ onMounted(() => {
     })
 })
 </script>
-
-<style scoped>
-.user-card {
-    transition:
-        border-color 0.15s ease,
-        box-shadow 0.15s ease;
-}
-
-.user-card:hover {
-    border-color: color-mix(in oklab, var(--ui-primary) 30%, transparent);
-}
-</style>

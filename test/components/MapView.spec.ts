@@ -4,6 +4,7 @@ import { useTemplateRef } from 'vue'
 import MapView from '~/components/map/MapView.vue'
 import MapFloorLayer from '~/components/map/FloorLayer.vue'
 import MapCanvas from '~/components/map/MapCanvas.vue'
+import MapRouteMarker from '~/components/map/RouteMarker.vue'
 import { useSvgPanZoom } from '~/composables/useSvgPanZoom'
 import { useCoarsePointer } from '~/composables/useCoarsePointer'
 
@@ -67,7 +68,7 @@ function createWrapper(props: Record<string, unknown> = {}) {
         props: { map, walls, routes, ...props },
         global: {
             mocks: { $t: (key: string) => key },
-            components: { MapFloorLayer, MapCanvas },
+            components: { MapFloorLayer, MapCanvas, MapRouteMarker },
             stubs: { UButton: true },
         },
     })
@@ -121,5 +122,65 @@ describe('MapView', () => {
             ['north'],
             [null],
         ])
+    })
+
+    it('shows grades on isolated routes and dots where routes overlap', () => {
+        const wrapper = createWrapper({
+            routes: [
+                { ...routes[0]!, grade: '6A' },
+                { ...routes[1]!, grade: '6B' },
+                {
+                    id: 'r4',
+                    name: 'Crowded',
+                    color: '#43a047',
+                    grade: '7A',
+                    wall: 'north',
+                    wall_position: 0.8001,
+                },
+            ],
+        })
+        const grades = wrapper.findAll('[data-testid="map-dot-grade"]')
+        expect(grades.map((grade) => grade.text())).toEqual(['6A'])
+        expect(
+            wrapper
+                .get('[data-testid="map-route-cluster"]')
+                .attributes('data-count'),
+        ).toBe('2')
+    })
+
+    it('spreads a selected cluster as grade circles', () => {
+        const wrapper = createWrapper({
+            selectedRouteId: 'r2',
+            routes: [
+                { ...routes[1]!, grade: '6B' },
+                {
+                    id: 'r4',
+                    name: 'Crowded',
+                    color: '#43a047',
+                    grade: '7A',
+                    wall: 'north',
+                    wall_position: 0.8001,
+                },
+            ],
+        })
+        expect(
+            wrapper
+                .findAll('[data-testid="map-dot-grade"]')
+                .map((grade) => grade.text()),
+        ).toEqual(['6B', '7A'])
+        expect(wrapper.findAll('.map-dot-leader')).toHaveLength(2)
+    })
+
+    it('names each status badge on hover', () => {
+        const wrapper = createWrapper({
+            routes: [{ ...routes[0]!, grade: '6A' }],
+            sentIds: new Set(['r1']),
+            defects: new Map([['r1', 'urgent']]),
+        })
+        expect(
+            wrapper
+                .findAll('.map-dot-badge title')
+                .map((title) => title.text()),
+        ).toEqual(['ticks.sent', 'tasks.defect.marker'])
     })
 })

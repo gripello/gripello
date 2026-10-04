@@ -5,7 +5,7 @@
             variant="link"
             :ui="{
                 root: 'w-full [&>div]:w-full',
-                list: 'grid w-full grid-cols-4',
+                list: 'grid w-full auto-cols-fr grid-flow-col',
                 item: 'py-0',
                 link: 'h-16 flex-col justify-center gap-1 px-0 before:hidden',
                 linkLabel: 'text-[0.75rem] tracking-wide',
@@ -33,31 +33,23 @@
 
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
-import { BOTTOM_NAV } from '~/utils/navigation'
+import { bottomNavLinks } from '~/utils/navigation'
 
 const { t } = useI18n()
 const route = useRoute()
 const gymCookie = useGymCookie()
 const { slug: gymSlug } = useGym()
 
-function linkTarget(to: string) {
-    if (to !== '/map') return to
-    const slug = gymSlug.value || gymCookie.value
-    return slug ? `/${slug}/map` : '/'
-}
 const items = computed<NavigationMenuItem[]>(() =>
-    BOTTOM_NAV.map((link) => ({
-        label: t(link.label),
-        icon: link.icon,
-        to: linkTarget(link.to),
-        testid: `bottom-nav-${navTestId(link.to)}`,
-        active:
-            link.to === '/account'
-                ? route.path === '/account'
-                : link.to === '/map'
-                  ? /^\/[^/]+\/map$/.test(route.path)
-                  : route.path.startsWith(link.to),
-    })),
+    bottomNavLinks(route.path, gymSlug.value || gymCookie.value || '').map(
+        (link) => ({
+            label: t(link.label),
+            icon: link.icon,
+            to: link.to,
+            testid: `bottom-nav-${navTestId(link.path)}`,
+            active: link.active,
+        }),
+    ),
 )
 </script>
 

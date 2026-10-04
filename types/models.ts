@@ -47,6 +47,7 @@ export interface RouteRecord extends BaseRecord {
     creator?: JsonValue<string> | null
     archived?: boolean
     archived_at?: string | null
+    permanent?: boolean
     color?: string | null
     screw_date?: string | null
     wall?: RecordId | null
@@ -165,6 +166,11 @@ export interface GymRecord extends BaseRecord, LegalFields {
     boulder_bands?: BoulderBandSetting[] | null
     privacy_extra?: string | null
     language?: string | null
+}
+
+export interface GymStatsRecord extends BaseRecord {
+    members: number
+    routes: number
 }
 
 export interface MembershipRecord extends BaseRecord {

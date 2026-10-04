@@ -15,7 +15,7 @@ test('the route table fits without sideways scrolling', async ({ page }) => {
         .toBeLessThanOrEqual(containerWidth + 1)
 })
 
-test('stacked setter chips keep clear of the row dividers', async ({
+test('setter names keep clear of the row dividers', async ({
     page,
     createRoute,
 }) => {
@@ -28,20 +28,17 @@ test('stacked setter chips keep clear of the row dividers', async ({
     const row = page
         .getByRole('row')
         .filter({ has: page.getByTestId(`index-row-${route.id}`) })
-    const chips = row.getByTestId('index-row-creators')
-    await expect(chips).toBeVisible()
-
-    await expect(chips.getByText(/Setter/)).toHaveCount(2)
+    const setters = row.getByTestId('index-row-creators')
+    await expect(setters).toHaveText(
+        'E2E Setter With A Long Name, Second Long Setter Name',
+    )
 
     const gaps = await row.evaluate((tr) => {
-        const chipBoxes = [
-            ...tr.querySelector('[data-testid="index-row-creators"]')!.children,
-        ].map((chip) => chip.getBoundingClientRect())
+        const box = tr
+            .querySelector('[data-testid="index-row-creators"]')!
+            .getBoundingClientRect()
         const rect = tr.getBoundingClientRect()
-        return {
-            top: chipBoxes[0]!.top - rect.top,
-            bottom: rect.bottom - chipBoxes[chipBoxes.length - 1]!.bottom,
-        }
+        return { top: box.top - rect.top, bottom: rect.bottom - box.bottom }
     })
     expect(gaps.top).toBeGreaterThanOrEqual(4)
     expect(gaps.bottom).toBeGreaterThanOrEqual(4)

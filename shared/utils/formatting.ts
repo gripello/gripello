@@ -4,6 +4,11 @@ export function formatDateToYYYYMMDD(date: string | null | undefined): string {
     return parseDate(date)?.toISOString().slice(0, 10) ?? ''
 }
 
+export function localDateYYYYMMDD(date = new Date()): string {
+    const pad = (value: number) => String(value).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
 const DAY_MS = 86_400_000
 
 export interface FormatDateOptions extends Intl.DateTimeFormatOptions {

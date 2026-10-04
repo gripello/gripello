@@ -2,9 +2,6 @@
     <div class="activity-page mx-auto w-full px-4">
         <LayoutPageHeader
             :title="seesEverything ? t('audit.title') : t('audit.titleOwn')"
-            :subtitle="
-                seesEverything ? t('audit.subtitle') : t('audit.subtitleOwn')
-            "
         />
 
         <FilterBar

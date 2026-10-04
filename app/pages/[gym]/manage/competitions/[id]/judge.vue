@@ -15,7 +15,18 @@
                     : competition.name
             }}
         </UButton>
-        <LayoutPageHeader :title="t('competitions.judge.title')" />
+        <LayoutPageHeader :title="t('competitions.judge.title')">
+            <template v-if="competitionItems.length > 1" #actions>
+                <USelect
+                    :model-value="competitionId"
+                    :items="competitionItems"
+                    class="min-w-48"
+                    :aria-label="t('competitions.judge.competition')"
+                    data-testid="judge-competition-switch"
+                    @update:model-value="switchCompetition"
+                />
+            </template>
+        </LayoutPageHeader>
 
         <template v-if="competition">
             <div
@@ -356,7 +367,7 @@ const { run } = useAsyncAction()
 const competitionId = computed(() => String(route.params.id ?? ''))
 const gymPath = useGymPath()
 
-const JUDGE_PICKER = gymPath('/manage/judge?pick=1')
+const JUDGE_PICKER = gymPath('/manage/judge')
 const hydrated = useHydrated()
 const cameFromPicker = ref(false)
 onMounted(() => {
@@ -369,6 +380,15 @@ const backTo = computed(() =>
         ? JUDGE_PICKER
         : gymPath(`/manage/competitions/${competitionId.value}`),
 )
+const { data: judgeable } = useJudgeableCompetitions()
+const competitionItems = computed(() =>
+    (judgeable.value ?? []).map((item) => ({
+        value: item.id,
+        label: item.name,
+    })),
+)
+const switchCompetition = (id: string) =>
+    navigateTo(gymPath(`/manage/competitions/${id}/judge`), { replace: true })
 const pickedRouteId = ref<string>()
 const search = ref('')
 const filter = ref<'all' | 'open' | 'topped'>('all')

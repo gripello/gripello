@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { MapPoint } from '#shared/utils/mapGeometry'
-import { closestPairDistance, clusterDots, spreadAround } from '~/utils/gymMap'
+import {
+    closestPairDistance,
+    clusterDots,
+    checkPath,
+    gradeFontPx,
+    gradeSpacingPx,
+    isolatedIds,
+    spreadAround,
+} from '~/utils/gymMap'
 
 const dot = (routeId: string, point: MapPoint) => ({ routeId, point })
 
@@ -55,4 +63,54 @@ describe('spreadAround', () => {
             expect(closestPairDistance(points)).toBeGreaterThanOrEqual(0.999)
         },
     )
+})
+
+describe('isolatedIds', () => {
+    it('keeps only markers without a neighbour inside the spacing', () => {
+        const dots = [
+            dot('a', [0, 0]),
+            dot('b', [0.5, 0]),
+            dot('c', [5, 0]),
+            dot('d', [7, 0]),
+        ]
+        expect(isolatedIds(dots, 1)).toEqual(new Set(['c', 'd']))
+    })
+
+    it('excludes a marker close to only one member of a crowd', () => {
+        const dots = [dot('a', [0, 0]), dot('b', [0.9, 0]), dot('c', [1.8, 0])]
+        expect(isolatedIds(dots, 1)).toEqual(new Set())
+    })
+
+    it('isolates every marker once zoomed in far enough', () => {
+        const dots = [dot('a', [0, 0]), dot('b', [0.5, 0])]
+        expect(isolatedIds(dots, 0.5)).toEqual(new Set(['a', 'b']))
+    })
+
+    it('handles an empty map', () => {
+        expect(isolatedIds([], 1)).toEqual(new Set())
+    })
+})
+
+describe('gradeFontPx', () => {
+    it('shrinks the font for longer grades', () => {
+        expect(gradeFontPx('6A+')).toBe(11)
+        expect(gradeFontPx('VIII')).toBe(9.5)
+        expect(gradeFontPx('5.10a')).toBe(8)
+    })
+})
+
+describe('gradeSpacingPx', () => {
+    it('keeps grade circles and their badges apart', () => {
+        expect(gradeSpacingPx(13)).toBe(40)
+    })
+
+    it('widens the spacing for coarse hit targets', () => {
+        expect(gradeSpacingPx(22)).toBe(44)
+    })
+})
+
+describe('checkPath', () => {
+    it('draws a tick around the centre', () => {
+        expect(checkPath([10, 10], 2)).toBe('M9 10 L9.8 10.8 L11.1 9.1')
+    })
 })

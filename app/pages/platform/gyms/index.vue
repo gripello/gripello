@@ -31,40 +31,30 @@
         </LayoutEmptyState>
 
         <UTable
-            v-else
+            v-else-if="mdAndUp"
             :data="gyms"
             :columns="columns"
-            :get-row-id="(row: GymRecord) => row.id"
+            :get-row-id="(row: PlatformGym) => row.id"
             :empty="t('table.no_data')"
             class="rounded-lg border border-default bg-default"
-            :ui="{ root: 'overflow-x-auto', tr: 'cursor-pointer' }"
+            :ui="{ tr: 'cursor-pointer' }"
             data-testid="platform-gym-table"
             @select="(_event, row) => navigateTo(detailPath(row.original))"
         >
             <template #venue-cell="{ row }">
                 <ULink
                     :to="detailPath(row.original)"
-                    class="block max-w-[55vw] min-w-0 md:max-w-64"
+                    class="block max-w-80 min-w-0"
                     :data-testid="`platform-gym-link-${row.original.slug}`"
                 >
-                    <span class="block truncate font-semibold text-highlighted">
-                        {{ gymTitle(row.original) }}
-                    </span>
-                    <span
-                        v-if="gymSubtitle(row.original)"
-                        class="block truncate text-sm text-muted"
-                    >
-                        {{ gymSubtitle(row.original) }}
-                    </span>
-                    <span
-                        class="block truncate font-mono text-xs text-muted md:hidden"
-                    >
-                        /{{ row.original.slug }}
-                    </span>
+                    <PlatformGymIdentity :gym="row.original" />
                 </ULink>
             </template>
-            <template #slug-cell="{ row }">
-                <span class="font-mono text-sm">/{{ row.original.slug }}</span>
+            <template #members-cell="{ row }">
+                <span class="tabular-nums">{{ row.original.members }}</span>
+            </template>
+            <template #routes-cell="{ row }">
+                <span class="tabular-nums">{{ row.original.routes }}</span>
             </template>
             <template #active-cell="{ row }">
                 <USwitch
@@ -74,18 +64,6 @@
                     @update:model-value="
                         (active) => setActive(row.original, active)
                     "
-                />
-            </template>
-            <template #edit-cell="{ row }">
-                <UButton
-                    :to="detailPath(row.original)"
-                    icon="i-lucide-pencil"
-                    variant="ghost"
-                    color="neutral"
-                    class="icon-btn"
-                    :aria-label="t('actions.edit')"
-                    :data-testid="`platform-gym-edit-${row.original.slug}`"
-                    @click.stop
                 />
             </template>
             <template #created-cell="{ row }">
@@ -98,7 +76,73 @@
                     }}
                 </span>
             </template>
+            <template #edit-cell="{ row }">
+                <div class="flex justify-end">
+                    <UButton
+                        v-if="row.original.active"
+                        :to="`/${row.original.slug}`"
+                        icon="i-lucide-external-link"
+                        variant="ghost"
+                        color="neutral"
+                        class="icon-btn"
+                        :aria-label="t('platform.gyms.open')"
+                        :data-testid="`platform-gym-open-${row.original.slug}`"
+                        @click.stop
+                    />
+                    <UButton
+                        :to="detailPath(row.original)"
+                        icon="i-lucide-pencil"
+                        variant="ghost"
+                        color="neutral"
+                        class="icon-btn"
+                        :aria-label="t('actions.edit')"
+                        :data-testid="`platform-gym-edit-${row.original.slug}`"
+                        @click.stop
+                    />
+                </div>
+            </template>
         </UTable>
+
+        <LayoutEmptyState
+            v-else-if="!gyms.length"
+            icon="i-lucide-building-2"
+            :title="t('table.no_data')"
+        />
+
+        <ul
+            v-else
+            class="divide-y divide-default rounded-lg border border-default bg-default"
+            data-testid="platform-gym-list"
+        >
+            <li
+                v-for="gym in gyms"
+                :key="gym.id"
+                class="flex items-center gap-2 p-3"
+            >
+                <ULink
+                    :to="detailPath(gym)"
+                    class="min-w-0 flex-1"
+                    :data-testid="`platform-gym-link-${gym.slug}`"
+                >
+                    <PlatformGymIdentity :gym="gym" />
+                </ULink>
+                <USwitch
+                    :model-value="!!gym.active"
+                    :aria-label="t('platform.gyms.active')"
+                    :data-testid="`platform-gym-active-${gym.slug}`"
+                    @update:model-value="(active) => setActive(gym, active)"
+                />
+                <UButton
+                    :to="detailPath(gym)"
+                    icon="i-lucide-pencil"
+                    variant="ghost"
+                    color="neutral"
+                    class="icon-btn"
+                    :aria-label="t('actions.edit')"
+                    :data-testid="`platform-gym-edit-${gym.slug}`"
+                />
+            </li>
+        </ul>
 
         <LayoutDialogShell
             v-model="dialogOpen"
@@ -179,7 +223,7 @@ import type { Form, TableColumn } from '@nuxt/ui'
 import type { GymRecord, RoleRecord } from '~/types/models'
 import { isValidGymSlug, slugifyGymName } from '#shared/utils/gymSlug'
 import { formatDate } from '#shared/utils/formatting'
-import { gymSubtitle, gymTitle } from '~/utils/gymNames'
+import type { PlatformGym } from '~/utils/platformGyms'
 import { required, validEmail, validateRules } from '~/utils/validation'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
@@ -189,33 +233,23 @@ const pb = usePocketbase()
 
 useHead({ title: () => t('platform.gyms.title') })
 
-const {
-    data: gyms,
-    error,
-    refresh,
-} = await useAsyncData(
-    'platform-gyms',
-    () =>
-        pb.collection('gyms').getFullList<GymRecord>({
-            fields: 'id,slug,name,unit_name,active,created',
-            sort: 'name',
-            requestKey: null,
-        }),
-    { default: () => [] },
-)
+const { data: gyms, error, refresh } = await usePlatformGyms()
+const { mdAndUp } = useDisplay()
 
 const detailPath = (gym: GymRecord) => `/platform/gyms/${gym.id}`
 
+const numeric = { class: { th: 'w-24', td: 'w-24' } }
 const wideOnly = {
-    class: { th: 'hidden md:table-cell', td: 'hidden md:table-cell' },
+    class: { th: 'hidden lg:table-cell', td: 'hidden lg:table-cell' },
 }
 
-const columns = computed<TableColumn<GymRecord>[]>(() => [
+const columns = computed<TableColumn<PlatformGym>[]>(() => [
     { id: 'venue', header: t('platform.gyms.venue') },
-    { id: 'slug', header: t('platform.gyms.slug'), meta: wideOnly },
-    { id: 'active', header: t('platform.gyms.active') },
+    { id: 'members', header: t('members.title'), meta: numeric },
+    { id: 'routes', header: t('platform.overview.routes'), meta: numeric },
+    { id: 'active', header: t('platform.gyms.active'), meta: numeric },
     { id: 'created', header: t('platform.gyms.createdAt'), meta: wideOnly },
-    { id: 'edit', header: '', meta: { class: { td: 'w-12 text-end' } } },
+    { id: 'edit', header: '', meta: { class: { td: 'w-28' } } },
 ])
 
 const dialogOpen = ref(false)

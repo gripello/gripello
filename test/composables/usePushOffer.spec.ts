@@ -53,7 +53,12 @@ describe('usePushOffer', () => {
 
     it('only loads the key before the browser has asked', async () => {
         expect(await offerWith('default')).toBe(true)
-        expect(send).toHaveBeenCalledOnce()
+        expect(send).toHaveBeenCalledExactlyOnceWith(
+            '/api/notifications/settings',
+            {
+                requestKey: null,
+            },
+        )
         expect(getList).not.toHaveBeenCalled()
     })
 

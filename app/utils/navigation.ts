@@ -32,6 +32,39 @@ export const BOTTOM_NAV: NavLink[] = [
     { to: '/account', icon: 'i-lucide-layout-grid', label: 'routes.me' },
 ]
 
+export const PLATFORM_LINKS: NavLink[] = [
+    {
+        to: '/platform',
+        icon: 'i-lucide-layout-dashboard',
+        label: 'platform.overview.title',
+        permission: PLATFORM_ADMIN,
+    },
+    {
+        to: '/platform/gyms',
+        icon: 'i-lucide-building-2',
+        label: 'platform.gyms.title',
+        permission: PLATFORM_ADMIN,
+    },
+    {
+        to: '/platform/users',
+        icon: 'i-lucide-users-round',
+        label: 'platform.users.title',
+        permission: PLATFORM_ADMIN,
+    },
+    {
+        to: '/platform/settings',
+        icon: 'i-lucide-sliders-horizontal',
+        label: 'platform.settings.title',
+        permission: PLATFORM_ADMIN,
+    },
+]
+
+export const PLATFORM_BOTTOM_NAV: NavLink[] = [
+    ...PLATFORM_LINKS.slice(0, -1),
+    { ...PLATFORM_LINKS.at(-1)!, label: 'routes.settings' },
+    BOTTOM_NAV.at(-1)!,
+]
+
 export const NAV_ITEMS: NavItem[] = [
     {
         key: 'home',
@@ -157,32 +190,14 @@ export const NAV_ITEMS: NavItem[] = [
             },
         ],
     },
-    {
-        key: 'platform',
-        icon: 'i-lucide-building-2',
-        label: 'nav.platform',
-        children: [
-            {
-                to: '/platform',
-                icon: 'i-lucide-layout-dashboard',
-                label: 'platform.overview.title',
-                permission: PLATFORM_ADMIN,
-            },
-            {
-                to: '/platform/gyms',
-                icon: 'i-lucide-building-2',
-                label: 'platform.gyms.title',
-                permission: PLATFORM_ADMIN,
-            },
-            {
-                to: '/platform/settings',
-                icon: 'i-lucide-sliders-horizontal',
-                label: 'platform.settings.title',
-                permission: PLATFORM_ADMIN,
-            },
-        ],
-    },
 ]
+
+const PLATFORM_GROUP: NavItem = {
+    key: 'platform',
+    icon: 'i-lucide-building-2',
+    label: 'nav.platform',
+    children: PLATFORM_LINKS,
+}
 
 const GYMLESS_PATHS = ['/logbook', '/account', '/scan', '/platform']
 
@@ -237,7 +252,7 @@ export function visibleNavItems(
     signedIn = true,
     slug = '',
 ): NavItem[] {
-    return withGym(NAV_ITEMS, slug)
+    return withGym([...NAV_ITEMS, PLATFORM_GROUP], slug)
         .filter((item) => signedIn || !item.signedIn)
         .map((item) =>
             item.children
@@ -271,11 +286,46 @@ export interface SidebarItem {
     testid: string
     current?: boolean
     defaultOpen?: boolean
+    'aria-label'?: string
     children?: SidebarItem[]
 }
 
 const isWithin = (path: string, to: string) =>
     path === to || path.startsWith(`${to}/`)
+
+export type NavContext = 'gym' | 'platform' | 'global'
+
+export function navContext(path: string, routeSlug: string): NavContext {
+    if (isWithin(path, '/platform')) return 'platform'
+    return routeSlug ? 'gym' : 'global'
+}
+
+export function requestedSection(requested: unknown, ids: string[]) {
+    return typeof requested === 'string' && ids.includes(requested)
+        ? requested
+        : ids[0]!
+}
+
+const bottomNavMatches = (to: string, path: string) => {
+    if (to === '/account') return path === to
+    if (to === '/map') return /^\/[^/]+\/map$/.test(path)
+    return isWithin(path, to)
+}
+
+export function bottomNavLinks(path: string, mapSlug: string) {
+    const links =
+        navContext(path, '') === 'platform' ? PLATFORM_BOTTOM_NAV : BOTTOM_NAV
+    const activeTo = links
+        .map((link) => link.to)
+        .filter((to) => bottomNavMatches(to, path))
+        .sort((a, b) => b.length - a.length)[0]
+    return links.map((link) => ({
+        ...link,
+        to: link.to === '/map' ? (mapSlug ? `/${mapSlug}/map` : '/') : link.to,
+        path: link.to,
+        active: link.to === activeTo,
+    }))
+}
 
 export function sidebarItems(
     can: Can,
@@ -290,6 +340,8 @@ export function sidebarItems(
         to: link.to,
         testid: `nav-link-${navTestId(link.path ?? link.to)}`,
     })
+    if (navContext(currentPath, '') === 'platform')
+        return [PLATFORM_LINKS.filter(allowed(can)).map(toItem)]
     const pages = visibleNavItems(can, signedIn, slug)
         .filter((item) => !item.children && !item.permission)
         .map((item) => toItem(item as NavLink))
@@ -299,6 +351,7 @@ export function sidebarItems(
         )
         return {
             label: t(section.label),
+            'aria-label': t(section.label),
             icon: section.icon,
             testid: `nav-group-${section.key}`,
             current,

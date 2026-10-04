@@ -33,7 +33,9 @@ test('adds a climber by email, changes the role and removes them again', async (
     await page.getByTestId('member-invite-submit').click()
     await expect(page.getByTestId('member-invite-dialog')).toBeHidden()
 
-    const card = page.getByTestId(`member-card-${climber.id}`)
+    const card = page
+        .locator('tr, li')
+        .filter({ has: page.getByTestId(`member-card-${climber.id}`) })
     await expect(card).toBeVisible()
     await expect(card.getByTestId('member-card-role')).toHaveText('routesetter')
 

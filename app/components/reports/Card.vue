@@ -1,90 +1,90 @@
 <template>
-    <div
-        class="list-card rounded-lg bg-elevated"
+    <article
+        class="rounded-lg border border-default bg-default"
         :data-testid="`report-card-${report.id}`"
     >
-        <div class="list-card__header">
-            <UIcon
-                name="i-lucide-flag"
-                class="shrink-0 size-[20px]"
-                :class="statusTextClass[statusColor(report.status)]"
-            />
-
-            <div class="grow min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-sm font-medium">
-                        {{ t(`reports.reasons.${report.reason}`) }}
-                    </span>
-                    <UBadge
-                        size="sm"
-                        :color="statusColor(report.status)"
-                        variant="soft"
-                        data-testid="report-card-status"
-                    >
-                        {{ t(`reports.status.${report.status}`) }}
-                    </UBadge>
-                    <UBadge
-                        v-if="report.status !== 'open' && report.decision"
-                        size="sm"
-                        color="neutral"
-                        variant="outline"
-                    >
-                        {{ t(`reports.decision.${report.decision}`) }}
-                    </UBadge>
-                    <UBadge
-                        v-if="!report.receipt_sent"
-                        size="sm"
-                        color="warning"
-                        variant="outline"
-                        data-testid="report-card-receipt-pending"
-                    >
-                        {{ t('reports.receiptPending') }}
-                    </UBadge>
-                </div>
-                <div class="text-xs text-muted">
-                    {{ formatReportDate(report.created) }}
-                </div>
-            </div>
-        </div>
-
-        <div class="list-card__meta">
-            <div class="list-card__meta-row list-card__meta-row--full">
-                <span class="text-sm">{{ report.explanation }}</span>
-            </div>
-
-            <div class="list-card__meta-row list-card__meta-row--full mt-2">
-                <span class="text-xs text-muted">
-                    {{ t('reports.snapshot') }}:
-                </span>
-                <span class="text-xs italic">
-                    {{
-                        report.content_snapshot ||
-                        t('reports.contentUnavailable')
-                    }}
-                </span>
-            </div>
-
-            <div class="list-card__meta-row list-card__meta-row--full mt-2">
-                <span class="text-xs text-muted">
-                    {{ t('reports.notifier') }}:
-                </span>
-                <span class="text-xs">
-                    {{ report.notifier_name }} ({{ report.notifier_email }})
-                </span>
-            </div>
-
-            <div
-                v-if="report.decision_reason"
-                class="list-card__meta-row list-card__meta-row--full mt-2"
+        <header class="flex flex-wrap items-start gap-x-3 gap-y-2 p-4 pb-3">
+            <span
+                class="flex size-9 shrink-0 items-center justify-center rounded-full"
+                :class="statusIconClass[statusColor(report.status)]"
             >
-                <span class="text-xs text-muted">
-                    {{ t('reports.decisionReason') }}:
-                </span>
-                <span class="text-xs">{{ report.decision_reason }}</span>
+                <UIcon name="i-lucide-flag" class="size-[18px]" />
+            </span>
+            <div class="min-w-0 grow">
+                <h3 class="text-sm font-semibold text-highlighted">
+                    {{ t(`reports.reasons.${report.reason}`) }}
+                </h3>
+                <time
+                    class="text-xs text-muted"
+                    :datetime="report.created"
+                    :title="
+                        formatDate(report.created, { locale, withTime: true })
+                    "
+                >
+                    {{ timeAgo(report.created, t, locale) }}
+                </time>
             </div>
+            <div class="flex flex-wrap items-center gap-1.5">
+                <UBadge
+                    v-if="!report.receipt_sent"
+                    color="warning"
+                    variant="soft"
+                    data-testid="report-card-receipt-pending"
+                >
+                    {{ t('reports.receiptPending') }}
+                </UBadge>
+                <UBadge
+                    v-if="report.status !== 'open' && report.decision"
+                    color="neutral"
+                    variant="soft"
+                >
+                    {{ t(`reports.decision.${report.decision}`) }}
+                </UBadge>
+                <UBadge
+                    :color="statusColor(report.status)"
+                    variant="soft"
+                    data-testid="report-card-status"
+                >
+                    {{ t(`reports.status.${report.status}`) }}
+                </UBadge>
+            </div>
+        </header>
+
+        <div class="flex flex-col gap-3 px-4 pb-4">
+            <p v-if="report.explanation" class="text-sm whitespace-pre-line">
+                {{ report.explanation }}
+            </p>
+            <blockquote
+                class="rounded-md border-s-2 border-accented bg-muted px-3 py-2 text-sm italic"
+                :aria-label="t('reports.snapshot')"
+            >
+                {{ report.content_snapshot || t('reports.contentUnavailable') }}
+            </blockquote>
+            <dl
+                class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-xs"
+            >
+                <dt class="text-muted">{{ t('reports.notifier') }}</dt>
+                <dd class="flex min-w-0 items-center gap-2">
+                    <UAvatar :alt="report.notifier_name" size="2xs" />
+                    <span class="truncate">
+                        {{ report.notifier_name }}
+                        <span class="text-muted">{{
+                            report.notifier_email
+                        }}</span>
+                    </span>
+                </dd>
+                <template v-if="report.decision_reason">
+                    <dt class="text-muted">
+                        {{ t('reports.decisionReason') }}
+                    </dt>
+                    <dd>{{ report.decision_reason }}</dd>
+                </template>
+            </dl>
         </div>
 
-        <div class="list-card__actions flex items-center gap-1">
+        <footer
+            class="flex flex-wrap items-center gap-2 border-t border-default px-4 py-2"
+        >
             <UButton
                 color="neutral"
                 variant="ghost"
@@ -93,15 +93,16 @@
                 target="_blank"
                 rel="noopener noreferrer"
                 icon="i-lucide-external-link"
+                class="-ms-2"
                 data-testid="report-card-view"
             >
                 {{ t('reports.viewContent') }}
             </UButton>
-            <div class="flex-1" />
             <template v-if="report.status === 'open'">
+                <div class="flex-1" />
                 <UButton
                     color="neutral"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     data-testid="report-card-keep"
                     @click="$emit('decide', report, 'content_kept')"
@@ -118,13 +119,13 @@
                     {{ t('reports.removeContent') }}
                 </UButton>
             </template>
-        </div>
-    </div>
+        </footer>
+    </article>
 </template>
 
 <script setup lang="ts">
 import { statusColor } from '~/utils/reports'
-import { formatDate } from '#shared/utils/formatting'
+import { formatDate, timeAgo } from '#shared/utils/formatting'
 import type { ReportDecision, ReportRecord } from '~/types/models'
 
 defineProps<{ report: ReportRecord; canRemove: boolean }>()
@@ -133,16 +134,12 @@ defineEmits<{ decide: [report: ReportRecord, decision: ReportDecision] }>()
 
 const { t, locale } = useI18n()
 
-const statusTextClass = {
-    warning: 'text-warning',
-    success: 'text-success',
-    neutral: 'text-muted',
+const statusIconClass = {
+    warning: 'bg-warning/10 text-warning',
+    success: 'bg-success/10 text-success',
+    neutral: 'bg-elevated text-muted',
 }
 
 const appContentUrl = (url: string) =>
     /^\/route\?id=\w+(#comment-\w+)?$/.test(url) ? url : undefined
-
-function formatReportDate(value?: string | null) {
-    return formatDate(value, { locale: locale.value, withTime: true })
-}
 </script>

@@ -103,8 +103,6 @@ import type { RouteRecord } from '~/types/models'
 
 const { slug: gymSlug } = useGym()
 
-definePageMeta({ footer: false })
-
 const REJECT_COOLDOWN_MS = 1500
 const FRAME_RADIUS = 0.25
 const PENDING_COLOR = '#FFFFFF'

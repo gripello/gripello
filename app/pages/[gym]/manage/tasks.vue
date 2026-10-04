@@ -55,7 +55,7 @@
                 </div>
             </template>
             <template #below>
-                <div class="flex flex-wrap gap-2 mt-3">
+                <div class="flex flex-wrap gap-2 px-3 pb-3">
                     <UButton
                         v-for="quick in quickFilters"
                         :key="quick.key"

@@ -25,6 +25,7 @@ test('footer shows the server status in the active locale', async ({
 }, testInfo) => {
     const language = projectLanguage(testInfo)
     await gotoSettled(page, gymPath('/'))
+    await page.getByTestId('footer-info').click()
     await expect(page.getByTestId('footer-health')).toHaveText(
         translate(language, 'notifications.success.health'),
     )
