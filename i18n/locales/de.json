@@ -1866,7 +1866,7 @@
         },
         "urgentDefect": {
             "subject": "Dringend: {problem} an {route}",
-            "body": "Ein Kletterer hat ein sicherheitsrelevantes Problem gemeldet. Bitte prüfe die Route, bevor sie wieder beklettert wird.",
+            "body": "Jemand hat ein sicherheitsrelevantes Problem gemeldet. Bitte prüfe die Route, bevor sie wieder beklettert wird.",
             "photo": "An der Aufgabe hängt ein Foto.",
             "action": "Aufgaben öffnen"
         }

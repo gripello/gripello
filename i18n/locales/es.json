@@ -1849,7 +1849,7 @@
         },
         "reportReceipt": {
             "subject": "Hemos recibido tu denuncia",
-            "body": "Hemos recibido tu denuncia y la revisaremos sin demora indebida. Te informaremos de nuestra decisión y de las vías para impugnarla."
+            "body": "Hemos recibido tu denuncia y la revisaremos sin demora indebida. Te informaremos de nuestra decisión y de cómo impugnarla."
         },
         "reportAlert": {
             "subject": "Nueva denuncia de contenido",
