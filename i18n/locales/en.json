@@ -32,20 +32,20 @@
     },
     "account": {
         "profile": "Profile",
-        "login": "Sign In",
+        "login": "Sign in",
         "logout": "Sign out",
         "firstname": "First name",
         "lastname": "Last name",
         "username": "Username",
         "password": "Password",
-        "newPassword": "New Password",
+        "newPassword": "New password",
         "email": "Email",
-        "username_or_email": "Username or Email",
+        "username_or_email": "Username or email",
         "login_hint": "Enter your username or email.",
         "reset_password": "Reset password",
         "reset_hint": "Enter the email address of your account.",
-        "userProfile": "User Profile",
-        "oldPassword": "Current Password",
+        "userProfile": "User profile",
+        "oldPassword": "Current password",
         "or_login_with": "Or sign in with",
         "remember_me": "Remember me",
         "changeAvatar": "Change avatar",
@@ -55,7 +55,7 @@
         "unsavedChanges": "Unsaved changes",
         "wrongOldPassword": "Current password is incorrect",
         "passwordChangedSignInAgain": "Password changed. Please sign in again with your new password.",
-        "unknownUser": "Unknown User",
+        "unknownUser": "Unknown user",
         "tabs": {
             "profile": "Profile",
             "security": "Security",
@@ -574,7 +574,7 @@
             "platformImprint": "Platform legal notice",
             "platformPrivacy": "Platform privacy policy",
             "platformTitle": "Platform operator",
-            "platformBody": "The gym runs this page on Gripello. The platform operator processes data on behalf of the gym and is controller for your account and logbook across all gyms.",
+            "platformBody": "The gym runs this page on Gripello. The platform operator processes data on behalf of the gym and is the controller for your account and logbook across all gyms.",
             "extraTitle": "Additional information from the gym"
         }
     },
@@ -860,7 +860,7 @@
     "importRoutes": {
         "title": "Confirm import",
         "intro": "The following routes and reviews will be imported. Please check the data before confirming.",
-        "confirm": "Confirm & Import",
+        "confirm": "Confirm & import",
         "ratingsCount": "Reviews",
         "ratingsFor": "Reviews for {name}",
         "noRatings": "No reviews to import for this route.",
@@ -877,7 +877,7 @@
         "failed": "The import failed unexpectedly."
     },
     "reports": {
-        "title": "Content Reports",
+        "title": "Content reports",
         "subtitle": "Reports submitted under Article 16 of the Digital Services Act.",
         "reportAction": "Report this comment",
         "dialogTitle": "Report content",
@@ -1036,7 +1036,7 @@
     "audit": {
         "title": "Activity log",
         "subtitle": "Every recorded action in the app.",
-        "titleOwn": "Your Activity",
+        "titleOwn": "Your activity",
         "subtitleOwn": "Everything recorded about your account.",
         "searchLabel": "Search activity",
         "filterAction": "Action",

@@ -157,13 +157,13 @@ describe('ExportOptionsDialog', () => {
         expect(
             wrapper.find('[data-testid="export-move-up-name"]').exists(),
         ).toBe(false)
-        await wrapper.find('[data-testid="export-locale"]').setValue('ru')
+        await wrapper.find('[data-testid="export-locale"]').setValue('fr')
         await checkbox(wrapper, 'logo').trigger('change')
         await confirmButton(wrapper)
 
         expect(wrapper.emitted('confirm')![0]).toEqual([
             {
-                locale: 'ru',
+                locale: 'fr',
                 labels: { anchor: 'climbing.anchor_point' },
                 show: { creators: true, date: true, logo: false },
             },

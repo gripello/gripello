@@ -23,12 +23,12 @@ test('switching to another route via the command palette shows that route', asyn
     await expect(page.getByTestId('route-page-name')).toHaveText(second.name)
 })
 
-test.describe('russian locale', () => {
-    test.use({ locale: 'ru-RU' })
+test.describe('french locale', () => {
+    test.use({ locale: 'fr-FR' })
 
     test('shows the translated route type', async ({ page, route }) => {
         await gotoSettled(page, `/route?id=${route.id}`)
-        await expect(page.getByTestId('route-type-chip')).toHaveText('Маршрут')
+        await expect(page.getByTestId('route-type-chip')).toHaveText('Voie')
     })
 })
 

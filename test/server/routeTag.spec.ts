@@ -12,9 +12,9 @@ import {
 import type { RouteRecord } from '../../types/models'
 import de from '../../i18n/locales/de.json'
 import en from '../../i18n/locales/en.json'
-import ru from '../../i18n/locales/ru.json'
-import tr from '../../i18n/locales/tr.json'
-import uk from '../../i18n/locales/uk.json'
+import es from '../../i18n/locales/es.json'
+import fr from '../../i18n/locales/fr.json'
+import nl from '../../i18n/locales/nl.json'
 
 interface Box {
     label: string
@@ -30,14 +30,14 @@ const overlaps = (a: Box, b: Box) =>
     a.y < b.y + b.height &&
     b.y < a.y + a.height
 
-const LOCALES = { en, de, ru, tr, uk }
+const LOCALES = { en, de, nl, fr, es }
 
 const LONG_TEXT: Record<string, string> = {
     en: 'Overhanging crimp traverse into the big roof finish',
     de: 'Überhängende Leistenquerung bis zum großen Dachausstieg',
-    ru: 'Нависающий траверс по мелким зацепам до большого карниза',
-    tr: 'Büyük çatı çıkışına kadar sarkan kenar geçişi İğüşöç',
-    uk: 'Нависаючий траверс по дрібних зачепах до великого карнизу',
+    nl: 'Overhangende traverse over kleine richels naar de grote dakuitstap',
+    fr: 'Traversée déversante sur réglettes jusqu’à la sortie du grand toit',
+    es: 'Travesía desplomada por regletas hasta la salida del gran techo',
 }
 
 const TAG_X = 20
