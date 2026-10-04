@@ -283,3 +283,17 @@ export function attachmentHeader(filename: string) {
             .replace(/^-+|-+$/g, '') || 'export'
     return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`
 }
+
+export async function fetchLogo(url: string) {
+    if (!url) {
+        return null
+    }
+    try {
+        const response = await fetch(url)
+        if (!response.ok) throw new Error('Failed to fetch logo')
+        return Buffer.from(await response.arrayBuffer())
+    } catch (error) {
+        console.error('Failed to fetch logo:', error)
+        return null
+    }
+}
