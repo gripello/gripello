@@ -3,18 +3,16 @@ import { test, expect } from '../../support/fixtures'
 import { gotoSubscribed, gymPath, searchRoutes } from '../../support/nav'
 import { uiaa } from '../../support/seed'
 
-function trackRefetches(page: Page) {
-    const refetches: string[] = []
-    page.on('request', (request) => {
-        const url = request.url()
-        if (
-            url.includes('/api/collections/averageRating/') ||
-            (url.includes('/api/collections/ratings/records') &&
-                request.method() === 'GET')
-        )
-            refetches.push(url)
-    })
-    return refetches
+// Other workers share the gym and trigger list refreshes, so refetches hang instead of being counted.
+function stallRefetches(page: Page) {
+    return page.route(
+        (url) =>
+            url.pathname.includes('/api/collections/averageRating/') ||
+            url.pathname.includes('/api/collections/ratings/records'),
+        (route) => {
+            if (route.request().method() !== 'GET') return route.fallback()
+        },
+    )
 }
 
 test('a rating from another visitor updates the open route page in place', async ({
@@ -24,7 +22,7 @@ test('a rating from another visitor updates the open route page in place', async
     testPrefix,
 }) => {
     await gotoSubscribed(page, `/route?id=${route.id}`, 'ratings')
-    const refetches = trackRefetches(page)
+    await stallRefetches(page)
 
     const comment = `${testPrefix} live review`
     await root.collection('ratings').create({
@@ -36,7 +34,6 @@ test('a rating from another visitor updates the open route page in place', async
 
     await expect(page.getByText(comment)).toBeVisible()
     await expect(page.getByTestId('route-avg-rating')).toContainText('4')
-    expect(refetches).toEqual([])
 })
 
 test('a rating from another visitor updates the open overview in place', async ({
@@ -53,14 +50,13 @@ test('a rating from another visitor updates the open overview in place', async (
         `[data-testid="overview-popular"] [data-route-id="${route.id}"]`,
     )
     await expect(popularRow).toHaveCount(0)
-    const refetches = trackRefetches(page)
+    await stallRefetches(page)
 
     await root
         .collection('ratings')
         .create({ route_id: route.id, rating: 5, ...uiaa('5') })
 
     await expect(popularRow).toBeVisible()
-    expect(refetches).toEqual([])
 })
 
 test('an edited route updates the open route list in place', async ({
@@ -71,7 +67,7 @@ test('an edited route updates the open route list in place', async ({
     await page.setViewportSize({ width: 1280, height: 900 })
     await gotoSubscribed(page, '/routes', 'routes')
     await searchRoutes(page, route.name)
-    const refetches = trackRefetches(page)
+    await stallRefetches(page)
 
     const renamed = `${route.name} renamed`
     await root.collection('routes').update(route.id, { name: renamed })
@@ -79,5 +75,4 @@ test('an edited route updates the open route list in place', async ({
     await expect(
         page.getByTestId(`index-row-${route.id}`).getByTestId('index-row-name'),
     ).toHaveText(renamed)
-    expect(refetches).toEqual([])
 })
