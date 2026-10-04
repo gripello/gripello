@@ -32,15 +32,13 @@ test('platform admin creates, manages, deactivates and deletes a gym', async ({
         const link = page.getByTestId(`platform-gym-link-${slug}`)
         await expect(link).toBeVisible()
         const gym = await gymBySlug(root, slug)
-        const firstAdmin = await root
-            .collection('memberships')
-            .getFirstListItem(
-                root.filter('gym = {:gym} && user.email = {:email}', {
-                    gym: gym!.id,
-                    email: adminEmail,
-                }),
-                { expand: 'role', requestKey: null },
-            )
+        const firstAdmin = await root.collection('invites').getFirstListItem(
+            root.filter('gym = {:gym} && email = {:email}', {
+                gym: gym!.id,
+                email: adminEmail,
+            }),
+            { expand: 'role', requestKey: null },
+        )
         expect(firstAdmin.expand?.role?.name).toBe('admin')
 
         expect((await page.request.get(`/${slug}`)).status()).toBe(200)
@@ -61,7 +59,7 @@ test('platform admin creates, manages, deactivates and deletes a gym', async ({
 
         await gotoSettled(page, `/platform/gyms/${gym!.id}?section=members`)
         await expect(
-            page.getByTestId(`member-card-${firstAdmin.user}`),
+            page.getByTestId(`pending-invite-${adminEmail}`),
         ).toBeVisible()
 
         await gotoSettled(page, `/${slug}/admin/settings?section=organization`)
@@ -80,14 +78,6 @@ test('platform admin creates, manages, deactivates and deletes a gym', async ({
     } finally {
         const gym = await gymBySlug(root, slug)
         if (gym) await root.collection('gyms').delete(gym.id)
-        const invited = await root
-            .collection('users')
-            .getFirstListItem(
-                root.filter('email = {:email}', { email: adminEmail }),
-                { requestKey: null },
-            )
-            .catch(() => null)
-        if (invited) await root.collection('users').delete(invited.id)
     }
 })
 

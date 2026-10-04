@@ -610,7 +610,8 @@
             "competitions": "Wettkämpfe - Gripello",
             "competition": "{name} - Wettkämpfe - Gripello",
             "judge": "Werten - Gripello",
-            "competitionRules": "{name} - Regeln - Gripello"
+            "competitionRules": "{name} - Regeln - Gripello",
+            "invite": "Einladung - Gripello"
         },
         "content": {
             "settings": "Einstellungen",
@@ -1748,8 +1749,8 @@
     },
     "members": {
         "title": "Mitglieder",
-        "invite": "Mitglied hinzufügen",
-        "email": "E-Mail des Kontos",
+        "invite": "Mitglied einladen",
+        "email": "E-Mail",
         "role": "Rolle",
         "search": "Mitglieder suchen…",
         "noMembers": "Keine Mitglieder gefunden",
@@ -1757,8 +1758,22 @@
         "removeConfirm": "Diese Person aus dem Team der Halle entfernen? Das Konto bleibt bestehen.",
         "removed": "Mitglied entfernt.",
         "alreadyMember": "Diese Person ist bereits Mitglied.",
-        "invited": "Konto zur Halle hinzugefügt.",
-        "invitedByMail": "Neues Konto angelegt. Eine E-Mail zum Setzen des Passworts ist unterwegs."
+        "invited": "Einladung verschickt."
+    },
+    "invites": {
+        "eyebrow": "EINLADUNG",
+        "title": "{gym} beitreten",
+        "subtitle": "Einladung für {email} als {role}.",
+        "wrongAccount": "Du bist als {current} angemeldet. Diese Einladung gilt für {email}.",
+        "accept": "Einladung annehmen",
+        "signIn": "Zum Annehmen anmelden",
+        "signOut": "Abmelden",
+        "invalid": "Diese Einladung ist ungültig oder abgelaufen.",
+        "pending": "Offene Einladungen",
+        "expires": "Läuft ab am {date}",
+        "resend": "Erneut senden",
+        "revoke": "Einladung zurückziehen",
+        "revoked": "Einladung zurückgezogen."
     },
     "landing": {
         "title": "Finde deine Halle",
@@ -1871,10 +1886,10 @@
             "note": "Falls du das nicht warst, ändere sofort dein Passwort. Damit werden alle anderen Geräte abgemeldet."
         },
         "invite": {
-            "subject": "Einladung zu {gym}",
-            "body": "{gym} hat dich auf {app} zum Team hinzugefügt. Lege ein Passwort fest, um dein Konto zu aktivieren.",
-            "action": "Passwort festlegen",
-            "note": "Falls du diese Einladung nicht erwartest, kannst du diese E-Mail ignorieren."
+            "subject": "Einladung ins Team",
+            "body": "{gym} lädt dich ein, auf {app} als {role} im Team mitzumachen.",
+            "action": "Einladung annehmen",
+            "note": "Die Einladung gilt 7 Tage. Falls du sie nicht erwartest, kannst du diese E-Mail ignorieren."
         },
         "reportReceipt": {
             "subject": "Deine Meldung ist eingegangen",

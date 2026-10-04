@@ -22,6 +22,8 @@
             </template>
         </FilterBar>
 
+        <AdminPendingInvites ref="pendingInvites" :gym-id="gymId" />
+
         <LayoutLoadingState v-if="loading && !members.length" />
 
         <LayoutEmptyState
@@ -374,6 +376,9 @@ async function changeRole(member: Member, role: string) {
 const inviteDialog = ref(false)
 const invite = reactive({ email: '', role: '', firstname: '', name: '' })
 const inviteForm = ref<Form<typeof invite> | null>(null)
+const pendingInvites = useTemplateRef<{ refresh: () => Promise<void> }>(
+    'pendingInvites',
+)
 const { pending: inviting, run: runInvite } = useAsyncAction()
 const { success: notifySuccess } = useNotification()
 
@@ -407,26 +412,19 @@ function inviteErrorMessage(error: unknown) {
 async function sendInvite() {
     await runInvite(
         async () => {
-            const result = await pb.send<{ created?: boolean }>(
-                `/api/gyms/${gymId.value}/members`,
-                {
-                    method: 'POST',
-                    body: {
-                        email: invite.email.trim(),
-                        role: invite.role,
-                        firstname: invite.firstname.trim(),
-                        name: invite.name.trim(),
-                    },
-                    requestKey: null,
+            await pb.send(`/api/gyms/${gymId.value}/members`, {
+                method: 'POST',
+                body: {
+                    email: invite.email.trim(),
+                    role: invite.role,
+                    firstname: invite.firstname.trim(),
+                    name: invite.name.trim(),
                 },
-            )
+                requestKey: null,
+            })
             inviteDialog.value = false
-            notifySuccess(
-                result.created
-                    ? t('members.invitedByMail')
-                    : t('members.invited'),
-            )
-            await reloadMembers()
+            notifySuccess(t('members.invited'))
+            await pendingInvites.value?.refresh()
         },
         { error: inviteErrorMessage },
     )

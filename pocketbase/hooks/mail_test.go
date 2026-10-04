@@ -27,7 +27,7 @@ func testBrand() mailBrand {
 
 func TestEveryMailRendersInEveryLocale(t *testing.T) {
 	messages := loadLocales(realLocalesDir)
-	params := map[string]any{"route": "Arete", "problem": "Loose hold", "email": "gym@example.com"}
+	params := map[string]any{"route": "Arete", "problem": "Loose hold", "email": "gym@example.com", "role": "routesetter"}
 	for key, value := range messages.group("en", "mails") {
 		group, _ := value.(map[string]any)
 		if _, isMail := group["subject"]; !isMail {
@@ -46,6 +46,12 @@ func TestEveryMailRendersInEveryLocale(t *testing.T) {
 				if found := leftoverPlaceholder.FindString(text); found != "" {
 					t.Errorf("%s/%s %s keeps placeholder %s", language, key, part, found)
 				}
+			}
+			if strings.Contains(rendered.HTML, "<img") {
+				t.Errorf("%s/%s embeds an image", language, key)
+			}
+			if strings.Count(rendered.Subject, testBrand().Name) > 1 {
+				t.Errorf("%s/%s subject names the gym twice: %s", language, key, rendered.Subject)
 			}
 			if !strings.Contains(rendered.Text, "https://gym.example/somewhere") || !strings.Contains(rendered.HTML, `lang="`+language+`"`) {
 				t.Errorf("%s/%s misses the action link or language", language, key)

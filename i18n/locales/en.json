@@ -610,7 +610,8 @@
             "competitions": "Competitions - Gripello",
             "competition": "{name} - Competitions - Gripello",
             "judge": "Judging - Gripello",
-            "competitionRules": "{name} - Rules - Gripello"
+            "competitionRules": "{name} - Rules - Gripello",
+            "invite": "Invitation - Gripello"
         },
         "content": {
             "settings": "Settings",
@@ -1748,8 +1749,8 @@
     },
     "members": {
         "title": "Members",
-        "invite": "Add member",
-        "email": "Email of the account",
+        "invite": "Invite member",
+        "email": "Email",
         "role": "Role",
         "search": "Search members…",
         "noMembers": "No members found",
@@ -1757,8 +1758,22 @@
         "removeConfirm": "Remove this person from the gym staff? Their account stays.",
         "removed": "Member removed.",
         "alreadyMember": "This person is already a member.",
-        "invited": "Account added to the gym.",
-        "invitedByMail": "New account created. An email to set a password is on its way."
+        "invited": "Invitation sent."
+    },
+    "invites": {
+        "eyebrow": "INVITATION",
+        "title": "Join {gym}",
+        "subtitle": "Invitation for {email} as {role}.",
+        "wrongAccount": "You're signed in as {current}. This invitation is for {email}.",
+        "accept": "Accept invitation",
+        "signIn": "Sign in to accept",
+        "signOut": "Sign out",
+        "invalid": "This invitation is invalid or has expired.",
+        "pending": "Pending invitations",
+        "expires": "Expires {date}",
+        "resend": "Send again",
+        "revoke": "Revoke invitation",
+        "revoked": "Invitation revoked."
     },
     "landing": {
         "title": "Find your gym",
@@ -1871,10 +1886,10 @@
             "note": "If this wasn't you, change your password right away. That signs out every other device."
         },
         "invite": {
-            "subject": "You're invited to {gym}",
-            "body": "{gym} has added you to its team on {app}. Choose a password to activate your account.",
-            "action": "Choose a password",
-            "note": "If you didn't expect this invitation, you can ignore this email."
+            "subject": "You're invited to join the team",
+            "body": "{gym} invited you to join its team on {app} as {role}.",
+            "action": "Accept invitation",
+            "note": "The invitation is valid for 7 days. If you didn't expect it, you can ignore this email."
         },
         "reportReceipt": {
             "subject": "We received your report",

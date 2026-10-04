@@ -2,13 +2,18 @@ package hooks
 
 import (
 	"net/http"
+	"net/http/httptest"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 type memberFixture struct {
@@ -160,84 +165,206 @@ func TestValidateMembership(t *testing.T) {
 	}
 }
 
-func TestInviteMember(t *testing.T) {
-	cases := []struct {
-		name   string
-		caller func(memberFixture) *core.Record
-		email  string
-		status int
-	}{
-		{"setter may not invite", func(f memberFixture) *core.Record { return f.setterA }, "climber@example.com", http.StatusForbidden},
-		{"already a member", func(f memberFixture) *core.Record { return f.adminA }, "setter-a@example.com", http.StatusConflict},
-		{"admin invites a climber", func(f memberFixture) *core.Record { return f.adminA }, "climber@example.com", http.StatusOK},
-	}
-	for _, c := range cases {
-		f := newMemberFixture(t)
-		token, err := c.caller(f).NewAuthToken()
-		if err != nil {
-			t.Fatal(err)
-		}
-		scenario := tests.ApiScenario{
-			Name:            c.name,
-			Method:          http.MethodPost,
-			URL:             "/api/gyms/" + f.gymA.Id + "/members",
-			Body:            strings.NewReader(`{"email":"` + c.email + `","role":"` + f.setterRoleA.Id + `"}`),
-			Headers:         map[string]string{"Authorization": token},
-			ExpectedStatus:  c.status,
-			ExpectedContent: []string{"{"},
-			TestAppFactory:  func(testing.TB) *tests.TestApp { return f.app },
-			AfterTestFunc: func(t testing.TB, app *tests.TestApp, _ *http.Response) {
-				invited := hasPermission(app, f.climber.Id, f.gymA.Id, "manage_routes")
-				if invited != (c.status == http.StatusOK) {
-					t.Errorf("climber membership = %v", invited)
-				}
-			},
-		}
-		scenario.Test(t)
-	}
+type inviteFixture struct {
+	memberFixture
+	handler http.Handler
 }
 
-func TestInviteMemberCreatesAccount(t *testing.T) {
-	f := newMemberFixture(t)
-	token, err := f.adminA.NewAuthToken()
+func newInviteFixture(t *testing.T) inviteFixture {
+	t.Helper()
+	f := inviteFixture{memberFixture: newMemberFixture(t)}
+	t.Cleanup(f.app.Cleanup)
+	router, err := apis.NewRouter(f.app)
 	if err != nil {
 		t.Fatal(err)
 	}
-	scenario := tests.ApiScenario{
-		Name:            "unknown email gets an account and a password mail",
-		Method:          http.MethodPost,
-		URL:             "/api/gyms/" + f.gymA.Id + "/members",
-		Body:            strings.NewReader(`{"email":"new@example.com","role":"` + f.setterRoleA.Id + `","firstname":"New","name":"Setter"}`),
-		Headers:         map[string]string{"Authorization": token},
-		ExpectedStatus:  http.StatusCreated,
-		ExpectedContent: []string{`"created":true`},
-		TestAppFactory:  func(testing.TB) *tests.TestApp { return f.app },
-		AfterTestFunc: func(t testing.TB, app *tests.TestApp, _ *http.Response) {
-			user, err := app.FindAuthRecordByEmail("users", "new@example.com")
-			if err != nil {
-				t.Fatalf("account not created: %v", err)
-			}
-			if user.Verified() || user.GetString("firstname") != "New" {
-				t.Errorf("unexpected account %v", user.PublicExport())
-			}
-			if !hasPermission(app, user.Id, f.gymA.Id, "manage_routes") {
-				t.Error("new account has no setter membership")
-			}
-			if app.TestMailer.TotalSend() != 1 || app.TestMailer.LastMessage().To[0].Address != "new@example.com" {
-				t.Errorf("password mail not sent: %d", app.TestMailer.TotalSend())
-			}
-			membership := membershipOf(app, user.Id, f.gymA.Id)
-			for collection, recordID := range map[string]string{"users": user.Id, "memberships": membership.Id} {
-				total, err := app.CountRecords("audit_logs", dbx.HashExp{
-					"collection_name": collection, "record_id": recordID, "action": "create", "actor": f.adminA.Id, "gym": f.gymA.Id,
-				})
-				if err != nil || total != 1 {
-					t.Errorf("%s audit rows = %d (%v)", collection, total, err)
-				}
-			}
-		},
+	serve := &core.ServeEvent{App: f.app, Router: router}
+	err = f.app.OnServe().Trigger(serve, func(e *core.ServeEvent) error {
+		f.handler, err = e.Router.BuildMux()
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	scenario.Test(t)
+	return f
+}
+
+func apiCall(t *testing.T, f inviteFixture, method, url, body string, caller *core.Record, status int, content ...string) {
+	t.Helper()
+	request := httptest.NewRequest(method, url, strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	if caller != nil {
+		token, err := caller.NewAuthToken()
+		if err != nil {
+			t.Fatal(err)
+		}
+		request.Header.Set("Authorization", token)
+	}
+	recorder := httptest.NewRecorder()
+	f.handler.ServeHTTP(recorder, request)
+	if recorder.Code != status {
+		t.Fatalf("%s %s = %d, want %d: %s", method, url, recorder.Code, status, recorder.Body)
+	}
+	if len(content) == 0 && recorder.Body.Len() != 0 {
+		t.Errorf("%s %s: expected empty body, got %s", method, url, recorder.Body)
+	}
+	for _, item := range content {
+		if !strings.Contains(recorder.Body.String(), item) {
+			t.Errorf("%s %s: %q missing in %s", method, url, item, recorder.Body)
+		}
+	}
+}
+
+var inviteLinkPattern = regexp.MustCompile(`/auth/invite/([A-Za-z0-9]+)`)
+
+func invite(t *testing.T, f inviteFixture, caller *core.Record, gym *core.Record, email, roleID string) string {
+	t.Helper()
+	sent := f.app.TestMailer.TotalSend()
+	apiCall(t, f, http.MethodPost, "/api/gyms/"+gym.Id+"/members", `{"email":"`+email+`","role":"`+roleID+`","firstname":"New"}`, caller, http.StatusAccepted)
+	if f.app.TestMailer.TotalSend() != sent+1 {
+		t.Fatalf("invite mail to %s not sent", email)
+	}
+	message := f.app.TestMailer.LastMessage()
+	if message.To[0].Address != email {
+		t.Fatalf("invite mail went to %v", message.To)
+	}
+	match := inviteLinkPattern.FindStringSubmatch(message.Text)
+	if match == nil {
+		t.Fatalf("no invite link in %q", message.Text)
+	}
+	return match[1]
+}
+
+func TestInviteMember(t *testing.T) {
+	cases := []struct {
+		name   string
+		caller func(inviteFixture) *core.Record
+		email  string
+		status int
+	}{
+		{"setter may not invite", func(f inviteFixture) *core.Record { return f.setterA }, "climber@example.com", http.StatusForbidden},
+		{"already a member", func(f inviteFixture) *core.Record { return f.adminA }, "setter-a@example.com", http.StatusConflict},
+		{"existing account", func(f inviteFixture) *core.Record { return f.adminA }, "climber@example.com", http.StatusAccepted},
+		{"unknown address", func(f inviteFixture) *core.Record { return f.adminA }, "new@example.com", http.StatusAccepted},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newInviteFixture(t)
+			users, _ := f.app.CountRecords("users")
+			content := []string{"{"}
+			if c.status == http.StatusAccepted {
+				content = nil
+			}
+			apiCall(t, f, http.MethodPost, "/api/gyms/"+f.gymA.Id+"/members", `{"email":"`+c.email+`","role":"`+f.setterRoleA.Id+`"}`, c.caller(f), c.status, content...)
+			if after, _ := f.app.CountRecords("users"); after != users {
+				t.Errorf("users %d -> %d", users, after)
+			}
+			if hasPermission(f.app, f.climber.Id, f.gymA.Id, "manage_routes") {
+				t.Error("climber became a member before accepting")
+			}
+			invites, _ := f.app.CountRecords("invites")
+			if (invites == 1) != (c.status == http.StatusAccepted) {
+				t.Errorf("invites = %d", invites)
+			}
+		})
+	}
+}
+
+func TestInviteNewAccount(t *testing.T) {
+	f := newInviteFixture(t)
+	first := invite(t, f, f.adminA, f.gymA, "new@example.com", f.adminRoleA.Id)
+	token := invite(t, f, f.adminA, f.gymA, "new@example.com", f.setterRoleA.Id)
+	if total, _ := f.app.CountRecords("invites"); total != 1 {
+		t.Fatalf("resend created %d invites", total)
+	}
+	for action, want := range map[string]int64{"create": 1, "update": 1} {
+		if total, _ := f.app.CountRecords("audit_logs", dbx.HashExp{"collection_name": "invites", "action": action}); total != want {
+			t.Errorf("invite %s audit rows = %d, want %d", action, total, want)
+		}
+	}
+	apiCall(t, f, http.MethodGet, "/api/invites/"+first, "", nil, http.StatusNotFound, "{")
+	apiCall(t, f, http.MethodGet, "/api/invites/"+token, "", nil, http.StatusOK, `"hasAccount":false`, `"role":"routesetter"`, `"slug":"gym-a"`)
+
+	apiCall(t, f, http.MethodPost, "/api/invites/"+token+"/accept", `{"password":"short","passwordConfirm":"short"}`, nil, http.StatusBadRequest, "{")
+	apiCall(t, f, http.MethodPost, "/api/invites/"+token+"/accept", `{"password":"1234567890","passwordConfirm":"1234567890","firstname":"New"}`, nil, http.StatusOK, `"token":`, `"gym":"gym-a"`)
+
+	user, err := f.app.FindAuthRecordByEmail("users", "new@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !user.Verified() || user.GetString("firstname") != "New" {
+		t.Errorf("unexpected account %v", user.PublicExport())
+	}
+	if !hasPermission(f.app, user.Id, f.gymA.Id, "manage_routes") || hasPermission(f.app, user.Id, f.gymA.Id, "manage_users") {
+		t.Error("membership does not carry the resent role")
+	}
+	membership := membershipOf(f.app, user.Id, f.gymA.Id)
+	for collection, recordID := range map[string]string{"users": user.Id, "memberships": membership.Id} {
+		if total, err := f.app.CountRecords("audit_logs", dbx.HashExp{"collection_name": collection, "record_id": recordID, "action": "create", "gym": f.gymA.Id}); err != nil || total != 1 {
+			t.Errorf("%s audit rows = %d (%v)", collection, total, err)
+		}
+	}
+	apiCall(t, f, http.MethodPost, "/api/invites/"+token+"/accept", `{}`, user, http.StatusNotFound, "{")
+}
+
+func TestInviteExistingAccount(t *testing.T) {
+	f := newInviteFixture(t)
+	token := invite(t, f, f.adminA, f.gymA, "climber@example.com", f.setterRoleA.Id)
+	apiCall(t, f, http.MethodGet, "/api/invites/"+token, "", nil, http.StatusOK, `"hasAccount":true`)
+	apiCall(t, f, http.MethodPost, "/api/invites/"+token+"/accept", `{"password":"1234567890","passwordConfirm":"1234567890"}`, nil, http.StatusConflict, "{")
+	apiCall(t, f, http.MethodPost, "/api/invites/"+token+"/accept", `{}`, f.setterB, http.StatusForbidden, "{")
+	if hasPermission(f.app, f.setterB.Id, f.gymA.Id, "manage_routes") {
+		t.Fatal("another account accepted the invite")
+	}
+	apiCall(t, f, http.MethodPost, "/api/invites/"+token+"/accept", `{}`, f.climber, http.StatusOK, `"gym":"gym-a"`)
+	if !hasPermission(f.app, f.climber.Id, f.gymA.Id, "manage_routes") {
+		t.Error("climber did not join")
+	}
+}
+
+func TestInviteRevokeAndExpiry(t *testing.T) {
+	f := newInviteFixture(t)
+	revoked := invite(t, f, f.adminA, f.gymA, "revoked@example.com", f.setterRoleA.Id)
+	record, err := f.app.FindFirstRecordByData("invites", "email", "revoked@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	apiCall(t, f, http.MethodGet, "/api/collections/invites/records", "", f.setterA, http.StatusOK, `"totalItems":0`)
+	apiCall(t, f, http.MethodDelete, "/api/collections/invites/records/"+record.Id, "", f.adminA, http.StatusNoContent)
+	apiCall(t, f, http.MethodGet, "/api/invites/"+revoked, "", nil, http.StatusNotFound, "{")
+
+	expired := invite(t, f, f.adminA, f.gymA, "expired@example.com", f.setterRoleA.Id)
+	record, err = f.app.FindFirstRecordByData("invites", "email", "expired@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	record.Set("expires_at", types.NowDateTime().Add(-time.Minute))
+	if err := f.app.Save(record); err != nil {
+		t.Fatal(err)
+	}
+	apiCall(t, f, http.MethodGet, "/api/invites/"+expired, "", nil, http.StatusNotFound, "{")
+	apiCall(t, f, http.MethodPost, "/api/invites/"+expired+"/accept", `{}`, f.climber, http.StatusNotFound, "{")
+	kept := invite(t, f, f.adminA, f.gymA, "kept@example.com", f.setterRoleA.Id)
+	for _, job := range f.app.Cron().Jobs() {
+		if job.Id() == "inviteRetention" {
+			job.Run()
+		}
+	}
+	if total, _ := f.app.CountRecords("invites"); total != 1 {
+		t.Errorf("invites after prune = %d, want only the unexpired one", total)
+	}
+	apiCall(t, f, http.MethodGet, "/api/invites/"+kept, "", nil, http.StatusOK, `"email":"kept@example.com"`)
+}
+
+func TestDeletingGymRemovesInvites(t *testing.T) {
+	f := newInviteFixture(t)
+	invite(t, f, f.adminA, f.gymA, "new@example.com", f.setterRoleA.Id)
+	if err := f.app.Delete(f.gymA); err != nil {
+		t.Fatal(err)
+	}
+	if total, _ := f.app.CountRecords("invites"); total != 0 {
+		t.Errorf("invites left after gym delete: %d", total)
+	}
 }
 
 func TestPlatformAdminManagesAnyGym(t *testing.T) {
@@ -259,17 +386,16 @@ func TestPlatformAdminManagesAnyGym(t *testing.T) {
 		t.Fatal(err)
 	}
 	scenario := tests.ApiScenario{
-		Name:            "platform admin invites the first admin of a gym",
-		Method:          http.MethodPost,
-		URL:             "/api/gyms/" + f.gymB.Id + "/members",
-		Body:            strings.NewReader(`{"email":"climber@example.com","role":"` + adminRoleB.Id + `"}`),
-		Headers:         map[string]string{"Authorization": token},
-		ExpectedStatus:  http.StatusOK,
-		ExpectedContent: []string{"{"},
-		TestAppFactory:  func(testing.TB) *tests.TestApp { return f.app },
+		Name:           "platform admin invites the first admin of a gym",
+		Method:         http.MethodPost,
+		URL:            "/api/gyms/" + f.gymB.Id + "/members",
+		Body:           strings.NewReader(`{"email":"climber@example.com","role":"` + adminRoleB.Id + `"}`),
+		Headers:        map[string]string{"Authorization": token},
+		ExpectedStatus: http.StatusAccepted,
+		TestAppFactory: func(testing.TB) *tests.TestApp { return f.app },
 		AfterTestFunc: func(t testing.TB, app *tests.TestApp, _ *http.Response) {
-			if !hasPermission(app, f.climber.Id, f.gymB.Id, "manage_users") {
-				t.Error("climber did not become admin of B")
+			if _, err := app.FindFirstRecordByFilter("invites", "gym = {:gym} && role = {:role}", dbx.Params{"gym": f.gymB.Id, "role": adminRoleB.Id}); err != nil {
+				t.Error("no pending admin invite for B")
 			}
 		},
 	}

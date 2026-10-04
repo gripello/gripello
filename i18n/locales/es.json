@@ -610,7 +610,8 @@
             "competitions": "Competiciones - Gripello",
             "competition": "{name} - Competiciones - Gripello",
             "judge": "Arbitraje - Gripello",
-            "competitionRules": "{name} - Reglamento - Gripello"
+            "competitionRules": "{name} - Reglamento - Gripello",
+            "invite": "Invitación - Gripello"
         },
         "content": {
             "settings": "Ajustes",
@@ -1748,8 +1749,8 @@
     },
     "members": {
         "title": "Miembros",
-        "invite": "Añadir miembro",
-        "email": "Correo de la cuenta",
+        "invite": "Invitar a un miembro",
+        "email": "Correo electrónico",
         "role": "Rol",
         "search": "Buscar miembros…",
         "noMembers": "No se encontraron miembros",
@@ -1757,8 +1758,22 @@
         "removeConfirm": "¿Quitar a esta persona del equipo del rocódromo? Su cuenta se mantiene.",
         "removed": "Miembro quitado.",
         "alreadyMember": "Esta persona ya es miembro.",
-        "invited": "Cuenta añadida al rocódromo.",
-        "invitedByMail": "Cuenta nueva creada. Se ha enviado un correo para establecer la contraseña."
+        "invited": "Invitación enviada."
+    },
+    "invites": {
+        "eyebrow": "INVITACIÓN",
+        "title": "Únete a {gym}",
+        "subtitle": "Invitación para {email} como {role}.",
+        "wrongAccount": "Has iniciado sesión como {current}. Esta invitación es para {email}.",
+        "accept": "Aceptar invitación",
+        "signIn": "Inicia sesión para aceptar",
+        "signOut": "Cerrar sesión",
+        "invalid": "Esta invitación no es válida o ha caducado.",
+        "pending": "Invitaciones pendientes",
+        "expires": "Caduca el {date}",
+        "resend": "Enviar de nuevo",
+        "revoke": "Retirar invitación",
+        "revoked": "Invitación retirada."
     },
     "landing": {
         "title": "Encuentra tu rocódromo",
@@ -1871,10 +1886,10 @@
             "note": "Si no has sido tú, cambia tu contraseña de inmediato. Así se cerrará la sesión en todos los demás dispositivos."
         },
         "invite": {
-            "subject": "Te han invitado a {gym}",
-            "body": "{gym} te ha añadido a su equipo en {app}. Elige una contraseña para activar tu cuenta.",
-            "action": "Elegir contraseña",
-            "note": "Si no esperabas esta invitación, puedes ignorar este correo."
+            "subject": "Invitación al equipo",
+            "body": "{gym} te invita a unirte a su equipo en {app} como {role}.",
+            "action": "Aceptar invitación",
+            "note": "La invitación es válida durante 7 días. Si no la esperabas, puedes ignorar este correo."
         },
         "reportReceipt": {
             "subject": "Hemos recibido tu denuncia",

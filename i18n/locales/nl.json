@@ -610,7 +610,8 @@
             "competitions": "Wedstrijden - Gripello",
             "competition": "{name} - Wedstrijden - Gripello",
             "judge": "Jureren - Gripello",
-            "competitionRules": "{name} - Regels - Gripello"
+            "competitionRules": "{name} - Regels - Gripello",
+            "invite": "Uitnodiging - Gripello"
         },
         "content": {
             "settings": "Instellingen",
@@ -1748,8 +1749,8 @@
     },
     "members": {
         "title": "Leden",
-        "invite": "Lid toevoegen",
-        "email": "E-mailadres van het account",
+        "invite": "Lid uitnodigen",
+        "email": "E-mailadres",
         "role": "Rol",
         "search": "Leden zoeken…",
         "noMembers": "Geen leden gevonden",
@@ -1757,8 +1758,22 @@
         "removeConfirm": "Deze persoon uit het team van de hal verwijderen? Het account blijft bestaan.",
         "removed": "Lid verwijderd.",
         "alreadyMember": "Deze persoon is al lid.",
-        "invited": "Account aan de hal toegevoegd.",
-        "invitedByMail": "Nieuw account aangemaakt. Er is een e-mail onderweg om een wachtwoord in te stellen."
+        "invited": "Uitnodiging verstuurd."
+    },
+    "invites": {
+        "eyebrow": "UITNODIGING",
+        "title": "Word lid van {gym}",
+        "subtitle": "Uitnodiging voor {email} als {role}.",
+        "wrongAccount": "Je bent ingelogd als {current}. Deze uitnodiging is voor {email}.",
+        "accept": "Uitnodiging accepteren",
+        "signIn": "Log in om te accepteren",
+        "signOut": "Uitloggen",
+        "invalid": "Deze uitnodiging is ongeldig of verlopen.",
+        "pending": "Openstaande uitnodigingen",
+        "expires": "Verloopt op {date}",
+        "resend": "Opnieuw versturen",
+        "revoke": "Uitnodiging intrekken",
+        "revoked": "Uitnodiging ingetrokken."
     },
     "landing": {
         "title": "Vind je hal",
@@ -1871,10 +1886,10 @@
             "note": "Was jij dit niet? Wijzig dan meteen je wachtwoord. Daarmee worden alle andere apparaten uitgelogd."
         },
         "invite": {
-            "subject": "Je bent uitgenodigd voor {gym}",
-            "body": "{gym} heeft je op {app} aan het team toegevoegd. Kies een wachtwoord om je account te activeren.",
-            "action": "Wachtwoord kiezen",
-            "note": "Verwachtte je deze uitnodiging niet? Dan kun je deze e-mail negeren."
+            "subject": "Uitnodiging voor het team",
+            "body": "{gym} nodigt je uit om op {app} als {role} bij het team te komen.",
+            "action": "Uitnodiging accepteren",
+            "note": "De uitnodiging is 7 dagen geldig. Verwachtte je haar niet? Dan kun je deze e-mail negeren."
         },
         "reportReceipt": {
             "subject": "We hebben je melding ontvangen",
