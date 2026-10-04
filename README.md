@@ -11,6 +11,8 @@ A climbing route management system for gyms and outdoor venues — [gripello.app
 
 ## Setup Docker Compose
 
+Running Gripello in production requires a commercial license, see [License](#license).
+
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
@@ -205,4 +207,10 @@ Gripello is designed to be simple and straightforward. Once set up, manage and e
 
 ## License
 
-Gripello is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for more details.
+Gripello is source-available under the [Business Source License 1.1](LICENSE), not an open source license.
+
+- You may copy, modify and redistribute the code and use it for non-production purposes such as development, testing and evaluation.
+- Production use, including self-hosting for a gym, requires a commercial license. Contact hello@gripello.com, or use the hosted version at [gripello.app](https://gripello.app).
+- Each version converts to the Apache License 2.0 four years after its release.
+
+Version 2.1.1 and earlier remain available under the GNU General Public License v3.0.

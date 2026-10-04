@@ -18,6 +18,16 @@ describe('docker ui build', () => {
         }
     })
 
+    it('ships the license and labels the image with it', () => {
+        expect(read('package.json')).toContain('"license": "BUSL-1.1"')
+        expect(read('LICENSE')).toMatch(/^Business Source License 1\.1$/m)
+        expect(read('Dockerfile')).toMatch(/^COPY LICENSE \/app\/LICENSE$/m)
+        expect(read('Dockerfile')).toContain(
+            'org.opencontainers.image.licenses="BUSL-1.1"',
+        )
+        expect(read('.dockerignore')).toMatch(/^!LICENSE$/m)
+    })
+
     it('gives the go tests the locales they check against', () => {
         expect(read('Dockerfile')).toMatch(
             /^COPY i18n\/locales\/\*\.json \/i18n\/locales\/$/m,
