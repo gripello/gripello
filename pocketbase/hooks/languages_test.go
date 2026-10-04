@@ -36,13 +36,21 @@ func TestDroppedLanguagesAreCleared(t *testing.T) {
 	app := newGymTestApp(t)
 	defer app.Cleanup()
 
-	runner := core.NewMigrationsRunner(app, core.AppMigrations)
-	if _, err := runner.Down(1); err != nil {
+	users, err := app.FindCollectionByNameOrId("users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	language := users.Fields.GetByName("language").(*core.SelectField)
+	language.Values = append(language.Values, "ru")
+	if err := app.Save(users); err != nil {
 		t.Fatal(err)
 	}
 	russian := saveRecord(t, app, "users", map[string]any{"email": "ru@example.com", "password": "pw12345678", "language": "ru"})
 	german := saveRecord(t, app, "users", map[string]any{"email": "de@example.com", "password": "pw12345678", "language": "de"})
-	if _, err := runner.Up(); err != nil {
+	if _, err := app.DB().NewQuery("DELETE FROM _migrations WHERE file = '1792000001_languages_nl_fr_es.js'").Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := core.NewMigrationsRunner(app, core.AppMigrations).Up(); err != nil {
 		t.Fatal(err)
 	}
 
