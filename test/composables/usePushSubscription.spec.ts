@@ -4,6 +4,7 @@ import { computed as vueComputed, ref as vueRef } from 'vue'
 vi.stubGlobal('ref', vueRef)
 vi.stubGlobal('computed', vueComputed)
 vi.stubGlobal('onMounted', () => {})
+vi.stubGlobal('usePbSubscription', () => ({ subscribe: vi.fn() }))
 
 let pbMock: any
 vi.stubGlobal('usePocketbase', () => pbMock)

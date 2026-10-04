@@ -558,6 +558,7 @@
                 "inventorySession": "Keeps the progress of an inventory scan",
                 "inventoryInstructions": "Remembers that inventory instructions were shown",
                 "offlineLogbook": "Keeps your logbook and unsent ascents available offline",
+                "pushDeclined": "Remembers that you removed push notifications on this device",
                 "offlineScores": "Keeps competition scores you entered without signal until they are sent",
                 "gym": "Remembers the gym you last opened",
                 "recentGyms": "Lists the gyms you visited recently on the start page"

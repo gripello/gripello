@@ -558,6 +558,7 @@
                 "inventorySession": "Guarda el progreso de un inventario",
                 "inventoryInstructions": "Recuerda que ya se mostraron las instrucciones del inventario",
                 "offlineLogbook": "Mantiene tu libreta y las ascensiones no enviadas disponibles sin conexión",
+                "pushDeclined": "Recuerda que eliminaste las notificaciones push en este dispositivo",
                 "offlineScores": "Guarda las puntuaciones de competición introducidas sin cobertura hasta que se envían",
                 "gym": "Recuerda el último rocódromo que abriste",
                 "recentGyms": "Muestra en la página de inicio los rocódromos visitados recientemente"

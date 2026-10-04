@@ -1,3 +1,5 @@
+import type { PushSubscriptionRecord } from '~/types/models'
+
 export type PushSupport = 'ok' | 'install' | 'unsupported'
 
 export function pushSupport(env: {
@@ -60,4 +62,53 @@ export function urlBase64ToUint8Array(base64: string) {
 export function subscriptionKeys(subscription: PushSubscription) {
     const { endpoint, keys } = subscription.toJSON()
     return { endpoint, p256dh: keys?.p256dh ?? '', auth: keys?.auth ?? '' }
+}
+
+export const PUSH_DECLINED_KEY = 'gripello-push-declined'
+
+export function shouldOfferPush(state: {
+    signedIn: boolean
+    support: PushSupport
+    permission: NotificationPermission | undefined
+    hasKey: boolean
+    declined: boolean
+    subscribedHere: boolean
+    hasDevices: boolean
+}) {
+    if (!state.signedIn || state.support !== 'ok' || !state.hasKey) return false
+    if (state.declined || state.subscribedHere) return false
+    if (state.permission === 'default') return true
+    return state.permission === 'granted' && state.hasDevices
+}
+
+function readPushDeclined(): string[] {
+    try {
+        const ids = JSON.parse(localStorage.getItem(PUSH_DECLINED_KEY) ?? '[]')
+        return Array.isArray(ids) ? ids : []
+    } catch {
+        return []
+    }
+}
+
+export function pushDeclinedBy(userId: string | undefined) {
+    return !!userId && readPushDeclined().includes(userId)
+}
+
+export function setPushDeclined(userId: string | undefined, declined: boolean) {
+    if (!userId) return
+    const others = readPushDeclined().filter((id) => id !== userId)
+    try {
+        localStorage.setItem(
+            PUSH_DECLINED_KEY,
+            JSON.stringify(declined ? [...others, userId] : others),
+        )
+    } catch {}
+}
+
+export function applyDeviceEvent(
+    devices: PushSubscriptionRecord[],
+    event: { action: string; record: PushSubscriptionRecord },
+) {
+    const others = devices.filter((device) => device.id !== event.record.id)
+    return event.action === 'delete' ? others : [event.record, ...others]
 }

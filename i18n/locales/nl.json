@@ -558,6 +558,7 @@
                 "inventorySession": "Bewaart de voortgang van een inventarisatiescan",
                 "inventoryInstructions": "Onthoudt dat de inventarisatie-instructies zijn getoond",
                 "offlineLogbook": "Houdt je logboek en nog niet verzonden beklimmingen offline beschikbaar",
+                "pushDeclined": "Onthoudt dat je pushmeldingen op dit apparaat hebt verwijderd",
                 "offlineScores": "Bewaart wedstrijdscores die je zonder bereik hebt ingevoerd tot ze zijn verzonden",
                 "gym": "Onthoudt de hal die je het laatst hebt geopend",
                 "recentGyms": "Toont de hallen die je onlangs hebt bezocht op de startpagina"
