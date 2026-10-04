@@ -10,7 +10,8 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "tilalx/verti-grade"
+        IMAGE_NAME = "ghcr.io/gripello/gripello"
+        GHCR_CREDENTIALS_ID = "ghcr"
         DOCKER_BUILDKIT = 1
         CI_ID = "${JOB_NAME}-${BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9]+/, '-').toLowerCase()
         DOCKER_CLI_EXPERIMENTAL = 'enabled'
@@ -33,6 +34,9 @@ pipeline {
                     sh 'docker buildx inspect --bootstrap'
                     withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
                         sh 'echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin'
+                    }
+                    withCredentials([usernamePassword(credentialsId: env.GHCR_CREDENTIALS_ID, usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')]) {
+                        sh 'echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin'
                     }
 
                     // Resolve tags/version once, reused by the test-image build and the release build.

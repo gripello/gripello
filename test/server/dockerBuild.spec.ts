@@ -28,6 +28,22 @@ describe('docker ui build', () => {
         expect(read('.dockerignore')).toMatch(/^!LICENSE$/m)
     })
 
+    it('publishes and documents the image on ghcr.io only', () => {
+        expect(read('Jenkinsfile')).toContain(
+            'IMAGE_NAME = "ghcr.io/gripello/gripello"',
+        )
+        expect(read('Jenkinsfile')).toContain('docker login ghcr.io')
+        expect(read('docker-compose.yml')).toContain(
+            'image: ghcr.io/gripello/gripello:rolling',
+        )
+        expect(read('README.md')).toContain(
+            'image: ghcr.io/gripello/gripello:latest',
+        )
+        for (const file of ['Jenkinsfile', 'docker-compose.yml', 'README.md']) {
+            expect(read(file)).not.toContain('verti-grade')
+        }
+    })
+
     it('gives the go tests the locales they check against', () => {
         expect(read('Dockerfile')).toMatch(
             /^COPY i18n\/locales\/\*\.json \/i18n\/locales\/$/m,
