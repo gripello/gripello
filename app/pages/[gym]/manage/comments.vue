@@ -267,6 +267,7 @@
 import { isAbortError } from '~/utils/errors'
 import { pbDateString } from '~/utils/audit'
 import { sendInBatches } from '~/utils/batch'
+import { realtimeCommentPlacement } from '~/utils/comments'
 import { formatNumber } from '#shared/utils/number'
 import { locationName } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
@@ -693,11 +694,16 @@ onMounted(async () => {
             scheduleStatsRefresh()
             try {
                 const rec = await fetchCommentIfVisible(e.record.id)
-                if (!rec || comments.value.some((c) => c.id === rec.id)) return
-                if (sortOrder.value === 'newest') {
+                if (!rec) return
+                const placement = realtimeCommentPlacement(
+                    sortOrder.value,
+                    comments.value.some((c) => c.id === rec.id),
+                    hasMore.value,
+                )
+                if (placement === 'prepend') {
                     comments.value = [mapComment(rec), ...comments.value]
                     totalItems.value++
-                } else if (sortOrder.value === 'oldest' && !hasMore.value) {
+                } else if (placement === 'append') {
                     comments.value = [...comments.value, mapComment(rec)]
                     totalItems.value++
                 } else {
