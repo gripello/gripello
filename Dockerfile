@@ -26,6 +26,19 @@ FROM pb-deps AS pb-build
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go build -trimpath -buildvcs=false -ldflags="-s -w" -o /out/pocketbase
+COPY <<'EOF' /go-licenses.tpl
+{{ range . }}{{ .Name }}@{{ .Version }} ({{ .LicenseName }})
+
+{{ .LicenseText }}
+
+------------------------------------------------------------------------------
+
+{{ end }}
+EOF
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOOS= GOARCH= go run github.com/google/go-licenses/v2@v2.0.1 report ./... \
+      --ignore pocketbase --template /go-licenses.tpl > /out/third-party-notices-go.txt
 
 FROM node:26.10.0-trixie@sha256:a723b54c35a76e947095a20a67d39585bb09c862e6b1adeb8a9f518f95e34fb0 AS ui-deps
 WORKDIR /app
@@ -49,6 +62,10 @@ COPY i18n ./i18n
 COPY shared ./shared
 COPY server ./server
 COPY public ./public
+COPY .docker/third-party-notices.mts ./.docker/
+COPY --from=pb-build /out/third-party-notices-go.txt /tmp/
+RUN { node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.txt; } \
+      > public/third-party-notices.txt
 COPY app ./app
 ARG APP_VERSION
 ENV NODE_ENV=production NITRO_PRESET=node-server APP_VERSION=${APP_VERSION}

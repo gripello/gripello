@@ -1,4 +1,5 @@
 # Nuxt 3
+public/third-party-notices.txt
 node_modules
 .nuxt
 dist
