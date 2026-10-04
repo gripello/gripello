@@ -1257,6 +1257,8 @@
         "routes": "Routes",
         "wallHint": "Waar de route op de plattegrond staat. Verfijn dit onder ‘Routes plaatsen’.",
         "resizeList": "Lijstgrootte aanpassen",
+        "hideList": "Lijst verbergen",
+        "showList": "Lijst tonen",
         "backToList": "Terug naar lijst",
         "clusterLabel": "{count} route hier, tik om te tonen | {count} routes hier, tik om te tonen",
         "followWall": "{wall} volgen",
@@ -1350,7 +1352,6 @@
         "hints": {
             "idle": "Tik op een route en dan op de plek op de wand — de volgende route volgt automatisch. Vink meerdere routes aan om ze in één keer op een wand te zetten. Sleep stippen om ze te verplaatsen.",
             "armed": "Klik op een wand om “{name}” te plaatsen. Esc annuleert.",
-            "selected": "Sleep de stip van “{name}” naar de juiste plek op de wand, of naar een andere wand. Delete haalt hem van de plattegrond.",
             "checked": "Tik op een wand om er {n} route te plaatsen, op volgorde van lijnnummer. | Tik op een wand om er {n} routes te plaatsen, op volgorde van lijnnummer."
         },
         "skip": "Overslaan",

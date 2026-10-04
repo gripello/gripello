@@ -98,7 +98,7 @@
                     :armed-route-id="placement.canvasArmedId.value"
                     :inset-bottom="sheetCover"
                     @place="placement.place"
-                    @select-route="placement.selectedRouteId.value = $event"
+                    @select-route="selectFromMap"
                     @select-wall="selectWall"
                 />
                 <MapFilterChips
@@ -123,6 +123,24 @@
             >
                 <template #header>
                     <span
+                        v-if="hint === null && placement.selectedPlaced.value"
+                        class="flex min-w-0 flex-1 items-center gap-2"
+                        aria-live="polite"
+                        data-testid="placement-selected"
+                    >
+                        <RouteColorDot
+                            :color="placement.selectedPlaced.value.color"
+                            :size="18"
+                        />
+                        <span class="truncate text-sm font-semibold">{{
+                            placement.selectedPlaced.value.name
+                        }}</span>
+                        <span class="shrink-0 text-xs text-muted">{{
+                            formatGrade(placement.selectedPlaced.value)
+                        }}</span>
+                    </span>
+                    <span
+                        v-else
                         class="placement-hint text-xs"
                         aria-live="polite"
                         data-testid="placement-hint"
@@ -582,10 +600,7 @@ const hint = computed(() => {
         return t('mapPlacement.hints.armed', {
             name: placement.armedRoute.value.name,
         })
-    if (placement.selectedPlaced.value)
-        return t('mapPlacement.hints.selected', {
-            name: placement.selectedPlaced.value.name,
-        })
+    if (placement.selectedPlaced.value) return null
     return t('mapPlacement.hints.idle')
 })
 
@@ -595,6 +610,19 @@ function routeSubtitle(item: RouteRecord) {
     return ['—', '-'].includes(String(anchor))
         ? grade
         : `${grade} · ${t('climbing.anchor_point')} ${anchor}`
+}
+
+function selectFromMap(routeId: string | null) {
+    placement.selectedRouteId.value = routeId
+    if (!routeId) return
+    placement.tab.value = 'placed'
+    nextTick(() =>
+        document
+            .querySelector(
+                `[data-testid="placement-route"][data-route-id="${routeId}"]`,
+            )
+            ?.scrollIntoView({ block: 'nearest' }),
+    )
 }
 
 function selectWall(wallId: string | null) {
@@ -621,7 +649,7 @@ async function discard() {
 }
 
 const canvasRef = useTemplateRef<{
-    previewAt: (clientX: number, clientY: number) => void
+    previewAt: (routeId: string, clientX: number, clientY: number) => void
     placeAt: (routeId: string, clientX: number, clientY: number) => boolean
 }>('canvasRef')
 const dragging = ref<{
@@ -648,7 +676,7 @@ function onItemPointerDown(item: RouteRecord, event: PointerEvent) {
             x,
             y,
         }
-        canvasRef.value?.previewAt(x, y)
+        canvasRef.value?.previewAt(item.id, x, y)
     }
     const preventScroll = (touchEvent: TouchEvent) => {
         if (dragging.value) touchEvent.preventDefault()
@@ -683,7 +711,7 @@ function onItemPointerDown(item: RouteRecord, event: PointerEvent) {
     }
     const cancel = () => {
         cleanup()
-        canvasRef.value?.previewAt(-1, -1)
+        canvasRef.value?.previewAt(item.id, -1, -1)
         dragging.value = null
     }
 

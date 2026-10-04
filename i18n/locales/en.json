@@ -1257,6 +1257,8 @@
         "routes": "Routes",
         "wallHint": "Where the route sits on the gym map. Fine-tune it under Place routes.",
         "resizeList": "Resize list",
+        "hideList": "Hide list",
+        "showList": "Show list",
         "backToList": "Back to list",
         "clusterLabel": "{count} route here, tap to show | {count} routes here, tap to show",
         "followWall": "Follow {wall}",
@@ -1350,7 +1352,6 @@
         "hints": {
             "idle": "Tap a route, then its spot on the wall — the next route follows automatically. Tick several routes to put them on one wall at once. Drag dots to move them.",
             "armed": "Click on a wall to place \"{name}\". Esc cancels.",
-            "selected": "Drag the dot of \"{name}\" to its spot on the wall, or onto another wall. Delete removes it from the map.",
             "checked": "Tap a wall to place {n} route there, ordered by anchor. | Tap a wall to place {n} routes there, ordered by anchor."
         },
         "skip": "Skip",

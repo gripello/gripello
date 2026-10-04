@@ -73,13 +73,15 @@
             @keydown.space.prevent="onDotKey(dot)"
         />
 
-        <circle
-            v-if="ghost"
-            :cx="ghost.point[0]"
-            :cy="ghost.point[1]"
-            :r="(DOT_RADIUS_PX * 1.3) / pixelsPerUnit"
+        <MapRouteMarker
+            v-if="ghost && ghostRoute"
+            :at="ghost.point"
+            v-bind="dotColors(ghostRoute.color)"
+            :grade="formatGrade(ghostRoute)"
+            as-grade
+            :pixels-per-unit="pixelsPerUnit"
+            :hit-radius-px="0"
             class="placement-ghost"
-            pointer-events="none"
             data-testid="placement-ghost"
         />
     </MapCanvas>
@@ -96,9 +98,10 @@ import {
     type MapBounds,
 } from '#shared/utils/mapGeometry'
 import { translatedColorName } from '~/utils/colorName'
+import { formatGrade } from '#shared/utils/grades'
 import {
-    DOT_RADIUS_PX,
-    gradeSpacingPx,
+    dotColors,
+    GRADE_SPACING_PX,
     HIT_RADIUS_PX,
     isolatedIds,
     placeRoutes,
@@ -149,14 +152,16 @@ const hitRadiusPx = computed(() =>
     coarsePointer.value ? HIT_RADIUS_PX.coarse : HIT_RADIUS_PX.fine,
 )
 const draggingRouteId = ref<string | null>(null)
-const ghost = ref<(EdgeProjection & { wall: MapWall }) | null>(null)
+const ghost = ref<(EdgeProjection & { wall: MapWall; routeId: string }) | null>(
+    null,
+)
+const ghostRoute = computed(
+    () => ghost.value && routesById.value.get(ghost.value.routeId),
+)
 
 const dots = computed(() => placeRoutes(props.walls, props.routes))
 const isolated = computed(() =>
-    isolatedIds(
-        dots.value,
-        gradeSpacingPx(hitRadiusPx.value) / pixelsPerUnit.value,
-    ),
+    isolatedIds(dots.value, GRADE_SPACING_PX / pixelsPerUnit.value),
 )
 const routesById = computed(
     () => new Map(props.routes.map((route) => [route.id, route])),
@@ -190,10 +195,17 @@ function isOverCanvas(clientX: number, clientY: number) {
     )
 }
 
-function previewAt(clientX: number, clientY: number) {
-    ghost.value = isOverCanvas(clientX, clientY)
-        ? snapAt({ clientX, clientY })
-        : null
+function ghostAt(
+    routeId: string,
+    client: { clientX: number; clientY: number },
+) {
+    const target = snapAt(client)
+    ghost.value = target ? { ...target, routeId } : null
+}
+
+function previewAt(routeId: string, clientX: number, clientY: number) {
+    if (isOverCanvas(clientX, clientY)) ghostAt(routeId, { clientX, clientY })
+    else ghost.value = null
 }
 
 function placeAt(routeId: string, clientX: number, clientY: number) {
@@ -268,7 +280,7 @@ function onDotDown(routeId: string, event: PointerEvent) {
             return
         moved = true
         draggingRouteId.value = routeId
-        ghost.value = snapAt(moveEvent)
+        ghostAt(routeId, moveEvent)
     }
     const end = (endEvent: PointerEvent) => {
         target.removeEventListener('pointermove', move)
@@ -345,10 +357,7 @@ function onDotDown(routeId: string, event: PointerEvent) {
     opacity: 0.4;
 }
 
-.placement-ghost {
-    fill: color-mix(in oklab, var(--ui-primary) 35%, transparent);
-    stroke: var(--ui-primary);
-    stroke-width: 2;
-    vector-effect: non-scaling-stroke;
+.map-dot.placement-ghost {
+    pointer-events: none;
 }
 </style>

@@ -1,9 +1,28 @@
 <template>
-    <aside v-if="mdAndUp" class="map-sheet map-sheet--side" v-bind="$attrs">
+    <aside
+        v-if="mdAndUp"
+        class="map-sheet map-sheet--side"
+        :class="{ 'map-sheet--collapsed': collapsed }"
+        v-bind="$attrs"
+    >
         <div class="map-sheet__header">
-            <slot name="header" />
+            <UButton
+                :icon="
+                    collapsed
+                        ? 'i-lucide-panel-right-open'
+                        : 'i-lucide-panel-right-close'
+                "
+                color="neutral"
+                variant="ghost"
+                class="icon-btn shrink-0"
+                :aria-label="$t(collapsed ? 'map.showList' : 'map.hideList')"
+                :aria-expanded="!collapsed"
+                data-testid="map-sheet-collapse"
+                @click="collapsed = !collapsed"
+            />
+            <slot v-if="!collapsed" name="header" />
         </div>
-        <div class="map-sheet__body">
+        <div v-if="!collapsed" class="map-sheet__body">
             <slot />
         </div>
     </aside>
@@ -56,6 +75,7 @@ const FLICK_SPEED = 0.5
 const ORDER: SheetSnap[] = ['peek', 'half', 'full']
 
 const { mdAndUp } = useDisplay()
+const collapsed = ref(false)
 const sheetRef = useTemplateRef<HTMLElement>('sheetRef')
 const gripRef = useTemplateRef<HTMLElement>('gripRef')
 const containerHeight = ref(0)
@@ -180,6 +200,14 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
     border-bottom: 1px solid var(--ui-border);
 }
 
+.map-sheet--collapsed {
+    width: auto;
+}
+
+.map-sheet--collapsed .map-sheet__header {
+    border-bottom: 0;
+}
+
 .map-sheet--bottom {
     position: absolute;
     left: 0;
@@ -240,7 +268,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 }
 
 .map-sheet--side .map-sheet__header {
-    padding: 4px 8px 4px 16px;
+    padding: 4px 8px;
 }
 
 .map-sheet__body {

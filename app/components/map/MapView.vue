@@ -104,14 +104,16 @@
                         :r="clusterRadius"
                         class="map-cluster-body"
                     />
-                    <text
-                        :x="cluster.point[0]"
-                        :y="cluster.point[1]"
-                        :font-size="clusterFontSize"
-                        class="map-cluster-count"
+                    <g
+                        :transform="`translate(${cluster.point[0]} ${cluster.point[1]}) scale(${1 / pixelsPerUnit})`"
                     >
-                        {{ cluster.dots.length }}
-                    </text>
+                        <text
+                            :font-size="CLUSTER_FONT_PX"
+                            class="map-cluster-count"
+                        >
+                            {{ cluster.dots.length }}
+                        </text>
+                    </g>
                 </g>
             </g>
             <template #overlay>
@@ -156,7 +158,7 @@ import {
     closestPairDistance,
     clusterDots,
     GRADE_RADIUS_PX,
-    gradeSpacingPx,
+    GRADE_SPACING_PX,
     HIT_RADIUS_PX,
     isolatedIds,
     placeRoutes,
@@ -250,9 +252,7 @@ const counts = computed(() =>
     wallCounts(props.routes, props.sentIds ?? new Set(), props.matchingIds),
 )
 
-const gradeSpacing = computed(
-    () => gradeSpacingPx(hitRadiusPx.value) / pixelsPerUnit.value,
-)
+const gradeSpacing = computed(() => GRADE_SPACING_PX / pixelsPerUnit.value)
 const dotSpacing = computed(() => (hitRadiusPx.value * 2) / pixelsPerUnit.value)
 const spreadSpacing = computed(() =>
     Math.max(
@@ -264,7 +264,6 @@ const gradeHitPx = computed(() => Math.max(hitRadiusPx.value, GRADE_RADIUS_PX))
 
 const dotHitRadius = computed(() => hitRadiusPx.value / pixelsPerUnit.value)
 const clusterRadius = computed(() => CLUSTER_RADIUS_PX / pixelsPerUnit.value)
-const clusterFontSize = computed(() => CLUSTER_FONT_PX / pixelsPerUnit.value)
 
 function markerClusters(routeDots: RouteDot[]) {
     const isolated = isolatedIds(routeDots, gradeSpacing.value)

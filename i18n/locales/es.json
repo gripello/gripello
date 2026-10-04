@@ -1257,6 +1257,8 @@
         "routes": "Vías",
         "wallHint": "Dónde está la vía en el plano del rocódromo. Ajústalo en «Colocar vías».",
         "resizeList": "Cambiar tamaño de la lista",
+        "hideList": "Ocultar lista",
+        "showList": "Mostrar lista",
         "backToList": "Volver a la lista",
         "clusterLabel": "{count} vía aquí, toca para ver | {count} vías aquí, toca para ver",
         "followWall": "Seguir {wall}",
@@ -1350,7 +1352,6 @@
         "hints": {
             "idle": "Toca una vía y luego su sitio en la pared: la siguiente vía sigue automáticamente. Marca varias vías para ponerlas de una vez en una pared. Arrastra los puntos para moverlos.",
             "armed": "Haz clic en una pared para colocar «{name}». Esc cancela.",
-            "selected": "Arrastra el punto de «{name}» a su sitio en la pared o a otra pared. Supr lo quita del plano.",
             "checked": "Toca una pared para colocar allí {n} vía, ordenada por reunión. | Toca una pared para colocar allí {n} vías, ordenadas por reunión."
         },
         "skip": "Omitir",

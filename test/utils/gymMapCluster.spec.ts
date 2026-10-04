@@ -5,7 +5,9 @@ import {
     clusterDots,
     checkPath,
     gradeFontPx,
-    gradeSpacingPx,
+    GRADE_SPACING_PX,
+    exclamationPath,
+    sparklePath,
     isolatedIds,
     spreadAround,
 } from '~/utils/gymMap'
@@ -99,13 +101,23 @@ describe('gradeFontPx', () => {
     })
 })
 
-describe('gradeSpacingPx', () => {
-    it('keeps grade circles and their badges apart', () => {
-        expect(gradeSpacingPx(13)).toBe(40)
+describe('GRADE_SPACING_PX', () => {
+    it('shows grade circles as soon as they no longer overlap', () => {
+        const dots = (gap: number) => [
+            { routeId: 'a', point: [0, 0] as [number, number] },
+            { routeId: 'b', point: [gap, 0] as [number, number] },
+        ]
+        expect(isolatedIds(dots(32), GRADE_SPACING_PX).size).toBe(2)
+        expect(isolatedIds(dots(25), GRADE_SPACING_PX).size).toBe(0)
     })
+})
 
-    it('widens the spacing for coarse hit targets', () => {
-        expect(gradeSpacingPx(22)).toBe(44)
+describe('badge glyphs', () => {
+    it('draws an exclamation mark and a sparkle around the centre', () => {
+        expect(exclamationPath([10, 10], 2)).toBe(
+            'M10 9 L10 10.2 M10 10.9 L10 10.92',
+        )
+        expect(sparklePath([10, 10], 10)).toMatch(/^M10 4 .* Z$/)
     })
 })
 

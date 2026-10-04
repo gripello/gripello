@@ -106,4 +106,17 @@ describe('PlacementCanvas', () => {
             .trigger('keydown', { key: 'Enter' })
         expect(wrapper.emitted('place')).toEqual([['r1', 'north', 0.8]])
     })
+
+    it('previews the dragged route as its full grade marker', async () => {
+        const wrapper = createWrapper()
+        ;(
+            wrapper.vm as unknown as {
+                previewAt: (id: string, x: number, y: number) => void
+            }
+        ).previewAt('r3', 0, 0)
+        await wrapper.vm.$nextTick()
+        const ghost = wrapper.get('[data-testid="placement-ghost"]')
+        expect(ghost.get('.map-dot-body').attributes('fill')).toBe('#43A047')
+        expect(ghost.get('[data-testid="map-dot-grade"]').text()).toBe('7A')
+    })
 })

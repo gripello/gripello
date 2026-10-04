@@ -18,17 +18,19 @@
             class="map-dot-body"
         />
         <template v-if="asGrade">
-            <text
+            <g
                 v-if="grade"
-                :x="at[0]"
-                :y="at[1]"
-                :font-size="gradeFontPx(grade) / pixelsPerUnit"
-                :fill="stroke"
-                class="map-dot-grade"
-                data-testid="map-dot-grade"
+                :transform="`translate(${at[0]} ${at[1]}) scale(${1 / pixelsPerUnit})`"
             >
-                {{ grade }}
-            </text>
+                <text
+                    :font-size="gradeFontPx(grade)"
+                    :fill="stroke"
+                    class="map-dot-grade"
+                    data-testid="map-dot-grade"
+                >
+                    {{ grade }}
+                </text>
+            </g>
             <g
                 v-for="badge in badges"
                 :key="badge.kind"
@@ -38,9 +40,8 @@
                 <title>{{ badge.title }}</title>
                 <circle :cx="badge.at[0]" :cy="badge.at[1]" :r="badgeRadius" />
                 <path
-                    v-if="badge.kind === 'sent'"
-                    :d="checkPath(badge.at, badgeRadius)"
-                    class="map-dot-badge-check"
+                    :d="badge.glyph(badge.at, badgeRadius)"
+                    class="map-dot-badge-glyph"
                 />
             </g>
         </template>
@@ -51,15 +52,22 @@
                 :stroke="stroke"
                 class="map-dot-check"
             />
-            <circle
+            <g
                 v-if="defect"
-                :cx="at[0] + dotRadius * 0.85"
-                :cy="at[1] - dotRadius * 0.85"
-                :r="dotRadius * 0.5"
                 class="map-dot-defect"
                 :class="`map-dot-defect--${defect}`"
                 data-testid="map-dot-defect"
-            />
+            >
+                <circle
+                    :cx="defectAt[0]"
+                    :cy="defectAt[1]"
+                    :r="dotRadius * 0.6"
+                />
+                <path
+                    :d="exclamationPath(defectAt, dotRadius * 0.6)"
+                    class="map-dot-badge-glyph"
+                />
+            </g>
         </template>
         <circle
             v-if="selected"
@@ -77,8 +85,11 @@ import {
     BADGE_RADIUS_PX,
     DOT_RADIUS_PX,
     GRADE_RADIUS_PX,
+    GRADE_SPACING_PX,
     checkPath,
+    exclamationPath,
     gradeFontPx,
+    sparklePath,
 } from '~/utils/gymMap'
 import type { DefectSeverity } from '~/utils/tasks'
 
@@ -99,7 +110,7 @@ const props = withDefaults(
     { grade: '', defect: null },
 )
 
-const BADGE_ANGLES = [-Math.PI / 4, 0, -Math.PI / 2]
+const BADGE_ANGLES = [-Math.PI / 4, (-3 * Math.PI) / 4, -Math.PI / 2]
 
 const { t } = useI18n()
 const dotRadius = computed(() => DOT_RADIUS_PX / props.pixelsPerUnit)
@@ -108,23 +119,41 @@ const badgeRadius = computed(() => BADGE_RADIUS_PX / props.pixelsPerUnit)
 const hitRadius = computed(
     () =>
         (props.asGrade
-            ? Math.max(props.hitRadiusPx, GRADE_RADIUS_PX)
+            ? Math.max(
+                  Math.min(props.hitRadiusPx, GRADE_SPACING_PX / 2),
+                  GRADE_RADIUS_PX,
+              )
             : props.hitRadiusPx) / props.pixelsPerUnit,
 )
 
+const defectAt = computed<MapPoint>(() => [
+    props.at[0] + dotRadius.value * 0.85,
+    props.at[1] - dotRadius.value * 0.85,
+])
+
 const badges = computed(() => {
     const shown = [
-        props.sent && { kind: 'sent', title: t('ticks.sent') },
+        props.sent && {
+            kind: 'sent',
+            title: t('ticks.sent'),
+            glyph: checkPath,
+        },
         props.defect && {
             kind: `defect-${props.defect}`,
             title: t('tasks.defect.marker'),
+            glyph: exclamationPath,
         },
-        props.isNew && { kind: 'new', title: t('ticks.suggestions.new') },
+        props.isNew && {
+            kind: 'new',
+            title: t('ticks.suggestions.new'),
+            glyph: sparklePath,
+        },
     ].filter((badge) => !!badge)
     const distance = gradeRadius.value * 0.95
-    return shown.map(({ kind, title }, index) => ({
+    return shown.map(({ kind, title, glyph }, index) => ({
         kind,
         title,
+        glyph,
         at: [
             props.at[0] + distance * Math.cos(BADGE_ANGLES[index]!),
             props.at[1] + distance * Math.sin(BADGE_ANGLES[index]!),
@@ -189,7 +218,7 @@ const badges = computed(() => {
 }
 
 .map-dot-badge--new circle {
-    fill: var(--ui-primary);
+    fill: var(--ui-info);
 }
 
 .map-dot-badge--defect-urgent circle {
@@ -200,7 +229,7 @@ const badges = computed(() => {
     fill: var(--ui-warning);
 }
 
-.map-dot-badge-check {
+.map-dot-badge-glyph {
     fill: none;
     stroke: var(--ui-bg);
     stroke-width: 1.5;
@@ -209,18 +238,26 @@ const badges = computed(() => {
     vector-effect: non-scaling-stroke;
 }
 
+.map-dot-badge--new .map-dot-badge-glyph {
+    fill: var(--ui-bg);
+    stroke-width: 1;
+}
+
 .map-dot-defect {
-    stroke: var(--ui-bg);
-    stroke-width: 1.5;
-    vector-effect: non-scaling-stroke;
     pointer-events: none;
 }
 
-.map-dot-defect--urgent {
+.map-dot-defect circle {
+    stroke: var(--ui-bg);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+}
+
+.map-dot-defect--urgent circle {
     fill: var(--ui-error);
 }
 
-.map-dot-defect--minor {
+.map-dot-defect--minor circle {
     fill: var(--ui-warning);
 }
 

@@ -561,13 +561,9 @@
         position: absolute;
         top: 12px;
         left: 12px;
-        right: 64px;
+        max-width: calc(100% - 76px);
         z-index: 1;
-        pointer-events: none;
-    }
-
-    .map-screen__chips > * {
-        pointer-events: auto;
+        touch-action: pan-x;
     }
 
     .text-eyebrow {
