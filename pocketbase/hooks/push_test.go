@@ -47,7 +47,7 @@ func TestPushTextReadsTheAppLocales(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "en.json"), []byte(`{"notifications":{"center":{"types":{"task_assigned":"Assigned: {title}","report_filed":"Report"}}}}`), 0o644)
 	os.WriteFile(filepath.Join(dir, "de.json"), []byte(`{"notifications":{"center":{"types":{"task_assigned":"Zugewiesen: {title}"}}}}`), 0o644)
-	messages := loadPushMessages(dir)
+	messages := loadLocales(dir)
 
 	if got := pushText(messages, "de", "task_assigned", map[string]any{"title": "Griff"}); got != "Zugewiesen: Griff" {
 		t.Errorf("de = %q", got)
@@ -61,13 +61,13 @@ func TestPushTextReadsTheAppLocales(t *testing.T) {
 }
 
 func TestPushTextCoversEveryNotificationTypeInTheRealLocales(t *testing.T) {
-	messages := loadPushMessages(filepath.Join("..", "..", "i18n", "locales"))
+	messages := loadLocales(filepath.Join("..", "..", "i18n", "locales"))
 	if len(messages) == 0 {
 		t.Skip("i18n/locales is outside the docker test context")
 	}
 	for _, notificationType := range []string{"task_defect_filed", "task_defect_fixed", "task_assigned", "report_filed", "report_decided_kept", "report_decided_removed", "wall_new_routes", "competition_published"} {
-		for language, types := range messages {
-			if types[notificationType] == "" {
+		for language := range messages {
+			if pushText(messages, language, notificationType, nil) == "" || messages.lookup(language, "notifications.center.types."+notificationType) == "" {
 				t.Errorf("%s has no %s", language, notificationType)
 			}
 		}
@@ -121,11 +121,11 @@ func TestWantsNotificationDefaultsToOn(t *testing.T) {
 }
 
 func TestEveryNotificationTypeHasATopic(t *testing.T) {
-	messages := loadPushMessages(filepath.Join("..", "..", "i18n", "locales"))
+	messages := loadLocales(filepath.Join("..", "..", "i18n", "locales"))
 	if len(messages) == 0 {
 		t.Skip("i18n/locales is outside the docker test context")
 	}
-	for notificationType := range messages["en"] {
+	for notificationType := range messages.group("en", "notifications.center.types") {
 		if !strings.HasSuffix(notificationType, "_gym") && topicOf(notificationType) == "" {
 			t.Errorf("%s belongs to no topic in notificationTopics", notificationType)
 		}
@@ -142,7 +142,7 @@ func TestPushDeliveriesHonourMutedTopics(t *testing.T) {
 	if err := f.app.Save(f.climber); err != nil {
 		t.Fatal(err)
 	}
-	messages := map[string]map[string]string{"en": {"task_assigned": "Assigned"}}
+	messages := localeMessages{"en": {"notifications": map[string]any{"center": map[string]any{"types": map[string]any{"task_assigned": "Assigned"}}}}}
 
 	staff := pushDeliveries(f.app, messages, []*core.Record{f.adminA, f.climber, f.setterA}, notification{Gym: f.gymA.Id, Type: "task_assigned"})
 	if len(staff) != 1 || staff[0].subscription.Endpoint != "https://push.example/a" {
@@ -188,7 +188,7 @@ func TestDeliverPushDropsGoneSubscriptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deliveries := pushDeliveries(f.app, map[string]map[string]string{}, []*core.Record{f.climber}, notification{Type: "task_defect_fixed"})
+	deliveries := pushDeliveries(f.app, localeMessages{}, []*core.Record{f.climber}, notification{Type: "task_defect_fixed"})
 	deliverPush(f.app, deliveries, &webpush.Options{Subscriber: "test@example.com", VAPIDPublicKey: publicKey, VAPIDPrivateKey: privateKey, TTL: 60})
 
 	rows, _ := f.app.FindAllRecords("push_subscriptions")

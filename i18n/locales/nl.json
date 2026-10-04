@@ -775,6 +775,7 @@
         "saveError": "Instellingen konden niet worden opgeslagen. Probeer het opnieuw.",
         "contactEmail": "Contact-e-mail",
         "contactEmailHint": "Wordt gepubliceerd als aanspreekpunt en ontvangt meldingen over nieuwe inhoudsmeldingen.",
+        "mailLanguage": "Taal voor e-mails",
         "mailNotConfigured": "E-mail is niet geconfigureerd, dus wachtwoordherstel en meldingen over inhoud kunnen niet worden verzonden. SMTP stel je in PocketBase in, niet hier.",
         "mailNotConfiguredAction": "E-mailinstellingen van PocketBase openen",
         "legalTitle": "Colofon",
@@ -1790,6 +1791,84 @@
             "routes": "Routes",
             "admins": "Platformbeheerders",
             "dashboard": "PocketBase-dashboard"
+        }
+    },
+    "mails": {
+        "greeting": "Hallo {name},",
+        "greetingAnonymous": "Hallo,",
+        "linkHint": "Werkt de knop niet? Kopieer dan deze link naar je browser:",
+        "imprint": "Colofon",
+        "privacy": "Privacy",
+        "unavailable": "niet beschikbaar",
+        "labels": {
+            "reason": "Reden",
+            "reference": "Referentie",
+            "content": "Gemelde inhoud",
+            "explanation": "Toelichting",
+            "snapshot": "Inhoud op het moment van de melding",
+            "reportedBy": "Gemeld door",
+            "reasoning": "Motivering",
+            "problem": "Probleem",
+            "route": "Route",
+            "details": "Details",
+            "location": "Inlog"
+        },
+        "verification": {
+            "subject": "Bevestig je e-mailadres",
+            "body": "Bedankt voor je aanmelding bij {app}. Bevestig je e-mailadres om je account af te ronden.",
+            "action": "E-mailadres bevestigen",
+            "note": "Heb je je niet aangemeld? Dan kun je deze e-mail negeren."
+        },
+        "passwordReset": {
+            "subject": "Wachtwoord opnieuw instellen",
+            "body": "We hebben een verzoek ontvangen om het wachtwoord van je {app}-account opnieuw in te stellen.",
+            "action": "Nieuw wachtwoord kiezen",
+            "note": "Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren. Je wachtwoord blijft hetzelfde."
+        },
+        "emailChange": {
+            "subject": "Bevestig je nieuwe e-mailadres",
+            "body": "Bevestig dit adres om het voortaan voor je {app}-account te gebruiken.",
+            "action": "Nieuw adres bevestigen",
+            "note": "Heb je niet gevraagd om je e-mailadres te wijzigen? Dan kun je deze e-mail negeren."
+        },
+        "otp": {
+            "subject": "Je inlogcode",
+            "body": "Gebruik deze code om in te loggen bij {app}:",
+            "note": "Heb je geen code aangevraagd? Dan kun je deze e-mail negeren."
+        },
+        "authAlert": {
+            "subject": "Nieuwe inlog op je account",
+            "body": "Er is zojuist ingelogd op je {app}-account vanaf een nieuw apparaat of een nieuwe locatie.",
+            "note": "Was jij dit niet? Wijzig dan meteen je wachtwoord. Daarmee worden alle andere apparaten uitgelogd."
+        },
+        "invite": {
+            "subject": "Je bent uitgenodigd voor {gym}",
+            "body": "{gym} heeft je op {app} aan het team toegevoegd. Kies een wachtwoord om je account te activeren.",
+            "action": "Wachtwoord kiezen",
+            "note": "Verwachtte je deze uitnodiging niet? Dan kun je deze e-mail negeren."
+        },
+        "reportReceipt": {
+            "subject": "We hebben je melding ontvangen",
+            "body": "We hebben je melding ontvangen en beoordelen deze zonder onnodige vertraging. We laten je weten wat we besluiten en hoe je tegen dat besluit in beroep kunt gaan."
+        },
+        "reportAlert": {
+            "subject": "Nieuwe melding van inhoud",
+            "body": "Er is een nieuwe melding ingediend die wacht op beoordeling.",
+            "action": "Meldingen openen"
+        },
+        "reportDecision": {
+            "subject": "Besluit over je melding",
+            "body": "We hebben je melding beoordeeld.",
+            "kept": "De gemelde inhoud blijft online.",
+            "removed": "De gemelde inhoud is verwijderd.",
+            "redress": "Zo kun je tegen dit besluit opkomen: je kunt je wenden tot een gecertificeerde instantie voor buitengerechtelijke geschillenbeslechting volgens artikel 21 van de digitaledienstenverordening, of naar de bevoegde rechter stappen.",
+            "redressContact": "Je kunt ook rechtstreeks contact opnemen met de beheerder via {email}."
+        },
+        "urgentDefect": {
+            "subject": "Dringend: {problem} bij {route}",
+            "body": "Een klimmer heeft een veiligheidsprobleem gemeld. Controleer de route voordat er weer op geklommen wordt.",
+            "photo": "Bij de taak is een foto gevoegd.",
+            "action": "Takenbord openen"
         }
     }
 }

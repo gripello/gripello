@@ -9,15 +9,9 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-func TestUserLanguagesMatchLocaleFiles(t *testing.T) {
+func TestLanguageFieldsMatchLocaleFiles(t *testing.T) {
 	app := newGymTestApp(t)
 	defer app.Cleanup()
-
-	users, err := app.FindCollectionByNameOrId("users")
-	if err != nil {
-		t.Fatal(err)
-	}
-	values := slices.Clone(users.Fields.GetByName("language").(*core.SelectField).Values)
 
 	files, _ := filepath.Glob(filepath.Join("..", "..", "i18n", "locales", "*.json"))
 	locales := []string{}
@@ -25,10 +19,18 @@ func TestUserLanguagesMatchLocaleFiles(t *testing.T) {
 		locales = append(locales, strings.TrimSuffix(filepath.Base(file), ".json"))
 	}
 
-	slices.Sort(values)
 	slices.Sort(locales)
-	if !slices.Equal(values, locales) {
-		t.Errorf("users.language = %v, locale files = %v", values, locales)
+
+	for _, name := range []string{"users", "gyms", "reports"} {
+		collection, err := app.FindCollectionByNameOrId(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		values := slices.Clone(collection.Fields.GetByName("language").(*core.SelectField).Values)
+		slices.Sort(values)
+		if !slices.Equal(values, locales) {
+			t.Errorf("%s.language = %v, locale files = %v", name, values, locales)
+		}
 	}
 }
 

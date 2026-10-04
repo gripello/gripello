@@ -275,6 +275,19 @@
                                 data-testid="settings-contact-email"
                             />
                         </UFormField>
+                        <UFormField
+                            :label="$t('settings.mailLanguage')"
+                            name="language"
+                            :ui="fieldUi"
+                        >
+                            <USelect
+                                v-model="copySettings.language"
+                                :items="languageItems"
+                                icon="i-lucide-languages"
+                                class="w-full"
+                                data-testid="settings-mail-language"
+                            />
+                        </UFormField>
                     </UPageCard>
 
                     <UPageCard
@@ -411,6 +424,7 @@ import type { Form } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { isValidGymSlug } from '#shared/utils/gymSlug'
 import { required, validEmail, validateRules } from '~/utils/validation'
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '~/utils/locales'
 import {
     DEFAULT_GYM_BANDS,
     bandSettingsFrom,
@@ -451,6 +465,7 @@ const original = reactive({
     name: '',
     unit_name: '',
     contact_email: '',
+    language: DEFAULT_LOCALE as string,
     slug: '',
     previous_slugs: [] as string[],
     route_grade_system: DEFAULT_ROUTE_GRADE_SYSTEM as string,
@@ -458,6 +473,11 @@ const original = reactive({
     ...legalFieldsFrom({}),
     ...bandFieldsFrom({}),
 })
+
+const languageItems = SUPPORTED_LOCALES.map(({ code, name }) => ({
+    label: name,
+    value: code as string,
+}))
 
 function gradeSystemItems(systems: GradeSystem[]) {
     return systems.map((value) => ({
@@ -532,6 +552,7 @@ function fieldsPayload(state: EditableSettings) {
         name: state.name,
         unit_name: state.unit_name,
         contact_email: state.contact_email,
+        language: state.language,
         slug: state.slug,
         previous_slugs: state.previous_slugs,
         route_grade_system: state.route_grade_system,
@@ -559,6 +580,7 @@ function adoptOriginal(rec: GymRecord) {
     original.name = rec.name ?? ''
     original.unit_name = rec.unit_name ?? ''
     original.contact_email = rec.contact_email ?? ''
+    original.language = rec.language || DEFAULT_LOCALE
     original.slug = rec.slug ?? ''
     original.previous_slugs = [...(rec.previous_slugs ?? [])]
     original.route_grade_system =

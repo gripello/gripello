@@ -21,5 +21,6 @@ func Register(app core.App) {
 	registerCompetitionTicks(app)
 	registerLive(app)
 	registerNotifications(app)
+	registerAuthMails(app)
 	registerSMTPFromEnv(app)
 }

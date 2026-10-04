@@ -1,30 +1,15 @@
 package hooks
 
 import (
-	"fmt"
-	"html"
 	"net/http"
-	"net/mail"
 	"net/url"
 	"slices"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/tools/mailer"
 	"github.com/pocketbase/pocketbase/tools/types"
 )
-
-var reportReasonLabels = map[string]string{
-	"hate_speech":     "Hate speech",
-	"harassment":      "Harassment",
-	"violence_threat": "Threat of violence",
-	"sexual_content":  "Sexual content",
-	"personal_data":   "Personal data",
-	"ip_infringement": "Intellectual property infringement",
-	"spam_fraud":      "Spam or fraud",
-	"other":           "Other",
-}
 
 func registerReports(app core.App) {
 	app.OnRecordCreateRequest("reports").BindFunc(func(e *core.RecordRequestEvent) error {
@@ -173,14 +158,7 @@ func sendReportReceipt(app core.App, report *core.Record) error {
 		return nil
 	}
 
-	summary := reportSummaryHTML(app, report)
-
-	receiptSent, err := sendMail(
-		app,
-		[]string{report.GetString("notifier_email")},
-		gymMailSubject(app, report.GetString("gym"), "We received your report"),
-		reportReceiptHTML(report),
-	)
+	receiptSent, err := sendGymMail(app, reportReceiptMail(report), []mailRecipient{reportNotifier(report)})
 	if err != nil {
 		return err
 	}
@@ -195,34 +173,39 @@ func sendReportReceipt(app core.App, report *core.Record) error {
 		}
 	}
 
-	_, err = sendMail(
-		app,
-		reportAlertRecipients(app, report),
-		gymMailSubject(app, report.GetString("gym"), "New content report"),
-		fmt.Sprintf(`<p>A new report was submitted and is awaiting review.</p>
-             %s
-             <p><strong>Reported by:</strong> %s
-             (%s)</p>
-             <p><a href="%s%s">Open the moderation queue</a></p>`,
-			summary,
-			html.EscapeString(report.GetString("notifier_name")),
-			html.EscapeString(report.GetString("notifier_email")),
-			html.EscapeString(appURL(app)),
-			html.EscapeString(gymPath(app, report.GetString("gym"), "/manage/reports")),
-		),
-	)
+	_, err = sendGymMail(app, reportAlertMail(app, report), reportAlertRecipients(app, report))
 	return err
 }
 
-func reportReceiptHTML(report *core.Record) string {
-	return fmt.Sprintf(`<p>Hello,</p>
-             <p>We have received your report and will review it without undue delay.
-             You will be informed of the decision and of the ways to challenge it.</p>
-             <p><strong>Reason:</strong> %s</p>
-             <p>Reference: %s</p>`,
-		html.EscapeString(reportReasonLabel(report.GetString("reason"))),
-		html.EscapeString(report.Id),
-	)
+func reportNotifier(report *core.Record) mailRecipient {
+	return mailRecipient{Address: report.GetString("notifier_email"), Language: report.GetString("language")}
+}
+
+func reportReceiptMail(report *core.Record) mailContent {
+	return mailContent{
+		Key: "reportReceipt",
+		Gym: report.GetString("gym"),
+		Details: []mailDetail{
+			{Label: "reason", ValueKey: "reports.reasons." + report.GetString("reason"), Value: report.GetString("reason")},
+			{Label: "reference", Value: report.Id},
+		},
+	}
+}
+
+func reportAlertMail(app core.App, report *core.Record) mailContent {
+	contentURL := absoluteURL(appURL(app), report.GetString("content_url"))
+	return mailContent{
+		Key: "reportAlert",
+		Gym: report.GetString("gym"),
+		Details: []mailDetail{
+			{Label: "reason", ValueKey: "reports.reasons." + report.GetString("reason"), Value: report.GetString("reason")},
+			{Label: "content", Value: contentURL, Link: contentURL},
+			{Label: "explanation", Value: report.GetString("explanation")},
+			{Label: "snapshot", Value: report.GetString("content_snapshot")},
+			{Label: "reportedBy", Value: report.GetString("notifier_name") + " (" + report.GetString("notifier_email") + ")"},
+		},
+		Action: gymPath(app, report.GetString("gym"), "/manage/reports"),
+	}
 }
 
 func sendReportDecision(app core.App, report *core.Record) error {
@@ -234,36 +217,37 @@ func sendReportDecision(app core.App, report *core.Record) error {
 		return nil
 	}
 
-	outcome := "The reported content has been kept online."
-	if report.GetString("decision") == "content_removed" {
-		outcome = "The reported content has been removed."
-	}
-	reasoning := ""
-	if reason := report.GetString("decision_reason"); reason != "" {
-		reasoning = fmt.Sprintf("<p><strong>Reasoning:</strong><br>%s</p>", html.EscapeString(reason))
-	}
-
-	if _, err := sendMail(
-		app,
-		[]string{report.GetString("notifier_email")},
-		gymMailSubject(app, report.GetString("gym"), "Decision on your report"),
-		fmt.Sprintf(`<p>Hello %s,</p>
-             <p>We have reviewed your report (reference %s).</p>
-             <p><strong>Decision:</strong> %s</p>
-             %s
-             %s`,
-			html.EscapeString(report.GetString("notifier_name")),
-			html.EscapeString(report.Id),
-			html.EscapeString(outcome),
-			reasoning,
-			reportRedressHTML(app, report.GetString("gym")),
-		),
-	); err != nil {
+	if _, err := sendGymMail(app, reportDecisionMail(app, report), []mailRecipient{reportNotifier(report)}); err != nil {
 		return err
 	}
 
 	report.Set("notified_at", types.NowDateTime())
 	return app.Save(report)
+}
+
+func reportDecisionMail(app core.App, report *core.Record) mailContent {
+	outcome := "mails.reportDecision.kept"
+	if report.GetString("decision") == "content_removed" {
+		outcome = "mails.reportDecision.removed"
+	}
+	details := []mailDetail{{Label: "reference", Value: report.Id}}
+	if reason := report.GetString("decision_reason"); reason != "" {
+		details = append(details, mailDetail{Label: "reasoning", Value: reason})
+	}
+	outro := []string{"mails.reportDecision.redress"}
+	contact := contactEmail(app, report.GetString("gym"))
+	if contact != "" {
+		outro = append(outro, "mails.reportDecision.redressContact")
+	}
+	return mailContent{
+		Key:     "reportDecision",
+		Gym:     report.GetString("gym"),
+		Name:    report.GetString("notifier_name"),
+		Params:  map[string]any{"email": contact},
+		Lines:   []string{outcome},
+		Details: details,
+		Outro:   outro,
+	}
 }
 
 func isReportDecisionMailPending(report *core.Record) bool {
@@ -275,90 +259,12 @@ func isReportDecisionTransition(report *core.Record) bool {
 	return report.Original().GetString("status") == "open" && isReportDecisionMailPending(report)
 }
 
-func sendMail(app core.App, recipients []string, subject string, body string) (bool, error) {
-	to := []mail.Address{}
-	for _, address := range recipients {
-		if address != "" {
-			to = append(to, mail.Address{Address: address})
-		}
+func reportAlertRecipients(app core.App, report *core.Record) []mailRecipient {
+	recipients := usersAsRecipients(usersByPermission(app, report.GetString("gym"), "manage_reports"))
+	if contact := contactEmail(app, report.GetString("gym")); contact != "" {
+		recipients = append(recipients, mailRecipient{Address: contact})
 	}
-	if len(to) == 0 {
-		return false, nil
-	}
-
-	meta := app.Settings().Meta
-	message := &mailer.Message{
-		From:    mail.Address{Address: meta.SenderAddress, Name: meta.SenderName},
-		To:      to,
-		Subject: subject,
-		HTML:    body,
-	}
-	if err := app.NewMailClient().Send(message); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func reportAlertRecipients(app core.App, report *core.Record) []string {
-	addresses := []string{}
-	for _, user := range usersByPermission(app, report.GetString("gym"), "manage_reports") {
-		if address := user.GetString("email"); address != "" && !slices.Contains(addresses, address) {
-			addresses = append(addresses, address)
-		}
-	}
-	if contact := contactEmail(app, report.GetString("gym")); contact != "" && !slices.Contains(addresses, contact) {
-		addresses = append(addresses, contact)
-	}
-	return addresses
-}
-
-func reportSummaryHTML(app core.App, report *core.Record) string {
-	contentURL := report.GetString("content_url")
-	if !strings.HasPrefix(contentURL, "http") {
-		contentURL = appURL(app) + contentURL
-	}
-
-	snapshot := html.EscapeString(report.GetString("content_snapshot"))
-	if snapshot == "" {
-		snapshot = "<em>unavailable</em>"
-	}
-
-	return fmt.Sprintf(`
-        <p><strong>Reason:</strong> %s</p>
-        <p><strong>Reported content:</strong> <a href="%s">%s</a></p>
-        <p><strong>Explanation:</strong><br>%s</p>
-        <p><strong>Content at the time of the report:</strong><br>%s</p>
-    `,
-		html.EscapeString(reportReasonLabel(report.GetString("reason"))),
-		html.EscapeString(contentURL),
-		html.EscapeString(contentURL),
-		html.EscapeString(report.GetString("explanation")),
-		snapshot,
-	)
-}
-
-func reportRedressHTML(app core.App, gymID string) string {
-	contactLine := ""
-	if contact := contactEmail(app, gymID); contact != "" {
-		escaped := html.EscapeString(contact)
-		contactLine = fmt.Sprintf(`<li>Contacting the operator directly at <a href="mailto:%s">%s</a>.</li>`, escaped, escaped)
-	}
-
-	return fmt.Sprintf(`
-        <p><strong>How to challenge this decision</strong></p>
-        <ul>
-            <li>Out-of-court dispute settlement before a certified body under Article 21 of the Digital Services Act.</li>
-            <li>Judicial remedy before the competent court.</li>
-            %s
-        </ul>
-    `, contactLine)
-}
-
-func reportReasonLabel(reason string) string {
-	if label, ok := reportReasonLabels[reason]; ok {
-		return label
-	}
-	return firstNonEmpty(reason, "Other")
+	return recipients
 }
 
 func appURL(app core.App) string {

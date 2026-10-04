@@ -1,7 +1,6 @@
 package hooks
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -129,24 +128,6 @@ func TestIsUrgentDefectTask(t *testing.T) {
 	task.Set("priority", urgentTaskPriority)
 	if isUrgentDefectTask(task) {
 		t.Error("urgent staff task triggered a defect alert")
-	}
-}
-
-func TestUrgentDefectAlertEscapesClimberText(t *testing.T) {
-	task := newTaskRecord()
-	task.Set("category", "loose_bolt")
-	task.Set("route", "r1")
-	task.Set("description", "<script>alert(1)</script>")
-
-	body := urgentDefectAlertHTML("https://gym.example", "/demo/manage/tasks", "<b>Arete</b>", task)
-
-	if strings.Contains(body, "<script>") || strings.Contains(body, "<b>Arete</b>") {
-		t.Errorf("unescaped climber text in mail: %s", body)
-	}
-	for _, want := range []string{"Loose bolt / screw", "https://gym.example/route?id=r1", "https://gym.example/demo/manage/tasks"} {
-		if !strings.Contains(body, want) {
-			t.Errorf("mail lacks %q: %s", want, body)
-		}
 	}
 }
 

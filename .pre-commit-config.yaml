@@ -19,3 +19,4 @@ repos:
             entry: yarn prettier --write
             language: system
             types_or: [javascript, ts, vue, html, css, json]
+            exclude: ^pocketbase/hooks/mail/

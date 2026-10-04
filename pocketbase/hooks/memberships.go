@@ -8,7 +8,6 @@ import (
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/mails"
 	"github.com/pocketbase/pocketbase/tools/security"
 )
 
@@ -118,10 +117,24 @@ func inviteMember(e *core.RequestEvent) error {
 	if !created {
 		return e.JSON(http.StatusOK, membership)
 	}
-	if err := mails.SendRecordPasswordReset(e.App, user); err != nil {
+	if err := sendInviteMail(e.App, user, gymID); err != nil {
 		e.App.Logger().Error("memberships: invitation mail failed", "user", user.Id, "error", err)
 	}
 	return e.JSON(http.StatusCreated, map[string]bool{"created": true})
+}
+
+func sendInviteMail(app core.App, user *core.Record, gymID string) error {
+	token, err := user.NewPasswordResetToken()
+	if err != nil {
+		return err
+	}
+	_, err = sendGymMail(app, mailContent{
+		Key:    "invite",
+		Gym:    gymID,
+		Name:   user.GetString("firstname"),
+		Action: "/auth/confirm-password-reset/" + token,
+	}, usersAsRecipients([]*core.Record{user}))
+	return err
 }
 
 func auditInvite(e *core.RequestEvent, collection, recordID, gymID string) {

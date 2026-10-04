@@ -25,7 +25,7 @@ test('a new member without an account sets a password from the mail and signs in
     await page.getByTestId('member-invite-submit').click()
     await expect(page.getByTestId('member-invite-dialog')).toBeHidden()
 
-    const mail = await waitForMail(page, email, { subject: /password/i })
+    const mail = await waitForMail(page, email, { subject: /invited/i })
     expect(mail.HTML).not.toContain('/_/#/')
     const path = linkPath(
         mail,
