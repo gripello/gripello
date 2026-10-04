@@ -253,15 +253,12 @@ const form = reactive(formFrom(props.user))
 const userForm = ref<Form<typeof form> | null>(null)
 const newMembership = reactive({ gym: '', role: '' })
 
-watch(
-    () => [open.value, props.user?.id],
-    () => {
-        Object.assign(form, formFrom(props.user))
-        Object.assign(newMembership, { gym: '', role: '' })
-        avatarFile.value = null
-        avatarRemoved.value = false
-    },
-)
+watch([open, () => props.user?.id], () => {
+    Object.assign(form, formFrom(props.user))
+    Object.assign(newMembership, { gym: '', role: '' })
+    avatarFile.value = null
+    avatarRemoved.value = false
+})
 
 const avatarFile = ref<File | null>(null)
 const avatarRemoved = ref(false)
