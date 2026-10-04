@@ -19,8 +19,9 @@ type notificationTopic struct {
 var notificationTopics = []notificationTopic{
 	{Key: "new_routes", Types: []string{"wall_new_routes"}},
 	{Key: "defect_fixed", Types: []string{"task_defect_fixed"}},
+	{Key: "wish_done", Types: []string{"task_wish_done"}},
 	{Key: "competition_results", Types: []string{"competition_published"}},
-	{Key: "tasks", Permission: "manage_tasks", Types: []string{"task_defect_filed", "task_assigned"}},
+	{Key: "tasks", Permission: "manage_tasks", Types: []string{"task_defect_filed", "task_wish_filed", "task_assigned"}},
 	{Key: "reports", Permission: "manage_reports", Types: []string{"report_filed", "report_decided_kept", "report_decided_removed"}},
 }
 

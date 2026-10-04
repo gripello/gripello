@@ -454,6 +454,8 @@
                 "task_assigned": "Task assigned to you: “{title}”",
                 "task_defect_fixed": "The problem you reported on “{route}” has been fixed — thank you!",
                 "task_defect_filed_gym": "New defect reported on “{route}” at {gym}",
+                "task_wish_filed": "New route wish for {location}",
+                "task_wish_done": "Your route wish for {location} has been set — enjoy!",
                 "wall_new_routes": "New routes on {wall}: {count}",
                 "competition_published": "Results for “{competition}” are online"
             }
@@ -962,6 +964,7 @@
         "loadError": "Tasks could not be loaded.",
         "kinds": {
             "defect": "Defect",
+            "wish": "Route wish",
             "reset": "Reset",
             "maintenance": "Maintenance",
             "other": "Other"
@@ -1015,6 +1018,14 @@
             "submitted": "Thanks! The setters have been notified.",
             "bannerTitle": "{n} known problem | {n} known problems",
             "marker": "Known problem"
+        },
+        "wish": {
+            "action": "Wish for a route",
+            "dialogTitle": "Wish for a route",
+            "details": "What would you like?",
+            "detailsPlaceholder": "e.g. a slab with small crimps",
+            "submit": "Send wish",
+            "submitted": "Thanks! The setters have your wish."
         },
         "board": {
             "recentlyDone": "last 30",
@@ -1411,6 +1422,7 @@
             "topics": {
                 "new_routes": "New routes on walls I follow",
                 "defect_fixed": "Defects I reported are fixed",
+                "wish_done": "My route wishes are set",
                 "competition_results": "Competition results",
                 "tasks": "Tasks and reported defects",
                 "reports": "Content reports (DSA)"

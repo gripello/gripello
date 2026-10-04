@@ -11,7 +11,7 @@ import (
 func newTaskRecord() *core.Record {
 	collection := core.NewBaseCollection("tasks")
 	collection.Fields.Add(&core.NumberField{Name: "priority"})
-	for _, name := range []string{"kind", "title", "category", "status", "route", "assignee", "due_date", "done_by", "description", "photo"} {
+	for _, name := range []string{"kind", "title", "category", "status", "route", "assignee", "due_date", "done_by", "description", "photo", "location", "route_type", "grade"} {
 		collection.Fields.Add(&core.TextField{Name: name})
 	}
 	collection.Fields.Add(&core.DateField{Name: "done_at"})
@@ -35,7 +35,7 @@ func TestDefaultTaskPriority(t *testing.T) {
 	}
 }
 
-func TestRestrictToDefectReport(t *testing.T) {
+func TestRestrictToClimberReport(t *testing.T) {
 	task := newTaskRecord()
 	task.Set("kind", "reset")
 	task.Set("title", "Strip wall")
@@ -44,7 +44,7 @@ func TestRestrictToDefectReport(t *testing.T) {
 	task.Set("priority", 1)
 	task.Set("category", "broken_hold")
 
-	restrictToDefectReport(task)
+	restrictToClimberReport(task)
 
 	if task.GetString("kind") != "defect" || task.GetInt("priority") != urgentTaskPriority {
 		t.Errorf("climber report not forced to defect: %v", task.PublicExport())
@@ -53,6 +53,40 @@ func TestRestrictToDefectReport(t *testing.T) {
 		if task.GetString(field) != "" {
 			t.Errorf("climber set staff field %q", field)
 		}
+	}
+}
+
+func TestRestrictToClimberReportKeepsWishes(t *testing.T) {
+	task := newTaskRecord()
+	task.Set("kind", "wish")
+	task.Set("assignee", "someone")
+
+	restrictToClimberReport(task)
+
+	if task.GetString("kind") != "wish" || task.GetString("assignee") != "" || task.GetInt("priority") != normalTaskPriority {
+		t.Errorf("climber wish not kept as a plain wish: %v", task.PublicExport())
+	}
+}
+
+func TestValidateWish(t *testing.T) {
+	wish := newTaskRecord()
+	wish.Set("kind", "wish")
+	wish.Set("route_type", "Boulder")
+	if validateTask(wish) == nil {
+		t.Error("wish without location accepted")
+	}
+	wish.Set("location", "l1")
+	if validateTask(wish) != nil {
+		t.Error("complete wish rejected")
+	}
+	wish.Set("route", "r1")
+	if validateTask(wish) == nil {
+		t.Error("wish pointing to a route accepted")
+	}
+	wish.Set("route", "")
+	wish.Set("route_type", "")
+	if validateTask(wish) == nil {
+		t.Error("wish without route type accepted")
 	}
 }
 

@@ -454,6 +454,8 @@
                 "task_assigned": "Tarea asignada a ti: «{title}»",
                 "task_defect_fixed": "El problema que avisaste en «{route}» se ha solucionado. ¡Gracias!",
                 "task_defect_filed_gym": "Nuevo desperfecto en «{route}» en {gym}",
+                "task_wish_filed": "Nuevo deseo de vía para {location}",
+                "task_wish_done": "Tu deseo de vía para {location} ya está equipado. ¡Disfrútalo!",
                 "wall_new_routes": "Nuevas vías en {wall}: {count}",
                 "competition_published": "Los resultados de «{competition}» ya están publicados"
             }
@@ -962,6 +964,7 @@
         "loadError": "No se pudieron cargar las tareas.",
         "kinds": {
             "defect": "Desperfecto",
+            "wish": "Deseo de vía",
             "reset": "Reequipamiento",
             "maintenance": "Mantenimiento",
             "other": "Otro"
@@ -1015,6 +1018,14 @@
             "submitted": "¡Gracias! Hemos avisado a los equipadores.",
             "bannerTitle": "{n} problema conocido | {n} problemas conocidos",
             "marker": "Problema conocido"
+        },
+        "wish": {
+            "action": "Pedir una vía",
+            "dialogTitle": "Pedir una vía",
+            "details": "¿Qué te gustaría?",
+            "detailsPlaceholder": "p. ej. una placa con regletas pequeñas",
+            "submit": "Enviar deseo",
+            "submitted": "¡Gracias! Los equipadores tienen tu deseo."
         },
         "board": {
             "recentlyDone": "últimas 30",
@@ -1411,6 +1422,7 @@
             "topics": {
                 "new_routes": "Nuevas vías en paredes que sigo",
                 "defect_fixed": "Desperfectos que he reportado, reparados",
+                "wish_done": "Mis deseos de vías están equipados",
                 "competition_results": "Resultados de competiciones",
                 "tasks": "Tareas y desperfectos reportados",
                 "reports": "Denuncias de contenido (DSA)"

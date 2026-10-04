@@ -28,7 +28,7 @@ func registerTasks(app core.App) {
 			return err
 		}
 		if !isTaskManager(e) {
-			restrictToDefectReport(e.Record)
+			restrictToClimberReport(e.Record)
 		}
 		e.Record.Set("reporter", actorID)
 		e.Record.Set("status", "open")
@@ -59,6 +59,15 @@ func registerTasks(app core.App) {
 			if err := sendUrgentDefectAlert(e.App, e.Record, actorID); err != nil {
 				e.App.Logger().Error("tasks: urgent defect mail failed", "task", e.Record.Id, "error", err)
 			}
+		}
+		if e.Record.GetString("kind") == "wish" {
+			pushNotification(e.App, notification{
+				Users:  withoutUser(usersByPermission(e.App, e.Record.GetString("gym"), "manage_tasks"), actorID),
+				Gym:    e.Record.GetString("gym"),
+				Type:   "task_wish_filed",
+				Params: wishParams(e.App, e.Record),
+				URL:    gymPath(e.App, e.Record.GetString("gym"), "/manage/tasks"),
+			})
 		}
 		notifyTaskAssignee(e.App, e.Record, actorID)
 		return nil
@@ -92,17 +101,8 @@ func registerTasks(app core.App) {
 			notifyTaskAssignee(e.App, e.Record, actorID)
 		}
 		reporterID := e.Record.GetString("reporter")
-		if e.Record.GetString("kind") == "defect" && e.Record.GetString("status") == "done" &&
-			previousStatus != "done" && reporterID != "" && reporterID != actorID {
-			if reporter, err := e.App.FindRecordById("users", reporterID); err == nil {
-				pushNotification(e.App, notification{
-					Users:  []*core.Record{reporter},
-					Gym:    e.Record.GetString("gym"),
-					Type:   "task_defect_fixed",
-					Params: map[string]any{"route": taskRouteName(e.App, e.Record)},
-					URL:    "/route?id=" + e.Record.GetString("route"),
-				})
-			}
+		if e.Record.GetString("status") == "done" && previousStatus != "done" && reporterID != "" && reporterID != actorID {
+			notifyReporterOfDoneTask(e.App, e.Record, reporterID)
 		}
 		return nil
 	})
@@ -147,8 +147,12 @@ func requestUserID(e *core.RecordRequestEvent) string {
 	return e.Auth.Id
 }
 
-func restrictToDefectReport(task *core.Record) {
-	task.Set("kind", "defect")
+var climberTaskKinds = []string{"defect", "wish"}
+
+func restrictToClimberReport(task *core.Record) {
+	if !slices.Contains(climberTaskKinds, task.GetString("kind")) {
+		task.Set("kind", "defect")
+	}
 	task.Set("title", "")
 	task.Set("assignee", "")
 	task.Set("due_date", "")
@@ -163,6 +167,15 @@ func defaultTaskPriority(kind, category string) int {
 }
 
 func validateTask(task *core.Record) error {
+	if task.GetString("kind") == "wish" {
+		if task.GetString("route") != "" {
+			return apis.NewBadRequestError("A wish cannot point to an existing route.", nil)
+		}
+		if task.GetString("location") == "" || task.GetString("route_type") == "" {
+			return apis.NewBadRequestError("A wish needs a location and a route type.", nil)
+		}
+		return nil
+	}
 	if task.GetString("kind") == "defect" {
 		if task.GetString("route") == "" || task.GetString("category") == "" {
 			return apis.NewBadRequestError("A defect needs a route and a category.", nil)
@@ -352,4 +365,37 @@ func urgentDefectMail(app core.App, task *core.Record) mailContent {
 
 func defectFiledParams(routeName, gymName string) map[string]any {
 	return map[string]any{"route": routeName, "gym": gymName}
+}
+
+func notifyReporterOfDoneTask(app core.App, task *core.Record, reporterID string) {
+	reporter, err := app.FindRecordById("users", reporterID)
+	if err != nil {
+		return
+	}
+	switch task.GetString("kind") {
+	case "defect":
+		pushNotification(app, notification{
+			Users:  []*core.Record{reporter},
+			Gym:    task.GetString("gym"),
+			Type:   "task_defect_fixed",
+			Params: map[string]any{"route": taskRouteName(app, task)},
+			URL:    "/route?id=" + task.GetString("route"),
+		})
+	case "wish":
+		pushNotification(app, notification{
+			Users:  []*core.Record{reporter},
+			Gym:    task.GetString("gym"),
+			Type:   "task_wish_done",
+			Params: wishParams(app, task),
+			URL:    gymPath(app, task.GetString("gym"), "/routes"),
+		})
+	}
+}
+
+func wishParams(app core.App, task *core.Record) map[string]any {
+	location := ""
+	if record, err := app.FindRecordById("locations", task.GetString("location")); err == nil {
+		location = record.GetString("name")
+	}
+	return map[string]any{"location": location}
 }

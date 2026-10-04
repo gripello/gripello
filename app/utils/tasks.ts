@@ -6,7 +6,13 @@ import type {
     TaskStatus,
 } from '~/types/models'
 
-export const TASK_KINDS = ['defect', 'reset', 'maintenance', 'other'] as const
+export const TASK_KINDS = [
+    'defect',
+    'wish',
+    'reset',
+    'maintenance',
+    'other',
+] as const
 
 export const STAFF_TASK_KINDS = ['reset', 'maintenance', 'other'] as const
 
@@ -147,10 +153,15 @@ export function taskStatusColor(
 }
 
 export function taskTitle(
-    task: Pick<TaskRecord, 'kind' | 'title' | 'category'>,
+    task: Pick<TaskRecord, 'kind' | 'title' | 'category'> &
+        Partial<Pick<TaskRecord, 'route_type' | 'grade'>>,
     t: (key: string) => string,
 ): string {
     if (task.title) return task.title
+    if (task.kind === 'wish' && task.route_type)
+        return [t(`routes.types.${task.route_type.toLowerCase()}`), task.grade]
+            .filter(Boolean)
+            .join(' ')
     if (task.kind === 'defect' && task.category)
         return t(`tasks.categories.${task.category}`)
     return t(`tasks.kinds.${task.kind}`)

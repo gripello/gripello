@@ -454,6 +454,8 @@
                 "task_assigned": "Taak aan jou toegewezen: ‘{title}’",
                 "task_defect_fixed": "Het probleem dat je bij ‘{route}’ hebt gemeld, is verholpen — bedankt!",
                 "task_defect_filed_gym": "Nieuw defect gemeld bij ‘{route}’ in {gym}",
+                "task_wish_filed": "Nieuwe routewens voor {location}",
+                "task_wish_done": "Je routewens voor {location} is geschroefd — veel plezier!",
                 "wall_new_routes": "Nieuwe routes aan {wall}: {count}",
                 "competition_published": "De uitslag van ‘{competition}’ staat online"
             }
@@ -962,6 +964,7 @@
         "loadError": "Taken konden niet worden geladen.",
         "kinds": {
             "defect": "Defect",
+            "wish": "Routewens",
             "reset": "Ombouwen",
             "maintenance": "Onderhoud",
             "other": "Overig"
@@ -1015,6 +1018,14 @@
             "submitted": "Bedankt! De routebouwers zijn op de hoogte gebracht.",
             "bannerTitle": "{n} bekend probleem | {n} bekende problemen",
             "marker": "Bekend probleem"
+        },
+        "wish": {
+            "action": "Route wensen",
+            "dialogTitle": "Route wensen",
+            "details": "Wat zou je graag willen?",
+            "detailsPlaceholder": "bijv. een plaat met kleine richeltjes",
+            "submit": "Wens versturen",
+            "submitted": "Bedankt! De routebouwers hebben je wens."
         },
         "board": {
             "recentlyDone": "laatste 30",
@@ -1411,6 +1422,7 @@
             "topics": {
                 "new_routes": "Nieuwe routes op wanden die ik volg",
                 "defect_fixed": "Door mij gemelde problemen zijn verholpen",
+                "wish_done": "Mijn routewensen zijn geschroefd",
                 "competition_results": "Wedstrijduitslagen",
                 "tasks": "Taken en gemelde defecten",
                 "reports": "Inhoudsmeldingen (DSA)"

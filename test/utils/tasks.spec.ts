@@ -65,6 +65,18 @@ describe('taskTitle', () => {
             'tasks.kinds.maintenance',
         )
     })
+
+    it('names a wish by route type and grade', () => {
+        expect(
+            taskTitle(
+                { kind: 'wish', title: '', route_type: 'Boulder', grade: '6b' },
+                t,
+            ),
+        ).toBe('routes.types.boulder 6b')
+        expect(
+            taskTitle({ kind: 'wish', title: '', route_type: 'Route' }, t),
+        ).toBe('routes.types.route')
+    })
 })
 
 describe('task priority levels', () => {
