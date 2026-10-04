@@ -284,7 +284,6 @@ import { cacheKeys } from '~/utils/realtimeCache'
 definePageMeta({
     middleware: ['auth'],
     requiredPermission: 'manage_settings',
-    footer: false,
 })
 
 const { t } = useI18n()

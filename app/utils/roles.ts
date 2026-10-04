@@ -75,3 +75,33 @@ export function groupPermissions<T extends { name: string }>(
         { key: 'other', icon: 'i-lucide-ellipsis', permissions: others },
     ].filter((group) => group.permissions.length)
 }
+
+export function memberCountsByRole(
+    memberships: { role?: RecordId | null }[],
+): Record<RecordId, number> {
+    const counts: Record<RecordId, number> = {}
+    for (const { role } of memberships)
+        if (role) counts[role] = (counts[role] ?? 0) + 1
+    return counts
+}
+
+export const LOCKOUT_PERMISSIONS = ['manage_users', 'manage_settings']
+
+export function revokesOwnAccess(options: {
+    role: Pick<RoleRecord, 'id' | 'permissions'>
+    nextPermissions: RecordId[]
+    permissions: { id: RecordId; name: string }[]
+    ownRoleId: RecordId | null | undefined
+    platformAdmin: boolean
+}): boolean {
+    const { role, nextPermissions, permissions, ownRoleId, platformAdmin } =
+        options
+    if (platformAdmin || role.id !== ownRoleId) return false
+    const current = role.permissions ?? []
+    return permissions.some(
+        (permission) =>
+            LOCKOUT_PERMISSIONS.includes(permission.name) &&
+            current.includes(permission.id) &&
+            !nextPermissions.includes(permission.id),
+    )
+}

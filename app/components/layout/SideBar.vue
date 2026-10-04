@@ -24,7 +24,7 @@
                 orientation="vertical"
                 :collapsed="!open"
                 tooltip
-                popover
+                :popover="coarsePointer ? { mode: 'click' } : true"
                 highlight
                 :aria-label="$t('nav.mainNavigation')"
                 :ui="{ link: 'py-2', separator: 'my-2' }"
@@ -44,8 +44,15 @@
             </UNavigationMenu>
         </div>
 
-        <template v-if="loggedIn" #footer>
-            <UserIcon :collapsed="!open" />
+        <template #footer>
+            <div class="flex w-full min-w-0 flex-col gap-2">
+                <LayoutFootBar
+                    :settings="footerSettings"
+                    :gym-slug="footerGymSlug"
+                    :collapsed="!open"
+                />
+                <UserIcon v-if="loggedIn" :collapsed="!open" />
+            </div>
         </template>
     </USidebar>
 </template>
@@ -53,14 +60,20 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { sidebarItems, type SidebarItem } from '~/utils/navigation'
+import type { GymRecord, SettingsRecord } from '~/types/models'
 
-const props = defineProps<{ loggedIn: boolean }>()
+const props = defineProps<{
+    loggedIn: boolean
+    footerSettings?: Partial<SettingsRecord> | Partial<GymRecord>
+    footerGymSlug?: string
+}>()
 
 const { can } = usePermissions()
 const { t } = useI18n()
 const route = useRoute()
 
 const { open } = useSidebar()
+const coarsePointer = useCoarsePointer()
 const { slug } = useGym()
 
 const scroller = useTemplateRef<HTMLElement>('scroller')

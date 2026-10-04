@@ -1,16 +1,16 @@
 <template>
     <a href="#main-content" class="skip-link">{{ $t('nav.skipToContent') }}</a>
     <div class="app-frame">
-        <LayoutSideBar :loggedIn="isLoggedIn" />
+        <LayoutSideBar
+            :loggedIn="isLoggedIn"
+            :footer-settings="gymSlug && gym ? gym : settings"
+            :footer-gym-slug="gymSlug"
+        />
         <div class="page-body">
             <LayoutNavBar :loggedIn="isLoggedIn" />
             <main id="main-content" class="app-main" tabindex="-1">
                 <slot />
             </main>
-            <LayoutFootBar
-                :settings="gymSlug && gym ? gym : settings"
-                :gym-slug="gymSlug"
-            />
         </div>
     </div>
     <LayoutBottomNav />

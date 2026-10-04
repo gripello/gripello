@@ -1,422 +1,381 @@
 <template>
-    <div :class="{ 'max-lg:pb-24': hasChanges }">
-        <nav
-            class="settings-nav-mobile lg:hidden"
-            :aria-label="$t('settings.sections')"
+    <SettingsLayout
+        v-slot="{ activeSection }"
+        :sections="sections"
+        :has-changes="hasChanges"
+        :saving="saving"
+        test-id-prefix="settings"
+        @save="settingsForm?.submit()"
+        @cancel="resetForm"
+    >
+        <UForm
+            ref="settingsForm"
+            :state="copySettings"
+            :validate="validateSettings"
+            class="flex flex-col gap-6 empty:hidden"
+            @submit="saveSettings"
         >
-            <UNavigationMenu
-                :items="sectionNavItems"
-                highlight
-                class="w-max min-w-full"
-            />
-        </nav>
-
-        <div class="flex gap-8">
-            <aside class="hidden w-52 shrink-0 lg:block">
-                <nav
-                    class="settings-nav-desktop"
-                    :aria-label="$t('settings.sections')"
-                >
-                    <UNavigationMenu
-                        :items="sectionNavItems"
-                        orientation="vertical"
-                        highlight
-                    />
-                </nav>
-            </aside>
-
-            <div class="flex min-w-0 flex-1 flex-col gap-6">
-                <LayoutSaveBar
-                    :show="hasChanges"
-                    :loading="saving"
-                    test-id-prefix="settings"
-                    cancelable
-                    @save="settingsForm?.submit()"
-                    @cancel="resetForm"
-                />
-
-                <UForm
-                    ref="settingsForm"
-                    :state="copySettings"
-                    :validate="validateSettings"
-                    class="flex flex-col gap-6 empty:hidden"
-                    @submit="saveSettings"
-                >
-                    <UPageCard
-                        v-if="activeSection === 'branding'"
-                        id="settings-branding"
-                        :title="$t('settings.branding')"
-                        :description="$t('settings.brandingHint')"
-                        variant="subtle"
+            <UPageCard
+                v-if="activeSection === 'branding'"
+                id="settings-branding"
+                :title="$t('settings.branding')"
+                :description="$t('settings.brandingHint')"
+                variant="subtle"
+            >
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    <article
+                        v-for="asset in assetFields"
+                        :key="asset.key"
+                        class="asset-card"
+                        :class="{ 'asset-card--dirty': asset.isDirty }"
                     >
-                        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                            <article
-                                v-for="asset in assetFields"
-                                :key="asset.key"
-                                class="asset-card"
-                                :class="{ 'asset-card--dirty': asset.isDirty }"
+                        <button
+                            type="button"
+                            class="asset-card__preview"
+                            :class="{
+                                'asset-card__preview--empty':
+                                    !asset.preview.value,
+                            }"
+                            :data-testid="`settings-asset-${asset.key}`"
+                            :aria-label="`${asset.label}: ${asset.preview.value ? $t('settings.replace') : $t('settings.clickToUpload')}`"
+                            @click="asset.triggerInput()"
+                        >
+                            <img
+                                v-if="asset.preview.value"
+                                :src="asset.preview.value"
+                                :alt="asset.label"
+                                class="asset-card__image"
+                                :class="{
+                                    'asset-card__image--mono':
+                                        asset.key === 'logo',
+                                }"
+                            />
+                            <span
+                                v-else
+                                class="flex flex-col items-center gap-2 text-sm text-muted"
                             >
-                                <button
-                                    type="button"
-                                    class="asset-card__preview"
-                                    :class="{
-                                        'asset-card__preview--empty':
-                                            !asset.preview.value,
-                                    }"
-                                    :data-testid="`settings-asset-${asset.key}`"
-                                    :aria-label="`${asset.label}: ${asset.preview.value ? $t('settings.replace') : $t('settings.clickToUpload')}`"
+                                <UIcon
+                                    name="i-lucide-image-plus"
+                                    class="size-8"
+                                />
+                                {{ $t('settings.clickToUpload') }}
+                            </span>
+                        </button>
+
+                        <div class="flex flex-1 flex-col gap-1 p-4">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="font-semibold text-highlighted"
+                                    :data-testid="`settings-asset-label-${asset.key}`"
+                                    >{{ asset.label }}</span
+                                >
+                                <UBadge
+                                    v-if="asset.isDirty"
+                                    color="warning"
+                                    size="sm"
+                                    variant="soft"
+                                >
+                                    {{ $t('settings.changed') }}
+                                </UBadge>
+                            </div>
+                            <p class="text-sm text-muted">
+                                {{ asset.hint }}
+                            </p>
+
+                            <div
+                                class="mt-auto flex flex-wrap items-center gap-2 pt-3"
+                            >
+                                <div
+                                    v-if="asset.preview.value"
+                                    class="flex flex-wrap gap-2"
+                                    :data-testid="`settings-asset-actions-${asset.key}`"
+                                >
+                                    <UButton
+                                        color="neutral"
+                                        variant="outline"
+                                        size="sm"
+                                        icon="i-lucide-image-up"
+                                        :data-testid="`settings-asset-replace-${asset.key}`"
+                                        @click="asset.triggerInput()"
+                                    >
+                                        {{ $t('settings.replace') }}
+                                    </UButton>
+                                    <UButton
+                                        v-if="!asset.isDirty"
+                                        color="error"
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="i-lucide-trash-2"
+                                        :data-testid="`settings-asset-delete-${asset.key}`"
+                                        @click="asset.onDelete()"
+                                    >
+                                        {{ $t('settings.removeImage') }}
+                                    </UButton>
+                                </div>
+                                <UButton
+                                    v-else
+                                    color="neutral"
+                                    variant="outline"
+                                    size="sm"
+                                    icon="i-lucide-upload"
                                     @click="asset.triggerInput()"
                                 >
-                                    <img
-                                        v-if="asset.preview.value"
-                                        :src="asset.preview.value"
-                                        :alt="asset.label"
-                                        class="asset-card__image"
-                                        :class="{
-                                            'asset-card__image--mono':
-                                                asset.key === 'logo',
-                                        }"
-                                    />
-                                    <span
-                                        v-else
-                                        class="flex flex-col items-center gap-2 text-sm text-muted"
-                                    >
-                                        <UIcon
-                                            name="i-lucide-image-plus"
-                                            class="size-8"
-                                        />
-                                        {{ $t('settings.clickToUpload') }}
-                                    </span>
-                                </button>
-
-                                <div class="flex flex-1 flex-col gap-1 p-4">
-                                    <div class="flex items-center gap-2">
-                                        <span
-                                            class="font-semibold text-highlighted"
-                                            :data-testid="`settings-asset-label-${asset.key}`"
-                                            >{{ asset.label }}</span
-                                        >
-                                        <UBadge
-                                            v-if="asset.isDirty"
-                                            color="warning"
-                                            size="sm"
-                                            variant="soft"
-                                        >
-                                            {{ $t('settings.changed') }}
-                                        </UBadge>
-                                    </div>
-                                    <p class="text-sm text-muted">
-                                        {{ asset.hint }}
-                                    </p>
-
-                                    <div
-                                        class="mt-auto flex flex-wrap items-center gap-2 pt-3"
-                                    >
-                                        <div
-                                            v-if="asset.preview.value"
-                                            class="flex flex-wrap gap-2"
-                                            :data-testid="`settings-asset-actions-${asset.key}`"
-                                        >
-                                            <UButton
-                                                color="neutral"
-                                                variant="outline"
-                                                size="sm"
-                                                icon="i-lucide-image-up"
-                                                :data-testid="`settings-asset-replace-${asset.key}`"
-                                                @click="asset.triggerInput()"
-                                            >
-                                                {{ $t('settings.replace') }}
-                                            </UButton>
-                                            <UButton
-                                                v-if="!asset.isDirty"
-                                                color="error"
-                                                variant="ghost"
-                                                size="sm"
-                                                icon="i-lucide-trash-2"
-                                                :data-testid="`settings-asset-delete-${asset.key}`"
-                                                @click="asset.onDelete()"
-                                            >
-                                                {{ $t('settings.removeImage') }}
-                                            </UButton>
-                                        </div>
-                                        <UButton
-                                            v-else
-                                            color="neutral"
-                                            variant="outline"
-                                            size="sm"
-                                            icon="i-lucide-upload"
-                                            @click="asset.triggerInput()"
-                                        >
-                                            {{ $t('settings.clickToUpload') }}
-                                        </UButton>
-                                        <UButton
-                                            v-if="asset.isDirty"
-                                            color="neutral"
-                                            variant="ghost"
-                                            size="sm"
-                                            icon="i-lucide-undo-2"
-                                            @click="asset.onRevert()"
-                                        >
-                                            {{ $t('settings.revertChange') }}
-                                        </UButton>
-                                    </div>
-                                </div>
-
-                                <input
-                                    :ref="
-                                        (el) => {
-                                            asset.inputRef.value =
-                                                el as HTMLInputElement | null
-                                        }
-                                    "
-                                    type="file"
-                                    :accept="asset.accept"
-                                    class="hidden"
-                                    @change="
-                                        onFileChange($event, asset.onSelect)
-                                    "
-                                />
-                            </article>
-                        </div>
-                    </UPageCard>
-
-                    <UPageCard
-                        v-if="activeSection === 'organization'"
-                        id="settings-organization"
-                        :ui="formCardUi"
-                        :title="$t('settings.organization')"
-                        :description="$t('settings.organizationHint')"
-                        variant="subtle"
-                    >
-                        <UFormField
-                            :label="$t('settings.organizationName')"
-                            :ui="fieldUi"
-                        >
-                            <UInput
-                                v-model="copySettings.name"
-                                icon="i-lucide-building-2"
-                                :placeholder="
-                                    $t('settings.organizationNamePlaceholder')
-                                "
-                                :maxlength="50"
-                                class="w-full"
-                                data-testid="settings-org-name"
-                            />
-                        </UFormField>
-                        <UFormField
-                            :label="$t('settings.organizationUnit')"
-                            :ui="fieldUi"
-                        >
-                            <UInput
-                                v-model="copySettings.unit_name"
-                                icon="i-lucide-building-2"
-                                :placeholder="
-                                    $t('settings.organizationUnitPlaceholder')
-                                "
-                                :maxlength="50"
-                                class="w-full"
-                                data-testid="settings-org-unit"
-                            />
-                        </UFormField>
-                        <template v-if="editSlug">
-                            <UFormField
-                                :label="$t('platform.gyms.slug')"
-                                name="slug"
-                                :ui="fieldUi"
-                            >
-                                <UInput
-                                    v-model="copySettings.slug"
-                                    icon="i-lucide-link"
-                                    class="w-full"
-                                    :ui="{ base: 'font-mono' }"
-                                    data-testid="platform-gym-slug"
-                                />
-                            </UFormField>
-                            <UFormField
-                                v-if="copySettings.previous_slugs.length"
-                                :label="$t('platform.gyms.previousSlugs')"
-                                :ui="fieldUi"
-                            >
-                                <div class="flex flex-wrap gap-2">
-                                    <UBadge
-                                        v-for="previous in copySettings.previous_slugs"
-                                        :key="previous"
-                                        color="neutral"
-                                        variant="soft"
-                                        size="lg"
-                                        class="font-mono"
-                                        :data-testid="`platform-gym-previous-${previous}`"
-                                    >
-                                        /{{ previous }}
-                                        <UButton
-                                            icon="i-lucide-x"
-                                            color="neutral"
-                                            variant="link"
-                                            size="xs"
-                                            :aria-label="`${$t('actions.delete')} ${previous}`"
-                                            :data-testid="`platform-gym-release-${previous}`"
-                                            @click="releaseSlug(previous)"
-                                        />
-                                    </UBadge>
-                                </div>
-                            </UFormField>
-                        </template>
-                        <UFormField
-                            :label="$t('settings.contactEmail')"
-                            :description="$t('settings.contactEmailHint')"
-                            name="contact_email"
-                            :ui="fieldUi"
-                        >
-                            <UInput
-                                v-model="copySettings.contact_email"
-                                type="email"
-                                icon="i-lucide-mail"
-                                class="w-full"
-                                data-testid="settings-contact-email"
-                            />
-                        </UFormField>
-                        <UFormField
-                            :label="$t('settings.mailLanguage')"
-                            name="language"
-                            :ui="fieldUi"
-                        >
-                            <USelect
-                                v-model="copySettings.language"
-                                :items="languageItems"
-                                icon="i-lucide-languages"
-                                class="w-full"
-                                data-testid="settings-mail-language"
-                            />
-                        </UFormField>
-                    </UPageCard>
-
-                    <UPageCard
-                        v-if="activeSection === 'grading'"
-                        id="settings-grading"
-                        :title="$t('settings.grading')"
-                        :description="$t('settings.gradingHint')"
-                        variant="subtle"
-                        :ui="{ ...formCardUi, footer: 'pt-2 lg:col-span-2' }"
-                    >
-                        <template #footer>
-                            <GradeConversionDialog />
-                        </template>
-                        <UFormField
-                            :label="$t('settings.routeGradeSystem')"
-                            :ui="fieldUi"
-                        >
-                            <USelect
-                                v-model="copySettings.route_grade_system"
-                                :items="gradeSystemItems(ROUTE_GRADE_SYSTEMS)"
-                                icon="i-lucide-trending-up"
-                                class="w-full"
-                                data-testid="settings-route-grade-system"
-                            />
-                        </UFormField>
-                        <UFormField
-                            :label="$t('settings.boulderGradeSystem')"
-                            :ui="fieldUi"
-                        >
-                            <USelect
-                                v-model="copySettings.boulder_grade_system"
-                                :items="gradeSystemItems(BOULDER_GRADE_SYSTEMS)"
-                                icon="i-lucide-box"
-                                class="w-full"
-                                data-testid="settings-boulder-grade-system"
-                            />
-                        </UFormField>
-                        <UFormField
-                            :label="$t('settings.boulderBands')"
-                            :description="$t('settings.boulderBandsHint')"
-                            :ui="fieldUi"
-                            class="lg:col-span-2"
-                        >
-                            <AdminBoulderBandEditor
-                                v-model="copySettings.boulder_bands"
-                            />
-                            <div class="mt-3 flex flex-wrap gap-2">
+                                    {{ $t('settings.clickToUpload') }}
+                                </UButton>
                                 <UButton
+                                    v-if="asset.isDirty"
                                     color="neutral"
                                     variant="ghost"
                                     size="sm"
-                                    icon="i-lucide-rotate-ccw"
-                                    data-testid="settings-boulder-band-reset"
-                                    @click="
-                                        copySettings.boulder_bands =
-                                            defaultBandSettings()
-                                    "
+                                    icon="i-lucide-undo-2"
+                                    @click="asset.onRevert()"
                                 >
-                                    {{ $t('settings.resetBands') }}
+                                    {{ $t('settings.revertChange') }}
                                 </UButton>
                             </div>
-                        </UFormField>
-                    </UPageCard>
+                        </div>
 
-                    <UPageCard
-                        v-if="activeSection === 'urls'"
-                        id="settings-urls"
-                        :ui="formCardUi"
-                        :title="$t('settings.publicUrls')"
-                        :description="$t('settings.publicUrlsHint')"
-                        variant="subtle"
-                    >
-                        <UFormField
-                            :label="$t('settings.imprintUrl')"
-                            :description="$t('settings.legalUrlHint')"
-                            :ui="fieldUi"
-                        >
-                            <UInput
-                                v-model="copySettings.imprint_url"
-                                icon="i-lucide-file-text"
-                                placeholder="https://example.com/imprint"
-                                class="w-full"
-                                data-testid="settings-imprint-url"
-                            />
-                        </UFormField>
-                        <UFormField
-                            :label="$t('settings.privacyUrl')"
-                            :description="$t('settings.legalUrlHint')"
-                            :ui="fieldUi"
-                        >
-                            <UInput
-                                v-model="copySettings.privacy_url"
-                                icon="i-lucide-shield"
-                                placeholder="https://example.com/privacy"
-                                class="w-full"
-                                data-testid="settings-privacy-url"
-                            />
-                        </UFormField>
-                    </UPageCard>
+                        <input
+                            :ref="
+                                (el) => {
+                                    asset.inputRef.value =
+                                        el as HTMLInputElement | null
+                                }
+                            "
+                            type="file"
+                            :accept="asset.accept"
+                            class="hidden"
+                            @change="onFileChange($event, asset.onSelect)"
+                        />
+                    </article>
+                </div>
+            </UPageCard>
 
-                    <UPageCard
-                        v-if="activeSection === 'legal'"
-                        id="settings-legal"
-                        :ui="formCardUi"
-                        :title="$t('settings.legalTitle')"
-                        :description="$t('settings.legalIntro')"
-                        variant="subtle"
-                    >
-                        <SettingsLegalFields :legal="copySettings" />
-                    </UPageCard>
-                </UForm>
-
-                <template v-for="section in extraSections" :key="section.id">
-                    <slot
-                        v-if="activeSection === section.id"
-                        :name="section.id"
+            <UPageCard
+                v-if="activeSection === 'organization'"
+                id="settings-organization"
+                :ui="formCardUi"
+                :title="$t('settings.organization')"
+                :description="$t('settings.organizationHint')"
+                variant="subtle"
+            >
+                <UFormField
+                    :label="$t('settings.organizationName')"
+                    :ui="fieldUi"
+                >
+                    <UInput
+                        v-model="copySettings.name"
+                        icon="i-lucide-building-2"
+                        :placeholder="
+                            $t('settings.organizationNamePlaceholder')
+                        "
+                        :maxlength="50"
+                        class="w-full"
+                        data-testid="settings-org-name"
                     />
+                </UFormField>
+                <UFormField
+                    :label="$t('settings.organizationUnit')"
+                    :ui="fieldUi"
+                >
+                    <UInput
+                        v-model="copySettings.unit_name"
+                        icon="i-lucide-building-2"
+                        :placeholder="
+                            $t('settings.organizationUnitPlaceholder')
+                        "
+                        :maxlength="50"
+                        class="w-full"
+                        data-testid="settings-org-unit"
+                    />
+                </UFormField>
+                <template v-if="editSlug">
+                    <UFormField
+                        :label="$t('platform.gyms.slug')"
+                        name="slug"
+                        :ui="fieldUi"
+                    >
+                        <UInput
+                            v-model="copySettings.slug"
+                            icon="i-lucide-link"
+                            class="w-full"
+                            :ui="{ base: 'font-mono' }"
+                            data-testid="platform-gym-slug"
+                        />
+                    </UFormField>
+                    <UFormField
+                        v-if="copySettings.previous_slugs.length"
+                        :label="$t('platform.gyms.previousSlugs')"
+                        :ui="fieldUi"
+                    >
+                        <div class="flex flex-wrap gap-2">
+                            <UBadge
+                                v-for="previous in copySettings.previous_slugs"
+                                :key="previous"
+                                color="neutral"
+                                variant="soft"
+                                size="lg"
+                                class="font-mono"
+                                :data-testid="`platform-gym-previous-${previous}`"
+                            >
+                                /{{ previous }}
+                                <UButton
+                                    icon="i-lucide-x"
+                                    color="neutral"
+                                    variant="link"
+                                    size="xs"
+                                    :aria-label="`${$t('actions.delete')} ${previous}`"
+                                    :data-testid="`platform-gym-release-${previous}`"
+                                    @click="releaseSlug(previous)"
+                                />
+                            </UBadge>
+                        </div>
+                    </UFormField>
                 </template>
-            </div>
-        </div>
+                <UFormField
+                    :label="$t('settings.contactEmail')"
+                    :help="$t('settings.contactEmailHint')"
+                    name="contact_email"
+                    :ui="fieldUi"
+                >
+                    <UInput
+                        v-model="copySettings.contact_email"
+                        type="email"
+                        icon="i-lucide-mail"
+                        class="w-full"
+                        data-testid="settings-contact-email"
+                    />
+                </UFormField>
+                <UFormField
+                    :label="$t('settings.defaultLanguage')"
+                    :help="$t('settings.defaultLanguageHelp')"
+                    name="language"
+                    :ui="fieldUi"
+                >
+                    <USelect
+                        v-model="copySettings.language"
+                        :items="languageItems"
+                        icon="i-lucide-languages"
+                        class="w-full"
+                        data-testid="settings-mail-language"
+                    />
+                </UFormField>
+            </UPageCard>
 
-        <ConfirmDialog
-            v-model="discardDialogOpen"
-            :title="$t('account.unsavedChanges')"
-            :message="$t('mapEditor.discard')"
-            :confirm-text="$t('mapPlacement.discard')"
-            @confirm="settleDiscard(true)"
-        />
-    </div>
+            <UPageCard
+                v-if="activeSection === 'grading'"
+                id="settings-grading"
+                :title="$t('settings.grading')"
+                :description="$t('settings.gradingHint')"
+                variant="subtle"
+                :ui="{ ...formCardUi, footer: 'pt-2 lg:col-span-2' }"
+            >
+                <template #footer>
+                    <GradeConversionDialog />
+                </template>
+                <UFormField
+                    :label="$t('settings.routeGradeSystem')"
+                    :ui="fieldUi"
+                >
+                    <USelect
+                        v-model="copySettings.route_grade_system"
+                        :items="gradeSystemItems(ROUTE_GRADE_SYSTEMS)"
+                        icon="i-lucide-trending-up"
+                        class="w-full"
+                        data-testid="settings-route-grade-system"
+                    />
+                </UFormField>
+                <UFormField
+                    :label="$t('settings.boulderGradeSystem')"
+                    :ui="fieldUi"
+                >
+                    <USelect
+                        v-model="copySettings.boulder_grade_system"
+                        :items="gradeSystemItems(BOULDER_GRADE_SYSTEMS)"
+                        icon="i-lucide-box"
+                        class="w-full"
+                        data-testid="settings-boulder-grade-system"
+                    />
+                </UFormField>
+                <UFormField
+                    :label="$t('settings.boulderBands')"
+                    :help="$t('settings.boulderBandsHint')"
+                    :ui="fieldUi"
+                    class="lg:col-span-2"
+                >
+                    <AdminBoulderBandEditor
+                        v-model="copySettings.boulder_bands"
+                    />
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            size="sm"
+                            icon="i-lucide-rotate-ccw"
+                            data-testid="settings-boulder-band-reset"
+                            @click="
+                                copySettings.boulder_bands =
+                                    defaultBandSettings()
+                            "
+                        >
+                            {{ $t('settings.resetBands') }}
+                        </UButton>
+                    </div>
+                </UFormField>
+            </UPageCard>
+
+            <UPageCard
+                v-if="activeSection === 'urls'"
+                id="settings-urls"
+                :ui="formCardUi"
+                :title="$t('settings.publicUrls')"
+                :description="$t('settings.publicUrlsHint')"
+                variant="subtle"
+            >
+                <UFormField
+                    :label="$t('settings.imprintUrl')"
+                    :help="$t('settings.legalUrlHint')"
+                    :ui="fieldUi"
+                >
+                    <UInput
+                        v-model="copySettings.imprint_url"
+                        icon="i-lucide-file-text"
+                        placeholder="https://example.com/imprint"
+                        class="w-full"
+                        data-testid="settings-imprint-url"
+                    />
+                </UFormField>
+                <UFormField
+                    :label="$t('settings.privacyUrl')"
+                    :help="$t('settings.legalUrlHint')"
+                    :ui="fieldUi"
+                >
+                    <UInput
+                        v-model="copySettings.privacy_url"
+                        icon="i-lucide-shield"
+                        placeholder="https://example.com/privacy"
+                        class="w-full"
+                        data-testid="settings-privacy-url"
+                    />
+                </UFormField>
+            </UPageCard>
+
+            <UPageCard
+                v-if="activeSection === 'legal'"
+                id="settings-legal"
+                :ui="formCardUi"
+                :title="$t('settings.legalTitle')"
+                :description="$t('settings.legalIntro')"
+                variant="subtle"
+            >
+                <SettingsLegalFields :legal="copySettings" />
+            </UPageCard>
+        </UForm>
+
+        <template v-for="section in extraSections" :key="section.id">
+            <slot v-if="activeSection === section.id" :name="section.id" />
+        </template>
+    </SettingsLayout>
 </template>
 
 <script setup lang="ts">
@@ -424,6 +383,7 @@ import type { Form } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { isValidGymSlug } from '#shared/utils/gymSlug'
 import { required, validEmail, validateRules } from '~/utils/validation'
+import { SETTINGS_CARD_UI, SETTINGS_FIELD_UI } from '~/utils/settingsUi'
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '~/utils/locales'
 import {
     DEFAULT_GYM_BANDS,
@@ -677,14 +637,8 @@ const assetFields = computed(() => [
     },
 ])
 
-const fieldUi = {
-    container: 'w-full',
-}
-
-const formCardUi = {
-    container: 'lg:grid-cols-2 gap-y-5',
-    wrapper: 'lg:col-span-2',
-}
+const fieldUi = SETTINGS_FIELD_UI
+const formCardUi = SETTINGS_CARD_UI
 
 const formSections = computed(() => [
     {
@@ -726,23 +680,6 @@ const sections = computed(() =>
         },
         [...formSections.value],
     ),
-)
-
-const route = useRoute()
-const activeSection = computed(() => {
-    const requested = String(route.query.section ?? '')
-    return sections.value.some((section) => section.id === requested)
-        ? requested
-        : 'branding'
-})
-
-const sectionNavItems = computed(() =>
-    sections.value.map((section) => ({
-        label: section.label,
-        icon: section.icon,
-        to: { query: { section: section.id } },
-        active: activeSection.value === section.id,
-    })),
 )
 
 function onLogoSelected(file: File | null) {
@@ -850,31 +787,10 @@ async function saveSettings() {
         },
     )
 }
-
-const { discardDialogOpen, confirmDiscard, settleDiscard } = useDiscardConfirm(
-    () => hasChanges.value,
-)
-onBeforeRouteLeave(() => confirmDiscard())
 </script>
 
 <style scoped>
 @reference "~/assets/css/main.css";
-
-.settings-nav-mobile {
-    position: sticky;
-    top: calc(var(--app-top) + var(--app-top-inset, 0px));
-    z-index: 10;
-    margin: 0 -16px 16px;
-    padding: 0 16px;
-    overflow-x: auto;
-    background: var(--app-bg);
-    scrollbar-width: none;
-}
-
-.settings-nav-desktop {
-    position: sticky;
-    top: calc(var(--app-top) + var(--app-top-inset, 0px) + 16px);
-}
 
 .asset-card {
     display: flex;

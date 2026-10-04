@@ -157,8 +157,14 @@ test('the platform overview counts gyms and lists platform admins', async ({
 }) => {
     await gotoSettled(page, '/platform')
     await expect(
-        page.getByTestId('platform-stat-gyms').getByTestId('stat-tile-value'),
+        page.getByTestId('platform-stat-gyms').getByTestId('stats-card-value'),
     ).toHaveText(/^[1-9]\d*$/)
+    await expect(
+        page
+            .locator('[data-testid="gym-switcher"]:visible')
+            .getByTestId('gym-switcher-platform'),
+    ).toBeVisible()
+    await expect(page.getByTestId('gym-switcher-name')).toHaveCount(0)
     const admins = await root.collection('users').getFullList({
         filter: 'platform_admin = true',
         requestKey: null,

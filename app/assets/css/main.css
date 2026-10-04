@@ -636,3 +636,13 @@
         }
     }
 }
+
+@layer components {
+    .logo-mono {
+        filter: brightness(0);
+    }
+
+    .dark .logo-mono {
+        filter: brightness(0) invert(1);
+    }
+}

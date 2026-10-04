@@ -111,7 +111,7 @@
             </UButton>
             <div class="flex-1" />
             <UButton
-                :disabled="!valid || !hasChanges"
+                :disabled="!valid || (isEdit && !hasChanges)"
                 :loading="saving"
                 color="primary"
                 icon="i-lucide-check"
@@ -153,7 +153,7 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-    saved: [action: 'updated' | 'created']
+    saved: [action: 'updated' | 'created', roleId: string]
     close: []
 }>()
 
@@ -248,18 +248,22 @@ async function save() {
 
     saving.value = true
     try {
-        if (isEdit.value) {
-            await pb.collection('roles').update(props.role!.id!, payload)
-        } else {
-            await pb
-                .collection('roles')
-                .create({ ...payload, gym: gymId.value })
-        }
-        emit('saved', isEdit.value ? 'updated' : 'created')
+        const saved = isEdit.value
+            ? await pb.collection('roles').update(props.role!.id!, payload)
+            : await pb.collection('roles').create({
+                  ...payload,
+                  gym: gymId.value,
+                  permissions: props.role?.permissions ?? [],
+              })
+        emit('saved', isEdit.value ? 'updated' : 'created', saved.id)
         close()
     } catch (err) {
         if ((err as ClientResponseError)?.response?.data?.name) {
             nameError.value = t('permissions.nameTaken')
+            return
+        }
+        if ((err as ClientResponseError)?.status === 403) {
+            notifyError(t('permissions.cannotGrant'))
             return
         }
         console.error('Failed to save role:', err)

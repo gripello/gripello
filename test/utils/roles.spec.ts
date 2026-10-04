@@ -5,6 +5,8 @@ import {
     reassignTargets,
     defaultReassignTarget,
     groupPermissions,
+    memberCountsByRole,
+    revokesOwnAccess,
 } from '~/utils/roles'
 import type { RoleRecord } from '~/types/models'
 
@@ -95,5 +97,93 @@ describe('groupPermissions', () => {
                 permissions: [permission('brand_new')],
             },
         ])
+    })
+})
+
+describe('memberCountsByRole', () => {
+    it('counts memberships per role and skips empty roles', () => {
+        expect(
+            memberCountsByRole([
+                { role: 'a' },
+                { role: 'b' },
+                { role: 'a' },
+                { role: '' },
+                { role: null },
+            ]),
+        ).toEqual({ a: 2, b: 1 })
+    })
+})
+
+describe('revokesOwnAccess', () => {
+    const permissions = [
+        { id: 'p_users', name: 'manage_users' },
+        { id: 'p_settings', name: 'manage_settings' },
+        { id: 'p_routes', name: 'manage_routes' },
+    ]
+    const own = {
+        id: 'r_own',
+        permissions: ['p_users', 'p_settings', 'p_routes'],
+    }
+    const base = {
+        role: own,
+        permissions,
+        ownRoleId: 'r_own',
+        platformAdmin: false,
+    }
+
+    it('flags removing manage_users or manage_settings from the own role', () => {
+        expect(
+            revokesOwnAccess({
+                ...base,
+                nextPermissions: ['p_settings', 'p_routes'],
+            }),
+        ).toBe(true)
+        expect(
+            revokesOwnAccess({
+                ...base,
+                nextPermissions: ['p_users', 'p_routes'],
+            }),
+        ).toBe(true)
+        expect(revokesOwnAccess({ ...base, nextPermissions: [] })).toBe(true)
+    })
+
+    it('ignores harmless changes', () => {
+        expect(
+            revokesOwnAccess({
+                ...base,
+                nextPermissions: ['p_users', 'p_settings'],
+            }),
+        ).toBe(false)
+        expect(
+            revokesOwnAccess({
+                ...base,
+                role: { id: 'r_own', permissions: ['p_routes'] },
+                nextPermissions: [],
+            }),
+        ).toBe(false)
+    })
+
+    it('ignores other roles and platform admins', () => {
+        expect(
+            revokesOwnAccess({
+                ...base,
+                ownRoleId: 'r_other',
+                nextPermissions: [],
+            }),
+        ).toBe(false)
+        expect(
+            revokesOwnAccess({
+                ...base,
+                ownRoleId: undefined,
+                nextPermissions: [],
+            }),
+        ).toBe(false)
+        expect(
+            revokesOwnAccess({
+                ...base,
+                platformAdmin: true,
+                nextPermissions: [],
+            }),
+        ).toBe(false)
     })
 })

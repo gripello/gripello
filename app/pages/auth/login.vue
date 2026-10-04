@@ -359,8 +359,8 @@ import {
     validEmail,
     minLength,
     validateRules,
+    validUsername,
 } from '~/utils/validation'
-import type { Rule } from '~/utils/validation'
 import { safeRedirect, staffLandingPath } from '~/utils/nav'
 defineOptions({ name: 'LoginPage' })
 
@@ -482,13 +482,7 @@ const identityRules = computed(() => {
 })
 const passwordRules = [required(t), minLength(t, 6)]
 const emailRules = [required(t), validEmail(t)]
-const usernameRules: Rule[] = [
-    required(t),
-    minLength(t, 3),
-    (value) =>
-        /^[\w][\w.-]*$/.test(String(value ?? '')) ||
-        t('account.usernameInvalid'),
-]
+const usernameRules = validUsername(t)
 
 const loginState = computed(() => ({
     identity: identity.value,

@@ -51,7 +51,6 @@
         "changeAvatar": "Change avatar",
         "emailLocked": "Email cannot be changed here",
         "passwordStrength": "Password strength",
-        "passwordHint": "Leave the password fields empty to keep your current password.",
         "unsavedChanges": "Unsaved changes",
         "wrongOldPassword": "Current password is incorrect",
         "passwordChangedSignInAgain": "Password changed. Please sign in again with your new password.",
@@ -168,14 +167,14 @@
         "selectedCount": "{n} selected",
         "list": "Routes",
         "competitions": "Competitions",
-        "judge": "Judging"
+        "judge": "Judging",
+        "rated": "Has reviews"
     },
     "dashboard": {
         "online": "{0} online"
     },
     "analytics": {
         "title": "Analytics",
-        "subtitle": "How your routes are set, climbed and rated.",
         "meta": {
             "title": "Analytics - Gripello",
             "description": "Statistics on route setting, grades and reviews."
@@ -235,12 +234,6 @@
             "ratedRoutes": "Not enough reviews yet.",
             "gradeBalance": "The current grade mix matches what you usually set."
         },
-        "hints": {
-            "gradeBalance": "Active routes compared with your usual grade mix – red grades are missing on the wall.",
-            "gradeFeedback": "Each dot is a route with at least 3 grade votes. Above the line, climbers find it harder than its set grade.",
-            "ratedRoutes": "Stars compared with the average of all reviewed routes.",
-            "oldestActive": "Longest on the wall – candidates for a reset."
-        },
         "columns": {
             "averageRating": "Avg. stars",
             "averageDeviation": "Grade difference"
@@ -279,7 +272,10 @@
         "type": "Type",
         "archived": "Archived",
         "comment": "Comment",
-        "creators": "Setters"
+        "creators": "Setters",
+        "permanent": "Permanent",
+        "permanentHelp": "Fixed features like arêtes or cracks that are never reset. Left out of age statistics.",
+        "archivedHelp": "Taken off the wall. Hidden from climbers."
     },
     "ratings": {
         "ratings": "Reviews",
@@ -741,15 +737,21 @@
         "roleSaveError": "Could not save the role.",
         "roleDeleteError": "Could not delete the role. It may still be assigned to members.",
         "adminRoleLocked": "The admin role cannot be renamed or deleted.",
-        "subtitle": "What each role may do. Changes apply immediately.",
-        "noDescription": "No description",
         "groups": {
             "routes": "Routes",
             "competitions": "Competitions",
             "moderation": "Moderation",
             "admin": "Administration",
             "other": "Other"
-        }
+        },
+        "backToRoles": "All roles",
+        "memberCount": "{n} member | {n} members",
+        "duplicateRole": "Duplicate role",
+        "copyName": "{name} (copy)",
+        "cannotGrant": "You can only grant permissions you hold yourself.",
+        "lockoutTitle": "Remove your own access?",
+        "lockoutConfirm": "You hold this role. Without this permission you may lose access to this page.",
+        "lockoutConfirmAction": "Remove"
     },
     "time": {
         "justNow": "Just now",
@@ -776,7 +778,6 @@
         "saveError": "Could not save settings. Please try again.",
         "contactEmail": "Contact email",
         "contactEmailHint": "Published as your point of contact and notified about new content reports.",
-        "mailLanguage": "Language for e-mails",
         "mailNotConfigured": "Email is not configured, so password resets and content report notices cannot be delivered. SMTP is configured in PocketBase, not here.",
         "mailNotConfiguredAction": "Open PocketBase mail settings",
         "legalTitle": "Legal notice",
@@ -831,7 +832,9 @@
         "removeBand": "Remove color",
         "resetBands": "Reset to default",
         "splitBand": "Split",
-        "bandBoundary": "Boundary between {from} and {to}"
+        "bandBoundary": "Boundary between {from} and {to}",
+        "defaultLanguage": "Default language",
+        "defaultLanguageHelp": "Used by default for e-mails, exports and other system output."
     },
     "errors": {
         "notFound": {
@@ -1036,9 +1039,7 @@
     },
     "audit": {
         "title": "Activity log",
-        "subtitle": "Every recorded action in the app.",
         "titleOwn": "Your activity",
-        "subtitleOwn": "Everything recorded about your account.",
         "searchLabel": "Search activity",
         "filterAction": "Action",
         "filterCollection": "Area",
@@ -1397,18 +1398,10 @@
     },
     "accountSettings": {
         "title": "Settings",
-        "subtitle": "Manage your profile, preferences and security.",
-        "profileDescription": "How other people see you in the app.",
         "avatar": "Avatar",
         "avatarDescription": "JPG, PNG, SVG or WebP.",
-        "emailDescription": "Used to sign in and to receive notifications.",
-        "preferencesDescription": "Language and appearance of the app.",
         "language": "Language",
-        "languageDescription": "Used for the interface and for emails you receive.",
         "theme": "Theme",
-        "themeDescription": "Follow your system or pick a fixed theme.",
-        "passwordDescription": "Confirm your current password before choosing a new one.",
-        "notificationsDescription": "Choose what Gripello notifies you about.",
         "push": {
             "topicsTitle": "Notify me about",
             "topics": {
@@ -1661,7 +1654,8 @@
             "flags": {
                 "allFlashes": "Flashed everything",
                 "uniqueTop": "Only top on a route"
-            }
+            },
+            "competition": "Competition"
         },
         "export": {
             "menu": "Export",
@@ -1775,7 +1769,8 @@
             "previousSlugs": "Previous addresses",
             "venue": "Venue",
             "createdAt": "Created",
-            "open": "Open gym"
+            "open": "Open gym",
+            "inactive": "Inactive"
         },
         "settings": {
             "title": "Platform settings",
@@ -1791,6 +1786,21 @@
             "routes": "Routes",
             "admins": "Platform admins",
             "dashboard": "PocketBase dashboard"
+        },
+        "users": {
+            "title": "Users",
+            "search": "Search by name or email…",
+            "show": "Show",
+            "verified": "Verified",
+            "unverified": "Unverified",
+            "platformAdmin": "Platform admin",
+            "memberships": "Gym memberships",
+            "gym": "Gym",
+            "addMembership": "Add",
+            "sendPasswordReset": "Send password reset email",
+            "passwordResetSent": "Password reset email sent.",
+            "deleteConfirm": "Delete {name} with all their data? This cannot be undone.",
+            "lastAdmin": "This person is the only admin of a gym. Make someone else admin first."
         }
     },
     "mails": {

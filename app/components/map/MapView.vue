@@ -36,10 +36,20 @@
                     :y2="dot.at[1]"
                     class="map-dot-leader"
                 />
-                <g
+                <MapRouteMarker
                     v-for="dot in shownDots"
                     :key="dot.routeId"
-                    class="map-dot"
+                    :at="dot.at"
+                    :fill="dot.fill"
+                    :stroke="dot.stroke"
+                    :grade="dot.grade"
+                    :as-grade="dot.asGrade"
+                    :is-new="dot.isNew"
+                    :sent="!!sentIds?.has(dot.routeId)"
+                    :defect="defects?.get(dot.routeId)"
+                    :selected="dot.routeId === selectedRouteId"
+                    :pixels-per-unit="pixelsPerUnit"
+                    :hit-radius-px="hitRadiusPx"
                     :class="{
                         'map-dot--dimmed': isDimmed(dot.routeId),
                         'map-dot--selected': dot.routeId === selectedRouteId,
@@ -57,52 +67,7 @@
                     @click.stop="emit('selectRoute', dot.routeId)"
                     @keydown.enter.prevent="emit('selectRoute', dot.routeId)"
                     @keydown.space.prevent="emit('selectRoute', dot.routeId)"
-                >
-                    <circle
-                        v-if="dot.isNew"
-                        :cx="dot.at[0]"
-                        :cy="dot.at[1]"
-                        :r="dotRadius * 1.9"
-                        :fill="dot.fill"
-                        class="map-dot-halo"
-                    />
-                    <circle
-                        :cx="dot.at[0]"
-                        :cy="dot.at[1]"
-                        :r="hitRadius"
-                        class="map-dot-hit"
-                    />
-                    <circle
-                        :cx="dot.at[0]"
-                        :cy="dot.at[1]"
-                        :r="dotRadius"
-                        :fill="dot.fill"
-                        :stroke="dot.stroke"
-                        class="map-dot-body"
-                    />
-                    <path
-                        v-if="sentIds?.has(dot.routeId)"
-                        :d="checkPath(dot.at)"
-                        :stroke="dot.stroke"
-                        class="map-dot-check"
-                    />
-                    <circle
-                        v-if="defects?.has(dot.routeId)"
-                        :cx="dot.point[0] + dotRadius * 0.85"
-                        :cy="dot.point[1] - dotRadius * 0.85"
-                        :r="dotRadius * 0.5"
-                        class="map-dot-defect"
-                        :class="`map-dot-defect--${defects.get(dot.routeId)}`"
-                        data-testid="map-dot-defect"
-                    />
-                    <circle
-                        v-if="dot.routeId === selectedRouteId"
-                        :cx="dot.at[0]"
-                        :cy="dot.at[1]"
-                        :r="dotRadius * 2.2"
-                        class="map-dot-ring"
-                    />
-                </g>
+                />
                 <g
                     v-for="cluster in collapsedClusters"
                     :key="cluster.key"
@@ -130,7 +95,7 @@
                     <circle
                         :cx="cluster.point[0]"
                         :cy="cluster.point[1]"
-                        :r="hitRadius"
+                        :r="dotHitRadius"
                         class="map-dot-hit"
                     />
                     <circle
@@ -167,7 +132,6 @@
                     >
                         <span class="wall-pill__name">{{ label.name }}</span>
                         <span
-                            v-if="label.count"
                             class="wall-pill__count"
                             data-testid="map-wall-count"
                             >{{ label.count }}</span
@@ -191,6 +155,10 @@ import {
     clearOfDots,
     closestPairDistance,
     clusterDots,
+    GRADE_RADIUS_PX,
+    gradeSpacingPx,
+    HIT_RADIUS_PX,
+    isolatedIds,
     placeRoutes,
     spreadAround,
     type DotCluster,
@@ -237,14 +205,12 @@ const emit = defineEmits<{
     selectRoute: [routeId: string]
 }>()
 
-const DOT_RADIUS_PX = 5.5
 const CLUSTER_RADIUS_PX = 11
 const CLUSTER_FONT_PX = 12
 const SPREAD_HIT_RADII = 2.2
-const HIT_RADIUS_PX = { fine: 13, coarse: 22 }
-const LABEL_HEIGHT_PX = 46
-const LABEL_CHAR_PX = 8
-const LABEL_PADDING_PX = 28
+const LABEL_HEIGHT_PX = 24
+const LABEL_CHAR_PX = 7
+const LABEL_PADDING_PX = 24
 const LABEL_EDGE_PX = 4
 const MAX_PIXELS_PER_METRE = 400
 const CONTROLS_WIDTH_PX = 64
@@ -284,13 +250,36 @@ const counts = computed(() =>
     wallCounts(props.routes, props.sentIds ?? new Set(), props.matchingIds),
 )
 
-const dotRadius = computed(() => DOT_RADIUS_PX / pixelsPerUnit.value)
-const hitRadius = computed(() => hitRadiusPx.value / pixelsPerUnit.value)
+const gradeSpacing = computed(
+    () => gradeSpacingPx(hitRadiusPx.value) / pixelsPerUnit.value,
+)
+const dotSpacing = computed(() => (hitRadiusPx.value * 2) / pixelsPerUnit.value)
+const spreadSpacing = computed(() =>
+    Math.max(
+        (hitRadiusPx.value * SPREAD_HIT_RADII) / pixelsPerUnit.value,
+        gradeSpacing.value,
+    ),
+)
+const gradeHitPx = computed(() => Math.max(hitRadiusPx.value, GRADE_RADIUS_PX))
+
+const dotHitRadius = computed(() => hitRadiusPx.value / pixelsPerUnit.value)
 const clusterRadius = computed(() => CLUSTER_RADIUS_PX / pixelsPerUnit.value)
 const clusterFontSize = computed(() => CLUSTER_FONT_PX / pixelsPerUnit.value)
 
+function markerClusters(routeDots: RouteDot[]) {
+    const isolated = isolatedIds(routeDots, gradeSpacing.value)
+    const singles = routeDots
+        .filter((dot) => isolated.has(dot.routeId))
+        .map((dot) => ({ key: dot.routeId, point: dot.point, dots: [dot] }))
+    const crowded = routeDots.filter((dot) => !isolated.has(dot.routeId))
+    return {
+        isolated,
+        clusters: [...singles, ...clusterDots(crowded, dotSpacing.value)],
+    }
+}
+
 const expandedClusterKey = ref<string | null>(null)
-const clusters = computed(() => clusterDots(dots.value, hitRadius.value * 2))
+const markers = computed(() => markerClusters(dots.value))
 
 function isExpanded(cluster: DotCluster<RouteDot>) {
     return (
@@ -300,26 +289,41 @@ function isExpanded(cluster: DotCluster<RouteDot>) {
 }
 
 const collapsedClusters = computed(() =>
-    clusters.value.filter(
+    markers.value.clusters.filter(
         (cluster) => cluster.dots.length > 1 && !isExpanded(cluster),
     ),
 )
 
 const shownDots = computed(() =>
-    clusters.value.flatMap(
-        (cluster): (RouteDot & { at: MapPoint; from?: MapPoint })[] => {
-            if (cluster.dots.length === 1)
-                return [{ ...cluster.dots[0]!, at: cluster.dots[0]!.point }]
+    markers.value.clusters.flatMap(
+        (
+            cluster,
+        ): (RouteDot & {
+            at: MapPoint
+            from?: MapPoint
+            asGrade: boolean
+        })[] => {
+            if (cluster.dots.length === 1) {
+                const dot = cluster.dots[0]!
+                return [
+                    {
+                        ...dot,
+                        at: dot.point,
+                        asGrade: markers.value.isolated.has(dot.routeId),
+                    },
+                ]
+            }
             if (!isExpanded(cluster)) return []
             const spread = spreadAround(
                 cluster.point,
                 cluster.dots.length,
-                hitRadius.value * SPREAD_HIT_RADII,
+                spreadSpacing.value,
             )
             return cluster.dots.map((dot, index) => ({
                 ...dot,
                 at: spread[index]!,
                 from: cluster.point,
+                asGrade: true,
             }))
         },
     ),
@@ -327,7 +331,7 @@ const shownDots = computed(() =>
 
 function openCluster(cluster: DotCluster<RouteDot>) {
     const needed =
-        (hitRadius.value * SPREAD_HIT_RADII) /
+        spreadSpacing.value /
         closestPairDistance(cluster.dots.map((dot) => dot.point))
     const available = viewBox.value.width / limits.value.minWidth
     zoomBy(Math.min(needed, available), cluster.point)
@@ -375,13 +379,8 @@ function dotLabel(routeId: string) {
         .join(', ')
 }
 
-function checkPath([x, y]: MapPoint) {
-    const r = dotRadius.value
-    return `M${x - r * 0.5} ${y} L${x - r * 0.1} ${y + r * 0.4} L${x + r * 0.55} ${y - r * 0.45}`
-}
-
 const labels = computed(() => {
-    const screenDots = clusterDots(layoutDots.value, hitRadius.value * 2).map(
+    const screenDots = markerClusters(layoutDots.value).clusters.map(
         (cluster) => mapToScreen(cluster.point, size.value, viewBox.value),
     )
     const mapCentreY = mapToScreen(
@@ -391,7 +390,10 @@ const labels = computed(() => {
     ).y
     const placed = mapWalls.value.flatMap((wall) => {
         const position = mapToScreen(wall.labelAt, size.value, viewBox.value)
-        const width = wall.name.length * LABEL_CHAR_PX + LABEL_PADDING_PX
+        const count = countText(wall)
+        const width =
+            (wall.name.length + count.length + 3) * LABEL_CHAR_PX +
+            LABEL_PADDING_PX
         const offScreen =
             position.x < -width / 2 ||
             position.x > size.value.width + width / 2 ||
@@ -407,7 +409,7 @@ const labels = computed(() => {
                 height: LABEL_HEIGHT_PX,
             },
             screenDots,
-            hitRadiusPx.value,
+            gradeHitPx.value,
             LABEL_EDGE_PX,
             position.y < mapCentreY ? 1 : -1,
         )
@@ -418,7 +420,7 @@ const labels = computed(() => {
             width,
             size.value.width - (nearControls ? CONTROLS_WIDTH_PX : 0),
         )
-        return [{ ...box, name: wall.name, count: countText(wall), x, y }]
+        return [{ ...box, name: wall.name, count, x, y }]
     })
     const visible = visibleLabels(placed, props.selectedWallId)
     return placed.filter((label) => visible.has(label.id))
@@ -469,7 +471,7 @@ defineExpose({ focusWall, focusRoute, fitAll })
 }
 
 .map-wall-outline {
-    fill: color-mix(in oklab, var(--ui-text-highlighted) 20%, transparent);
+    fill: color-mix(in oklab, var(--ui-text-highlighted) 32%, transparent);
     stroke: color-mix(in oklab, var(--ui-text-highlighted) 30%, transparent);
     stroke-width: 1;
     stroke-linejoin: round;
@@ -479,7 +481,7 @@ defineExpose({ focusWall, focusRoute, fitAll })
 
 .map-wall:hover .map-wall-outline,
 .map-wall:focus-visible .map-wall-outline {
-    fill: color-mix(in oklab, var(--ui-text-highlighted) 28%, transparent);
+    fill: color-mix(in oklab, var(--ui-text-highlighted) 40%, transparent);
 }
 
 .map-wall:focus-visible .map-wall-outline {
@@ -491,21 +493,6 @@ defineExpose({ focusWall, focusRoute, fitAll })
     fill: color-mix(in oklab, var(--ui-primary) 22%, transparent);
     stroke: var(--ui-primary);
     stroke-width: 2;
-}
-
-.map-dot {
-    cursor: pointer;
-    transition: opacity 0.2s;
-}
-
-.map-dot:focus {
-    outline: none;
-}
-
-.map-dot:focus-visible .map-dot-hit {
-    stroke: var(--ui-primary);
-    stroke-width: 2;
-    vector-effect: non-scaling-stroke;
 }
 
 .map-dot--dimmed {
@@ -547,67 +534,6 @@ defineExpose({ focusWall, focusRoute, fitAll })
     vector-effect: non-scaling-stroke;
 }
 
-.map-dot-halo {
-    opacity: 0.3;
-}
-
-.map-dot-body {
-    stroke-width: 1.25;
-    vector-effect: non-scaling-stroke;
-}
-
-.map-dot-check {
-    fill: none;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    vector-effect: non-scaling-stroke;
-    pointer-events: none;
-}
-
-.map-dot-defect {
-    stroke: var(--ui-bg);
-    stroke-width: 1.5;
-    vector-effect: non-scaling-stroke;
-    pointer-events: none;
-}
-
-.map-dot-defect--urgent {
-    fill: var(--ui-error);
-}
-
-.map-dot-defect--minor {
-    fill: var(--ui-warning);
-}
-
-.map-dot-ring {
-    fill: none;
-    stroke: var(--ui-primary);
-    stroke-width: 2.5;
-    vector-effect: non-scaling-stroke;
-    pointer-events: none;
-    animation: dot-pulse 1.4s ease-out infinite;
-    transform-box: fill-box;
-    transform-origin: center;
-}
-
-@keyframes dot-pulse {
-    0% {
-        opacity: 1;
-        transform: scale(0.7);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(1.5);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .map-dot-ring {
-        animation: none;
-    }
-}
-
 .map-labels {
     position: absolute;
     inset: 0;
@@ -618,39 +544,36 @@ defineExpose({ focusWall, focusRoute, fitAll })
     position: absolute;
     transform: translate(-50%, -50%);
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
+    align-items: baseline;
+    gap: 6px;
     pointer-events: auto;
-    background: none;
+    padding: 2px 10px;
     border: 0;
-    padding: 0;
+    border-radius: 999px;
+    background: var(--ui-primary);
+    color: #fff;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     cursor: pointer;
     white-space: nowrap;
 }
 
-.wall-pill__name {
-    padding: 4px 12px;
-    border-radius: 999px;
-    background: var(--ui-primary);
-    color: #fff;
-    font-size: 0.875rem;
-    font-weight: 600;
-    line-height: 1.3;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-
-.wall-pill--selected .wall-pill__name {
+.wall-pill--selected {
     outline: 3px solid color-mix(in oklab, var(--ui-primary) 35%, transparent);
 }
 
+.wall-pill__name {
+    font-weight: 600;
+}
+
 .wall-pill__count {
-    font-size: 0.8125rem;
-    font-weight: 700;
-    color: var(--ui-text-highlighted);
-    text-shadow:
-        0 0 3px var(--ui-bg),
-        0 0 3px var(--ui-bg);
+    font-weight: 500;
+    opacity: 0.85;
     font-variant-numeric: tabular-nums;
+}
+
+.wall-pill__count::before {
+    content: '· ';
 }
 </style>

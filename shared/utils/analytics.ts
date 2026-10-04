@@ -27,6 +27,7 @@ export interface AnalyticsRoute extends GradeSource {
     creator?: unknown
     archived?: boolean
     archived_at?: string | null
+    permanent?: boolean
     screw_date?: string | null
     created?: string
 }
@@ -364,7 +365,7 @@ export function buildAnalytics(
     ): Trend => ({ value: current, previous: previous ?? null })
 
     const lifespans = matchingRoutes
-        .filter((route) => route.archived)
+        .filter((route) => route.archived && !route.permanent)
         .flatMap((route) => {
             const archivedAt = parseDate(route.archived_at)
             const setAt = routeDate(route)
@@ -589,7 +590,8 @@ export function buildAnalytics(
                     a.averageRating - b.averageRating || b.ratings - a.ratings,
             )
             .slice(0, LIST_LIMIT),
-        oldestActive: [...activeRoutes]
+        oldestActive: activeRoutes
+            .filter((route) => !route.permanent)
             .sort(byRouteDate)
             .slice(0, OLDEST_LIMIT)
             .map((route) => ({

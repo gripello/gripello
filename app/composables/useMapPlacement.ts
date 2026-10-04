@@ -181,6 +181,7 @@ export function useMapPlacement(
     const wallAge = computed(() => {
         const now = Date.now()
         const ages = wallRoutes.value
+            .filter((item) => !item.permanent)
             .map((item) =>
                 item.screw_date
                     ? (now -

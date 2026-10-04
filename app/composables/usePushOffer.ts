@@ -67,7 +67,9 @@ export function usePushOffer() {
             !!(await registration?.pushManager.getSubscription())
         if (subscribedHere.value) return
         const [settings, devices] = await Promise.all([
-            pb.send<{ pushKey: string }>('/api/notifications/settings', {}),
+            pb.send<{ pushKey: string }>('/api/notifications/settings', {
+                requestKey: null,
+            }),
             permission.value === 'granted'
                 ? pb
                       .collection('push_subscriptions')

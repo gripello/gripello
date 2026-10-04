@@ -118,3 +118,23 @@ test('the pages that stayed under /admin are still there', async ({
         await expect(page.locator('h1')).toHaveCount(1)
     }
 })
+
+test.describe('on a touch tablet', () => {
+    test.use({ hasTouch: true, viewport: { width: 1180, height: 820 } })
+
+    test('a tap on a collapsed section icon opens its pages', async ({
+        adminPage: page,
+    }) => {
+        await gotoSettled(page, '/manage/routes', /\/manage\/routes/)
+        const sidebar = page.getByTestId('nav-sidebar')
+        if ((await sidebar.getAttribute('data-state')) !== 'collapsed')
+            await page.getByTestId('nav-sidebar-toggle').tap()
+        await expect(sidebar).toHaveAttribute('data-state', 'collapsed')
+
+        await page
+            .getByTestId('nav-desktop-links')
+            .getByRole('button', { name: 'Admin' })
+            .tap()
+        await expect(page.getByRole('link', { name: 'Users' })).toBeVisible()
+    })
+})

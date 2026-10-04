@@ -131,8 +131,10 @@ test('grade charts switch discipline in place and follow the type filter', async
     await gotoSettled(page, '/manage/analytics?range=all')
     await page.getByTestId('analytics-discipline-grades-Boulder').click()
     await expect(
-        page.getByTestId('analytics-discipline-locationGrades-Boulder'),
-    ).toHaveAttribute('aria-pressed', 'true')
+        page
+            .getByTestId('analytics-discipline-locationGrades-Boulder')
+            .locator('xpath=ancestor::*[@role="tab"]'),
+    ).toHaveAttribute('aria-selected', 'true')
 
     await gotoSettled(page, '/manage/analytics?range=all&type=Route')
     await expect(page.getByTestId('analytics-chart-grades')).toBeVisible()

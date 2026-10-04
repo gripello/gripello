@@ -9,6 +9,9 @@ import {
     withGym,
     withGymSlug,
     gymSwitchPath,
+    bottomNavLinks,
+    navContext,
+    requestedSection,
 } from '~/utils/navigation'
 
 const allowing =
@@ -157,20 +160,40 @@ describe('platform section', () => {
         ).not.toContain('platform')
     })
 
-    it('links platform admins to the unprefixed platform pages, with or without a gym', () => {
+    it('stays out of the gym sidebar and staff sections', () => {
         for (const slug of ['gym-a', '']) {
-            const platform = staffSections(allowing(PLATFORM_ADMIN), slug)
-            expect(platform).toEqual([
-                expect.objectContaining({
-                    key: 'platform',
-                    links: [
-                        expect.objectContaining({ to: '/platform' }),
-                        expect.objectContaining({ to: '/platform/gyms' }),
-                        expect.objectContaining({ to: '/platform/settings' }),
-                    ],
-                }),
-            ])
+            expect(staffSections(allowing(PLATFORM_ADMIN), slug)).toEqual([])
         }
+        expect(
+            sidebarItems(
+                allowing(PLATFORM_ADMIN),
+                true,
+                'gym-a',
+                '/gym-a/routes',
+                (key) => key,
+            )[1],
+        ).toEqual([])
+    })
+
+    it('stays reachable from the command palette with unprefixed links', () => {
+        const platform = visibleNavItems(
+            allowing(PLATFORM_ADMIN),
+            true,
+            'gym-a',
+        )
+            .find((item) => item.key === 'platform')!
+            .children!.map((link) => link.to)
+        expect(platform).toEqual([
+            '/platform',
+            '/platform/gyms',
+            '/platform/users',
+            '/platform/settings',
+        ])
+        expect(
+            visibleNavItems(allowing('manage_users'), true, 'gym-a').map(
+                (item) => item.key,
+            ),
+        ).not.toContain('platform')
     })
 })
 
@@ -224,6 +247,7 @@ describe('sidebarItems', () => {
         expect(groups).toEqual([
             expect.objectContaining({
                 label: 't:nav.manage',
+                'aria-label': 't:nav.manage',
                 icon: 'i-lucide-sliders-horizontal',
                 testid: 'nav-group-manage',
                 current: false,
@@ -249,10 +273,95 @@ describe('sidebarItems', () => {
 
     it('matches whole path segments', () => {
         const groupsAt = (path: string) =>
-            sidebarItems(allowing(PLATFORM_ADMIN), true, '', path, t)[1]!
-        expect(groupsAt('/platform/gyms/abc')[0]!.defaultOpen).toBe(true)
-        expect(groupsAt('/platformer')).toEqual([
+            sidebarItems(allowing('manage_users'), true, 'gym-a', path, t)[1]!
+        expect(groupsAt('/gym-a/admin')).toEqual([
             expect.objectContaining({ defaultOpen: false }),
         ])
+        expect(groupsAt('/gym-a/admin/users')).toEqual([
+            expect.objectContaining({ defaultOpen: true }),
+        ])
+    })
+
+    it('shows only the platform links on platform pages', () => {
+        const lists = sidebarItems(
+            allowing(PLATFORM_ADMIN, 'manage_routes'),
+            true,
+            'gym-a',
+            '/platform/gyms/abc',
+            t,
+        )
+        expect(lists).toEqual([
+            [
+                expect.objectContaining({
+                    to: '/platform',
+                    testid: 'nav-link-platform',
+                }),
+                expect.objectContaining({
+                    to: '/platform/gyms',
+                    testid: 'nav-link-platform-gyms',
+                }),
+                expect.objectContaining({
+                    to: '/platform/users',
+                    testid: 'nav-link-platform-users',
+                }),
+                expect.objectContaining({
+                    to: '/platform/settings',
+                    label: 't:platform.settings.title',
+                }),
+            ],
+        ])
+    })
+})
+
+describe('navContext', () => {
+    it('tells gym, platform and tenant-less pages apart', () => {
+        expect(navContext('/gym-a/routes', 'gym-a')).toBe('gym')
+        expect(navContext('/platform', '')).toBe('platform')
+        expect(navContext('/platform/gyms/abc', '')).toBe('platform')
+        expect(navContext('/logbook', '')).toBe('global')
+        expect(navContext('/platformer', '')).toBe('global')
+    })
+})
+
+describe('requestedSection', () => {
+    it('falls back to the first section', () => {
+        expect(requestedSection('links', ['access', 'links'])).toBe('links')
+        expect(requestedSection('nope', ['access', 'links'])).toBe('access')
+        expect(requestedSection(['links'], ['access', 'links'])).toBe('access')
+        expect(requestedSection(undefined, ['access'])).toBe('access')
+    })
+})
+
+describe('bottomNavLinks', () => {
+    const activeAt = (path: string, slug = 'gym-a') =>
+        bottomNavLinks(path, slug).find((link) => link.active)?.path
+
+    it('points the map at the given gym', () => {
+        expect(bottomNavLinks('/logbook', 'gym-a')[0]!.to).toBe('/gym-a/map')
+        expect(bottomNavLinks('/logbook', '')[0]!.to).toBe('/')
+    })
+
+    it('marks the current climber page', () => {
+        expect(activeAt('/gym-a/map')).toBe('/map')
+        expect(activeAt('/gym-a/manage/map')).toBeUndefined()
+        expect(activeAt('/logbook')).toBe('/logbook')
+        expect(activeAt('/account')).toBe('/account')
+        expect(activeAt('/account/settings')).toBeUndefined()
+    })
+
+    it('swaps to the platform links on platform pages', () => {
+        expect(
+            bottomNavLinks('/platform/gyms/abc', 'gym-a').map(
+                (link) => link.to,
+            ),
+        ).toEqual([
+            '/platform',
+            '/platform/gyms',
+            '/platform/users',
+            '/platform/settings',
+            '/account',
+        ])
+        expect(activeAt('/platform')).toBe('/platform')
+        expect(activeAt('/platform/gyms/abc')).toBe('/platform/gyms')
     })
 })

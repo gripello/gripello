@@ -51,7 +51,6 @@
         "changeAvatar": "Cambiar avatar",
         "emailLocked": "El correo no se puede cambiar aquí",
         "passwordStrength": "Seguridad de la contraseña",
-        "passwordHint": "Deja vacíos los campos de contraseña para conservar la actual.",
         "unsavedChanges": "Cambios sin guardar",
         "wrongOldPassword": "La contraseña actual es incorrecta",
         "passwordChangedSignInAgain": "Contraseña cambiada. Vuelve a iniciar sesión con tu nueva contraseña.",
@@ -168,14 +167,14 @@
         "selectedCount": "Seleccionadas: {n}",
         "list": "Vías",
         "competitions": "Competiciones",
-        "judge": "Arbitraje"
+        "judge": "Arbitraje",
+        "rated": "Tiene valoraciones"
     },
     "dashboard": {
         "online": "{0} en línea"
     },
     "analytics": {
         "title": "Estadísticas",
-        "subtitle": "Cómo se equipan, escalan y valoran vuestras vías.",
         "meta": {
             "title": "Estadísticas - Gripello",
             "description": "Estadísticas de equipamiento, grados y valoraciones."
@@ -235,12 +234,6 @@
             "ratedRoutes": "Aún no hay suficientes valoraciones.",
             "gradeBalance": "La mezcla de grados actual coincide con lo que soléis equipar."
         },
-        "hints": {
-            "gradeBalance": "Vías activas comparadas con vuestra mezcla habitual de grados: los grados en rojo faltan en la pared.",
-            "gradeFeedback": "Cada punto es una vía con al menos 3 votos de grado. Por encima de la línea, a los escaladores les parece más dura que su grado propuesto.",
-            "ratedRoutes": "Estrellas comparadas con la media de todas las vías valoradas.",
-            "oldestActive": "Las que llevan más tiempo en la pared: candidatas para reequipar."
-        },
         "columns": {
             "averageRating": "Media de estrellas",
             "averageDeviation": "Diferencia de grado"
@@ -279,7 +272,10 @@
         "type": "Tipo",
         "archived": "Archivada",
         "comment": "Comentario",
-        "creators": "Equipadores"
+        "creators": "Equipadores",
+        "permanent": "Permanente",
+        "permanentHelp": "Estructuras fijas como aristas o fisuras que nunca se cambian. Excluidas de las estadísticas de antigüedad.",
+        "archivedHelp": "Retirada del muro. Oculta para los escaladores."
     },
     "ratings": {
         "ratings": "Valoraciones",
@@ -741,15 +737,21 @@
         "roleSaveError": "No se pudo guardar el rol.",
         "roleDeleteError": "No se pudo eliminar el rol. Puede que aún esté asignado a miembros.",
         "adminRoleLocked": "El rol de admin no se puede renombrar ni eliminar.",
-        "subtitle": "Lo que puede hacer cada rol. Los cambios se aplican al instante.",
-        "noDescription": "Sin descripción",
         "groups": {
             "routes": "Vías",
             "competitions": "Competiciones",
             "moderation": "Moderación",
             "admin": "Administración",
             "other": "Otros"
-        }
+        },
+        "backToRoles": "Todos los roles",
+        "memberCount": "{n} miembro | {n} miembros",
+        "duplicateRole": "Duplicar rol",
+        "copyName": "{name} (copia)",
+        "cannotGrant": "Solo puedes conceder permisos que tú mismo tienes.",
+        "lockoutTitle": "¿Quitar tu propio acceso?",
+        "lockoutConfirm": "Tienes este rol. Sin este permiso podrías perder el acceso a esta página.",
+        "lockoutConfirmAction": "Quitar"
     },
     "time": {
         "justNow": "Ahora mismo",
@@ -776,7 +778,6 @@
         "saveError": "No se pudieron guardar los ajustes. Inténtalo de nuevo.",
         "contactEmail": "Correo de contacto",
         "contactEmailHint": "Se publica como punto de contacto y recibe avisos de nuevas denuncias de contenido.",
-        "mailLanguage": "Idioma de los correos",
         "mailNotConfigured": "El correo no está configurado, así que no se pueden enviar restablecimientos de contraseña ni avisos de denuncias. El SMTP se configura en PocketBase, no aquí.",
         "mailNotConfiguredAction": "Abrir ajustes de correo de PocketBase",
         "legalTitle": "Aviso legal",
@@ -831,7 +832,9 @@
         "removeBand": "Quitar color",
         "resetBands": "Restablecer valores predeterminados",
         "splitBand": "Dividir",
-        "bandBoundary": "Límite entre {from} y {to}"
+        "bandBoundary": "Límite entre {from} y {to}",
+        "defaultLanguage": "Idioma predeterminado",
+        "defaultLanguageHelp": "Se usa por defecto para correos, exportaciones y otras salidas del sistema."
     },
     "errors": {
         "notFound": {
@@ -1036,9 +1039,7 @@
     },
     "audit": {
         "title": "Registro de actividad",
-        "subtitle": "Todas las acciones registradas en la app.",
         "titleOwn": "Tu actividad",
-        "subtitleOwn": "Todo lo registrado sobre tu cuenta.",
         "searchLabel": "Buscar actividad",
         "filterAction": "Acción",
         "filterCollection": "Área",
@@ -1397,18 +1398,10 @@
     },
     "accountSettings": {
         "title": "Ajustes",
-        "subtitle": "Gestiona tu perfil, tus preferencias y tu seguridad.",
-        "profileDescription": "Cómo te ven los demás en la app.",
         "avatar": "Avatar",
         "avatarDescription": "JPG, PNG, SVG o WebP.",
-        "emailDescription": "Para iniciar sesión y recibir notificaciones.",
-        "preferencesDescription": "Idioma y apariencia de la app.",
         "language": "Idioma",
-        "languageDescription": "Para la interfaz y los correos que recibes.",
         "theme": "Tema",
-        "themeDescription": "Sigue el sistema o elige un tema fijo.",
-        "passwordDescription": "Confirma tu contraseña actual antes de elegir una nueva.",
-        "notificationsDescription": "Elige sobre qué te avisa Gripello.",
         "push": {
             "topicsTitle": "Avisarme de",
             "topics": {
@@ -1661,7 +1654,8 @@
             "flags": {
                 "allFlashes": "Todo al flash",
                 "uniqueTop": "Único top en una vía"
-            }
+            },
+            "competition": "Competición"
         },
         "export": {
             "menu": "Exportar",
@@ -1775,7 +1769,8 @@
             "previousSlugs": "Direcciones anteriores",
             "venue": "Rocódromo",
             "createdAt": "Creado",
-            "open": "Abrir rocódromo"
+            "open": "Abrir rocódromo",
+            "inactive": "Inactivo"
         },
         "settings": {
             "title": "Ajustes de la plataforma",
@@ -1791,6 +1786,21 @@
             "routes": "Vías",
             "admins": "Admins de la plataforma",
             "dashboard": "Panel de PocketBase"
+        },
+        "users": {
+            "title": "Usuarios",
+            "search": "Buscar por nombre o email…",
+            "show": "Mostrar",
+            "verified": "Verificado",
+            "unverified": "Sin verificar",
+            "platformAdmin": "Admin de plataforma",
+            "memberships": "Membresías de rocódromos",
+            "gym": "Rocódromo",
+            "addMembership": "Añadir",
+            "sendPasswordReset": "Enviar email para restablecer la contraseña",
+            "passwordResetSent": "Email para restablecer la contraseña enviado.",
+            "deleteConfirm": "¿Eliminar a {name} con todos sus datos? No se puede deshacer.",
+            "lastAdmin": "Esta persona es la única admin de un rocódromo. Nombra primero a otra persona admin."
         }
     },
     "mails": {

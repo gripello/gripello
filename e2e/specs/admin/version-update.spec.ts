@@ -95,9 +95,11 @@ test('announces new commits and lists them', async ({ adminPage: page }) => {
     await expect(dialog).toContainText('bbbbbbb')
     await expect(dialog).toContainText('second commit')
 
-    const footerVersion = page.getByTestId('footer-version')
-    await expect(footerVersion).toHaveText(/\S/)
-    await expect(dialog).toContainText((await footerVersion.innerText()).trim())
+    const installed = await page
+        .getByTestId('footer-info')
+        .getAttribute('aria-label')
+    expect(installed?.trim()).toBeTruthy()
+    await expect(dialog).toContainText(installed!.trim())
 })
 
 test('stays hidden when the deployment is current', async ({
@@ -114,7 +116,7 @@ test('stays hidden for climbers', async ({ userPage: page }) => {
     await stubVersion(page, RELEASE_PAYLOAD)
     await gotoSettled(page, gymPath('/'))
 
-    await expect(page.getByTestId('footer-version')).toBeVisible()
+    await expect(page.getByTestId('footer-info')).toBeVisible()
     await expect(page.getByTestId('footer-update')).toBeHidden()
 })
 
@@ -126,6 +128,7 @@ test('the footer pill shows the installed release notes to a logged-out visitor'
 
     await expect(page.getByTestId('footer-update')).toBeHidden()
 
+    await page.getByTestId('footer-info').click()
     await page.getByTestId('footer-version').click()
 
     const dialog = page.getByTestId('release-notes-dialog')

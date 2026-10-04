@@ -51,7 +51,6 @@
         "changeAvatar": "Avatar ändern",
         "emailLocked": "E-Mail kann hier nicht geändert werden",
         "passwordStrength": "Passwortstärke",
-        "passwordHint": "Lass die Passwortfelder leer, um dein aktuelles Passwort zu behalten.",
         "unsavedChanges": "Ungespeicherte Änderungen",
         "wrongOldPassword": "Aktuelles Passwort ist falsch",
         "passwordChangedSignInAgain": "Passwort geändert. Bitte melde dich mit dem neuen Passwort erneut an.",
@@ -168,14 +167,14 @@
         "selectedCount": "{n} ausgewählt",
         "list": "Routen",
         "competitions": "Wettkämpfe",
-        "judge": "Schiedsrichter"
+        "judge": "Schiedsrichter",
+        "rated": "Hat Bewertungen"
     },
     "dashboard": {
         "online": "{0} online"
     },
     "analytics": {
         "title": "Analysen",
-        "subtitle": "Wie eure Routen geschraubt, geklettert und bewertet werden.",
         "meta": {
             "title": "Analysen - Gripello",
             "description": "Statistiken zu Schrauben, Graden und Bewertungen."
@@ -235,12 +234,6 @@
             "ratedRoutes": "Noch nicht genug Bewertungen.",
             "gradeBalance": "Der aktuelle Grad-Mix entspricht dem, was ihr sonst schraubt."
         },
-        "hints": {
-            "gradeBalance": "Aktive Routen im Vergleich zu eurem üblichen Grad-Mix – rote Grade fehlen an der Wand.",
-            "gradeFeedback": "Jeder Punkt ist eine Route mit mindestens 3 Grad-Einschätzungen. Über der Linie empfinden Kletternde sie schwerer als geschraubt.",
-            "ratedRoutes": "Sterne im Vergleich zum Durchschnitt aller bewerteten Routen.",
-            "oldestActive": "Am längsten an der Wand – Kandidaten zum Umschrauben."
-        },
         "columns": {
             "averageRating": "Ø Sterne",
             "averageDeviation": "Grad-Differenz"
@@ -279,7 +272,10 @@
         "type": "Typ",
         "archived": "Archiviert",
         "comment": "Kommentar",
-        "creators": "Schrauber"
+        "creators": "Schrauber",
+        "permanent": "Dauerhaft",
+        "permanentHelp": "Feste Strukturen wie Kanten oder Risse, die nie umgeschraubt werden. Zählen nicht in Alters-Statistiken.",
+        "archivedHelp": "Abgeschraubt. Für Kletternde ausgeblendet."
     },
     "ratings": {
         "ratings": "Bewertungen",
@@ -741,15 +737,21 @@
         "roleSaveError": "Rolle konnte nicht gespeichert werden.",
         "roleDeleteError": "Rolle konnte nicht gelöscht werden. Sie ist eventuell noch Mitgliedern zugewiesen.",
         "adminRoleLocked": "Die Admin-Rolle kann nicht umbenannt oder gelöscht werden.",
-        "subtitle": "Was jede Rolle darf. Änderungen gelten sofort.",
-        "noDescription": "Keine Beschreibung",
         "groups": {
             "routes": "Routen",
             "competitions": "Wettkämpfe",
             "moderation": "Moderation",
             "admin": "Verwaltung",
             "other": "Sonstiges"
-        }
+        },
+        "backToRoles": "Alle Rollen",
+        "memberCount": "{n} Mitglied | {n} Mitglieder",
+        "duplicateRole": "Rolle duplizieren",
+        "copyName": "{name} (Kopie)",
+        "cannotGrant": "Du kannst nur Berechtigungen vergeben, die du selbst hast.",
+        "lockoutTitle": "Eigenen Zugriff entfernen?",
+        "lockoutConfirm": "Du hast diese Rolle. Ohne diese Berechtigung verlierst du eventuell den Zugriff auf diese Seite.",
+        "lockoutConfirmAction": "Entfernen"
     },
     "time": {
         "justNow": "Gerade eben",
@@ -776,7 +778,6 @@
         "saveError": "Einstellungen konnten nicht gespeichert werden. Bitte erneut versuchen.",
         "contactEmail": "Kontakt-E-Mail",
         "contactEmailHint": "Wird als Kontaktstelle veröffentlicht und über neue Inhaltsmeldungen benachrichtigt.",
-        "mailLanguage": "Sprache für E-Mails",
         "mailNotConfigured": "E-Mail ist nicht konfiguriert, daher können Passwort-Zurücksetzungen und Meldungsbenachrichtigungen nicht zugestellt werden. SMTP wird in PocketBase konfiguriert, nicht hier.",
         "mailNotConfiguredAction": "PocketBase-E-Mail-Einstellungen öffnen",
         "legalTitle": "Impressum",
@@ -831,7 +832,9 @@
         "removeBand": "Farbe entfernen",
         "resetBands": "Auf Standard zurücksetzen",
         "splitBand": "Teilen",
-        "bandBoundary": "Grenze zwischen {from} und {to}"
+        "bandBoundary": "Grenze zwischen {from} und {to}",
+        "defaultLanguage": "Standardsprache",
+        "defaultLanguageHelp": "Wird standardmäßig für E-Mails, Exporte und andere Systemausgaben verwendet."
     },
     "errors": {
         "notFound": {
@@ -1036,9 +1039,7 @@
     },
     "audit": {
         "title": "Aktivitätsprotokoll",
-        "subtitle": "Alle aufgezeichneten Aktionen in der App.",
         "titleOwn": "Deine Aktivität",
-        "subtitleOwn": "Alles, was zu deinem Konto aufgezeichnet wurde.",
         "searchLabel": "Aktivität durchsuchen",
         "filterAction": "Aktion",
         "filterCollection": "Bereich",
@@ -1397,18 +1398,10 @@
     },
     "accountSettings": {
         "title": "Einstellungen",
-        "subtitle": "Verwalte dein Profil, deine Präferenzen und deine Sicherheit.",
-        "profileDescription": "So sehen dich andere in der App.",
         "avatar": "Avatar",
         "avatarDescription": "JPG, PNG, SVG oder WebP.",
-        "emailDescription": "Für die Anmeldung und für Benachrichtigungen.",
-        "preferencesDescription": "Sprache und Erscheinungsbild der App.",
         "language": "Sprache",
-        "languageDescription": "Für die Oberfläche und für E-Mails, die du erhältst.",
         "theme": "Design",
-        "themeDescription": "Folge deinem System oder wähle ein festes Design.",
-        "passwordDescription": "Bestätige dein aktuelles Passwort, bevor du ein neues wählst.",
-        "notificationsDescription": "Wähle, worüber Gripello dich benachrichtigt.",
         "push": {
             "topicsTitle": "Benachrichtige mich über",
             "topics": {
@@ -1661,7 +1654,8 @@
             "flags": {
                 "allFlashes": "Alles geflasht",
                 "uniqueTop": "Einziges Top einer Route"
-            }
+            },
+            "competition": "Wettkampf"
         },
         "export": {
             "menu": "Exportieren",
@@ -1775,7 +1769,8 @@
             "previousSlugs": "Frühere Adressen",
             "venue": "Halle",
             "createdAt": "Angelegt",
-            "open": "Halle öffnen"
+            "open": "Halle öffnen",
+            "inactive": "Inaktiv"
         },
         "settings": {
             "title": "Plattform-Einstellungen",
@@ -1791,6 +1786,21 @@
             "routes": "Routen",
             "admins": "Plattform-Admins",
             "dashboard": "PocketBase-Dashboard"
+        },
+        "users": {
+            "title": "Nutzer",
+            "search": "Nach Name oder E-Mail suchen…",
+            "show": "Anzeigen",
+            "verified": "Bestätigt",
+            "unverified": "Unbestätigt",
+            "platformAdmin": "Plattform-Admin",
+            "memberships": "Hallen-Mitgliedschaften",
+            "gym": "Halle",
+            "addMembership": "Hinzufügen",
+            "sendPasswordReset": "E-Mail zum Zurücksetzen des Passworts senden",
+            "passwordResetSent": "E-Mail zum Zurücksetzen des Passworts gesendet.",
+            "deleteConfirm": "{name} mit allen Daten löschen? Das kann nicht rückgängig gemacht werden.",
+            "lastAdmin": "Diese Person ist die einzige Admin einer Halle. Ernenne zuerst jemand anderen zur Admin."
         }
     },
     "mails": {

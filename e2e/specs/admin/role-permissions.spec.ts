@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, reloadSettled } from '../../support/nav'
 import { createRole } from '../../support/seed'
 
 const roleSaved = (page: Page) =>
@@ -16,7 +16,8 @@ test('toggles a permission for a role', async ({
     testPrefix,
 }) => {
     const role = await createRole(root, `${testPrefix}-role`)
-    await gotoSettled(page, '/admin/users')
+    await gotoSettled(page, '/admin/users#roles')
+    await page.getByTestId(`role-permissions-row-${role.name}`).click()
 
     const checkbox = page.getByTestId(
         `role-permissions-${role.name}-manage_users`,
@@ -28,7 +29,8 @@ test('toggles a permission for a role', async ({
     expect((await saved).ok()).toBe(true)
     await expect(checkbox).toBeChecked()
 
-    await gotoSettled(page, '/admin/users')
+    await reloadSettled(page)
+    await expect(page.getByTestId('role-detail')).toContainText(role.name)
     await expect(checkbox).toBeChecked()
 
     const reverted = roleSaved(page)
@@ -43,7 +45,8 @@ test('shows an error and does not persist the change when the update fails', asy
     testPrefix,
 }) => {
     const role = await createRole(root, `${testPrefix}-role`)
-    await gotoSettled(page, '/admin/users')
+    await gotoSettled(page, '/admin/users#roles')
+    await page.getByTestId(`role-permissions-row-${role.name}`).click()
 
     const checkbox = page.getByTestId(
         `role-permissions-${role.name}-manage_settings`,
@@ -59,7 +62,7 @@ test('shows an error and does not persist the change when the update fails', asy
     await expect(checkbox).not.toBeChecked()
 
     await page.unroute('**/api/collections/roles/records/**')
-    await gotoSettled(page, '/admin/users')
+    await reloadSettled(page)
     await expect(checkbox).not.toBeChecked()
 })
 
@@ -69,7 +72,8 @@ test('grants and revokes a whole permission group at once', async ({
     testPrefix,
 }) => {
     const role = await createRole(root, `${testPrefix}-role`)
-    await gotoSettled(page, '/admin/users')
+    await gotoSettled(page, '/admin/users#roles')
+    await page.getByTestId(`role-permissions-row-${role.name}`).click()
 
     const groupToggle = page.getByTestId(
         `role-group-toggle-${role.name}-competitions`,

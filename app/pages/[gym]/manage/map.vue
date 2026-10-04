@@ -484,12 +484,11 @@ const gymPath = useGymPath()
 definePageMeta({
     middleware: 'auth',
     requiredPermission: 'manage_routes',
-    footer: false,
 })
 
 const BATCH_SIZE = 150
 const PLACEMENT_FIELDS =
-    'id,name,color,grade,grade_system,grade_index,anchor_point,type,wall,wall_position,screw_date'
+    'id,name,color,grade,grade_system,grade_index,anchor_point,type,wall,wall_position,screw_date,permanent'
 const DRAG_THRESHOLD_PX = 6
 const LONG_PRESS_MS = 400
 

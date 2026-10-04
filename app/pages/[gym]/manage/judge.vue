@@ -18,8 +18,6 @@
 </template>
 
 <script setup lang="ts">
-import type { CompetitionRecord } from '~/types/models'
-
 const gymPath = useGymPath()
 
 definePageMeta({
@@ -28,29 +26,8 @@ definePageMeta({
 })
 
 const { t } = useI18n()
-const pb = usePocketbase()
-const gymId = useCurrentGymId()
-const route = useRoute()
 
-const { data: judgeable } = await useAsyncData('judge-competitions', () =>
-    pb.collection('competitions').getFullList<CompetitionRecord>({
-        filter: gymFilter(
-            pb,
-            gymId.value,
-            '(status = "open" || status = "closed")',
-        ),
-        sort: 'starts_at',
-    }),
-)
-
-if (!route.query.pick && judgeable.value?.length === 1) {
-    await navigateTo(
-        gymPath(`/manage/competitions/${judgeable.value[0]!.id}/judge`),
-        {
-            replace: true,
-        },
-    )
-}
+const { data: judgeable } = await useJudgeableCompetitions()
 
 useHead({ title: t('page.title.judge') })
 </script>

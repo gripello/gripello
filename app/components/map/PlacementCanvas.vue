@@ -44,12 +44,20 @@
             </text>
         </g>
 
-        <g
+        <MapRouteMarker
             v-for="dot in dots"
             :key="dot.routeId"
+            :at="dot.point"
+            :fill="dot.fill"
+            :stroke="dot.stroke"
+            :grade="dot.grade"
+            :as-grade="isolated.has(dot.routeId)"
+            :is-new="dot.isNew"
+            :selected="dot.routeId === selectedRouteId"
+            :pixels-per-unit="pixelsPerUnit"
+            :hit-radius-px="hitRadiusPx"
             class="placement-dot"
             :class="{
-                'placement-dot--selected': dot.routeId === selectedRouteId,
                 'placement-dot--dragging': dot.routeId === draggingRouteId,
             }"
             data-draggable
@@ -63,35 +71,13 @@
             @click.stop
             @keydown.enter.prevent="onDotKey(dot)"
             @keydown.space.prevent="onDotKey(dot)"
-        >
-            <circle
-                :cx="dot.point[0]"
-                :cy="dot.point[1]"
-                :r="hitRadius"
-                class="placement-dot-hit"
-            />
-            <circle
-                :cx="dot.point[0]"
-                :cy="dot.point[1]"
-                :r="dotRadius"
-                :fill="dot.fill"
-                :stroke="dot.stroke"
-                class="placement-dot-body"
-            />
-            <circle
-                v-if="dot.routeId === selectedRouteId"
-                :cx="dot.point[0]"
-                :cy="dot.point[1]"
-                :r="dotRadius * 2"
-                class="placement-dot-ring"
-            />
-        </g>
+        />
 
         <circle
             v-if="ghost"
             :cx="ghost.point[0]"
             :cy="ghost.point[1]"
-            :r="dotRadius * 1.3"
+            :r="(DOT_RADIUS_PX * 1.3) / pixelsPerUnit"
             class="placement-ghost"
             pointer-events="none"
             data-testid="placement-ghost"
@@ -111,6 +97,10 @@ import {
 } from '#shared/utils/mapGeometry'
 import { translatedColorName } from '~/utils/colorName'
 import {
+    DOT_RADIUS_PX,
+    gradeSpacingPx,
+    HIT_RADIUS_PX,
+    isolatedIds,
     placeRoutes,
     type MapRoute,
     type MapWall,
@@ -135,8 +125,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const DOT_RADIUS_PX = { fine: 6, coarse: 8 }
-const HIT_RADIUS_PX = { fine: 12, coarse: 22 }
 const SNAP_RADIUS_PX = 60
 const DRAG_THRESHOLD_PX = 4
 
@@ -157,17 +145,19 @@ const panZoom = useSvgPanZoom({
 const { pixelsPerUnit, toMap, fitAll, fitTo, svgRef } = panZoom
 
 const coarsePointer = useCoarsePointer()
-const pointer = computed(() => (coarsePointer.value ? 'coarse' : 'fine'))
-const dotRadius = computed(
-    () => DOT_RADIUS_PX[pointer.value] / pixelsPerUnit.value,
-)
-const hitRadius = computed(
-    () => HIT_RADIUS_PX[pointer.value] / pixelsPerUnit.value,
+const hitRadiusPx = computed(() =>
+    coarsePointer.value ? HIT_RADIUS_PX.coarse : HIT_RADIUS_PX.fine,
 )
 const draggingRouteId = ref<string | null>(null)
 const ghost = ref<(EdgeProjection & { wall: MapWall }) | null>(null)
 
 const dots = computed(() => placeRoutes(props.walls, props.routes))
+const isolated = computed(() =>
+    isolatedIds(
+        dots.value,
+        gradeSpacingPx(hitRadiusPx.value) / pixelsPerUnit.value,
+    ),
+)
 const routesById = computed(
     () => new Map(props.routes.map((route) => [route.id, route])),
 )
@@ -316,13 +306,11 @@ function onDotDown(routeId: string, event: PointerEvent) {
     vector-effect: non-scaling-stroke;
 }
 
-.placement-wall:focus,
-.placement-dot:focus {
+.placement-wall:focus {
     outline: none;
 }
 
-.placement-wall:focus-visible .placement-wall-outline,
-.placement-dot:focus-visible .placement-dot-hit {
+.placement-wall:focus-visible .placement-wall-outline {
     stroke: var(--ui-primary);
     stroke-width: 2;
     vector-effect: non-scaling-stroke;
@@ -349,25 +337,8 @@ function onDotDown(routeId: string, event: PointerEvent) {
     pointer-events: none;
 }
 
-.placement-dot {
+.map-dot.placement-dot {
     cursor: grab;
-}
-
-.placement-dot-hit {
-    fill: transparent;
-}
-
-.placement-dot-body {
-    stroke-width: 1.25;
-    vector-effect: non-scaling-stroke;
-}
-
-.placement-dot-ring {
-    fill: none;
-    stroke: var(--ui-primary);
-    stroke-width: 2.5;
-    vector-effect: non-scaling-stroke;
-    pointer-events: none;
 }
 
 .placement-dot--dragging {

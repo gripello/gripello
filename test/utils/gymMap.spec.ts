@@ -50,7 +50,14 @@ const walls = toMapWalls(
 )
 
 const routes = [
-    { id: 'r1', name: 'One', color: '#ffffff', wall: 'a', wall_position: 0.8 },
+    {
+        id: 'r1',
+        name: 'One',
+        color: '#ffffff',
+        grade: ' 6A+ ',
+        wall: 'a',
+        wall_position: 0.8,
+    },
     { id: 'r2', name: 'Two', color: 'nonsense', wall: 'a', wall_position: 0.2 },
     {
         id: 'r3',
@@ -78,6 +85,7 @@ describe('placeRoutes', () => {
         expect(dots[0]!.stroke).toBe('#1A1A1A')
         expect(dots[1]!.fill).toBe('#9E9E9E')
         expect(dots[2]!.stroke).toBe('#FFFFFF')
+        expect(dots.map((dot) => dot.grade)).toEqual(['6A+', '', ''])
     })
 
     it('flags routes set within the last week', () => {

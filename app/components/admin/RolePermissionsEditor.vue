@@ -1,28 +1,6 @@
 <template>
-    <section class="role-section">
-        <LayoutSectionHeader
-            :title="t('permissions.title')"
-            :subtitle="t('permissions.subtitle')"
-        >
-            <template #actions>
-                <UButton
-                    color="primary"
-                    icon="i-lucide-shield-plus"
-                    data-testid="role-create-open"
-                    @click="startCreate"
-                >
-                    {{ t('permissions.addRole') }}
-                </UButton>
-            </template>
-        </LayoutSectionHeader>
-
-        <div v-if="loading" class="grid grid-cols-12 gap-4">
-            <USkeleton
-                v-for="i in 3"
-                :key="i"
-                class="col-span-12 h-48 rounded-lg md:col-span-6 lg:col-span-4"
-            />
-        </div>
+    <section>
+        <USkeleton v-if="loading" class="h-96 w-full rounded-lg" />
 
         <LayoutEmptyState
             v-else-if="!roles.length"
@@ -32,131 +10,196 @@
 
         <div
             v-else
-            class="grid grid-cols-12 gap-4"
-            data-testid="role-permissions-table"
+            class="grid items-start gap-4 md:grid-cols-[18rem_minmax(0,1fr)]"
         >
-            <div
-                v-for="role in roles"
-                :key="role.id"
-                class="col-span-12 md:col-span-6 lg:col-span-4"
+            <ul
+                class="divide-y divide-default overflow-hidden rounded-lg border border-default bg-default md:sticky md:top-20"
+                :class="{ 'hidden md:block': routeRoleId }"
+                data-testid="role-list"
             >
-                <div
-                    class="role-card flex h-full flex-col rounded-lg border bg-default"
-                    :data-testid="`role-permissions-row-${role.name}`"
-                >
-                    <div class="flex items-center gap-3 px-4 pb-1 pt-3">
-                        <span
-                            class="inline-flex size-[42px] shrink-0 items-center justify-center rounded-full"
-                            :class="{ 'bg-elevated': !role.color }"
-                            :style="{
-                                backgroundColor: role.color || undefined,
-                                color: readableTextOn(role.color),
-                            }"
+                <li v-for="role in roles" :key="role.id">
+                    <button
+                        type="button"
+                        class="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-start transition-colors hover:bg-elevated/50"
+                        :class="{
+                            'md:bg-elevated': role.id === selectedRole?.id,
+                        }"
+                        :aria-current="
+                            role.id === selectedRole?.id ? 'true' : undefined
+                        "
+                        :data-testid="`role-permissions-row-${role.name}`"
+                        @click="selectRole(role)"
+                    >
+                        <AdminRoleBadge
+                            :color="role.color"
                             :data-testid="`role-color-${role.name}`"
+                        />
+                        <span
+                            class="min-w-0 flex-1 truncate font-medium text-highlighted"
                         >
-                            <UIcon
-                                name="i-lucide-shield-user"
-                                class="size-[20px]"
-                            />
+                            {{ role.name }}
                         </span>
-
-                        <div class="min-w-0 flex-1">
-                            <div class="text-sm font-semibold card-title-tight">
-                                {{ role.name }}
-                            </div>
-                            <div
-                                class="text-xs card-subtitle-muted text-muted whitespace-normal"
-                            >
-                                {{
-                                    role.description ||
-                                    t('permissions.noDescription')
-                                }}
-                            </div>
-                        </div>
-
                         <UBadge
                             color="neutral"
                             variant="soft"
+                            size="sm"
                             :data-testid="`role-granted-${role.name}`"
                         >
                             {{ grantedCount(role) }}/{{ allPermissions.length }}
                         </UBadge>
-                    </div>
+                        <UBadge
+                            color="neutral"
+                            variant="outline"
+                            size="sm"
+                            icon="i-lucide-users-round"
+                            :label="String(memberCount(role))"
+                            :aria-label="memberCountLabel(role)"
+                            :title="memberCountLabel(role)"
+                            :data-testid="`role-members-${role.name}`"
+                        />
+                        <UIcon
+                            name="i-lucide-chevron-right"
+                            class="size-4 shrink-0 text-dimmed md:hidden"
+                        />
+                    </button>
+                </li>
+            </ul>
 
-                    <USeparator class="mt-3" />
+            <div
+                v-if="selectedRole"
+                class="min-w-0"
+                :class="{ 'hidden md:block': !routeRoleId }"
+                data-testid="role-detail"
+            >
+                <UButton
+                    icon="i-lucide-arrow-left"
+                    color="neutral"
+                    variant="link"
+                    class="mb-2 px-0 md:hidden"
+                    :label="t('permissions.backToRoles')"
+                    data-testid="role-detail-back"
+                    @click="selectRole(null)"
+                />
 
-                    <div class="flex grow flex-col gap-4 px-4 py-3">
-                        <div
-                            v-for="group in permissionGroups"
-                            :key="group.key"
-                            class="flex flex-col gap-2"
-                            :data-testid="`role-group-${role.name}-${group.key}`"
+                <div class="mb-4 flex items-start gap-3">
+                    <AdminRoleBadge :color="selectedRole.color" size="lg" />
+                    <div class="min-w-0 flex-1">
+                        <h2
+                            class="truncate text-lg font-semibold text-highlighted"
                         >
-                            <UCheckbox
-                                :model-value="
-                                    groupState(role, group.permissions)
-                                "
-                                :disabled="isProtectedRole(role) || saving"
-                                :ui="{
-                                    label: 'flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted uppercase',
-                                }"
-                                :data-testid="`role-group-toggle-${role.name}-${group.key}`"
-                                @update:model-value="
-                                    toggleGroup(role, group.permissions)
-                                "
-                            >
-                                <template #label>
-                                    <UIcon
-                                        :name="group.icon"
-                                        class="size-3.5"
-                                    />
-                                    {{ t(`permissions.groups.${group.key}`) }}
-                                </template>
-                            </UCheckbox>
-                            <div class="grid grid-cols-12 gap-2 ps-6">
-                                <UCheckbox
-                                    v-for="perm in group.permissions"
-                                    :key="perm.id"
-                                    :model-value="hasPermission(role, perm.id)"
-                                    :label="
-                                        t('permissions.features.' + perm.name)
-                                    "
-                                    :disabled="isProtectedRole(role) || saving"
-                                    class="col-span-12 sm:col-span-6"
-                                    :data-testid="`role-permissions-${role.name}-${perm.name}`"
-                                    @update:model-value="
-                                        togglePermission(role, perm)
-                                    "
-                                />
-                            </div>
-                        </div>
+                            {{ selectedRole.name }}
+                        </h2>
+                        <p
+                            v-if="selectedRole.description"
+                            class="text-sm text-muted"
+                        >
+                            {{ selectedRole.description }}
+                        </p>
+                        <p
+                            class="flex items-center gap-1 text-sm text-muted"
+                            data-testid="role-detail-members"
+                        >
+                            <UIcon
+                                name="i-lucide-users-round"
+                                class="size-4 shrink-0"
+                            />
+                            {{ memberCountLabel(selectedRole) }}
+                        </p>
                     </div>
-
-                    <div class="flex justify-end gap-1 px-2 pb-2">
+                    <div class="flex shrink-0">
                         <UTooltip :text="t('permissions.editRole')">
                             <UButton
                                 icon="i-lucide-pencil"
                                 color="neutral"
                                 variant="ghost"
+                                class="icon-btn"
                                 :aria-label="t('permissions.editRole')"
-                                :data-testid="`role-edit-${role.name}`"
-                                @click="startEdit(role)"
+                                :data-testid="`role-edit-${selectedRole.name}`"
+                                @click="startEdit(selectedRole)"
+                            />
+                        </UTooltip>
+                        <UTooltip :text="t('permissions.duplicateRole')">
+                            <UButton
+                                icon="i-lucide-copy"
+                                color="neutral"
+                                variant="ghost"
+                                class="icon-btn"
+                                :aria-label="t('permissions.duplicateRole')"
+                                :data-testid="`role-duplicate-${selectedRole.name}`"
+                                @click="startDuplicate(selectedRole)"
                             />
                         </UTooltip>
                         <UTooltip
-                            v-if="!isProtectedRole(role)"
+                            v-if="!isProtectedRole(selectedRole)"
                             :text="t('permissions.deleteRole')"
                         >
                             <UButton
                                 icon="i-lucide-trash-2"
                                 color="error"
                                 variant="ghost"
+                                class="icon-btn"
                                 :aria-label="t('permissions.deleteRole')"
-                                :data-testid="`role-delete-${role.name}`"
-                                @click="confirmDelete(role)"
+                                :data-testid="`role-delete-${selectedRole.name}`"
+                                @click="confirmDelete(selectedRole)"
                             />
                         </UTooltip>
                     </div>
+                </div>
+
+                <div class="flex flex-col gap-4">
+                    <section
+                        v-for="group in permissionGroups"
+                        :key="group.key"
+                        class="rounded-lg border border-default bg-default"
+                        :data-testid="`role-group-${group.key}`"
+                    >
+                        <div
+                            class="flex items-center gap-2 border-b border-default px-4 py-3"
+                        >
+                            <UIcon
+                                :name="group.icon"
+                                class="size-4 shrink-0 text-muted"
+                            />
+                            <h3
+                                class="min-w-0 flex-1 truncate font-semibold text-highlighted"
+                            >
+                                {{ t(`permissions.groups.${group.key}`) }}
+                            </h3>
+                            <UCheckbox
+                                :model-value="
+                                    groupState(selectedRole, group.permissions)
+                                "
+                                :disabled="
+                                    isProtectedRole(selectedRole) || saving
+                                "
+                                :aria-label="
+                                    t(`permissions.groups.${group.key}`)
+                                "
+                                :data-testid="`role-group-toggle-${selectedRole.name}-${group.key}`"
+                                @update:model-value="
+                                    toggleGroup(selectedRole, group.permissions)
+                                "
+                            />
+                        </div>
+                        <div class="grid gap-x-6 px-4 py-1 lg:grid-cols-2">
+                            <USwitch
+                                v-for="perm in group.permissions"
+                                :key="perm.id"
+                                :model-value="
+                                    hasPermission(selectedRole, perm.id)
+                                "
+                                :disabled="
+                                    isProtectedRole(selectedRole) || saving
+                                "
+                                :label="t('permissions.features.' + perm.name)"
+                                class="py-2.5"
+                                :data-testid="`role-permissions-${selectedRole.name}-${perm.name}`"
+                                @update:model-value="
+                                    togglePermission(selectedRole, perm)
+                                "
+                            />
+                        </div>
+                    </section>
                 </div>
             </div>
         </div>
@@ -165,6 +208,14 @@
             :role="editingRole"
             @saved="onRoleSaved"
             @close="editingRole = null"
+        />
+
+        <ConfirmDialog
+            v-model="lockoutDialog"
+            :title="t('permissions.lockoutTitle')"
+            :message="t('permissions.lockoutConfirm')"
+            :confirm-text="t('permissions.lockoutConfirmAction')"
+            @confirm="confirmLockout"
         />
 
         <LayoutDialogShell
@@ -244,14 +295,18 @@ import {
     isProtectedRole,
     reassignTargets,
     defaultReassignTarget,
+    memberCountsByRole,
+    revokesOwnAccess,
 } from '~/utils/roles'
-import { readableTextOn } from '~/utils/color'
+import { membershipIn } from '#shared/utils/memberships'
 import type { PermissionRecord, RoleRecord } from '~/types/models'
 import { coalesce } from '~/utils/realtimeCache'
+import { withSelectedRole } from '~/utils/adminUsersTab'
 
 const { t } = useI18n()
 const pb = usePocketbase()
 const gymId = useCurrentGymId()
+const { memberships: ownMemberships, isPlatformAdmin } = usePermissions()
 
 const REASSIGN_BATCH_SIZE = 200
 
@@ -259,6 +314,7 @@ const loading = ref(true)
 const { pending: saving, run: runSave } = useAsyncAction()
 const roles = ref<RoleRecord[]>([])
 const allPermissions = ref<PermissionRecord[]>([])
+const memberCounts = ref<Record<string, number>>({})
 const { notify, error: notifyError } = useNotification()
 
 const editingRole = ref<Partial<RoleRecord> | null>(null)
@@ -283,9 +339,36 @@ function grantedCount(role: RoleRecord) {
     return (role.permissions ?? []).length
 }
 
+function memberCount(role: RoleRecord) {
+    return memberCounts.value[role.id] ?? 0
+}
+
+function memberCountLabel(role: RoleRecord) {
+    const n = memberCount(role)
+    return t('permissions.memberCount', { n }, n)
+}
+
 function hasPermission(role: RoleRecord, permId: string) {
     const perms = role.permissions ?? []
     return perms.includes(permId)
+}
+
+const route = useRoute()
+const router = useRouter()
+const routeRoleId = computed(() =>
+    typeof route.query.role === 'string' ? route.query.role : null,
+)
+const selectedRole = computed(
+    () =>
+        roles.value.find((role) => role.id === routeRoleId.value) ??
+        roles.value[0],
+)
+
+function selectRole(role: Pick<RoleRecord, 'id'> | null) {
+    return router.push({
+        query: withSelectedRole(route.query, role?.id ?? null),
+        hash: route.hash,
+    })
 }
 
 const permissionGroups = computed(() => groupPermissions(allPermissions.value))
@@ -318,7 +401,30 @@ function togglePermission(role: RoleRecord, perm: PermissionRecord) {
     )
 }
 
-async function savePermissions(role: RoleRecord, currentPerms: string[]) {
+const lockoutDialog = ref(false)
+const pendingChange = shallowRef<{ role: RoleRecord; perms: string[] }>()
+
+function savePermissions(role: RoleRecord, perms: string[]) {
+    const risky = revokesOwnAccess({
+        role,
+        nextPermissions: perms,
+        permissions: allPermissions.value,
+        ownRoleId: membershipIn(ownMemberships.value, gymId.value)?.role,
+        platformAdmin: isPlatformAdmin.value,
+    })
+    if (!risky) return persistPermissions(role, perms)
+    pendingChange.value = { role, perms }
+    lockoutDialog.value = true
+}
+
+function confirmLockout() {
+    lockoutDialog.value = false
+    const change = pendingChange.value
+    pendingChange.value = undefined
+    if (change) return persistPermissions(change.role, change.perms)
+}
+
+async function persistPermissions(role: RoleRecord, currentPerms: string[]) {
     const previousPerms = role.permissions ?? []
     role.permissions = currentPerms
     const saved = await runSave(
@@ -336,18 +442,26 @@ async function savePermissions(role: RoleRecord, currentPerms: string[]) {
     if (!saved) role.permissions = previousPerms
 }
 
-// ── Create / edit ──────────────────────────────────────────────────────────
-
 function startCreate() {
     editingRole.value = { name: '', description: '', color: '' }
+}
+
+function startDuplicate(role: RoleRecord) {
+    editingRole.value = {
+        name: t('permissions.copyName', { name: role.name }),
+        description: role.description ?? '',
+        color: role.color ?? '',
+        permissions: [...(role.permissions ?? [])],
+    }
 }
 
 function startEdit(role: RoleRecord) {
     editingRole.value = { ...role }
 }
 
-async function onRoleSaved(kind: 'created' | 'updated') {
+async function onRoleSaved(kind: 'created' | 'updated', roleId: string) {
     editingRole.value = null
+    if (kind === 'created') void selectRole({ id: roleId })
     notify(
         t(
             kind === 'created'
@@ -362,8 +476,6 @@ async function onRoleSaved(kind: 'created' | 'updated') {
 async function refreshRoles() {
     await Promise.all([fetchData({ silent: true }), refreshNuxtData('roles')])
 }
-
-// ── Delete ─────────────────────────────────────────────────────────────────
 
 async function confirmDelete(role: RoleRecord) {
     deletingRole.value = role
@@ -413,6 +525,7 @@ async function deleteRole() {
             }
 
             await pb.collection('roles').delete(role.id)
+            if (routeRoleId.value === role.id) await selectRole(null)
             deleteDialog.value = false
             deletingRole.value = null
             await refreshRoles()
@@ -424,12 +537,10 @@ async function deleteRole() {
     )
 }
 
-// ── Data ───────────────────────────────────────────────────────────────────
-
 async function fetchData({ silent = false } = {}) {
     if (!silent) loading.value = true
     try {
-        const [rolesData, permsData] = await Promise.all([
+        const [rolesData, permsData, membershipsData] = await Promise.all([
             pb.collection('roles').getFullList<RoleRecord>({
                 filter: pb.filter('gym = {:gym}', { gym: gymId.value }),
                 sort: 'name',
@@ -439,9 +550,15 @@ async function fetchData({ silent = false } = {}) {
                 sort: 'name',
                 requestKey: 'rolePermEditor_perms',
             }),
+            pb.collection('memberships').getFullList<{ role: string }>({
+                filter: gymFilter(pb, gymId.value),
+                fields: 'role',
+                requestKey: 'rolePermEditor_members',
+            }),
         ])
         roles.value = rolesData
         allPermissions.value = permsData
+        memberCounts.value = memberCountsByRole(membershipsData)
     } catch (err) {
         if (isAbortError(err)) return
         console.error('Failed to fetch roles/permissions:', err)
@@ -455,7 +572,11 @@ const { data: initial } = useAsyncData(
     'role-permissions',
     async () => {
         await fetchData()
-        return { roles: roles.value, permissions: allPermissions.value }
+        return {
+            roles: roles.value,
+            permissions: allPermissions.value,
+            memberCounts: memberCounts.value,
+        }
     },
     { watch: [gymId] },
 )
@@ -463,13 +584,17 @@ const { data: initial } = useAsyncData(
 if (initial.value) {
     roles.value = initial.value.roles
     allPermissions.value = initial.value.permissions
+    memberCounts.value = initial.value.memberCounts
     loading.value = false
 }
+
+defineExpose({ startCreate })
 
 const fetchDataSoon = coalesce(() => fetchData({ silent: true }))
 const { subscribe } = usePbSubscription(fetchDataSoon)
 onMounted(() => {
     void subscribe('roles', fetchDataSoon)
     void subscribe('permissions', fetchDataSoon)
+    void subscribe('memberships', fetchDataSoon)
 })
 </script>

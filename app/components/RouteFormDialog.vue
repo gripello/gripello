@@ -111,22 +111,40 @@
                 />
             </UFormField>
 
-            <div class="grid grid-cols-2 gap-4">
-                <UFormField :label="$t('routes.screwed_at')" name="screw_date">
-                    <UInput
-                        v-model="form.screw_date"
-                        type="date"
-                        class="w-full"
-                        data-testid="route-form-screw-date"
+            <UFormField :label="$t('routes.screwed_at')" name="screw_date">
+                <UInput
+                    v-model="form.screw_date"
+                    type="date"
+                    class="w-full sm:w-1/2"
+                    data-testid="route-form-screw-date"
+                />
+            </UFormField>
+
+            <div
+                class="divide-y divide-default rounded-lg border border-default"
+            >
+                <label
+                    v-for="flag in routeFlags"
+                    :key="flag.key"
+                    class="flex cursor-pointer items-center gap-3 px-3 py-2.5"
+                >
+                    <UIcon
+                        :name="flag.icon"
+                        class="size-5 shrink-0 text-muted"
                     />
-                </UFormField>
-                <div v-if="isEditMode" class="flex items-center justify-center">
+                    <span class="min-w-0 grow">
+                        <span class="block text-sm font-medium">
+                            {{ $t(`climbing.${flag.key}`) }}
+                        </span>
+                        <span class="block text-xs text-muted">
+                            {{ $t(`climbing.${flag.key}Help`) }}
+                        </span>
+                    </span>
                     <USwitch
-                        v-model="form.archived"
-                        :label="$t('climbing.archived')"
-                        data-testid="route-form-archived"
+                        v-model="form[flag.key]"
+                        :data-testid="`route-form-${flag.key}`"
                     />
-                </div>
+                </label>
             </div>
 
             <UFormField
@@ -268,6 +286,7 @@ import {
 import {
     normalizeCreators,
     formatDateToYYYYMMDD,
+    localDateYYYYMMDD,
 } from '#shared/utils/formatting'
 import { required, maxLength, type Rule } from '~/utils/validation'
 import { ROUTE_TYPES } from '~/utils/routes'
@@ -379,6 +398,12 @@ const editRouteId = ref<string | null>(null)
 const originalAnchorPointIsZero = ref(false)
 const originalGrading = ref<{ type: string; system: GradeSystem } | null>(null)
 const { gradeSystemFor } = useGradeSystems()
+const routeFlags = computed(() => [
+    { key: 'permanent' as const, icon: 'i-lucide-mountain' },
+    ...(isEditMode.value
+        ? [{ key: 'archived' as const, icon: 'i-lucide-archive' }]
+        : []),
+])
 
 const form = reactive({
     name: '',
@@ -391,6 +416,7 @@ const form = reactive({
     screw_date: '',
     color: '#FF5722',
     archived: false,
+    permanent: false,
     wall: '' as string | null,
 })
 const originalWall = ref({ wall: '', position: null as number | null })
@@ -542,9 +568,10 @@ const resetForm = () => {
     form.type = ''
     form.comment = ''
     form.creator = []
-    form.screw_date = ''
+    form.screw_date = localDateYYYYMMDD()
     form.color = '#FF5722'
     form.archived = false
+    form.permanent = false
     form.wall = ''
     autoWall = ''
     originalWall.value = { wall: '', position: null }
@@ -570,6 +597,7 @@ const loadFromRoute = (route: RouteRecord) => {
     form.screw_date = formatDateToYYYYMMDD(route.screw_date ?? null)
     form.color = route.color ?? '#FF5722'
     form.archived = route.archived ?? false
+    form.permanent = route.permanent ?? false
     form.wall = route.wall ?? ''
     originalWall.value = {
         wall: route.wall ?? '',
@@ -646,6 +674,7 @@ async function submit() {
             screw_date: form.screw_date,
             color: form.color,
             archived: isEditMode.value ? Boolean(form.archived) : false,
+            permanent: form.permanent,
             wall: form.wall || '',
             wall_position: await wallPosition(form.wall || null),
         }

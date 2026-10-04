@@ -15,34 +15,18 @@
                         :aria-label="t('ticks.gym')"
                         data-testid="logbook-gym"
                     />
-                    <UFieldGroup data-testid="logbook-kind">
-                        <UButton
-                            v-for="option in LOGBOOK_KINDS"
-                            :key="option"
-                            size="sm"
-                            :color="kind === option ? 'primary' : 'neutral'"
-                            :variant="kind === option ? 'soft' : 'outline'"
-                            :aria-pressed="kind === option"
-                            :data-testid="`logbook-kind-${option}`"
-                            @click="kind = option"
-                        >
-                            {{ t(`ticks.kind.${option}`) }}
-                        </UButton>
-                    </UFieldGroup>
-                    <UFieldGroup data-testid="logbook-range">
-                        <UButton
-                            v-for="option in LOGBOOK_RANGES"
-                            :key="option"
-                            size="sm"
-                            :color="range === option ? 'primary' : 'neutral'"
-                            :variant="range === option ? 'soft' : 'outline'"
-                            :aria-pressed="range === option"
-                            :data-testid="`logbook-range-${option}`"
-                            @click="range = option"
-                        >
-                            {{ t(`ticks.range.${option}`) }}
-                        </UButton>
-                    </UFieldGroup>
+                    <SegmentedControl
+                        v-model="kind"
+                        :items="kindItems"
+                        size="sm"
+                        test-id="logbook-kind"
+                    />
+                    <SegmentedControl
+                        v-model="range"
+                        :items="rangeItems"
+                        size="sm"
+                        test-id="logbook-range"
+                    />
                 </div>
             </template>
         </LayoutPageHeader>
@@ -246,6 +230,15 @@ type LoggedTick = TickRecord & { expand?: { route?: RouteRecord } }
 
 const LOGBOOK_KINDS: LogbookKind[] = ['boulder', 'route']
 const LOGBOOK_RANGES: LogbookRange[] = ['30d', '12m', 'all']
+const kindItems = computed(() =>
+    LOGBOOK_KINDS.map((value) => ({ value, label: t(`ticks.kind.${value}`) })),
+)
+const rangeItems = computed(() =>
+    LOGBOOK_RANGES.map((value) => ({
+        value,
+        label: t(`ticks.range.${value}`),
+    })),
+)
 const LOGBOOK_TABS = ['sessions', 'stats', 'projects'] as const
 
 const { t } = useI18n()

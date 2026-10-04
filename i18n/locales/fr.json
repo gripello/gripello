@@ -51,7 +51,6 @@
         "changeAvatar": "Changer d'avatar",
         "emailLocked": "L'e-mail ne peut pas être modifié ici",
         "passwordStrength": "Robustesse du mot de passe",
-        "passwordHint": "Laissez les champs de mot de passe vides pour conserver votre mot de passe actuel.",
         "unsavedChanges": "Modifications non enregistrées",
         "wrongOldPassword": "Le mot de passe actuel est incorrect",
         "passwordChangedSignInAgain": "Mot de passe modifié. Veuillez vous reconnecter avec votre nouveau mot de passe.",
@@ -168,14 +167,14 @@
         "selectedCount": "Sélection : {n}",
         "list": "Voies",
         "competitions": "Compétitions",
-        "judge": "Jugement"
+        "judge": "Jugement",
+        "rated": "A des avis"
     },
     "dashboard": {
         "online": "{0} en ligne"
     },
     "analytics": {
         "title": "Statistiques",
-        "subtitle": "Comment vos voies sont ouvertes, grimpées et évaluées.",
         "meta": {
             "title": "Statistiques - Gripello",
             "description": "Statistiques sur l’ouverture, les cotations et les avis."
@@ -235,12 +234,6 @@
             "ratedRoutes": "Pas encore assez d’avis.",
             "gradeBalance": "La répartition actuelle des cotations correspond à ce que vous ouvrez habituellement."
         },
-        "hints": {
-            "gradeBalance": "Voies actives comparées à votre répartition habituelle – les cotations en rouge manquent au mur.",
-            "gradeFeedback": "Chaque point est une voie avec au moins 3 votes de cotation. Au-dessus de la ligne, les grimpeurs la trouvent plus dure que sa cotation.",
-            "ratedRoutes": "Étoiles comparées à la moyenne de toutes les voies notées.",
-            "oldestActive": "Au mur depuis le plus longtemps – à démonter en priorité."
-        },
         "columns": {
             "averageRating": "Moy. étoiles",
             "averageDeviation": "Écart de cotation"
@@ -279,7 +272,10 @@
         "type": "Type",
         "archived": "Archivée",
         "comment": "Commentaire",
-        "creators": "Ouvreurs"
+        "creators": "Ouvreurs",
+        "permanent": "Permanente",
+        "permanentHelp": "Structures fixes comme arêtes ou fissures jamais rééquipées. Exclues des statistiques d'âge.",
+        "archivedHelp": "Retirée du mur. Masquée pour les grimpeurs."
     },
     "ratings": {
         "ratings": "Avis",
@@ -741,15 +737,21 @@
         "roleSaveError": "Impossible d’enregistrer le rôle.",
         "roleDeleteError": "Impossible de supprimer le rôle. Il est peut-être encore attribué à des membres.",
         "adminRoleLocked": "Le rôle admin ne peut être ni renommé ni supprimé.",
-        "subtitle": "Ce que chaque rôle peut faire. Les modifications s’appliquent immédiatement.",
-        "noDescription": "Aucune description",
         "groups": {
             "routes": "Voies",
             "competitions": "Compétitions",
             "moderation": "Modération",
             "admin": "Administration",
             "other": "Autres"
-        }
+        },
+        "backToRoles": "Tous les rôles",
+        "memberCount": "{n} membre | {n} membres",
+        "duplicateRole": "Dupliquer le rôle",
+        "copyName": "{name} (copie)",
+        "cannotGrant": "Vous ne pouvez attribuer que les autorisations que vous détenez.",
+        "lockoutTitle": "Retirer votre propre accès ?",
+        "lockoutConfirm": "Vous avez ce rôle. Sans cette autorisation, vous risquez de perdre l'accès à cette page.",
+        "lockoutConfirmAction": "Retirer"
     },
     "time": {
         "justNow": "À l'instant",
@@ -776,7 +778,6 @@
         "saveError": "Impossible d’enregistrer les paramètres. Veuillez réessayer.",
         "contactEmail": "E-mail de contact",
         "contactEmailHint": "Publié comme point de contact et notifié des nouveaux signalements de contenu.",
-        "mailLanguage": "Langue des e-mails",
         "mailNotConfigured": "L’e-mail n’est pas configuré : les réinitialisations de mot de passe et les avis de signalement ne peuvent pas être envoyés. Le SMTP se configure dans PocketBase, pas ici.",
         "mailNotConfiguredAction": "Ouvrir les paramètres e-mail de PocketBase",
         "legalTitle": "Mentions légales",
@@ -831,7 +832,9 @@
         "removeBand": "Supprimer la couleur",
         "resetBands": "Rétablir les valeurs par défaut",
         "splitBand": "Scinder",
-        "bandBoundary": "Limite entre {from} et {to}"
+        "bandBoundary": "Limite entre {from} et {to}",
+        "defaultLanguage": "Langue par défaut",
+        "defaultLanguageHelp": "Utilisée par défaut pour les e-mails, les exports et les autres sorties du système."
     },
     "errors": {
         "notFound": {
@@ -1036,9 +1039,7 @@
     },
     "audit": {
         "title": "Journal d'activité",
-        "subtitle": "Toutes les actions enregistrées dans l'application.",
         "titleOwn": "Votre activité",
-        "subtitleOwn": "Tout ce qui a été enregistré sur votre compte.",
         "searchLabel": "Rechercher dans l'activité",
         "filterAction": "Action",
         "filterCollection": "Domaine",
@@ -1397,18 +1398,10 @@
     },
     "accountSettings": {
         "title": "Paramètres",
-        "subtitle": "Gérez votre profil, vos préférences et votre sécurité.",
-        "profileDescription": "Comment les autres vous voient dans l'application.",
         "avatar": "Avatar",
         "avatarDescription": "JPG, PNG, SVG ou WebP.",
-        "emailDescription": "Pour vous connecter et recevoir des notifications.",
-        "preferencesDescription": "Langue et apparence de l'application.",
         "language": "Langue",
-        "languageDescription": "Pour l'interface et les e-mails que vous recevez.",
         "theme": "Thème",
-        "themeDescription": "Suivez votre système ou choisissez un thème fixe.",
-        "passwordDescription": "Confirmez votre mot de passe actuel avant d'en choisir un nouveau.",
-        "notificationsDescription": "Choisissez les notifications que Gripello vous envoie.",
         "push": {
             "topicsTitle": "Me notifier pour",
             "topics": {
@@ -1661,7 +1654,8 @@
             "flags": {
                 "allFlashes": "Tout en flash",
                 "uniqueTop": "Seul top sur une voie"
-            }
+            },
+            "competition": "Compétition"
         },
         "export": {
             "menu": "Exporter",
@@ -1775,7 +1769,8 @@
             "previousSlugs": "Anciennes adresses",
             "venue": "Salle",
             "createdAt": "Créée le",
-            "open": "Ouvrir la salle"
+            "open": "Ouvrir la salle",
+            "inactive": "Inactif"
         },
         "settings": {
             "title": "Paramètres de la plateforme",
@@ -1791,6 +1786,21 @@
             "routes": "Voies",
             "admins": "Admins de la plateforme",
             "dashboard": "Tableau de bord PocketBase"
+        },
+        "users": {
+            "title": "Utilisateurs",
+            "search": "Rechercher par nom ou e-mail…",
+            "show": "Afficher",
+            "verified": "Vérifié",
+            "unverified": "Non vérifié",
+            "platformAdmin": "Admin plateforme",
+            "memberships": "Adhésions aux salles",
+            "gym": "Salle",
+            "addMembership": "Ajouter",
+            "sendPasswordReset": "Envoyer un e-mail de réinitialisation du mot de passe",
+            "passwordResetSent": "E-mail de réinitialisation envoyé.",
+            "deleteConfirm": "Supprimer {name} et toutes ses données ? Cette action est irréversible.",
+            "lastAdmin": "Cette personne est la seule admin d'une salle. Nommez d'abord quelqu'un d'autre admin."
         }
     },
     "mails": {

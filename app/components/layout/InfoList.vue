@@ -17,31 +17,26 @@
                 />
             </NuxtLink>
             <NuxtLink
-                v-bind="legalLinkProps(settings?.imprint_url, '/imprint')"
+                v-bind="
+                    gym?.slug
+                        ? legalLinkProps(
+                              gym.imprint_url,
+                              `/${gym.slug}/imprint`,
+                          )
+                        : legalLinkProps(settings?.imprint_url, '/imprint')
+                "
                 class="native-row"
                 data-testid="footer-imprint"
             >
                 <span class="native-row__icon"
                     ><UIcon name="i-lucide-scale"
                 /></span>
-                <span class="native-row__text">{{ $t('legal.imprint') }}</span>
-                <UIcon
-                    name="i-lucide-chevron-right"
-                    class="native-row__chevron"
-                />
-            </NuxtLink>
-            <NuxtLink
-                v-if="gym?.slug"
-                v-bind="legalLinkProps(gym.imprint_url, `/${gym.slug}/imprint`)"
-                class="native-row"
-                data-testid="me-gym-imprint"
-            >
-                <span class="native-row__icon"
-                    ><UIcon name="i-lucide-building-2"
-                /></span>
-                <span class="native-row__text">{{
-                    $t('legal.gymImprint', { name: gym.name })
-                }}</span>
+                <span class="native-row__text">
+                    <span class="block">{{ $t('legal.imprint') }}</span>
+                    <span v-if="gym?.slug" class="native-row__subtitle">{{
+                        gym.name
+                    }}</span>
+                </span>
                 <UIcon
                     name="i-lucide-chevron-right"
                     class="native-row__chevron"

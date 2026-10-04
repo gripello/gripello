@@ -5,6 +5,7 @@ import {
     normalizeCreators,
     formatDateToYYYYMMDD,
     formatDate,
+    localDateYYYYMMDD,
 } from '#shared/utils/formatting'
 
 describe('formatAnchorPoint', () => {
@@ -224,5 +225,16 @@ describe('formatDate', () => {
                 withTime: true,
             }),
         ).toContain('10:00')
+    })
+})
+
+describe('localDateYYYYMMDD', () => {
+    it('uses the local calendar day, not the UTC one', () => {
+        expect(localDateYYYYMMDD(new Date(2026, 9, 4, 23, 30))).toBe(
+            '2026-10-04',
+        )
+        expect(localDateYYYYMMDD(new Date(2026, 0, 2, 0, 15))).toBe(
+            '2026-01-02',
+        )
     })
 })

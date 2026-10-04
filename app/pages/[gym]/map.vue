@@ -256,7 +256,7 @@ import { cacheKeys } from '~/utils/realtimeCache'
 
 const gymPath = useGymPath()
 
-definePageMeta({ footer: false, keepalive: true })
+definePageMeta({ keepalive: true })
 
 const MAP_ROUTE_FIELDS =
     'id,name,color,grade,grade_system,grade_index,anchor_point,location,type,comment,creator,screw_date,wall,wall_position,average_rating,ratings_count'

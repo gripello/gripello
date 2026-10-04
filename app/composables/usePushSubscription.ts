@@ -38,7 +38,7 @@ export function usePushSubscription() {
             const [settings, list, subscription] = await Promise.all([
                 pb.send<{ pushKey: string; topics: NotificationTopic[] }>(
                     '/api/notifications/settings',
-                    {},
+                    { requestKey: null },
                 ),
                 pb
                     .collection('push_subscriptions')

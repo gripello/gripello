@@ -67,14 +67,18 @@
                 :hint="t('reports.emptyHint')"
             />
 
-            <ReportsCard
-                v-for="report in loading ? [] : reports"
-                :key="report.id"
-                :report="report"
-                :can-remove="can(removalTarget(report).permission)"
-                class="mb-3"
-                @decide="openDecision"
-            />
+            <div
+                v-if="!loading && reports.length"
+                class="grid items-start gap-3 xl:grid-cols-2"
+            >
+                <ReportsCard
+                    v-for="report in reports"
+                    :key="report.id"
+                    :report="report"
+                    :can-remove="can(removalTarget(report).permission)"
+                    @decide="openDecision"
+                />
+            </div>
 
             <div v-if="hasMore" class="text-center mt-4">
                 <UButton

@@ -1,13 +1,13 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, reloadSettled } from '../../support/nav'
 import { e2eRole } from '../../support/seed'
 
 test('creates a role with a color, toggles a permission, then deletes it', async ({
     adminPage: page,
     testPrefix,
 }) => {
-    await gotoSettled(page, '/admin/users')
-    await expect(page.getByTestId('role-permissions-table')).toBeVisible()
+    await gotoSettled(page, '/admin/users#roles')
+    await expect(page.getByTestId('role-list')).toBeVisible()
 
     const name = `${testPrefix}-role`
 
@@ -19,27 +19,30 @@ test('creates a role with a color, toggles a permission, then deletes it', async
     await page.getByTestId('role-form-submit').click()
     await expect(page.getByTestId('role-form-dialog')).toBeHidden()
 
-    const card = page.getByTestId(`role-permissions-row-${name}`)
-    await expect(card).toBeVisible()
-    await expect(card).toContainText('created by e2e')
+    await expect(page.getByTestId(`role-permissions-row-${name}`)).toBeVisible()
+    await expect(page.getByTestId('role-detail')).toContainText(name)
+    await expect(page.getByTestId('role-detail')).toContainText(
+        'created by e2e',
+    )
 
     await expect(page.getByTestId(`role-color-${name}`)).toHaveCSS(
         'background-color',
         'rgb(66, 165, 245)',
     )
 
-    const checkbox = page.getByTestId(`role-permissions-${name}-view_analytics`)
-    await expect(checkbox).not.toBeChecked()
+    const toggle = page.getByTestId(`role-permissions-${name}-view_analytics`)
+    await expect(toggle).not.toBeChecked()
     const saved = page.waitForResponse(
         (res) =>
             res.request().method() === 'PATCH' &&
             res.url().includes('/api/collections/roles/records/'),
     )
-    await checkbox.click()
+    await toggle.click()
     expect((await saved).ok()).toBe(true)
-    await expect(checkbox).toBeChecked()
+    await expect(toggle).toBeChecked()
+    await expect(page.getByTestId(`role-granted-${name}`)).toHaveText(/^1\//)
 
-    await gotoSettled(page, '/admin/users')
+    await reloadSettled(page)
     await expect(
         page.getByTestId(`role-permissions-${name}-view_analytics`),
     ).toBeChecked()
@@ -59,7 +62,7 @@ test('moves the holders of a deleted role to the role picked in the dialog', asy
     testPrefix,
     createUser,
 }) => {
-    await gotoSettled(page, '/admin/users')
+    await gotoSettled(page, '/admin/users#roles')
 
     const roleName = `${testPrefix}-doomed`
 
@@ -93,8 +96,11 @@ test('moves the holders of a deleted role to the role picked in the dialog', asy
         page.getByTestId(`role-permissions-row-${roleName}`),
     ).toBeHidden()
 
+    await page.getByRole('tab', { name: 'Members' }).click()
     await page.getByTestId('filter-search').fill(holder.email)
-    const card = page.getByTestId(`member-card-${holder.id}`)
+    const card = page
+        .locator('tr, li')
+        .filter({ has: page.getByTestId(`member-card-${holder.id}`) })
     await expect(card).toBeVisible()
     await expect(card.getByTestId('member-card-role')).toHaveText('routesetter')
 })
@@ -102,10 +108,10 @@ test('moves the holders of a deleted role to the role picked in the dialog', asy
 test('the admin role cannot be deleted and its permissions are locked', async ({
     adminPage: page,
 }) => {
-    await gotoSettled(page, '/admin/users')
+    await gotoSettled(page, '/admin/users#roles')
 
-    const adminCard = page.getByTestId('role-permissions-row-admin')
-    await expect(adminCard).toBeVisible()
+    await page.getByTestId('role-permissions-row-admin').click()
+    await expect(page.getByTestId('role-detail')).toContainText('admin')
     await expect(page.getByTestId('role-delete-admin')).toHaveCount(0)
     await expect(
         page.getByTestId('role-permissions-admin-manage_users'),
@@ -119,7 +125,7 @@ test('the admin role cannot be deleted and its permissions are locked', async ({
 test('rejects a role name that is already taken', async ({
     adminPage: page,
 }) => {
-    await gotoSettled(page, '/admin/users')
+    await gotoSettled(page, '/admin/users#roles')
 
     await page.getByTestId('role-create-open').click()
     await page.getByTestId('role-form-name').fill('admin')
@@ -146,8 +152,54 @@ test('add role button looks like the add member button', async ({
             }
         })
 
-    await expect(page.getByTestId('role-create-open')).toBeVisible()
     await expect(page.getByTestId('member-invite-open')).toBeVisible()
     const userButton = await style('member-invite-open')
+    await page.getByRole('tab', { name: 'Roles & permissions' }).click()
+    await expect(page.getByTestId('role-create-open')).toBeVisible()
     await expect.poll(() => style('role-create-open')).toEqual(userButton)
+})
+
+test('duplicates a role with its colour and permissions', async ({
+    adminPage: page,
+    root,
+    testPrefix,
+}) => {
+    await gotoSettled(page, '/admin/users#roles')
+
+    const name = `${testPrefix}-source`
+    await page.getByTestId('role-create-open').click()
+    await page.getByTestId('role-form-name').fill(name)
+    await page.getByTestId('role-form-swatch-26A69A').click()
+    await page.getByTestId('role-form-submit').click()
+    await expect(page.getByTestId('role-form-dialog')).toBeHidden()
+    await expect(page.getByTestId(`role-members-${name}`)).toHaveText('0')
+
+    const toggle = page.getByTestId(`role-permissions-${name}-view_analytics`)
+    await toggle.click()
+    await expect(toggle).toBeChecked()
+    await expect(page.getByTestId(`role-granted-${name}`)).toHaveText(/^1\//)
+
+    await page.getByTestId(`role-duplicate-${name}`).click()
+    await expect(page.getByTestId('role-form-name')).toHaveValue(
+        `${name} (copy)`,
+    )
+    await page.getByTestId('role-form-submit').click()
+    await expect(page.getByTestId('role-form-dialog')).toBeHidden()
+
+    const copy = `${name} (copy)`
+    await expect(page.getByTestId('role-detail')).toContainText(copy)
+    await expect(
+        page.getByTestId(`role-permissions-${copy}-view_analytics`),
+    ).toBeChecked()
+    await expect(page.getByTestId(`role-color-${copy}`)).toHaveCSS(
+        'background-color',
+        'rgb(38, 166, 154)',
+    )
+
+    const source = await e2eRole(root, name)
+    const duplicate = await e2eRole(root, copy)
+    expect(duplicate.permissions).toEqual(source.permissions)
+
+    for (const role of [duplicate, source])
+        await root.collection('roles').delete(role.id)
 })

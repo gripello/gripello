@@ -5,24 +5,15 @@
         data-testid="settings-page"
     >
         <div data-testid="profile-header">
-            <LayoutPageHeader
-                :title="t('accountSettings.title')"
-                :subtitle="t('accountSettings.subtitle')"
-            />
-            <UNavigationMenu
-                :items="tabs"
-                highlight
-                class="-mx-1 mb-6 border-b border-default"
-            />
+            <LayoutPageHeader :title="t('accountSettings.title')" />
+            <nav ref="tabNav" class="account-tabs">
+                <UNavigationMenu
+                    :items="tabs"
+                    highlight
+                    class="w-max min-w-full border-b border-default"
+                />
+            </nav>
         </div>
-
-        <input
-            type="file"
-            ref="avatarInput"
-            accept="image/jpeg,image/png,image/svg+xml,image/webp"
-            class="hidden"
-            @change="onAvatarNative"
-        />
 
         <div class="flex flex-col gap-4 sm:gap-6 pb-8">
             <LayoutSaveBar
@@ -35,11 +26,7 @@
                 @cancel="resetSection(activeTab)"
             />
 
-            <UPageCard
-                :title="sectionTitle"
-                :description="sectionDescription"
-                variant="naked"
-            />
+            <UPageCard :title="sectionTitle" variant="naked" />
 
             <UPageCard v-if="activeTab === 'profile'" variant="subtle">
                 <UForm
@@ -53,31 +40,11 @@
                         :description="t('accountSettings.avatarDescription')"
                         class="flex flex-row-reverse items-center justify-end gap-4 lg:col-span-2"
                     >
-                        <UTooltip :text="t('account.changeAvatar')">
-                            <div
-                                class="avatar-wrapper"
-                                role="button"
-                                tabindex="0"
-                                :aria-label="t('account.changeAvatar')"
-                                data-testid="profile-avatar-upload"
-                                @click="openAvatarPicker"
-                                @keydown.enter.prevent="openAvatarPicker"
-                                @keydown.space.prevent="openAvatarPicker"
-                            >
-                                <UAvatar
-                                    :src="avatarPreview || undefined"
-                                    :alt="t('account.changeAvatar')"
-                                    icon="i-lucide-user"
-                                    class="avatar-ring size-16 text-[32px]"
-                                />
-                                <div class="avatar-overlay">
-                                    <UIcon
-                                        name="i-lucide-camera"
-                                        class="size-[18px] text-white"
-                                    />
-                                </div>
-                            </div>
-                        </UTooltip>
+                        <UserAvatarPicker
+                            :preview="avatarPreview"
+                            test-id-prefix="profile"
+                            @select="selectAvatar"
+                        />
                     </UFormField>
                     <UFormField
                         :label="t('account.firstname')"
@@ -113,7 +80,6 @@
                         :label="t('account.email')"
                         name="email"
                         required
-                        :description="t('accountSettings.emailDescription')"
                         :help="
                             emailChangeRequested
                                 ? t('account.emailChangeConfirmHint')
@@ -136,10 +102,7 @@
                 variant="subtle"
                 :ui="{ container: 'lg:grid-cols-2 gap-y-5' }"
             >
-                <UFormField
-                    :label="t('accountSettings.language')"
-                    :description="t('accountSettings.languageDescription')"
-                >
+                <UFormField :label="t('accountSettings.language')">
                     <UPopover :content="{ align: 'start', sideOffset: 4 }">
                         <UButton
                             color="neutral"
@@ -181,10 +144,7 @@
                         </template>
                     </UPopover>
                 </UFormField>
-                <UFormField
-                    :label="t('accountSettings.theme')"
-                    :description="t('accountSettings.themeDescription')"
-                >
+                <UFormField :label="t('accountSettings.theme')">
                     <USelect
                         :model-value="themeMode"
                         :items="themeOptions"
@@ -208,13 +168,6 @@
                         :require-old-password="true"
                         @validity="passwordFieldsValid = $event"
                     />
-                    <p
-                        v-if="!passwordChangeRequested"
-                        class="flex items-center gap-2 text-sm text-muted"
-                    >
-                        <UIcon name="i-lucide-info" class="size-4 shrink-0" />
-                        {{ t('account.passwordHint') }}
-                    </p>
                 </UPageCard>
 
                 <UPageCard
@@ -335,7 +288,6 @@ const setThemeMode = (next: string) => setMode(next as ThemeMode)
 
 const avatarFile = ref<File | null>(null)
 const avatarPreview = ref<string | null>(null)
-const avatarInput = ref<HTMLInputElement | null>(null)
 
 const savedAvatarUrl = () =>
     user.avatar ? usePbFileUrl(user, user.avatar, { thumb: '100x100' }) : null
@@ -344,18 +296,9 @@ onMounted(() => {
     avatarPreview.value = savedAvatarUrl()
 })
 
-function openAvatarPicker() {
-    avatarInput.value?.click()
-}
-
-function onAvatarNative(event: Event) {
-    const input = event.target as HTMLInputElement
-    const file = input.files?.[0]
-    if (file) {
-        avatarFile.value = file
-        avatarPreview.value = URL.createObjectURL(file)
-    }
-    input.value = ''
+function selectAvatar(file: File) {
+    avatarFile.value = file
+    avatarPreview.value = URL.createObjectURL(file)
 }
 
 const passwordChangeRequested = computed(
@@ -403,6 +346,16 @@ const tabs = computed<NavigationMenuItem[]>(() => [
     },
 ])
 
+const tabNav = useTemplateRef<HTMLElement>('tabNav')
+watch(
+    [activeTab, tabNav],
+    () =>
+        tabNav.value
+            ?.querySelector('[aria-current="page"]')
+            ?.scrollIntoView({ block: 'nearest', inline: 'center' }),
+    { flush: 'post' },
+)
+
 const sectionTitle = computed(
     () =>
         ({
@@ -412,16 +365,6 @@ const sectionTitle = computed(
             security: t('account.password'),
         })[activeTab.value],
 )
-const sectionDescription = computed(
-    () =>
-        ({
-            profile: t('accountSettings.profileDescription'),
-            preferences: t('accountSettings.preferencesDescription'),
-            notifications: t('accountSettings.notificationsDescription'),
-            security: t('accountSettings.passwordDescription'),
-        })[activeTab.value],
-)
-
 const validateProfile = (state: Record<string, unknown>) =>
     validateRules(state, {
         firstname: [required(t)],
@@ -616,6 +559,17 @@ async function deleteAccount() {
 </script>
 
 <style scoped>
+.account-tabs {
+    position: sticky;
+    top: calc(var(--app-top) + var(--app-top-inset, 0px));
+    z-index: 10;
+    margin: 0 -16px 24px;
+    padding: 0 16px;
+    overflow-x: auto;
+    background: var(--app-bg);
+    scrollbar-width: none;
+}
+
 .locale-code {
     min-width: 28px;
     padding: 2px 0;

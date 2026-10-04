@@ -23,11 +23,7 @@
                 <span class="manage-row__name">
                     {{ route.name }}
                     <TaskDefectMarker :severity="defect" size="sm" />
-                    <UIcon
-                        name="i-lucide-badge-check"
-                        class="size-[14px] text-amber-500"
-                        v-if="route.has_ratings"
-                    />
+                    <RouteRatedMarker v-if="route.has_ratings" size="sm" />
                     <UBadge
                         v-if="route.archived"
                         size="sm"

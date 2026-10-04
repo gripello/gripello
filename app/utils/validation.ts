@@ -27,6 +27,13 @@ export const validEmail =
     (v) =>
         /.+@.+\..+/.test(String(v ?? '')) || t('validation.email')
 
+export const validUsername = (t: TranslateFn): Rule[] => [
+    required(t),
+    minLength(t, 3),
+    (v) =>
+        /^[\w][\w.-]*$/.test(String(v ?? '')) || t('account.usernameInvalid'),
+]
+
 export const passwordsMatch =
     (t: TranslateFn, getPassword: () => string): Rule =>
     (v) =>

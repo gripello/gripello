@@ -17,6 +17,13 @@ export async function gotoSettled(
     if (expectPath) await page.waitForURL(expectPath)
 }
 
+export async function reloadSettled(page: Page) {
+    await page.reload()
+    await page
+        .locator('[data-testid="page-hydrated"]')
+        .waitFor({ state: 'attached' })
+}
+
 export async function gotoSubscribed(page: Page, path: string, topic: string) {
     const subscribed = page.waitForResponse(
         (response) =>
