@@ -21,7 +21,7 @@ test('a rating from another visitor updates the open route page in place', async
     route,
     testPrefix,
 }) => {
-    await gotoSubscribed(page, `/route?id=${route.id}`, 'ratings')
+    await gotoSubscribed(page, `/route?id=${route.id}`, 'gym_changes:')
     await stallRefetches(page)
 
     const comment = `${testPrefix} live review`
@@ -45,7 +45,7 @@ test('a rating from another visitor updates the open overview in place', async (
         .collection('ratings')
         .create({ route_id: route.id, rating: 5, ...uiaa('5') })
 
-    await gotoSubscribed(page, gymPath('/'), 'ratings')
+    await gotoSubscribed(page, gymPath('/'), 'gym_changes:')
     const popularRow = page.locator(
         `[data-testid="overview-popular"] [data-route-id="${route.id}"]`,
     )
@@ -65,7 +65,7 @@ test('an edited route updates the open route list in place', async ({
     route,
 }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
-    await gotoSubscribed(page, '/routes', 'routes')
+    await gotoSubscribed(page, '/routes', 'gym_changes:')
     await searchRoutes(page, route.name)
     await stallRefetches(page)
 

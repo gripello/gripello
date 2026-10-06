@@ -81,7 +81,14 @@ echo "[pocketbase] starting..."
 /pb/pocketbase serve --http=0.0.0.0:8080 &
 
 # Start Nuxt.js UI
-echo "[nuxt] starting..."
+CPUS="$(nproc)"
+# nproc ignores a container CPU quota (docker --cpus), cgroup v2 exposes it here
+if read -r QUOTA PERIOD < /sys/fs/cgroup/cpu.max 2>/dev/null && [ "$QUOTA" != "max" ]; then
+    CPUS=$(( (QUOTA + PERIOD - 1) / PERIOD ))
+fi
+WORKERS=$(( CPUS < 2 ? 1 : CPUS / 2 ))
+export NITRO_CLUSTER_WORKERS="${NITRO_CLUSTER_WORKERS:-$(( WORKERS > 8 ? 8 : WORKERS ))}"
+echo "[nuxt] starting ${NITRO_CLUSTER_WORKERS} workers..."
 node ui/server/index.mjs &
 
 # Start Nginx

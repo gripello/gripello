@@ -297,6 +297,75 @@ describe('usePermissions', () => {
         expect(can('manage_routes')).toBe(true)
     })
 
+    it('ensureLoaded retries after a failed load instead of keeping empty permissions', async () => {
+        const getOneMock = vi
+            .fn()
+            .mockRejectedValueOnce(
+                Object.assign(new Error('down'), { status: 502 }),
+            )
+            .mockResolvedValue(memberOf('routesetter', ['manage_routes']))
+        pbMock.collection = vi.fn().mockReturnValue({ getOne: getOneMock })
+        const consoleError = vi
+            .spyOn(console, 'error')
+            .mockImplementation(() => {})
+
+        const { ensureLoaded, can } = await loadComposable()
+        await ensureLoaded()
+        expect(can('manage_routes')).toBe(false)
+        await ensureLoaded()
+
+        expect(getOneMock).toHaveBeenCalledTimes(2)
+        expect(can('manage_routes')).toBe(true)
+        consoleError.mockRestore()
+    })
+
+    it('reports repeated failures once until a load succeeds again', async () => {
+        const down = Object.assign(new Error('down'), { status: 502 })
+        const getOneMock = vi
+            .fn()
+            .mockRejectedValueOnce(down)
+            .mockRejectedValueOnce(down)
+            .mockResolvedValueOnce(memberOf('routesetter', ['manage_routes']))
+            .mockRejectedValueOnce(down)
+        pbMock.collection = vi.fn().mockReturnValue({ getOne: getOneMock })
+        const consoleError = vi
+            .spyOn(console, 'error')
+            .mockImplementation(() => {})
+        notifyErrorMock.mockClear()
+
+        const { ensureLoaded, refreshPermissions } = await loadComposable()
+        await ensureLoaded()
+        await ensureLoaded()
+        expect(notifyErrorMock).toHaveBeenCalledTimes(1)
+        await ensureLoaded()
+        await refreshPermissions()
+        expect(notifyErrorMock).toHaveBeenCalledTimes(2)
+        consoleError.mockRestore()
+    })
+
+    it('flags a rejected session and clears the flag once a load succeeds', async () => {
+        const getOneMock = vi
+            .fn()
+            .mockRejectedValueOnce(
+                Object.assign(new Error('expired'), { status: 401 }),
+            )
+            .mockResolvedValue(memberOf('routesetter', ['manage_routes']))
+        pbMock.collection = vi.fn().mockReturnValue({ getOne: getOneMock })
+        const consoleError = vi
+            .spyOn(console, 'error')
+            .mockImplementation(() => {})
+
+        const { refreshPermissions, authRejected, verifiedUser } =
+            await loadComposable()
+        await refreshPermissions()
+        expect(authRejected.value).toBe(true)
+        await refreshPermissions()
+
+        expect(authRejected.value).toBe(false)
+        expect(verifiedUser.value?.expand).toBeUndefined()
+        consoleError.mockRestore()
+    })
+
     it('ensureLoaded reloads after a guest visit once the user signs in', async () => {
         const getOneMock = vi
             .fn()

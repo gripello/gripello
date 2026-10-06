@@ -1,5 +1,5 @@
 <template>
-    <div class="page--narrow mx-auto w-full px-4" data-testid="me-page">
+    <div class="mx-auto w-full px-4" data-testid="me-page">
         <h1 class="sr-only">{{ $t('me.title') }}</h1>
 
         <AuthGuestCta v-if="!user" redirect="/account" test-id-prefix="me" />
@@ -7,25 +7,57 @@
         <template v-else>
             <NuxtLink
                 to="/account/settings"
-                class="native-group native-row mt-6 py-3"
+                class="native-group mt-6 block overflow-hidden"
                 data-testid="me-profile"
             >
-                <UAvatar
-                    :src="avatar || undefined"
-                    :alt="displayName"
-                    :text="initials"
-                    class="size-14 text-xl font-bold"
-                    :class="avatar ? undefined : 'bg-primary'"
-                    :ui="{ fallback: 'text-inverted' }"
+                <ClimberBanner
+                    :banner="climberFileUrl(user.id, user.banner, '1600x400')"
+                    :avatar="avatar"
+                    :name="displayName"
+                    class="h-24"
                 />
+                <span class="relative flex items-end gap-3 px-4 pb-4">
+                    <UAvatar
+                        :src="avatar || undefined"
+                        :alt="displayName"
+                        :text="initials"
+                        class="-mt-8 size-18 text-2xl font-bold ring-4 ring-(--ui-bg)"
+                        :class="avatar ? undefined : 'bg-primary'"
+                        :ui="{ fallback: 'text-inverted' }"
+                    />
+                    <span class="native-row__text pb-1">
+                        <span
+                            class="block truncate text-lg font-semibold"
+                            data-testid="me-name"
+                            >{{ displayName }}</span
+                        >
+                        <span class="native-row__subtitle">{{
+                            $t('me.profileHint')
+                        }}</span>
+                    </span>
+                    <UIcon
+                        name="i-lucide-chevron-right"
+                        class="native-row__chevron mb-2"
+                    />
+                </span>
+            </NuxtLink>
+
+            <NuxtLink
+                v-if="staffHub"
+                :to="staffHub"
+                class="native-group native-row mt-4 border-primary/40 bg-primary/10"
+                style="--native-tint: var(--ui-primary)"
+                data-testid="me-staff-tools"
+            >
+                <span class="native-row__icon">
+                    <UIcon name="i-lucide-wrench" />
+                </span>
                 <span class="native-row__text">
-                    <span
-                        class="block truncate text-lg font-semibold"
-                        data-testid="me-name"
-                        >{{ displayName }}</span
-                    >
+                    <span class="block font-semibold">{{
+                        $t('nav.staffTools')
+                    }}</span>
                     <span class="native-row__subtitle">{{
-                        $t('me.profileHint')
+                        gym ? gymTitle(gym) : ''
                     }}</span>
                 </span>
                 <UIcon
@@ -35,6 +67,40 @@
             </NuxtLink>
 
             <div class="native-group mt-4">
+                <NuxtLink
+                    :to="`/climber?id=${user.id}`"
+                    class="native-row"
+                    style="--native-tint: var(--ui-primary)"
+                    data-testid="me-public-profile"
+                >
+                    <span class="native-row__icon">
+                        <UIcon name="i-lucide-id-card" />
+                    </span>
+                    <span class="native-row__text">{{
+                        $t('friends.myProfile')
+                    }}</span>
+                    <UIcon
+                        name="i-lucide-chevron-right"
+                        class="native-row__chevron"
+                    />
+                </NuxtLink>
+                <NuxtLink
+                    to="/friends"
+                    class="native-row"
+                    style="--native-tint: var(--ui-primary)"
+                    data-testid="me-friends"
+                >
+                    <span class="native-row__icon">
+                        <UIcon name="i-lucide-users" />
+                    </span>
+                    <span class="native-row__text">{{
+                        $t('routes.friends')
+                    }}</span>
+                    <UIcon
+                        name="i-lucide-chevron-right"
+                        class="native-row__chevron"
+                    />
+                </NuxtLink>
                 <NuxtLink
                     to="/account/activity"
                     class="native-row"
@@ -119,60 +185,6 @@
             />
         </template>
 
-        <section class="lg:hidden" data-testid="me-pages">
-            <p class="native-heading">{{ $t('me.pages') }}</p>
-            <div class="native-group">
-                <NuxtLink
-                    v-for="link in pages"
-                    :key="link.to"
-                    :to="link.to"
-                    class="native-row"
-                    style="--native-tint: var(--ui-primary)"
-                    :data-testid="`me-page-${navTestId(link.path ?? link.to)}`"
-                >
-                    <span class="native-row__icon">
-                        <UIcon :name="link.icon" />
-                    </span>
-                    <span class="native-row__text">{{ $t(link.label) }}</span>
-                    <UIcon
-                        name="i-lucide-chevron-right"
-                        class="native-row__chevron"
-                    />
-                </NuxtLink>
-            </div>
-        </section>
-
-        <template v-if="user">
-            <section
-                v-for="section in sections"
-                :key="section.key"
-                class="lg:hidden"
-                :data-testid="`me-section-${section.key}`"
-            >
-                <p class="native-heading">{{ $t(section.label) }}</p>
-                <div class="native-group">
-                    <NuxtLink
-                        v-for="link in section.links"
-                        :key="link.to"
-                        :to="link.to"
-                        class="native-row"
-                        :style="{ '--native-tint': SECTION_TINTS[section.key] }"
-                        :data-testid="`me-staff-${navTestId(link.path ?? link.to)}`"
-                    >
-                        <span class="native-row__icon">
-                            <UIcon :name="link.icon" />
-                        </span>
-                        <span class="native-row__text">{{
-                            $t(link.label)
-                        }}</span>
-                        <UIcon
-                            name="i-lucide-chevron-right"
-                            class="native-row__chevron"
-                        />
-                    </NuxtLink>
-                </div>
-            </section>
-        </template>
         <LayoutInfoList v-if="!lgAndUp" :settings="settings" :gym="gym" />
         <div v-if="user" class="native-group mt-6 mb-4">
             <button
@@ -199,7 +211,8 @@
 
 <script setup lang="ts">
 import type { MembershipRecord, SettingsRecord } from '~/types/models'
-import { pageLinks, staffSections } from '~/utils/navigation'
+import { gymTitle } from '~/utils/gymNames'
+import { staffSections } from '~/utils/navigation'
 
 const { t } = useI18n()
 const pb = usePocketbase()
@@ -235,16 +248,12 @@ const avatar = computed(() =>
     usePbFileUrl(user.value, user.value?.avatar, { thumb: '100x100' }),
 )
 
-const SECTION_TINTS: Record<string, string> = {
-    manage: 'var(--ui-info)',
-    moderation: 'var(--ui-warning)',
-    admin: '#64748b',
-    platform: 'var(--ui-primary)',
-}
-
-const { gym, slug: gymSlug } = useGym()
-const sections = computed(() => staffSections(can, gymSlug.value))
-const pages = computed(() => pageLinks(!!user.value, gymSlug.value))
+const { gym, slug } = useGym()
+const staffHub = computed(() =>
+    slug.value && staffSections(can, slug.value).length
+        ? `/${slug.value}/manage`
+        : null,
+)
 
 const leaving = ref<MembershipRecord | null>(null)
 const leaveDialog = computed({

@@ -34,6 +34,27 @@
         </LayoutEmptyState>
 
         <template v-else>
+            <LayoutSectionHeader :title="t('platform.overview.needsYou')" />
+            <div
+                class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4"
+                data-testid="platform-needs-you"
+            >
+                <NuxtLink
+                    v-for="tile in attentionTiles"
+                    :key="tile.key"
+                    :to="tile.to"
+                    class="flex rounded-2xl focus-visible:outline-2 focus-visible:outline-primary"
+                    :data-testid="`platform-attention-${tile.key}`"
+                >
+                    <AnalyticsStatsCard
+                        :title="tile.label"
+                        :value="tile.value"
+                        :icon="tile.icon"
+                        :color="tile.color"
+                        class="w-full"
+                    />
+                </NuxtLink>
+            </div>
             <div class="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <AnalyticsStatsCard
                     v-for="tile in tiles"
@@ -82,6 +103,22 @@
                                 >
                                     <PlatformGymIdentity :gym="gym" />
                                 </NuxtLink>
+                                <UButton
+                                    v-if="openCases(gym.id)"
+                                    :to="`/platform/moderation?gym=${gym.id}`"
+                                    color="error"
+                                    variant="soft"
+                                    size="sm"
+                                    icon="i-lucide-shield-alert"
+                                    :data-testid="`platform-gym-open-cases-${gym.slug}`"
+                                >
+                                    {{
+                                        t(
+                                            'moderation.openCases',
+                                            openCases(gym.id),
+                                        )
+                                    }}
+                                </UButton>
                                 <div
                                     class="hidden shrink-0 items-center gap-4 text-sm text-muted sm:flex"
                                 >
@@ -170,6 +207,7 @@
 import type { UserRecord } from '~/types/models'
 import { platformTotals, type PlatformGym } from '~/utils/platformGyms'
 import { userDisplayName } from '~/utils/platformUsers'
+import { parseDate } from '#shared/utils/formatting'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
@@ -237,6 +275,56 @@ const tiles = computed(() => {
         },
     ]
 })
+
+const { summary } = useModerationSummary()
+
+const STALE_CASE_MS = 3 * 86_400_000
+
+const attentionTiles = computed(() => {
+    const now = Date.now()
+    const staleGyms = (summary.value?.gyms ?? []).filter(
+        (entry) =>
+            now - (parseDate(entry.oldest)?.getTime() ?? now) > STALE_CASE_MS,
+    ).length
+    return [
+        {
+            key: 'legal',
+            label: t('platform.overview.legalReports'),
+            value: summary.value?.legal_reports ?? 0,
+            icon: 'i-lucide-flag',
+            color: 'error',
+            to: '/platform/moderation',
+        },
+        {
+            key: 'stale-gyms',
+            label: t('platform.overview.staleGyms'),
+            value: staleGyms,
+            icon: 'i-lucide-clock-alert',
+            color: 'warning',
+            to: '/platform/moderation',
+        },
+        {
+            key: 'profiles',
+            label: t('platform.overview.profiles'),
+            value: summary.value?.profiles ?? 0,
+            icon: 'i-lucide-circle-user-round',
+            color: 'info',
+            to: '/platform/moderation',
+        },
+        {
+            key: 'suspended',
+            label: t('platform.overview.suspended'),
+            value: summary.value?.suspended ?? 0,
+            icon: 'i-lucide-ban',
+            color: 'secondary',
+            to: '/platform/users?show=suspended',
+        },
+    ]
+})
+
+function openCases(gymId: string) {
+    return summary.value?.gyms?.find((entry) => entry.gym === gymId)?.open ?? 0
+}
 
 function gymCounts(gym: PlatformGym) {
     return [

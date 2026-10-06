@@ -2,6 +2,8 @@ package hooks
 
 import (
 	"net/http"
+
+	"github.com/pocketbase/dbx"
 	"net/url"
 	"slices"
 	"strings"
@@ -20,6 +22,9 @@ func registerReports(app core.App) {
 		e.Record.Set("decided_by", "")
 		e.Record.Set("receipt_sent", false)
 		e.Record.Set("notified_at", "")
+		if !reportedContentExists(e.App, e.Record) {
+			return apis.NewBadRequestError("The reported content does not exist.", nil)
+		}
 		e.Record.Set("content_snapshot", truncateRunes(reportedContentSnapshot(e.App, e.Record), 5000))
 		e.Record.Set("content_url", reportedContentURL(e.App, e.Record))
 		return e.Next()
@@ -40,7 +45,26 @@ func registerReports(app core.App) {
 		removing := e.Record.GetString("decision") == "content_removed" &&
 			e.Record.Original().GetString("decision") != "content_removed"
 		if removing && reportedContentExists(e.App, e.Record) {
-			return apis.NewBadRequestError("The reported content still exists. Delete it before recording its removal.", nil)
+			var hidden *core.Record
+			app := e.App
+			err := app.RunInTransaction(func(tx core.App) error {
+				item, err := hideReportedContent(tx, e, e.Record)
+				if err != nil {
+					return err
+				}
+				hidden = item
+				e.App = tx
+				return e.Next()
+			})
+			if err == nil && hidden != nil {
+				entry := requestAuditEntry(e.RequestEvent, "update", "moderation_items")
+				entry.RecordID = hidden.Id
+				entry.Gym = hidden.GetString("gym")
+				entry.ChangedFields = []string{"state"}
+				writeAuditEntry(app, entry)
+				notifyAuthor(app, hidden, "hide", false)
+			}
+			return err
 		}
 		return e.Next()
 	})
@@ -51,12 +75,23 @@ func registerReports(app core.App) {
 			Gym:    e.Record.GetString("gym"),
 			Type:   "report_filed",
 			Params: map[string]any{"snippet": truncateRunes(e.Record.GetString("content_snapshot"), 140)},
-			URL:    gymPath(e.App, e.Record.GetString("gym"), "/manage/reports"),
+			URL:    gymPath(e.App, e.Record.GetString("gym"), "/manage/moderation"),
 		})
+
+		if e.Record.GetString("reason") != "other" {
+			pushNotification(e.App, notification{
+				Users:  platformAdmins(e.App),
+				Gym:    e.Record.GetString("gym"),
+				Type:   "report_filed_platform",
+				Params: map[string]any{"snippet": truncateRunes(e.Record.GetString("content_snapshot"), 140)},
+				URL:    "/platform/moderation",
+			})
+		}
 
 		if err := sendReportReceipt(e.App, e.Record); err != nil {
 			e.App.Logger().Error("reports: receipt/alert mail failed", "report", e.Record.Id, "error", err)
 		}
+		countReport(e.App, e.Record)
 		return e.Next()
 	})
 
@@ -77,6 +112,53 @@ func registerReports(app core.App) {
 	})
 }
 
+func hideReportedContent(app core.App, e *core.RecordRequestEvent, report *core.Record) (*core.Record, error) {
+	kindName := report.GetString("content_type")
+	kind, moderated := moderatedKinds[kindName]
+	if !moderated {
+		return nil, apis.NewBadRequestError("The reported content still exists. Delete it before recording its removal.", nil)
+	}
+	record, err := app.FindRecordById(kind.collection, report.GetString("content_id"))
+	if err != nil {
+		return nil, err
+	}
+	item := findModerationItem(app, kindName, record.Id)
+	if item != nil && item.GetString("state") == "hidden" {
+		return nil, nil
+	}
+	if err := upsertModerationItem(app, kindName, record); err != nil {
+		return nil, err
+	}
+	item = findModerationItem(app, kindName, record.Id)
+	if item == nil {
+		return nil, apis.NewBadRequestError("The reported content could not be hidden.", nil)
+	}
+	platform := e.HasSuperuserAuth() || isPlatformAdmin(e.Auth)
+	reviewer := ""
+	if e.Auth != nil && e.Auth.Collection().Name == "users" {
+		reviewer = e.Auth.Id
+	}
+	gymStaff := reviewer != "" && item.GetString("gym") != "" && hasPermission(app, reviewer, item.GetString("gym"), "manage_comments")
+	if !platform && !gymStaff {
+		return nil, apis.NewForbiddenError("Removing this content requires manage_comments.", nil)
+	}
+	if err := moderationAllowed(item, "hide", platform, gymStaff); err != nil {
+		return nil, err
+	}
+	if err := applyModeration(app, item, moderationRequest{Action: "hide", Reason: report.GetString("decision_reason"), decidedReport: report.Id}, platform, reviewer); err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+
+func platformAdmins(app core.App) []*core.Record {
+	admins, err := app.FindAllRecords("users", dbx.HashExp{"platform_admin": true})
+	if err != nil {
+		app.Logger().Error("reports: loading platform admins failed", "error", err)
+	}
+	return admins
+}
+
 var moderatorReportFields = []string{"status", "decision", "decision_reason"}
 
 func keepServerOwnedReportFields(report *core.Record, original *core.Record) {
@@ -88,8 +170,13 @@ func keepServerOwnedReportFields(report *core.Record, original *core.Record) {
 }
 
 func reportedContentCollection(report *core.Record) string {
-	if report.GetString("content_type") == "route" {
+	switch report.GetString("content_type") {
+	case "route":
 		return "routes"
+	case "beta_video":
+		return "beta_videos"
+	case "profile":
+		return "users"
 	}
 	return "ratings"
 }
@@ -101,6 +188,23 @@ func reportedContentExists(app core.App, report *core.Record) bool {
 
 func reportedContentSnapshot(app core.App, report *core.Record) string {
 	contentID := report.GetString("content_id")
+	if report.GetString("content_type") == "profile" {
+		user, err := app.FindRecordById("users", contentID)
+		if err != nil {
+			return ""
+		}
+		return strings.Join(slices.DeleteFunc(
+			[]string{user.GetString("username"), user.GetString("firstname"), user.GetString("name")},
+			func(part string) bool { return part == "" },
+		), " - ")
+	}
+	if report.GetString("content_type") == "beta_video" {
+		video, err := app.FindRecordById("beta_videos", contentID)
+		if err != nil {
+			return ""
+		}
+		return video.GetString("url") + video.GetString("file")
+	}
 	if report.GetString("content_type") == "route" {
 		route, err := app.FindRecordById("routes", contentID)
 		if err != nil {
@@ -123,6 +227,16 @@ func reportedContentURL(app core.App, report *core.Record) string {
 	contentID := report.GetString("content_id")
 	if report.GetString("content_type") == "route" {
 		return "/route?id=" + url.QueryEscape(contentID)
+	}
+	if report.GetString("content_type") == "profile" {
+		return "/climber?id=" + url.QueryEscape(contentID)
+	}
+	if report.GetString("content_type") == "beta_video" {
+		video, err := app.FindRecordById("beta_videos", contentID)
+		if err != nil {
+			return "/"
+		}
+		return "/route?id=" + url.QueryEscape(video.GetString("route")) + "#beta-" + url.QueryEscape(contentID)
 	}
 	rating, err := app.FindRecordById("ratings", contentID)
 	if err != nil {
@@ -149,7 +263,7 @@ func notifyReportDecided(app core.App, report *core.Record) {
 		notificationType = "report_decided_removed"
 	}
 
-	pushNotification(app, notification{Users: recipients, Gym: report.GetString("gym"), Type: notificationType, URL: gymPath(app, report.GetString("gym"), "/manage/reports")})
+	pushNotification(app, notification{Users: recipients, Gym: report.GetString("gym"), Type: notificationType, URL: gymPath(app, report.GetString("gym"), "/manage/moderation")})
 }
 
 func sendReportReceipt(app core.App, report *core.Record) error {
@@ -204,7 +318,7 @@ func reportAlertMail(app core.App, report *core.Record) mailContent {
 			{Label: "snapshot", Value: report.GetString("content_snapshot")},
 			{Label: "reportedBy", Value: report.GetString("notifier_name") + " (" + report.GetString("notifier_email") + ")"},
 		},
-		Action: gymPath(app, report.GetString("gym"), "/manage/reports"),
+		Action: gymPath(app, report.GetString("gym"), "/manage/moderation"),
 	}
 }
 

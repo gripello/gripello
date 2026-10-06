@@ -100,3 +100,29 @@ describe('plural forms', () => {
         expect(t('analytics.labels.routeCount', { n: 2 }, 2)).toBe('2 voies')
     })
 })
+
+describe('message syntax', () => {
+    it.each(Object.entries({ en, de, nl, fr, es }))(
+        '%s compiles every message',
+        async (locale, messages) => {
+            vi.stubGlobal('defineI18nConfig', (config: unknown) => config)
+            const { default: config } = await import('../../i18n/i18n.config')
+            const i18n = createI18n({
+                ...(config as () => object)(),
+                legacy: false,
+                locale,
+                messages: { [locale]: messages },
+            })
+            for (const key of Object.keys(flatten(messages)))
+                expect(() => i18n.global.t(key, {}), key).not.toThrow()
+        },
+    )
+})
+
+describe('locale loading', () => {
+    it('lets the server cache the messages of the plain loader files', () => {
+        expect(readFileSync('nuxt.config.ts', 'utf8')).toContain(
+            'file: { path: `${code}.ts`, cache: true }',
+        )
+    })
+})

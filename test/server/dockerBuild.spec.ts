@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { BETA_VIDEO_MAX_BYTES } from '#shared/utils/betaVideos'
 
 const read = (file: string) => readFileSync(file, 'utf8')
 
@@ -16,6 +17,22 @@ describe('docker ui build', () => {
             )
             expect(read('.dockerignore')).toMatch(new RegExp(`^!${dir}$`, 'm'))
         }
+    })
+
+    it('renders pages in a capped pool of worker processes', () => {
+        expect(read('Dockerfile')).toContain('NITRO_PRESET=node-cluster')
+        expect(read('.docker/docker-entrypoint.sh')).toContain(
+            'export NITRO_CLUSTER_WORKERS="${NITRO_CLUSTER_WORKERS:-$(( WORKERS > 8 ? 8 : WORKERS ))}"',
+        )
+    })
+
+    it('lets nginx pass the largest beta video upload', () => {
+        const [, megabytes] = read('.docker/nginx.conf').match(
+            /client_max_body_size (\d+)m;/,
+        )!
+        expect(Number(megabytes) * 1024 * 1024).toBeGreaterThan(
+            BETA_VIDEO_MAX_BYTES,
+        )
     })
 
     it('ships the license and labels the image with it', () => {

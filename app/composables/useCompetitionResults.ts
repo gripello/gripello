@@ -1,4 +1,5 @@
 import type { CompetitionResults } from '#shared/utils/competitionResults'
+import { resultsChangedAt } from '~/utils/competitions'
 
 const RESULT_KINDS = ['competition', 'routes', 'entries', 'scores', 'resync']
 
@@ -33,7 +34,7 @@ export function useCompetitionResults(
     const refreshSoon = coalesce(() => result.refresh(), 1_000)
     useCompetitionLive(competitionId, (change) => {
         if (!RESULT_KINDS.includes(change.kind)) return
-        changedAt.value = Math.max(changedAt.value, change.at)
+        changedAt.value = resultsChangedAt(changedAt.value, change)
         refreshSoon()
     })
 

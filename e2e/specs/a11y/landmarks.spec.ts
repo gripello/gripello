@@ -1,12 +1,12 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 
-test('nav has a labelled main-navigation landmark', async ({
+test('the sidebar is a navigation landmark named after the gym', async ({
     adminPage: page,
 }) => {
     await gotoSettled(page, '/manage/routes')
     await expect(
-        page.getByRole('navigation', { name: 'Main navigation' }).first(),
+        page.getByRole('navigation', { name: 'E2E Gym' }).first(),
     ).toBeVisible()
 })
 

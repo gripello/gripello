@@ -1,6 +1,5 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, gymPath } from '../../support/nav'
-import { createComment } from '../../support/comments'
 
 test('command palette dialog and search field are named', async ({ page }) => {
     await gotoSettled(page, gymPath('/'))
@@ -20,21 +19,6 @@ test('dialog shell is named by its title', async ({ adminPage: page }) => {
     await expect(
         page.getByRole('dialog', { name: 'Create route' }),
     ).toBeVisible()
-})
-
-test('comment selection checkboxes name the reviewer', async ({
-    adminPage: page,
-    route,
-    testPrefix,
-}) => {
-    await gotoSettled(page, '/manage/comments')
-    const id = await createComment(page, route.id, `${testPrefix}-named`, 5)
-    await gotoSettled(page, '/manage/comments')
-    await expect(
-        page
-            .getByTestId(`comment-card-${id}`)
-            .getByTestId('comment-card-checkbox'),
-    ).toHaveAttribute('aria-label', /^Select .+/)
 })
 
 test('settings asset upload zone opens the file picker from the keyboard', async ({

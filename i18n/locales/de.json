@@ -59,7 +59,8 @@
             "profile": "Profil",
             "security": "Sicherheit",
             "preferences": "Präferenzen",
-            "notifications": "Benachrichtigungen"
+            "notifications": "Benachrichtigungen",
+            "privacy": "Privatsphäre"
         },
         "placeholders": {
             "firstname": "Max",
@@ -138,7 +139,8 @@
         "leaveGym": "{gym} verlassen",
         "leaveGymConfirm": "Du verlierst deine Rolle und den Teamzugang in dieser Halle. Dein Logbuch bleibt erhalten.",
         "leftGym": "Du hast die Halle verlassen.",
-        "lastAdmin": "Die Halle braucht erst einen weiteren Admin, bevor du sie verlassen kannst."
+        "lastAdmin": "Die Halle braucht erst einen weiteren Admin, bevor du sie verlassen kannst.",
+        "changeBanner": "Banner ändern"
     },
     "routes": {
         "home": "Übersicht",
@@ -166,13 +168,15 @@
         "mapEditor": "Plan-Editor",
         "mapPlacement": "Routen platzieren",
         "scan": "Scannen",
-        "me": "Mehr",
         "moreActions": "Weitere Aktionen",
         "selectedCount": "{n} ausgewählt",
         "list": "Routen",
         "competitions": "Wettkämpfe",
         "judge": "Schiedsrichter",
-        "rated": "Hat Bewertungen"
+        "rated": "Hat Bewertungen",
+        "leaderboard": "Rangliste",
+        "friends": "Freunde",
+        "feed": "Feed"
     },
     "dashboard": {
         "online": "{0} online"
@@ -293,7 +297,9 @@
         "climber_reviews": "Bewertungen",
         "felt": "gefühlt",
         "perceived_difficulty": "Gefühlter Grad",
-        "loadError": "Bewertungen konnten nicht geladen werden."
+        "loadError": "Bewertungen konnten nicht geladen werden.",
+        "deleteOwn": "Meine Bewertung löschen",
+        "deleteOwnConfirm": "Deine Bewertung wird endgültig entfernt."
     },
     "table": {
         "actions": "Aktionen",
@@ -327,7 +333,10 @@
         "load_more": "Mehr laden",
         "close": "Schließen",
         "export": "Exportieren",
-        "select_route": "{name} auswählen"
+        "select_route": "{name} auswählen",
+        "previous": "Zurück",
+        "next": "Weiter",
+        "more": "Mehr"
     },
     "inventory": {
         "title": "Routeninventur",
@@ -412,7 +421,8 @@
             "userInviteMail": "Benutzer erstellt, aber die Einladungs-E-Mail konnte nicht versendet werden.",
             "resetLinkInvalid": "Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Fordere auf der Anmeldeseite einen neuen an.",
             "captcha": "Die Spam-Prüfung ist fehlgeschlagen. Bitte versuche es erneut.",
-            "verificationMail": "Dein Konto wurde erstellt, aber die Bestätigungs-E-Mail konnte nicht gesendet werden. Fordere auf der Anmeldeseite eine neue an."
+            "verificationMail": "Dein Konto wurde erstellt, aber die Bestätigungs-E-Mail konnte nicht gesendet werden. Fordere auf der Anmeldeseite eine neue an.",
+            "account_suspended": "Dieses Konto ist gesperrt."
         },
         "deleteItem": "Diesen Eintrag löschen? Das kann nicht rückgängig gemacht werden.",
         "deleteMoreItems": "Die ausgewählten Einträge löschen? Das kann nicht rückgängig gemacht werden.",
@@ -457,14 +467,24 @@
                 "task_wish_filed": "Neuer Routenwunsch für {location}",
                 "task_wish_done": "Dein Routenwunsch für {location} wurde geschraubt – viel Spaß!",
                 "wall_new_routes": "Neue Routen an {wall}: {count}",
-                "competition_published": "Ergebnisse von „{competition}“ sind online"
+                "competition_published": "Ergebnisse von „{competition}“ sind online",
+                "follow_requested": "{name} möchte dir folgen",
+                "follow_accepted": "{name} hat deine Folgeanfrage angenommen",
+                "new_follower": "{name} folgt dir jetzt",
+                "achievement_earned": "Neue Erfolge freigeschaltet: {count}",
+                "report_filed_platform": "Inhalt in einer Halle gemeldet: „{snippet}“",
+                "moderation_pending": "Ein Beta-Video wartet auf Freigabe",
+                "content_hidden": "Dein Inhalt wurde ausgeblendet: {reason}",
+                "beta_approved": "Dein Beta-Video wurde freigegeben",
+                "beta_rejected": "Dein Beta-Video wurde abgelehnt: {reason}"
             }
         }
     },
     "filter": {
         "title": "Filter",
         "all": "Alle",
-        "archived": "Archiviert"
+        "archived": "Archiviert",
+        "clear": "Filter entfernen"
     },
     "legal": {
         "privacy": "Datenschutz",
@@ -485,62 +505,110 @@
             "subtitle": "Angaben gemäß § 5 DDG"
         },
         "privacyPage": {
+            "subtitle": "Wie wir personenbezogene Daten bei der Nutzung dieser Anwendung verarbeiten.",
             "controllerTitle": "Verantwortlicher",
+            "scope": {
+                "title": "Geltungsbereich und Hosting",
+                "body": "Diese Datenschutzerklärung gilt für Gripello, die Web-App für Kletterhallen, die du im Browser oder als installierte App (PWA) nutzt. Für die Seiten einer Halle ist die oben genannte Halle bzw. der Verein verantwortlich; für hallenübergreifende Bereiche wie Logbuch, Konto, Freunde und Kletterprofile der Betreiber der Plattform, dessen Datenschutzerklärung verlinkt ist. Alle Daten werden ausschließlich auf eigenen Servern in der Europäischen Union gespeichert. Es werden keine Analyse-, Werbe- oder Social-Media-Dienste eingebunden und keine Inhalte von fremden Servern geladen."
+            },
             "serverLogs": {
                 "title": "Server-Logfiles",
-                "body": "Beim Aufruf dieser Anwendung verarbeitet der Server technische Daten wie IP-Adresse, Datum und Uhrzeit, aufgerufene URL und Browserkennung, um die Seite auszuliefern und Missbrauch abzuwehren (Art. 6 Abs. 1 lit. f DSGVO). Request-Logs werden nach kurzer Zeit automatisch gelöscht (standardmäßig nach 5 Tagen)."
+                "body": "Beim Aufruf dieser Anwendung verarbeitet der Server technische Daten wie IP-Adresse, Datum und Uhrzeit, aufgerufene URL, Antwortstatus und Browserkennung, um die Seite auszuliefern, Fehler zu beheben und Missbrauch (z. B. Angriffe, Massenanfragen) abzuwehren. Rechtsgrundlage ist unser berechtigtes Interesse an einem sicheren und stabilen Betrieb (Art. 6 Abs. 1 lit. f DSGVO). Request-Logs werden automatisch gelöscht, standardmäßig nach 5 Tagen. Einige Funktionen (z. B. Anmeldung, Registrierung, Einladungen, Datenexport) sind pro IP-Adresse und Konto ratenbegrenzt; dafür wird die IP-Adresse kurzzeitig im Arbeitsspeicher gezählt."
             },
             "accounts": {
-                "title": "Benutzerkonten",
-                "body": "Konten werden von der Administration für Mitarbeitende angelegt. Gespeichert werden E-Mail-Adresse, Benutzername, Vor- und Nachname, ein optionales Profilbild, die bevorzugte Sprache und die zugewiesene Rolle, um den Dienst bereitzustellen (Art. 6 Abs. 1 lit. b DSGVO). Die Daten bleiben gespeichert, solange das Konto besteht; du kannst dein Konto jederzeit selbst löschen."
+                "title": "Benutzerkonto",
+                "body": "Wenn der Betreiber die Registrierung zulässt, kannst du dir selbst ein Konto mit E-Mail-Adresse und Passwort anlegen; zur Bestätigung senden wir dir eine Verifizierungs-E-Mail. Außerdem können Administratorinnen und Administratoren einer Halle dich als Mitarbeiterin oder Mitarbeiter hinzufügen, indem sie deine E-Mail-Adresse sowie Vor- und Nachnamen eingeben: Hast du noch kein Konto, wird damit sofort ein noch nicht bestätigtes Konto mit diesen Angaben samt Mitgliedschaft angelegt, und du erhältst eine E-Mail, mit der du dein Passwort festlegst; ein bestehendes Konto erhält die Mitgliedschaft direkt. Zum Konto speichern wir E-Mail-Adresse, Benutzername, Vor- und Nachname, optional ein Profilbild und ein Profilbanner, deine Sprache, Benachrichtigungs- und Privatsphäre-Einstellungen sowie die Wände, denen du folgst. Das Passwort wird nur als Hash gespeichert. Rechte als Mitarbeiterin oder Mitarbeiter einer Halle ergeben sich aus einer Mitgliedschaft (Konto, Halle, Rolle), die die Administratorinnen und Administratoren der Halle verwalten. Deine E-Mail-Adresse wird anderen Kletternden und den Mitarbeitenden der Halle nicht angezeigt; die Administratorinnen und Administratoren der Plattform können sie sehen, und meldest du Inhalte, erhalten die Moderation der Halle und ihre Kontaktadresse deinen Namen und deine E-Mail-Adresse (siehe Meldungen von Inhalten). Rechtsgrundlage ist die Erfüllung des Nutzungsvertrags (Art. 6 Abs. 1 lit. b DSGVO). Die Daten bleiben gespeichert, solange dein Konto besteht; du kannst sie in den Einstellungen jederzeit ändern und das Konto selbst löschen."
+            },
+            "privacySettings": {
+                "title": "Privatsphäre-Einstellungen",
+                "body": "Unter Einstellungen → Privatsphäre bestimmst du: wer dir folgen darf, ob du auf Bestenlisten der Halle erscheinst, ob dein Name bei Bewertungen gezeigt wird und ob deine Begehungen mit Followerinnen und Followern geteilt werden. Änderungen wirken sofort für alle künftigen Anzeigen, bei Bestenlisten mit kurzer Verzögerung (siehe Bestenlisten); bereits von anderen heruntergeladene Exporte oder Screenshots können wir nicht zurückholen."
+            },
+            "logbook": {
+                "title": "Logbuch (Begehungen)",
+                "body": "Wenn du eine Begehung einträgst, speichern wir Route, Tag, Art (Flash, Top oder Versuch), Anzahl der Versuche, den Zeitpunkt des Eintrags, eine optionale private Notiz sowie eine Momentaufnahme des Schwierigkeitsgrads. Zweck ist dein persönliches Trainingstagebuch mit Statistiken und Erfolgen (Art. 6 Abs. 1 lit. b DSGVO). Notizen sieht niemand außer dir. Ob andere deine Begehungen sehen, bestimmst du über die Privatsphäre-Einstellungen (siehe Freunde, Kletterprofil und Bestenlisten). Das Logbuch funktioniert auch offline: Einträge werden dann im Browserspeicher deines Geräts (IndexedDB) zwischengespeichert und übertragen, sobald du wieder online bist. Begehungen bleiben gespeichert, bis du sie löschst oder dein Konto löschst; wird eine Route entfernt, behält der Eintrag nur Routenname und Grad."
+            },
+            "friends": {
+                "title": "Freunde und Folgen",
+                "body": "Du kannst anderen Kletternden folgen und selbst Followerinnen und Follower haben. Gespeichert wird, wer wem folgt und ob die Anfrage offen, angenommen oder abgelehnt ist. In den Privatsphäre-Einstellungen legst du fest, wer dir folgen darf: nur nach deiner Bestätigung (Voreinstellung), jede angemeldete Person oder niemand. Wer dir folgt, sieht deine Begehungen (Route, Grad, Art, Anzahl der Versuche, Tag und Zeitpunkt des Eintrags, nie Notizen) in seinem Freunde-Feed und im Feed der Halle, es sei denn, du deaktivierst „Meine Begehungen mit Followern teilen“; auf die Bestenlisten hat diese Einstellung keinen Einfluss. Neue Begehungen werden über die bestehende Serververbindung der App live zugestellt. Rechtsgrundlage ist die Bereitstellung der von dir genutzten Community-Funktion (Art. 6 Abs. 1 lit. b DSGVO). Du kannst Anfragen ablehnen, Followerinnen und Follower jederzeit entfernen und Verbindungen beenden; alle Folgebeziehungen werden mit deinem Konto gelöscht."
+            },
+            "profiles": {
+                "title": "Kletterprofil und Suche",
+                "body": "Angemeldete Personen können dein Kletterprofil mit Name, Profilbild, Banner (ohne eigenes Banner wird auf dem Gerät des Betrachters eines aus den Farben deines Profilbilds erzeugt) und der Anzahl deiner Followerinnen, Follower und gefolgten Personen öffnen. Steht deine Folge-Einstellung auf „Niemand“, sehen es nur Personen, mit denen du über eine angenommene Folgebeziehung verbunden bist, und Personen, denen du eine Folgeanfrage geschickt hast. Statistiken, letzte Begehungen und einen Vergleich mit den selbst gekletterten Routen sehen nur deine bestätigten Followerinnen und Follower, deine Erfolge (außer gradbezogenen) alle, die dein Profil öffnen können. Deaktivierst du „Meine Begehungen mit Followern teilen“, sind Begehungen, Statistiken, Vergleich und Erfolge auf deinem Profil für alle anderen ausgeblendet; für Bestenlisten gilt eine eigene Einstellung. In der Kletterndensuche erscheinen Name, Profilbild und Banner aller Konten, deren Folge-Einstellung nicht „Niemand“ ist. Gäste sehen keine Profile und können nicht suchen. Rechtsgrundlage ist die Bereitstellung der Community-Funktion (Art. 6 Abs. 1 lit. b DSGVO); mit der Folge-Einstellung „Niemand“ verschwindest du aus der Suche."
+            },
+            "leaderboards": {
+                "title": "Bestenlisten",
+                "body": "Jede Halle hat Bestenlisten je Saison oder für die letzten 60 Tage. Die Punktzahl wird aus deinen besten 10 Begehungen im Zeitraum berechnet; angezeigt werden dein auf „Vorname N.“ gekürzter Name, eine interne Konto-ID, dein Profilbild, Rang, Punkte, Anzahl der Begehungen und Flashes sowie dein schwerster Grad. Bestenlisten sind öffentlich, also auch für Gäste sichtbar, und unabhängig von „Meine Begehungen mit Followern teilen“. Rechtsgrundlage ist unser berechtigtes Interesse und das der Halle an einer motivierenden Community-Funktion (Art. 6 Abs. 1 lit. f DSGVO). Du kannst dem jederzeit widersprechen (Art. 21 DSGVO), indem du in den Privatsphäre-Einstellungen „In Hallen-Ranglisten anzeigen“ deaktivierst; aus aktuellen Bestenlisten verschwindest du dann innerhalb etwa einer Minute, aus abgeschlossenen Saisons innerhalb einiger Stunden. Bestenlisten werden bei Abruf aus den Logbüchern berechnet, nur kurz zwischengespeichert und nicht dauerhaft gespeichert."
             },
             "ratings": {
                 "title": "Bewertungen",
-                "body": "Sternebewertungen, Grad-Einschätzungen und Kommentare zu Routen können ohne Konto abgegeben werden und werden ohne Namen oder IP-Adresse gespeichert. Kommentare sind öffentlich sichtbar und können moderiert werden."
+                "body": "Sternebewertungen, Grad-Einschätzungen und Kommentare zu Routen gibst du mit deinem Konto ab; sie werden mit dem Konto verknüpft gespeichert, damit du sie später ändern oder löschen kannst und Missbrauch unterbunden werden kann (Art. 6 Abs. 1 lit. b DSGVO). Andere angemeldete Personen sehen deinen Namen und dein Profilbild bei der Bewertung, es sei denn, du deaktivierst in den Privatsphäre-Einstellungen „Meinen Namen bei meinen Bewertungen zeigen“; Gäste sehen nie, wer bewertet hat. Die Anzeige deines Namens stützen wir auf unser und das Interesse der Community an nachvollziehbaren Bewertungen (Art. 6 Abs. 1 lit. f DSGVO); mit der genannten Einstellung kannst du dem jederzeit widersprechen (Art. 21 DSGVO). Kommentare können gemeldet und von der Moderation der Halle entfernt werden. Bewertungen bleiben bestehen, solange die Route existiert; löschst du dein Konto, bleiben sie anonym und ohne Verknüpfung zu dir erhalten."
             },
-            "reports": {
-                "title": "Meldungen von Inhalten",
-                "body": "Wenn du Inhalte meldest, verarbeiten wir Name, E-Mail-Adresse, Meldegrund und deine Begründung, um die Meldung zu bearbeiten und dich über die Entscheidung zu informieren (Art. 6 Abs. 1 lit. c DSGVO i. V. m. Art. 16 DSA). Meldungen werden so lange aufbewahrt, wie es zur Dokumentation erforderlich ist."
+            "betaVideos": {
+                "title": "Beta-Videos",
+                "body": "Zu einer Route kannst du einen Link (YouTube Shorts, Instagram, TikTok) oder ein eigenes Video (max. 30 MB) hinzufügen. Video oder Link sind für alle sichtbar, auch für Gäste; dein Name und Profilbild als Urheber nur für angemeldete Personen. Links werden nie eingebettet: Erst wenn du einen Link antippst, wird die jeweilige Plattform aufgerufen, und dann gilt deren Datenschutzerklärung. Rechtsgrundlage ist die Bereitstellung der von dir genutzten Funktion (Art. 6 Abs. 1 lit. b DSGVO). Achte darauf, keine anderen Personen ohne deren Einverständnis zu filmen. Beta-Videos können gemeldet und von dir oder der Moderation der Halle gelöscht werden; sie werden mit der Route und mit deinem Konto gelöscht."
+            },
+            "achievements": {
+                "title": "Erfolge",
+                "body": "Unser Server berechnet automatisch Erfolge aus deiner eigenen Aktivität: Begehungen, Sessions, Bewertungen, Beta-Videos, angenommene Folgeanfragen, bestätigte Problemmeldungen, Wettkampfteilnahmen und Saisonplatzierungen. Gespeichert werden die erreichte Stufe und das Datum. Gradbezogene Erfolge siehst nur du; die übrigen sehen andere nur dort, wo dein Profil für sie sichtbar ist und du deine Begehungen mit Followern teilst. Über neue Erfolge informieren wir dich in der App und, falls aktiviert, per Push; die Push-Benachrichtigungen dazu kannst du über das Thema „Erfolge“ in den Benachrichtigungseinstellungen abschalten. Es handelt sich um eine Spielfunktion ohne rechtliche oder vergleichbar erhebliche Wirkung für dich (keine automatisierte Entscheidung im Sinne von Art. 22 DSGVO). Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO; Erfolge werden mit deinem Konto gelöscht."
+            },
+            "competitions": {
+                "title": "Wettkämpfe",
+                "body": "Meldest du dich für einen Wettkampf einer Halle an, speichern wir Name bzw. Anzeigename, Geburtsjahr, Kategorie, Startnummer und deine Ergebnisse sowie bei Teilnehmenden unter 16 Jahren die Bestätigung, dass ein Elternteil oder eine sorgeberechtigte Person einverstanden ist (Art. 6 Abs. 1 lit. b DSGVO). Ergebnislisten und Ranglisten des Wettkampfs sind innerhalb der Halle öffentlich und können von der Halle als PDF exportiert werden; bei der Anmeldung kannst du „In öffentlichen Ergebnissen verbergen“ wählen. Teilnahmedaten werden gelöscht, wenn die Halle den Wettkampf löscht oder du dein Konto löschst."
             },
             "defects": {
                 "title": "Problemmeldungen zu Routen",
-                "body": "Wenn du ein Problem an einer Route meldest, speichern wir die gewählte Problemart, deine optionale Beschreibung und dein Foto sowie — falls angemeldet — dein Konto, damit das Team die Route reparieren und dich informieren kann. Bitte keine Personen fotografieren. Meldungen werden mit der Route gelöscht."
+                "body": "Wenn du ein Problem an einer Route meldest, speichern wir die gewählte Problemart, deine optionale Beschreibung und dein Foto sowie, falls angemeldet, dein Konto, damit das Team der Halle die Route reparieren und dich über den Stand informieren kann (Art. 6 Abs. 1 lit. b DSGVO, für Gäste Art. 6 Abs. 1 lit. f DSGVO: Sicherheit und Instandhaltung der Routen). Bitte keine Personen fotografieren. Meldungen sehen die Mitarbeitenden der Halle; sie werden mit der Route gelöscht. Löschst du dein Konto, bleibt die Meldung ohne Verknüpfung zu dir erhalten."
             },
-            "auditLog": {
-                "title": "Audit-Log",
-                "body": "Änderungen, Anmeldungen und fehlgeschlagene Anmeldeversuche von Mitarbeitenden werden mit Benutzer, Aktion und IP-Adresse protokolliert, um Sicherheit und Nachvollziehbarkeit zu gewährleisten (Art. 6 Abs. 1 lit. f DSGVO). Einträge werden nach {auditDays} Tagen automatisch gelöscht."
+            "reports": {
+                "title": "Meldungen von Inhalten",
+                "body": "Wenn du Inhalte wie Kommentare oder Beta-Videos meldest, verarbeiten wir Name, E-Mail-Adresse, Meldegrund und deine Begründung, um die Meldung zu prüfen, zu entscheiden und dich über die Entscheidung zu informieren (Art. 6 Abs. 1 lit. c DSGVO i. V. m. Art. 16 DSA). Meldungen bearbeitet die Moderation der Halle; sie und die Kontaktadresse der Halle erhalten deinen Namen und deine E-Mail-Adresse mit der Meldung. Wer den gemeldeten Inhalt erstellt hat, erfährt nicht, wer gemeldet hat, außer das Gesetz verlangt es. Meldungen werden so lange aufbewahrt, wie es zur Dokumentation und zur Abwehr von Missbrauch erforderlich ist; Name und E-Mail-Adresse der meldenden Person bleiben dafür auch nach einer Kontolöschung erhalten."
             },
-            "captcha": {
-                "title": "Spamschutz",
-                "body": "Einige Formulare nutzen eine selbst gehostete Proof-of-Work-Prüfung, die in deinem Browser läuft. Es werden keine Daten an Dritte übermittelt und keine Tracking-Cookies gesetzt."
+            "notifications": {
+                "title": "Benachrichtigungen",
+                "body": "Ereignisse, die dich betreffen (z. B. neue Routen an gefolgten Wänden, Folgeanfragen, Erfolge, Stand einer Problemmeldung, Aufgaben für Mitarbeitende), speichern wir als Benachrichtigung in deinem Konto und zeigen sie in der App an (Art. 6 Abs. 1 lit. b DSGVO). In den Benachrichtigungseinstellungen kannst du jedes Thema einzeln für Push abschalten; deine Auswahl wird im Konto gespeichert, die Glocke in der App zeigt weiterhin alle Benachrichtigungen. Gelesene Benachrichtigungen werden nach 30 Tagen automatisch gelöscht, alle übrigen nach 90 Tagen und alle mit deinem Konto."
             },
             "push": {
                 "title": "Push-Benachrichtigungen",
-                "body": "Wenn du Push-Benachrichtigungen auf einem Gerät aktivierst, speichern wir die Push-Adresse seines Browsers zusammen mit deinem Konto und versenden Benachrichtigungen über den Push-Dienst des Browser-Herstellers (z. B. Google, Apple, Mozilla). Die Adresse wird gelöscht, wenn du das Gerät in deinen Benachrichtigungseinstellungen entfernst, dein Konto löschst oder der Push-Dienst sie als abgelaufen meldet – das passiert, nachdem du dich auf dem Gerät abmeldest oder die Berechtigung entziehst."
+                "body": "Push-Benachrichtigungen bekommst du nur, wenn du sie auf einem Gerät ausdrücklich aktivierst und dein Browser die Berechtigung erteilt. Dafür speichern wir die Push-Adresse deines Browsers, die zugehörigen Verschlüsselungsschlüssel und eine Gerätebezeichnung (Browser und Betriebssystem, z. B. Firefox · Android) in deinem Konto und senden Nachrichten über den Push-Dienst des Browser-Herstellers (z. B. Google, Apple, Mozilla). Diese Dienste können Daten auch außerhalb der EU verarbeiten; sie erhalten nur die Push-Adresse und den für dein Gerät verschlüsselten Nachrichteninhalt, den sie nicht lesen können. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, für den Zugriff auf dein Gerät § 25 Abs. 1 TDDDG), die du jederzeit mit Wirkung für die Zukunft widerrufen kannst: indem du das Gerät in den Benachrichtigungseinstellungen entfernst oder die Browserberechtigung entziehst. Meldest du dich ab oder meldet sich eine andere Person auf dem Gerät an, wird das Push-Abonnement im Browser beendet. Die gespeicherte Push-Adresse löschen wir, wenn du das Gerät in den Benachrichtigungseinstellungen entfernst, der Push-Dienst sie als abgelaufen meldet oder du dein Konto löschst."
+            },
+            "dataExport": {
+                "title": "Datenexport",
+                "body": "Unter „Deine Daten herunterladen“ in den Kontoeinstellungen erhältst du eine ZIP-Datei mit allen Daten, die mit deinem Konto verknüpft sind: Profil, Profilbild und Banner, Logbuch, Bewertungen, Beta-Videos, Folgebeziehungen, Erfolge, Benachrichtigungen, Mitgliedschaften, Aufgaben und Wettkampfteilnahmen. Damit kommen wir deinem Recht auf Auskunft und Datenübertragbarkeit (Art. 15 und 20 DSGVO) nach. Der Export ist auf wenige Abrufe pro Stunde begrenzt; die Datei wird nicht auf dem Server gespeichert."
+            },
+            "deletion": {
+                "title": "Konto löschen",
+                "body": "Du kannst dein Konto in den Einstellungen jederzeit selbst löschen. Gelöscht werden Konto, Profilbild und Banner, Logbuch, Folgebeziehungen, Beta-Videos, Erfolge, Push-Registrierungen, Benachrichtigungen, Mitgliedschaften und Wettkampfteilnahmen. Ohne Verknüpfung zu dir bleiben erhalten: Bewertungen und Kommentare (anonym), gemeldete Routenprobleme und daraus entstandene Aufgaben sowie Meldungen von Inhalten mit Name und E-Mail-Adresse der meldenden Person, soweit das zur Bearbeitung und Dokumentation nach dem DSA erforderlich ist. Server-Logfiles und Audit-Log werden nach den oben genannten Fristen gelöscht."
+            },
+            "auditLog": {
+                "title": "Audit-Log",
+                "body": "Um Sicherheit und Nachvollziehbarkeit zu gewährleisten, protokollieren wir jede Änderung, die jemand über die App vornimmt (z. B. Logbuch-Einträge, Folgebeziehungen, Bewertungen, Beta-Videos, Problem- und Inhaltsmeldungen, Wettkampfanmeldungen und Änderungen durch Mitarbeitende), sowie Anmeldungen, fehlgeschlagene Anmeldeversuche (die eingegebene Adresse nur als kurzer Hash), Passwort-Zurücksetzungen und Änderungen der E-Mail-Adresse, jeweils mit der E-Mail-Adresse des Kontos, der Aktion, dem betroffenen Datensatz und der IP-Adresse (Art. 6 Abs. 1 lit. f DSGVO). Mitarbeitende einer Halle mit Zugriff auf das Audit-Log sehen die Einträge ihrer Halle, die Administratorinnen und Administratoren der Plattform alle Einträge und du deine eigenen. Einträge werden nach {auditDays} Tagen automatisch gelöscht."
+            },
+            "captcha": {
+                "title": "Spamschutz",
+                "body": "Einige Formulare nutzen eine selbst gehostete Proof-of-Work-Prüfung, die in deinem Browser eine kleine Rechenaufgabe löst (Art. 6 Abs. 1 lit. f DSGVO: Schutz vor Spam und automatisierten Anfragen). Es werden keine Daten an Dritte übermittelt, keine Cookies gesetzt und kein Nutzungsverhalten ausgewertet."
             },
             "thirdParties": {
                 "title": "Kein Tracking, keine Drittanbieter",
-                "body": "Diese Anwendung verwendet keine Analyse-, Werbe- oder Social-Media-Dienste und lädt keine Ressourcen von Servern Dritter. Alle Daten werden auf unserem eigenen Server verarbeitet. Eine Übermittlung in Drittländer findet nicht statt."
+                "body": "Diese Anwendung verwendet keine Analyse-, Werbe- oder Social-Media-Dienste, keine Schriften oder Skripte von fremden Servern und keine eingebetteten Videos. Alle Daten werden auf unseren eigenen Servern in der Europäischen Union verarbeitet. Eine Übermittlung in Drittländer findet nur statt, wenn du Push-Benachrichtigungen aktivierst (Push-Dienst deines Browser-Herstellers) oder selbst einen Beta-Video-Link öffnest. Für Nutzende aus der Schweiz: Die Speicherung in der EU ist eine Bekanntgabe ins Ausland in einen Staat mit angemessenem Datenschutz nach Art. 16 Abs. 1 DSG."
             },
             "storage": {
                 "title": "Cookies und lokaler Speicher",
-                "body": "Wir speichern auf deinem Gerät nur Informationen, die für den von dir gewünschten Dienst unbedingt erforderlich sind (§ 25 Abs. 2 TDDDG). Eine Einwilligung ist daher nicht erforderlich. Die vollständige Liste:"
+                "body": "Wir speichern auf deinem Gerät nur Informationen, die für den von dir gewünschten Dienst unbedingt erforderlich sind (§ 25 Abs. 2 Nr. 2 TDDDG): Anmeldesitzung, gewählte Halle, Darstellung, offline zwischengespeicherte Seiten und ausstehende Logbuch-Einträge. Eine Einwilligung ist dafür nicht erforderlich. Die vollständige Liste:"
             },
             "rights": {
                 "title": "Deine Rechte",
-                "body": "Nach der DSGVO hast du folgende Rechte bezüglich deiner personenbezogenen Daten:",
+                "body": "Du hast gegenüber dem oben genannten Verantwortlichen folgende Rechte; Auskunft und Übertragbarkeit kannst du direkt über den Datenexport, Berichtigung und Löschung über die Kontoeinstellungen wahrnehmen. Auf Anfragen antworten wir innerhalb eines Monats:",
                 "items": {
                     "access": "Recht auf Auskunft (Art. 15 DSGVO)",
                     "rectification": "Recht auf Berichtigung (Art. 16 DSGVO)",
                     "erasure": "Recht auf Löschung (Art. 17 DSGVO)",
                     "restriction": "Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)",
                     "portability": "Recht auf Datenübertragbarkeit (Art. 20 DSGVO)",
-                    "objection": "Widerspruchsrecht (Art. 21 DSGVO)",
-                    "withdrawal": "Recht auf jederzeitigen Widerruf einer Einwilligung (Art. 7 Abs. 3 DSGVO)"
+                    "objection": "Widerspruchsrecht gegen Verarbeitungen auf Grundlage berechtigter Interessen, etwa Bestenlisten und Namensanzeige bei Bewertungen (Art. 21 DSGVO)",
+                    "withdrawal": "Recht auf jederzeitigen Widerruf einer Einwilligung, etwa für Push-Benachrichtigungen (Art. 7 Abs. 3 DSGVO)"
                 },
-                "complaint": "Außerdem hast du das Recht, dich bei einer Datenschutz-Aufsichtsbehörde zu beschweren (Art. 77 DSGVO)."
-            },
-            "subtitle": "Wie wir personenbezogene Daten bei der Nutzung dieser Anwendung verarbeiten."
+                "complaint": "Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO), in Deutschland bei der Landesbeauftragten oder dem Landesbeauftragten deines Bundeslands, in Österreich bei der Datenschutzbehörde (Barichgasse 40–42, 1030 Wien, dsb{'@'}dsb.gv.at). Für Nutzende aus der Schweiz gelten zusätzlich das Datenschutzgesetz (DSG) mit dem Auskunftsrecht nach Art. 25 DSG; Aufsichtsbehörde ist der Eidgenössische Datenschutz- und Öffentlichkeitsbeauftragte (EDÖB)."
+            }
         },
         "storage": {
             "name": "Name",
@@ -550,7 +618,8 @@
             "kinds": {
                 "cookie": "Cookie",
                 "localStorage": "Lokaler Speicher",
-                "indexedDB": "Browser-Datenbank (IndexedDB)"
+                "indexedDB": "Browser-Datenbank (IndexedDB)",
+                "cacheStorage": "Cache (Service Worker)"
             },
             "purposes": {
                 "auth": "Hält dich angemeldet",
@@ -563,12 +632,16 @@
                 "pushDeclined": "Merkt sich, dass du Push-Benachrichtigungen auf diesem Gerät entfernt hast",
                 "offlineScores": "Speichert Wettkampfergebnisse, die du ohne Netz eingetragen hast, bis sie gesendet sind",
                 "gym": "Merkt sich die zuletzt geöffnete Halle",
-                "recentGyms": "Zeigt die zuletzt besuchten Hallen auf der Startseite"
+                "recentGyms": "Zeigt die zuletzt besuchten Hallen auf der Startseite",
+                "mapRouteType": "Merkt sich, ob die Karte Boulder oder Routen zeigt",
+                "offlinePages": "Hält App-Grundgerüst, öffentliche Seiten, Hallendaten und Bilder offline verfügbar",
+                "moderationSeen": "Merkt sich, wann du die Moderation zuletzt geöffnet hast, um neue Fälle zu markieren"
             },
             "durations": {
                 "session": "Bis zur Abmeldung",
                 "oneYear": "1 Jahr",
-                "persistent": "Bis zur Löschung im Browser"
+                "persistent": "Bis zur Löschung im Browser",
+                "untilUpdate": "Bis zum nächsten App-Update"
             }
         },
         "gymImprint": "Impressum von {name}",
@@ -611,7 +684,11 @@
             "competition": "{name} - Wettkämpfe - Gripello",
             "judge": "Werten - Gripello",
             "competitionRules": "{name} - Regeln - Gripello",
-            "invite": "Einladung - Gripello"
+            "invite": "Einladung - Gripello",
+            "leaderboard": "Rangliste - Gripello",
+            "friends": "Freunde - Gripello",
+            "climber": "{name} - Gripello",
+            "feed": "Feed"
         },
         "content": {
             "settings": "Einstellungen",
@@ -685,7 +762,16 @@
         "quickNavigation": "Schnellnavigation",
         "platform": "Plattform",
         "allGyms": "Alle Hallen…",
-        "manageGyms": "Hallen verwalten"
+        "manageGyms": "Hallen verwalten",
+        "you": "Du",
+        "gym": "Halle",
+        "community": "Community",
+        "staffTools": "Team-Werkzeuge",
+        "backToClimbing": "Zurück zum Klettern",
+        "staff": "Team",
+        "more": "Mehr",
+        "sections": "Bereiche",
+        "noStaffTools": "Du hast in dieser Halle keine Team-Werkzeuge"
     },
     "users": {
         "create": "Benutzer hinzufügen",
@@ -841,7 +927,8 @@
         "splitBand": "Teilen",
         "bandBoundary": "Grenze zwischen {from} und {to}",
         "defaultLanguage": "Standardsprache",
-        "defaultLanguageHelp": "Wird standardmäßig für E-Mails, Exporte und andere Systemausgaben verwendet."
+        "defaultLanguageHelp": "Wird standardmäßig für E-Mails, Exporte und andere Systemausgaben verwendet.",
+        "premoderateBetas": "Beta-Videos vor dem Anzeigen freigeben"
     },
     "errors": {
         "notFound": {
@@ -910,7 +997,7 @@
         "notifierName": "Dein Name",
         "notifierEmail": "Deine E-Mail-Adresse",
         "contactNote": "Wir nutzen deine E-Mail-Adresse nur für die Eingangsbestätigung und die Mitteilung der Entscheidung.",
-        "goodFaith": "Ich erkläre nach Treu und Glauben, dass die Angaben in dieser Meldung richtig und vollständig sind.",
+        "goodFaith": "Ich versichere nach bestem Wissen und Gewissen, dass meine Angaben in dieser Meldung richtig und vollständig sind.",
         "submit": "Meldung absenden",
         "submitted": "Meldung übermittelt. Wir haben dir eine Bestätigung per E-Mail geschickt.",
         "snapshot": "Inhalt zum Zeitpunkt der Meldung",
@@ -938,7 +1025,8 @@
         "empty": "Keine Meldungen",
         "emptyHint": "Gemeldete Inhalte erscheinen hier zur Prüfung.",
         "mailWarning": "E-Mail ist nicht konfiguriert, daher erhalten meldende Personen weder die Eingangsbestätigung noch die Entscheidungsmitteilung nach Artikel 16.",
-        "mailWarningAction": "Einstellungen öffnen"
+        "mailWarningAction": "Einstellungen öffnen",
+        "reportProfile": "Profil melden"
     },
     "tasks": {
         "pageTitle": "Aufgaben",
@@ -1191,7 +1279,9 @@
         "tabs": {
             "sessions": "Sessions",
             "stats": "Statistik",
-            "projects": "Projekte"
+            "projects": "Projekte",
+            "badges": "Abzeichen",
+            "timeline": "Verlauf"
         },
         "stats": {
             "sends": "Durchstiege",
@@ -1418,8 +1508,6 @@
     },
     "accountSettings": {
         "title": "Einstellungen",
-        "avatar": "Avatar",
-        "avatarDescription": "JPG, PNG, SVG oder WebP.",
         "language": "Sprache",
         "theme": "Design",
         "push": {
@@ -1430,7 +1518,12 @@
                 "wish_done": "Meine Routenwünsche sind geschraubt",
                 "competition_results": "Wettkampfergebnisse",
                 "tasks": "Aufgaben und gemeldete Defekte",
-                "reports": "Inhaltsmeldungen (DSA)"
+                "reports": "Inhaltsmeldungen (DSA)",
+                "social": "Follower und Folgeanfragen",
+                "achievements": "Erfolge",
+                "platform_reports": "Inhaltsmeldungen aller Hallen",
+                "content": "Moderation meiner Inhalte",
+                "moderation": "Zu prüfende Inhalte"
             },
             "devices": "Geräte",
             "thisDevice": "Dieses Gerät",
@@ -1441,6 +1534,17 @@
             "unsupported": "In diesem Browser nicht verfügbar",
             "blocked": "Benachrichtigungen sind in den Browser-Einstellungen blockiert.",
             "followedWalls": "Gefolgte Wände"
+        },
+        "privacy": {
+            "followPolicy": "Wer mir folgen darf",
+            "leaderboard": "In Hallen-Ranglisten anzeigen",
+            "policies": {
+                "approve": "Alle, nach meiner Bestätigung",
+                "open": "Alle",
+                "closed": "Niemand"
+            },
+            "reviewName": "Meinen Namen bei meinen Bewertungen zeigen",
+            "shareSends": "Meine Begehungen mit Followern teilen"
         }
     },
     "competitions": {
@@ -1805,7 +1909,9 @@
             "venue": "Halle",
             "createdAt": "Angelegt",
             "open": "Halle öffnen",
-            "inactive": "Inaktiv"
+            "inactive": "Inaktiv",
+            "takeOffline": "Offline nehmen",
+            "takeOfflineConfirm": "{name} verschwindet für Kletternde, bis du die Halle wieder einschaltest."
         },
         "settings": {
             "title": "Plattform-Einstellungen",
@@ -1820,7 +1926,12 @@
             "memberships": "Mitgliedschaften",
             "routes": "Routen",
             "admins": "Plattform-Admins",
-            "dashboard": "PocketBase-Dashboard"
+            "dashboard": "PocketBase-Dashboard",
+            "needsYou": "Braucht dich",
+            "legalReports": "Offene Rechtsmeldungen",
+            "staleGyms": "Hallen im Rückstand",
+            "profiles": "Profile zu prüfen",
+            "suspended": "Gesperrte Personen"
         },
         "users": {
             "title": "Nutzer",
@@ -1835,7 +1946,36 @@
             "sendPasswordReset": "E-Mail zum Zurücksetzen des Passworts senden",
             "passwordResetSent": "E-Mail zum Zurücksetzen des Passworts gesendet.",
             "deleteConfirm": "{name} mit allen Daten löschen? Das kann nicht rückgängig gemacht werden.",
-            "lastAdmin": "Diese Person ist die einzige Admin einer Halle. Ernenne zuerst jemand anderen zur Admin."
+            "lastAdmin": "Diese Person ist die einzige Admin einer Halle. Ernenne zuerst jemand anderen zur Admin.",
+            "suspend": "Sperren",
+            "suspendUntil": "Gesperrt bis",
+            "liftSuspension": "Sperre aufheben",
+            "suspendedUntil": "Gesperrt bis {date}",
+            "permanent": "Dauerhaft",
+            "suspendedPermanently": "Dauerhaft gesperrt",
+            "suspendName": "{name} sperren",
+            "suspendHowLong": "Wie lange",
+            "durations": {
+                "week": "7 Tage",
+                "month": "30 Tage",
+                "until": "Bis Datum",
+                "permanent": "Dauerhaft"
+            },
+            "suspendReason": "Begründung (geht an die Person)",
+            "suspendHideContent": "Auch ihre sichtbaren Inhalte ausblenden",
+            "suspendEffects": {
+                "signedOut": "Auf allen Geräten abgemeldet und kann sich nicht anmelden.",
+                "mail": "Erhält eine E-Mail mit deiner Begründung und wie sie widersprechen kann.",
+                "kept": "Mitgliedschaften und Logbuch bleiben; nichts wird gelöscht.",
+                "lift": "Unter Personen kannst du die Sperre jederzeit aufheben."
+            },
+            "suspendPermanently": "Dauerhaft sperren"
+        },
+        "features": {
+            "title": "Feature-Flags",
+            "flags": {
+                "beta_videos": "Beta-Videos"
+            }
         }
     },
     "mails": {
@@ -1856,7 +1996,8 @@
             "problem": "Problem",
             "route": "Route",
             "details": "Details",
-            "location": "Anmeldung"
+            "location": "Anmeldung",
+            "until": "Gesperrt bis"
         },
         "verification": {
             "subject": "Bestätige deine E-Mail-Adresse",
@@ -1914,6 +2055,303 @@
             "body": "Jemand hat ein sicherheitsrelevantes Problem gemeldet. Bitte prüfe die Route, bevor sie wieder beklettert wird.",
             "photo": "An der Aufgabe hängt ein Foto.",
             "action": "Aufgaben öffnen"
+        },
+        "contentHidden": {
+            "subject": "Dein Inhalt wurde ausgeblendet",
+            "body": "Wir haben einen Inhalt von dir ausgeblendet. Er ist für andere nicht mehr sichtbar."
+        },
+        "accountSuspended": {
+            "subject": "Dein Konto wurde gesperrt",
+            "body": "Dein Konto wurde gesperrt. Du kannst dich bis zum unten genannten Datum nicht anmelden."
         }
+    },
+    "leaderboard": {
+        "title": "Rangliste",
+        "season": "Saison",
+        "rolling": "Letzte 60 Tage",
+        "rollingWindow": "Seit {from}",
+        "tv": "TV-Ansicht",
+        "empty": "Noch keine Durchstiege",
+        "anonymous": "Kletterer*in",
+        "sends": "{n} Durchstieg | {n} Durchstiege",
+        "youAreHidden": "Du bist in Ranglisten ausgeblendet",
+        "showMe": "Mich anzeigen",
+        "seasons": {
+            "title": "Saisons",
+            "name": "Name",
+            "start": "Beginn",
+            "end": "Ende",
+            "add": "Saison anlegen",
+            "deleteConfirm": "Diese Saison löschen? Die Begehungen bleiben in den Logbüchern.",
+            "endBeforeStart": "Das Ende muss nach dem Beginn liegen"
+        },
+        "points": "{n} Pkt.",
+        "stats": {
+            "climbers": "Kletternde",
+            "grades": "Begehungen nach Grad",
+            "topRoutes": "Am meisten geklettert"
+        },
+        "standing": {
+            "rank": "Platz",
+            "score": "Punkte",
+            "ahead": "Bis zum nächsten Platz",
+            "bestSends": "Meine gewerteten Begehungen"
+        }
+    },
+    "badges": {
+        "weeks": "{n} Woche | {n} Wochen",
+        "currentStreak": "Aktuelle Serie",
+        "bestStreak": "Beste Serie"
+    },
+    "friends": {
+        "title": "Freunde",
+        "search": "Kletternde finden",
+        "noResults": "Niemand gefunden",
+        "tabs": {
+            "feed": "Feed",
+            "following": "Folge ich",
+            "followers": "Follower",
+            "requests": "Anfragen"
+        },
+        "feedEmpty": "Noch keine Begehungen von Leuten, denen du folgst",
+        "empty": {
+            "following": "Du folgst noch niemandem",
+            "followers": "Noch keine Follower",
+            "requests": "Keine offenen Anfragen"
+        },
+        "follow": "Folgen",
+        "following": "Folge ich",
+        "requested": "Angefragt",
+        "unfollow": "Nicht mehr folgen",
+        "unfollowConfirm": "Du siehst die Begehungen dann nicht mehr.",
+        "accept": "Annehmen",
+        "decline": "Ablehnen",
+        "removeFollower": "Follower entfernen",
+        "removeFollowerConfirm": "Diese Person sieht deine Begehungen dann nicht mehr.",
+        "followerCount": "{n} Follower | {n} Follower",
+        "followingCount": "Folgt {n} | Folgt {n}",
+        "closedProfile": "Dieses Logbuch ist privat",
+        "requestPending": "Folgeanfrage gesendet",
+        "followToSee": "Folge, um das Logbuch zu sehen",
+        "you": "Du",
+        "onlyTheirs": "Von ihnen geschafft, von dir noch nicht",
+        "sentByBoth": "Beide geschafft",
+        "privateSends": "Die Begehungen sind privat",
+        "myProfile": "Mein Profil",
+        "editProfile": "Profil bearbeiten",
+        "recent": "Letzte Begehungen",
+        "block": "Blockieren",
+        "unblock": "Blockierung aufheben",
+        "blockConfirm": "Die Person kann dir nicht mehr folgen oder dich finden, und du siehst ihre Bewertungen und Beta-Videos nicht mehr."
+    },
+    "beta": {
+        "title": "Beta-Videos",
+        "add": "Beta hinzufügen",
+        "link": "Link",
+        "file": "Video",
+        "submit": "Teilen",
+        "added": "Beta geteilt",
+        "deleted": "Beta entfernt",
+        "deleteConfirm": "Dieses Beta-Video entfernen?",
+        "report": "Dieses Video melden",
+        "invalidLink": "Bitte einen YouTube-Shorts-, Instagram- oder TikTok-Link verwenden",
+        "fileTooLarge": "Videos dürfen höchstens {size} MB groß sein",
+        "openOn": "Auf {platform} öffnen",
+        "play": "Abspielen",
+        "pause": "Pause",
+        "mute": "Stumm",
+        "unmute": "Ton an",
+        "fullscreen": "Vollbild",
+        "seek": "Wiedergabeposition",
+        "drop": "Video hierher ziehen oder auswählen",
+        "chooseOther": "Anderes wählen",
+        "awaitingApproval": "Dein Video wartet auf Freigabe durch die Halle"
+    },
+    "feed": {
+        "title": "Feed",
+        "someone": "Jemand",
+        "newRoutes": "Neu geschraubt",
+        "activity": "Begehungen deiner Freunde",
+        "signInForFriends": "Melde dich an, um den Begehungen deiner Freunde zu folgen",
+        "noNewRoutes": "Keine neuen Routen in den letzten 30 Tagen",
+        "today": "Heute",
+        "yesterday": "Gestern"
+    },
+    "timeline": {
+        "filters": {
+            "all": "Alle",
+            "send": "Begehungen",
+            "review": "Bewertungen",
+            "beta": "Betas"
+        },
+        "empty": "Noch nichts hier",
+        "beta": "Beta-Video",
+        "deleted": "Gelöschte Route"
+    },
+    "achievements": {
+        "categories": {
+            "progress": "Fortschritt",
+            "volume": "Umfang",
+            "style": "Stil",
+            "rhythm": "Rhythmus",
+            "exploration": "Entdecken",
+            "fresh": "Neue Routen",
+            "community": "Community",
+            "competition": "Wettkämpfe"
+        },
+        "names": {
+            "sends": "Begehungen",
+            "sessions": "Sessions",
+            "flashes": "Flashs",
+            "flash_grades": "Flash-Bandbreite",
+            "personal_bests": "Persönliche Bestleistungen",
+            "grade_ladder": "Grad-Leiter",
+            "pyramid": "Pyramide",
+            "project": "Projekt",
+            "active_weeks": "Aktive Wochen",
+            "perfect_months": "Perfekte Monate",
+            "welcome_back": "Willkommen zurück",
+            "walls": "Wand-Entdecker",
+            "colors": "Regenbogen",
+            "gyms": "Hallen-Tourist",
+            "all_rounder": "Allrounder",
+            "set_sweeper": "Neuschrauben-Jäger",
+            "first_ascents": "Erstbegehungen",
+            "wall_clears": "Wand komplett",
+            "before_strip": "Vor dem Abschrauben",
+            "reviews": "Bewerter:in",
+            "betas": "Beta-Teiler:in",
+            "friends": "Vernetzt",
+            "helper": "Helfer:in",
+            "competitions": "Wettkämpfer:in",
+            "season_top10": "Saison-Top-10"
+        },
+        "rules": {
+            "sends": "Klettere {n} verschiedene Route | Klettere {n} verschiedene Routen",
+            "sessions": "Klettere an {n} verschiedenen Tagen",
+            "flashes": "Flashe {n} Route | Flashe {n} Routen",
+            "flash_grades": "Flashe in {n} verschiedenen Graden",
+            "personal_bests": "Übertriff deine schwerste Begehung {n}-mal",
+            "grade_ladder": "Klettere in {n} verschiedenen Graden",
+            "pyramid": "1 im Höchstgrad, 2 einen darunter, 4 zwei darunter",
+            "project": "Schaffe eine Route nach {n} Versuchen",
+            "active_weeks": "Klettere {n} Wochen in Folge – eine Pause ist okay",
+            "perfect_months": "Klettere jede Woche in {n} Monat | Klettere jede Woche in {n} Monaten",
+            "welcome_back": "Komm nach drei Wochen Pause zurück",
+            "walls": "Klettere an {n} Wänden einer Halle",
+            "colors": "Klettere Routen in {n} Griff-Farben",
+            "gyms": "Klettere in {n} Hallen",
+            "all_rounder": "Klettere Boulder und Routen",
+            "set_sweeper": "Klettere {n} Routen in der ersten Woche nach dem Schrauben",
+            "first_ascents": "Klettere {n} Route als Erste:r | Klettere {n} Routen als Erste:r",
+            "wall_clears": "Klettere alle Routen an {n} Wand | Klettere alle Routen an {n} Wänden",
+            "before_strip": "Klettere {n} Route in ihrer letzten Woche | Klettere {n} Routen in ihrer letzten Woche",
+            "reviews": "Schreibe {n} Bewertung | Schreibe {n} Bewertungen",
+            "betas": "Teile {n} Beta-Video | Teile {n} Beta-Videos",
+            "friends": "Habe {n} Freund:in | Habe {n} Freund:innen",
+            "helper": "Melde {n} Problem, das behoben wird | Melde {n} Probleme, die behoben werden",
+            "competitions": "Nimm an {n} Wettkampf teil | Nimm an {n} Wettkämpfen teil",
+            "season_top10": "Beende {n} Saison in den Top 10 | Beende {n} Saisons in den Top 10"
+        },
+        "unlocked": "Erfolg freigeschaltet: {name}",
+        "more": "und {n} weitere"
+    },
+    "moderation": {
+        "title": "Moderation",
+        "reviewStats": "Bewertungsstatistik",
+        "moderate": "Moderieren",
+        "filterType": "Inhalt",
+        "filterGym": "Halle",
+        "views": {
+            "decide": "Zu entscheiden",
+            "approval": "Wartet auf Freigabe",
+            "hidden": "Ausgeblendet",
+            "history": "Geprüft",
+            "all": "Alle Hallen"
+        },
+        "types": {
+            "rating": "Bewertung",
+            "beta_video": "Beta-Video",
+            "profile": "Profil",
+            "competition_entry": "Wettkampfname",
+            "task": "Mangel / Wunsch",
+            "route": "Route"
+        },
+        "states": {
+            "unreviewed": "Zu entscheiden",
+            "approved": "Geprüft",
+            "pending": "Wartet auf Freigabe",
+            "hidden": "Ausgeblendet"
+        },
+        "actions": {
+            "keep": "Sichtbar lassen",
+            "publish": "Video veröffentlichen",
+            "reject": "Ablehnen…",
+            "hide": "Ausblenden…",
+            "restore": "Wieder sichtbar machen"
+        },
+        "done": {
+            "approve": "Bleibt sichtbar",
+            "publish": "Video veröffentlicht",
+            "reject": "Video abgelehnt",
+            "hide": "Ausgeblendet",
+            "restore": "Wieder sichtbar",
+            "hideAll": "{count} Inhalt ausgeblendet | {count} Inhalte ausgeblendet"
+        },
+        "decision": {
+            "why": "Warum? (geht an die Person)",
+            "explanation": "Erklärung",
+            "whatHappens": "Was passiert",
+            "hiddenNow": "Kletternde sehen es nicht mehr.",
+            "authorInformed": "Die Person erhält deine Begründung und wie sie widersprechen kann.",
+            "reportersInformed": "Die meldende Person erhält die Entscheidung. | {count} Meldende erhalten die Entscheidung.",
+            "restorable": "Unter Ausgeblendet kannst du es 180 Tage lang wieder sichtbar machen.",
+            "platformLock": "Nur Gripello kann es wieder sichtbar machen.",
+            "declineGone": "Das Video wird nicht veröffentlicht und sofort gelöscht.",
+            "authorAll": "Alle sichtbaren Inhalte dieser Person werden auf einmal ausgeblendet."
+        },
+        "author": {
+            "showAll": "Alles von dieser Person",
+            "hideAll": "Alle Inhalte ausblenden…",
+            "hideAllConfirm": "Alle ausblenden",
+            "suspend": "Sperren…",
+            "cannotSuspend": "Plattform-Admins und das eigene Konto können hier nicht gesperrt werden"
+        },
+        "consequence": {
+            "reports": "Schließt die offene Meldung und informiert die meldende Person. | Schließt {count} offene Meldungen und informiert die Meldenden.",
+            "author": "Die Person wird informiert, wenn du ausblendest.",
+            "pending": "Nur du entscheidest, ob Kletternde dieses Video sehen.",
+            "restore": "Macht es für Kletternde wieder sichtbar."
+        },
+        "empty": {
+            "decide": "Nichts zu entscheiden",
+            "approval": "Keine Uploads warten",
+            "hidden": "Nichts ausgeblendet",
+            "history": "Noch nichts geprüft",
+            "all": "Nichts zu entscheiden"
+        },
+        "reports": "{count} Meldung | {count} Meldungen",
+        "reportsTitle": "Meldung | Meldungen ({count})",
+        "openCases": "{count} offen | {count} offen",
+        "viewInContext": "Im Kontext ansehen",
+        "hiddenByPlatform": "Von Gripello ausgeblendet",
+        "hiddenByGym": "Von der Halle ausgeblendet",
+        "keptNote": "Geprüft und sichtbar gelassen",
+        "waitingTitle": "Wartet auf Freigabe",
+        "new": "Neu",
+        "newSinceVisit": "{count} neu seit deinem letzten Besuch | {count} neu seit deinem letzten Besuch",
+        "undo": "Rückgängig",
+        "saved": "Gespeichert",
+        "confirmTitle": {
+            "hide": "Diesen Inhalt ausblenden?",
+            "reject": "Dieses Video ablehnen?"
+        },
+        "confirm": {
+            "hide": "Ausblenden",
+            "reject": "Ablehnen"
+        },
+        "authorPosts": "{count} Beitrag | {count} Beiträge",
+        "authorHidden": "{count} ausgeblendet",
+        "decidedElsewhere": "Dieser Fall wurde anderswo entschieden"
     }
 }

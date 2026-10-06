@@ -115,13 +115,15 @@
 </template>
 
 <script setup lang="ts">
+import { achievementToast } from '~/utils/achievements'
 import { timeAgo } from '#shared/utils/formatting'
+import type { RecordSubscription } from 'pocketbase'
 import type { NotificationRecord } from '~/types/models'
+import { liveTopics } from '~/utils/realtimeCache'
 import { notificationLabelKey } from '~/utils/notificationLabel'
 
 const { t, locale } = useI18n()
 const pb = usePocketbase()
-const { subscribe } = usePbSubscription()
 const {
     items,
     unreadCount,
@@ -132,7 +134,7 @@ const {
     dismiss,
 } = useNotificationQueue()
 
-const { error: notifyError } = useNotification()
+const { error: notifyError, notify } = useNotification()
 
 const open = ref(false)
 const { offered: pushOffered, turnOn } = usePushOffer()
@@ -158,11 +160,29 @@ async function turnOnPush() {
     }
 }
 
+let unmounted = false
+let unsubscribe: (() => Promise<void>) | undefined
+
 onMounted(async () => {
     if (!pb.authStore.isValid) return
 
+    const subscribed = pb.realtime.subscribe(
+        liveTopics.ownNotifications,
+        (event: RecordSubscription<NotificationRecord>) => {
+            applyEvent(event)
+            const text = achievementToast(event, t)
+            if (text) notify(text)
+        },
+    )
     await refresh()
-    await subscribe('notifications', applyEvent)
+    const stop = await subscribed
+    if (unmounted) await stop()
+    else unsubscribe = stop
+})
+
+onBeforeUnmount(() => {
+    unmounted = true
+    void unsubscribe?.()
 })
 </script>
 

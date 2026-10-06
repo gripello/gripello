@@ -30,13 +30,22 @@
             </span>
 
             <div class="list-card__title">
-                <span class="list-card__name">{{ comment.userName }}</span>
+                <NuxtLink
+                    v-if="comment.userId"
+                    :to="`/climber?id=${comment.userId}`"
+                    class="list-card__name hover:underline"
+                    data-testid="comment-card-author"
+                    >{{ comment.userName }}</NuxtLink
+                >
+                <span v-else class="list-card__name">{{
+                    comment.userName
+                }}</span>
                 <span class="comment-card__date">{{ formattedDate }}</span>
             </div>
 
             <div
                 v-if="comment.rating"
-                class="shrink-0 comment-card__rating"
+                class="flex shrink-0 comment-card__rating"
                 role="img"
                 :aria-label="`${comment.rating}/5`"
             >
@@ -44,13 +53,20 @@
                     v-for="star in 5"
                     :key="star"
                     name="i-lucide-star"
+                    mode="svg"
                     class="size-[18px]"
                     :class="
                         star <= comment.rating
-                            ? 'text-amber-500 fill-current'
+                            ? 'text-amber-500 **:fill-current'
                             : 'text-dimmed'
                     "
                 />
+            </div>
+            <div
+                v-if="actionsInHeader && $slots.actions"
+                class="-me-2 flex shrink-0 items-center"
+            >
+                <slot name="actions" />
             </div>
         </div>
 
@@ -134,7 +150,7 @@
         </div>
 
         <div
-            v-if="$slots.actions"
+            v-if="!actionsInHeader && $slots.actions"
             class="list-card__actions flex items-center justify-end gap-1"
         >
             <slot name="actions" />
@@ -152,6 +168,7 @@ export interface CommentCardItem {
     id: string
     userName: string
     userAvatar?: string | null
+    userId?: string
     rating?: number | null
     created: string
     comment?: string | null
@@ -169,6 +186,7 @@ const props = withDefaults(
         showRoute?: boolean
         dateFormat?: 'relative' | 'absolute'
         collapsible?: boolean
+        actionsInHeader?: boolean
     }>(),
     {
         selectable: false,

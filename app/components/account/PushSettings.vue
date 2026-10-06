@@ -217,25 +217,31 @@ const TOPIC_ICONS: Record<string, string> = {
     competition_results: 'i-lucide-trophy',
     tasks: 'i-lucide-clipboard-list',
     reports: 'i-lucide-flag',
+    platform_reports: 'i-lucide-shield-alert',
+    moderation: 'i-lucide-shield-check',
+    content: 'i-lucide-eye-off',
+    social: 'i-lucide-users',
+    achievements: 'i-lucide-medal',
 }
 
 const { t, locale } = useI18n()
 const pb = usePocketbase()
 const push = usePushSubscription()
-const { memberships } = usePermissions()
+const { memberships, isPlatformAdmin } = usePermissions()
 const { followed, setFollowing } = useFollowedWalls()
 const { error: notifyError } = useNotification()
 
 const grantedPermissions = computed(
     () =>
-        new Set(
-            memberships.value.flatMap(
+        new Set([
+            ...memberships.value.flatMap(
                 (membership) =>
                     membership.expand?.role?.expand?.permissions?.map(
                         (permission) => permission.name,
                     ) ?? [],
             ),
-        ),
+            ...(isPlatformAdmin.value ? ['platform_admin'] : []),
+        ]),
 )
 const topics = computed(() =>
     visibleTopics(push.topics.value, grantedPermissions.value).map((topic) => ({

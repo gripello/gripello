@@ -1,8 +1,8 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { createComment } from '../../support/comments'
+import { createComment, deleteComment } from '../../support/comments'
 
-test('deleting a comment lowers the total by exactly one', async ({
+test('a comment deleted elsewhere lowers the total by exactly one', async ({
     adminPage: page,
     testPrefix,
     route,
@@ -20,11 +20,7 @@ test('deleting a comment lowers the total by exactly one', async ({
     const showing = page.getByTestId('comments-showing')
     await expect(showing).toHaveText('Showing 2 of 2 reviews')
 
-    await page
-        .getByTestId(`comment-card-${deletedId}`)
-        .getByTestId('comment-card-delete')
-        .click()
-    await page.getByTestId('confirm-dialog-confirm').click()
+    await deleteComment(page, deletedId)
 
     await expect(page.getByTestId(`comment-card-${deletedId}`)).toHaveCount(0)
     await expect(showing).toHaveText('Showing 1 of 1 reviews')

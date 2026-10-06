@@ -1,11 +1,6 @@
 import { gradeLabels } from '#shared/utils/grades'
 import type { GymBand } from '#shared/utils/gradeReference'
 import { readableTextOn } from '../../app/utils/color'
-import de from '../../i18n/locales/de.json'
-import en from '../../i18n/locales/en.json'
-import es from '../../i18n/locales/es.json'
-import fr from '../../i18n/locales/fr.json'
-import nl from '../../i18n/locales/nl.json'
 
 export type Translate = (key: string, params?: Record<string, string>) => string
 
@@ -221,10 +216,7 @@ export function drawGradeScalePdf(
     drawFooter(doc, content)
 }
 
-const MESSAGES: Record<string, object> = { de, en, es, fr, nl }
-
-export function translator(language: string | null | undefined): Translate {
-    const messages = MESSAGES[language ?? ''] ?? en
+export function translator(messages: object): Translate {
     return (key, params = {}) => {
         const value = key
             .split('.')

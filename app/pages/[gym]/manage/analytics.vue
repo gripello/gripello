@@ -246,10 +246,11 @@
                                         v-for="star in 5"
                                         :key="star"
                                         name="i-lucide-star"
+                                        mode="svg"
                                         :class="[
                                             'size-3.5',
                                             star <= Math.round(comment.rating)
-                                                ? 'fill-current text-warning'
+                                                ? 'text-warning **:fill-current'
                                                 : 'text-dimmed',
                                         ]"
                                     />

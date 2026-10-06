@@ -165,7 +165,8 @@ export function buildAuditFilter(options: {
 const AUDIT_TARGET_PATHS: Record<string, string> = {
     users: '/admin/users',
     ratings: '/manage/comments',
-    reports: '/manage/reports',
+    reports: '/manage/moderation',
+    moderation_items: '/manage/moderation',
     tasks: '/manage/tasks',
 }
 

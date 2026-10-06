@@ -48,6 +48,8 @@ export async function assertSettledUrl(
 export async function authHeader(
     page: Page,
 ): Promise<{ Authorization: string }> {
+    // The auth cookie is only readable once the page shows an app document.
+    if (page.url() === 'about:blank') await gotoSettled(page, '/')
     const token = await page.evaluate(() => {
         const raw = document.cookie
             .split('; ')

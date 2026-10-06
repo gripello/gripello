@@ -1,32 +1,13 @@
 import type { Page } from '@playwright/test'
 import type PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
+import { decide, openCase } from '../../support/moderation'
 import { authHeader, gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { createRole } from '../../support/seed'
-
-async function waitForNotification(page: Page, marker: string) {
-    const headers = await authHeader(page)
-    let match: { id: string } | undefined
-    await expect
-        .poll(
-            async () => {
-                const res = await page.request.get(
-                    '/api/collections/notifications/records?perPage=200&sort=-created',
-                    { headers },
-                )
-                match = ((await res.json()).items ?? []).find(
-                    (item: { params?: unknown }) =>
-                        JSON.stringify(item.params ?? {}).includes(marker),
-                )
-                return !!match
-            },
-            { message: `notification carrying ${marker}` },
-        )
-        .toBe(true)
-    return match!
-}
+import { signInAs } from '../../support/auth'
+import { waitForNotification } from '../../support/notifications'
 
 const pbTime = () => new Date().toISOString().replace('T', ' ')
 
@@ -95,7 +76,7 @@ test('opening a notification marks it read and clears the badge', async ({
     await page.getByTestId('notification-bell').click()
     await page.getByTestId(`notification-item-${queued.id}`).click()
 
-    await page.waitForURL(/\/manage\/reports/)
+    await page.waitForURL(/\/manage\/moderation/)
 
     const headers = await authHeader(page)
     await expect
@@ -160,44 +141,40 @@ test('deciding a report notifies the other moderators exactly once', async ({
 }) => {
     const role = await createRole(root, `${testPrefix}-moderators`, [
         'manage_reports',
+        'manage_comments',
     ])
     const decider = await createUser(role.id, 'decider')
     const other = await createUser(role.id, 'other')
     const page = await pageAs(decider)
 
-    await gotoSettled(page, '/manage/reports', /\/manage\/reports/)
+    await gotoSettled(page, '/manage/moderation')
     const commentId = await createComment(page, route.id, `${testPrefix}-once`)
-    const reportId = await createReport(page, {
+    await createReport(page, {
         contentId: commentId,
         explanation: `${testPrefix}-once`,
     })
 
-    await gotoSettled(page, '/manage/reports')
-    const card = page.getByTestId(`report-card-${reportId}`)
-    await card.getByTestId('report-card-keep').click()
-    await page
-        .getByTestId('report-decision-reason')
-        .first()
-        .fill('Reviewed, no rule broken.')
-
+    await openCase(page, `${testPrefix}-once`)
     const decided = page.waitForResponse(
         (res) =>
-            res.request().method() === 'PATCH' &&
-            res.url().includes(`/api/collections/reports/records/${reportId}`),
+            res.request().method() === 'POST' &&
+            res.url().includes('/api/moderation/'),
     )
     const from = pbTime()
-    await page.getByTestId('report-decision-confirm').click()
+    await decide(page, 'approve')
     expect((await decided).ok()).toBe(true)
     const to = pbTime()
-    await expect(page.getByTestId('report-decision-dialog')).toBeHidden()
 
     expect(await decidedBetween(root, decider.id, from, to)).toHaveLength(0)
     expect(await decidedBetween(root, other.id, from, to)).toHaveLength(1)
 })
 
 test('a plain user with no notifications still gets a bell', async ({
-    userPage: page,
+    page,
+    createUser,
 }) => {
+    const climber = await createUser('user', 'bell')
+    await signInAs(page, climber.email, climber.password)
     await gotoSettled(page, gymPath('/'))
 
     await expect(page.getByTestId('notification-bell')).toBeVisible()

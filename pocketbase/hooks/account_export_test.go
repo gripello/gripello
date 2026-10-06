@@ -200,18 +200,30 @@ func TestAccountExportCoversEveryUserLink(t *testing.T) {
 	}
 
 	exported := map[string]bool{
-		"users.avatar":             true,
-		"ticks.user":               true,
-		"memberships.user":         true,
-		"competition_entries.user": true,
-		"notifications.user":       true,
-		"push_subscriptions.user":  true,
-		"tasks.reporter":           true,
-		"tasks.assignee":           true,
-		"tasks.done_by":            true,
-		"tasks.photo":              true,
-		"audit_logs.actor":         true,
-		"reports.decided_by":       false, // moderation of other people's reports, holds the notifiers' data
+		"users.avatar":                 true,
+		"users.banner":                 true,
+		"ticks.user":                   true,
+		"memberships.user":             true,
+		"competition_entries.user":     true,
+		"notifications.user":           true,
+		"push_subscriptions.user":      true,
+		"tasks.reporter":               true,
+		"tasks.assignee":               true,
+		"tasks.done_by":                true,
+		"tasks.photo":                  true,
+		"audit_logs.actor":             true,
+		"follows.follower":             true,
+		"follows.followee":             true,
+		"beta_videos.user":             true,
+		"user_badges.user":             true,
+		"beta_videos.file":             true,
+		"ratings.user":                 true,
+		"reports.decided_by":           false, // moderation of other people's reports, holds the notifiers' data
+		"blocks.blocker":               true,
+		"blocks.blocked":               false, // who blocked you is the blocker's own data
+		"moderation_items.author":      true,
+		"moderation_items.files":       true,
+		"moderation_items.reviewed_by": false, // moderator identity
 	}
 	users, err := app.FindCollectionByNameOrId("users")
 	if err != nil {

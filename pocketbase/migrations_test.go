@@ -262,7 +262,7 @@ func TestGymsMigration(t *testing.T) {
 			t.Errorf("settings.%s missing", field)
 		}
 	}
-	for _, name := range []string{"locations", "walls", "routes", "ratings", "tasks", "reports", "competitions", "roles"} {
+	for _, name := range []string{"locations", "walls", "routes", "ratings", "tasks", "competitions", "roles"} {
 		collection, err := app.FindCollectionByNameOrId(name)
 		if err != nil {
 			t.Fatal(err)
@@ -764,5 +764,86 @@ func TestGymsMigrationDownRefusesSeveralGyms(t *testing.T) {
 	}
 	if _, err := app.FindCollectionByNameOrId("memberships"); err != nil {
 		t.Errorf("failed revert left no memberships: %v", err)
+	}
+}
+
+func TestModerationInboxBackfillsOpenReports(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+
+	jsvm.MustRegister(app, jsvm.Config{MigrationsDir: "pb_migrations"})
+	runner := migrateDownTo(t, app, "1792700002_moderation_inbox.js")
+
+	gym := saveTestRecord(t, app, "gyms", map[string]any{"slug": "gym-a", "name": "A"})
+	climber := saveTestRecord(t, app, "users", map[string]any{"email": "climber@example.com"})
+	rating := saveTestRecord(t, app, "ratings", map[string]any{"gym": gym.Id, "user": climber.Id, "rating": 1, "comment": "spam"})
+	report := func(status string) {
+		saveTestRecord(t, app, "reports", map[string]any{
+			"gym": gym.Id, "content_type": "rating", "content_id": rating.Id, "reason": "spam_fraud", "status": status,
+			"explanation": "Ads", "notifier_name": "N", "notifier_email": "n@example.com", "good_faith": true,
+		})
+	}
+	report("open")
+	report("open")
+	report("rejected")
+	saveTestRecord(t, app, "reports", map[string]any{
+		"gym": gym.Id, "content_type": "rating", "content_id": "gone0000000000a", "reason": "spam_fraud", "status": "open",
+		"explanation": "Ads", "notifier_name": "N", "notifier_email": "n@example.com", "good_faith": true,
+	})
+
+	if _, err := runner.Up(); err != nil {
+		t.Fatal(err)
+	}
+	items, err := app.FindAllRecords("moderation_items")
+	if err != nil || len(items) != 1 {
+		t.Fatalf("backfilled %d items (%v), want 1", len(items), err)
+	}
+	item := items[0]
+	if item.GetString("content_id") != rating.Id || item.GetInt("reports_count") != 2 || item.GetString("state") != "unreviewed" ||
+		item.GetString("gym") != gym.Id || item.GetString("author") != climber.Id {
+		t.Errorf("backfilled item = %v", item.FieldsData())
+	}
+	var snapshot map[string]any
+	if err := item.UnmarshalJSONField("snapshot", &snapshot); err != nil || snapshot["comment"] != "spam" || snapshot["user"] != nil {
+		t.Errorf("snapshot = %v (%v)", snapshot, err)
+	}
+}
+
+func TestCommunityPathsFreeTheirGymSlugs(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+
+	jsvm.MustRegister(app, jsvm.Config{MigrationsDir: "pb_migrations"})
+	runner := migrateDownTo(t, app, "1792700005_community_paths.js")
+
+	friends := saveTestRecord(t, app, "gyms", map[string]any{"slug": "friends", "name": "Friends", "previous_slugs": []string{"climber", "old-friends"}})
+	saveTestRecord(t, app, "gyms", map[string]any{"slug": "climber-gym", "name": "Taken"})
+	climber := saveTestRecord(t, app, "gyms", map[string]any{"slug": "climber", "name": "Climber"})
+	untouched := saveTestRecord(t, app, "gyms", map[string]any{"slug": "dav", "name": "DAV", "previous_slugs": []string{"dav-old"}})
+
+	if _, err := runner.Up(); err != nil {
+		t.Fatal(err)
+	}
+	slugs := func(gym *core.Record) (string, string) {
+		fresh, err := app.FindRecordById("gyms", gym.Id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return fresh.GetString("slug"), fresh.GetString("previous_slugs")
+	}
+	if slug, previous := slugs(friends); slug != "friends-gym" || previous != `["old-friends"]` {
+		t.Errorf("friends gym = %s %s", slug, previous)
+	}
+	if slug, _ := slugs(climber); slug != "climber-gym-1" {
+		t.Errorf("climber gym = %s, want climber-gym-1", slug)
+	}
+	if slug, previous := slugs(untouched); slug != "dav" || previous != `["dav-old"]` {
+		t.Errorf("untouched gym = %s %s", slug, previous)
 	}
 }

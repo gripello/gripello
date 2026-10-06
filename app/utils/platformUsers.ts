@@ -6,7 +6,7 @@ import type {
 } from '~/types/models'
 import { gymTitle } from '~/utils/gymNames'
 
-export type PlatformUserFilter = 'platform_admins' | 'unverified'
+export type PlatformUserFilter = 'platform_admins' | 'unverified' | 'suspended'
 
 export type PlatformUser = UserRecord & {
     expand?: { memberships_via_user?: MembershipRecord[] }
@@ -24,7 +24,7 @@ export interface MembershipChip {
 type Filter = (raw: string, params?: Record<string, unknown>) => string
 
 export const PLATFORM_USER_FIELDS =
-    'id,collectionId,email,username,firstname,name,avatar,verified,platform_admin,created,expand.memberships_via_user.id,expand.memberships_via_user.gym,expand.memberships_via_user.role'
+    'id,collectionId,email,username,firstname,name,avatar,verified,platform_admin,suspended_until,suspension_reason,created,expand.memberships_via_user.id,expand.memberships_via_user.gym,expand.memberships_via_user.role'
 
 export function userDisplayName(user: UserRecord) {
     return (
@@ -53,6 +53,7 @@ export function platformUserFilter(
     }
     if (kind === 'platform_admins') parts.push('platform_admin = true')
     if (kind === 'unverified') parts.push('verified = false')
+    if (kind === 'suspended') parts.push('suspended_until > @now')
     return parts.join(' && ')
 }
 
@@ -86,4 +87,36 @@ export function joinableGyms(chips: MembershipChip[], gyms: GymRecord[]) {
 
 export function rolesOfGym(roles: RoleRecord[], gymId: string) {
     return roles.filter((role) => role.gym === gymId)
+}
+
+export function isPermanentlySuspended(
+    user: Pick<UserRecord, 'suspended_until'>,
+) {
+    return !!user.suspended_until && user.suspended_until.startsWith('9999-')
+}
+
+export function isSuspended(
+    user: Pick<UserRecord, 'suspended_until'>,
+    now = new Date(),
+) {
+    return !!user.suspended_until && new Date(user.suspended_until) > now
+}
+
+export type SuspensionDuration = 'week' | 'month' | 'until' | 'permanent'
+
+const DAY_MS = 86_400_000
+
+export function suspensionEnd(
+    duration: SuspensionDuration,
+    until: string,
+    now = new Date(),
+): string | null {
+    if (duration === 'permanent') return null
+    // The chosen day counts in full, in the admin's own time zone.
+    if (duration === 'until')
+        return new Date(`${until}T23:59:59.999`).toISOString().replace('T', ' ')
+    const days = duration === 'week' ? 7 : 30
+    return new Date(now.getTime() + days * DAY_MS)
+        .toISOString()
+        .replace('T', ' ')
 }

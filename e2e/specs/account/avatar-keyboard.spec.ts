@@ -7,7 +7,7 @@ test('the profile avatar upload opens with the keyboard', async ({
     await gotoSettled(page, '/account/settings')
 
     const upload = page.getByTestId('profile-avatar-upload')
-    await expect(upload).toHaveAttribute('role', 'button')
+    await expect(upload).toHaveRole('button')
     await expect(upload).toHaveAttribute('aria-label', /.+/)
 
     await upload.focus()

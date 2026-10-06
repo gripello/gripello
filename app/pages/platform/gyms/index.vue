@@ -62,7 +62,7 @@
                     :aria-label="t('platform.gyms.active')"
                     :data-testid="`platform-gym-active-${row.original.slug}`"
                     @update:model-value="
-                        (active) => setActive(row.original, active)
+                        (active) => requestActive(row.original, active)
                     "
                 />
             </template>
@@ -130,7 +130,7 @@
                     :model-value="!!gym.active"
                     :aria-label="t('platform.gyms.active')"
                     :data-testid="`platform-gym-active-${gym.slug}`"
-                    @update:model-value="(active) => setActive(gym, active)"
+                    @update:model-value="(active) => requestActive(gym, active)"
                 />
                 <UButton
                     :to="detailPath(gym)"
@@ -143,6 +143,20 @@
                 />
             </li>
         </ul>
+
+        <ConfirmDialog
+            :model-value="!!offlineTarget"
+            :title="t('platform.gyms.takeOffline')"
+            :message="
+                t('platform.gyms.takeOfflineConfirm', {
+                    name: offlineTarget?.name ?? '',
+                })
+            "
+            :confirm-text="t('platform.gyms.takeOffline')"
+            data-testid="platform-gym-offline-dialog"
+            @update:model-value="offlineTarget = null"
+            @confirm="offlineTarget && setActive(offlineTarget, false)"
+        />
 
         <LayoutDialogShell
             v-model="dialogOpen"
@@ -320,7 +334,15 @@ async function createGym() {
 
 const { run: runToggle } = useAsyncAction()
 
+const offlineTarget = ref<GymRecord | null>(null)
+
+function requestActive(gym: GymRecord, active: boolean) {
+    if (active) return setActive(gym, true)
+    offlineTarget.value = gym
+}
+
 async function setActive(gym: GymRecord, active: boolean) {
+    offlineTarget.value = null
     await runToggle(async () => {
         await pb.collection('gyms').update(gym.id, { active })
         gym.active = active

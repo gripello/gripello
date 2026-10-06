@@ -9,20 +9,16 @@ import {
     translator,
 } from '../../server/utils/gradeScalePdf'
 import { pdfBuffer } from '../../server/utils/export'
+import de from '../../i18n/locales/de.json'
 import { gymBandsFrom } from '../../shared/utils/gradeReference'
 
-const t = translator('de')
+const t = translator(de)
 
 describe('translator', () => {
     it('resolves nested keys and fills placeholders', () => {
         expect(t('gradeConversion.easy')).toBe('Leicht')
         expect(t('gradeConversion.andUp', { grade: '7A' })).toContain('7A')
         expect(t('gradeConversion.missing')).toBe('gradeConversion.missing')
-    })
-
-    it('falls back to English for gyms without a known language', () => {
-        expect(translator(null)('gradeConversion.easy')).toBe('Easy')
-        expect(translator('xx')('gradeConversion.easy')).toBe('Easy')
     })
 })
 

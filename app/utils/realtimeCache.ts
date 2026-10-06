@@ -26,11 +26,39 @@ export const cacheKeys = {
     routeDefects: (routeId: string) => `route-defects:${routeId}`,
     tickedRoutes: 'ticked-routes',
     logbook: 'logbook',
+    follows: 'follows',
+    blocks: 'blocks',
+    friendsFeed: 'friends-feed',
+    communityFeed: 'community-feed',
 }
+
+export const isFollowKey = (key: string) =>
+    key === cacheKeys.follows ||
+    key === cacheKeys.friendsFeed ||
+    key === cacheKeys.communityFeed ||
+    key.startsWith('climber:') ||
+    key.startsWith('climber-ticks:')
 
 export const liveTopics = {
     openDefects: 'open_route_defects',
     ownTicks: 'own_ticks',
+    ownNotifications: 'own_notifications',
+    followedTicks: 'followed_ticks',
+    followChanges: 'follow_changes',
+}
+
+export const gymChangesTopic = (gymId: string) => `gym_changes:${gymId}`
+
+export const gymDefectsTopic = (gymId: string) =>
+    `${liveTopics.openDefects}:${gymId}`
+
+export type GymChangeCollection =
+    'routes' | 'walls' | 'locations' | 'ratings' | 'beta_videos'
+
+export interface GymChange<T = Record<string, unknown>> {
+    collection: GymChangeCollection
+    action: 'create' | 'update' | 'delete'
+    record: T
 }
 
 export interface OpenDefectsChange {
@@ -119,6 +147,7 @@ export function replaceRouteDefects<
 export function isLiveKey(key: string, keyLocations: KeyLocations = {}) {
     return (
         key === cacheKeys.unplacedRoutes ||
+        isFollowKey(key) ||
         !!defectsScope(key) ||
         !!routeRowsScope(key, keyLocations) ||
         !!wallsScope(key, keyLocations) ||

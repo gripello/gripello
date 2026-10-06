@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
     PLATFORM_ADMIN,
     gymLink,
-    pageLinks,
-    sidebarItems,
+    sectionTabs,
+    sidebarSections,
+    zoneOfPath,
+    gymLocalPath,
     staffSections,
     visibleNavItems,
     withGym,
@@ -67,34 +69,35 @@ describe('withGym', () => {
 describe('visibleNavItems', () => {
     it('drops links and empty groups the role cannot open', () => {
         const items = visibleNavItems(allowing(), true, 'gym-a')
-        expect(items.map((item) => item.key)).toEqual([
-            'home',
-            'list',
-            'map',
-            'logbook',
-            'competitions',
-        ])
         expect(items.map((item) => item.to)).toEqual([
             '/gym-a',
             '/gym-a/routes',
             '/gym-a/map',
-            '/logbook',
+            '/gym-a/feed',
+            '/gym-a/leaderboard',
             '/gym-a/competitions',
+            '/friends',
+            '/logbook',
         ])
     })
 
     it('shows guests only the public pages', () => {
-        const keys = visibleNavItems(allowing(), false, 'gym-a').map(
-            (item) => item.key,
-        )
-        expect(keys).toEqual(['home', 'list', 'map', 'competitions'])
+        const items = visibleNavItems(allowing(), false, 'gym-a')
+        expect(items.map((item) => item.key)).toEqual([
+            'home',
+            'list',
+            'map',
+            'feed',
+            'leaderboard',
+            'competitions',
+        ])
     })
 
-    it('keeps only the landing page and logbook outside a gym', () => {
+    it('keeps only the landing page and personal pages outside a gym', () => {
         const keys = visibleNavItems(allowing('manage_routes'), true).map(
             (item) => item.key,
         )
-        expect(keys).toEqual(['home', 'logbook'])
+        expect(keys).toEqual(['home', 'friends', 'logbook'])
     })
 })
 
@@ -132,23 +135,33 @@ describe('staffSections', () => {
             ]),
         ).toEqual([
             ['manage', ['/manage/analytics']],
-            ['moderation', ['/manage/comments', '/manage/reports']],
+            ['moderation', ['/manage/moderation', '/manage/comments']],
         ])
+    })
+
+    it('puts the open case count on the moderation links', () => {
+        const { sections } = sidebarSections(
+            allowing('manage_comments'),
+            true,
+            'gym-a',
+            '/gym-a/manage',
+            (key) => key,
+            'staff',
+            '',
+            { moderation: 4 },
+        )
+        const links = sections.flatMap((section) => section.items)
+        expect(
+            links.find((link) => link.to.endsWith('/manage/moderation'))?.badge,
+        ).toBe('4')
+        expect(
+            links.find((link) => link.to.endsWith('/manage/comments'))?.badge,
+        ).toBeUndefined()
     })
 
     it('returns nothing for climbers or without a gym', () => {
         expect(staffSections(allowing(), 'gym-a')).toEqual([])
         expect(staffSections(allowing('manage_routes'))).toEqual([])
-    })
-})
-
-describe('pageLinks', () => {
-    it('lists public pages that are not in the bottom nav', () => {
-        expect(pageLinks(false, 'gym-a').map((link) => link.to)).toEqual([
-            '/gym-a',
-            '/gym-a/routes',
-            '/gym-a/competitions',
-        ])
     })
 })
 
@@ -164,15 +177,20 @@ describe('platform section', () => {
         for (const slug of ['gym-a', '']) {
             expect(staffSections(allowing(PLATFORM_ADMIN), slug)).toEqual([])
         }
-        expect(
-            sidebarItems(
-                allowing(PLATFORM_ADMIN),
-                true,
-                'gym-a',
-                '/gym-a/routes',
-                (key) => key,
-            )[1],
-        ).toEqual([])
+        const nav = sidebarSections(
+            allowing(PLATFORM_ADMIN),
+            true,
+            'gym-a',
+            '/gym-a/routes',
+            (key) => key,
+            'gym',
+        )
+        expect(nav.sections.map((section) => section.key)).toEqual([
+            'gym',
+            'community',
+            'you',
+        ])
+        expect(nav.staffEntry).toBeNull()
     })
 
     it('stays reachable from the command palette with unprefixed links', () => {
@@ -185,6 +203,7 @@ describe('platform section', () => {
             .children!.map((link) => link.to)
         expect(platform).toEqual([
             '/platform',
+            '/platform/moderation',
             '/platform/gyms',
             '/platform/users',
             '/platform/settings',
@@ -226,96 +245,145 @@ describe('gymSwitchPath', () => {
     })
 })
 
-describe('sidebarItems', () => {
+describe('sidebarSections', () => {
     const t = (key: string) => `t:${key}`
+    const testids = (items: { testid: string }[]) =>
+        items.map((item) => item.testid)
 
-    it('lists pages flat and staff sections as collapsible groups', () => {
-        const [pages, groups] = sidebarItems(
+    it('splits climber pages into gym, community and you', () => {
+        const { sections, staffEntry } = sidebarSections(
+            allowing('manage_routes'),
+            true,
+            'gym-a',
+            '/gym-a/routes',
+            t,
+            'gym',
+            'me',
+        )
+        expect(
+            sections.map((section) => [section.label, testids(section.items)]),
+        ).toEqual([
+            ['t:nav.gym', ['nav-link-home', 'nav-link-routes', 'nav-link-map']],
+            [
+                't:nav.community',
+                [
+                    'nav-link-feed',
+                    'nav-link-leaderboard',
+                    'nav-link-competitions',
+                    'nav-link-friends',
+                ],
+            ],
+            ['t:nav.you', ['nav-link-logbook', 'nav-link-climber']],
+        ])
+        expect(staffEntry).toBe('/gym-a/manage')
+    })
+
+    it('keeps the same zones on personal pages and hides staff for climbers', () => {
+        const { sections, staffEntry } = sidebarSections(
+            allowing(),
+            true,
+            'gym-a',
+            '/friends',
+            t,
+            'global',
+        )
+        expect(sections[0]!.items[0]).toMatchObject({ to: '/gym-a' })
+        expect(staffEntry).toBeNull()
+    })
+
+    it('lists only the staff sections in the staff workspace', () => {
+        const { sections } = sidebarSections(
             allowing('manage_routes', 'manage_settings'),
             true,
             'gym-a',
             '/gym-a/admin/settings',
             t,
+            'staff',
         )
-        expect(pages!.map((item) => item.testid)).toEqual([
-            'nav-link-home',
-            'nav-link-routes',
-            'nav-link-map',
-            'nav-link-logbook',
-            'nav-link-competitions',
+        expect(sections.map((section) => section.key)).toEqual([
+            'manage',
+            'admin',
         ])
-        expect(groups).toEqual([
-            expect.objectContaining({
-                label: 't:nav.manage',
-                'aria-label': 't:nav.manage',
-                icon: 'i-lucide-sliders-horizontal',
-                testid: 'nav-group-manage',
-                current: false,
-                defaultOpen: false,
-            }),
-            expect.objectContaining({
-                testid: 'nav-group-admin',
-                current: true,
-                defaultOpen: true,
-                children: [
-                    expect.objectContaining({
-                        to: '/gym-a/admin/map',
-                        testid: 'nav-link-admin-map',
-                    }),
-                    expect.objectContaining({
-                        to: '/gym-a/admin/settings',
-                        testid: 'nav-link-admin-settings',
-                    }),
-                ],
-            }),
-        ])
-    })
-
-    it('matches whole path segments', () => {
-        const groupsAt = (path: string) =>
-            sidebarItems(allowing('manage_users'), true, 'gym-a', path, t)[1]!
-        expect(groupsAt('/gym-a/admin')).toEqual([
-            expect.objectContaining({ defaultOpen: false }),
-        ])
-        expect(groupsAt('/gym-a/admin/users')).toEqual([
-            expect.objectContaining({ defaultOpen: true }),
-        ])
+        expect(sections[1]!.items.find((item) => item.current)?.testid).toBe(
+            'nav-link-admin-settings',
+        )
     })
 
     it('shows only the platform links on platform pages', () => {
-        const lists = sidebarItems(
+        const { sections } = sidebarSections(
             allowing(PLATFORM_ADMIN, 'manage_routes'),
             true,
             'gym-a',
             '/platform/gyms/abc',
             t,
+            'platform',
         )
-        expect(lists).toEqual([
+        expect(
+            sections.map((section) => section.items.map((i) => i.to)),
+        ).toEqual([
             [
-                expect.objectContaining({
-                    to: '/platform',
-                    testid: 'nav-link-platform',
-                }),
-                expect.objectContaining({
-                    to: '/platform/gyms',
-                    testid: 'nav-link-platform-gyms',
-                }),
-                expect.objectContaining({
-                    to: '/platform/users',
-                    testid: 'nav-link-platform-users',
-                }),
-                expect.objectContaining({
-                    to: '/platform/settings',
-                    label: 't:platform.settings.title',
-                }),
+                '/platform',
+                '/platform/moderation',
+                '/platform/gyms',
+                '/platform/users',
+                '/platform/settings',
             ],
         ])
+    })
+})
+
+describe('zoneOfPath', () => {
+    it('places pages in gym, community or you', () => {
+        expect(zoneOfPath('/gym-a')).toBe('gym')
+        expect(zoneOfPath('/gym-a/map')).toBe('gym')
+        expect(zoneOfPath('/gym-a/route')).toBe('gym')
+        expect(zoneOfPath('/gym-a/competitions/abc')).toBe('community')
+        expect(zoneOfPath('/friends')).toBe('community')
+        expect(zoneOfPath('/climber')).toBe('community')
+        expect(zoneOfPath('/logbook')).toBe('you')
+        expect(zoneOfPath('/gym-a/manage/routes')).toBeNull()
+        expect(zoneOfPath('/')).toBeNull()
+        expect(gymLocalPath('/route')).toBeNull()
+        expect(gymLocalPath('/gym-a/')).toBe('/')
+    })
+})
+
+describe('sectionTabs', () => {
+    it('offers the sibling pages of a zone', () => {
+        expect(
+            sectionTabs('/gym-a/map', 'gym-a').map((tab) => [
+                tab.to,
+                tab.active,
+            ]),
+        ).toEqual([
+            ['/gym-a/routes', false],
+            ['/gym-a/map', true],
+            ['/gym-a', false],
+        ])
+        expect(sectionTabs('/gym-a/leaderboard', 'gym-a')[1]).toMatchObject({
+            testid: 'section-tab-leaderboard',
+            active: true,
+        })
+        expect(sectionTabs('/gym-a/route', 'gym-a')).toEqual([])
+        expect(sectionTabs('/friends', 'gym-a').at(-1)).toMatchObject({
+            to: '/friends',
+            active: true,
+        })
+        expect(sectionTabs('/friends', '')).toEqual([])
+    })
+
+    it('leaves signed-in pages out for guests', () => {
+        expect(
+            sectionTabs('/gym-a/feed', 'gym-a', false).map((tab) => tab.to),
+        ).toEqual(['/gym-a/feed', '/gym-a/leaderboard', '/gym-a/competitions'])
     })
 })
 
 describe('navContext', () => {
     it('tells gym, platform and tenant-less pages apart', () => {
         expect(navContext('/gym-a/routes', 'gym-a')).toBe('gym')
+        expect(navContext('/gym-a/manage', 'gym-a')).toBe('staff')
+        expect(navContext('/gym-a/admin/users', 'gym-a')).toBe('staff')
         expect(navContext('/platform', '')).toBe('platform')
         expect(navContext('/platform/gyms/abc', '')).toBe('platform')
         expect(navContext('/logbook', '')).toBe('global')
@@ -333,35 +401,83 @@ describe('requestedSection', () => {
 })
 
 describe('bottomNavLinks', () => {
-    const activeAt = (path: string, slug = 'gym-a') =>
-        bottomNavLinks(path, slug).find((link) => link.active)?.path
+    const activeAt = (
+        path: string,
+        context: 'gym' | 'staff' | 'platform' | 'global' = 'gym',
+    ) =>
+        bottomNavLinks(path, 'gym-a', context).find((link) => link.active)?.path
 
-    it('points the map at the given gym', () => {
-        expect(bottomNavLinks('/logbook', 'gym-a')[0]!.to).toBe('/gym-a/map')
-        expect(bottomNavLinks('/logbook', '')[0]!.to).toBe('/')
+    it('points the gym and community tabs at the given gym', () => {
+        expect(
+            bottomNavLinks('/logbook', 'gym-a', 'global').map(
+                (link) => link.to,
+            ),
+        ).toEqual([
+            '/gym-a/routes',
+            '/gym-a/feed',
+            '/scan',
+            '/logbook',
+            '/account',
+        ])
+        expect(bottomNavLinks('/logbook', '', 'global')[1]!.to).toBe('/')
     })
 
-    it('marks the current climber page', () => {
-        expect(activeAt('/gym-a/map')).toBe('/map')
-        expect(activeAt('/gym-a/manage/map')).toBeUndefined()
-        expect(activeAt('/logbook')).toBe('/logbook')
-        expect(activeAt('/account')).toBe('/account')
-        expect(activeAt('/account/settings')).toBeUndefined()
+    it('marks the zone of the current page', () => {
+        expect(activeAt('/gym-a/map')).toBe('/routes')
+        expect(activeAt('/gym-a')).toBe('/routes')
+        expect(activeAt('/gym-a/leaderboard')).toBe('/feed')
+        expect(activeAt('/friends', 'global')).toBe('/feed')
+        expect(activeAt('/logbook', 'global')).toBe('/logbook')
+        expect(activeAt('/account', 'global')).toBe('/account')
+        expect(activeAt('/account/settings', 'global')).toBeUndefined()
+    })
+
+    it('swaps to permitted staff tabs in the staff workspace', () => {
+        const tabs = bottomNavLinks(
+            '/gym-a/manage/tasks',
+            'gym-a',
+            'staff',
+            (permission) => permission === 'manage_tasks',
+        )
+        expect(tabs.map((tab) => tab.to)).toEqual([
+            '/gym-a/manage/tasks',
+            '/gym-a/manage',
+        ])
+        expect(tabs.find((tab) => tab.active)?.path).toBe('/manage/tasks')
+        expect(activeAt('/gym-a/manage', 'staff')).toBe('/manage')
+    })
+
+    it('marks More on staff pages without their own tab', () => {
+        expect(activeAt('/gym-a/manage/walls', 'staff')).toBe('/manage')
+        expect(activeAt('/gym-a/admin/users', 'staff')).toBe('/manage')
+        expect(activeAt('/gym-a/manage/routes/new', 'staff')).toBe(
+            '/manage/routes',
+        )
+        expect(
+            bottomNavLinks(
+                '/gym-a/manage/routes',
+                'gym-a',
+                'staff',
+                () => false,
+            ).find((tab) => tab.active)?.path,
+        ).toBe('/manage')
     })
 
     it('swaps to the platform links on platform pages', () => {
         expect(
-            bottomNavLinks('/platform/gyms/abc', 'gym-a').map(
+            bottomNavLinks('/platform/gyms/abc', 'gym-a', 'platform').map(
                 (link) => link.to,
             ),
         ).toEqual([
             '/platform',
+            '/platform/moderation',
             '/platform/gyms',
             '/platform/users',
-            '/platform/settings',
             '/account',
         ])
-        expect(activeAt('/platform')).toBe('/platform')
-        expect(activeAt('/platform/gyms/abc')).toBe('/platform/gyms')
+        expect(activeAt('/platform', 'platform')).toBe('/platform')
+        expect(activeAt('/platform/gyms/abc', 'platform')).toBe(
+            '/platform/gyms',
+        )
     })
 })

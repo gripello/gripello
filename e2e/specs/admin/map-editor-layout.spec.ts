@@ -56,9 +56,7 @@ test('leaving with unsaved changes asks in a dialog', async ({
             ),
         ).toBeVisible()
 
-        const mapLink = page
-            .getByTestId('nav-desktop-links')
-            .getByTestId('nav-link-map')
+        const mapLink = page.getByTestId('nav-back-to-climbing')
         await mapLink.click()
         const dialog = page.getByTestId('confirm-dialog')
         await expect(dialog).toBeVisible()
@@ -68,7 +66,7 @@ test('leaving with unsaved changes asks in a dialog', async ({
 
         await mapLink.click()
         await page.getByTestId('confirm-dialog-confirm').click()
-        await page.waitForURL(/\/map(\?|$)/)
+        await page.waitForURL(/\/routes(\?|$)/)
     } finally {
         await seeded.cleanup()
     }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { gradeIndex } from '#shared/utils/grades'
 import {
+    compareLogbooks,
     gradePyramid,
     logbookStats,
     medianSendIndex,
@@ -262,5 +263,27 @@ describe('ungraded sends', () => {
                 'boulder',
             ),
         ).toBe(15.7)
+    })
+})
+
+describe('compareLogbooks', () => {
+    it('compares stats and splits their sends into shared and new ones', () => {
+        const mine = [
+            tick('top', '6A', { route: 'a' }),
+            tick('flash', '6B', { route: 'b', date: daysAgo(400) }),
+        ]
+        const theirs = [
+            tick('flash', '6A', { route: 'a' }),
+            tick('top', '6B', { route: 'b' }),
+            tick('top', '7A', { route: 'c' }),
+            tick('attempt', '7B', { route: 'd' }),
+            tick('top', '6a', { route: 'e', grade_system: 'french' }),
+        ]
+        const comparison = compareLogbooks(mine, theirs, 'boulder', '12m', NOW)
+        expect(comparison.mine.sends).toBe(1)
+        expect(comparison.theirs).toMatchObject({ sends: 3, flashes: 1 })
+        expect(comparison.theirs.hardest?.grade).toBe('7A')
+        expect(comparison.both).toEqual(['a', 'b'])
+        expect(comparison.onlyTheirs).toEqual(['c'])
     })
 })

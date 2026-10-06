@@ -1,5 +1,8 @@
 import type { GymRecord, RoleRecord } from '~/types/models'
 import {
+    isPermanentlySuspended,
+    isSuspended,
+    suspensionEnd,
     joinableGyms,
     membershipChips,
     platformUserFilter,
@@ -45,6 +48,12 @@ describe('platformUserFilter', () => {
         expect(combined).toContain('email ~ "ada"')
         expect(combined).toContain('name ~ "ada"')
         expect(combined.endsWith(' && verified = false')).toBe(true)
+    })
+
+    it('lists users whose suspension has not ended', () => {
+        expect(platformUserFilter(filter, '', 'suspended')).toBe(
+            'suspended_until > @now',
+        )
     })
 
     it('also matches users found by their hidden email', () => {
@@ -99,5 +108,51 @@ describe('membershipChips', () => {
             'r2',
             'r3',
         ])
+    })
+})
+
+describe('isSuspended', () => {
+    const now = new Date('2026-10-06T12:00:00Z')
+
+    it('only counts suspensions that have not ended', () => {
+        expect(
+            isSuspended({ suspended_until: '2026-10-07 00:00:00.000Z' }, now),
+        ).toBe(true)
+        expect(
+            isSuspended({ suspended_until: '2026-10-01 00:00:00.000Z' }, now),
+        ).toBe(false)
+        expect(isSuspended({ suspended_until: '' }, now)).toBe(false)
+        expect(isSuspended({}, now)).toBe(false)
+    })
+})
+
+describe('isPermanentlySuspended', () => {
+    it('recognises the lifetime end date', () => {
+        expect(
+            isPermanentlySuspended({
+                suspended_until: '9999-12-31 00:00:00.000Z',
+            }),
+        ).toBe(true)
+        expect(
+            isPermanentlySuspended({
+                suspended_until: '2027-01-01 00:00:00.000Z',
+            }),
+        ).toBe(false)
+    })
+})
+
+describe('suspensionEnd', () => {
+    const now = new Date('2026-10-06T12:00:00.000Z')
+
+    it('turns presets into an end date', () => {
+        expect(suspensionEnd('week', '', now)).toBe('2026-10-13 12:00:00.000Z')
+        expect(suspensionEnd('month', '', now)).toBe('2026-11-05 12:00:00.000Z')
+        expect(suspensionEnd('until', '2026-12-24', now)).toBe(
+            new Date('2026-12-24T23:59:59.999').toISOString().replace('T', ' '),
+        )
+    })
+
+    it('leaves permanent suspensions without a date', () => {
+        expect(suspensionEnd('permanent', '', now)).toBeNull()
     })
 })

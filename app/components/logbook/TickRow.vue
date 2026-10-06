@@ -73,7 +73,7 @@
             </p>
         </div>
         <GradeLabel :source="tick" />
-        <UPopover :content="{ align: 'end', side: 'bottom' }">
+        <UPopover v-if="!readonly" :content="{ align: 'end', side: 'bottom' }">
             <UButton
                 icon="i-lucide-ellipsis-vertical"
                 color="neutral"
@@ -115,6 +115,7 @@ import type { PendingTick } from '~/utils/tickOutbox'
 
 const props = defineProps<{
     tick: PendingTick<TickRecord & { expand?: { route?: RouteRecord } }>
+    readonly?: boolean
 }>()
 
 const emit = defineEmits<{

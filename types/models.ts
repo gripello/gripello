@@ -17,6 +17,7 @@ import type {
 } from '../shared/utils/competitionScoring'
 import type { GymMap, MapPoint } from '../shared/utils/mapGeometry'
 import type { BoulderBandSetting } from '../shared/utils/gradeReference'
+import type { GymFeatures } from '../shared/utils/featureFlags'
 
 export type RecordId = string
 
@@ -88,6 +89,8 @@ export interface RatingRecord extends BaseRecord {
     grade_system?: string | null
     grade_index?: number | null
     comment?: string | null
+    author?: { id: string; name: string; avatar: string }
+    mine?: boolean
 }
 
 export interface TickRecord extends BaseRecord {
@@ -129,10 +132,86 @@ export interface UserRecord extends BaseRecord {
     lastname?: string | null
     name?: string | null
     avatar?: string | null
+    banner?: string | null
     language?: string | null
     platform_admin?: boolean
     notification_prefs?: NotificationPrefs | null
     followed_walls?: string[]
+    leaderboard_hidden?: boolean
+    follow_policy?: FollowPolicy | ''
+    reviews_anonymous?: boolean
+    ticks_private?: boolean
+    suspended_until?: string
+    suspension_reason?: string
+}
+
+export type FollowPolicy = 'approve' | 'open' | 'closed'
+export type FollowStatus = 'pending' | 'accepted'
+
+export interface FollowRecord extends BaseRecord {
+    follower: RecordId
+    followee: RecordId
+    status: FollowStatus
+}
+
+export type FriendTickRecord = Omit<TickRecord, 'note'>
+
+export interface SeasonRecord extends BaseRecord {
+    gym: RecordId
+    name: string
+    starts_at: string
+    ends_at: string
+}
+
+export interface BetaVideoRecord extends BaseRecord {
+    gym: RecordId
+    route: RecordId
+    user: RecordId
+    url?: string
+    file?: string
+    author?: { id: string; name: string; avatar: string }
+}
+
+export type ModerationContentType =
+    'rating' | 'beta_video' | 'profile' | 'competition_entry' | 'task' | 'route'
+export type ModerationState = 'unreviewed' | 'approved' | 'pending' | 'hidden'
+export type ModerationAction = 'approve' | 'reject' | 'hide' | 'restore'
+
+export interface ModerationItemRecord extends BaseRecord {
+    gym: RecordId | ''
+    content_type: ModerationContentType
+    content_id: RecordId
+    author: RecordId | ''
+    snapshot: Record<string, unknown> | null
+    files: string[]
+    state: ModerationState
+    hidden_by: 'gym' | 'platform' | ''
+    reports_count: number
+    reason: string
+    reviewed_by: RecordId | ''
+    reviewed_at: string
+    context?: ModerationContext
+}
+
+export interface ModerationContext {
+    author?: { id: RecordId; name: string; avatar: string }
+    history?: { items: number; hidden: number }
+    route?: { id: RecordId; name: string; grade: string; color: string }
+    competition?: string
+    gym_name?: string
+    reports: {
+        id: RecordId
+        reason: string
+        explanation: string
+        notifier_name: string
+        status: ReportStatus
+        created: string
+    }[]
+}
+
+export interface BlockRecord extends BaseRecord {
+    blocker: RecordId
+    blocked: RecordId
 }
 
 export interface LegalFields {
@@ -166,6 +245,8 @@ export interface GymRecord extends BaseRecord, LegalFields {
     boulder_bands?: BoulderBandSetting[] | null
     privacy_extra?: string | null
     language?: string | null
+    features?: GymFeatures | null
+    premoderate_betas?: boolean
 }
 
 export interface GymStatsRecord extends BaseRecord {
@@ -208,7 +289,7 @@ export interface LegalPerson {
     role?: string
 }
 
-export type ReportContentType = 'rating' | 'route'
+export type ReportContentType = 'rating' | 'route' | 'beta_video' | 'profile'
 export type ReportReason = (typeof REPORT_REASONS)[number]
 export type ReportStatus = (typeof REPORT_STATUSES)[number]
 export type ReportDecision = 'content_removed' | 'content_kept'

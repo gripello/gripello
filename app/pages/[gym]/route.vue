@@ -254,6 +254,18 @@
                                 {{ t('ratings.createReview') }}
                             </UButton>
                             <UButton
+                                v-if="!metadata.archived && betasEnabled"
+                                color="neutral"
+                                variant="soft"
+                                size="lg"
+                                class="grow justify-center"
+                                icon="i-lucide-video"
+                                data-testid="beta-add"
+                                @click="betaVideos?.openAdd()"
+                            >
+                                {{ t('beta.add') }}
+                            </UButton>
+                            <UButton
                                 v-if="metadata?.wall && metadata.location"
                                 color="neutral"
                                 variant="soft"
@@ -344,10 +356,16 @@
                     class="route-layout__reviews px-4 pt-4"
                     data-testid="route-reviews"
                 >
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-base font-bold">
+                    <RouteBetaVideos
+                        v-if="route_id"
+                        ref="betaVideos"
+                        :route-id="route_id"
+                    />
+
+                    <div class="mb-3 flex items-center gap-2">
+                        <h2 class="text-base font-bold">
                             {{ t('ratings.climber_reviews') }}
-                        </span>
+                        </h2>
                         <UBadge
                             v-if="reviews.length"
                             variant="soft"
@@ -364,6 +382,7 @@
                             :key="review.id"
                             :comment="review"
                             date-format="relative"
+                            actions-in-header
                             class="mb-3"
                             :class="{
                                 'comment-card--target':
@@ -372,14 +391,26 @@
                         >
                             <template #actions>
                                 <UButton
+                                    v-if="!review.mine"
                                     icon="i-lucide-flag"
                                     color="neutral"
                                     variant="ghost"
-                                    size="sm"
+                                    class="icon-btn"
                                     :aria-label="t('reports.reportAction')"
                                     :title="t('reports.reportAction')"
                                     data-testid="comment-card-report"
                                     @click="openReport(review.id)"
+                                />
+                                <UButton
+                                    v-else
+                                    icon="i-lucide-trash-2"
+                                    color="neutral"
+                                    variant="ghost"
+                                    class="icon-btn"
+                                    :aria-label="t('ratings.deleteOwn')"
+                                    :title="t('ratings.deleteOwn')"
+                                    data-testid="comment-card-delete"
+                                    @click="deleteTarget = review.id"
                                 />
                             </template>
                         </CommentsCard>
@@ -390,6 +421,15 @@
                         icon="i-lucide-sparkles"
                         :title="t('ratings.no_reviews_yet')"
                         :hint="t('ratings.be_the_first')"
+                    />
+
+                    <ConfirmDialog
+                        :model-value="!!deleteTarget"
+                        :title="t('ratings.deleteOwn')"
+                        :message="t('ratings.deleteOwnConfirm')"
+                        :confirm-text="t('actions.delete')"
+                        @update:model-value="deleteTarget = null"
+                        @confirm="deleteOwnReview"
                     />
 
                     <ReportsFormDialog
@@ -429,8 +469,11 @@ import { sanitizeGymMap } from '#shared/utils/mapGeometry'
 import { reportContentUrl } from '~/utils/reports'
 import { isLightColor, shadeColor } from '~/utils/color'
 import { cacheKeys } from '~/utils/realtimeCache'
+import { hasFeature } from '#shared/utils/featureFlags'
 
 const gymPath = useGymPath()
+const { gym } = useGym()
+const betasEnabled = computed(() => hasFeature(gym.value, 'beta_videos'))
 const gymId = useCurrentGymId()
 
 definePageMeta({ key: (route) => String(route.query.id ?? '') })
@@ -527,9 +570,16 @@ interface ReviewDisplay {
     created: string
     userName: string
     userAvatar: string | null
+    userId?: string
+    mine: boolean
 }
 
-const reviews = computed(() => routeRatings.data.value.map(mapReview))
+const { isBlocked } = useBlocks()
+const reviews = computed(() =>
+    routeRatings.data.value
+        .filter((rating) => !isBlocked(rating.author?.id))
+        .map(mapReview),
+)
 
 const reportDialog = ref(false)
 const reportTarget = ref<string | null>(null)
@@ -544,7 +594,24 @@ function openReport(id: string) {
     reportDialog.value = true
 }
 
+const deleteTarget = ref<string | null>(null)
+async function deleteOwnReview() {
+    const id = deleteTarget.value
+    deleteTarget.value = null
+    if (!id) return
+    try {
+        await pb.collection('ratings').delete(id)
+        routeRatings.data.value = routeRatings.data.value.filter(
+            (rating) => rating.id !== id,
+        )
+    } catch (error) {
+        console.error(error)
+        notifyError(t('notifications.error.generic'))
+    }
+}
+
 const isLoggedIn = pb.authStore.isValid
+const betaVideos = useTemplateRef<{ openAdd: () => void }>('betaVideos')
 const tickDialog = ref(false)
 const reviewDialog = ref(false)
 const defectDialog = ref(false)
@@ -650,14 +717,14 @@ const avgPerceivedDifficulty = computed(() => {
 
 // ── Data fetching ──────────────────────────────────────────────────────────
 
-function mapReview(
-    r: RatingRecord & { expand?: Record<string, unknown> },
-): ReviewDisplay {
-    const user = r.expand?.user as
-        { name?: string; username?: string; avatar?: string } | undefined
-    const userName = user?.name || user?.username || t('comments.anonymous')
-    const userAvatar = r.expand?.user
-        ? usePbFileUrl(r.expand.user, user?.avatar, { thumb: '80x80' }) || null
+function mapReview(r: RatingRecord): ReviewDisplay {
+    const userName = r.author?.name || t('comments.anonymous')
+    const userAvatar = r.author
+        ? usePbFileUrl(
+              { collectionId: '_pb_users_auth_', id: r.author.id },
+              r.author.avatar,
+              { thumb: '80x80' },
+          ) || null
         : null
 
     return {
@@ -668,6 +735,8 @@ function mapReview(
         created: r.created ?? '',
         userName,
         userAvatar,
+        userId: r.author?.id,
+        mine: !!r.mine,
     }
 }
 

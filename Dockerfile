@@ -68,7 +68,7 @@ RUN { node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.tx
       > public/third-party-notices.txt
 COPY app ./app
 ARG APP_VERSION
-ENV NODE_ENV=production NITRO_PRESET=node-server APP_VERSION=${APP_VERSION}
+ENV NODE_ENV=production NITRO_PRESET=node-cluster APP_VERSION=${APP_VERSION}
 RUN yarn build
 
 FROM node:26.10.0-trixie-slim@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1

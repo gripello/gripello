@@ -1,5 +1,6 @@
 import type { RecordSubscription } from 'pocketbase'
 import type {
+    BetaVideoRecord,
     LocationRecord,
     OpenRouteDefectRecord,
     RatingRecord,
@@ -11,9 +12,12 @@ import type {
 import {
     applyRatingChange,
     cacheKeys,
+    isFollowKey,
     coalesce,
     defectsScope,
     detailRouteId,
+    gymChangesTopic,
+    gymDefectsTopic,
     liveTopics,
     servedStaleFromSsrCache,
     isLiveKey,
@@ -31,6 +35,8 @@ import {
     upsertById,
     wallsScope,
     type ExpandField,
+    type GymChange,
+    type GymChangeCollection,
     type KeyLocations,
     type OpenDefectsChange,
     type RatingChange,
@@ -188,7 +194,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         applyChange(trackRating(ratingLedger, 'delete', rating))
     }
 
-    function onRating({ action, record }: RecordSubscription<RatingRecord>) {
+    function onRating({ action, record }: GymChange<RatingRecord>) {
         if (!inLiveGym(record)) return
         if (action === 'create') return applyRating(record)
         if (action === 'delete') return revertRating(record)
@@ -209,7 +215,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         rescoreSoon()
     }
 
-    function onRoute({ action, record }: RecordSubscription<RouteRecord>) {
+    function onRoute({ action, record }: GymChange<RouteRecord>) {
         if (!inLiveGym(record)) return
         const removed = action === 'delete' || !!record.archived
         patchRouteRows((rows, inScope) =>
@@ -230,9 +236,19 @@ export default defineNuxtPlugin((nuxtApp) => {
         if (action !== 'delete' && keys.includes(cacheKeys.route(record.id)))
             void refreshNuxtData(cacheKeys.route(record.id))
         if (keys.includes(cacheKeys.unplacedRoutes)) refreshUnplacedSoon()
+        if (keys.includes(cacheKeys.communityFeed)) refreshCommunityFeedSoon()
     }
 
-    function onWall({ action, record }: RecordSubscription<WallRecord>) {
+    const refreshCommunityFeedSoon = coalesce(() =>
+        refreshNuxtData(cacheKeys.communityFeed),
+    )
+
+    function onBetaVideo({ record }: GymChange<BetaVideoRecord>) {
+        if (inLiveGym(record) && loadedKeys().includes(cacheKeys.communityFeed))
+            refreshCommunityFeedSoon()
+    }
+
+    function onWall({ action, record }: GymChange<WallRecord>) {
         if (!inLiveGym(record)) return
         for (const key of loadedKeys()) {
             const inScope = wallsScope(key, keyLocations.value)
@@ -248,10 +264,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         if (action !== 'delete') patchExpandedEverywhere('wall', record)
     }
 
-    function onLocation({
-        action,
-        record,
-    }: RecordSubscription<LocationRecord>) {
+    function onLocation({ action, record }: GymChange<LocationRecord>) {
         if (!inLiveGym(record)) return
         const data = read<LocationRecord[] | undefined>(cacheKeys.locations)
         if (data) {
@@ -288,6 +301,11 @@ export default defineNuxtPlugin((nuxtApp) => {
         if (record.user === pb.authStore.record?.id) refreshOwnTicksSoon()
     }
 
+    const refreshFollowsSoon = coalesce(() => {
+        const keys = loadedKeys().filter(isFollowKey)
+        return keys.length ? refreshNuxtData(keys) : Promise.resolve()
+    }, 300)
+
     const hydratedFromStaleCache = servedStaleFromSsrCache(
         document.documentElement.dataset.ssrAge,
     )
@@ -308,17 +326,54 @@ export default defineNuxtPlugin((nuxtApp) => {
         if (hydratedFromStaleCache) refreshLiveKeys(0)
     }
 
+    const gymChangeHandlers: Record<
+        GymChangeCollection,
+        (change: GymChange<never>) => void
+    > = {
+        ratings: onRating,
+        routes: onRoute,
+        walls: onWall,
+        locations: onLocation,
+        beta_videos: onBetaVideo,
+    }
+
+    function onGymChange(change: GymChange) {
+        gymChangeHandlers[change.collection]?.(change as GymChange<never>)
+    }
+
     nuxtApp.hook('app:mounted', () => {
+        watch(
+            liveGym,
+            (gymId, _, onCleanup) => {
+                if (!gymId) return
+                const topics = [
+                    [gymChangesTopic(gymId), onGymChange],
+                    [gymDefectsTopic(gymId), onOpenDefects],
+                ] as const
+                const subscribed = topics.map(([topic, listener]) => {
+                    const subscription = pb.realtime.subscribe(topic, listener)
+                    subscription.catch((error) =>
+                        console.error('Realtime subscription failed:', error),
+                    )
+                    return { topic, subscription }
+                })
+                onCleanup(() => {
+                    for (const { topic, subscription } of subscribed)
+                        void subscription
+                            .then(
+                                (unsubscribe) => unsubscribe(),
+                                () => pb.realtime.unsubscribe(topic),
+                            )
+                            .catch(() => {})
+                })
+            },
+            { immediate: true },
+        )
         const subscriptions = [
             pb.realtime.subscribe('PB_CONNECT', onConnect),
-            pb.collection('ratings').subscribe<RatingRecord>('*', onRating),
-            pb.collection('routes').subscribe<RouteRecord>('*', onRoute),
-            pb.collection('walls').subscribe<WallRecord>('*', onWall),
-            pb
-                .collection('locations')
-                .subscribe<LocationRecord>('*', onLocation),
-            pb.realtime.subscribe(liveTopics.openDefects, onOpenDefects),
             pb.realtime.subscribe(liveTopics.ownTicks, onOwnTick),
+            pb.realtime.subscribe(liveTopics.followChanges, refreshFollowsSoon),
+            pb.realtime.subscribe(liveTopics.followedTicks, refreshFollowsSoon),
         ]
         for (const subscription of subscriptions)
             subscription.catch((error) =>

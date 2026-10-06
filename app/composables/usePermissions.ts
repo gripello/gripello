@@ -1,3 +1,4 @@
+import type { RecordModel } from 'pocketbase'
 import type { MembershipRecord, UserRecord } from '~/types/models'
 import {
     activeMemberships,
@@ -26,6 +27,12 @@ export function usePermissions() {
     const loaded = useState<boolean>('user-permissions-loaded', () => false)
     const loadedForUser = useState<string>('user-permissions-user', () => '')
     const platformAdmin = useState<boolean>('user-platform-admin', () => false)
+    const verifiedUser = useState<(UserRecord & RecordModel) | null>(
+        'user-verified-record',
+        () => null,
+    )
+    const authRejected = useState<boolean>('user-auth-rejected', () => false)
+    const loadFailed = useState<boolean>('user-permissions-failed', () => false)
     const currentGymId = useCurrentGymId()
     const nuxtApp = useNuxtApp()
     const { $i18n } = nuxtApp
@@ -43,20 +50,30 @@ export function usePermissions() {
         try {
             const user = await pb
                 .collection('users')
-                .getOne<UserRecord>(userId, {
+                .getOne<UserRecord & RecordModel>(userId, {
                     expand: MEMBERSHIPS_EXPAND,
                     requestKey: 'userPermissions',
                 })
             if (currentUserId() !== userId) return
+            verifiedUser.value = { ...user, expand: undefined }
+            authRejected.value = false
+            loadFailed.value = false
             platformAdmin.value = !!user.platform_admin
             memberships.value =
                 (user.expand?.memberships_via_user as MembershipRecord[]) ?? []
         } catch (err) {
             if (isAutoCancelled(err) || currentUserId() !== userId) return
+            authRejected.value = [401, 403, 404].includes(
+                (err as { status?: number })?.status ?? 0,
+            )
             console.error('Failed to fetch permissions:', err)
             memberships.value = []
             platformAdmin.value = false
-            notifyError($i18n.t('permissions.loadError'))
+            if (!loadFailed.value) notifyError($i18n.t('permissions.loadError'))
+            loadFailed.value = true
+            loadedForUser.value = ''
+            loaded.value = true
+            return
         }
         loadedForUser.value = userId
         loaded.value = true
@@ -128,6 +145,8 @@ export function usePermissions() {
         loaded,
         can,
         ensureLoaded,
+        verifiedUser,
+        authRejected,
         refreshPermissions,
     }
 }

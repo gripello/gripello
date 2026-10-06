@@ -59,7 +59,8 @@
             "profile": "Profil",
             "security": "Sécurité",
             "preferences": "Préférences",
-            "notifications": "Notifications"
+            "notifications": "Notifications",
+            "privacy": "Confidentialité"
         },
         "placeholders": {
             "firstname": "Marie",
@@ -138,7 +139,8 @@
         "leaveGym": "Quitter {gym}",
         "leaveGymConfirm": "Vous perdez votre rôle et votre accès d'équipe dans cette salle. Votre carnet est conservé.",
         "leftGym": "Vous avez quitté la salle.",
-        "lastAdmin": "La salle a besoin d'un autre administrateur avant que vous puissiez la quitter."
+        "lastAdmin": "La salle a besoin d'un autre administrateur avant que vous puissiez la quitter.",
+        "changeBanner": "Changer la bannière"
     },
     "routes": {
         "home": "Aperçu",
@@ -166,13 +168,15 @@
         "mapEditor": "Éditeur de plan",
         "mapPlacement": "Placer les voies",
         "scan": "Scanner",
-        "me": "Plus",
         "moreActions": "Plus d'actions",
         "selectedCount": "Sélection : {n}",
         "list": "Voies",
         "competitions": "Compétitions",
         "judge": "Jugement",
-        "rated": "A des avis"
+        "rated": "A des avis",
+        "leaderboard": "Classement",
+        "friends": "Amis",
+        "feed": "Fil d’actu"
     },
     "dashboard": {
         "online": "{0} en ligne"
@@ -293,7 +297,9 @@
         "climber_reviews": "Avis",
         "felt": "ressenti",
         "perceived_difficulty": "Cotation ressentie",
-        "loadError": "Impossible de charger les avis."
+        "loadError": "Impossible de charger les avis.",
+        "deleteOwn": "Supprimer mon avis",
+        "deleteOwnConfirm": "Ton avis sera définitivement supprimé."
     },
     "table": {
         "actions": "Actions",
@@ -327,7 +333,10 @@
         "load_more": "Charger plus",
         "close": "Fermer",
         "export": "Exporter",
-        "select_route": "Sélectionner {name}"
+        "select_route": "Sélectionner {name}",
+        "previous": "Précédent",
+        "next": "Suivant",
+        "more": "Plus"
     },
     "inventory": {
         "title": "Inventaire des voies",
@@ -412,7 +421,8 @@
             "userInviteMail": "Utilisateur créé, mais l’e-mail d’invitation n’a pas pu être envoyé.",
             "resetLinkInvalid": "Ce lien de réinitialisation du mot de passe n’est pas valide ou a expiré. Demandez-en un nouveau depuis la page de connexion.",
             "captcha": "La vérification anti-spam a échoué. Veuillez réessayer.",
-            "verificationMail": "Votre compte a été créé, mais l’e-mail de confirmation n’a pas pu être envoyé. Demandez-en un nouveau depuis la page de connexion."
+            "verificationMail": "Votre compte a été créé, mais l’e-mail de confirmation n’a pas pu être envoyé. Demandez-en un nouveau depuis la page de connexion.",
+            "account_suspended": "Ce compte est suspendu."
         },
         "deleteItem": "Supprimer cet élément ? Cette action est irréversible.",
         "deleteMoreItems": "Supprimer les éléments sélectionnés ? Cette action est irréversible.",
@@ -457,14 +467,24 @@
                 "task_wish_filed": "Nouveau souhait de voie pour {location}",
                 "task_wish_done": "Votre souhait de voie pour {location} a été ouvert — amusez-vous bien !",
                 "wall_new_routes": "Nouvelles voies sur {wall} : {count}",
-                "competition_published": "Les résultats de « {competition} » sont en ligne"
+                "competition_published": "Les résultats de « {competition} » sont en ligne",
+                "follow_requested": "{name} souhaite vous suivre",
+                "follow_accepted": "{name} a accepté votre demande de suivi",
+                "new_follower": "{name} vous suit désormais",
+                "achievement_earned": "Nouveaux succès débloqués : {count}",
+                "report_filed_platform": "Contenu signalé dans une salle : « {snippet} »",
+                "moderation_pending": "Une vidéo bêta attend une approbation",
+                "content_hidden": "Ton contenu a été masqué : {reason}",
+                "beta_approved": "Ta vidéo bêta a été approuvée",
+                "beta_rejected": "Ta vidéo bêta a été refusée : {reason}"
             }
         }
     },
     "filter": {
         "title": "Filtrer",
         "all": "Tous",
-        "archived": "Archivées"
+        "archived": "Archivées",
+        "clear": "Retirer le filtre"
     },
     "legal": {
         "privacy": "Confidentialité",
@@ -485,62 +505,110 @@
             "subtitle": "Informations conformément au § 5 DDG"
         },
         "privacyPage": {
+            "subtitle": "Comment nous traitons les données à caractère personnel lorsque vous utilisez cette application.",
             "controllerTitle": "Responsable du traitement",
+            "scope": {
+                "title": "Qui est responsable",
+                "body": "Gripello est une application web utilisée par plusieurs salles d’escalade. Pour les pages d’une salle (voies, avis, signalements, compétitions, classements), le responsable du traitement est la salle ou le club indiqué ci-dessus. Pour les pages communes à toutes les salles (carnet de croix, compte, amis, profils), le responsable est l’exploitant de la plateforme. Toutes les données sont hébergées sur nos propres serveurs dans l’Union européenne. Vous pouvez exercer vos droits auprès de l’un ou l’autre ; nous transmettons votre demande si nécessaire."
+            },
             "serverLogs": {
                 "title": "Journaux du serveur",
-                "body": "Lorsque vous accédez à cette application, le serveur traite des données techniques telles que l’adresse IP, la date et l’heure, l’URL demandée et l’agent utilisateur du navigateur afin de fournir la page et de la protéger contre les abus (article 6, paragraphe 1, point f), du RGPD). Les journaux de requêtes sont supprimés automatiquement après une courte durée (5 jours par défaut)."
+                "body": "Lorsque vous accédez à cette application, le serveur traite des données techniques telles que l’adresse IP, la date et l’heure, l’URL demandée et l’agent utilisateur du navigateur afin de fournir la page et de la protéger contre les abus. Base légale : intérêt légitime à assurer le fonctionnement et la sécurité du service (article 6, paragraphe 1, point f), du RGPD). Ces journaux ne sont visibles que par l’équipe technique et sont supprimés automatiquement après une courte durée (5 jours par défaut)."
             },
             "accounts": {
-                "title": "Comptes utilisateur",
-                "body": "Les comptes du personnel sont créés par les administrateurs. Nous conservons l’adresse e-mail, le nom d’utilisateur, le prénom et le nom, une photo de profil facultative, votre langue préférée et le rôle attribué afin de fournir le service (article 6, paragraphe 1, point b), du RGPD). Les données sont conservées tant que le compte existe ; vous pouvez supprimer votre compte vous-même à tout moment."
+                "title": "Compte utilisateur",
+                "body": "Si l’exploitant autorise les inscriptions, vous pouvez créer un compte avec une adresse e-mail et un mot de passe ; un e-mail de vérification confirme l’adresse. Un administrateur d’une salle peut aussi vous ajouter comme membre du personnel en saisissant votre adresse e-mail, votre prénom et votre nom : si vous n’avez pas encore de compte, cela crée immédiatement un compte non vérifié avec ces informations ainsi que l’adhésion, et vous recevez un e-mail pour définir votre mot de passe ; un compte existant reçoit directement l’adhésion. Nous conservons votre adresse e-mail, votre nom d’utilisateur, votre prénom et votre nom, une photo de profil et une bannière facultatives, votre langue, vos préférences de notification, vos paramètres de confidentialité et les murs que vous suivez. Le mot de passe n’est stocké que sous forme chiffrée (hachée). Si une salle vous donne un rôle (par ex. ouvreur ou administrateur), nous enregistrons cette adhésion et ce rôle pour la salle concernée. Votre adresse e-mail n’est pas affichée aux autres grimpeurs ni au personnel des salles ; les administrateurs de la plateforme peuvent la voir et, si vous signalez un contenu, les modérateurs de la salle et l’adresse de contact de la salle reçoivent votre nom et votre adresse e-mail (voir Signalements de contenu). Base légale : exécution du contrat d’utilisation du service (article 6, paragraphe 1, point b), du RGPD). Durée de conservation : tant que le compte existe ; vous pouvez modifier ces données ou supprimer votre compte à tout moment dans les paramètres."
+            },
+            "privacySettings": {
+                "title": "Vos paramètres de confidentialité",
+                "body": "Dans Paramètres → Confidentialité, vous décidez qui peut vous suivre (sur demande à valider, tout le monde ou personne), si vous apparaissez dans les classements des salles, si votre nom est affiché sur vos avis et si vos croix sont partagées avec vos abonnés. Les modifications prennent effet immédiatement ; les classements suivent avec un léger délai (voir Classements)."
+            },
+            "logbook": {
+                "title": "Carnet de croix",
+                "body": "Lorsque vous enregistrez une croix, nous conservons la voie, le jour, le type (flash, enchaînement, essai), le nombre d’essais, la cotation de la voie à ce moment, l’heure d’enregistrement et une note privée facultative. Ces données servent à votre carnet d’entraînement, à vos statistiques et à vos succès. Votre note n’est jamais visible par d’autres personnes. Qui peut voir vos croix est expliqué sous Amis, Profils et Classements. Sans connexion, les croix sont mises en attente dans le stockage de votre navigateur (IndexedDB) puis envoyées dès que vous êtes en ligne. Base légale : exécution du contrat (article 6, paragraphe 1, point b), du RGPD). Durée de conservation : jusqu’à ce que vous supprimiez la croix ou votre compte."
+            },
+            "friends": {
+                "title": "Amis et abonnements",
+                "body": "Vous pouvez suivre d’autres grimpeurs. Selon votre paramètre, les demandes doivent être validées par vous (par défaut), sont acceptées automatiquement ou sont impossibles. Nous enregistrons qui suit qui et le statut de la demande. Vos abonnés voient vos croix (voie, cotation, type, nombre d’essais, jour et heure d’enregistrement, jamais vos notes) dans leur fil d’amis et le fil de la salle, en direct via la connexion de l’application, sauf si vous avez désactivé « Partager mes réussites avec mes abonnés ». Ce paramètre n’a pas d’effet sur les classements. Vous pouvez refuser des demandes et retirer des abonnés à tout moment. Base légale : exécution du contrat (article 6, paragraphe 1, point b), du RGPD). Durée de conservation : jusqu’à la fin de l’abonnement ou la suppression du compte."
+            },
+            "profiles": {
+                "title": "Profils de grimpeur",
+                "body": "Les utilisateurs connectés peuvent ouvrir votre profil avec votre nom, votre photo de profil, votre bannière (à défaut, une bannière est calculée sur l’appareil de la personne qui le consulte à partir des couleurs de votre photo) et le nombre d’abonnés et d’abonnements. Si votre paramètre d’abonnement est sur « Personne », seuls les grimpeurs liés à vous par un abonnement accepté et ceux à qui vous avez envoyé une demande d’abonnement peuvent l’ouvrir. Vos statistiques, vos croix récentes et la comparaison avec leurs propres voies enchaînées ne sont visibles que par vos abonnés acceptés, vos succès (sauf ceux liés aux cotations) par toute personne pouvant ouvrir votre profil. Si vous désactivez « Partager mes réussites avec mes abonnés », vos croix, statistiques, comparaison et succès sont masqués sur votre profil pour tous les autres ; les classements ont leur propre paramètre. La recherche de grimpeurs affiche le nom, la photo et la bannière des personnes dont le paramètre d’abonnement n’est pas « Personne ». Les visiteurs non connectés ne voient pas les profils et ne peuvent pas rechercher. Base légale : exécution du contrat (article 6, paragraphe 1, point b), du RGPD). Choisissez « Personne » pour ne plus apparaître dans la recherche."
+            },
+            "leaderboards": {
+                "title": "Classements",
+                "body": "Chaque salle publie des classements par saison ou sur les 60 derniers jours, calculés à partir des 10 meilleures croix de chaque grimpeur. Le classement affiche votre nom abrégé (prénom et initiale du nom), un identifiant interne, votre photo, votre rang, vos points, votre nombre de croix et de flashs et votre cotation la plus difficile ; il est public, y compris pour les visiteurs non connectés, et indépendant de « Partager mes réussites avec mes abonnés ». Les classements sont calculés à la demande à partir des carnets de croix, mis en cache brièvement et ne sont pas stockés durablement. Base légale : intérêt légitime de la salle à animer sa communauté (article 6, paragraphe 1, point f), du RGPD). Vous pouvez vous y opposer à tout moment en désactivant « M’afficher dans les classements de la salle » ; vous disparaissez alors des classements en cours en une minute environ et des saisons terminées en quelques heures."
             },
             "ratings": {
                 "title": "Avis",
-                "body": "Les notes en étoiles, les votes de cotation et les commentaires sur les voies peuvent être soumis sans compte et sont enregistrés sans nom ni adresse IP. Les commentaires sont visibles publiquement et peuvent être modérés."
+                "body": "Un avis (étoiles, cotation ressentie, commentaire) est lié à votre compte. Les autres utilisateurs connectés voient votre nom et votre photo à côté de l’avis, sauf si vous avez désactivé « Afficher mon nom sur mes avis » ; les visiteurs non connectés ne voient jamais le nom de l’auteur. Les avis peuvent être signalés et supprimés par les modérateurs de la salle. Base légale : exécution du contrat pour la publication de l’avis (article 6, paragraphe 1, point b), du RGPD) et intérêt légitime à rendre les avis fiables pour l’affichage de l’auteur (article 6, paragraphe 1, point f), du RGPD), auquel vous pouvez vous opposer avec ce paramètre. Si vous supprimez votre compte, vos avis sont conservés de manière anonyme, sans lien avec vous."
             },
-            "reports": {
-                "title": "Signalements de contenu",
-                "body": "Si vous signalez un contenu, nous traitons votre nom, votre adresse e-mail, le motif du signalement et vos explications afin de traiter le signalement et de vous informer de la décision (article 6, paragraphe 1, point c), du RGPD, en liaison avec l’article 16 du règlement sur les services numériques). Les signalements sont conservés aussi longtemps que nécessaire à des fins de documentation."
+            "betaVideos": {
+                "title": "Vidéos de bêta",
+                "body": "Vous pouvez ajouter à une voie un lien (TikTok, Instagram, YouTube Shorts) ou téléverser une vidéo (30 Mo maximum). La vidéo ou le lien est visible par tous ; votre nom et votre photo uniquement par les utilisateurs connectés. Les liens ne sont jamais intégrés : aucune requête n’est envoyée à la plateforme tant que vous ne cliquez pas sur le lien, après quoi la politique de confidentialité de cette plateforme s’applique. Ne filmez pas d’autres personnes sans leur accord. Les vidéos peuvent être signalées et supprimées par vous ou par les modérateurs de la salle. Base légale : exécution du contrat (article 6, paragraphe 1, point b), du RGPD). Durée de conservation : jusqu’à la suppression de la vidéo ou de votre compte."
+            },
+            "achievements": {
+                "title": "Succès",
+                "body": "Notre serveur calcule automatiquement vos succès à partir de votre propre activité (croix, séances, avis, vidéos de bêta, abonnements acceptés, signalements de problèmes confirmés, participations aux compétitions, rangs de saison) et enregistre chaque palier atteint avec sa date. Les succès liés aux cotations ne sont visibles que par vous ; les autres ne sont visibles que là où votre profil l’est et si vous partagez vos réussites avec vos abonnés. Ce calcul ne produit aucun effet juridique ni aucun effet similaire à votre égard. Base légale : exécution du contrat (article 6, paragraphe 1, point b), du RGPD). Durée de conservation : jusqu’à la suppression de votre compte."
+            },
+            "competitions": {
+                "title": "Compétitions",
+                "body": "Si vous participez à une compétition d’une salle, nous enregistrons votre nom ou nom affiché, votre année de naissance, votre catégorie, votre numéro de dossard et vos résultats et, pour les participants de moins de 16 ans, la confirmation qu’un parent ou tuteur légal y consent, afin d’organiser la compétition et d’établir le classement. Les résultats sont publiés sur les pages de la salle ; lors de l’inscription, vous pouvez choisir « Me masquer dans les résultats publics ». Base légale : exécution du contrat lié à votre inscription (article 6, paragraphe 1, point b), du RGPD) et intérêt légitime de la salle à publier les résultats (article 6, paragraphe 1, point f), du RGPD). Durée de conservation : déterminée par la salle ; les inscriptions sont supprimées avec la compétition ou avec votre compte."
             },
             "defects": {
                 "title": "Signalements de problèmes sur les voies",
-                "body": "Si vous signalez un problème sur une voie, nous enregistrons le type de problème choisi, votre description et votre photo facultatives et — si vous êtes connecté — votre compte, afin que l’équipe puisse réparer la voie et vous en informer. Ne photographiez pas de personnes. Les signalements sont supprimés en même temps que la voie."
+                "body": "Si vous signalez un problème sur une voie, nous enregistrons le type de problème choisi, votre description et votre photo facultatives et — si vous êtes connecté — votre compte, afin que l’équipe puisse réparer la voie et vous en informer (article 6, paragraphe 1, point f), du RGPD). Les autres grimpeurs voient seulement qu’un problème est ouvert, pas qui l’a signalé. Ne photographiez pas de personnes. Les signalements sont supprimés en même temps que la voie ; si vous supprimez votre compte, ils sont conservés sans lien avec vous."
             },
-            "auditLog": {
-                "title": "Journal d’audit",
-                "body": "Les modifications, connexions et tentatives de connexion échouées du personnel sont journalisées avec l’utilisateur, l’action et l’adresse IP afin de garantir la sécurité et la traçabilité (article 6, paragraphe 1, point f), du RGPD). Les entrées sont supprimées automatiquement après {auditDays} jours."
+            "reports": {
+                "title": "Signalements de contenu",
+                "body": "Si vous signalez un contenu, nous traitons votre nom, votre adresse e-mail, le motif du signalement et vos explications afin de traiter le signalement et de vous informer de la décision (article 6, paragraphe 1, point c), du RGPD, en liaison avec l’article 16 du règlement sur les services numériques). Les modérateurs de la salle concernée et l’adresse de contact de la salle reçoivent votre nom et votre adresse e-mail avec le signalement. La personne dont vous signalez le contenu n’apprend pas qui vous êtes, sauf obligation légale. Les signalements sont conservés aussi longtemps que nécessaire à des fins de documentation, même après la suppression de votre compte."
             },
-            "captcha": {
-                "title": "Protection contre le spam",
-                "body": "Certains formulaires utilisent une vérification par preuve de travail auto-hébergée, exécutée dans votre navigateur. Aucune donnée n’est transmise à des tiers et aucun cookie de traçage n’est déposé."
+            "notifications": {
+                "title": "Notifications",
+                "body": "L’application vous informe dans son centre de notifications (la cloche), par exemple d’une nouvelle demande d’abonnement, d’un succès obtenu, d’une nouvelle voie sur un mur suivi ou de la suite donnée à un signalement. Dans les paramètres, vous pouvez désactiver chaque thème séparément pour les notifications push ; la cloche affiche toujours toutes les notifications. Base légale : exécution du contrat (article 6, paragraphe 1, point b), du RGPD). Les notifications lues sont supprimées automatiquement après 30 jours, toutes les autres après 90 jours, et toutes avec votre compte."
             },
             "push": {
                 "title": "Notifications push",
-                "body": "Si vous activez les notifications push sur un appareil, nous enregistrons l’adresse push fournie par son navigateur avec votre compte et envoyons les notifications via le service push de l’éditeur du navigateur (par ex. Google, Apple, Mozilla). L’adresse est supprimée lorsque vous retirez l’appareil dans vos paramètres de notification, supprimez votre compte ou lorsque le service push la signale comme expirée, ce qui se produit après votre déconnexion sur cet appareil ou le retrait de l’autorisation."
+                "body": "Les notifications push ne sont envoyées que si vous les activez sur un appareil et l’autorisez dans votre navigateur. Nous enregistrons alors avec votre compte l’adresse push et les clés fournies par le navigateur ainsi qu’un nom d’appareil (navigateur et système, par ex. Firefox · Android) et envoyons les notifications via le service push de l’éditeur du navigateur (par ex. Google, Apple, Mozilla). Ces services peuvent traiter des données hors de l’UE ; ils ne reçoivent que l’adresse push et le contenu chiffré, qu’ils ne peuvent pas lire. Base légale : votre consentement (article 6, paragraphe 1, point a), du RGPD, et article 82 de la loi Informatique et Libertés), que vous pouvez retirer à tout moment en retirant l’appareil dans vos paramètres ou en révoquant l’autorisation du navigateur. Lorsque vous vous déconnectez ou qu’une autre personne se connecte sur cet appareil, l’abonnement push du navigateur est résilié. Nous supprimons l’adresse enregistrée lorsque vous retirez l’appareil dans vos paramètres, lorsque le service push la signale comme expirée ou lorsque vous supprimez votre compte."
+            },
+            "dataExport": {
+                "title": "Télécharger mes données",
+                "body": "Dans les paramètres du compte, « Télécharger vos données » génère une archive ZIP contenant toutes les données liées à votre compte : profil, photo, bannière, carnet de croix, avis, vidéos de bêta, abonnements, succès, notifications, adhésions, tâches, participations aux compétitions, etc. Cela vous permet d’exercer vos droits d’accès et de portabilité vous-même. Le nombre de téléchargements par heure est limité."
+            },
+            "deletion": {
+                "title": "Suppression du compte",
+                "body": "Vous pouvez supprimer votre compte dans les paramètres. Sont alors supprimés : le compte, le carnet de croix, les abonnements, les vidéos de bêta, les succès, les abonnements push, les notifications, les adhésions et les inscriptions aux compétitions. Sont conservés sans lien avec vous (anonymisés) : vos avis et les problèmes ou tâches que vous avez signalés. Les signalements de contenu conservent le nom et l’adresse e-mail du signalant tant que leur traitement l’exige. Les journaux techniques expirent selon les durées indiquées ci-dessus. En France, droit de définir des directives relatives à la conservation, à l’effacement et à la communication de vos données après votre décès (article 85 de la loi Informatique et Libertés)."
+            },
+            "auditLog": {
+                "title": "Journal d’audit",
+                "body": "Afin de garantir la sécurité et la traçabilité, nous journalisons chaque modification effectuée par quiconque via l’application (par ex. croix, abonnements, avis, vidéos de bêta, signalements de problèmes et de contenus, inscriptions aux compétitions et modifications du personnel) ainsi que les connexions, les tentatives de connexion échouées (l’adresse saisie uniquement sous forme de court hachage), les réinitialisations de mot de passe et les changements d’adresse e-mail, avec l’adresse e-mail du compte, l’action, l’enregistrement concerné et l’adresse IP (article 6, paragraphe 1, point f), du RGPD). Le personnel d’une salle ayant accès au journal d’audit voit les entrées de sa salle, les administrateurs de la plateforme toutes les entrées, et vous les vôtres. Les entrées sont supprimées automatiquement après {auditDays} jours."
+            },
+            "captcha": {
+                "title": "Protection contre le spam",
+                "body": "Certains formulaires utilisent une vérification par preuve de travail auto-hébergée, exécutée dans votre navigateur. Aucune donnée n’est transmise à des tiers et aucun cookie de traçage n’est déposé. Base légale : intérêt légitime à protéger le service contre le spam et les abus automatisés (article 6, paragraphe 1, point f), du RGPD)."
             },
             "thirdParties": {
                 "title": "Aucun traçage, aucun tiers",
-                "body": "Cette application n’utilise aucun outil d’analyse, de publicité ni de plugin de réseaux sociaux et ne charge aucune ressource depuis des serveurs tiers. Toutes les données sont traitées sur notre propre serveur. Aucune donnée n’est transférée vers des pays tiers."
+                "body": "Cette application n’utilise aucun outil d’analyse, de publicité ni de plugin de réseaux sociaux et ne charge aucune ressource depuis des serveurs tiers. Toutes les données sont traitées sur nos propres serveurs dans l’Union européenne ; un transfert hors de l’UE n’a lieu que si vous activez les notifications push (service push de l’éditeur de votre navigateur) ou ouvrez vous-même un lien de vidéo de bêta (voir les sections ci-dessus). Nous ne vendons ni ne louons vos données et ne prenons aucune décision automatisée produisant des effets juridiques à votre égard."
             },
             "storage": {
                 "title": "Cookies et stockage local",
-                "body": "Nous ne stockons sur votre appareil que les informations strictement nécessaires à la fourniture du service que vous avez demandé (§ 25, al. 2, TDDDG). Aucun consentement n’est donc requis. La liste complète :"
+                "body": "Nous ne stockons sur votre appareil que les informations strictement nécessaires au service que vous avez demandé (session de connexion, salle choisie, préférences d’affichage, croix en attente hors ligne). Conformément à l’article 82 de la loi Informatique et Libertés et aux lignes directrices de la CNIL (ainsi qu’au § 25, al. 2, TDDDG et aux règles équivalentes), ces traceurs sont exemptés de consentement ; c’est pourquoi aucun bandeau cookies n’est affiché. La liste complète :"
             },
             "rights": {
                 "title": "Vos droits",
-                "body": "En vertu du RGPD, vous disposez des droits suivants concernant vos données à caractère personnel :",
+                "body": "En vertu du RGPD (et, en Suisse, de la nLPD), vous disposez des droits suivants concernant vos données à caractère personnel ; pour les exercer, contactez le responsable indiqué ci-dessus. Nous répondons dans un délai d’un mois :",
                 "items": {
                     "access": "Droit d’accès (article 15 du RGPD)",
                     "rectification": "Droit de rectification (article 16 du RGPD)",
                     "erasure": "Droit à l’effacement (article 17 du RGPD)",
                     "restriction": "Droit à la limitation du traitement (article 18 du RGPD)",
                     "portability": "Droit à la portabilité des données (article 20 du RGPD)",
-                    "objection": "Droit d’opposition (article 21 du RGPD)",
-                    "withdrawal": "Droit de retirer votre consentement à tout moment (article 7, paragraphe 3, du RGPD)"
+                    "objection": "Droit d’opposition, notamment aux traitements fondés sur l’intérêt légitime comme les classements (article 21 du RGPD)",
+                    "withdrawal": "Droit de retirer votre consentement à tout moment, sans remettre en cause les traitements déjà effectués (article 7, paragraphe 3, du RGPD)"
                 },
-                "complaint": "Vous avez également le droit d’introduire une réclamation auprès d’une autorité de contrôle de la protection des données (article 77 du RGPD)."
-            },
-            "subtitle": "Comment nous traitons les données à caractère personnel lorsque vous utilisez cette application."
+                "complaint": "Vous avez également le droit d’introduire une réclamation auprès d’une autorité de contrôle (article 77 du RGPD), notamment celle de votre lieu de résidence : la CNIL en France, l’Autorité de protection des données (APD) en Belgique, la CNPD au Luxembourg ou le Préposé fédéral à la protection des données et à la transparence (PFPDT) en Suisse."
+            }
         },
         "storage": {
             "name": "Nom",
@@ -550,7 +618,8 @@
             "kinds": {
                 "cookie": "Cookie",
                 "localStorage": "Stockage local",
-                "indexedDB": "Base de données du navigateur (IndexedDB)"
+                "indexedDB": "Base de données du navigateur (IndexedDB)",
+                "cacheStorage": "Cache (service worker)"
             },
             "purposes": {
                 "auth": "Vous maintient connecté",
@@ -563,12 +632,16 @@
                 "pushDeclined": "Mémorise que vous avez supprimé les notifications push sur cet appareil",
                 "offlineScores": "Conserve les scores de compétition saisis sans réseau jusqu’à leur envoi",
                 "gym": "Mémorise la dernière salle ouverte",
-                "recentGyms": "Affiche les salles récemment visitées sur la page d’accueil"
+                "recentGyms": "Affiche les salles récemment visitées sur la page d’accueil",
+                "mapRouteType": "Mémorise si la carte affiche les blocs ou les voies",
+                "offlinePages": "Garde la structure de l’application, les pages publiques, les données de la salle et les images disponibles hors ligne",
+                "moderationSeen": "Retient quand tu as ouvert la modération pour la dernière fois, pour marquer les nouveaux cas"
             },
             "durations": {
                 "session": "Jusqu’à la déconnexion",
                 "oneYear": "1 an",
-                "persistent": "Jusqu’à suppression dans le navigateur"
+                "persistent": "Jusqu’à suppression dans le navigateur",
+                "untilUpdate": "Jusqu’à la prochaine mise à jour de l’application"
             }
         },
         "gymImprint": "Mentions légales de {name}",
@@ -611,7 +684,11 @@
             "competition": "{name} - Compétitions - Gripello",
             "judge": "Jugement - Gripello",
             "competitionRules": "{name} - Règlement - Gripello",
-            "invite": "Invitation - Gripello"
+            "invite": "Invitation - Gripello",
+            "leaderboard": "Classement - Gripello",
+            "friends": "Amis - Gripello",
+            "climber": "{name} - Gripello",
+            "feed": "Fil d’actu"
         },
         "content": {
             "settings": "Paramètres",
@@ -685,7 +762,16 @@
         "quickNavigation": "Navigation rapide",
         "platform": "Plateforme",
         "allGyms": "Toutes les salles…",
-        "manageGyms": "Gérer les salles"
+        "manageGyms": "Gérer les salles",
+        "you": "Moi",
+        "gym": "Salle",
+        "community": "Communauté",
+        "staffTools": "Outils équipe",
+        "backToClimbing": "Retour à la grimpe",
+        "staff": "Équipe",
+        "more": "Plus",
+        "sections": "Sections",
+        "noStaffTools": "Tu n’as pas d’outils équipe dans cette salle"
     },
     "users": {
         "create": "Ajouter un utilisateur",
@@ -841,7 +927,8 @@
         "splitBand": "Scinder",
         "bandBoundary": "Limite entre {from} et {to}",
         "defaultLanguage": "Langue par défaut",
-        "defaultLanguageHelp": "Utilisée par défaut pour les e-mails, les exports et les autres sorties du système."
+        "defaultLanguageHelp": "Utilisée par défaut pour les e-mails, les exports et les autres sorties du système.",
+        "premoderateBetas": "Approuver les vidéos bêta avant leur affichage"
     },
     "errors": {
         "notFound": {
@@ -938,7 +1025,8 @@
         "empty": "Aucun signalement",
         "emptyHint": "Les contenus signalés apparaîtront ici pour examen.",
         "mailWarning": "L'e-mail n'est pas configuré : les auteurs de signalements ne reçoivent pas les accusés de réception ni les notifications de décision exigés par l'article 16.",
-        "mailWarningAction": "Ouvrir les paramètres"
+        "mailWarningAction": "Ouvrir les paramètres",
+        "reportProfile": "Signaler le profil"
     },
     "tasks": {
         "pageTitle": "Tâches",
@@ -1191,7 +1279,9 @@
         "tabs": {
             "sessions": "Séances",
             "stats": "Statistiques",
-            "projects": "Projets"
+            "projects": "Projets",
+            "badges": "Badges",
+            "timeline": "Chronologie"
         },
         "stats": {
             "sends": "Réussites",
@@ -1418,8 +1508,6 @@
     },
     "accountSettings": {
         "title": "Paramètres",
-        "avatar": "Avatar",
-        "avatarDescription": "JPG, PNG, SVG ou WebP.",
         "language": "Langue",
         "theme": "Thème",
         "push": {
@@ -1430,7 +1518,12 @@
                 "wish_done": "Mes souhaits de voies sont ouverts",
                 "competition_results": "Résultats des compétitions",
                 "tasks": "Tâches et défauts signalés",
-                "reports": "Signalements de contenu (DSA)"
+                "reports": "Signalements de contenu (DSA)",
+                "social": "Abonnés et demandes de suivi",
+                "achievements": "Succès",
+                "platform_reports": "Signalements de toutes les salles",
+                "content": "Modération de mon contenu",
+                "moderation": "Contenu à examiner"
             },
             "devices": "Appareils",
             "thisDevice": "Cet appareil",
@@ -1441,6 +1534,17 @@
             "unsupported": "Non disponible dans ce navigateur",
             "blocked": "Les notifications sont bloquées dans les paramètres de votre navigateur.",
             "followedWalls": "Murs suivis"
+        },
+        "privacy": {
+            "followPolicy": "Qui peut me suivre",
+            "leaderboard": "M’afficher dans les classements de la salle",
+            "policies": {
+                "approve": "Tout le monde, après validation",
+                "open": "Tout le monde",
+                "closed": "Personne"
+            },
+            "reviewName": "Afficher mon nom sur mes avis",
+            "shareSends": "Partager mes réussites avec mes abonnés"
         }
     },
     "competitions": {
@@ -1805,7 +1909,9 @@
             "venue": "Salle",
             "createdAt": "Créée le",
             "open": "Ouvrir la salle",
-            "inactive": "Inactif"
+            "inactive": "Inactif",
+            "takeOffline": "Mettre hors ligne",
+            "takeOfflineConfirm": "{name} disparaît pour les grimpeurs jusqu’à ce que tu la réactives."
         },
         "settings": {
             "title": "Paramètres de la plateforme",
@@ -1820,7 +1926,12 @@
             "memberships": "Adhésions",
             "routes": "Voies",
             "admins": "Admins de la plateforme",
-            "dashboard": "Tableau de bord PocketBase"
+            "dashboard": "Tableau de bord PocketBase",
+            "needsYou": "À traiter",
+            "legalReports": "Signalements juridiques ouverts",
+            "staleGyms": "Salles en retard",
+            "profiles": "Profils à vérifier",
+            "suspended": "Personnes suspendues"
         },
         "users": {
             "title": "Utilisateurs",
@@ -1835,7 +1946,36 @@
             "sendPasswordReset": "Envoyer un e-mail de réinitialisation du mot de passe",
             "passwordResetSent": "E-mail de réinitialisation envoyé.",
             "deleteConfirm": "Supprimer {name} et toutes ses données ? Cette action est irréversible.",
-            "lastAdmin": "Cette personne est la seule admin d'une salle. Nommez d'abord quelqu'un d'autre admin."
+            "lastAdmin": "Cette personne est la seule admin d'une salle. Nommez d'abord quelqu'un d'autre admin.",
+            "suspend": "Suspendre",
+            "suspendUntil": "Suspendu jusqu’au",
+            "liftSuspension": "Lever la suspension",
+            "suspendedUntil": "Suspendu jusqu’au {date}",
+            "permanent": "Définitivement",
+            "suspendedPermanently": "Suspendu définitivement",
+            "suspendName": "Suspendre {name}",
+            "suspendHowLong": "Durée",
+            "durations": {
+                "week": "7 jours",
+                "month": "30 jours",
+                "until": "Jusqu’au",
+                "permanent": "Définitivement"
+            },
+            "suspendReason": "Motif (envoyé à la personne)",
+            "suspendHideContent": "Masquer aussi son contenu visible",
+            "suspendEffects": {
+                "signedOut": "Déconnecté sur tous les appareils, connexion impossible.",
+                "mail": "Reçoit un e-mail avec ton motif et comment contester.",
+                "kept": "Adhésions et carnet restent ; rien n’est supprimé.",
+                "lift": "Tu peux lever la suspension à tout moment sous Utilisateurs."
+            },
+            "suspendPermanently": "Suspendre définitivement"
+        },
+        "features": {
+            "title": "Fonctionnalités",
+            "flags": {
+                "beta_videos": "Vidéos bêta"
+            }
         }
     },
     "mails": {
@@ -1856,7 +1996,8 @@
             "problem": "Problème",
             "route": "Voie",
             "details": "Détails",
-            "location": "Connexion"
+            "location": "Connexion",
+            "until": "Suspendu jusqu’au"
         },
         "verification": {
             "subject": "Confirmez votre adresse e-mail",
@@ -1914,6 +2055,303 @@
             "body": "Un grimpeur a signalé un problème de sécurité. Vérifiez la voie avant qu’elle ne soit grimpée à nouveau.",
             "photo": "Une photo est jointe à la tâche.",
             "action": "Ouvrir le tableau des tâches"
+        },
+        "contentHidden": {
+            "subject": "Ton contenu a été masqué",
+            "body": "Nous avons masqué un contenu que tu as publié. Il n’est plus visible par les autres."
+        },
+        "accountSuspended": {
+            "subject": "Ton compte a été suspendu",
+            "body": "Ton compte a été suspendu. Tu ne peux pas te connecter avant la date ci-dessous."
         }
+    },
+    "leaderboard": {
+        "title": "Classement",
+        "season": "Saison",
+        "rolling": "60 derniers jours",
+        "rollingWindow": "Depuis le {from}",
+        "tv": "Vue TV",
+        "empty": "Aucune réussite pour l’instant",
+        "anonymous": "Grimpeur·se",
+        "sends": "{n} réussite | {n} réussites",
+        "youAreHidden": "Vous êtes masqué·e des classements",
+        "showMe": "M’afficher",
+        "seasons": {
+            "title": "Saisons",
+            "name": "Nom",
+            "start": "Début",
+            "end": "Fin",
+            "add": "Ajouter une saison",
+            "deleteConfirm": "Supprimer cette saison ? Les ascensions restent dans les carnets.",
+            "endBeforeStart": "La fin doit être après le début"
+        },
+        "points": "{n} pts",
+        "stats": {
+            "climbers": "Grimpeurs",
+            "grades": "Réussites par cotation",
+            "topRoutes": "Les plus grimpées"
+        },
+        "standing": {
+            "rank": "Rang",
+            "score": "Points",
+            "ahead": "Jusqu’au rang suivant",
+            "bestSends": "Mes réussites comptées"
+        }
+    },
+    "badges": {
+        "weeks": "{n} semaine | {n} semaines",
+        "currentStreak": "Série en cours",
+        "bestStreak": "Meilleure série"
+    },
+    "friends": {
+        "title": "Amis",
+        "search": "Trouver des grimpeurs",
+        "noResults": "Aucun grimpeur trouvé",
+        "tabs": {
+            "feed": "Fil",
+            "following": "Abonnements",
+            "followers": "Abonnés",
+            "requests": "Demandes"
+        },
+        "feedEmpty": "Aucune ascension des personnes que vous suivez",
+        "empty": {
+            "following": "Vous ne suivez encore personne",
+            "followers": "Pas encore d’abonnés",
+            "requests": "Aucune demande en attente"
+        },
+        "follow": "Suivre",
+        "following": "Abonné·e",
+        "requested": "Demandé",
+        "unfollow": "Ne plus suivre",
+        "unfollowConfirm": "Vous ne verrez plus ses ascensions.",
+        "accept": "Accepter",
+        "decline": "Refuser",
+        "removeFollower": "Retirer l’abonné",
+        "removeFollowerConfirm": "Cette personne ne verra plus vos ascensions.",
+        "followerCount": "{n} abonné | {n} abonnés",
+        "followingCount": "Suit {n} | Suit {n}",
+        "closedProfile": "Ce carnet est privé",
+        "requestPending": "Demande de suivi envoyée",
+        "followToSee": "Suivez pour voir son carnet",
+        "you": "Vous",
+        "onlyTheirs": "Réussies par eux, pas encore par vous",
+        "sentByBoth": "Réussies par les deux",
+        "privateSends": "Ses réussites sont privées",
+        "myProfile": "Mon profil",
+        "editProfile": "Modifier le profil",
+        "recent": "Ascensions récentes",
+        "block": "Bloquer",
+        "unblock": "Débloquer",
+        "blockConfirm": "Cette personne ne peut plus te suivre ni te trouver, et tu ne verras plus ses avis ni ses vidéos bêta."
+    },
+    "beta": {
+        "title": "Vidéos de beta",
+        "add": "Ajouter une beta",
+        "link": "Lien",
+        "file": "Vidéo",
+        "submit": "Partager",
+        "added": "Beta partagée",
+        "deleted": "Beta supprimée",
+        "deleteConfirm": "Supprimer cette vidéo de beta ?",
+        "report": "Signaler cette vidéo",
+        "invalidLink": "Utilisez un lien YouTube Shorts, Instagram ou TikTok",
+        "fileTooLarge": "Les vidéos ne peuvent dépasser {size} Mo",
+        "openOn": "Ouvrir sur {platform}",
+        "play": "Lire",
+        "pause": "Pause",
+        "mute": "Couper le son",
+        "unmute": "Activer le son",
+        "fullscreen": "Plein écran",
+        "seek": "Position de lecture",
+        "drop": "Dépose une vidéo ou choisis-en une",
+        "chooseOther": "Choisir une autre",
+        "awaitingApproval": "Ta vidéo attend l’approbation de la salle"
+    },
+    "feed": {
+        "title": "Fil d’actu",
+        "someone": "Quelqu’un",
+        "newRoutes": "Nouvelles voies",
+        "activity": "Réussites de tes amis",
+        "signInForFriends": "Connecte-toi pour suivre les réussites de tes amis",
+        "noNewRoutes": "Aucune nouvelle voie ces 30 derniers jours",
+        "today": "Aujourd’hui",
+        "yesterday": "Hier"
+    },
+    "timeline": {
+        "filters": {
+            "all": "Tout",
+            "send": "Réussites",
+            "review": "Avis",
+            "beta": "Bêtas"
+        },
+        "empty": "Rien pour le moment",
+        "beta": "Vidéo bêta",
+        "deleted": "Voie supprimée"
+    },
+    "achievements": {
+        "categories": {
+            "progress": "Progression",
+            "volume": "Volume",
+            "style": "Style",
+            "rhythm": "Rythme",
+            "exploration": "Exploration",
+            "fresh": "Nouvelles voies",
+            "community": "Communauté",
+            "competition": "Compétitions"
+        },
+        "names": {
+            "sends": "Réussites",
+            "sessions": "Séances",
+            "flashes": "Flashs",
+            "flash_grades": "Palette de flash",
+            "personal_bests": "Records personnels",
+            "grade_ladder": "Échelle de cotations",
+            "pyramid": "Pyramide",
+            "project": "Projet",
+            "active_weeks": "Semaines actives",
+            "perfect_months": "Mois parfaits",
+            "welcome_back": "Bon retour",
+            "walls": "Explorateur de murs",
+            "colors": "Arc-en-ciel",
+            "gyms": "Touriste des salles",
+            "all_rounder": "Polyvalent",
+            "set_sweeper": "Chasseur de nouveautés",
+            "first_ascents": "Premières ascensions",
+            "wall_clears": "Mur bouclé",
+            "before_strip": "Avant le démontage",
+            "reviews": "Critique",
+            "betas": "Partageur de bêta",
+            "friends": "Connecté",
+            "helper": "Aide",
+            "competitions": "Compétiteur",
+            "season_top10": "Top 10 de saison"
+        },
+        "rules": {
+            "sends": "Réussis {n} voie différente | Réussis {n} voies différentes",
+            "sessions": "Grimpe sur {n} jours différents",
+            "flashes": "Flashe {n} voie | Flashe {n} voies",
+            "flash_grades": "Flashe dans {n} cotations différentes",
+            "personal_bests": "Bats ta meilleure réussite {n} fois",
+            "grade_ladder": "Réussis dans {n} cotations différentes",
+            "pyramid": "1 à ta cotation max, 2 juste en dessous, 4 deux en dessous",
+            "project": "Réussis une voie après {n} essais",
+            "active_weeks": "Grimpe {n} semaines d’affilée – une semaine de pause est permise",
+            "perfect_months": "Grimpe chaque semaine pendant {n} mois",
+            "welcome_back": "Reviens après trois semaines de pause",
+            "walls": "Réussis sur {n} murs d’une salle",
+            "colors": "Réussis des voies de {n} couleurs de prises",
+            "gyms": "Grimpe dans {n} salles",
+            "all_rounder": "Réussis des blocs et des voies",
+            "set_sweeper": "Réussis {n} voies dans la semaine de leur ouverture",
+            "first_ascents": "Sois le premier à réussir {n} voie | Sois le premier à réussir {n} voies",
+            "wall_clears": "Réussis toutes les voies de {n} mur | Réussis toutes les voies de {n} murs",
+            "before_strip": "Réussis {n} voie dans sa dernière semaine | Réussis {n} voies dans leur dernière semaine",
+            "reviews": "Écris {n} avis",
+            "betas": "Partage {n} vidéo bêta | Partage {n} vidéos bêta",
+            "friends": "Aie {n} ami | Aie {n} amis",
+            "helper": "Signale {n} problème qui est réparé | Signale {n} problèmes qui sont réparés",
+            "competitions": "Participe à {n} compétition | Participe à {n} compétitions",
+            "season_top10": "Termine {n} saison dans le top 10 | Termine {n} saisons dans le top 10"
+        },
+        "unlocked": "Succès débloqué : {name}",
+        "more": "et {n} de plus"
+    },
+    "moderation": {
+        "title": "Modération",
+        "reviewStats": "Statistiques des avis",
+        "moderate": "Modérer",
+        "filterType": "Contenu",
+        "filterGym": "Salle",
+        "views": {
+            "decide": "À décider",
+            "approval": "En attente d’approbation",
+            "hidden": "Masqué",
+            "history": "Vérifié",
+            "all": "Toutes les salles"
+        },
+        "types": {
+            "rating": "Avis",
+            "beta_video": "Vidéo bêta",
+            "profile": "Profil",
+            "competition_entry": "Nom de compétition",
+            "task": "Défaut / souhait",
+            "route": "Voie"
+        },
+        "states": {
+            "unreviewed": "À décider",
+            "approved": "Vérifié",
+            "pending": "En attente d’approbation",
+            "hidden": "Masqué"
+        },
+        "actions": {
+            "keep": "Laisser visible",
+            "publish": "Publier la vidéo",
+            "reject": "Refuser…",
+            "hide": "Masquer…",
+            "restore": "Rendre visible à nouveau"
+        },
+        "done": {
+            "approve": "Reste visible",
+            "publish": "Vidéo publiée",
+            "reject": "Vidéo refusée",
+            "hide": "Masqué",
+            "restore": "De nouveau visible",
+            "hideAll": "{count} contenu masqué | {count} contenus masqués"
+        },
+        "decision": {
+            "why": "Pourquoi ? (envoyé à l’auteur)",
+            "explanation": "Explication",
+            "whatHappens": "Ce qui se passe",
+            "hiddenNow": "Les grimpeurs ne le voient plus.",
+            "authorInformed": "L’auteur reçoit ta raison et comment contester.",
+            "reportersInformed": "La personne qui a signalé reçoit la décision. | {count} personnes reçoivent la décision.",
+            "restorable": "Tu peux le rendre visible à nouveau sous Masqué pendant 180 jours.",
+            "platformLock": "Seul Gripello peut le rendre visible à nouveau.",
+            "declineGone": "La vidéo n’est pas publiée et est supprimée immédiatement.",
+            "authorAll": "Tout le contenu visible de cette personne est masqué d’un coup."
+        },
+        "author": {
+            "showAll": "Tout de cette personne",
+            "hideAll": "Masquer tout son contenu…",
+            "hideAllConfirm": "Tout masquer",
+            "suspend": "Suspendre…",
+            "cannotSuspend": "Les admins de la plateforme et ton propre compte ne peuvent pas être suspendus ici"
+        },
+        "consequence": {
+            "reports": "Clôt le signalement ouvert et informe la personne. | Clôt {count} signalements ouverts et informe les personnes.",
+            "author": "L’auteur est informé si tu masques.",
+            "pending": "Toi seul décides si les grimpeurs voient cette vidéo.",
+            "restore": "Le rend de nouveau visible pour les grimpeurs."
+        },
+        "empty": {
+            "decide": "Rien à décider",
+            "approval": "Aucun envoi en attente",
+            "hidden": "Rien de masqué",
+            "history": "Rien de vérifié",
+            "all": "Rien à décider"
+        },
+        "reports": "{count} signalement | {count} signalements",
+        "reportsTitle": "Signalement | Signalements ({count})",
+        "openCases": "{count} ouvert | {count} ouverts",
+        "viewInContext": "Voir dans le contexte",
+        "hiddenByPlatform": "Masqué par Gripello",
+        "hiddenByGym": "Masqué par la salle",
+        "keptNote": "Vérifié et laissé visible",
+        "waitingTitle": "En attente d’approbation",
+        "new": "Nouveau",
+        "newSinceVisit": "{count} nouveau depuis ta dernière visite | {count} nouveaux depuis ta dernière visite",
+        "undo": "Annuler",
+        "saved": "Enregistré",
+        "confirmTitle": {
+            "hide": "Masquer ce contenu ?",
+            "reject": "Refuser cette vidéo ?"
+        },
+        "confirm": {
+            "hide": "Masquer",
+            "reject": "Refuser"
+        },
+        "authorPosts": "{count} publication | {count} publications",
+        "authorHidden": "{count} masqué | {count} masqués",
+        "decidedElsewhere": "Ce cas a été décidé ailleurs"
     }
 }

@@ -10,8 +10,12 @@ export const SIDEBAR_OPEN_COOKIE = 'sidebar-open'
 export const GYM_COOKIE = 'gym'
 export const EXPORT_COLUMNS_KEY = 'gripello.export-columns'
 export const COMPETITION_SCORES_KEY = 'gripello:competition-scores'
+export const MAP_ROUTE_TYPE_KEY = 'map-route-type'
+export const MODERATION_SEEN_KEY = 'gripello.moderation-seen'
+export const SERVICE_WORKER_CACHES = 'gripello-*'
 
-export type ClientStorageKind = 'cookie' | 'localStorage' | 'indexedDB'
+export type ClientStorageKind =
+    'cookie' | 'localStorage' | 'indexedDB' | 'cacheStorage'
 
 export interface ClientStorageEntry {
     name: string
@@ -45,6 +49,12 @@ export const CLIENT_STORAGE: ClientStorageEntry[] = [
         kind: 'cookie',
         purpose: 'gym',
         duration: 'oneYear',
+    },
+    {
+        name: MODERATION_SEEN_KEY,
+        kind: 'localStorage',
+        purpose: 'moderationSeen',
+        duration: 'persistent',
     },
     {
         name: RECENT_GYMS_KEY,
@@ -83,9 +93,21 @@ export const CLIENT_STORAGE: ClientStorageEntry[] = [
         duration: 'persistent',
     },
     {
+        name: MAP_ROUTE_TYPE_KEY,
+        kind: 'localStorage',
+        purpose: 'mapRouteType',
+        duration: 'persistent',
+    },
+    {
         name: TICKS_DB,
         kind: 'indexedDB',
         purpose: 'offlineLogbook',
         duration: 'persistent',
+    },
+    {
+        name: SERVICE_WORKER_CACHES,
+        kind: 'cacheStorage',
+        purpose: 'offlinePages',
+        duration: 'untilUpdate',
     },
 ]

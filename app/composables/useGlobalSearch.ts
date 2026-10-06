@@ -1,6 +1,6 @@
 import type {
     RatingRecord,
-    ReportRecord,
+    ModerationItemRecord,
     RoleRecord,
     RouteRecord,
     UserRecord,
@@ -8,6 +8,7 @@ import type {
 import { normalizeCreators } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
 import { routeSearchFilter } from '~/utils/routeSearch'
+import { moderationText } from '~/utils/moderation'
 
 export interface SearchResult {
     key: string
@@ -160,26 +161,25 @@ export function useGlobalSearch() {
         }))
     }
 
-    const searchReports = async (query: string): Promise<SearchResult[]> => {
-        const term = quote(query)
+    const searchModeration = async (query: string): Promise<SearchResult[]> => {
         const res = await pb
-            .collection('reports')
-            .getList<ReportRecord>(1, RESULTS_PER_GROUP, {
+            .collection('moderation_items')
+            .getList<ModerationItemRecord>(1, RESULTS_PER_GROUP, {
                 filter: gymFilter(
                     pb,
                     gymId.value,
-                    `(explanation ~ ${term} || notifier_name ~ ${term})`,
+                    `snapshot ~ ${quote(query)}`,
                 ),
                 sort: '-created',
                 skipTotal: true,
                 requestKey: null,
             })
-        return res.items.map((report) => ({
-            key: `report-${report.id}`,
-            to: gymPath(`/manage/reports?search=${encodeURIComponent(query)}`),
-            icon: 'i-lucide-flag',
-            title: shorten(report.explanation) || '—',
-            subtitle: report.notifier_name ?? undefined,
+        return res.items.map((item) => ({
+            key: `moderation-${item.id}`,
+            to: gymPath(`/manage/moderation?case=${item.id}`),
+            icon: 'i-lucide-shield-check',
+            title: shorten(moderationText(item)) || '—',
+            subtitle: item.context?.author?.name ?? undefined,
         }))
     }
 
@@ -223,10 +223,10 @@ export function useGlobalSearch() {
             search: searchReviews,
         },
         {
-            key: 'reports',
-            label: 'routes.reports',
-            permission: 'manage_reports',
-            search: searchReports,
+            key: 'moderation',
+            label: 'moderation.title',
+            permission: 'manage_comments',
+            search: searchModeration,
         },
         {
             key: 'settings',

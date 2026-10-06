@@ -1,8 +1,9 @@
 <template>
     <div
         class="h-full rounded-lg bg-elevated"
-        :data-testid="`logbook-day-${day}`"
+        :data-testid="testId ?? `logbook-day-${day}`"
     >
+        <slot name="header" />
         <button
             type="button"
             class="session-card__header p-4"
@@ -69,6 +70,7 @@
                 <USeparator v-if="index" />
                 <LogbookTickRow
                     :tick="tick"
+                    :readonly="readonly"
                     @edit="emit('edit', $event)"
                     @delete="emit('delete', $event)"
                 />
@@ -88,6 +90,8 @@ const props = defineProps<{
     day: string
     ticks: (TickRecord & { expand?: { route?: RouteRecord } })[]
     initiallyOpen?: boolean
+    readonly?: boolean
+    testId?: string
 }>()
 
 const emit = defineEmits<{

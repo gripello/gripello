@@ -7,6 +7,9 @@ test('logs out and redirects to login', async ({ adminPage: page }) => {
         await page.getByTestId('user-menu-activator').click()
         await page.getByTestId('user-menu-logout').click()
     } else {
+        const back = page.getByTestId('nav-back-to-climbing-mobile')
+        await back.or(page.getByTestId('bottom-nav-account')).first().waitFor()
+        if (await back.isVisible()) await back.click()
         await page.getByTestId('bottom-nav-account').click()
         await page.getByTestId('me-logout').click()
     }

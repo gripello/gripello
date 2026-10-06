@@ -557,15 +557,21 @@ function authErrorMessage(err: unknown) {
     return data?.message ?? message ?? ''
 }
 
+function isSuspendedError(err: unknown) {
+    return /suspended/i.test(authErrorMessage(err))
+}
+
 function isUnverifiedError(err: unknown) {
     return (
-        (err as { status?: number })?.status === 403 ||
-        /not verified/i.test(authErrorMessage(err))
+        !isSuspendedError(err) &&
+        ((err as { status?: number })?.status === 403 ||
+            /not verified/i.test(authErrorMessage(err)))
     )
 }
 
 function resolveAuthError(err: unknown) {
     const msg = authErrorMessage(err)
+    if (isSuspendedError(err)) return t('notifications.error.account_suspended')
     if (/invalid.+credentials/i.test(msg))
         return t('notifications.error.invalid_credentials')
     if (isUnverifiedError(err))

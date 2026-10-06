@@ -121,47 +121,6 @@
                     </UFieldGroup>
                 </div>
             </template>
-
-            <template #below>
-                <Transition name="slide-y">
-                    <div
-                        v-if="selectedCount > 0"
-                        class="bulk-bar px-4 py-2 flex items-center gap-2 flex-wrap"
-                    >
-                        <UIcon
-                            name="i-lucide-circle-check"
-                            class="size-[18px] text-primary"
-                        />
-                        <span class="text-sm font-medium">
-                            {{ t('comments.selected', { n: selectedCount }) }}
-                        </span>
-                        <div class="flex-1" />
-                        <UButton
-                            size="sm"
-                            color="neutral"
-                            variant="ghost"
-                            data-testid="comments-bulk-cancel"
-                            @click="clearSelection"
-                        >
-                            {{ t('actions.cancel') }}
-                        </UButton>
-                        <UButton
-                            size="sm"
-                            color="error"
-                            variant="soft"
-                            icon="i-lucide-trash-2"
-                            data-testid="comments-bulk-delete"
-                            @click="bulkDeleteDialog = true"
-                        >
-                            {{
-                                t('comments.deleteSelected', {
-                                    n: selectedCount,
-                                })
-                            }}
-                        </UButton>
-                    </div>
-                </Transition>
-            </template>
         </FilterBar>
 
         <LayoutLoadingState
@@ -183,13 +142,7 @@
                 class="col-span-12 sm:col-span-6 lg:col-span-4"
             >
                 <VirtualWindow :estimated-height="240">
-                    <CommentsCard
-                        :comment="comment"
-                        selectable
-                        :selected="!!selectedMap[comment.id]"
-                        show-route
-                        @toggle-select="toggleSelect(comment.id)"
-                    >
+                    <CommentsCard :comment="comment" show-route>
                         <template #actions>
                             <UTooltip :text="t('actions.edit')">
                                 <UButton
@@ -201,14 +154,16 @@
                                     @click="openEdit(comment)"
                                 />
                             </UTooltip>
-                            <UButton
-                                icon="i-lucide-trash-2"
-                                color="error"
-                                variant="ghost"
-                                :aria-label="t('actions.delete')"
-                                data-testid="comment-card-delete"
-                                @click="openDelete(comment)"
-                            />
+                            <UTooltip :text="t('moderation.moderate')">
+                                <UButton
+                                    icon="i-lucide-shield-check"
+                                    color="neutral"
+                                    variant="ghost"
+                                    :aria-label="t('moderation.moderate')"
+                                    data-testid="comment-card-moderate"
+                                    @click="moderate(comment)"
+                                />
+                            </UTooltip>
                         </template>
                     </CommentsCard>
                 </VirtualWindow>
@@ -238,35 +193,12 @@
             :review="editingReview"
             @saved="onReviewSaved"
         />
-
-        <ConfirmDialog
-            v-model="deleteDialog"
-            :title="t('actions.confirm')"
-            :message="t('notifications.deleteItem')"
-            :loading="deleting"
-            @confirm="confirmDelete"
-        />
-
-        <ConfirmDialog
-            v-model="bulkDeleteDialog"
-            :title="
-                t(
-                    'comments.bulkDeleteTitle',
-                    { n: selectedCount },
-                    selectedCount,
-                )
-            "
-            :message="t('notifications.deleteMoreItems')"
-            :loading="bulkDeleting"
-            @confirm="bulkDelete"
-        />
     </div>
 </template>
 
 <script setup lang="ts">
 import { isAbortError } from '~/utils/errors'
 import { pbDateString } from '~/utils/audit'
-import { sendInBatches } from '~/utils/batch'
 import { realtimeCommentPlacement } from '~/utils/comments'
 import { formatNumber } from '#shared/utils/number'
 import { locationName } from '#shared/utils/formatting'
@@ -285,6 +217,7 @@ type ManagedComment = RatingRecord & {
 
 const { t, locale } = useI18n()
 const pb = usePocketbase()
+const gymPath = useGymPath()
 const gymId = useCurrentGymId()
 
 useHead({
@@ -298,8 +231,6 @@ definePageMeta({
 })
 
 // ── State ──────────────────────────────────────────────────────────────────
-
-const { pending: bulkDeleting, run: runBulkDelete } = useAsyncAction()
 
 const {
     items: comments,
@@ -364,13 +295,8 @@ const selectedRating = ref(0)
 const dateFilter = ref('')
 const sortOrder = ref('newest')
 
-const selectedMap = reactive<Record<string, true>>({})
-const selectedCount = computed(() => Object.keys(selectedMap).length)
-
 const editDialog = ref(false)
 const editingReview = ref<ManagedComment | null>(null)
-
-const bulkDeleteDialog = ref(false)
 
 const { notify } = useNotification()
 
@@ -548,7 +474,6 @@ watch(sentinelRef, (el) => {
 let searchDebounce: ReturnType<typeof setTimeout> | undefined
 watch(search, () => {
     clearTimeout(searchDebounce)
-    clearSelection()
     searchDebounce = setTimeout(() => fetchList(), 300)
 })
 
@@ -561,7 +486,6 @@ watch(
         sortOrder,
     ],
     () => {
-        clearSelection()
         fetchList()
     },
 )
@@ -588,60 +512,20 @@ function onReviewSaved(updated: RatingRecord | null) {
     scheduleStatsRefresh()
 }
 
-// ── Single delete (one shared ConfirmDialog for all cards) ─────────────────
+const { run: runModerate } = useAsyncAction()
 
-const deleteDialog = ref(false)
-const { pending: deleting, run: runDelete } = useAsyncAction()
-const deleteTarget = ref<ManagedComment | null>(null)
-
-function openDelete(comment: ManagedComment) {
-    deleteTarget.value = comment
-    deleteDialog.value = true
-}
-
-async function confirmDelete() {
-    if (!deleteTarget.value) return
-    const id = deleteTarget.value.id
-    await runDelete(
-        async () => {
-            await pb.collection('ratings').delete(id)
-            removeComments([id])
-            deleteDialog.value = false
-            deleteTarget.value = null
-            scheduleStatsRefresh()
-        },
-        { success: t('notifications.success.delete') },
+async function moderate(comment: ManagedComment) {
+    const opened = await runModerate(() =>
+        pb.send<{ id: string }>('/api/moderation/cases', {
+            method: 'POST',
+            body: { content_type: 'rating', content_id: comment.id },
+        }),
     )
-}
-
-// ── Bulk delete ────────────────────────────────────────────────────────────
-
-async function bulkDelete() {
-    const ids = Object.keys(selectedMap)
-    await runBulkDelete(
-        async () => {
-            const deletedIds: string[] = []
-            try {
-                await sendInBatches(
-                    pb,
-                    ids,
-                    (batch, id) => batch.collection('ratings').delete(id),
-                    (chunk) => deletedIds.push(...chunk),
-                )
-                bulkDeleteDialog.value = false
-            } finally {
-                if (deletedIds.length) {
-                    removeComments(deletedIds)
-                    scheduleStatsRefresh()
-                }
-            }
-        },
-        { success: t('notifications.success.delete') },
-    )
+    if (opened)
+        await navigateTo(gymPath(`/manage/moderation?case=${opened.id}`))
 }
 
 function removeComments(ids: string[]) {
-    ids.forEach((id) => delete selectedMap[id])
     const remaining = comments.value.filter((c) => !ids.includes(c.id))
     const removedCount = comments.value.length - remaining.length
     comments.value = remaining
@@ -659,17 +543,6 @@ async function fetchCommentIfVisible(id: string) {
         requestKey: null,
     })
     return result.items[0] ?? null
-}
-
-// ── Selection helpers ──────────────────────────────────────────────────────
-
-function toggleSelect(id: string) {
-    if (selectedMap[id]) delete selectedMap[id]
-    else selectedMap[id] = true
-}
-
-function clearSelection() {
-    Object.keys(selectedMap).forEach((k) => delete selectedMap[k])
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────

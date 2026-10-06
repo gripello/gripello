@@ -24,8 +24,25 @@
                         :model-value="!!gym.active"
                         :label="t('platform.gyms.active')"
                         data-testid="platform-gym-active"
-                        @update:model-value="setActive"
+                        @update:model-value="requestActive"
                     />
+                    <UButton
+                        :to="`/platform/moderation?gym=${gym.id}`"
+                        color="neutral"
+                        variant="outline"
+                        icon="i-lucide-shield-alert"
+                        data-testid="platform-gym-moderation"
+                    >
+                        {{ t('moderation.title') }}
+                        <UBadge
+                            v-if="openCases"
+                            color="error"
+                            variant="soft"
+                            size="sm"
+                        >
+                            {{ openCases }}
+                        </UBadge>
+                    </UButton>
                     <UButton
                         v-if="gym.active"
                         :to="`/${gym.slug}`"
@@ -62,6 +79,22 @@
                         <AdminMembersCard ref="membersCard" :gym-id="gym.id" />
                     </section>
                 </template>
+                <template #features>
+                    <UPageCard
+                        :title="t('platform.features.title')"
+                        variant="subtle"
+                    >
+                        <USwitch
+                            v-for="flag in FEATURE_FLAGS"
+                            :key="flag"
+                            :model-value="hasFeature(gym, flag)"
+                            :label="t(`platform.features.flags.${flag}`)"
+                            :disabled="savingFeature"
+                            :data-testid="`platform-feature-${gym.slug}-${flag}`"
+                            @update:model-value="setFeature(flag, $event)"
+                        />
+                    </UPageCard>
+                </template>
                 <template #danger>
                     <UPageCard
                         :title="t('platform.gyms.delete')"
@@ -83,6 +116,19 @@
             </AdminGymSettingsForm>
 
             <ConfirmDialog
+                v-model="offlineDialogOpen"
+                :title="t('platform.gyms.takeOffline')"
+                :message="
+                    t('platform.gyms.takeOfflineConfirm', {
+                        name: gymTitle(gym),
+                    })
+                "
+                :confirm-text="t('platform.gyms.takeOffline')"
+                data-testid="platform-gym-offline-dialog"
+                @confirm="setActive(false)"
+            />
+
+            <ConfirmDialog
                 v-model="deleteDialogOpen"
                 :title="t('platform.gyms.delete')"
                 :message="
@@ -97,6 +143,8 @@
 
 <script setup lang="ts">
 import type { GymRecord } from '~/types/models'
+import type { FeatureFlag } from '#shared/utils/featureFlags'
+import { FEATURE_FLAGS, hasFeature } from '#shared/utils/featureFlags'
 import { gymTitle } from '~/utils/gymNames'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
@@ -122,6 +170,11 @@ useHead({
 const extraSections = computed(() => [
     { id: 'members', label: t('members.title'), icon: 'i-lucide-users-round' },
     {
+        id: 'features',
+        label: t('platform.features.title'),
+        icon: 'i-lucide-flag',
+    },
+    {
         id: 'danger',
         label: t('platform.gyms.delete'),
         icon: 'i-lucide-trash-2',
@@ -129,14 +182,36 @@ const extraSections = computed(() => [
 ])
 
 const { run: runToggle } = useAsyncAction()
+const offlineDialogOpen = ref(false)
+
+function requestActive(active: boolean) {
+    if (active) return setActive(true)
+    offlineDialogOpen.value = true
+}
 
 async function setActive(active: boolean) {
+    offlineDialogOpen.value = false
     await runToggle(async () => {
         gym.value = await pb
             .collection('gyms')
             .update<GymRecord>(gymId, { active })
     })
 }
+
+const { pending: savingFeature, run: runFeature } = useAsyncAction()
+
+async function setFeature(flag: FeatureFlag, on: boolean) {
+    await runFeature(async () => {
+        gym.value = await pb.collection('gyms').update<GymRecord>(gymId, {
+            features: { ...gym.value?.features, [flag]: on },
+        })
+    })
+}
+
+const { summary } = useModerationSummary()
+const openCases = computed(
+    () => summary.value?.gyms?.find((entry) => entry.gym === gymId)?.open ?? 0,
+)
 
 const deleteDialogOpen = ref(false)
 const { pending: removing, run: runRemove } = useAsyncAction()

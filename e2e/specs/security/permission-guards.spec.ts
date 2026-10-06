@@ -137,7 +137,7 @@ test('inventory may archive and restore routes but not edit them', async ({
     }
 })
 
-test('a report cannot be marked removed while its content still exists', async ({
+test('a report handler without moderation rights cannot remove reported content', async ({
     adminPage: page,
     root,
     testPrefix,
@@ -177,12 +177,15 @@ test('a report cannot be marked removed while its content still exists', async (
         ).rejects.toMatchObject({ status: 404 })
         await expect(
             moderator.client.collection('reports').update(reportId, decision),
-        ).rejects.toMatchObject({ status: 400 })
+        ).rejects.toMatchObject({ status: 403 })
+        expect(
+            (await root.collection('routes').getOne(route.id)).archived,
+        ).toBe(false)
 
+        // Deleting the content decides its open reports as removed.
         await root.collection('routes').delete(route.id)
-        const decided = await moderator.client
-            .collection('reports')
-            .update(reportId, decision)
+        const decided = await root.collection('reports').getOne(reportId)
+        expect(decided.status).toBe('actioned')
         expect(decided.decision).toBe('content_removed')
     } finally {
         await moderator.cleanup()
@@ -196,12 +199,19 @@ test('a report cannot be marked removed while its content still exists', async (
 
 test('a decided report keeps its decision and server-owned fields', async ({
     root,
+    route,
     testPrefix,
 }) => {
+    const rating = await root.collection('ratings').create({
+        route_id: route.id,
+        rating: 4,
+        ...uiaa('5'),
+        comment: `${testPrefix}-reported-rating`,
+    })
     const { id: reportId } = await root.collection('reports').create({
         gym: await e2eGymId(root),
         content_type: 'rating',
-        content_id: `${Date.now()}`.padEnd(15, '0'),
+        content_id: rating.id,
         reason: 'other',
         explanation: `${testPrefix}-decided-once`,
         notifier_name: 'E2E Reporter',

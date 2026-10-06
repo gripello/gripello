@@ -21,7 +21,8 @@ test('server-renders the logged-in navbar', async ({ adminPage: page }) => {
 
     expect(html).toContain('data-testid="user-menu-activator"')
     expect(html).toContain('data-testid="bottom-nav"')
-    expect(html).toContain('data-testid="nav-group-admin"')
+    expect(html).toContain('data-testid="nav-back-to-climbing"')
+    expect(html).toContain('data-testid="nav-link-admin-settings"')
 })
 
 test('the navbar logo actually loads', async ({ page }) => {

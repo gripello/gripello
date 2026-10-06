@@ -59,7 +59,8 @@
             "profile": "Profiel",
             "security": "Beveiliging",
             "preferences": "Voorkeuren",
-            "notifications": "Meldingen"
+            "notifications": "Meldingen",
+            "privacy": "Privacy"
         },
         "placeholders": {
             "firstname": "Sanne",
@@ -138,7 +139,8 @@
         "leaveGym": "{gym} verlaten",
         "leaveGymConfirm": "Je verliest je rol en teamtoegang in deze hal. Je logboek blijft bewaard.",
         "leftGym": "Je hebt de hal verlaten.",
-        "lastAdmin": "De hal heeft eerst nog een beheerder nodig voordat je kunt vertrekken."
+        "lastAdmin": "De hal heeft eerst nog een beheerder nodig voordat je kunt vertrekken.",
+        "changeBanner": "Banner wijzigen"
     },
     "routes": {
         "home": "Overzicht",
@@ -166,13 +168,15 @@
         "mapEditor": "Plattegrondeditor",
         "mapPlacement": "Routes plaatsen",
         "scan": "Scannen",
-        "me": "Meer",
         "moreActions": "Meer acties",
         "selectedCount": "{n} geselecteerd",
         "list": "Routes",
         "competitions": "Wedstrijden",
         "judge": "Jureren",
-        "rated": "Heeft beoordelingen"
+        "rated": "Heeft beoordelingen",
+        "leaderboard": "Ranglijst",
+        "friends": "Vrienden",
+        "feed": "Feed"
     },
     "dashboard": {
         "online": "{0} online"
@@ -293,7 +297,9 @@
         "climber_reviews": "Beoordelingen",
         "felt": "voelt als",
         "perceived_difficulty": "Gevoelsgraad",
-        "loadError": "Beoordelingen konden niet worden geladen."
+        "loadError": "Beoordelingen konden niet worden geladen.",
+        "deleteOwn": "Mijn review verwijderen",
+        "deleteOwnConfirm": "Je review wordt definitief verwijderd."
     },
     "table": {
         "actions": "Acties",
@@ -327,7 +333,10 @@
         "load_more": "Meer laden",
         "close": "Sluiten",
         "export": "Exporteren",
-        "select_route": "{name} selecteren"
+        "select_route": "{name} selecteren",
+        "previous": "Vorige",
+        "next": "Volgende",
+        "more": "Meer"
     },
     "inventory": {
         "title": "Route-inventarisatie",
@@ -412,7 +421,8 @@
             "userInviteMail": "Gebruiker aangemaakt, maar de uitnodiging kon niet per e-mail worden verstuurd.",
             "resetLinkInvalid": "Deze link om je wachtwoord te resetten is ongeldig of verlopen. Vraag op de inlogpagina een nieuwe aan.",
             "captcha": "De spamcontrole is mislukt. Probeer het opnieuw.",
-            "verificationMail": "Je account is aangemaakt, maar de bevestigingsmail kon niet worden verstuurd. Vraag op de inlogpagina een nieuwe aan."
+            "verificationMail": "Je account is aangemaakt, maar de bevestigingsmail kon niet worden verstuurd. Vraag op de inlogpagina een nieuwe aan.",
+            "account_suspended": "Dit account is geschorst."
         },
         "deleteItem": "Dit item verwijderen? Dit kan niet ongedaan worden gemaakt.",
         "deleteMoreItems": "De geselecteerde items verwijderen? Dit kan niet ongedaan worden gemaakt.",
@@ -457,14 +467,24 @@
                 "task_wish_filed": "Nieuwe routewens voor {location}",
                 "task_wish_done": "Je routewens voor {location} is geschroefd — veel plezier!",
                 "wall_new_routes": "Nieuwe routes aan {wall}: {count}",
-                "competition_published": "De uitslag van ‘{competition}’ staat online"
+                "competition_published": "De uitslag van ‘{competition}’ staat online",
+                "follow_requested": "{name} wil je volgen",
+                "follow_accepted": "{name} heeft je volgverzoek geaccepteerd",
+                "new_follower": "{name} volgt je nu",
+                "achievement_earned": "Nieuwe prestaties ontgrendeld: {count}",
+                "report_filed_platform": "Inhoud gemeld in een hal: ‘{snippet}’",
+                "moderation_pending": "Een beta-video wacht op goedkeuring",
+                "content_hidden": "Je inhoud is verborgen: {reason}",
+                "beta_approved": "Je beta-video is goedgekeurd",
+                "beta_rejected": "Je beta-video is afgewezen: {reason}"
             }
         }
     },
     "filter": {
         "title": "Filter",
         "all": "Alle",
-        "archived": "Gearchiveerd"
+        "archived": "Gearchiveerd",
+        "clear": "Filter verwijderen"
     },
     "legal": {
         "privacy": "Privacy",
@@ -485,62 +505,110 @@
             "subtitle": "Informatie overeenkomstig § 5 DDG"
         },
         "privacyPage": {
+            "subtitle": "Hoe wij persoonsgegevens verwerken wanneer je deze applicatie gebruikt.",
             "controllerTitle": "Verwerkingsverantwoordelijke",
+            "scope": {
+                "title": "Wie is verantwoordelijk",
+                "body": "Gripello is een webapp (ook te installeren als app) die klimhallen voor hun routes gebruiken. Voor de pagina's van een hal is de hierboven genoemde hal of vereniging verantwoordelijk; voor de onderdelen die niet bij één hal horen, zoals je account, logboek, vrienden en klimmersprofielen, is dat de exploitant van het platform. Alle gegevens worden uitsluitend op eigen servers in de Europese Unie opgeslagen. Er worden geen analyse-, advertentie- of socialemediadiensten gebruikt en geen inhoud van externe servers geladen."
+            },
             "serverLogs": {
                 "title": "Serverlogbestanden",
-                "body": "Wanneer je deze applicatie opent, verwerkt de server technische gegevens zoals IP-adres, datum en tijd, opgevraagde URL en de user-agent van de browser om de pagina te leveren en misbruik te voorkomen (art. 6, lid 1, onder f, AVG). Verzoeklogs worden na korte tijd automatisch verwijderd (standaard na 5 dagen)."
+                "body": "Wanneer je deze applicatie opent, verwerkt de server technische gegevens zoals IP-adres, datum en tijd, opgevraagde URL en de user-agent van je browser om de pagina te leveren en misbruik te voorkomen. De grondslag is ons gerechtvaardigd belang bij een veilige en stabiele dienst (art. 6, lid 1, onder f, AVG). Verzoeklogs worden na korte tijd automatisch verwijderd (standaard na 5 dagen). Alleen beheerders van de server hebben toegang."
             },
             "accounts": {
                 "title": "Gebruikersaccounts",
-                "body": "Accounts voor medewerkers worden aangemaakt door beheerders. Wij slaan e-mailadres, gebruikersnaam, voor- en achternaam, een optionele profielfoto, je voorkeurstaal en de toegewezen rol op om de dienst te kunnen leveren (art. 6, lid 1, onder b, AVG). De gegevens worden bewaard zolang het account bestaat; je kunt je account op elk moment zelf verwijderen."
+                "body": "Als de exploitant registratie toestaat, kun je een account aanmaken met e-mailadres en wachtwoord; je ontvangt een verificatiemail. Beheerders van een hal kunnen je ook als medewerker toevoegen door je e-mailadres en je voor- en achternaam in te voeren: heb je nog geen account, dan wordt daarmee direct een nog niet geverifieerd account met deze gegevens en het lidmaatschap aangemaakt en ontvang je een e-mail om je wachtwoord in te stellen; een bestaand account krijgt het lidmaatschap meteen. Wij slaan je e-mailadres, gebruikersnaam, voor- en achternaam, wachtwoord (alleen als veilige hash), een optionele profielfoto en profielbanner, je taal, je meldingsvoorkeuren, je privacy-instellingen en de muren die je volgt op. Als je medewerker van een hal bent, komt daar je lidmaatschap met rol per hal bij. Je e-mailadres wordt niet getoond aan andere klimmers of aan medewerkers van de hal; de beheerders van het platform kunnen het zien, en als je inhoud meldt, ontvangen de moderatoren van de hal en het contactadres van de hal je naam en e-mailadres (zie Meldingen van inhoud). De grondslag is de uitvoering van de overeenkomst voor het gebruik van de dienst (art. 6, lid 1, onder b, AVG). De gegevens worden bewaard zolang je account bestaat."
+            },
+            "privacySettings": {
+                "title": "Jouw privacy-instellingen",
+                "body": "Onder Instellingen, Privacy bepaal je wie je mag volgen, of je in de ranglijsten van hallen staat, of je naam bij beoordelingen zichtbaar is en of je beklimmingen met volgers worden gedeeld. Elke keuze werkt direct; ranglijsten volgen met een korte vertraging (zie Ranglijsten)."
+            },
+            "logbook": {
+                "title": "Logboek",
+                "body": "In je logboek leg je beklimmingen vast: de route, de dag, het type (flash, top of poging), het aantal pogingen, het tijdstip waarop de beklimming is opgeslagen, een optionele notitie en de moeilijkheidsgraad op dat moment. Dit dient als persoonlijk trainingslogboek en voor je statistieken en achievements (art. 6, lid 1, onder b, AVG). Je notities zijn nooit voor anderen zichtbaar. Zonder verbinding wacht een beklimming in de lokale opslag van je browser (IndexedDB) tot je weer online bent. Of anderen je beklimmingen zien, staat beschreven onder Vrienden, Klimmersprofielen en Ranglijsten. Het logboek wordt bewaard tot je het wist of je account verwijdert."
+            },
+            "friends": {
+                "title": "Vrienden en volgers",
+                "body": "Je kunt andere gebruikers volgen en zelf gevolgd worden. In je privacy-instellingen kies je of volgverzoeken moeten worden goedgekeurd (standaard), iedereen je mag volgen of niemand. Volgers zien je beklimmingen (route, graad, type, aantal pogingen, dag en tijdstip van opslaan, nooit je notities) in de vriendenfeed en de feed van de hal, tenzij je 'Mijn beklimmingen delen met volgers' hebt uitgeschakeld. Deze instelling heeft geen invloed op ranglijsten. Je kunt volgers verwijderen en verzoeken afwijzen. Updates verlopen live via de verbinding van de app met onze server. De grondslag is de uitvoering van de overeenkomst (art. 6, lid 1, onder b, AVG). Volgrelaties worden verwijderd met je account."
+            },
+            "profiles": {
+                "title": "Klimmersprofielen",
+                "body": "Ingelogde gebruikers kunnen je klimmersprofiel openen met je naam, profielfoto, banner (zonder eigen banner wordt er op het apparaat van de bezoeker een afgeleid uit de kleuren van je foto) en het aantal volgers en gevolgden. Staat je volgbeleid op 'Niemand', dan kunnen alleen klimmers met wie je via een geaccepteerde volgrelatie verbonden bent en klimmers aan wie je een volgverzoek hebt gestuurd het openen. Je statistieken, recente beklimmingen en een vergelijking met hun eigen beklommen routes zien alleen je geaccepteerde volgers, je achievements (behalve die over graden) iedereen die je profiel kan openen. Als je 'Mijn beklimmingen delen met volgers' uitschakelt, zijn je beklimmingen, statistieken, vergelijking en achievements op je profiel voor alle anderen verborgen; voor ranglijsten geldt een eigen instelling. De zoekfunctie voor klimmers toont naam, foto en banner van gebruikers wier volgbeleid niet op 'Niemand' staat. Bezoekers zonder account zien geen profielen en kunnen niet zoeken. Grondslag: uitvoering van de overeenkomst (art. 6, lid 1, onder b, AVG); met volgbeleid 'Niemand' verdwijn je uit de zoekfunctie."
+            },
+            "leaderboards": {
+                "title": "Ranglijsten",
+                "body": "Elke hal kan ranglijsten tonen per seizoen of over de afgelopen 60 dagen. De score komt uit je beste 10 beklimmingen in die periode. De lijst toont je naam verkort als 'Voornaam A.', een interne gebruikers-ID, je profielfoto, positie, punten, aantal beklimmingen en flashes en je zwaarste graad. Ranglijsten zijn openbaar, ook voor bezoekers zonder account, en staan los van 'Mijn beklimmingen delen met volgers'. De grondslag is ons gerechtvaardigd belang en dat van de hal bij een motiverende community (art. 6, lid 1, onder f, AVG). Je hebt het recht van bezwaar: zet 'Toon mij in ranglijsten van de hal' uit in Instellingen, Privacy; je verdwijnt dan binnen ongeveer een minuut uit de actuele ranglijsten en binnen enkele uren uit afgesloten seizoenen. Ranglijsten worden bij opvragen uit de logboeken berekend, slechts kort in het geheugen gehouden en niet blijvend opgeslagen."
             },
             "ratings": {
                 "title": "Beoordelingen",
-                "body": "Sterrenbeoordelingen, graadstemmen en opmerkingen bij routes kunnen zonder account worden ingediend en worden zonder naam of IP-adres opgeslagen. Opmerkingen zijn openbaar zichtbaar en kunnen worden gemodereerd."
+                "body": "Een beoordeling (sterren, gevoelde graad en opmerking) is gekoppeld aan je account. Andere ingelogde gebruikers zien je naam en profielfoto bij de beoordeling, tenzij je 'Mijn naam bij mijn reviews tonen' hebt uitgeschakeld; bezoekers zonder account zien nooit een naam. Beoordelingen kunnen worden gemeld en door moderatoren van de hal worden verwijderd. De grondslag is het leveren van de beoordelingsfunctie (art. 6, lid 1, onder b, AVG) en, voor het tonen van je naam, ons gerechtvaardigd belang bij betrouwbare, toetsbare beoordelingen binnen de community (art. 6, lid 1, onder f, AVG); je kunt hiertegen bezwaar maken met de genoemde instelling. Als je je account verwijdert, blijven beoordelingen bestaan maar worden ze losgekoppeld van je account en dus anoniem."
             },
-            "reports": {
-                "title": "Meldingen van inhoud",
-                "body": "Als je inhoud meldt, verwerken wij je naam, e-mailadres, de reden van de melding en je toelichting om de melding te behandelen en je over het besluit te informeren (art. 6, lid 1, onder c, AVG juncto art. 16 DSA). Meldingen worden bewaard zolang dat voor de documentatie nodig is."
+            "betaVideos": {
+                "title": "Bètavideo's",
+                "body": "Bij een route kun je een link (TikTok, Instagram, YouTube Shorts) toevoegen of een video van maximaal 30 MB uploaden. Links en uploads zijn voor iedereen zichtbaar; je naam en profielfoto alleen voor ingelogde gebruikers. Links worden nooit ingesloten: pas wanneer je zelf op een link tikt, wordt het platform benaderd en geldt het privacybeleid van dat platform. Zorg dat je geen anderen herkenbaar in beeld brengt zonder hun toestemming. Grondslag: uitvoering van de overeenkomst (art. 6, lid 1, onder b, AVG). Je kunt je eigen bijdragen op elk moment verwijderen, moderatoren van de hal kunnen dat ook; ze worden verwijderd met je account."
+            },
+            "achievements": {
+                "title": "Achievements",
+                "body": "Onze server berekent automatisch achievements uit je eigen activiteit: beklimmingen, sessies, beoordelingen, betavideo's, geaccepteerde volgers, bevestigde probleemmeldingen, wedstrijdinschrijvingen en seizoensposities. Behaalde niveaus worden met de datum opgeslagen. Achievements over graden zie alleen jij; de overige zijn zichtbaar waar je profiel zichtbaar is en je je beklimmingen met volgers deelt. Een nieuw achievement meldt de app in het meldingscentrum en, als je dat hebt ingeschakeld, via pushmelding; de pushmeldingen kun je uitzetten met het onderwerp 'Prestaties'. Dit heeft geen rechtsgevolgen of vergelijkbare gevolgen voor je. Grondslag: uitvoering van de overeenkomst (art. 6, lid 1, onder b, AVG). Ze worden verwijderd met je account."
+            },
+            "competitions": {
+                "title": "Wedstrijden",
+                "body": "Bij een inschrijving voor een wedstrijd verwerkt de hal je (weergave)naam, geboortejaar, categorie, startnummer en resultaten en, bij deelnemers jonger dan 16, de bevestiging dat een ouder of voogd toestemming geeft. Uitslagen met namen zijn openbaar bij de betreffende hal; bij de inschrijving kun je 'Verberg mij in openbare uitslagen' kiezen. De grondslag is de uitvoering van de overeenkomst voor deelname (art. 6, lid 1, onder b, AVG). Inschrijvingen worden verwijderd wanneer de hal de wedstrijd verwijdert of jij je account verwijdert."
             },
             "defects": {
                 "title": "Probleemmeldingen over routes",
-                "body": "Als je een probleem met een route meldt, slaan wij het gekozen type probleem, je optionele beschrijving en foto en — als je bent ingelogd — je account op, zodat het team de route kan herstellen en je op de hoogte kan brengen. Fotografeer geen personen. Meldingen worden samen met de route verwijderd."
+                "body": "Als je een probleem met een route meldt, slaan wij het gekozen type probleem, je optionele beschrijving en foto en, als je bent ingelogd, je account op, zodat het team de route kan herstellen en je op de hoogte kan brengen (art. 6, lid 1, onder f, AVG: ons belang bij veilige routes). Fotografeer geen personen. Meldingen worden samen met de route verwijderd; als je je account verwijdert, blijven ze bestaan zonder koppeling aan jou."
             },
-            "auditLog": {
-                "title": "Auditlog",
-                "body": "Wijzigingen, inlogpogingen en mislukte inlogpogingen van medewerkers worden met gebruiker, handeling en IP-adres vastgelegd om de beveiliging en traceerbaarheid te waarborgen (art. 6, lid 1, onder f, AVG). Vermeldingen worden na {auditDays} dagen automatisch verwijderd."
+            "reports": {
+                "title": "Meldingen van inhoud",
+                "body": "Als je inhoud meldt, verwerken wij je naam, e-mailadres, de reden van de melding en je toelichting om de melding te behandelen en je over het besluit te informeren (art. 6, lid 1, onder c, AVG juncto art. 16 DSA). De moderatoren van de hal en het contactadres van de hal ontvangen je naam en e-mailadres bij de melding. Wie de gemelde inhoud heeft geplaatst, hoort niet wie hem heeft gemeld, tenzij de wet dat vereist. Deze gegevens blijven ook na het verwijderen van je account bewaard zolang dat voor de documentatie nodig is."
             },
-            "captcha": {
-                "title": "Spambescherming",
-                "body": "Sommige formulieren gebruiken een zelf gehoste proof-of-workcontrole die in je browser wordt uitgevoerd. Er worden geen gegevens aan derden verstrekt en er worden geen trackingcookies geplaatst."
+            "notifications": {
+                "title": "Meldingen",
+                "body": "Gebeurtenissen die jou aangaan (bijv. nieuwe routes aan gevolgde muren, volgverzoeken, achievements, de status van een probleemmelding) slaan wij als melding bij je account op en tonen we in het meldingscentrum van de app (art. 6, lid 1, onder b, AVG). In je meldingsinstellingen kun je elk onderwerp afzonderlijk uitzetten voor pushmeldingen; het meldingscentrum toont altijd alle meldingen. Gelezen meldingen worden na 30 dagen automatisch verwijderd, alle overige na 90 dagen en alle met je account."
             },
             "push": {
                 "title": "Pushmeldingen",
-                "body": "Als je pushmeldingen op een apparaat inschakelt, slaan wij het pushadres dat de browser ons geeft samen met je account op en versturen wij meldingen via de pushdienst van de browserleverancier (bijv. Google, Apple, Mozilla). Het adres wordt verwijderd wanneer je het apparaat in je meldingsinstellingen verwijdert, je account verwijdert of wanneer de pushdienst het als verlopen meldt; dat gebeurt nadat je op dat apparaat uitlogt of de toestemming intrekt."
+                "body": "Pushmeldingen krijg je alleen nadat je ze per apparaat hebt ingeschakeld; dan slaan wij het pushadres en de sleutels die je browser ons geeft en een apparaatnaam (browser en besturingssysteem, bijv. Firefox · Android) samen met je account op en versturen we berichten via de pushdienst van de browserleverancier (bijv. Google, Apple, Mozilla). Die diensten kunnen gegevens ook buiten de EU verwerken; ze ontvangen alleen het pushadres en de versleutelde inhoud, die ze niet kunnen lezen. De grondslag is je toestemming (art. 6, lid 1, onder a, AVG; art. 11.7a Telecommunicatiewet), die je kunt intrekken door het apparaat in je meldingsinstellingen te verwijderen of de browsermachtiging in te trekken. Bij uitloggen of wisselen van gebruiker op dat apparaat wordt het pushabonnement in de browser opgezegd. Het opgeslagen adres verwijderen wij wanneer je het apparaat in je meldingsinstellingen verwijdert, wanneer de pushdienst het als verlopen meldt of wanneer je je account verwijdert."
+            },
+            "dataExport": {
+                "title": "Je gegevens downloaden",
+                "body": "Met 'Je gegevens downloaden' in je accountinstellingen ontvang je een ZIP-bestand met alle gegevens die aan je account zijn gekoppeld (profiel, foto's, logboek, beoordelingen, bètavideo's, volgrelaties, achievements, meldingen, lidmaatschappen, taken, wedstrijdinschrijvingen). Dit kan een beperkt aantal keer per uur."
+            },
+            "deletion": {
+                "title": "Account verwijderen",
+                "body": "Je kunt je account op elk moment zelf verwijderen in je instellingen. Daarbij worden account, profielfoto en banner, logboek, volgrelaties, bètavideo's, achievements, pushabonnementen, meldingen, lidmaatschappen en wedstrijdinschrijvingen verwijderd. Beoordelingen en probleemmeldingen blijven anoniem bestaan; meldingen van inhoud (DSA) behouden naam en e-mailadres van de melder voor zover de wet dat vereist. Serverlogs en het auditlog worden volgens de hierboven genoemde termijnen verwijderd."
+            },
+            "auditLog": {
+                "title": "Auditlog",
+                "body": "Om de beveiliging en traceerbaarheid te waarborgen, leggen wij elke wijziging vast die iemand via de app doet (bijv. logboekregels, volgrelaties, beoordelingen, betavideo's, probleem- en inhoudsmeldingen, wedstrijdinschrijvingen en wijzigingen door medewerkers), evenals inloggen, mislukte inlogpogingen (het ingevoerde adres alleen als korte hash), wachtwoordherstel en wijzigingen van het e-mailadres, telkens met het e-mailadres van het account, de handeling, het betreffende record en het IP-adres (art. 6, lid 1, onder f, AVG). Medewerkers van een hal met toegang tot het auditlog zien de vermeldingen van hun hal, de beheerders van het platform alle vermeldingen en jij je eigen vermeldingen. Vermeldingen worden na {auditDays} dagen automatisch verwijderd."
+            },
+            "captcha": {
+                "title": "Spambescherming",
+                "body": "Sommige formulieren gebruiken een zelf gehoste proof-of-workcontrole die in je browser wordt uitgevoerd (art. 6, lid 1, onder f, AVG). Er worden geen gegevens aan derden verstrekt en er worden geen trackingcookies geplaatst."
             },
             "thirdParties": {
                 "title": "Geen tracking, geen derden",
-                "body": "Deze applicatie gebruikt geen analyse-, advertentie- of socialemediaplug-ins en laadt geen bronnen van servers van derden. Alle gegevens worden op onze eigen server verwerkt. Er vindt geen doorgifte van gegevens naar derde landen plaats."
+                "body": "Deze applicatie gebruikt geen analyse-, advertentie- of socialemediaplug-ins en laadt geen bronnen van servers van derden. Alle gegevens worden op onze eigen servers in de EU verwerkt en we verkopen geen gegevens. Doorgifte naar derde landen kan alleen plaatsvinden als je pushmeldingen inschakelt (pushdienst van je browserleverancier) of zelf een link naar een bètavideo opent (zie de secties hierboven)."
             },
             "storage": {
                 "title": "Cookies en lokale opslag",
-                "body": "Wij slaan op je apparaat alleen informatie op die strikt noodzakelijk is om de door jou gevraagde dienst te leveren (§ 25, lid 2, TDDDG). Daarom is geen toestemming vereist. Het volledige overzicht:"
+                "body": "Wij slaan op je apparaat alleen informatie op of lezen die uit die strikt noodzakelijk is om de door jou gevraagde dienst te leveren of die geen of een zeer geringe impact op je privacy heeft (art. 11.7a, lid 3, Telecommunicatiewet). Daarom is geen toestemming vereist. Het volledige overzicht:"
             },
             "rights": {
                 "title": "Jouw rechten",
-                "body": "Op grond van de AVG heb je de volgende rechten met betrekking tot je persoonsgegevens:",
+                "body": "Op grond van de AVG heb je de volgende rechten met betrekking tot je persoonsgegevens. Stuur je verzoek naar de verwerkingsverantwoordelijke; wij reageren binnen één maand.",
                 "items": {
                     "access": "Recht van inzage (art. 15 AVG)",
                     "rectification": "Recht op rectificatie (art. 16 AVG)",
                     "erasure": "Recht op gegevenswissing (art. 17 AVG)",
                     "restriction": "Recht op beperking van de verwerking (art. 18 AVG)",
                     "portability": "Recht op overdraagbaarheid van gegevens (art. 20 AVG)",
-                    "objection": "Recht van bezwaar (art. 21 AVG)",
+                    "objection": "Recht van bezwaar tegen verwerking op basis van gerechtvaardigd belang (art. 21 AVG)",
                     "withdrawal": "Recht om je toestemming te allen tijde in te trekken (art. 7, lid 3, AVG)"
                 },
-                "complaint": "Je hebt ook het recht om een klacht in te dienen bij een toezichthoudende autoriteit voor gegevensbescherming (art. 77 AVG)."
-            },
-            "subtitle": "Hoe wij persoonsgegevens verwerken wanneer je deze applicatie gebruikt."
+                "complaint": "Je hebt het recht om een klacht in te dienen bij de toezichthoudende autoriteit (art. 77 AVG): in Nederland de Autoriteit Persoonsgegevens (autoriteitpersoonsgegevens.nl), in België de Gegevensbeschermingsautoriteit (gegevensbeschermingsautoriteit.be)."
+            }
         },
         "storage": {
             "name": "Naam",
@@ -550,7 +618,8 @@
             "kinds": {
                 "cookie": "Cookie",
                 "localStorage": "Lokale opslag",
-                "indexedDB": "Browserdatabase (IndexedDB)"
+                "indexedDB": "Browserdatabase (IndexedDB)",
+                "cacheStorage": "Cache (service worker)"
             },
             "purposes": {
                 "auth": "Houdt je ingelogd",
@@ -563,12 +632,16 @@
                 "pushDeclined": "Onthoudt dat je pushmeldingen op dit apparaat hebt verwijderd",
                 "offlineScores": "Bewaart wedstrijdscores die je zonder bereik hebt ingevoerd tot ze zijn verzonden",
                 "gym": "Onthoudt de hal die je het laatst hebt geopend",
-                "recentGyms": "Toont de hallen die je onlangs hebt bezocht op de startpagina"
+                "recentGyms": "Toont de hallen die je onlangs hebt bezocht op de startpagina",
+                "mapRouteType": "Onthoudt of de kaart boulders of routes toont",
+                "offlinePages": "Houdt de basis van de app, openbare pagina’s, gegevens van de hal en afbeeldingen offline beschikbaar",
+                "moderationSeen": "Onthoudt wanneer je de moderatie voor het laatst opende, om nieuwe zaken te markeren"
             },
             "durations": {
                 "session": "Tot het uitloggen",
                 "oneYear": "1 jaar",
-                "persistent": "Tot verwijdering in de browser"
+                "persistent": "Tot verwijdering in de browser",
+                "untilUpdate": "Tot de volgende update van de app"
             }
         },
         "gymImprint": "Colofon van {name}",
@@ -611,7 +684,11 @@
             "competition": "{name} - Wedstrijden - Gripello",
             "judge": "Jureren - Gripello",
             "competitionRules": "{name} - Regels - Gripello",
-            "invite": "Uitnodiging - Gripello"
+            "invite": "Uitnodiging - Gripello",
+            "leaderboard": "Ranglijst - Gripello",
+            "friends": "Vrienden - Gripello",
+            "climber": "{name} - Gripello",
+            "feed": "Feed"
         },
         "content": {
             "settings": "Instellingen",
@@ -685,7 +762,16 @@
         "quickNavigation": "Snelnavigatie",
         "platform": "Platform",
         "allGyms": "Alle hallen…",
-        "manageGyms": "Hallen beheren"
+        "manageGyms": "Hallen beheren",
+        "you": "Jij",
+        "gym": "Hal",
+        "community": "Community",
+        "staffTools": "Teamtools",
+        "backToClimbing": "Terug naar klimmen",
+        "staff": "Team",
+        "more": "Meer",
+        "sections": "Onderdelen",
+        "noStaffTools": "Je hebt geen teamtools in deze hal"
     },
     "users": {
         "create": "Gebruiker toevoegen",
@@ -841,7 +927,8 @@
         "splitBand": "Splitsen",
         "bandBoundary": "Grens tussen {from} en {to}",
         "defaultLanguage": "Standaardtaal",
-        "defaultLanguageHelp": "Wordt standaard gebruikt voor e-mails, exports en andere systeemuitvoer."
+        "defaultLanguageHelp": "Wordt standaard gebruikt voor e-mails, exports en andere systeemuitvoer.",
+        "premoderateBetas": "Beta-video’s goedkeuren voordat ze zichtbaar zijn"
     },
     "errors": {
         "notFound": {
@@ -938,7 +1025,8 @@
         "empty": "Geen meldingen",
         "emptyHint": "Gemelde inhoud verschijnt hier ter beoordeling.",
         "mailWarning": "E-mail is niet ingesteld, dus melders ontvangen niet de ontvangstbevestigingen en besluiten die artikel 16 vereist.",
-        "mailWarningAction": "Instellingen openen"
+        "mailWarningAction": "Instellingen openen",
+        "reportProfile": "Profiel melden"
     },
     "tasks": {
         "pageTitle": "Taken",
@@ -1191,7 +1279,9 @@
         "tabs": {
             "sessions": "Sessies",
             "stats": "Statistieken",
-            "projects": "Projecten"
+            "projects": "Projecten",
+            "badges": "Badges",
+            "timeline": "Tijdlijn"
         },
         "stats": {
             "sends": "Tops",
@@ -1418,8 +1508,6 @@
     },
     "accountSettings": {
         "title": "Instellingen",
-        "avatar": "Avatar",
-        "avatarDescription": "JPG, PNG, SVG of WebP.",
         "language": "Taal",
         "theme": "Thema",
         "push": {
@@ -1430,7 +1518,12 @@
                 "wish_done": "Mijn routewensen zijn geschroefd",
                 "competition_results": "Wedstrijduitslagen",
                 "tasks": "Taken en gemelde defecten",
-                "reports": "Inhoudsmeldingen (DSA)"
+                "reports": "Inhoudsmeldingen (DSA)",
+                "social": "Volgers en volgverzoeken",
+                "achievements": "Prestaties",
+                "platform_reports": "Inhoudsmeldingen uit alle hallen",
+                "content": "Moderatie van mijn inhoud",
+                "moderation": "Te beoordelen inhoud"
             },
             "devices": "Apparaten",
             "thisDevice": "Dit apparaat",
@@ -1441,6 +1534,17 @@
             "unsupported": "Niet beschikbaar in deze browser",
             "blocked": "Meldingen zijn geblokkeerd in je browserinstellingen.",
             "followedWalls": "Gevolgde wanden"
+        },
+        "privacy": {
+            "followPolicy": "Wie mij mag volgen",
+            "leaderboard": "Toon mij in ranglijsten van de hal",
+            "policies": {
+                "approve": "Iedereen, na mijn goedkeuring",
+                "open": "Iedereen",
+                "closed": "Niemand"
+            },
+            "reviewName": "Mijn naam bij mijn reviews tonen",
+            "shareSends": "Mijn beklimmingen delen met volgers"
         }
     },
     "competitions": {
@@ -1805,7 +1909,9 @@
             "venue": "Hal",
             "createdAt": "Aangemaakt",
             "open": "Hal openen",
-            "inactive": "Inactief"
+            "inactive": "Inactief",
+            "takeOffline": "Offline halen",
+            "takeOfflineConfirm": "{name} verdwijnt voor klimmers tot je de hal weer inschakelt."
         },
         "settings": {
             "title": "Platforminstellingen",
@@ -1820,7 +1926,12 @@
             "memberships": "Lidmaatschappen",
             "routes": "Routes",
             "admins": "Platformbeheerders",
-            "dashboard": "PocketBase-dashboard"
+            "dashboard": "PocketBase-dashboard",
+            "needsYou": "Heeft je nodig",
+            "legalReports": "Open juridische meldingen",
+            "staleGyms": "Hallen met achterstand",
+            "profiles": "Profielen te controleren",
+            "suspended": "Geschorste personen"
         },
         "users": {
             "title": "Gebruikers",
@@ -1835,7 +1946,36 @@
             "sendPasswordReset": "E-mail voor wachtwoordherstel sturen",
             "passwordResetSent": "E-mail voor wachtwoordherstel verstuurd.",
             "deleteConfirm": "{name} met alle gegevens verwijderen? Dit kan niet ongedaan worden gemaakt.",
-            "lastAdmin": "Deze persoon is de enige beheerder van een hal. Maak eerst iemand anders beheerder."
+            "lastAdmin": "Deze persoon is de enige beheerder van een hal. Maak eerst iemand anders beheerder.",
+            "suspend": "Schorsen",
+            "suspendUntil": "Geschorst tot",
+            "liftSuspension": "Schorsing opheffen",
+            "suspendedUntil": "Geschorst tot {date}",
+            "permanent": "Permanent",
+            "suspendedPermanently": "Permanent geschorst",
+            "suspendName": "{name} schorsen",
+            "suspendHowLong": "Hoe lang",
+            "durations": {
+                "week": "7 dagen",
+                "month": "30 dagen",
+                "until": "Tot datum",
+                "permanent": "Permanent"
+            },
+            "suspendReason": "Reden (naar de persoon)",
+            "suspendHideContent": "Ook hun zichtbare inhoud verbergen",
+            "suspendEffects": {
+                "signedOut": "Op elk apparaat afgemeld en kan niet inloggen.",
+                "mail": "Krijgt een e-mail met je reden en hoe bezwaar te maken.",
+                "kept": "Lidmaatschappen en logboek blijven; niets wordt verwijderd.",
+                "lift": "Onder Gebruikers kun je de schorsing altijd opheffen."
+            },
+            "suspendPermanently": "Permanent schorsen"
+        },
+        "features": {
+            "title": "Feature flags",
+            "flags": {
+                "beta_videos": "Beta-video's"
+            }
         }
     },
     "mails": {
@@ -1856,7 +1996,8 @@
             "problem": "Probleem",
             "route": "Route",
             "details": "Details",
-            "location": "Inlog"
+            "location": "Inlog",
+            "until": "Geschorst tot"
         },
         "verification": {
             "subject": "Bevestig je e-mailadres",
@@ -1914,6 +2055,303 @@
             "body": "Een klimmer heeft een veiligheidsprobleem gemeld. Controleer de route voordat er weer op geklommen wordt.",
             "photo": "Bij de taak is een foto gevoegd.",
             "action": "Takenbord openen"
+        },
+        "contentHidden": {
+            "subject": "Je inhoud is verborgen",
+            "body": "We hebben inhoud die je hebt geplaatst verborgen. Anderen kunnen die niet meer zien."
+        },
+        "accountSuspended": {
+            "subject": "Je account is geschorst",
+            "body": "Je account is geschorst. Je kunt niet inloggen tot de onderstaande datum."
         }
+    },
+    "leaderboard": {
+        "title": "Ranglijst",
+        "season": "Seizoen",
+        "rolling": "Laatste 60 dagen",
+        "rollingWindow": "Sinds {from}",
+        "tv": "Tv-weergave",
+        "empty": "Nog geen beklimmingen",
+        "anonymous": "Klimmer",
+        "sends": "{n} beklimming | {n} beklimmingen",
+        "youAreHidden": "Je bent verborgen in ranglijsten",
+        "showMe": "Toon mij",
+        "seasons": {
+            "title": "Seizoenen",
+            "name": "Naam",
+            "start": "Begin",
+            "end": "Einde",
+            "add": "Seizoen toevoegen",
+            "deleteConfirm": "Dit seizoen verwijderen? Beklimmingen blijven in de logboeken.",
+            "endBeforeStart": "Het einde moet na het begin liggen"
+        },
+        "points": "{n} ptn",
+        "stats": {
+            "climbers": "Klimmers",
+            "grades": "Beklimmingen per graad",
+            "topRoutes": "Meest geklommen"
+        },
+        "standing": {
+            "rank": "Positie",
+            "score": "Punten",
+            "ahead": "Tot volgende plek",
+            "bestSends": "Mijn tellende beklimmingen"
+        }
+    },
+    "badges": {
+        "weeks": "{n} week | {n} weken",
+        "currentStreak": "Huidige reeks",
+        "bestStreak": "Beste reeks"
+    },
+    "friends": {
+        "title": "Vrienden",
+        "search": "Klimmers zoeken",
+        "noResults": "Geen klimmers gevonden",
+        "tabs": {
+            "feed": "Feed",
+            "following": "Volgend",
+            "followers": "Volgers",
+            "requests": "Verzoeken"
+        },
+        "feedEmpty": "Nog geen beklimmingen van mensen die je volgt",
+        "empty": {
+            "following": "Je volgt nog niemand",
+            "followers": "Nog geen volgers",
+            "requests": "Geen openstaande verzoeken"
+        },
+        "follow": "Volgen",
+        "following": "Volgend",
+        "requested": "Aangevraagd",
+        "unfollow": "Ontvolgen",
+        "unfollowConfirm": "Je ziet hun beklimmingen dan niet meer.",
+        "accept": "Accepteren",
+        "decline": "Weigeren",
+        "removeFollower": "Volger verwijderen",
+        "removeFollowerConfirm": "Die persoon ziet je beklimmingen dan niet meer.",
+        "followerCount": "{n} volger | {n} volgers",
+        "followingCount": "Volgt {n} | Volgt {n}",
+        "closedProfile": "Dit logboek is privé",
+        "requestPending": "Volgverzoek verzonden",
+        "followToSee": "Volg om het logboek te zien",
+        "you": "Jij",
+        "onlyTheirs": "Door hen geklommen, nog niet door jou",
+        "sentByBoth": "Allebei geklommen",
+        "privateSends": "Hun beklimmingen zijn privé",
+        "myProfile": "Mijn profiel",
+        "editProfile": "Profiel bewerken",
+        "recent": "Recente beklimmingen",
+        "block": "Blokkeren",
+        "unblock": "Deblokkeren",
+        "blockConfirm": "Deze persoon kan je niet meer volgen of vinden, en jij ziet diens beoordelingen en beta-video’s niet meer."
+    },
+    "beta": {
+        "title": "Beta-video’s",
+        "add": "Beta toevoegen",
+        "link": "Link",
+        "file": "Video",
+        "submit": "Delen",
+        "added": "Beta gedeeld",
+        "deleted": "Beta verwijderd",
+        "deleteConfirm": "Deze beta-video verwijderen?",
+        "report": "Deze video melden",
+        "invalidLink": "Gebruik een YouTube Shorts-, Instagram- of TikTok-link",
+        "fileTooLarge": "Video’s mogen maximaal {size} MB zijn",
+        "openOn": "Openen op {platform}",
+        "play": "Afspelen",
+        "pause": "Pauzeren",
+        "mute": "Dempen",
+        "unmute": "Geluid aan",
+        "fullscreen": "Volledig scherm",
+        "seek": "Afspeelpositie",
+        "drop": "Sleep een video hierheen of kies er een",
+        "chooseOther": "Andere kiezen",
+        "awaitingApproval": "Je video wacht op goedkeuring door de hal"
+    },
+    "feed": {
+        "title": "Feed",
+        "someone": "Iemand",
+        "newRoutes": "Nieuwe routes",
+        "activity": "Beklimmingen van vrienden",
+        "signInForFriends": "Log in om de beklimmingen van je vrienden te volgen",
+        "noNewRoutes": "Geen nieuwe routes in de afgelopen 30 dagen",
+        "today": "Vandaag",
+        "yesterday": "Gisteren"
+    },
+    "timeline": {
+        "filters": {
+            "all": "Alles",
+            "send": "Beklimmingen",
+            "review": "Reviews",
+            "beta": "Beta's"
+        },
+        "empty": "Nog niets hier",
+        "beta": "Betavideo",
+        "deleted": "Verwijderde route"
+    },
+    "achievements": {
+        "categories": {
+            "progress": "Vooruitgang",
+            "volume": "Volume",
+            "style": "Stijl",
+            "rhythm": "Ritme",
+            "exploration": "Ontdekken",
+            "fresh": "Nieuwe routes",
+            "community": "Community",
+            "competition": "Wedstrijden"
+        },
+        "names": {
+            "sends": "Beklimmingen",
+            "sessions": "Sessies",
+            "flashes": "Flashes",
+            "flash_grades": "Flash-bereik",
+            "personal_bests": "Persoonlijke records",
+            "grade_ladder": "Gradenladder",
+            "pyramid": "Piramide",
+            "project": "Project",
+            "active_weeks": "Actieve weken",
+            "perfect_months": "Perfecte maanden",
+            "welcome_back": "Welkom terug",
+            "walls": "Wandontdekker",
+            "colors": "Regenboog",
+            "gyms": "Haltoerist",
+            "all_rounder": "Allrounder",
+            "set_sweeper": "Nieuwe-route-jager",
+            "first_ascents": "Eerste beklimmingen",
+            "wall_clears": "Wand compleet",
+            "before_strip": "Voor het afschroeven",
+            "reviews": "Recensent",
+            "betas": "Betadeler",
+            "friends": "Verbonden",
+            "helper": "Helper",
+            "competitions": "Deelnemer",
+            "season_top10": "Seizoen top 10"
+        },
+        "rules": {
+            "sends": "Klim {n} verschillende route | Klim {n} verschillende routes",
+            "sessions": "Klim op {n} verschillende dagen",
+            "flashes": "Flash {n} route | Flash {n} routes",
+            "flash_grades": "Flash op {n} verschillende graden",
+            "personal_bests": "Verbeter je zwaarste beklimming {n} keer",
+            "grade_ladder": "Klim op {n} verschillende graden",
+            "pyramid": "1 op je topgraad, 2 eentje lager, 4 twee lager",
+            "project": "Klim een route na {n} pogingen",
+            "active_weeks": "Klim {n} weken op rij – één week rust mag",
+            "perfect_months": "Klim elke week in {n} maand | Klim elke week in {n} maanden",
+            "welcome_back": "Kom terug na drie weken pauze",
+            "walls": "Klim op {n} wanden van één hal",
+            "colors": "Klim routes in {n} grepkleuren",
+            "gyms": "Klim in {n} hallen",
+            "all_rounder": "Klim boulders en routes",
+            "set_sweeper": "Klim {n} routes binnen een week na het zetten",
+            "first_ascents": "Klim als eerste {n} route | Klim als eerste {n} routes",
+            "wall_clears": "Klim alle routes op {n} wand | Klim alle routes op {n} wanden",
+            "before_strip": "Klim {n} route in haar laatste week | Klim {n} routes in hun laatste week",
+            "reviews": "Schrijf {n} review | Schrijf {n} reviews",
+            "betas": "Deel {n} betavideo | Deel {n} betavideo’s",
+            "friends": "Heb {n} vriend | Heb {n} vrienden",
+            "helper": "Meld {n} probleem dat wordt opgelost | Meld {n} problemen die worden opgelost",
+            "competitions": "Doe mee aan {n} wedstrijd | Doe mee aan {n} wedstrijden",
+            "season_top10": "Eindig {n} seizoen in de top 10 | Eindig {n} seizoenen in de top 10"
+        },
+        "unlocked": "Prestatie ontgrendeld: {name}",
+        "more": "en nog {n}"
+    },
+    "moderation": {
+        "title": "Moderatie",
+        "reviewStats": "Beoordelingsstatistiek",
+        "moderate": "Modereren",
+        "filterType": "Inhoud",
+        "filterGym": "Hal",
+        "views": {
+            "decide": "Beslissing nodig",
+            "approval": "Wacht op goedkeuring",
+            "hidden": "Verborgen",
+            "history": "Gecontroleerd",
+            "all": "Alle hallen"
+        },
+        "types": {
+            "rating": "Beoordeling",
+            "beta_video": "Beta-video",
+            "profile": "Profiel",
+            "competition_entry": "Wedstrijdnaam",
+            "task": "Defect / wens",
+            "route": "Route"
+        },
+        "states": {
+            "unreviewed": "Beslissing nodig",
+            "approved": "Gecontroleerd",
+            "pending": "Wacht op goedkeuring",
+            "hidden": "Verborgen"
+        },
+        "actions": {
+            "keep": "Zichtbaar laten",
+            "publish": "Video publiceren",
+            "reject": "Afwijzen…",
+            "hide": "Verbergen…",
+            "restore": "Weer zichtbaar maken"
+        },
+        "done": {
+            "approve": "Blijft zichtbaar",
+            "publish": "Video gepubliceerd",
+            "reject": "Video afgewezen",
+            "hide": "Verborgen",
+            "restore": "Weer zichtbaar",
+            "hideAll": "{count} item verborgen | {count} items verborgen"
+        },
+        "decision": {
+            "why": "Waarom? (naar de auteur)",
+            "explanation": "Toelichting",
+            "whatHappens": "Wat er gebeurt",
+            "hiddenNow": "Klimmers zien het niet meer.",
+            "authorInformed": "De auteur krijgt je reden en hoe bezwaar te maken.",
+            "reportersInformed": "De melder krijgt de beslissing. | {count} melders krijgen de beslissing.",
+            "restorable": "Onder Verborgen kun je het 180 dagen lang weer zichtbaar maken.",
+            "platformLock": "Alleen Gripello kan het weer zichtbaar maken.",
+            "declineGone": "De video wordt niet gepubliceerd en meteen verwijderd.",
+            "authorAll": "Alle zichtbare inhoud van deze persoon wordt in één keer verborgen."
+        },
+        "author": {
+            "showAll": "Alles van deze persoon",
+            "hideAll": "Alle inhoud verbergen…",
+            "hideAllConfirm": "Alles verbergen",
+            "suspend": "Schorsen…",
+            "cannotSuspend": "Platformbeheerders en je eigen account kun je hier niet schorsen"
+        },
+        "consequence": {
+            "reports": "Sluit de open melding en informeert de melder. | Sluit {count} open meldingen en informeert de melders.",
+            "author": "De auteur wordt geïnformeerd als je het verbergt.",
+            "pending": "Alleen jij beslist of klimmers deze video zien.",
+            "restore": "Maakt het weer zichtbaar voor klimmers."
+        },
+        "empty": {
+            "decide": "Niets te beslissen",
+            "approval": "Geen uploads in de wacht",
+            "hidden": "Niets verborgen",
+            "history": "Nog niets gecontroleerd",
+            "all": "Niets te beslissen"
+        },
+        "reports": "{count} melding | {count} meldingen",
+        "reportsTitle": "Melding | Meldingen ({count})",
+        "openCases": "{count} open | {count} open",
+        "viewInContext": "In context bekijken",
+        "hiddenByPlatform": "Verborgen door Gripello",
+        "hiddenByGym": "Verborgen door de hal",
+        "keptNote": "Gecontroleerd en zichtbaar gelaten",
+        "waitingTitle": "Wacht op goedkeuring",
+        "new": "Nieuw",
+        "newSinceVisit": "{count} nieuw sinds je laatste bezoek | {count} nieuw sinds je laatste bezoek",
+        "undo": "Ongedaan maken",
+        "saved": "Opgeslagen",
+        "confirmTitle": {
+            "hide": "Deze inhoud verbergen?",
+            "reject": "Deze video afwijzen?"
+        },
+        "confirm": {
+            "hide": "Verbergen",
+            "reject": "Afwijzen"
+        },
+        "authorPosts": "{count} bijdrage | {count} bijdragen",
+        "authorHidden": "{count} verborgen",
+        "decidedElsewhere": "Deze zaak is elders beslist"
     }
 }

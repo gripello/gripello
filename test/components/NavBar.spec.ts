@@ -5,8 +5,15 @@ import NavBar from '~/components/layout/NavBar.vue'
 vi.stubGlobal('useTemplateRef', useTemplateRef)
 vi.stubGlobal('useThemeMode', () => ({ mode: ref('system'), setMode: vi.fn() }))
 vi.stubGlobal('usePermissions', () => ({ can: () => false }))
-vi.stubGlobal('useGym', () => ({ slug: computed(() => 'e2e') }))
+vi.stubGlobal('useGym', () => ({
+    slug: computed(() => 'e2e'),
+    gym: computed(() => ({ name: 'E2E Gym' })),
+}))
 vi.stubGlobal('useSidebar', () => ({ open: ref(false), toggle: vi.fn() }))
+const route = { path: '/e2e/routes', params: { gym: 'e2e' } }
+vi.stubGlobal('useRoute', () => route)
+vi.stubGlobal('routeGymSlug', (params: { gym?: string }) => params.gym ?? '')
+vi.stubGlobal('useFollows', () => ({ requests: ref([]) }))
 
 const UHeader = defineComponent({
     props: { ui: { type: Object, default: () => ({}) } },
@@ -15,6 +22,7 @@ const UHeader = defineComponent({
             h('header', [
                 h('div', { class: props.ui.left }, slots.left?.()),
                 h('div', { class: props.ui.right }, slots.right?.()),
+                slots.bottom?.(),
             ])
     },
 })
@@ -36,6 +44,7 @@ function mountNavBar(loggedIn: boolean) {
                 LayoutGymSwitcher: true,
                 LayoutCommandPalette: true,
                 NotificationsBell: true,
+                UChip: { template: '<span><slot /></span>' },
             },
         },
     })
@@ -70,5 +79,24 @@ describe('NavBar', () => {
 
         expect(wrapper.find('[data-testid="nav-login"]').exists()).toBe(false)
         expect(wrapper.find('notifications-bell-stub').exists()).toBe(true)
+    })
+
+    it('keeps the theme toggle on phones for guests only', () => {
+        const toggle = (loggedIn: boolean) =>
+            mountNavBar(loggedIn)
+                .get('[data-testid="nav-theme-toggle"]')
+                .classes()
+
+        expect(toggle(false)).not.toContain('max-lg:hidden')
+        expect(toggle(true)).toContain('max-lg:hidden')
+    })
+
+    it('shows the sibling sections of the current zone', () => {
+        const wrapper = mountNavBar(true)
+        expect(
+            wrapper
+                .findAll('[data-testid^="section-tab-"]')
+                .map((tab) => tab.attributes('data-testid')),
+        ).toEqual(['section-tab-routes', 'section-tab-map', 'section-tab-home'])
     })
 })
