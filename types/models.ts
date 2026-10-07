@@ -18,6 +18,8 @@ import type {
 import type { GymMap, MapPoint } from '../shared/utils/mapGeometry'
 import type { BoulderBandSetting } from '../shared/utils/gradeReference'
 import type { GymFeatures } from '../shared/utils/featureFlags'
+import type { GymAmenity } from '../shared/utils/gymAmenities'
+import type { GymOpeningHours } from '../shared/utils/openingHours'
 
 export type RecordId = string
 
@@ -247,6 +249,15 @@ export interface GymRecord extends BaseRecord, LegalFields {
     language?: string | null
     features?: GymFeatures | null
     premoderate_betas?: boolean
+    cover_image?: string | null
+    description?: string | null
+    address?: string | null
+    latitude?: number | null
+    longitude?: number | null
+    website_url?: string | null
+    opening_hours?: GymOpeningHours | null
+    hours_note?: string | null
+    amenities?: GymAmenity[] | null
 }
 
 export interface GymStatsRecord extends BaseRecord {

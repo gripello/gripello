@@ -127,6 +127,7 @@ const textSections = [
     'deletion',
     'auditLog',
     'captcha',
+    'map',
     'thirdParties',
 ]
 

@@ -263,6 +263,122 @@
             </UPageCard>
 
             <UPageCard
+                v-if="activeSection === 'info'"
+                id="settings-info"
+                :ui="formCardUi"
+                :title="$t('gymInfo.settings.title')"
+                variant="subtle"
+            >
+                <UFormField
+                    :label="$t('gymInfo.settings.description')"
+                    name="description"
+                    :ui="fieldUi"
+                    class="lg:col-span-2"
+                >
+                    <UTextarea
+                        v-model="copySettings.description"
+                        :maxlength="2000"
+                        :rows="4"
+                        autoresize
+                        class="w-full"
+                        data-testid="settings-info-description"
+                    />
+                </UFormField>
+                <UFormField
+                    :label="$t('gymInfo.settings.address')"
+                    name="address"
+                    :ui="fieldUi"
+                >
+                    <UInput
+                        v-model="copySettings.address"
+                        icon="i-lucide-map-pin"
+                        :maxlength="300"
+                        class="w-full"
+                        :ui="{ trailing: 'pe-1' }"
+                        data-testid="settings-info-address"
+                        @keydown.enter.prevent="locateAddress"
+                    >
+                        <template #trailing>
+                            <UButton
+                                icon="i-lucide-search"
+                                color="neutral"
+                                variant="link"
+                                size="sm"
+                                :label="$t('gymInfo.settings.locate')"
+                                :loading="locating"
+                                :disabled="!copySettings.address.trim()"
+                                data-testid="settings-info-locate"
+                                @click="locateAddress"
+                            />
+                        </template>
+                    </UInput>
+                </UFormField>
+                <UFormField
+                    :label="$t('gymInfo.settings.website')"
+                    name="website_url"
+                    :ui="fieldUi"
+                >
+                    <UInput
+                        v-model="copySettings.website_url"
+                        type="url"
+                        icon="i-lucide-globe"
+                        placeholder="https://"
+                        class="w-full"
+                        data-testid="settings-info-website"
+                    />
+                </UFormField>
+                <UFormField
+                    :label="$t('gymInfo.location')"
+                    :ui="fieldUi"
+                    class="lg:col-span-2"
+                >
+                    <GymLocationMap
+                        :markers="locationMarkers"
+                        draggable
+                        @update:position="movePin"
+                    />
+                </UFormField>
+                <UFormField
+                    :label="$t('gymInfo.hoursTitle')"
+                    name="opening_hours"
+                    :ui="fieldUi"
+                >
+                    <AdminOpeningHoursEditor
+                        v-model="copySettings.opening_hours"
+                    />
+                </UFormField>
+                <UFormField
+                    :label="$t('gymInfo.settings.hoursNote')"
+                    name="hours_note"
+                    :ui="fieldUi"
+                >
+                    <UTextarea
+                        v-model="copySettings.hours_note"
+                        :maxlength="300"
+                        :rows="3"
+                        autoresize
+                        class="w-full"
+                        data-testid="settings-info-hours-note"
+                    />
+                </UFormField>
+                <UFormField
+                    :label="$t('gymInfo.amenitiesTitle')"
+                    :ui="fieldUi"
+                    class="lg:col-span-2"
+                >
+                    <UCheckboxGroup
+                        v-model="copySettings.amenities"
+                        :items="amenityItems"
+                        :ui="{
+                            fieldset:
+                                'grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3',
+                        }"
+                        data-testid="settings-info-amenities"
+                    />
+                </UFormField>
+            </UPageCard>
+
+            <UPageCard
                 v-if="activeSection === 'moderation'"
                 id="settings-moderation"
                 :title="$t('moderation.title')"
@@ -399,6 +515,13 @@
 
 <script setup lang="ts">
 import { hasFeature } from '#shared/utils/featureFlags'
+import { GYM_AMENITY_KEYS, type GymAmenity } from '#shared/utils/gymAmenities'
+import {
+    HOURS_DAYS,
+    isValidOpeningHours,
+    type GymOpeningHours,
+} from '#shared/utils/openingHours'
+import { geocodeAddress, hasLocation, reverseGeocode } from '~/utils/gymInfo'
 import type { Form } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { isValidGymSlug } from '#shared/utils/gymSlug'
@@ -451,6 +574,14 @@ const original = reactive({
     route_grade_system: DEFAULT_ROUTE_GRADE_SYSTEM as string,
     boulder_grade_system: DEFAULT_BOULDER_GRADE_SYSTEM as string,
     premoderate_betas: false,
+    description: '',
+    address: '',
+    latitude: 0,
+    longitude: 0,
+    website_url: '',
+    opening_hours: hoursFrom(null),
+    hours_note: '',
+    amenities: [] as GymAmenity[],
     ...legalFieldsFrom({}),
     ...bandFieldsFrom({}),
 })
@@ -467,10 +598,21 @@ function gradeSystemItems(systems: GradeSystem[]) {
     }))
 }
 
+function hoursFrom(hours: GymOpeningHours | null | undefined) {
+    return Object.fromEntries(
+        HOURS_DAYS.map((day) => [
+            day,
+            (hours?.[day] ?? []).map((interval) => [...interval]),
+        ]),
+    ) as GymOpeningHours
+}
+
 function freshCopy() {
     return {
         ...original,
         previous_slugs: [...original.previous_slugs],
+        opening_hours: hoursFrom(original.opening_hours),
+        amenities: [...original.amenities],
         ...legalFieldsFrom(original),
         ...bandFieldsFrom(original),
     }
@@ -482,6 +624,11 @@ const settingsForm = ref<Form<typeof copySettings> | null>(null)
 function validateSettings(state: typeof copySettings) {
     return validateRules(state, {
         contact_email: [(email) => !email || validEmail(t)(email)],
+        opening_hours: [
+            (hours) =>
+                isValidOpeningHours(hours) ||
+                t('gymInfo.settings.invalidHours'),
+        ],
         ...(props.editSlug && {
             slug: [
                 required(t),
@@ -539,6 +686,14 @@ function fieldsPayload(state: EditableSettings) {
         route_grade_system: state.route_grade_system,
         boulder_grade_system: state.boulder_grade_system,
         premoderate_betas: state.premoderate_betas,
+        description: state.description,
+        address: state.address,
+        latitude: state.latitude,
+        longitude: state.longitude,
+        website_url: state.website_url,
+        opening_hours: state.opening_hours,
+        hours_note: state.hours_note,
+        amenities: state.amenities,
         ...legalPayload(state),
         boulder_bands: state.boulder_bands.map((band) => ({
             ...band,
@@ -570,6 +725,14 @@ function adoptOriginal(rec: GymRecord) {
     original.boulder_grade_system =
         rec.boulder_grade_system || DEFAULT_BOULDER_GRADE_SYSTEM
     original.premoderate_betas = !!rec.premoderate_betas
+    original.description = rec.description ?? ''
+    original.address = rec.address ?? ''
+    original.latitude = rec.latitude ?? 0
+    original.longitude = rec.longitude ?? 0
+    original.website_url = rec.website_url ?? ''
+    original.opening_hours = hoursFrom(rec.opening_hours)
+    original.hours_note = rec.hours_note ?? ''
+    original.amenities = [...(rec.amenities ?? [])]
     Object.assign(original, legalFieldsFrom(rec), bandFieldsFrom(rec))
 }
 
@@ -582,26 +745,8 @@ function adoptRecord(rec: GymRecord | null | undefined) {
         Object.assign(copySettings, { [field]: fresh[field] })
     }
 
-    logoPreview.value = pbFileUrl(rec, rec.page_logo)
-    iconPreview.value = pbFileUrl(rec, rec.page_icon)
-    signPreview.value = pbFileUrl(rec, rec.sign_image)
+    for (const asset of assets) asset.preview.value = asset.stored(rec)
 }
-
-const logoFile = ref<File | null>(null)
-const iconFile = ref<File | null>(null)
-const signFile = ref<File | null>(null)
-
-const logoClear = ref(false)
-const iconClear = ref(false)
-const signClear = ref(false)
-
-const logoInputRef = ref<FileInputRef>(null)
-const iconInputRef = ref<FileInputRef>(null)
-const signInputRef = ref<FileInputRef>(null)
-
-const logoPreview = ref<string | null>(null)
-const iconPreview = ref<string | null>(null)
-const signPreview = ref<string | null>(null)
 
 const { pending: saving, run: runSave } = useAsyncAction()
 
@@ -618,49 +763,121 @@ function onFileChange(event: Event, onSelect: (file: File | null) => void) {
     input.value = ''
 }
 
-const assetFields = computed(() => [
-    {
-        key: 'logo',
-        label: t('settings.assets.logo'),
-        hint: t('settings.assetHints.logo'),
-        accept: 'image/jpeg,image/png,image/svg+xml,image/webp',
-        preview: logoPreview,
-        inputRef: logoInputRef,
-        isDirty: !!logoFile.value || logoClear.value,
-        onSelect: onLogoSelected,
-        onRevert: onLogoRevert,
-        onDelete: onLogoDelete,
-        triggerInput: () => logoInputRef.value?.click(),
-    },
-    {
-        key: 'icon',
-        label: t('settings.assets.icon'),
-        hint: t('settings.assetHints.icon'),
-        accept: '.ico,image/vnd.microsoft.icon,image/x-icon',
-        preview: iconPreview,
-        inputRef: iconInputRef,
-        isDirty: !!iconFile.value || iconClear.value,
-        onSelect: onIconSelected,
-        onRevert: onIconRevert,
-        onDelete: onIconDelete,
-        triggerInput: () => iconInputRef.value?.click(),
-    },
-    {
-        key: 'sign',
-        label: t('settings.assets.sign'),
-        hint: t('settings.assetHints.sign'),
-        accept: 'image/jpeg,image/png,image/svg+xml,image/webp',
-        preview: signPreview,
-        inputRef: signInputRef,
-        isDirty: !!signFile.value || signClear.value,
-        onSelect: onSignSelected,
-        onRevert: onSignRevert,
-        onDelete: onSignDelete,
-        triggerInput: () => signInputRef.value?.click(),
-    },
-])
+const IMAGE_ACCEPT = 'image/jpeg,image/png,image/svg+xml,image/webp'
+
+function assetSlot(
+    key: string,
+    field: 'page_logo' | 'page_icon' | 'sign_image' | 'cover_image',
+    accept: string,
+) {
+    const file = ref<File | null>(null)
+    const clear = ref(false)
+    const inputRef = ref<FileInputRef>(null)
+    const preview = ref<string | null>(null)
+    const stored = (rec: Partial<GymRecord> | null | undefined) =>
+        pbFileUrl(rec, rec?.[field])
+    return {
+        key,
+        field,
+        accept,
+        file,
+        clear,
+        inputRef,
+        preview,
+        stored,
+        reset(rec = settings.value) {
+            file.value = null
+            clear.value = false
+            preview.value = stored(rec)
+        },
+        select(selected: File | null) {
+            file.value = selected
+            clear.value = false
+            preview.value = selected
+                ? URL.createObjectURL(selected)
+                : stored(settings.value)
+        },
+        remove() {
+            clear.value = true
+            preview.value = null
+        },
+    }
+}
+
+const assets = [
+    assetSlot('logo', 'page_logo', IMAGE_ACCEPT),
+    assetSlot(
+        'icon',
+        'page_icon',
+        '.ico,image/vnd.microsoft.icon,image/x-icon',
+    ),
+    assetSlot('sign', 'sign_image', IMAGE_ACCEPT),
+    assetSlot('cover', 'cover_image', 'image/jpeg,image/png,image/webp'),
+]
+
+const assetFields = computed(() =>
+    assets.map((asset) => ({
+        key: asset.key,
+        label: t(`settings.assets.${asset.key}`),
+        hint: t(`settings.assetHints.${asset.key}`),
+        accept: asset.accept,
+        preview: asset.preview,
+        inputRef: asset.inputRef,
+        isDirty: !!asset.file.value || asset.clear.value,
+        onSelect: asset.select,
+        onRevert: () => asset.reset(),
+        onDelete: asset.remove,
+        triggerInput: () => asset.inputRef.value?.click(),
+    })),
+)
 
 const fieldUi = SETTINGS_FIELD_UI
+
+const amenityItems = computed(() =>
+    GYM_AMENITY_KEYS.map((value) => ({
+        value,
+        label: t(`gymInfo.amenities.${value}`),
+    })),
+)
+const locationMarkers = computed(() =>
+    hasLocation(copySettings)
+        ? [
+              {
+                  id: 'gym',
+                  lat: copySettings.latitude,
+                  lng: copySettings.longitude,
+              },
+          ]
+        : [],
+)
+
+function setPosition([lat, lng]: [number, number]) {
+    copySettings.latitude = Number(lat.toFixed(6))
+    copySettings.longitude = Number(lng.toFixed(6))
+}
+
+async function movePin(position: [number, number]) {
+    setPosition(position)
+    const pinned = [copySettings.latitude, copySettings.longitude]
+    const address = await reverseGeocode(position).catch(() => null)
+    const stillPinned =
+        copySettings.latitude === pinned[0] &&
+        copySettings.longitude === pinned[1]
+    if (address && stillPinned) copySettings.address = address
+}
+
+const { pending: locating, run: runLocate } = useAsyncAction()
+function locateAddress() {
+    if (!copySettings.address.trim()) return
+    return runLocate(
+        async () => {
+            const position = await geocodeAddress(copySettings.address)
+            if (!position) throw new Error('not found')
+            setPosition(position)
+        },
+        { error: t('gymInfo.settings.notFound') },
+    )
+}
 const formCardUi = SETTINGS_CARD_UI
 
 const formSections = computed(() => [
@@ -674,7 +891,11 @@ const formSections = computed(() => [
         label: t('settings.organization'),
         icon: 'i-lucide-building-2',
     },
-
+    {
+        id: 'info',
+        label: t('gymInfo.settings.title'),
+        icon: 'i-lucide-info',
+    },
     {
         id: 'grading',
         label: t('settings.grading'),
@@ -714,73 +935,14 @@ const sections = computed(() =>
     ),
 )
 
-function onLogoSelected(file: File | null) {
-    logoFile.value = file
-    logoClear.value = false
-    logoPreview.value = file
-        ? URL.createObjectURL(file)
-        : pbFileUrl(settings.value, settings.value?.page_logo)
-}
-
-function onIconSelected(file: File | null) {
-    iconFile.value = file
-    iconClear.value = false
-    iconPreview.value = file
-        ? URL.createObjectURL(file)
-        : pbFileUrl(settings.value, settings.value?.page_icon)
-}
-
-function onSignSelected(file: File | null) {
-    signFile.value = file
-    signClear.value = false
-    signPreview.value = file
-        ? URL.createObjectURL(file)
-        : pbFileUrl(settings.value, settings.value?.sign_image)
-}
-
-function onLogoRevert() {
-    logoFile.value = null
-    logoClear.value = false
-    logoPreview.value = pbFileUrl(settings.value, settings.value?.page_logo)
-}
-function onLogoDelete() {
-    logoClear.value = true
-    logoPreview.value = null
-}
-
-function onIconRevert() {
-    iconFile.value = null
-    iconClear.value = false
-    iconPreview.value = pbFileUrl(settings.value, settings.value?.page_icon)
-}
-function onIconDelete() {
-    iconClear.value = true
-    iconPreview.value = null
-}
-
-function onSignRevert() {
-    signFile.value = null
-    signClear.value = false
-    signPreview.value = pbFileUrl(settings.value, settings.value?.sign_image)
-}
-function onSignDelete() {
-    signClear.value = true
-    signPreview.value = null
-}
-
 const hasChanges = computed(
     () =>
-        !!(logoFile.value || iconFile.value || signFile.value) ||
-        logoClear.value ||
-        iconClear.value ||
-        signClear.value ||
+        assets.some((asset) => asset.file.value || asset.clear.value) ||
         Object.keys(changedFieldsPayload()).length > 0,
 )
 
 function resetForm() {
-    onLogoRevert()
-    onIconRevert()
-    onSignRevert()
+    for (const asset of assets) asset.reset()
     Object.assign(copySettings, freshCopy())
 }
 
@@ -791,23 +953,16 @@ async function saveSettings() {
     await runSave(
         async () => {
             const payload = changedFieldsPayload()
-            if (logoFile.value) payload.page_logo = logoFile.value
-            else if (logoClear.value) payload.page_logo = null
-            if (iconFile.value) payload.page_icon = iconFile.value
-            else if (iconClear.value) payload.page_icon = null
-            if (signFile.value) payload.sign_image = signFile.value
-            else if (signClear.value) payload.sign_image = null
+            for (const asset of assets) {
+                if (asset.file.value) payload[asset.field] = asset.file.value
+                else if (asset.clear.value) payload[asset.field] = null
+            }
 
             const updated = await pb
                 .collection('gyms')
                 .update<GymRecord>(settings.value!.id, payload)
 
-            logoPreview.value = pbFileUrl(updated, updated.page_logo)
-            iconPreview.value = pbFileUrl(updated, updated.page_icon)
-            signPreview.value = pbFileUrl(updated, updated.sign_image)
-
-            logoFile.value = iconFile.value = signFile.value = null
-            logoClear.value = iconClear.value = signClear.value = false
+            for (const asset of assets) asset.reset(updated)
 
             adoptOriginal(updated)
             Object.assign(copySettings, freshCopy())

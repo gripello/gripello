@@ -11,6 +11,7 @@ export const GYM_COOKIE = 'gym'
 export const EXPORT_COLUMNS_KEY = 'gripello.export-columns'
 export const COMPETITION_SCORES_KEY = 'gripello:competition-scores'
 export const MAP_ROUTE_TYPE_KEY = 'map-route-type'
+export const MAP_CONSENT_KEY = 'gripello-map-consent'
 export const MODERATION_SEEN_KEY = 'gripello.moderation-seen'
 export const SERVICE_WORKER_CACHES = 'gripello-*'
 
@@ -96,6 +97,12 @@ export const CLIENT_STORAGE: ClientStorageEntry[] = [
         name: MAP_ROUTE_TYPE_KEY,
         kind: 'localStorage',
         purpose: 'mapRouteType',
+        duration: 'persistent',
+    },
+    {
+        name: MAP_CONSENT_KEY,
+        kind: 'localStorage',
+        purpose: 'mapConsent',
         duration: 'persistent',
     },
     {

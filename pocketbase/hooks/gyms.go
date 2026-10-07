@@ -90,6 +90,8 @@ func registerGyms(app core.App) {
 	app.OnRecordUpdate("gyms").BindFunc(validateSlug)
 	app.OnRecordCreate("gyms").BindFunc(validateFeatures)
 	app.OnRecordUpdate("gyms").BindFunc(validateFeatures)
+	app.OnRecordCreate("gyms").BindFunc(validateOpeningHours)
+	app.OnRecordUpdate("gyms").BindFunc(validateOpeningHours)
 
 	app.OnRecordCreateRequest("gyms").BindFunc(func(e *core.RecordRequestEvent) error {
 		if !e.HasSuperuserAuth() {

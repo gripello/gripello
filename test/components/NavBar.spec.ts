@@ -97,6 +97,11 @@ describe('NavBar', () => {
             wrapper
                 .findAll('[data-testid^="section-tab-"]')
                 .map((tab) => tab.attributes('data-testid')),
-        ).toEqual(['section-tab-routes', 'section-tab-map', 'section-tab-home'])
+        ).toEqual([
+            'section-tab-routes',
+            'section-tab-map',
+            'section-tab-info',
+            'section-tab-home',
+        ])
     })
 })

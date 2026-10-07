@@ -17,6 +17,17 @@
                         >{{ $t('overview.allRoutes') }} ›</NuxtLink
                     >
                 </p>
+                <UButton
+                    v-if="openLabel"
+                    :to="gymPath('/info')"
+                    :color="openNow?.open ? 'success' : 'neutral'"
+                    variant="soft"
+                    size="sm"
+                    icon="i-lucide-clock"
+                    :label="openLabel"
+                    class="mt-2"
+                    data-testid="overview-open-status"
+                />
             </div>
         </header>
 
@@ -185,6 +196,10 @@ const { orgName } = useOrgSettings()
 const { tickedRouteIds } = useTickedRoutes()
 const { routeGradeSystem, boulderGradeSystem } = useGradeSystems()
 const isLoggedIn = computed(() => pb.authStore.isValid)
+const { gym } = useGym()
+const { status: openNow, label: openLabel } = useOpenStatus(
+    () => gym.value?.opening_hours,
+)
 
 useSeoMeta({
     title: () => t('page.title.overview'),

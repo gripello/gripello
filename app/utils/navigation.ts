@@ -133,6 +133,13 @@ export const NAV_ITEMS: NavItem[] = [
         label: 'routes.map',
     },
     {
+        key: 'info',
+        zone: 'gym',
+        to: '/info',
+        icon: 'i-lucide-info',
+        label: 'routes.info',
+    },
+    {
         key: 'feed',
         zone: 'community',
         to: '/feed',
@@ -485,7 +492,7 @@ export function bottomNavLinks(
 }
 
 const SECTION_TABS: Record<Zone, string[]> = {
-    gym: ['/routes', '/map', '/'],
+    gym: ['/routes', '/map', '/info', '/'],
     community: ['/feed', '/leaderboard', '/competitions', '/friends'],
     you: [],
 }

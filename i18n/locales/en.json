@@ -176,7 +176,8 @@
         "rated": "Has reviews",
         "leaderboard": "Leaderboard",
         "friends": "Friends",
-        "feed": "Feed"
+        "feed": "Feed",
+        "info": "Info"
     },
     "dashboard": {
         "online": "{0} online"
@@ -589,7 +590,7 @@
             },
             "thirdParties": {
                 "title": "No tracking, no third parties",
-                "body": "We do not use analytics, advertising, social media plugins or tracking, and the app loads no fonts, scripts or other resources from third-party servers. We do not sell your data or use it for profiling or automated decisions with legal or similarly significant effects. The only external services involved are the push service of your browser vendor, if you turn on push notifications, and video platforms you choose to open yourself from a beta video link (see the sections above)."
+                "body": "We do not use analytics, advertising, social media plugins or tracking, and the app loads no fonts, scripts or other resources from third-party servers. We do not sell your data or use it for profiling or automated decisions with legal or similarly significant effects. The only external services involved are the push service of your browser vendor, if you turn on push notifications, and video platforms you choose to open yourself from a beta video link (see the sections above). Maps are only loaded from OpenStreetMap after you choose to show them (see Maps)."
             },
             "storage": {
                 "title": "Cookies and local storage",
@@ -608,6 +609,10 @@
                     "withdrawal": "Right to withdraw consent at any time, without affecting processing before the withdrawal (Art. 7(3) GDPR)"
                 },
                 "complaint": "You also have the right to complain to a data protection supervisory authority, in particular in the EU country where you live or work or where the alleged infringement took place (Art. 77 GDPR). In the UK you can complain to the Information Commissioner's Office (ico.org.uk); in Ireland to the Data Protection Commission (dataprotection.ie)."
+            },
+            "map": {
+                "title": "Maps",
+                "body": "Maps on gym pages are only loaded after you select Show map. Your browser then requests map tiles from the OpenStreetMap Foundation (UK), which receives your IP address and browser details (Art. 6(1)(a) GDPR, your consent). We remember the choice on your device; clear the site data to withdraw it. Staff who look up a gym address or move the map pin in the settings send that address or the pin coordinates to OpenStreetMap Nominatim."
             }
         },
         "storage": {
@@ -635,7 +640,8 @@
                 "recentGyms": "Lists the gyms you visited recently on the start page",
                 "mapRouteType": "Remembers whether the map shows boulders or routes",
                 "offlinePages": "Keeps the app shell, public pages, gym data and images available offline",
-                "moderationSeen": "Remembers when you last opened the moderation inbox, to mark new cases"
+                "moderationSeen": "Remembers when you last opened the moderation inbox, to mark new cases",
+                "mapConsent": "Remembers that you chose to load maps"
             },
             "durations": {
                 "session": "Until sign-out",
@@ -901,7 +907,8 @@
         "assets": {
             "logo": "App logo",
             "icon": "Browser icon",
-            "sign": "Logo on route labels"
+            "sign": "Logo on route labels",
+            "cover": "Cover image"
         },
         "grading": "Grading scales",
         "routeGradeSystem": "Route scale",
@@ -916,7 +923,8 @@
         "assetHints": {
             "logo": "PNG, JPG, SVG or WebP. Shown in the navigation bar.",
             "icon": "ICO file shown in the browser tab.",
-            "sign": "PNG, JPG, SVG or WebP. Printed on route labels."
+            "sign": "PNG, JPG, SVG or WebP. Printed on route labels.",
+            "cover": "PNG, JPG or WebP. Shown at the top of the gym info page."
         },
         "boulderBands": "Boulder colors",
         "boulderBandsHint": "Shown as a color bar next to boulder grades and on printed signs. Drag the handles to move where a color ends; select a color to rename, recolor, split or remove it.",
@@ -1886,7 +1894,9 @@
         "myGyms": "My gyms",
         "recent": "Recently visited",
         "allGyms": "All gyms",
-        "empty": "No gyms found"
+        "empty": "No gyms found",
+        "openGym": "Go to gym",
+        "showOnMap": "Show on map"
     },
     "gym": {
         "notFound": "This gym does not exist or is not active."
@@ -2353,5 +2363,63 @@
         "authorPosts": "{count} post | {count} posts",
         "authorHidden": "{count} hidden",
         "decidedElsewhere": "This case was decided elsewhere"
+    },
+    "gymInfo": {
+        "title": "{name} · Info",
+        "empty": "The gym has not added any information yet.",
+        "location": "Location",
+        "amenitiesTitle": "Facilities",
+        "hoursTitle": "Opening hours",
+        "holiday": "Public holidays",
+        "closed": "Closed",
+        "openUntil": "Open until {time}",
+        "opensAt": "Opens at {time}",
+        "opensOn": "Opens {day} {time}",
+        "contact": "Contact",
+        "directions": {
+            "osm": "OpenStreetMap",
+            "google": "Google Maps",
+            "apple": "Apple Maps",
+            "route": "Directions",
+            "other": "Other map apps"
+        },
+        "map": {
+            "show": "Show map",
+            "consent": "Loads map tiles from {provider}, which receives your IP address."
+        },
+        "amenities": {
+            "toilets": "Toilets",
+            "showers": "Showers",
+            "changing_rooms": "Changing rooms",
+            "lockers": "Lockers",
+            "cafe": "Café",
+            "shop": "Shop",
+            "rental": "Gear rental",
+            "parking": "Parking",
+            "bike_parking": "Bike parking",
+            "public_transport": "Public transport",
+            "kids_area": "Kids area",
+            "training_area": "Training area",
+            "outdoor_area": "Outdoor area",
+            "yoga": "Yoga",
+            "sauna": "Sauna",
+            "wheelchair": "Wheelchair access",
+            "wifi": "Wi-Fi"
+        },
+        "settings": {
+            "title": "Gym info",
+            "description": "Description",
+            "address": "Address",
+            "locate": "Find",
+            "website": "Website",
+            "hoursNote": "Note on opening hours",
+            "invalidHours": "Enter a start and end time for every interval.",
+            "notFound": "Address not found",
+            "opens": "opens",
+            "closes": "closes",
+            "addInterval": "Add hours",
+            "removeInterval": "Remove hours",
+            "copyMonday": "Copy Monday to Tue–Fri"
+        }
     }
 }

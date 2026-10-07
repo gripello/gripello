@@ -176,7 +176,8 @@
         "rated": "Tiene valoraciones",
         "leaderboard": "Clasificación",
         "friends": "Amigos",
-        "feed": "Novedades"
+        "feed": "Novedades",
+        "info": "Info"
     },
     "dashboard": {
         "online": "{0} en línea"
@@ -589,7 +590,7 @@
             },
             "thirdParties": {
                 "title": "Sin seguimiento ni terceros",
-                "body": "Esta aplicación no utiliza herramientas de análisis, publicidad ni complementos de redes sociales y no carga recursos de servidores de terceros. Todos los datos se tratan en nuestros propios servidores situados en la Unión Europea. Solo puede haber transferencias a terceros países si activas las notificaciones push (servicio push del fabricante del navegador) o abres tú mismo un enlace de vídeo de beta (consulta las secciones anteriores)."
+                "body": "Esta aplicación no utiliza herramientas de análisis, publicidad ni complementos de redes sociales y no carga recursos de servidores de terceros. Todos los datos se tratan en nuestros propios servidores situados en la Unión Europea. Solo puede haber transferencias a terceros países si activas las notificaciones push (servicio push del fabricante del navegador) o abres tú mismo un enlace de vídeo de beta (consulta las secciones anteriores). Los mapas solo se cargan desde OpenStreetMap si eliges mostrarlos (consulta Mapas)."
             },
             "storage": {
                 "title": "Cookies y almacenamiento local",
@@ -608,6 +609,10 @@
                     "withdrawal": "Derecho a retirar el consentimiento en cualquier momento, sin que ello afecte a la licitud del tratamiento anterior (art. 7, apartado 3, del RGPD)"
                 },
                 "complaint": "También tienes derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (AEPD, www.aepd.es, art. 77 del RGPD) o ante la autoridad de control de tu lugar de residencia."
+            },
+            "map": {
+                "title": "Mapas",
+                "body": "Los mapas de las páginas de rocódromos solo se cargan después de elegir Mostrar mapa. Tu navegador solicita entonces teselas a la OpenStreetMap Foundation (Reino Unido), que recibe tu dirección IP y datos del navegador (art. 6.1.a RGPD, tu consentimiento). Guardamos la elección en tu dispositivo; borra los datos del sitio para retirarla. El personal que busca la dirección de un rocódromo o mueve el marcador del mapa en los ajustes envía esa dirección o las coordenadas a OpenStreetMap Nominatim."
             }
         },
         "storage": {
@@ -635,7 +640,8 @@
                 "recentGyms": "Muestra en la página de inicio los rocódromos visitados recientemente",
                 "mapRouteType": "Recuerda si el mapa muestra bloques o vías",
                 "offlinePages": "Mantiene disponibles sin conexión la estructura de la aplicación, las páginas públicas, los datos del rocódromo y las imágenes",
-                "moderationSeen": "Recuerda cuándo abriste la moderación por última vez para marcar casos nuevos"
+                "moderationSeen": "Recuerda cuándo abriste la moderación por última vez para marcar casos nuevos",
+                "mapConsent": "Recuerda que elegiste cargar mapas"
             },
             "durations": {
                 "session": "Hasta cerrar sesión",
@@ -901,7 +907,8 @@
         "assets": {
             "logo": "Logo de la app",
             "icon": "Icono del navegador",
-            "sign": "Logo en las etiquetas de vías"
+            "sign": "Logo en las etiquetas de vías",
+            "cover": "Imagen de portada"
         },
         "grading": "Escalas de grados",
         "routeGradeSystem": "Escala de vías",
@@ -916,7 +923,8 @@
         "assetHints": {
             "logo": "PNG, JPG, SVG o WebP. Se muestra en la barra de navegación.",
             "icon": "Archivo ICO que se muestra en la pestaña del navegador.",
-            "sign": "PNG, JPG, SVG o WebP. Se imprime en las etiquetas de vías."
+            "sign": "PNG, JPG, SVG o WebP. Se imprime en las etiquetas de vías.",
+            "cover": "PNG, JPG o WebP. Arriba en la página de info del rocódromo."
         },
         "boulderBands": "Colores de bloque",
         "boulderBandsHint": "Se muestra como barra de color junto a los grados de bloque y en las etiquetas impresas. Arrastra los tiradores para mover dónde termina un color; selecciona un color para renombrarlo, cambiarlo, dividirlo o quitarlo.",
@@ -1886,7 +1894,9 @@
         "myGyms": "Mis rocódromos",
         "recent": "Visitados recientemente",
         "allGyms": "Todos los rocódromos",
-        "empty": "No se encontraron rocódromos"
+        "empty": "No se encontraron rocódromos",
+        "openGym": "Ir al rocódromo",
+        "showOnMap": "Mostrar en el mapa"
     },
     "gym": {
         "notFound": "Este rocódromo no existe o no está activo."
@@ -2353,5 +2363,63 @@
         "authorPosts": "{count} publicación | {count} publicaciones",
         "authorHidden": "{count} oculta | {count} ocultas",
         "decidedElsewhere": "Este caso se decidió en otro lugar"
+    },
+    "gymInfo": {
+        "title": "{name} · Info",
+        "empty": "El rocódromo aún no ha añadido información.",
+        "location": "Ubicación",
+        "amenitiesTitle": "Instalaciones",
+        "hoursTitle": "Horario",
+        "holiday": "Festivos",
+        "closed": "Cerrado",
+        "openUntil": "Abierto hasta las {time}",
+        "opensAt": "Abre a las {time}",
+        "opensOn": "Abre el {day} a las {time}",
+        "contact": "Contacto",
+        "directions": {
+            "osm": "OpenStreetMap",
+            "google": "Google Maps",
+            "apple": "Apple Mapas",
+            "route": "Cómo llegar",
+            "other": "Otras apps de mapas"
+        },
+        "map": {
+            "show": "Mostrar mapa",
+            "consent": "Carga teselas de mapa de {provider}, que recibe tu dirección IP."
+        },
+        "amenities": {
+            "toilets": "Aseos",
+            "showers": "Duchas",
+            "changing_rooms": "Vestuarios",
+            "lockers": "Taquillas",
+            "cafe": "Cafetería",
+            "shop": "Tienda",
+            "rental": "Alquiler de material",
+            "parking": "Aparcamiento",
+            "bike_parking": "Aparcabicis",
+            "public_transport": "Transporte público",
+            "kids_area": "Zona infantil",
+            "training_area": "Zona de entrenamiento",
+            "outdoor_area": "Zona exterior",
+            "yoga": "Yoga",
+            "sauna": "Sauna",
+            "wheelchair": "Accesible en silla de ruedas",
+            "wifi": "Wi-Fi"
+        },
+        "settings": {
+            "title": "Info del rocódromo",
+            "description": "Descripción",
+            "address": "Dirección",
+            "locate": "Buscar",
+            "website": "Sitio web",
+            "hoursNote": "Nota sobre el horario",
+            "invalidHours": "Indica una hora de inicio y fin para cada franja.",
+            "notFound": "Dirección no encontrada",
+            "opens": "abre",
+            "closes": "cierra",
+            "addInterval": "Añadir franja",
+            "removeInterval": "Quitar franja",
+            "copyMonday": "Copiar lunes a mar–vie"
+        }
     }
 }
