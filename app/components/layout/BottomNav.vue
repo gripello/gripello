@@ -154,8 +154,6 @@ const items = computed<NavigationMenuItem[]>(() =>
     border-radius: 9999px;
     background: var(--ui-primary);
     color: var(--ui-bg);
-    box-shadow: 0 6px 16px
-        color-mix(in oklab, var(--ui-primary) 35%, transparent);
 }
 
 .bottom-nav__label {

@@ -97,7 +97,7 @@
             --app-bottom-inset: env(safe-area-inset-bottom, 0px);
         }
         :root:has([data-section-tabs]) {
-            --app-top: 104px;
+            --app-top: 109px;
         }
     }
 

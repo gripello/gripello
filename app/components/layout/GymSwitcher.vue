@@ -14,11 +14,8 @@
             variant="ghost"
             :block="!collapsed"
             :square="collapsed"
-            class="min-w-0 data-[state=open]:bg-elevated"
-            :class="[
-                collapsed ? 'mx-auto p-1' : 'justify-start gap-2 p-1.5',
-                currentGym && 'rounded-md bg-elevated/60 ring ring-default',
-            ]"
+            class="min-w-0 rounded-md bg-elevated/60 ring ring-default data-[state=open]:bg-elevated"
+            :class="collapsed ? 'mx-auto p-1' : 'justify-start gap-2 p-1.5'"
             :aria-label="
                 currentGym ? `${title} · ${t('nav.allGyms')}` : t('nav.allGyms')
             "
@@ -71,7 +68,7 @@
             </UBadge>
             <span
                 v-if="!collapsed && currentGym"
-                class="line-clamp-2 min-w-0 flex-1 text-start text-sm leading-tight font-semibold break-words text-highlighted"
+                class="line-clamp-2 min-w-0 flex-1 text-start text-sm leading-4 font-semibold break-words text-highlighted"
                 data-testid="gym-switcher-name"
             >
                 {{ title }}
@@ -223,7 +220,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
 
 <style scoped>
 .gym-switcher__custom {
-    max-height: 36px;
+    max-height: 32px;
 }
 
 .gym-switcher__brand {

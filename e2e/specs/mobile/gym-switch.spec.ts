@@ -29,3 +29,17 @@ test('climbers switch gyms from the header', async ({ page, root }) => {
         await root.collection('gyms').delete(other.id)
     }
 })
+
+test('the switcher keeps its tile and height with and without a gym', async ({
+    page,
+}) => {
+    const switcher = page.locator('[data-testid="gym-switcher"]:visible')
+    await gotoSettled(page, '/')
+    await expect(switcher).toHaveClass(/\bring\b/)
+    const defaultHeight = (await switcher.boundingBox())!.height
+
+    await gotoSettled(page, gymPath('/routes'))
+    await expect(switcher.getByTestId('gym-switcher-name')).toBeVisible()
+    await expect(switcher).toHaveClass(/\bring\b/)
+    expect((await switcher.boundingBox())!.height).toBe(defaultHeight)
+})

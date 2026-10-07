@@ -92,7 +92,7 @@
                 :title="t('leaderboard.empty')"
                 data-testid="leaderboard-empty"
             />
-            <div v-else class="grid gap-6 lg:grid-cols-5">
+            <div v-else class="grid grid-cols-1 gap-6 lg:grid-cols-5">
                 <div class="lg:col-span-3">
                     <div
                         v-if="board.me && !meVisible"
