@@ -11,6 +11,8 @@ services:
             PB_SUPERUSER_PASSWORD: changeme123
             # Cache server-rendered public pages for guests this many seconds (0 = off).
             #SSR_CACHE_SECONDS: 5
+            # Server-rendering worker processes (default: half the CPUs or CPU quota, 1 to 8).
+            #NITRO_CLUSTER_WORKERS: 4
             # Mail (SMTP). Uncomment and fill in to enable.
             #PB_SMTP_HOST: smtp.example.com
             #PB_SMTP_PORT: 587

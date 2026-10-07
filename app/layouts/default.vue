@@ -20,12 +20,21 @@
 <script setup lang="ts">
 import type { ClientResponseError, UnsubscribeFunc } from 'pocketbase'
 import type { GymRecord, SettingsRecord } from '~/types/models'
+import { sessionNeedsRefresh } from '~/utils/session'
 
 const hydrated = useHydrated()
 
 const pb = usePocketbase()
 const isLoggedIn = ref(pb.authStore.isValid)
-const { refreshPermissions, memberships } = usePermissions()
+const authRecord = useAuthRecord()
+authRecord.value = pb.authStore.record
+const {
+    refreshPermissions,
+    ensureLoaded,
+    memberships,
+    verifiedUser,
+    authRejected,
+} = usePermissions()
 
 const { data: settingsData } = await useSettingsRecord()
 const { gym } = useGym()
@@ -41,11 +50,13 @@ const refreshSession = async () => {
     try {
         await pb.collection('users').authRefresh()
         isLoggedIn.value = pb.authStore.isValid
+        authRecord.value = pb.authStore.record
     } catch (error) {
         const status = (error as ClientResponseError)?.status
         if (status !== 401 && status !== 403) return
         pb.authStore.clear()
         isLoggedIn.value = false
+        authRecord.value = null
     }
 }
 
@@ -93,17 +104,26 @@ function unsubscribeFromMemberships() {
 async function subscribeToMemberships() {
     unsubscribeFromMemberships()
     if (!pb.authStore.isValid) return
-    unsubMemberships = releaseIfUnmounted(
-        await pb.collection('memberships').subscribe('*', (e) => {
-            if (e.record.user === pb.authStore.record?.id) refreshPermissions()
-        }),
-    )
-    unsubRoles = releaseIfUnmounted(
-        await pb.collection('roles').subscribe('*', (e) => {
-            if (memberships.value.some((m) => m.role === e.record.id))
-                refreshPermissions()
-        }),
-    )
+    const [membershipsSubscription, rolesSubscription] = (
+        await Promise.allSettled([
+            pb.collection('memberships').subscribe('*', (e) => {
+                if (e.record.user === pb.authStore.record?.id)
+                    refreshPermissions()
+            }),
+            pb.collection('roles').subscribe('*', (e) => {
+                if (memberships.value.some((m) => m.role === e.record.id))
+                    refreshPermissions()
+            }),
+        ])
+    ).map((result) => (result.status === 'fulfilled' ? result.value : null))
+    if (!pb.authStore.isValid) {
+        void membershipsSubscription?.().catch(() => {})
+        void rolesSubscription?.().catch(() => {})
+        return
+    }
+    if (membershipsSubscription)
+        unsubMemberships = releaseIfUnmounted(membershipsSubscription)
+    if (rolesSubscription) unsubRoles = releaseIfUnmounted(rolesSubscription)
 }
 
 async function subscribeToGym(gymId: string | undefined) {
@@ -123,16 +143,19 @@ async function subscribeToGym(gymId: string | undefined) {
 async function subscribeToUser(userId: string) {
     unsubUser?.()?.catch?.(() => {})
     unsubUser = null
-    unsubUser = releaseIfUnmounted(
-        await pb.collection('users').subscribe(userId, (e) => {
-            if (e.action === 'delete') {
-                pb.authStore.clear()
-            } else {
-                pb.authStore.save(pb.authStore.token, e.record)
-                isLoggedIn.value = true
-            }
-        }),
-    )
+    const unsubscribe = await pb.collection('users').subscribe(userId, (e) => {
+        if (e.action === 'delete') {
+            pb.authStore.clear()
+        } else {
+            pb.authStore.save(pb.authStore.token, e.record)
+            isLoggedIn.value = true
+        }
+    })
+    if (pb.authStore.record?.id !== userId) {
+        void unsubscribe().catch(() => {})
+        return
+    }
+    unsubUser = releaseIfUnmounted(unsubscribe)
 }
 
 watch(
@@ -142,15 +165,20 @@ watch(
 
 onMounted(async () => {
     try {
-        if (pb.authStore.isValid) {
-            await refreshSession()
+        const userId = pb.authStore.isValid ? pb.authStore.record?.id : ''
+        if (userId && verifiedUser.value?.id === userId) {
+            pb.authStore.save(pb.authStore.token, verifiedUser.value)
+            authRecord.value = pb.authStore.record
         }
-        await refreshPermissions()
-
+        let subscribedUserId = userId
         unsubAuthChange = pb.authStore.onChange((token, record) => {
             isLoggedIn.value = !!token
-            if (token && record?.id) {
-                subscribeToUser(record.id)
+            authRecord.value = token ? record : null
+            const nextUserId = (token && record?.id) || ''
+            if (nextUserId === subscribedUserId) return
+            subscribedUserId = nextUserId
+            if (nextUserId) {
+                subscribeToUser(nextUserId)
                 subscribeToMemberships()
             } else {
                 unsubUser?.()?.catch?.(() => {})
@@ -159,13 +187,20 @@ onMounted(async () => {
             }
         })
 
-        if (pb.authStore.isValid && pb.authStore.record?.id) {
-            await subscribeToUser(pb.authStore.record.id)
-        }
-
-        await subscribeToMemberships()
-
-        await subscribeToGym(gym.value?.id)
+        await Promise.all([
+            userId && subscribeToUser(userId),
+            subscribeToMemberships(),
+            subscribeToGym(gym.value?.id),
+            (async () => {
+                if (
+                    userId &&
+                    (authRejected.value ||
+                        sessionNeedsRefresh(pb.authStore.token))
+                )
+                    await refreshSession()
+                await ensureLoaded()
+            })(),
+        ])
     } catch (error) {
         console.error('Error during initialization:', error)
     }

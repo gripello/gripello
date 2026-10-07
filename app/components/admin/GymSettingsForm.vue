@@ -263,6 +263,25 @@
             </UPageCard>
 
             <UPageCard
+                v-if="activeSection === 'moderation'"
+                id="settings-moderation"
+                :title="$t('moderation.title')"
+                variant="subtle"
+                :ui="formCardUi"
+            >
+                <UFormField
+                    :label="$t('settings.premoderateBetas')"
+                    name="premoderate_betas"
+                    :ui="fieldUi"
+                >
+                    <USwitch
+                        v-model="copySettings.premoderate_betas"
+                        data-testid="settings-premoderate-betas"
+                    />
+                </UFormField>
+            </UPageCard>
+
+            <UPageCard
                 v-if="activeSection === 'grading'"
                 id="settings-grading"
                 :title="$t('settings.grading')"
@@ -379,6 +398,7 @@
 </template>
 
 <script setup lang="ts">
+import { hasFeature } from '#shared/utils/featureFlags'
 import type { Form } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { isValidGymSlug } from '#shared/utils/gymSlug'
@@ -430,6 +450,7 @@ const original = reactive({
     previous_slugs: [] as string[],
     route_grade_system: DEFAULT_ROUTE_GRADE_SYSTEM as string,
     boulder_grade_system: DEFAULT_BOULDER_GRADE_SYSTEM as string,
+    premoderate_betas: false,
     ...legalFieldsFrom({}),
     ...bandFieldsFrom({}),
 })
@@ -517,6 +538,7 @@ function fieldsPayload(state: EditableSettings) {
         previous_slugs: state.previous_slugs,
         route_grade_system: state.route_grade_system,
         boulder_grade_system: state.boulder_grade_system,
+        premoderate_betas: state.premoderate_betas,
         ...legalPayload(state),
         boulder_bands: state.boulder_bands.map((band) => ({
             ...band,
@@ -547,6 +569,7 @@ function adoptOriginal(rec: GymRecord) {
         rec.route_grade_system || DEFAULT_ROUTE_GRADE_SYSTEM
     original.boulder_grade_system =
         rec.boulder_grade_system || DEFAULT_BOULDER_GRADE_SYSTEM
+    original.premoderate_betas = !!rec.premoderate_betas
     Object.assign(original, legalFieldsFrom(rec), bandFieldsFrom(rec))
 }
 
@@ -657,6 +680,15 @@ const formSections = computed(() => [
         label: t('settings.grading'),
         icon: 'i-lucide-trending-up',
     },
+    ...(hasFeature(settings.value, 'beta_videos')
+        ? [
+              {
+                  id: 'moderation',
+                  label: t('moderation.title'),
+                  icon: 'i-lucide-shield-check',
+              },
+          ]
+        : []),
     {
         id: 'urls',
         label: t('settings.publicUrls'),

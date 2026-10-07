@@ -86,10 +86,11 @@
                         >
                             <UIcon
                                 name="i-lucide-star"
+                                mode="svg"
                                 class="size-6"
                                 :class="
                                     star <= (hoverRating ?? form.rating ?? 0)
-                                        ? 'text-amber-500 fill-current'
+                                        ? 'text-amber-500 **:fill-current'
                                         : 'text-dimmed'
                                 "
                             />

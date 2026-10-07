@@ -59,7 +59,8 @@
             "profile": "Perfil",
             "security": "Seguridad",
             "preferences": "Preferencias",
-            "notifications": "Notificaciones"
+            "notifications": "Notificaciones",
+            "privacy": "Privacidad"
         },
         "placeholders": {
             "firstname": "Lucía",
@@ -138,7 +139,8 @@
         "leaveGym": "Salir de {gym}",
         "leaveGymConfirm": "Pierdes tu rol y tu acceso de equipo en este rocódromo. Tu libreta se conserva.",
         "leftGym": "Has salido del rocódromo.",
-        "lastAdmin": "El rocódromo necesita otro administrador antes de que puedas salir."
+        "lastAdmin": "El rocódromo necesita otro administrador antes de que puedas salir.",
+        "changeBanner": "Cambiar banner"
     },
     "routes": {
         "home": "Resumen",
@@ -166,13 +168,15 @@
         "mapEditor": "Editor de plano",
         "mapPlacement": "Colocar vías",
         "scan": "Escanear",
-        "me": "Más",
         "moreActions": "Más acciones",
         "selectedCount": "Seleccionadas: {n}",
         "list": "Vías",
         "competitions": "Competiciones",
         "judge": "Arbitraje",
-        "rated": "Tiene valoraciones"
+        "rated": "Tiene valoraciones",
+        "leaderboard": "Clasificación",
+        "friends": "Amigos",
+        "feed": "Novedades"
     },
     "dashboard": {
         "online": "{0} en línea"
@@ -293,7 +297,9 @@
         "climber_reviews": "Valoraciones",
         "felt": "percibido",
         "perceived_difficulty": "Grado percibido",
-        "loadError": "No se pudieron cargar las valoraciones."
+        "loadError": "No se pudieron cargar las valoraciones.",
+        "deleteOwn": "Eliminar mi reseña",
+        "deleteOwnConfirm": "Tu reseña se eliminará definitivamente."
     },
     "table": {
         "actions": "Acciones",
@@ -327,7 +333,10 @@
         "load_more": "Cargar más",
         "close": "Cerrar",
         "export": "Exportar",
-        "select_route": "Seleccionar {name}"
+        "select_route": "Seleccionar {name}",
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "more": "Más"
     },
     "inventory": {
         "title": "Inventario de vías",
@@ -412,7 +421,8 @@
             "userInviteMail": "Usuario creado, pero no se pudo enviar el correo de invitación.",
             "resetLinkInvalid": "Este enlace para restablecer la contraseña no es válido o ha caducado. Solicita uno nuevo en la página de inicio de sesión.",
             "captcha": "La comprobación antispam ha fallado. Inténtalo de nuevo.",
-            "verificationMail": "Tu cuenta se ha creado, pero no se pudo enviar el correo de verificación. Solicita uno nuevo en la página de inicio de sesión."
+            "verificationMail": "Tu cuenta se ha creado, pero no se pudo enviar el correo de verificación. Solicita uno nuevo en la página de inicio de sesión.",
+            "account_suspended": "Esta cuenta está suspendida."
         },
         "deleteItem": "¿Eliminar este elemento? No se puede deshacer.",
         "deleteMoreItems": "¿Eliminar los elementos seleccionados? No se puede deshacer.",
@@ -457,14 +467,24 @@
                 "task_wish_filed": "Nuevo deseo de vía para {location}",
                 "task_wish_done": "Tu deseo de vía para {location} ya está equipado. ¡Disfrútalo!",
                 "wall_new_routes": "Nuevas vías en {wall}: {count}",
-                "competition_published": "Los resultados de «{competition}» ya están publicados"
+                "competition_published": "Los resultados de «{competition}» ya están publicados",
+                "follow_requested": "{name} quiere seguirte",
+                "follow_accepted": "{name} aceptó tu solicitud",
+                "new_follower": "{name} ahora te sigue",
+                "achievement_earned": "Nuevos logros desbloqueados: {count}",
+                "report_filed_platform": "Contenido denunciado en un rocódromo: «{snippet}»",
+                "moderation_pending": "Un vídeo beta espera aprobación",
+                "content_hidden": "Tu contenido se ha ocultado: {reason}",
+                "beta_approved": "Tu vídeo beta ha sido aprobado",
+                "beta_rejected": "Tu vídeo beta ha sido rechazado: {reason}"
             }
         }
     },
     "filter": {
         "title": "Filtrar",
         "all": "Todos",
-        "archived": "Archivadas"
+        "archived": "Archivadas",
+        "clear": "Quitar filtro"
     },
     "legal": {
         "privacy": "Privacidad",
@@ -485,62 +505,110 @@
             "subtitle": "Información conforme al § 5 DDG"
         },
         "privacyPage": {
+            "subtitle": "Cómo tratamos los datos personales cuando usas esta aplicación.",
             "controllerTitle": "Responsable del tratamiento",
+            "scope": {
+                "title": "Responsables",
+                "body": "Gripello es una aplicación web (también instalable como app) que usan los rocódromos para gestionar sus vías. El rocódromo o club indicado arriba es responsable de sus propias páginas; de las partes que no pertenecen a un rocódromo concreto, como tu cuenta, diario, amigos y perfiles de escalador, lo es el operador de la plataforma. Todos los datos se guardan exclusivamente en servidores propios en la Unión Europea. No usamos servicios de analítica, publicidad ni redes sociales, ni cargamos contenido de servidores externos."
+            },
             "serverLogs": {
                 "title": "Registros del servidor",
-                "body": "Cuando accedes a esta aplicación, el servidor trata datos técnicos como la dirección IP, la fecha y hora, la URL solicitada y el agente de usuario del navegador para entregar la página y protegerla frente a abusos (art. 6, apartado 1, letra f), del RGPD). Los registros de solicitudes se eliminan automáticamente al cabo de poco tiempo (por defecto, 5 días)."
+                "body": "Cuando accedes a esta aplicación, el servidor trata datos técnicos como la dirección IP, la fecha y hora, la URL solicitada y el agente de usuario del navegador para entregar la página y protegerla frente a abusos. Base jurídica: interés legítimo en la seguridad y el funcionamiento del servicio (art. 6, apartado 1, letra f), del RGPD). Los registros de solicitudes se eliminan automáticamente al cabo de poco tiempo (por defecto, 5 días)."
             },
             "accounts": {
                 "title": "Cuentas de usuario",
-                "body": "Los administradores crean las cuentas del personal. Conservamos la dirección de correo electrónico, el nombre de usuario, el nombre y los apellidos, una foto de perfil opcional, tu idioma preferido y el rol asignado para prestar el servicio (art. 6, apartado 1, letra b), del RGPD). Los datos se conservan mientras exista la cuenta; puedes eliminar tu cuenta tú mismo en cualquier momento."
+                "body": "Si el operador permite el registro, puedes crear una cuenta con tu correo electrónico y una contraseña; te enviamos un correo de verificación. Además, la administración de un rocódromo puede añadirte como miembro del personal introduciendo tu correo electrónico, tu nombre y tus apellidos: si aún no tienes cuenta, se crea en ese momento una cuenta sin verificar con esos datos junto con la membresía y recibes un correo para establecer tu contraseña; a una cuenta existente se le añade la membresía directamente. Guardamos la dirección de correo electrónico, el nombre de usuario, el nombre y los apellidos, la contraseña (solo como hash seguro), una foto de perfil y un banner de perfil opcionales, tu idioma, tus preferencias de notificaciones y de privacidad y las paredes que sigues. Los derechos del personal de un rocódromo se derivan de su membresía en ese rocódromo y de su rol. Tu correo electrónico no se muestra a otros escaladores ni al personal de los rocódromos; pueden verlo los administradores de la plataforma y, si denuncias un contenido, la moderación del rocódromo y su dirección de contacto reciben tu nombre y tu correo electrónico (consulta Denuncias de contenido). Base jurídica: ejecución del contrato de uso de la aplicación (art. 6, apartado 1, letra b), del RGPD). Los datos se conservan mientras exista la cuenta; puedes eliminarla tú mismo en cualquier momento en los ajustes."
+            },
+            "privacySettings": {
+                "title": "Ajustes de privacidad",
+                "body": "En Ajustes > Privacidad decides quién puede seguirte (previa aprobación, cualquiera o nadie), si apareces en las clasificaciones de los rocódromos, si tu nombre se muestra en tus valoraciones y si tus encadenes se comparten con tus seguidores. Puedes cambiar estos ajustes en cualquier momento y se aplican de inmediato; las clasificaciones se actualizan con un breve retraso (consulta Clasificaciones)."
+            },
+            "logbook": {
+                "title": "Diario de escalada",
+                "body": "Al registrar un encadene guardamos la vía, el día, el tipo (flash, top o intento), el número de intentos, la hora en que se guardó el registro, una nota privada opcional y el grado de la vía en ese momento. Los usamos para tu diario personal, tus estadísticas y tus logros. Las notas no las ve nadie más. Quién puede ver tus encadenes se explica en Amigos, Perfiles y Clasificaciones. Si no hay conexión, los registros se guardan en tu navegador y se envían cuando vuelves a estar en línea. Base jurídica: ejecución del contrato (art. 6, apartado 1, letra b), del RGPD). Se conservan hasta que los borres o elimines tu cuenta, momento en que se suprimen."
+            },
+            "friends": {
+                "title": "Amigos y seguidores",
+                "body": "Puedes seguir a otras personas y ellas a ti. Tus seguidores ven tus encadenes (vía, grado, tipo, número de intentos, día y hora en que se guardó el registro, nunca las notas) en el feed de amigos y del rocódromo, salvo que desactives Compartir mis encadenes con mis seguidores. Este ajuste no afecta a las clasificaciones. Por defecto, las solicitudes de seguimiento deben ser aprobadas por ti; puedes cambiarlo, rechazar solicitudes y eliminar seguidores en cualquier momento. Las actualizaciones en directo llegan por la conexión de la propia aplicación. Base jurídica: ejecución del contrato (art. 6, apartado 1, letra b), del RGPD). Los seguimientos se suprimen al eliminar la cuenta."
+            },
+            "profiles": {
+                "title": "Perfiles de escaladores",
+                "body": "Las personas con sesión iniciada pueden abrir tu perfil con tu nombre, avatar, banner (si no tienes, se genera uno en el dispositivo de quien lo ve a partir de los colores de tu avatar) y número de seguidores y seguidos. Si en Quién puede seguirme eliges Nadie, solo pueden abrirlo quienes están conectados contigo por un seguimiento aceptado y las personas a las que has enviado una solicitud de seguimiento. Tus estadísticas, tus últimos encadenes y la comparación con sus propias vías encadenadas solo los ven tus seguidores aceptados; tus logros (salvo los relacionados con el grado), cualquiera que pueda abrir tu perfil. Si desactivas Compartir mis encadenes con mis seguidores, tus encadenes, estadísticas, comparación y logros quedan ocultos en tu perfil para todos los demás; las clasificaciones tienen su propio ajuste. La búsqueda de escaladores muestra nombre, avatar y banner de quienes no han elegido Nadie. Los visitantes sin cuenta no ven perfiles ni pueden buscar. Base jurídica: ejecución del contrato (art. 6, apartado 1, letra b), del RGPD). Elige Nadie para dejar de aparecer en la búsqueda."
+            },
+            "leaderboards": {
+                "title": "Clasificaciones",
+                "body": "Las clasificaciones de cada rocódromo, por temporada o de los últimos 60 días, puntúan tus 10 mejores encadenes y muestran tu nombre abreviado (Nombre A.), un identificador interno, tu avatar, posición, puntos, número de encadenes y de flashes y tu grado más difícil. Son públicas, también para visitantes sin cuenta, y no dependen de Compartir mis encadenes con mis seguidores. Se calculan al consultarlas a partir de los diarios, se guardan en caché solo brevemente y no se almacenan de forma permanente. Base jurídica: interés legítimo en un componente comunitario y deportivo (art. 6, apartado 1, letra f), del RGPD). Puedes oponerte en cualquier momento desactivando Mostrarme en las clasificaciones del rocódromo (art. 21 del RGPD); desapareces de las clasificaciones actuales en un minuto aproximadamente y de las temporadas terminadas en unas horas."
             },
             "ratings": {
                 "title": "Valoraciones",
-                "body": "Las valoraciones con estrellas, los votos de grado y los comentarios sobre las vías pueden enviarse sin cuenta y se guardan sin nombre ni dirección IP. Los comentarios son públicos y pueden ser moderados."
+                "body": "Una valoración (estrellas, grado percibido y comentario) está vinculada a tu cuenta. Las demás personas con sesión iniciada ven tu nombre y avatar, salvo que desactives Mostrar mi nombre en mis reseñas; los visitantes sin cuenta nunca ven el autor. Las valoraciones pueden denunciarse y ser retiradas por la moderación del rocódromo. Base jurídica: ejecución del contrato (art. 6, apartado 1, letra b), del RGPD) e interés legítimo en la transparencia entre escaladores (letra f), con derecho de oposición mediante el ajuste Mostrar mi nombre en mis reseñas. Al eliminar tu cuenta, las valoraciones se conservan sin vínculo con ella, es decir, de forma anónima."
             },
-            "reports": {
-                "title": "Denuncias de contenido",
-                "body": "Si denuncias un contenido, tratamos tu nombre, tu dirección de correo electrónico, el motivo de la denuncia y tu explicación para gestionar la denuncia e informarte de la decisión (art. 6, apartado 1, letra c), del RGPD, en relación con el art. 16 del Reglamento de Servicios Digitales). Las denuncias se conservan durante el tiempo necesario para su documentación."
+            "betaVideos": {
+                "title": "Vídeos de beta",
+                "body": "Puedes añadir a una vía un enlace (TikTok, Instagram o YouTube Shorts) o subir un vídeo de hasta 30 MB. Enlaces y vídeos son visibles para todos; tu nombre y avatar, solo para personas con sesión iniciada. Los enlaces nunca se incrustan: no se envía ninguna solicitud a la plataforma hasta que pulses el enlace, y entonces se aplica la política de privacidad de esa plataforma. No incluyas a otras personas identificables sin su consentimiento. Pueden denunciarse y los elimina quien los subió o la moderación del rocódromo. Base jurídica: ejecución del contrato (art. 6, apartado 1, letra b), del RGPD). Se suprimen al eliminar la cuenta."
+            },
+            "achievements": {
+                "title": "Logros",
+                "body": "Nuestro servidor calcula automáticamente logros a partir de tu propia actividad (encadenes, sesiones, valoraciones, vídeos de beta, seguimientos aceptados, avisos de defectos confirmados, participaciones en competiciones y puestos de temporada) y guarda los niveles alcanzados con su fecha. Los logros relacionados con el grado solo los ves tú; los demás se muestran únicamente donde tu perfil es visible y si compartes tus encadenes con tus seguidores. Un aviso en la campana y, si lo has activado, una notificación push te informan de cada logro nuevo; puedes desactivar las notificaciones push del tema Logros. No producen efectos jurídicos ni efectos similares para ti. Base jurídica: ejecución del contrato (art. 6, apartado 1, letra b), del RGPD). Se suprimen al eliminar la cuenta."
+            },
+            "competitions": {
+                "title": "Competiciones",
+                "body": "Si participas en una competición, tratamos tu nombre o nombre para mostrar, año de nacimiento, categoría, dorsal y resultados y, para participantes menores de 16 años, la confirmación de que su madre, padre o tutor legal da su consentimiento. Los resultados son públicos en la página del rocódromo organizador; al inscribirte puedes elegir Ocultarme en los resultados públicos. Base jurídica: ejecución de la inscripción en la competición (art. 6, apartado 1, letra b), del RGPD). Los datos se conservan durante el tiempo necesario para la competición y su documentación y se suprimen cuando el rocódromo elimina la competición o cuando eliminas tu cuenta; el rocódromo puede suprimirlos antes si lo solicitas."
             },
             "defects": {
                 "title": "Avisos de problemas en vías",
-                "body": "Si avisas de un problema en una vía, guardamos el tipo de problema elegido, tu descripción y foto opcionales y —si has iniciado sesión— tu cuenta, para que el equipo pueda reparar la vía y avisarte. No incluyas personas en las fotos. Los avisos se eliminan junto con la vía."
+                "body": "Si avisas de un problema en una vía, guardamos el tipo de problema elegido, tu descripción y foto opcionales y —si has iniciado sesión— tu cuenta, para que el equipo pueda reparar la vía y avisarte. No incluyas personas en las fotos. Base jurídica: interés legítimo en la seguridad de las vías (art. 6, apartado 1, letra f), del RGPD). Los avisos se eliminan junto con la vía; al eliminar tu cuenta se conservan sin vínculo con ella."
+            },
+            "reports": {
+                "title": "Denuncias de contenido",
+                "body": "Si denuncias un contenido, tratamos tu nombre, tu dirección de correo electrónico, el motivo de la denuncia y tu explicación para gestionar la denuncia e informarte de la decisión (art. 6, apartado 1, letra c), del RGPD, en relación con el art. 16 del Reglamento de Servicios Digitales). La moderación del rocódromo y su dirección de contacto reciben tu nombre y tu correo electrónico con la denuncia. La persona cuyo contenido denuncias no sabrá quién eres, salvo que la ley lo exija. Las denuncias se conservan durante el tiempo necesario para su documentación, también si eliminas tu cuenta."
+            },
+            "notifications": {
+                "title": "Notificaciones",
+                "body": "Los avisos que te afectan (p. ej., vías nuevas en paredes que sigues, solicitudes de seguimiento, logros, el estado de un aviso de defecto) se guardan en tu cuenta y se muestran en el centro de notificaciones de la aplicación (art. 6, apartado 1, letra b), del RGPD). En los ajustes de notificaciones puedes desactivar cada tema por separado para las notificaciones push; la campana muestra siempre todos los avisos. Los avisos leídos se eliminan automáticamente a los 30 días, todos los demás a los 90 días y todos al eliminar la cuenta."
+            },
+            "push": {
+                "title": "Notificaciones push",
+                "body": "Las notificaciones push solo se activan si las aceptas en cada dispositivo: guardamos la dirección push y las claves que nos facilita tu navegador y un nombre de dispositivo (navegador y sistema operativo, p. ej., Firefox · Android) junto con tu cuenta y enviamos los avisos a través del servicio push del fabricante del navegador (p. ej., Google, Apple, Mozilla). Estos servicios pueden tratar datos fuera de la UE; solo reciben la dirección push y el contenido cifrado, que no pueden leer. Base jurídica: tu consentimiento (art. 6, apartado 1, letra a), del RGPD, y art. 22, apartado 2, de la LSSI), que puedes retirar en cualquier momento quitando el dispositivo en tus ajustes o revocando el permiso del navegador. Al cerrar sesión o cambiar de usuario en ese dispositivo se cancela la suscripción push del navegador. Eliminamos la dirección guardada cuando quitas el dispositivo en tus ajustes, cuando el servicio push la notifica como caducada o cuando eliminas tu cuenta."
+            },
+            "dataExport": {
+                "title": "Descarga de tus datos",
+                "body": "En los ajustes de la cuenta, Descargar tus datos genera un archivo ZIP con todos los datos vinculados a tu cuenta: perfil, avatar, banner, diario, valoraciones, vídeos de beta, seguimientos, logros, notificaciones, pertenencias a rocódromos, tareas y participaciones en competiciones. Es la forma más rápida de ejercer tus derechos de acceso y portabilidad (arts. 15 y 20 del RGPD). La descarga tiene un límite de solicitudes por hora."
+            },
+            "deletion": {
+                "title": "Eliminación de la cuenta",
+                "body": "Puedes eliminar tu cuenta en los ajustes. Se suprimen la cuenta, el diario, los seguimientos, los vídeos de beta, los logros, las suscripciones push, las notificaciones, las membresías y las inscripciones en competiciones. Se conservan sin vínculo con tu persona las valoraciones y los avisos de defectos o tareas. Las denuncias de contenido conservan el nombre y el correo de quien denuncia porque la normativa exige su tramitación. Cuando la supresión exija bloquear los datos, los mantenemos bloqueados durante los plazos legales de prescripción, a disposición exclusiva de jueces, tribunales y autoridades (art. 32 de la LOPDGDD). Las personas vinculadas al fallecido por razones familiares o de hecho, sus herederos y quienes él haya designado en su testamento digital pueden solicitar el acceso, la rectificación o la supresión de sus datos, salvo que el fallecido lo hubiera prohibido expresamente (art. 3 y art. 96 de la LOPDGDD). Escríbenos al correo del responsable."
             },
             "auditLog": {
                 "title": "Registro de auditoría",
-                "body": "Los cambios, inicios de sesión e intentos fallidos de inicio de sesión del personal se registran con el usuario, la acción y la dirección IP para garantizar la seguridad y la trazabilidad (art. 6, apartado 1, letra f), del RGPD). Las entradas se eliminan automáticamente al cabo de {auditDays} días."
+                "body": "Para garantizar la seguridad y la trazabilidad, registramos cada cambio que cualquier persona hace a través de la aplicación (p. ej., registros del diario, seguimientos, valoraciones, vídeos de beta, avisos de defectos y denuncias de contenido, inscripciones en competiciones y cambios del personal), así como los inicios de sesión, los intentos fallidos (la dirección introducida solo como un hash corto), los restablecimientos de contraseña y los cambios de correo electrónico, con el correo de la cuenta, la acción, el registro afectado y la dirección IP (art. 6, apartado 1, letra f), del RGPD). El personal de un rocódromo con acceso al registro de auditoría ve las entradas de su rocódromo, los administradores de la plataforma todas las entradas y tú las tuyas. Las entradas se eliminan automáticamente al cabo de {auditDays} días."
             },
             "captcha": {
                 "title": "Protección contra spam",
                 "body": "Algunos formularios utilizan una comprobación de prueba de trabajo alojada en nuestro propio servidor que se ejecuta en tu navegador. No se envían datos a terceros ni se instalan cookies de seguimiento."
             },
-            "push": {
-                "title": "Notificaciones push",
-                "body": "Si activas las notificaciones push en un dispositivo, guardamos la dirección push que nos facilita su navegador junto con tu cuenta y enviamos las notificaciones a través del servicio push del fabricante del navegador (p. ej., Google, Apple, Mozilla). La dirección se elimina cuando quitas el dispositivo en tus ajustes de notificaciones, eliminas tu cuenta o cuando el servicio push la notifica como caducada, lo que ocurre después de cerrar sesión en ese dispositivo o de revocar el permiso."
-            },
             "thirdParties": {
                 "title": "Sin seguimiento ni terceros",
-                "body": "Esta aplicación no utiliza herramientas de análisis, publicidad ni complementos de redes sociales y no carga recursos de servidores de terceros. Todos los datos se tratan en nuestro propio servidor. No se realizan transferencias de datos a terceros países."
+                "body": "Esta aplicación no utiliza herramientas de análisis, publicidad ni complementos de redes sociales y no carga recursos de servidores de terceros. Todos los datos se tratan en nuestros propios servidores situados en la Unión Europea. Solo puede haber transferencias a terceros países si activas las notificaciones push (servicio push del fabricante del navegador) o abres tú mismo un enlace de vídeo de beta (consulta las secciones anteriores)."
             },
             "storage": {
                 "title": "Cookies y almacenamiento local",
-                "body": "Solo guardamos en tu dispositivo la información estrictamente necesaria para prestar el servicio que has solicitado (§ 25, apdo. 2, TDDDG). Por ello no se requiere consentimiento. La lista completa:"
+                "body": "Solo guardamos en tu dispositivo la información estrictamente necesaria para prestar el servicio que has solicitado (art. 22, apartado 2, de la LSSI). Por ello no se requiere consentimiento. La lista completa:"
             },
             "rights": {
                 "title": "Tus derechos",
-                "body": "De acuerdo con el RGPD, tienes los siguientes derechos sobre tus datos personales:",
+                "body": "De acuerdo con el RGPD y la LOPDGDD, tienes los siguientes derechos sobre tus datos personales. Puedes ejercerlos escribiendo al responsable; te respondemos en el plazo de un mes. Si no estás conforme con la respuesta, puedes acudir a la autoridad de control.",
                 "items": {
                     "access": "Derecho de acceso (art. 15 del RGPD)",
                     "rectification": "Derecho de rectificación (art. 16 del RGPD)",
                     "erasure": "Derecho de supresión (art. 17 del RGPD)",
                     "restriction": "Derecho a la limitación del tratamiento (art. 18 del RGPD)",
                     "portability": "Derecho a la portabilidad de los datos (art. 20 del RGPD)",
-                    "objection": "Derecho de oposición (art. 21 del RGPD)",
-                    "withdrawal": "Derecho a retirar el consentimiento en cualquier momento (art. 7, apartado 3, del RGPD)"
+                    "objection": "Derecho de oposición al tratamiento basado en el interés legítimo (art. 21 del RGPD)",
+                    "withdrawal": "Derecho a retirar el consentimiento en cualquier momento, sin que ello afecte a la licitud del tratamiento anterior (art. 7, apartado 3, del RGPD)"
                 },
-                "complaint": "También tienes derecho a presentar una reclamación ante una autoridad de control en materia de protección de datos (art. 77 del RGPD)."
-            },
-            "subtitle": "Cómo tratamos los datos personales cuando usas esta aplicación."
+                "complaint": "También tienes derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (AEPD, www.aepd.es, art. 77 del RGPD) o ante la autoridad de control de tu lugar de residencia."
+            }
         },
         "storage": {
             "name": "Nombre",
@@ -550,7 +618,8 @@
             "kinds": {
                 "cookie": "Cookie",
                 "localStorage": "Almacenamiento local",
-                "indexedDB": "Base de datos del navegador (IndexedDB)"
+                "indexedDB": "Base de datos del navegador (IndexedDB)",
+                "cacheStorage": "Caché (service worker)"
             },
             "purposes": {
                 "auth": "Mantiene tu sesión iniciada",
@@ -563,12 +632,16 @@
                 "pushDeclined": "Recuerda que eliminaste las notificaciones push en este dispositivo",
                 "offlineScores": "Guarda las puntuaciones de competición introducidas sin cobertura hasta que se envían",
                 "gym": "Recuerda el último rocódromo que abriste",
-                "recentGyms": "Muestra en la página de inicio los rocódromos visitados recientemente"
+                "recentGyms": "Muestra en la página de inicio los rocódromos visitados recientemente",
+                "mapRouteType": "Recuerda si el mapa muestra bloques o vías",
+                "offlinePages": "Mantiene disponibles sin conexión la estructura de la aplicación, las páginas públicas, los datos del rocódromo y las imágenes",
+                "moderationSeen": "Recuerda cuándo abriste la moderación por última vez para marcar casos nuevos"
             },
             "durations": {
                 "session": "Hasta cerrar sesión",
                 "oneYear": "1 año",
-                "persistent": "Hasta que se elimine en el navegador"
+                "persistent": "Hasta que se elimine en el navegador",
+                "untilUpdate": "Hasta la próxima actualización de la aplicación"
             }
         },
         "gymImprint": "Aviso legal de {name}",
@@ -611,7 +684,11 @@
             "competition": "{name} - Competiciones - Gripello",
             "judge": "Arbitraje - Gripello",
             "competitionRules": "{name} - Reglamento - Gripello",
-            "invite": "Invitación - Gripello"
+            "invite": "Invitación - Gripello",
+            "leaderboard": "Clasificación - Gripello",
+            "friends": "Amigos - Gripello",
+            "climber": "{name} - Gripello",
+            "feed": "Novedades"
         },
         "content": {
             "settings": "Ajustes",
@@ -685,7 +762,16 @@
         "quickNavigation": "Navegación rápida",
         "platform": "Plataforma",
         "allGyms": "Todos los rocódromos…",
-        "manageGyms": "Gestionar rocódromos"
+        "manageGyms": "Gestionar rocódromos",
+        "you": "Tú",
+        "gym": "Rocódromo",
+        "community": "Comunidad",
+        "staffTools": "Herramientas del equipo",
+        "backToClimbing": "Volver a escalar",
+        "staff": "Equipo",
+        "more": "Más",
+        "sections": "Secciones",
+        "noStaffTools": "No tienes herramientas del equipo en este rocódromo"
     },
     "users": {
         "create": "Añadir usuario",
@@ -841,7 +927,8 @@
         "splitBand": "Dividir",
         "bandBoundary": "Límite entre {from} y {to}",
         "defaultLanguage": "Idioma predeterminado",
-        "defaultLanguageHelp": "Se usa por defecto para correos, exportaciones y otras salidas del sistema."
+        "defaultLanguageHelp": "Se usa por defecto para correos, exportaciones y otras salidas del sistema.",
+        "premoderateBetas": "Aprobar los vídeos beta antes de mostrarlos"
     },
     "errors": {
         "notFound": {
@@ -938,7 +1025,8 @@
         "empty": "No hay denuncias",
         "emptyHint": "El contenido denunciado aparecerá aquí para su revisión.",
         "mailWarning": "El correo no está configurado, así que los denunciantes no reciben los acuses de recibo ni las notificaciones de decisión que exige el artículo 16.",
-        "mailWarningAction": "Abrir ajustes"
+        "mailWarningAction": "Abrir ajustes",
+        "reportProfile": "Denunciar perfil"
     },
     "tasks": {
         "pageTitle": "Tareas",
@@ -1191,7 +1279,9 @@
         "tabs": {
             "sessions": "Sesiones",
             "stats": "Estadísticas",
-            "projects": "Proyectos"
+            "projects": "Proyectos",
+            "badges": "Insignias",
+            "timeline": "Cronología"
         },
         "stats": {
             "sends": "Encadenadas",
@@ -1418,8 +1508,6 @@
     },
     "accountSettings": {
         "title": "Ajustes",
-        "avatar": "Avatar",
-        "avatarDescription": "JPG, PNG, SVG o WebP.",
         "language": "Idioma",
         "theme": "Tema",
         "push": {
@@ -1430,7 +1518,12 @@
                 "wish_done": "Mis deseos de vías están equipados",
                 "competition_results": "Resultados de competiciones",
                 "tasks": "Tareas y desperfectos reportados",
-                "reports": "Denuncias de contenido (DSA)"
+                "reports": "Denuncias de contenido (DSA)",
+                "social": "Seguidores y solicitudes",
+                "achievements": "Logros",
+                "platform_reports": "Denuncias de todos los rocódromos",
+                "content": "Moderación de mi contenido",
+                "moderation": "Contenido por revisar"
             },
             "devices": "Dispositivos",
             "thisDevice": "Este dispositivo",
@@ -1441,6 +1534,17 @@
             "unsupported": "No disponible en este navegador",
             "blocked": "Las notificaciones están bloqueadas en los ajustes de tu navegador.",
             "followedWalls": "Paredes que sigues"
+        },
+        "privacy": {
+            "followPolicy": "Quién puede seguirme",
+            "leaderboard": "Mostrarme en las clasificaciones del rocódromo",
+            "policies": {
+                "approve": "Todos, tras mi aprobación",
+                "open": "Todos",
+                "closed": "Nadie"
+            },
+            "reviewName": "Mostrar mi nombre en mis reseñas",
+            "shareSends": "Compartir mis encadenes con mis seguidores"
         }
     },
     "competitions": {
@@ -1805,7 +1909,9 @@
             "venue": "Rocódromo",
             "createdAt": "Creado",
             "open": "Abrir rocódromo",
-            "inactive": "Inactivo"
+            "inactive": "Inactivo",
+            "takeOffline": "Desconectar",
+            "takeOfflineConfirm": "{name} desaparece para los escaladores hasta que lo vuelvas a activar."
         },
         "settings": {
             "title": "Ajustes de la plataforma",
@@ -1820,7 +1926,12 @@
             "memberships": "Membresías",
             "routes": "Vías",
             "admins": "Admins de la plataforma",
-            "dashboard": "Panel de PocketBase"
+            "dashboard": "Panel de PocketBase",
+            "needsYou": "Te necesita",
+            "legalReports": "Denuncias legales abiertas",
+            "staleGyms": "Rocódromos con retraso",
+            "profiles": "Perfiles por revisar",
+            "suspended": "Personas suspendidas"
         },
         "users": {
             "title": "Usuarios",
@@ -1835,7 +1946,36 @@
             "sendPasswordReset": "Enviar email para restablecer la contraseña",
             "passwordResetSent": "Email para restablecer la contraseña enviado.",
             "deleteConfirm": "¿Eliminar a {name} con todos sus datos? No se puede deshacer.",
-            "lastAdmin": "Esta persona es la única admin de un rocódromo. Nombra primero a otra persona admin."
+            "lastAdmin": "Esta persona es la única admin de un rocódromo. Nombra primero a otra persona admin.",
+            "suspend": "Suspender",
+            "suspendUntil": "Suspendida hasta",
+            "liftSuspension": "Levantar la suspensión",
+            "suspendedUntil": "Suspendida hasta {date}",
+            "permanent": "Permanentemente",
+            "suspendedPermanently": "Suspendida permanentemente",
+            "suspendName": "Suspender a {name}",
+            "suspendHowLong": "Cuánto tiempo",
+            "durations": {
+                "week": "7 días",
+                "month": "30 días",
+                "until": "Hasta fecha",
+                "permanent": "Permanentemente"
+            },
+            "suspendReason": "Motivo (se envía a la persona)",
+            "suspendHideContent": "Ocultar también su contenido visible",
+            "suspendEffects": {
+                "signedOut": "Se cierra su sesión en todos los dispositivos y no puede entrar.",
+                "mail": "Recibe un correo con tu motivo y cómo reclamar.",
+                "kept": "Membresías y registro se mantienen; no se borra nada.",
+                "lift": "Puedes levantar la suspensión cuando quieras en Usuarios."
+            },
+            "suspendPermanently": "Suspender permanentemente"
+        },
+        "features": {
+            "title": "Funciones",
+            "flags": {
+                "beta_videos": "Vídeos beta"
+            }
         }
     },
     "mails": {
@@ -1856,7 +1996,8 @@
             "problem": "Problema",
             "route": "Vía",
             "details": "Detalles",
-            "location": "Inicio de sesión"
+            "location": "Inicio de sesión",
+            "until": "Suspendida hasta"
         },
         "verification": {
             "subject": "Confirma tu dirección de correo",
@@ -1914,6 +2055,303 @@
             "body": "Un escalador ha informado de un problema de seguridad. Revisa la vía antes de que se vuelva a escalar.",
             "photo": "La tarea incluye una foto.",
             "action": "Abrir el tablero de tareas"
+        },
+        "contentHidden": {
+            "subject": "Tu contenido se ha ocultado",
+            "body": "Hemos ocultado un contenido que publicaste. Ya no es visible para los demás."
+        },
+        "accountSuspended": {
+            "subject": "Tu cuenta ha sido suspendida",
+            "body": "Tu cuenta ha sido suspendida. No puedes iniciar sesión hasta la fecha indicada abajo."
         }
+    },
+    "leaderboard": {
+        "title": "Clasificación",
+        "season": "Temporada",
+        "rolling": "Últimos 60 días",
+        "rollingWindow": "Desde {from}",
+        "tv": "Vista TV",
+        "empty": "Aún no hay encadenamientos",
+        "anonymous": "Escalador/a",
+        "sends": "{n} encadenamiento | {n} encadenamientos",
+        "youAreHidden": "Estás oculto/a en las clasificaciones",
+        "showMe": "Mostrarme",
+        "seasons": {
+            "title": "Temporadas",
+            "name": "Nombre",
+            "start": "Inicio",
+            "end": "Fin",
+            "add": "Añadir temporada",
+            "deleteConfirm": "¿Eliminar esta temporada? Los ascensos se quedan en los cuadernos.",
+            "endBeforeStart": "El fin debe ser posterior al inicio"
+        },
+        "points": "{n} pts",
+        "stats": {
+            "climbers": "Escaladores",
+            "grades": "Encadenes por grado",
+            "topRoutes": "Las más escaladas"
+        },
+        "standing": {
+            "rank": "Puesto",
+            "score": "Puntos",
+            "ahead": "Para el siguiente puesto",
+            "bestSends": "Mis encadenes puntuados"
+        }
+    },
+    "badges": {
+        "weeks": "{n} semana | {n} semanas",
+        "currentStreak": "Racha actual",
+        "bestStreak": "Mejor racha"
+    },
+    "friends": {
+        "title": "Amigos",
+        "search": "Buscar escaladores",
+        "noResults": "No se encontró a nadie",
+        "tabs": {
+            "feed": "Actividad",
+            "following": "Siguiendo",
+            "followers": "Seguidores",
+            "requests": "Solicitudes"
+        },
+        "feedEmpty": "Aún no hay ascensos de quienes sigues",
+        "empty": {
+            "following": "Aún no sigues a nadie",
+            "followers": "Aún no tienes seguidores",
+            "requests": "No hay solicitudes pendientes"
+        },
+        "follow": "Seguir",
+        "following": "Siguiendo",
+        "requested": "Solicitado",
+        "unfollow": "Dejar de seguir",
+        "unfollowConfirm": "Ya no verás sus ascensos.",
+        "accept": "Aceptar",
+        "decline": "Rechazar",
+        "removeFollower": "Quitar seguidor",
+        "removeFollowerConfirm": "Esa persona ya no verá tus ascensos.",
+        "followerCount": "{n} seguidor | {n} seguidores",
+        "followingCount": "Sigue a {n} | Sigue a {n}",
+        "closedProfile": "Este cuaderno es privado",
+        "requestPending": "Solicitud enviada",
+        "followToSee": "Sigue para ver su cuaderno",
+        "you": "Tú",
+        "onlyTheirs": "Encadenadas por ellos, aún no por ti",
+        "sentByBoth": "Encadenadas por ambos",
+        "privateSends": "Sus encadenes son privados",
+        "myProfile": "Mi perfil",
+        "editProfile": "Editar perfil",
+        "recent": "Ascensos recientes",
+        "block": "Bloquear",
+        "unblock": "Desbloquear",
+        "blockConfirm": "Esta persona ya no podrá seguirte ni encontrarte, y no verás sus reseñas ni sus vídeos beta."
+    },
+    "beta": {
+        "title": "Vídeos de beta",
+        "add": "Añadir beta",
+        "link": "Enlace",
+        "file": "Vídeo",
+        "submit": "Compartir",
+        "added": "Beta compartida",
+        "deleted": "Beta eliminada",
+        "deleteConfirm": "¿Eliminar este vídeo de beta?",
+        "report": "Denunciar este vídeo",
+        "invalidLink": "Usa un enlace de YouTube Shorts, Instagram o TikTok",
+        "fileTooLarge": "Los vídeos pueden tener como máximo {size} MB",
+        "openOn": "Abrir en {platform}",
+        "play": "Reproducir",
+        "pause": "Pausa",
+        "mute": "Silenciar",
+        "unmute": "Activar sonido",
+        "fullscreen": "Pantalla completa",
+        "seek": "Posición de reproducción",
+        "drop": "Suelta un vídeo o elige uno",
+        "chooseOther": "Elegir otro",
+        "awaitingApproval": "Tu vídeo está pendiente de aprobación por el rocódromo"
+    },
+    "feed": {
+        "title": "Novedades",
+        "someone": "Alguien",
+        "newRoutes": "Rutas nuevas",
+        "activity": "Encadenes de tus amigos",
+        "signInForFriends": "Inicia sesión para seguir los encadenes de tus amigos",
+        "noNewRoutes": "No hay rutas nuevas en los últimos 30 días",
+        "today": "Hoy",
+        "yesterday": "Ayer"
+    },
+    "timeline": {
+        "filters": {
+            "all": "Todo",
+            "send": "Encadenes",
+            "review": "Reseñas",
+            "beta": "Betas"
+        },
+        "empty": "Aún no hay nada",
+        "beta": "Vídeo beta",
+        "deleted": "Vía eliminada"
+    },
+    "achievements": {
+        "categories": {
+            "progress": "Progreso",
+            "volume": "Volumen",
+            "style": "Estilo",
+            "rhythm": "Ritmo",
+            "exploration": "Exploración",
+            "fresh": "Vías nuevas",
+            "community": "Comunidad",
+            "competition": "Competiciones"
+        },
+        "names": {
+            "sends": "Encadenes",
+            "sessions": "Sesiones",
+            "flashes": "Flashes",
+            "flash_grades": "Rango de flash",
+            "personal_bests": "Récords personales",
+            "grade_ladder": "Escalera de grados",
+            "pyramid": "Pirámide",
+            "project": "Proyecto",
+            "active_weeks": "Semanas activas",
+            "perfect_months": "Meses perfectos",
+            "welcome_back": "Bienvenida de vuelta",
+            "walls": "Explorador de muros",
+            "colors": "Arcoíris",
+            "gyms": "Turista de rocódromos",
+            "all_rounder": "Todoterreno",
+            "set_sweeper": "Cazanovedades",
+            "first_ascents": "Primeras ascensiones",
+            "wall_clears": "Muro completo",
+            "before_strip": "Antes del desmontaje",
+            "reviews": "Reseñista",
+            "betas": "Comparte betas",
+            "friends": "Conectado",
+            "helper": "Colaborador",
+            "competitions": "Competidor",
+            "season_top10": "Top 10 de temporada"
+        },
+        "rules": {
+            "sends": "Encadena {n} vía distinta | Encadena {n} vías distintas",
+            "sessions": "Escala en {n} días distintos",
+            "flashes": "Haz flash en {n} vía | Haz flash en {n} vías",
+            "flash_grades": "Haz flash en {n} grados distintos",
+            "personal_bests": "Supera tu encadene más difícil {n} vez | Supera tu encadene más difícil {n} veces",
+            "grade_ladder": "Encadena en {n} grados distintos",
+            "pyramid": "1 en tu grado máximo, 2 uno por debajo, 4 dos por debajo",
+            "project": "Encadena una vía tras {n} intentos",
+            "active_weeks": "Escala {n} semanas seguidas: una semana de descanso vale",
+            "perfect_months": "Escala cada semana durante {n} mes | Escala cada semana durante {n} meses",
+            "welcome_back": "Vuelve tras tres semanas de pausa",
+            "walls": "Encadena en {n} muros de un rocódromo",
+            "colors": "Encadena vías de {n} colores de presas",
+            "gyms": "Escala en {n} rocódromos",
+            "all_rounder": "Encadena bloques y vías",
+            "set_sweeper": "Encadena {n} vías en su primera semana",
+            "first_ascents": "Sé quien encadena primero {n} vía | Sé quien encadena primero {n} vías",
+            "wall_clears": "Encadena todas las vías de {n} muro | Encadena todas las vías de {n} muros",
+            "before_strip": "Encadena {n} vía en su última semana | Encadena {n} vías en su última semana",
+            "reviews": "Escribe {n} reseña | Escribe {n} reseñas",
+            "betas": "Comparte {n} vídeo beta | Comparte {n} vídeos beta",
+            "friends": "Ten {n} amigo | Ten {n} amigos",
+            "helper": "Informa de {n} problema que se arregla | Informa de {n} problemas que se arreglan",
+            "competitions": "Participa en {n} competición | Participa en {n} competiciones",
+            "season_top10": "Termina {n} temporada en el top 10 | Termina {n} temporadas en el top 10"
+        },
+        "unlocked": "Logro desbloqueado: {name}",
+        "more": "y {n} más"
+    },
+    "moderation": {
+        "title": "Moderación",
+        "reviewStats": "Estadísticas de reseñas",
+        "moderate": "Moderar",
+        "filterType": "Contenido",
+        "filterGym": "Rocódromo",
+        "views": {
+            "decide": "Por decidir",
+            "approval": "Pendiente de aprobación",
+            "hidden": "Oculto",
+            "history": "Revisado",
+            "all": "Todos los rocódromos"
+        },
+        "types": {
+            "rating": "Reseña",
+            "beta_video": "Vídeo beta",
+            "profile": "Perfil",
+            "competition_entry": "Nombre de competición",
+            "task": "Defecto / deseo",
+            "route": "Vía"
+        },
+        "states": {
+            "unreviewed": "Por decidir",
+            "approved": "Revisado",
+            "pending": "Pendiente de aprobación",
+            "hidden": "Oculto"
+        },
+        "actions": {
+            "keep": "Dejar visible",
+            "publish": "Publicar vídeo",
+            "reject": "Rechazar…",
+            "hide": "Ocultar…",
+            "restore": "Volver a mostrar"
+        },
+        "done": {
+            "approve": "Sigue visible",
+            "publish": "Vídeo publicado",
+            "reject": "Vídeo rechazado",
+            "hide": "Oculto",
+            "restore": "Visible de nuevo",
+            "hideAll": "{count} contenido oculto | {count} contenidos ocultos"
+        },
+        "decision": {
+            "why": "¿Por qué? (se envía al autor)",
+            "explanation": "Explicación",
+            "whatHappens": "Qué ocurre",
+            "hiddenNow": "Los escaladores ya no lo ven.",
+            "authorInformed": "El autor recibe tu motivo y cómo reclamar.",
+            "reportersInformed": "Quien denunció recibe la decisión. | {count} denunciantes reciben la decisión.",
+            "restorable": "En Oculto puedes volver a mostrarlo durante 180 días.",
+            "platformLock": "Solo Gripello puede volver a mostrarlo.",
+            "declineGone": "El vídeo no se publica y se borra de inmediato.",
+            "authorAll": "Todo el contenido visible de esta persona se oculta de una vez."
+        },
+        "author": {
+            "showAll": "Todo de esta persona",
+            "hideAll": "Ocultar todo su contenido…",
+            "hideAllConfirm": "Ocultar todo",
+            "suspend": "Suspender…",
+            "cannotSuspend": "Los administradores de la plataforma y tu propia cuenta no se pueden suspender aquí"
+        },
+        "consequence": {
+            "reports": "Cierra la denuncia abierta e informa a quien denunció. | Cierra {count} denuncias abiertas e informa a los denunciantes.",
+            "author": "El autor recibe aviso si lo ocultas.",
+            "pending": "Solo tú decides si los escaladores ven este vídeo.",
+            "restore": "Lo vuelve a mostrar a los escaladores."
+        },
+        "empty": {
+            "decide": "Nada por decidir",
+            "approval": "Ninguna subida pendiente",
+            "hidden": "Nada oculto",
+            "history": "Nada revisado todavía",
+            "all": "Nada por decidir"
+        },
+        "reports": "{count} denuncia | {count} denuncias",
+        "reportsTitle": "Denuncia | Denuncias ({count})",
+        "openCases": "{count} abierto | {count} abiertos",
+        "viewInContext": "Ver en contexto",
+        "hiddenByPlatform": "Ocultado por Gripello",
+        "hiddenByGym": "Ocultado por el rocódromo",
+        "keptNote": "Revisado y visible",
+        "waitingTitle": "Pendiente de aprobación",
+        "new": "Nuevo",
+        "newSinceVisit": "{count} nuevo desde tu última visita | {count} nuevos desde tu última visita",
+        "undo": "Deshacer",
+        "saved": "Guardado",
+        "confirmTitle": {
+            "hide": "¿Ocultar este contenido?",
+            "reject": "¿Rechazar este vídeo?"
+        },
+        "confirm": {
+            "hide": "Ocultar",
+            "reject": "Rechazar"
+        },
+        "authorPosts": "{count} publicación | {count} publicaciones",
+        "authorHidden": "{count} oculta | {count} ocultas",
+        "decidedElsewhere": "Este caso se decidió en otro lugar"
     }
 }

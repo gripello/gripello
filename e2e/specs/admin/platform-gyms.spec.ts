@@ -44,6 +44,7 @@ test('platform admin creates, manages, deactivates and deletes a gym', async ({
         expect((await page.request.get(`/${slug}`)).status()).toBe(200)
 
         await page.getByTestId(`platform-gym-active-${slug}`).click()
+        await page.getByTestId('confirm-dialog-confirm').click()
         await expect
             .poll(async () => (await gymBySlug(root, slug))?.active)
             .toBe(false)
@@ -208,6 +209,7 @@ test('inactive gyms drop out of every gym picker', async ({
 
         await gotoSettled(adminPage, '/platform/gyms')
         await adminPage.getByTestId(`platform-gym-active-${slug}`).click()
+        await adminPage.getByTestId('confirm-dialog-confirm').click()
         await expect
             .poll(async () => (await gymBySlug(root, slug))?.active)
             .toBe(false)

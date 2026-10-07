@@ -10,12 +10,12 @@ test('a setter leaves the gym and loses the staff pages', async ({
     const page = await pageAs(setter)
     await page.setViewportSize({ width: 390, height: 844 })
     await gotoSettled(page, '/account')
-    await expect(page.getByTestId('me-staff-manage-routes')).toBeVisible()
+    await expect(page.getByTestId('me-staff-tools')).toBeVisible()
 
     await page.getByTestId(`me-gym-leave-${E2E_GYM_SLUG}`).click()
     await page.getByTestId('confirm-dialog-confirm').click()
 
     await expect(page.getByTestId(`me-gym-${E2E_GYM_SLUG}`)).toHaveCount(0)
     await expect(page.getByTestId('me-gyms-empty')).toBeVisible()
-    await expect(page.getByTestId('me-staff-manage-routes')).toHaveCount(0)
+    await expect(page.getByTestId('me-staff-tools')).toHaveCount(0)
 })

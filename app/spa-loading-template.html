@@ -1,0 +1,42 @@
+<div id="spa-loading">
+    <img src="/app-icon.svg" alt="" width="56" height="56" />
+</div>
+<style>
+    #spa-loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8faf3;
+    }
+    #spa-loading.dark {
+        background: #0d1117;
+    }
+    #spa-loading img {
+        border-radius: 14px;
+        animation: spa-loading-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes spa-loading-pulse {
+        50% {
+            opacity: 0.45;
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        #spa-loading img {
+            animation: none;
+        }
+    }
+</style>
+<script>
+    ;(() => {
+        const mode =
+            (document.cookie.match(/(?:^|; )theme-mode=([^;]*)/) || [])[1] ||
+            'system'
+        const dark =
+            mode === 'dark' ||
+            (mode === 'system' &&
+                matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.getElementById('spa-loading').classList.add('dark')
+    })()
+</script>

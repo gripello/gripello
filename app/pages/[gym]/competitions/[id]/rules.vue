@@ -1,5 +1,5 @@
 <template>
-    <div class="mx-auto w-full max-w-3xl p-4">
+    <div class="mx-auto w-full p-4">
         <LayoutLoadingState
             v-if="status === 'pending' && !competition"
             variant="page"

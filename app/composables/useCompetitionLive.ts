@@ -13,47 +13,44 @@ export interface CompetitionChange {
     at: number
 }
 
-const COMPETITION_TOPIC = 'competition_changes'
+export const competitionTopic = (competitionId: string) =>
+    `competition_changes:${competitionId}`
 
 export function useCompetitionLive(
     competitionId: Ref<string>,
     onChange: (change: CompetitionChange) => void,
 ) {
     const pb = usePocketbase()
-    const unsubscribers: (() => Promise<void>)[] = []
-    let unmounted = false
+    const subscribed: Promise<() => Promise<void>>[] = []
+    const release = (subscription: Promise<() => Promise<void>>) =>
+        void subscription.then((unsubscribe) => unsubscribe()).catch(() => {})
 
-    const keep = (unsubscribe: () => Promise<void>) => {
-        if (unmounted) void unsubscribe().catch(() => {})
-        else unsubscribers.push(unsubscribe)
-    }
-
-    onMounted(async () => {
-        try {
-            keep(
-                await pb.realtime.subscribe(
-                    COMPETITION_TOPIC,
+    onMounted(() => {
+        subscribed.push(
+            pb.realtime.subscribe('PB_CONNECT', () =>
+                onChange({
+                    competition: competitionId.value,
+                    kind: 'resync',
+                    at: Date.now(),
+                }),
+            ),
+        )
+        watch(
+            competitionId,
+            (id, _, onCleanup) => {
+                const subscription = pb.realtime.subscribe(
+                    competitionTopic(id),
                     (change: CompetitionChange) => {
-                        if (change.competition === competitionId.value) {
+                        if (change.competition === competitionId.value)
                             onChange(change)
-                        }
                     },
-                ),
-            )
-            keep(
-                await pb.realtime.subscribe('PB_CONNECT', () =>
-                    onChange({
-                        competition: competitionId.value,
-                        kind: 'resync',
-                        at: Date.now(),
-                    }),
-                ),
-            )
-        } catch {}
+                )
+                subscription.catch(() => {})
+                onCleanup(() => release(subscription))
+            },
+            { immediate: true },
+        )
     })
 
-    onBeforeUnmount(() => {
-        unmounted = true
-        unsubscribers.forEach((unsubscribe) => unsubscribe().catch(() => {}))
-    })
+    onBeforeUnmount(() => subscribed.forEach(release))
 }

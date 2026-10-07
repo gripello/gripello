@@ -1,4 +1,5 @@
 import { versionLabel } from '#shared/utils/version'
+import { sharedAsyncData } from '~/utils/asyncData'
 
 export interface VersionCommit {
     sha: string
@@ -31,7 +32,7 @@ export function useVersionCheck() {
     const { data, status, refresh } = useAsyncData<VersionPayload>(
         'version',
         () => $fetch<VersionPayload, string>('/api/version'),
-        { server: false, lazy: true },
+        { ...sharedAsyncData, dedupe: 'defer', server: false, lazy: true },
     )
 
     const { appVersion, repoUrl } = useRuntimeConfig().public as {

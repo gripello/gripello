@@ -1,7 +1,7 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 
-test('the bottom bar leads to map, scanner, logbook and account', async ({
+test('the bottom bar leads to gym, community, scanner and account', async ({
     page,
 }) => {
     await gotoSettled(page, '/map')
@@ -16,8 +16,10 @@ test('the bottom bar leads to map, scanner, logbook and account', async ({
     await page.waitForURL('**/account')
     await expect(page.getByTestId('me-guest')).toBeVisible()
 
-    await page.getByTestId('bottom-nav-map').click()
-    await page.waitForURL('**/map')
+    await page.getByTestId('bottom-nav-feed').click()
+    await page.waitForURL('**/feed')
+    await page.getByTestId('bottom-nav-routes').click()
+    await page.waitForURL('**/routes')
 })
 
 test('signed-in climbers reach their logbook and account', async ({

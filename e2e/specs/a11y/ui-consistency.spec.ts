@@ -9,7 +9,7 @@ const PAGES = [
     '/manage/analytics',
     '/admin/settings',
     '/manage/inventory',
-    '/manage/reports',
+    '/manage/moderation',
     '/account/activity',
     '/logbook',
 ]
@@ -31,7 +31,7 @@ test('every icon-only button exposes an accessible name', async ({
         '/manage/routes',
         '/admin/users',
         '/manage/comments',
-        '/manage/reports',
+        '/manage/moderation',
         '/account/activity',
         '/logbook',
     ]) {

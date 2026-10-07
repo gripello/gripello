@@ -258,6 +258,7 @@
 import { competitionPhase, competitionShareUrl } from '~/utils/competitions'
 import type { StandingRow } from '#shared/utils/competitionResults'
 import type { CompetitionRecord } from '~/types/models'
+import { MEDALS, PODIUM_ROWS } from '~/utils/themeColors'
 
 definePageMeta({ layout: false })
 
@@ -265,16 +266,6 @@ const CATEGORIES_PER_PAGE = 3
 const ROTATE_MS = 20_000
 const SCROLL_STEP_MS = 50
 const SCROLL_PAUSE_MS = 3_000
-const PODIUM_ROWS: Record<number, string> = {
-    1: 'bg-[#f5c542]/15',
-    2: 'bg-[#9aa4ae]/15',
-    3: 'bg-[#cd7f32]/12',
-}
-const MEDALS: Record<number, string> = {
-    1: 'bg-[#f5c542] text-[#3a2a00]',
-    2: 'bg-[#c9d1d9] text-[#1f2328]',
-    3: 'bg-[#cd7f32] text-[#2b1600]',
-}
 
 const { t, locale } = useI18n()
 const pb = usePocketbase()

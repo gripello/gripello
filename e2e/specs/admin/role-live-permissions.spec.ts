@@ -17,7 +17,7 @@ test('a permission added to the own role shows up without a reload', async ({
     try {
         await signInAs(page, user.email, user.password)
         await gotoSubscribed(page, gymPath('/routes'), 'roles')
-        await expect(page.getByTestId('nav-group-moderation')).toHaveCount(0)
+        await expect(page.getByTestId('nav-staff-tools')).toHaveCount(0)
 
         const manageComments = await root
             .collection('permissions')
@@ -26,7 +26,7 @@ test('a permission added to the own role shows up without a reload', async ({
             .collection('roles')
             .update(role.id, { permissions: [manageComments.id] })
 
-        await expect(page.getByTestId('nav-group-moderation')).toBeVisible()
+        await expect(page.getByTestId('nav-staff-tools')).toBeVisible()
     } finally {
         await root.collection('users').delete(user.id)
         await root.collection('roles').delete(role.id)

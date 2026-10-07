@@ -8,6 +8,7 @@ import {
 } from '../../utils/export'
 import { drawGradeScalePdf, translator } from '../../utils/gradeScalePdf'
 import { gymBandsFrom } from '#shared/utils/gradeReference'
+import { DEFAULT_LOCALE, isLocaleCode } from '../../../app/utils/locales'
 import type { GymRecord } from '../../../types/models'
 
 export default eventHandler(async (event) => {
@@ -23,7 +24,12 @@ export default eventHandler(async (event) => {
         : null
     if (!gym) throw createError({ statusCode: 404, statusMessage: 'No gym.' })
 
-    const t = translator(gym.language)
+    const language = isLocaleCode(gym.language) ? gym.language : DEFAULT_LOCALE
+    const messages = await useStorage('assets:locales').getItem<object>(
+        `${language}.json`,
+    )
+    if (!messages) throw new Error('Locale messages missing')
+    const t = translator(messages)
     try {
         const { default: PDFDocument } = await import('pdfkit')
         const fonts = useStorage('assets:server')

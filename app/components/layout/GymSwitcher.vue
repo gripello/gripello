@@ -15,8 +15,13 @@
             :block="!collapsed"
             :square="collapsed"
             class="min-w-0 data-[state=open]:bg-elevated"
-            :class="collapsed ? 'mx-auto p-1' : 'justify-start gap-2 p-1.5'"
-            :aria-label="$t('nav.allGyms')"
+            :class="[
+                collapsed ? 'mx-auto p-1' : 'justify-start gap-2 p-1.5',
+                currentGym && 'rounded-md bg-elevated/60 ring ring-default',
+            ]"
+            :aria-label="
+                currentGym ? `${title} · ${t('nav.allGyms')}` : t('nav.allGyms')
+            "
             data-testid="gym-switcher"
         >
             <span
@@ -66,7 +71,7 @@
             </UBadge>
             <span
                 v-if="!collapsed && currentGym"
-                class="min-w-0 flex-1 truncate text-start font-semibold text-highlighted"
+                class="line-clamp-2 min-w-0 flex-1 text-start text-sm leading-tight font-semibold break-words text-highlighted"
                 data-testid="gym-switcher-name"
             >
                 {{ title }}
@@ -111,7 +116,9 @@ const { gymMemberships, isPlatformAdmin } = usePermissions()
 const context = computed(() =>
     navContext(route.path, routeGymSlug(route.params)),
 )
-const currentGym = computed(() => (context.value === 'gym' ? gym.value : null))
+const currentGym = computed(() =>
+    context.value === 'gym' || context.value === 'staff' ? gym.value : null,
+)
 const title = computed(() =>
     currentGym.value ? gymTitle(currentGym.value) : 'Gripello',
 )

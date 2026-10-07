@@ -77,6 +77,23 @@
                         {{ t('platform.users.platformAdmin') }}
                     </UBadge>
                     <UBadge
+                        v-if="isSuspended(user)"
+                        color="error"
+                        variant="soft"
+                        icon="i-lucide-ban"
+                        data-testid="platform-user-suspended-badge"
+                    >
+                        {{
+                            isPermanentlySuspended(user)
+                                ? t('platform.users.suspendedPermanently')
+                                : t('platform.users.suspendedUntil', {
+                                      date: formatDate(user.suspended_until!, {
+                                          locale,
+                                      }),
+                                  })
+                        }}
+                    </UBadge>
+                    <UBadge
                         :color="user.verified ? 'success' : 'warning'"
                         variant="soft"
                         :icon="
@@ -123,6 +140,16 @@
                         @click="openEdit(user.id)"
                     />
                     <UButton
+                        icon="i-lucide-ban"
+                        color="neutral"
+                        variant="ghost"
+                        class="icon-btn"
+                        :aria-label="t('platform.users.suspend')"
+                        :disabled="!!user.platform_admin"
+                        data-testid="platform-user-suspend"
+                        @click="openSuspend(user.id)"
+                    />
+                    <UButton
                         icon="i-lucide-trash-2"
                         color="error"
                         variant="ghost"
@@ -157,6 +184,12 @@
             @delete="openDelete"
         />
 
+        <PlatformSuspendDialog
+            v-model="suspendOpen"
+            :user="suspendingUser"
+            @changed="reloadLoaded"
+        />
+
         <ConfirmDialog
             v-model="deleteOpen"
             :title="t('users.delete')"
@@ -174,8 +207,11 @@
 <script setup lang="ts">
 import type { GymRecord, RoleRecord } from '~/types/models'
 import { nameInitials } from '~/utils/avatar'
+import { formatDate } from '#shared/utils/formatting'
 import {
     PLATFORM_USER_FIELDS,
+    isPermanentlySuspended,
+    isSuspended,
     membershipChips,
     platformUserFilter,
     userDisplayName,
@@ -185,7 +221,7 @@ import {
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const pb = usePocketbase()
 
 useHead({ title: () => t('platform.users.title') })
@@ -218,10 +254,15 @@ const roles = computed(() => lookups.value.roles)
 
 const search = ref('')
 const emailMatchIds = ref<string[]>([])
-const kind = ref<PlatformUserFilter | null>(null)
+const kind = ref<PlatformUserFilter | null>(
+    (['platform_admins', 'unverified', 'suspended'] as const).find(
+        (value) => value === useRoute().query.show,
+    ) ?? null,
+)
 const kindItems = computed(() => [
     { label: t('platform.overview.admins'), value: 'platform_admins' },
     { label: t('platform.users.unverified'), value: 'unverified' },
+    { label: t('platform.overview.suspended'), value: 'suspended' },
 ])
 
 const {
@@ -302,6 +343,17 @@ const editOpen = ref(false)
 function openEdit(id: string) {
     editingId.value = id
     editOpen.value = true
+}
+
+const suspendingId = ref<string | null>(null)
+const suspendingUser = computed(
+    () => users.value.find((user) => user.id === suspendingId.value) ?? null,
+)
+const suspendOpen = ref(false)
+
+function openSuspend(id: string) {
+    suspendingId.value = id
+    suspendOpen.value = true
 }
 
 const deletingId = ref<string | null>(null)

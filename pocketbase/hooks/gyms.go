@@ -20,7 +20,9 @@ var reservedGymSlugs = []string{
 	"admin",
 	"api",
 	"auth",
+	"climber",
 	"competitions",
+	"friends",
 	"imprint",
 	"logbook",
 	"manage",
@@ -33,9 +35,9 @@ var reservedGymSlugs = []string{
 	"scan",
 }
 
-var gymOwnedTables = []string{"locations", "walls", "routes", "ratings", "tasks", "reports", "competitions", "roles"}
+var gymOwnedTables = []string{"locations", "walls", "routes", "ratings", "tasks", "reports", "competitions", "roles", "seasons", "beta_videos"}
 
-var gymDeletionOrder = []string{"competitions", "tasks", "reports", "ratings", "routes", "walls", "locations", "memberships", "roles"}
+var gymDeletionOrder = []string{"competitions", "seasons", "tasks", "reports", "beta_videos", "ratings", "routes", "walls", "locations", "memberships", "roles"}
 
 type gymParent struct {
 	collection string
@@ -47,6 +49,7 @@ var gymParents = map[string]gymParent{
 	"routes":       {"locations", "location"},
 	"ratings":      {"routes", "route_id"},
 	"competitions": {"locations", "location"},
+	"beta_videos":  {"routes", "route"},
 }
 
 type seededRole struct {
@@ -85,6 +88,8 @@ func registerGyms(app core.App) {
 	}
 	app.OnRecordCreate("gyms").BindFunc(validateSlug)
 	app.OnRecordUpdate("gyms").BindFunc(validateSlug)
+	app.OnRecordCreate("gyms").BindFunc(validateFeatures)
+	app.OnRecordUpdate("gyms").BindFunc(validateFeatures)
 
 	app.OnRecordCreateRequest("gyms").BindFunc(func(e *core.RecordRequestEvent) error {
 		if !e.HasSuperuserAuth() {
@@ -117,6 +122,9 @@ func registerGyms(app core.App) {
 		}
 		if e.Record.GetString("slug") != e.Record.Original().GetString("slug") {
 			return apis.NewForbiddenError("Only platform admins may change the slug.", nil)
+		}
+		if featuresChanged(e.Record) {
+			return apis.NewForbiddenError("Only platform admins may change feature flags.", nil)
 		}
 		before, _ := previousSlugs(e.Record.Original())
 		after, _ := previousSlugs(e.Record)
@@ -153,10 +161,12 @@ func registerGyms(app core.App) {
 		}
 		return e.Next()
 	}
-	app.OnRecordUpdate("locations", "roles", "reports").BindFunc(keepGym)
+	app.OnRecordUpdate("locations", "roles", "reports", "seasons").BindFunc(keepGym)
 
 	app.OnRecordCreate("reports").BindFunc(func(e *core.RecordEvent) error {
-		if gym := reportedContentGym(e.App, e.Record); gym != "" {
+		if e.Record.GetString("content_type") == "profile" {
+			e.Record.Set("gym", "")
+		} else if gym := reportedContentGym(e.App, e.Record); gym != "" {
 			e.Record.Set("gym", gym)
 		}
 		return e.Next()

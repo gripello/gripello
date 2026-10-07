@@ -59,7 +59,8 @@
             "profile": "Profile",
             "security": "Security",
             "preferences": "Preferences",
-            "notifications": "Notifications"
+            "notifications": "Notifications",
+            "privacy": "Privacy"
         },
         "placeholders": {
             "firstname": "Jane",
@@ -138,7 +139,8 @@
         "leaveGym": "Leave {gym}",
         "leaveGymConfirm": "You lose your role and staff access in this gym. Your logbook stays.",
         "leftGym": "You left the gym.",
-        "lastAdmin": "The gym needs another admin before you can leave."
+        "lastAdmin": "The gym needs another admin before you can leave.",
+        "changeBanner": "Change banner"
     },
     "routes": {
         "home": "Overview",
@@ -166,13 +168,15 @@
         "mapEditor": "Map editor",
         "mapPlacement": "Place routes",
         "scan": "Scan",
-        "me": "More",
         "moreActions": "More actions",
         "selectedCount": "{n} selected",
         "list": "Routes",
         "competitions": "Competitions",
         "judge": "Judging",
-        "rated": "Has reviews"
+        "rated": "Has reviews",
+        "leaderboard": "Leaderboard",
+        "friends": "Friends",
+        "feed": "Feed"
     },
     "dashboard": {
         "online": "{0} online"
@@ -293,7 +297,9 @@
         "climber_reviews": "Reviews",
         "felt": "felt",
         "perceived_difficulty": "Felt grade",
-        "loadError": "Failed to load reviews."
+        "loadError": "Failed to load reviews.",
+        "deleteOwn": "Delete my review",
+        "deleteOwnConfirm": "Your review will be removed for good."
     },
     "table": {
         "actions": "Actions",
@@ -327,7 +333,10 @@
         "load_more": "Load more",
         "close": "Close",
         "export": "Export",
-        "select_route": "Select {name}"
+        "select_route": "Select {name}",
+        "previous": "Previous",
+        "next": "Next",
+        "more": "More"
     },
     "inventory": {
         "title": "Route inventory",
@@ -412,7 +421,8 @@
             "userInviteMail": "User created, but the invitation email could not be sent.",
             "resetLinkInvalid": "This password reset link is invalid or has expired. Request a new one from the sign-in page.",
             "captcha": "The spam check failed. Please try again.",
-            "verificationMail": "Your account was created, but the verification email could not be sent. Request a new one from the sign-in page."
+            "verificationMail": "Your account was created, but the verification email could not be sent. Request a new one from the sign-in page.",
+            "account_suspended": "This account is suspended."
         },
         "deleteItem": "Delete this item? This cannot be undone.",
         "deleteMoreItems": "Delete the selected items? This cannot be undone.",
@@ -457,14 +467,24 @@
                 "task_wish_filed": "New route wish for {location}",
                 "task_wish_done": "Your route wish for {location} has been set — enjoy!",
                 "wall_new_routes": "New routes on {wall}: {count}",
-                "competition_published": "Results for “{competition}” are online"
+                "competition_published": "Results for “{competition}” are online",
+                "follow_requested": "{name} wants to follow you",
+                "follow_accepted": "{name} accepted your follow request",
+                "new_follower": "{name} follows you now",
+                "achievement_earned": "New achievements unlocked: {count}",
+                "report_filed_platform": "Content reported in a gym: “{snippet}”",
+                "moderation_pending": "A beta video is waiting for approval",
+                "content_hidden": "Your content was hidden: {reason}",
+                "beta_approved": "Your beta video was approved",
+                "beta_rejected": "Your beta video was rejected: {reason}"
             }
         }
     },
     "filter": {
         "title": "Filter",
         "all": "All",
-        "archived": "Archived"
+        "archived": "Archived",
+        "clear": "Remove filter"
     },
     "legal": {
         "privacy": "Privacy",
@@ -485,62 +505,110 @@
             "subtitle": "Information according to § 5 DDG"
         },
         "privacyPage": {
+            "subtitle": "What personal data we process when you use Gripello, why, who can see it, how long we keep it and what you can control.",
             "controllerTitle": "Controller",
+            "scope": {
+                "title": "Who is responsible",
+                "body": "Gripello is a web app that climbing gyms use for their routes. The gym or club named above is the controller for its own gym pages (routes, reviews, route problem reports, competitions, staff tools). The operator of Gripello is the controller for the pages that are not tied to a gym: your account, logbook, friends, climber profiles and achievements. All data is stored and processed on our own servers in the European Union. If you have questions about your data, contact the controller named above."
+            },
             "serverLogs": {
                 "title": "Server logs",
-                "body": "When you access this application, the server processes technical data such as IP address, date and time, requested URL and browser user agent to deliver the page and protect against abuse (Art. 6(1)(f) GDPR). Request logs are deleted automatically after a short period (5 days by default)."
+                "body": "When you open the app, our server processes technical data such as your IP address, date and time, the requested address and your browser's user agent to deliver the page and protect the service against abuse and attacks. Lawful basis: our legitimate interests in running a secure service (Art. 6(1)(f) GDPR). Request logs are deleted automatically after 5 days."
             },
             "accounts": {
-                "title": "User accounts",
-                "body": "Accounts are created by administrators for staff. We store email address, username, first and last name, an optional avatar, your preferred language and the assigned role to provide the service (Art. 6(1)(b) GDPR). Data is kept while the account exists; you can delete your account yourself at any time."
+                "title": "Your account",
+                "body": "If the operator allows sign-up, you can register with an e-mail address and password; we send a verification e-mail to confirm the address. A gym admin can also add you as a staff member by entering your e-mail address and your first and last name: if you have no account yet, this immediately creates an unverified account with these details together with the membership, and we send you an e-mail to set your password; an existing account gets the membership straight away. We store your e-mail address, username, first and last name, password (only as a secure hash), language, notification preferences, privacy settings, the walls you follow and, if you add them, an avatar and a profile banner. If you work for a gym, your staff rights come from your membership in that gym and its role. We use this data to provide your account and the features you use (Art. 6(1)(b) GDPR). Your e-mail address is not shown to other climbers or to gym staff; the platform administrators can see it, and if you report content, the gym's moderators and the gym's contact address receive your name and e-mail address (see Content reports). Your account data is kept until you delete your account."
+            },
+            "privacySettings": {
+                "title": "Your privacy settings",
+                "body": "Under Settings → Privacy you decide who can follow you (approve each request, which is the default, anyone, or nobody), whether you appear on gym leaderboards, whether your name is shown on your reviews and whether your sends are shared with your followers. Changes take effect immediately; leaderboards follow with a short delay (see Leaderboards)."
+            },
+            "logbook": {
+                "title": "Logbook",
+                "body": "When you log a send we store the route, the day, the type (flash, top or attempt), the number of attempts, the route's grade at that moment, the time the entry was saved and, if you add one, a note. We use this to keep your personal training log and to show your statistics and achievements (Art. 6(1)(b) GDPR). Your notes are only ever visible to you. Whether your sends are visible to others is explained under Friends, Climber profiles and Leaderboards. If you are offline, new entries are kept in your browser's storage until they can be sent. Your logbook is deleted when you delete your account; if a gym deletes a route, your entry keeps the route name and grade."
+            },
+            "friends": {
+                "title": "Friends and followers",
+                "body": "You can follow other climbers and they can follow you, according to your follow setting. We store who follows whom and whether a request is pending or accepted. Your followers see your sends (route, grade, type, number of attempts, day and the time the entry was saved, never your notes) in their friends feed and the gym feed, updated live, unless you turn off Share my sends with followers. This setting does not affect leaderboards. You can decline requests and remove followers at any time. Lawful basis: providing the social features you choose to use (Art. 6(1)(b) GDPR). Follow data is deleted when you delete your account."
+            },
+            "profiles": {
+                "title": "Climber profiles and search",
+                "body": "Signed-in users can open your climber profile with your name, avatar, banner (if you have none, one is created on the viewer's device from your avatar's colours) and follower and following counts. If your follow setting is Nobody, only climbers connected with you through an accepted follow and climbers you have sent a follow request to can open it. Your statistics, recent sends and a comparison with the viewer's own sent routes are shown only to your accepted followers, your achievements (except grade-based ones) to everyone who can open your profile. If you turn off Share my sends with followers, your sends, statistics, comparison and achievements are hidden on your profile from everyone else; gym leaderboards have their own setting. Climber search shows the name, avatar and banner of users whose follow setting is not Nobody. Guests cannot see profiles or search. Lawful basis: Art. 6(1)(b) GDPR. Set your follow setting to Nobody to remove yourself from search."
+            },
+            "leaderboards": {
+                "title": "Leaderboards",
+                "body": "Each gym can show leaderboards for a season or the last 60 days. They are calculated from logbook data (your best 10 sends in that period) and show your shortened name (first name and the initial of your last name), an internal user ID, your avatar, rank, points, number of sends and flashes and your hardest grade. Leaderboards are public, including to visitors who are not signed in, and do not depend on Share my sends with followers. Lawful basis: our legitimate interests and those of the gym and its climbers in a motivating community feature (Art. 6(1)(f) GDPR). You can object at any time by turning off Show me on gym leaderboards in your privacy settings; you then disappear from current leaderboards within about a minute and from finished seasons within a few hours. Leaderboards are calculated on request, cached only briefly and not stored permanently."
             },
             "ratings": {
                 "title": "Reviews",
-                "body": "Star ratings, grade votes and comments on routes can be submitted without an account and are stored without name or IP address. Comments are publicly visible and may be moderated."
+                "body": "Signed-in users can review routes with stars, a felt grade and a comment. Each review is linked to your account. Signed-in users see your name and avatar next to your review unless you turn off Show my name on my reviews; visitors who are not signed in never see author names. The ratings and comments are shown publicly with the route and help the gym and other climbers. Lawful basis: providing the review feature (Art. 6(1)(b) GDPR) and, for showing your name, the legitimate interest in a trustworthy review community (Art. 6(1)(f) GDPR), which you can object to with the setting above. Gym moderators can remove reviews and anyone can report them. If you delete your account, your reviews remain without any link to you."
             },
-            "reports": {
-                "title": "Content reports",
-                "body": "If you report content, we process your name, email address, the report reason and your explanation to handle the report and inform you about the decision (Art. 6(1)(c) GDPR in conjunction with Art. 16 DSA). Reports are kept as long as needed for documentation."
+            "betaVideos": {
+                "title": "Beta videos",
+                "body": "You can add a beta video to a route, either as a link to TikTok, Instagram or YouTube Shorts or as an upload of up to 30 MB. Videos and links are visible to everyone; your name and avatar as the person who added it are shown to signed-in users only. Make sure you have the right to share the video and that other people in it agree. Links are never embedded, so no data reaches the platform unless you tap the link; the platform's own privacy policy then applies. Lawful basis: Art. 6(1)(b) GDPR. You or the gym's moderators can delete a video at any time, it can be reported, and it is deleted when you delete your account."
+            },
+            "achievements": {
+                "title": "Achievements",
+                "body": "Our server automatically awards achievements based on your own activity: sends, climbing sessions, reviews, beta videos, accepted follows, confirmed route problem reports, competition entries and season ranks. We store each tier you reach with the date. Achievements based on grades are visible only to you; others see your remaining achievements only where your profile is visible to them and you share your sends with followers. This is not used to make any decision about you. Lawful basis: Art. 6(1)(b) GDPR. Achievements are deleted when you delete your account."
+            },
+            "competitions": {
+                "title": "Competitions",
+                "body": "If you take part in a competition run by a gym, the gym stores your name or display name, birth year, category, start number and results and, for participants under 16, the confirmation that a parent or guardian consents, to run the competition and publish results (Art. 6(1)(b) GDPR). Results lists with names are public on the gym's pages; when you register you can choose Hide me from public results. Entries are deleted when the gym deletes the competition or you delete your account."
             },
             "defects": {
                 "title": "Route problem reports",
-                "body": "If you report a problem with a route, we store the selected problem type, your optional description and photo, and — if you are signed in — your account, so staff can fix the route and let you know. Do not include people in photos. Reports are deleted together with the route."
+                "body": "If you report a problem with a route, we store the problem type, your optional description and photo and, if you are signed in, a link to your account, so the gym's staff can fix the route and let you know (Art. 6(1)(f) GDPR, our interest in safe routes). Other climbers only see that a problem is open, not who reported it. Please do not include people in photos. Reports are deleted together with the route; if you delete your account, they remain without any link to you."
             },
-            "auditLog": {
-                "title": "Audit log",
-                "body": "Changes, logins and failed login attempts by staff are logged with user, action and IP address to ensure security and traceability (Art. 6(1)(f) GDPR). Entries are deleted automatically after {auditDays} days."
+            "reports": {
+                "title": "Content reports",
+                "body": "If you report illegal or inappropriate content, we process your name, e-mail address, the reason and your explanation to handle the report and inform you of the decision (Art. 6(1)(c) GDPR in conjunction with Art. 16 of the EU Digital Services Act). The gym's moderators and the gym's contact address receive your name and e-mail address with the report. The person whose content you report is not told who you are, unless the law requires it. Reports are kept as long as needed to document the decision and are not deleted when you delete your account."
             },
-            "captcha": {
-                "title": "Spam protection",
-                "body": "Some forms use a self-hosted proof-of-work check that runs in your browser. No data is sent to third parties and no tracking cookies are set."
+            "notifications": {
+                "title": "Notifications",
+                "body": "The bell in the app shows notifications such as follow requests, new routes on walls you follow, updates on your reports and new achievements. We store each notification with your account (Art. 6(1)(b) GDPR). In your notification settings you can switch off each topic for push notifications; the bell always shows all notifications. Read notifications are deleted automatically after 30 days, all others after 90 days, and all of them when you delete your account."
             },
             "push": {
                 "title": "Push notifications",
-                "body": "If you turn on push notifications on a device, we store the push address its browser gives us together with your account and send notifications through the browser vendor’s push service (e.g. Google, Apple, Mozilla). The address is deleted when you remove the device in your notification settings, delete your account, or when the push service reports it as expired, which happens after you sign out on that device or revoke the permission."
+                "body": "Push notifications are off until you turn them on for a device and allow them in your browser. Lawful basis: your consent (Art. 6(1)(a) GDPR and the national rules on device access), which you can withdraw at any time by removing the device in your notification settings or revoking the browser permission. We store the push address and keys your browser gives us and a device label (browser and operating system, for example Firefox · Android) with your account. Notifications are sent through your browser vendor's push service (for example Google, Apple or Mozilla), which may be located outside the EU and only receives the push address and the encrypted message. When you sign out or another person signs in on that device, the browser's subscription is cancelled. We delete the stored address when you remove the device in your notification settings, when the push service reports it as expired, or when you delete your account."
+            },
+            "dataExport": {
+                "title": "Download your data",
+                "body": "In your account settings, Download your data creates a ZIP file with all data linked to your account, including your profile, avatar, banner, logbook, reviews, beta videos, follows, achievements, notifications, memberships, tasks and competition entries. This lets you use your rights of access and data portability yourself. To protect the service, it can be used a few times per hour."
+            },
+            "deletion": {
+                "title": "Deleting your account",
+                "body": "You can delete your account yourself in your account settings. This deletes your account, logbook, follows, beta videos, achievements, notifications, push subscriptions, memberships and competition entries. Your reviews and route problem reports remain without any link to you, so they cannot be traced back to you. Content reports you made keep your name and e-mail address as long as needed to document them. Server logs and audit log entries are deleted on their normal schedule."
+            },
+            "auditLog": {
+                "title": "Audit log",
+                "body": "To keep the service secure and changes traceable, we log every change made through the app by anyone (for example logbook entries, follows, reviews, beta videos, route problem and content reports, competition entries and staff changes) as well as sign-ins, failed sign-in attempts (the entered address only as a short hash), password resets and e-mail address changes, each with the e-mail address of the account, the action, the affected record and the IP address (Art. 6(1)(f) GDPR). Gym staff with access to the audit log see the entries for their gym, the platform administrators see all entries, and you can see your own. Entries are deleted automatically after {auditDays} days."
+            },
+            "captcha": {
+                "title": "Spam protection",
+                "body": "Some forms, such as registration, use a proof-of-work check hosted on our own server: your browser solves a small computing task. No data is sent to third parties and no tracking cookies are set. Lawful basis: our legitimate interests in protecting the service from spam and automated abuse (Art. 6(1)(f) GDPR)."
             },
             "thirdParties": {
                 "title": "No tracking, no third parties",
-                "body": "This application does not use analytics, advertising or social media plugins and loads no resources from third-party servers. All data is processed on our own server. Data is not transferred to third countries."
+                "body": "We do not use analytics, advertising, social media plugins or tracking, and the app loads no fonts, scripts or other resources from third-party servers. We do not sell your data or use it for profiling or automated decisions with legal or similarly significant effects. The only external services involved are the push service of your browser vendor, if you turn on push notifications, and video platforms you choose to open yourself from a beta video link (see the sections above)."
             },
             "storage": {
                 "title": "Cookies and local storage",
-                "body": "We only store information on your device that is strictly necessary to provide the service you requested (§ 25(2) TDDDG). Therefore no consent is required. The complete list:"
+                "body": "We only store information on your device, or read it from there, where this is strictly necessary to provide the service you asked for, for example keeping you signed in, remembering the selected gym and your theme, and keeping logbook entries you made offline until you are back online. Because this storage is strictly necessary, no consent is required (Art. 5(3) ePrivacy Directive as implemented nationally, in Germany § 25(2) TDDDG). We set no tracking cookies. The complete list:"
             },
             "rights": {
                 "title": "Your rights",
-                "body": "Under the GDPR you have the following rights regarding your personal data:",
+                "body": "Under the GDPR (and the UK GDPR if you are in the UK) you have the following rights. Contact the controller named above to use them; we reply within one month.",
                 "items": {
                     "access": "Right of access (Art. 15 GDPR)",
                     "rectification": "Right to rectification (Art. 16 GDPR)",
                     "erasure": "Right to erasure (Art. 17 GDPR)",
                     "restriction": "Right to restriction of processing (Art. 18 GDPR)",
                     "portability": "Right to data portability (Art. 20 GDPR)",
-                    "objection": "Right to object (Art. 21 GDPR)",
-                    "withdrawal": "Right to withdraw consent at any time (Art. 7(3) GDPR)"
+                    "objection": "Right to object at any time, on grounds relating to your situation, to processing based on legitimate interests (Art. 21 GDPR)",
+                    "withdrawal": "Right to withdraw consent at any time, without affecting processing before the withdrawal (Art. 7(3) GDPR)"
                 },
-                "complaint": "You also have the right to lodge a complaint with a data protection supervisory authority (Art. 77 GDPR)."
-            },
-            "subtitle": "How we process personal data when you use this application."
+                "complaint": "You also have the right to complain to a data protection supervisory authority, in particular in the EU country where you live or work or where the alleged infringement took place (Art. 77 GDPR). In the UK you can complain to the Information Commissioner's Office (ico.org.uk); in Ireland to the Data Protection Commission (dataprotection.ie)."
+            }
         },
         "storage": {
             "name": "Name",
@@ -550,7 +618,8 @@
             "kinds": {
                 "cookie": "Cookie",
                 "localStorage": "Local storage",
-                "indexedDB": "Browser database (IndexedDB)"
+                "indexedDB": "Browser database (IndexedDB)",
+                "cacheStorage": "Cache (service worker)"
             },
             "purposes": {
                 "auth": "Keeps you signed in",
@@ -563,12 +632,16 @@
                 "pushDeclined": "Remembers that you removed push notifications on this device",
                 "offlineScores": "Keeps competition scores you entered without signal until they are sent",
                 "gym": "Remembers the gym you last opened",
-                "recentGyms": "Lists the gyms you visited recently on the start page"
+                "recentGyms": "Lists the gyms you visited recently on the start page",
+                "mapRouteType": "Remembers whether the map shows boulders or routes",
+                "offlinePages": "Keeps the app shell, public pages, gym data and images available offline",
+                "moderationSeen": "Remembers when you last opened the moderation inbox, to mark new cases"
             },
             "durations": {
                 "session": "Until sign-out",
                 "oneYear": "1 year",
-                "persistent": "Until deleted in the browser"
+                "persistent": "Until deleted in the browser",
+                "untilUpdate": "Until the next app update"
             }
         },
         "gymImprint": "Legal notice of {name}",
@@ -611,7 +684,11 @@
             "competition": "{name} - Competitions - Gripello",
             "judge": "Judging - Gripello",
             "competitionRules": "{name} - Rules - Gripello",
-            "invite": "Invitation - Gripello"
+            "invite": "Invitation - Gripello",
+            "leaderboard": "Leaderboard - Gripello",
+            "friends": "Friends - Gripello",
+            "climber": "{name} - Gripello",
+            "feed": "Feed"
         },
         "content": {
             "settings": "Settings",
@@ -685,7 +762,16 @@
         "quickNavigation": "Quick navigation",
         "platform": "Platform",
         "allGyms": "All gyms…",
-        "manageGyms": "Manage gyms"
+        "manageGyms": "Manage gyms",
+        "you": "You",
+        "gym": "Gym",
+        "community": "Community",
+        "staffTools": "Staff tools",
+        "backToClimbing": "Back to climbing",
+        "staff": "Staff",
+        "more": "More",
+        "sections": "Sections",
+        "noStaffTools": "You have no staff tools in this gym"
     },
     "users": {
         "create": "Add user",
@@ -841,7 +927,8 @@
         "splitBand": "Split",
         "bandBoundary": "Boundary between {from} and {to}",
         "defaultLanguage": "Default language",
-        "defaultLanguageHelp": "Used by default for e-mails, exports and other system output."
+        "defaultLanguageHelp": "Used by default for e-mails, exports and other system output.",
+        "premoderateBetas": "Approve beta videos before they are shown"
     },
     "errors": {
         "notFound": {
@@ -938,7 +1025,8 @@
         "empty": "No reports",
         "emptyHint": "Reported content will appear here for review.",
         "mailWarning": "Email is not configured, so reporters are not receiving the confirmations and decision notices required by Article 16.",
-        "mailWarningAction": "Open settings"
+        "mailWarningAction": "Open settings",
+        "reportProfile": "Report profile"
     },
     "tasks": {
         "pageTitle": "Tasks",
@@ -1191,7 +1279,9 @@
         "tabs": {
             "sessions": "Sessions",
             "stats": "Stats",
-            "projects": "Projects"
+            "projects": "Projects",
+            "badges": "Badges",
+            "timeline": "Timeline"
         },
         "stats": {
             "sends": "Sends",
@@ -1418,8 +1508,6 @@
     },
     "accountSettings": {
         "title": "Settings",
-        "avatar": "Avatar",
-        "avatarDescription": "JPG, PNG, SVG or WebP.",
         "language": "Language",
         "theme": "Theme",
         "push": {
@@ -1430,7 +1518,12 @@
                 "wish_done": "My route wishes are set",
                 "competition_results": "Competition results",
                 "tasks": "Tasks and reported defects",
-                "reports": "Content reports (DSA)"
+                "reports": "Content reports (DSA)",
+                "social": "Followers and follow requests",
+                "achievements": "Achievements",
+                "platform_reports": "Content reports from all gyms",
+                "content": "Moderation of my content",
+                "moderation": "Content to review"
             },
             "devices": "Devices",
             "thisDevice": "This device",
@@ -1441,6 +1534,17 @@
             "unsupported": "Not available in this browser",
             "blocked": "Notifications are blocked in your browser settings.",
             "followedWalls": "Followed walls"
+        },
+        "privacy": {
+            "followPolicy": "Who can follow me",
+            "leaderboard": "Show me on gym leaderboards",
+            "policies": {
+                "approve": "Everyone, after I approve",
+                "open": "Everyone",
+                "closed": "Nobody"
+            },
+            "reviewName": "Show my name on my reviews",
+            "shareSends": "Share my sends with followers"
         }
     },
     "competitions": {
@@ -1805,7 +1909,9 @@
             "venue": "Venue",
             "createdAt": "Created",
             "open": "Open gym",
-            "inactive": "Inactive"
+            "inactive": "Inactive",
+            "takeOffline": "Take offline",
+            "takeOfflineConfirm": "{name} disappears for climbers until you switch it back on."
         },
         "settings": {
             "title": "Platform settings",
@@ -1820,7 +1926,12 @@
             "memberships": "Memberships",
             "routes": "Routes",
             "admins": "Platform admins",
-            "dashboard": "PocketBase dashboard"
+            "dashboard": "PocketBase dashboard",
+            "needsYou": "Needs you",
+            "legalReports": "Legal reports open",
+            "staleGyms": "Gyms falling behind",
+            "profiles": "Profiles to check",
+            "suspended": "Suspended users"
         },
         "users": {
             "title": "Users",
@@ -1835,7 +1946,36 @@
             "sendPasswordReset": "Send password reset email",
             "passwordResetSent": "Password reset email sent.",
             "deleteConfirm": "Delete {name} with all their data? This cannot be undone.",
-            "lastAdmin": "This person is the only admin of a gym. Make someone else admin first."
+            "lastAdmin": "This person is the only admin of a gym. Make someone else admin first.",
+            "suspend": "Suspend",
+            "suspendUntil": "Suspended until",
+            "liftSuspension": "Lift suspension",
+            "suspendedUntil": "Suspended until {date}",
+            "permanent": "Permanently",
+            "suspendedPermanently": "Suspended permanently",
+            "suspendName": "Suspend {name}",
+            "suspendHowLong": "How long",
+            "durations": {
+                "week": "7 days",
+                "month": "30 days",
+                "until": "Until date",
+                "permanent": "Permanently"
+            },
+            "suspendReason": "Reason (sent to the person)",
+            "suspendHideContent": "Also hide their visible content",
+            "suspendEffects": {
+                "signedOut": "Signed out on every device and cannot sign in.",
+                "mail": "Gets an e-mail with your reason and how to object.",
+                "kept": "Memberships and logbook stay; nothing is deleted.",
+                "lift": "You can lift the suspension any time under Users."
+            },
+            "suspendPermanently": "Suspend permanently"
+        },
+        "features": {
+            "title": "Feature flags",
+            "flags": {
+                "beta_videos": "Beta videos"
+            }
         }
     },
     "mails": {
@@ -1856,7 +1996,8 @@
             "problem": "Problem",
             "route": "Route",
             "details": "Details",
-            "location": "Sign-in"
+            "location": "Sign-in",
+            "until": "Suspended until"
         },
         "verification": {
             "subject": "Verify your email address",
@@ -1914,6 +2055,303 @@
             "body": "A climber reported a safety-relevant problem. Please check the route before it is climbed again.",
             "photo": "A photo is attached to the task.",
             "action": "Open the task board"
+        },
+        "contentHidden": {
+            "subject": "Your content has been hidden",
+            "body": "We have hidden content you posted. It is no longer visible to others."
+        },
+        "accountSuspended": {
+            "subject": "Your account has been suspended",
+            "body": "Your account has been suspended. You cannot sign in until the date below."
         }
+    },
+    "leaderboard": {
+        "title": "Leaderboard",
+        "season": "Season",
+        "rolling": "Last 60 days",
+        "rollingWindow": "Since {from}",
+        "tv": "TV view",
+        "empty": "No sends yet",
+        "anonymous": "Climber",
+        "sends": "{n} send | {n} sends",
+        "youAreHidden": "You are hidden from leaderboards",
+        "showMe": "Show me",
+        "seasons": {
+            "title": "Seasons",
+            "name": "Name",
+            "start": "Start",
+            "end": "End",
+            "add": "Add season",
+            "deleteConfirm": "Delete this season? Ascents stay in the logbooks.",
+            "endBeforeStart": "The end has to be after the start"
+        },
+        "points": "{n} pts",
+        "stats": {
+            "climbers": "Climbers",
+            "grades": "Sends by grade",
+            "topRoutes": "Most climbed"
+        },
+        "standing": {
+            "rank": "Rank",
+            "score": "Points",
+            "ahead": "To next rank",
+            "bestSends": "My scoring sends"
+        }
+    },
+    "badges": {
+        "weeks": "{n} week | {n} weeks",
+        "currentStreak": "Current streak",
+        "bestStreak": "Best streak"
+    },
+    "friends": {
+        "title": "Friends",
+        "search": "Find climbers",
+        "noResults": "No climbers found",
+        "tabs": {
+            "feed": "Feed",
+            "following": "Following",
+            "followers": "Followers",
+            "requests": "Requests"
+        },
+        "feedEmpty": "No ascents from people you follow yet",
+        "empty": {
+            "following": "You don’t follow anyone yet",
+            "followers": "No followers yet",
+            "requests": "No open requests"
+        },
+        "follow": "Follow",
+        "following": "Following",
+        "requested": "Requested",
+        "unfollow": "Unfollow",
+        "unfollowConfirm": "You will no longer see their ascents.",
+        "accept": "Accept",
+        "decline": "Decline",
+        "removeFollower": "Remove follower",
+        "removeFollowerConfirm": "They will no longer see your ascents.",
+        "followerCount": "{n} follower | {n} followers",
+        "followingCount": "Follows {n} | Follows {n}",
+        "closedProfile": "This logbook is private",
+        "requestPending": "Follow request sent",
+        "followToSee": "Follow to see their logbook",
+        "you": "You",
+        "onlyTheirs": "Sent by them, not by you",
+        "sentByBoth": "Sent by both",
+        "privateSends": "Their sends are private",
+        "myProfile": "My profile",
+        "editProfile": "Edit profile",
+        "recent": "Recent ascents",
+        "block": "Block",
+        "unblock": "Unblock",
+        "blockConfirm": "They can no longer follow you or find you, and you will not see their reviews or beta videos."
+    },
+    "beta": {
+        "title": "Beta videos",
+        "add": "Add beta",
+        "link": "Link",
+        "file": "Video",
+        "submit": "Share",
+        "added": "Beta shared",
+        "deleted": "Beta removed",
+        "deleteConfirm": "Remove this beta video?",
+        "report": "Report this video",
+        "invalidLink": "Use a YouTube Shorts, Instagram or TikTok link",
+        "fileTooLarge": "Videos can be up to {size} MB",
+        "openOn": "Open on {platform}",
+        "play": "Play",
+        "pause": "Pause",
+        "mute": "Mute",
+        "unmute": "Unmute",
+        "fullscreen": "Full screen",
+        "seek": "Playback position",
+        "drop": "Drop a video or choose one",
+        "chooseOther": "Choose another",
+        "awaitingApproval": "Your video is waiting for approval by the gym"
+    },
+    "feed": {
+        "title": "Feed",
+        "someone": "A climber",
+        "newRoutes": "New routes",
+        "activity": "Friends’ sends",
+        "signInForFriends": "Sign in to follow your friends’ sends",
+        "noNewRoutes": "No new routes in the last 30 days",
+        "today": "Today",
+        "yesterday": "Yesterday"
+    },
+    "timeline": {
+        "filters": {
+            "all": "All",
+            "send": "Sends",
+            "review": "Reviews",
+            "beta": "Betas"
+        },
+        "empty": "Nothing here yet",
+        "beta": "Beta video",
+        "deleted": "Deleted route"
+    },
+    "achievements": {
+        "categories": {
+            "progress": "Progress",
+            "volume": "Volume",
+            "style": "Style",
+            "rhythm": "Rhythm",
+            "exploration": "Exploration",
+            "fresh": "Fresh sets",
+            "community": "Community",
+            "competition": "Competitions"
+        },
+        "names": {
+            "sends": "Sends",
+            "sessions": "Sessions",
+            "flashes": "Flashes",
+            "flash_grades": "Flash range",
+            "personal_bests": "Personal bests",
+            "grade_ladder": "Grade ladder",
+            "pyramid": "Pyramid",
+            "project": "Project",
+            "active_weeks": "Active weeks",
+            "perfect_months": "Perfect months",
+            "welcome_back": "Welcome back",
+            "walls": "Wall explorer",
+            "colors": "Rainbow",
+            "gyms": "Gym tourist",
+            "all_rounder": "All-rounder",
+            "set_sweeper": "Set sweeper",
+            "first_ascents": "First ascents",
+            "wall_clears": "Wall clear",
+            "before_strip": "Before the strip",
+            "reviews": "Reviewer",
+            "betas": "Beta sharer",
+            "friends": "Connected",
+            "helper": "Helper",
+            "competitions": "Competitor",
+            "season_top10": "Season top 10"
+        },
+        "rules": {
+            "sends": "Send {n} different route | Send {n} different routes",
+            "sessions": "Climb on {n} different days",
+            "flashes": "Flash {n} route | Flash {n} routes",
+            "flash_grades": "Flash at {n} different grades",
+            "personal_bests": "Beat your hardest send {n} time | Beat your hardest send {n} times",
+            "grade_ladder": "Send at {n} different grades",
+            "pyramid": "1 at your top grade, 2 one below, 4 two below",
+            "project": "Send a route after {n} attempts",
+            "active_weeks": "Climb in {n} weeks running – one week off is fine",
+            "perfect_months": "Climb every week of {n} month | Climb every week of {n} months",
+            "welcome_back": "Come back after three weeks off",
+            "walls": "Send on {n} walls of one gym",
+            "colors": "Send routes in {n} hold colours",
+            "gyms": "Send in {n} gyms",
+            "all_rounder": "Send boulders and routes",
+            "set_sweeper": "Send {n} routes within a week of setting",
+            "first_ascents": "Be the first to send {n} route | Be the first to send {n} routes",
+            "wall_clears": "Send every route on {n} wall | Send every route on {n} walls",
+            "before_strip": "Send {n} route in its last week | Send {n} routes in their last week",
+            "reviews": "Write {n} review | Write {n} reviews",
+            "betas": "Share {n} beta video | Share {n} beta videos",
+            "friends": "Have {n} friend | Have {n} friends",
+            "helper": "Report {n} problem that gets fixed | Report {n} problems that get fixed",
+            "competitions": "Take part in {n} competition | Take part in {n} competitions",
+            "season_top10": "Finish {n} season in the top 10 | Finish {n} seasons in the top 10"
+        },
+        "unlocked": "Achievement unlocked: {name}",
+        "more": "and {n} more"
+    },
+    "moderation": {
+        "title": "Moderation",
+        "reviewStats": "Review statistics",
+        "moderate": "Moderate",
+        "filterType": "Content",
+        "filterGym": "Gym",
+        "views": {
+            "decide": "Needs decision",
+            "approval": "Waiting for approval",
+            "hidden": "Hidden",
+            "history": "Checked",
+            "all": "All gyms"
+        },
+        "types": {
+            "rating": "Review",
+            "beta_video": "Beta video",
+            "profile": "Profile",
+            "competition_entry": "Competition name",
+            "task": "Defect / wish",
+            "route": "Route"
+        },
+        "states": {
+            "unreviewed": "Needs decision",
+            "approved": "Checked",
+            "pending": "Waiting for approval",
+            "hidden": "Hidden"
+        },
+        "actions": {
+            "keep": "Keep visible",
+            "publish": "Publish video",
+            "reject": "Decline…",
+            "hide": "Hide…",
+            "restore": "Make visible again"
+        },
+        "done": {
+            "approve": "Kept visible",
+            "publish": "Video published",
+            "reject": "Video declined",
+            "hide": "Hidden",
+            "restore": "Visible again",
+            "hideAll": "{count} item hidden | {count} items hidden"
+        },
+        "decision": {
+            "why": "Why? (sent to the author)",
+            "explanation": "Explanation",
+            "whatHappens": "What happens",
+            "hiddenNow": "Climbers no longer see it.",
+            "authorInformed": "The author gets your reason and how to object.",
+            "reportersInformed": "The reporter gets the decision. | {count} reporters get the decision.",
+            "restorable": "You can make it visible again under Hidden within 180 days.",
+            "platformLock": "Only Gripello can make it visible again.",
+            "declineGone": "The video is not published and is deleted right away.",
+            "authorAll": "All visible content of this person is hidden at once."
+        },
+        "author": {
+            "showAll": "All by this person",
+            "hideAll": "Hide all their content…",
+            "hideAllConfirm": "Hide all",
+            "suspend": "Suspend…",
+            "cannotSuspend": "Platform admins and your own account cannot be suspended here"
+        },
+        "consequence": {
+            "reports": "Closes the open report and informs the reporter. | Closes {count} open reports and informs the reporters.",
+            "author": "The author is informed when you hide it.",
+            "pending": "Only you decide whether climbers see this video.",
+            "restore": "Makes it visible to climbers again."
+        },
+        "empty": {
+            "decide": "Nothing to decide",
+            "approval": "No uploads waiting",
+            "hidden": "Nothing hidden",
+            "history": "Nothing checked yet",
+            "all": "Nothing to decide"
+        },
+        "reports": "{count} report | {count} reports",
+        "reportsTitle": "Report | Reports ({count})",
+        "openCases": "{count} open | {count} open",
+        "viewInContext": "View in context",
+        "hiddenByPlatform": "Hidden by Gripello",
+        "hiddenByGym": "Hidden by the gym",
+        "keptNote": "Checked and kept visible",
+        "waitingTitle": "Waiting for approval",
+        "new": "New",
+        "newSinceVisit": "{count} new since your last visit | {count} new since your last visit",
+        "undo": "Undo",
+        "saved": "Saved",
+        "confirmTitle": {
+            "hide": "Hide this content?",
+            "reject": "Decline this video?"
+        },
+        "confirm": {
+            "hide": "Hide",
+            "reject": "Decline"
+        },
+        "authorPosts": "{count} post | {count} posts",
+        "authorHidden": "{count} hidden",
+        "decidedElsewhere": "This case was decided elsewhere"
     }
 }

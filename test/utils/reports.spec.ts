@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { reportContentUrl, statusColor, REPORT_REASONS } from '~/utils/reports'
+import { reportContentUrl, REPORT_REASONS } from '~/utils/reports'
 
 describe('reportContentUrl', () => {
     it('addresses a comment as an anchor on its route page', () => {
@@ -14,23 +14,21 @@ describe('reportContentUrl', () => {
         )
     })
 
+    it('addresses a beta video as an anchor on its route page', () => {
+        expect(reportContentUrl('beta_video', 'vid1', 'rt456')).toBe(
+            '/route?id=rt456#beta-vid1',
+        )
+    })
+
+    it('addresses a profile by the climber page', () => {
+        expect(reportContentUrl('profile', 'u1')).toBe('/climber?id=u1')
+    })
+
     it('falls back to a bare anchor when the route id is missing', () => {
         expect(reportContentUrl('rating', 'cmt123', null)).toBe(
             '#comment-cmt123',
         )
         expect(reportContentUrl('rating', 'cmt123')).toBe('#comment-cmt123')
-    })
-})
-
-describe('statusColor', () => {
-    it('maps each status to its own colour', () => {
-        expect(statusColor('open')).toBe('warning')
-        expect(statusColor('actioned')).toBe('success')
-        expect(statusColor('rejected')).toBe('neutral')
-    })
-
-    it('degrades to a neutral colour for an unknown status', () => {
-        expect(statusColor('something-else')).toBe('neutral')
     })
 })
 

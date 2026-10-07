@@ -43,7 +43,7 @@
                     variant="soft"
                     icon="i-lucide-refresh-cw"
                     data-testid="load-error-retry"
-                    @click="refresh()"
+                    @click="retry()"
                 >
                     {{ t('errors.retry') }}
                 </UButton>
@@ -57,6 +57,12 @@
                 :hint="t('ticks.emptyHint')"
                 class="mb-6"
                 data-testid="logbook-empty"
+            />
+            <LogbookTimeline
+                :ticks="[]"
+                :gym-id="ALL_GYMS"
+                :title="t('ticks.tabs.timeline')"
+                class="mb-6"
             />
             <LogbookSuggestions :kind="null" :target-index="null" />
         </template>
@@ -85,7 +91,7 @@
 
             <div
                 role="tablist"
-                class="mb-4 flex gap-1 border-b"
+                class="mb-4 flex gap-1 overflow-x-auto border-b"
                 data-testid="logbook-tabs"
             >
                 <UButton
@@ -96,7 +102,7 @@
                     color="neutral"
                     variant="ghost"
                     :class="[
-                        '-mb-px rounded-none border-b-2',
+                        '-mb-px shrink-0 rounded-none border-b-2',
                         tab === option
                             ? 'border-primary text-primary'
                             : 'border-transparent',
@@ -136,6 +142,10 @@
                 </div>
             </div>
 
+            <div v-else-if="tab === 'timeline'" role="tabpanel">
+                <LogbookTimeline :ticks="allTicks" :gym-id="gymId" />
+            </div>
+
             <div v-else-if="tab === 'stats'" role="tabpanel">
                 <div class="grid grid-cols-12 gap-3">
                     <div class="col-span-12 md:col-span-6">
@@ -166,6 +176,10 @@
                         </AnalyticsSection>
                     </div>
                 </div>
+            </div>
+
+            <div v-else-if="tab === 'badges'" role="tabpanel">
+                <BadgesGrid :user-id="myUserId" />
             </div>
 
             <div v-else role="tabpanel">
@@ -239,7 +253,13 @@ const rangeItems = computed(() =>
         label: t(`ticks.range.${value}`),
     })),
 )
-const LOGBOOK_TABS = ['sessions', 'stats', 'projects'] as const
+const LOGBOOK_TABS = [
+    'sessions',
+    'timeline',
+    'stats',
+    'projects',
+    'badges',
+] as const
 
 const { t } = useI18n()
 const pb = usePocketbase()
@@ -290,6 +310,7 @@ const allTicks = computed(() =>
     })),
 )
 const tickGyms = computed(() => gymsInTicks(allTicks.value))
+const myUserId = pb.authStore.record?.id ?? ''
 const gymId = ref(ALL_GYMS)
 const gymItems = computed(() => [
     { label: t('ticks.allGyms'), value: ALL_GYMS },
@@ -395,6 +416,10 @@ const editing = ref<TickRecord | null>(null)
 const logRouteId = ref<string | null>(null)
 const deleteTarget = ref<TickRecord | null>(null)
 const deleting = ref(false)
+
+function retry() {
+    return Promise.all([refresh(), refreshNuxtData('my-contributions')])
+}
 
 function reload() {
     return refreshTickedRoutes()

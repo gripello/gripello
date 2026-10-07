@@ -4,14 +4,32 @@
         class="nav-bar"
         :toggle="false"
         :ui="{
-            root: 'bg-default lg:bg-(--app-bg)/80 lg:backdrop-blur-md',
-            container: 'max-w-none',
+            root: 'h-auto bg-default lg:bg-(--app-bg)/80 lg:backdrop-blur-md',
+            container: 'h-[calc(var(--ui-header-height)-1px)] max-w-none',
             left: 'min-w-0 flex-1',
             right: 'shrink-0',
         }"
     >
         <template #left>
-            <LayoutGymSwitcher class="w-auto min-w-0 lg:hidden" />
+            <NuxtLink
+                v-if="context === 'staff'"
+                :to="`/${slug}/routes`"
+                class="flex min-h-11 min-w-0 items-center gap-2 rounded-full bg-elevated py-1 ps-3 pe-4 lg:hidden"
+                :aria-label="`${$t('nav.backToClimbing')}: ${gymName}`"
+                data-testid="nav-back-to-climbing-mobile"
+            >
+                <UIcon name="i-lucide-arrow-left" class="size-5 shrink-0" />
+                <span class="flex min-w-0 flex-col leading-tight">
+                    <span
+                        class="text-[0.6875rem] font-semibold tracking-wide text-muted uppercase"
+                        >{{ $t('nav.staff') }}</span
+                    >
+                    <span class="truncate text-sm font-bold text-highlighted">{{
+                        gymName
+                    }}</span>
+                </span>
+            </NuxtLink>
+            <LayoutGymSwitcher v-else class="w-auto min-w-0 lg:hidden" />
             <UButton
                 :icon="
                     sidebarOpen
@@ -42,6 +60,7 @@
                     color="neutral"
                     variant="ghost"
                     size="xl"
+                    :class="{ 'max-lg:hidden': loggedIn }"
                     data-testid="nav-theme-toggle"
                     :data-theme-mode="themeMode"
                     :aria-label="`${$t('nav.themeToggle')}: ${$t(themeModeLabel)}`"
@@ -60,12 +79,51 @@
                 <span class="max-sm:hidden">{{ $t('routes.login') }}</span>
             </UButton>
         </template>
+        <template #bottom>
+            <nav
+                v-if="tabs.length"
+                class="flex gap-1 overflow-x-auto px-4 pb-2 lg:hidden"
+                :aria-label="$t('nav.sections')"
+                data-section-tabs
+            >
+                <UButton
+                    v-for="tab in tabs"
+                    :key="tab.to"
+                    :to="tab.to"
+                    :color="tab.active ? 'primary' : 'neutral'"
+                    :variant="tab.active ? 'solid' : 'soft'"
+                    :icon="tab.to === '/friends' ? tab.icon : undefined"
+                    :aria-label="
+                        tab.to === '/friends' && requests.length
+                            ? `${$t(tab.label)}, ${$t('friends.tabs.requests')}: ${requests.length}`
+                            : $t(tab.label)
+                    "
+                    size="sm"
+                    class="shrink-0 rounded-full px-3"
+                    :class="{ 'icon-btn': tab.to === '/friends' }"
+                    :aria-current="tab.active ? 'page' : undefined"
+                    :data-testid="tab.testid"
+                >
+                    <template v-if="tab.to !== '/friends'">{{
+                        $t(tab.label)
+                    }}</template>
+                    <UBadge
+                        v-else-if="requests.length"
+                        :label="requests.length"
+                        color="error"
+                        size="sm"
+                        class="rounded-full"
+                    />
+                </UButton>
+            </nav>
+        </template>
     </UHeader>
 </template>
 
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import { visibleNavItems } from '~/utils/navigation'
+import { navContext, sectionTabs, visibleNavItems } from '~/utils/navigation'
+import { gymTitle } from '~/utils/gymNames'
 
 const props = defineProps<{ loggedIn: boolean }>()
 
@@ -107,7 +165,14 @@ const themeItems = computed<DropdownMenuItem[]>(() =>
 
 const { t } = useI18n()
 const { can } = usePermissions()
-const { slug } = useGym()
+const { gym, slug } = useGym()
+const route = useRoute()
+const context = computed(() =>
+    navContext(route.path, routeGymSlug(route.params)),
+)
+const gymName = computed(() => (gym.value ? gymTitle(gym.value) : ''))
+const tabs = computed(() => sectionTabs(route.path, slug.value, props.loggedIn))
+const { requests } = useFollows()
 const { open: sidebarOpen, toggle: toggleSidebar } = useSidebar()
 
 const paletteLinks = computed(() =>

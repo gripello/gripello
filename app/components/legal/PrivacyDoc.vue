@@ -107,14 +107,26 @@ defineProps<{
 }>()
 
 const textSections = [
+    'scope',
     'serverLogs',
     'accounts',
+    'privacySettings',
+    'logbook',
+    'friends',
+    'profiles',
+    'leaderboards',
     'ratings',
-    'reports',
+    'betaVideos',
+    'achievements',
+    'competitions',
     'defects',
+    'reports',
+    'notifications',
+    'push',
+    'dataExport',
+    'deletion',
     'auditLog',
     'captcha',
-    'push',
     'thirdParties',
 ]
 

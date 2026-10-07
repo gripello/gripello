@@ -1,4 +1,5 @@
 import type { LocationRecord } from '~/types/models'
+import { sharedAsyncData } from '~/utils/asyncData'
 
 export function useLocations() {
     const pb = usePocketbase()
@@ -12,6 +13,6 @@ export function useLocations() {
                 sort: 'name',
                 requestKey: 'locationsList',
             }),
-        { default: () => [] },
+        { ...sharedAsyncData, default: () => [] },
     )
 }

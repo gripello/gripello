@@ -6,6 +6,12 @@
             class="base-echart"
             :data-testid="testid"
         ></div>
+        <template #fallback>
+            <div
+                :style="containerStyle"
+                class="animate-pulse rounded-md bg-elevated/60"
+            />
+        </template>
     </client-only>
 </template>
 

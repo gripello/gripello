@@ -52,8 +52,9 @@ func newMemberFixture(t *testing.T) memberFixture {
 	t.Helper()
 	app := newGymTestApp(t)
 	f := memberFixture{app: app}
-	f.gymA = saveRecord(t, app, "gyms", map[string]any{"slug": "gym-a", "name": "A", "active": true})
-	f.gymB = saveRecord(t, app, "gyms", map[string]any{"slug": "gym-b", "name": "B", "active": true})
+	betas := map[string]bool{featureBetaVideos: true}
+	f.gymA = saveRecord(t, app, "gyms", map[string]any{"slug": "gym-a", "name": "A", "active": true, "features": betas})
+	f.gymB = saveRecord(t, app, "gyms", map[string]any{"slug": "gym-b", "name": "B", "active": true, "features": betas})
 	f.adminRoleA = gymRole(t, app, f.gymA.Id, "admin")
 	f.setterRoleA = gymRole(t, app, f.gymA.Id, "routesetter")
 	f.setterRoleB = gymRole(t, app, f.gymB.Id, "routesetter")

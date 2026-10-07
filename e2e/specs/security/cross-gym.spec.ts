@@ -60,7 +60,7 @@ test('staff of one gym cannot manage another gym', async ({
         ).toBe('Foreign route')
 
         await expect(page.getByTestId('nav-link-routes')).toBeVisible()
-        await expect(page.getByTestId('nav-group-manage')).toHaveCount(0)
+        await expect(page.getByTestId('nav-staff-tools')).toHaveCount(0)
         await expect(page.getByTestId('nav-link-manage-routes')).toHaveCount(0)
 
         await gotoSettled(page, `/${slug}/manage/routes`)

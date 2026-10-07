@@ -18,6 +18,7 @@ import {
     formatCompetitionWindow,
     suggestedEnd,
     competitionShareUrl,
+    resultsChangedAt,
 } from '~/utils/competitions'
 import type { CompetitionRecord } from '~/types/models'
 
@@ -316,5 +317,16 @@ describe('competitionShareUrl', () => {
         expect(competitionShareUrl('https://gripello.app', 'gym-a', 'c1')).toBe(
             'https://gripello.app/gym-a/competitions/c1',
         )
+    })
+})
+
+describe('resultsChangedAt', () => {
+    it('moves forward with real changes', () => {
+        expect(resultsChangedAt(100, { kind: 'scores', at: 200 })).toBe(200)
+        expect(resultsChangedAt(300, { kind: 'scores', at: 200 })).toBe(300)
+    })
+
+    it('keeps the last change on a resync so the shared cache stays usable', () => {
+        expect(resultsChangedAt(100, { kind: 'resync', at: 999 })).toBe(100)
     })
 })

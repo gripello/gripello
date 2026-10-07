@@ -252,3 +252,43 @@ export function medianSendIndex(
         .sort((a, b) => a - b)
     return values.length ? values[Math.floor(values.length / 2)]! : null
 }
+
+export interface LogbookComparison {
+    mine: LogbookStats
+    theirs: LogbookStats
+    both: string[]
+    onlyTheirs: string[]
+}
+
+function sentRoutes(ticks: LogbookTick[]): Set<string> {
+    return new Set(
+        ticks
+            .filter((tick) => isSend(tick) && tick.route)
+            .map((tick) => tick.route!),
+    )
+}
+
+export function compareLogbooks(
+    mine: LogbookTick[],
+    theirs: LogbookTick[],
+    kind: LogbookKind,
+    range: LogbookRange,
+    now = new Date(),
+): LogbookComparison {
+    const scoped = (ticks: LogbookTick[]) =>
+        ticks.filter(
+            (tick) =>
+                tickKind(tick) === kind &&
+                inWindow(tick, windowStart(range, now), windowEnd(now)),
+        )
+    const mineScoped = scoped(mine)
+    const theirsScoped = scoped(theirs)
+    const mySends = sentRoutes(mine.filter((tick) => tickKind(tick) === kind))
+    const theirSends = [...sentRoutes(theirsScoped)]
+    return {
+        mine: statsOf(mineScoped),
+        theirs: statsOf(theirsScoped),
+        both: theirSends.filter((route) => mySends.has(route)),
+        onlyTheirs: theirSends.filter((route) => !mySends.has(route)),
+    }
+}

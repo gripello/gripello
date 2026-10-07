@@ -7,6 +7,7 @@ require (
 	github.com/dop251/goja v0.0.0-20260901132549-43234fa61381
 	github.com/pocketbase/dbx v1.12.0
 	github.com/pocketbase/pocketbase v0.40.4
+	golang.org/x/sync v0.23.0
 )
 
 require (
@@ -54,7 +55,6 @@ require (
 	golang.org/x/image v0.46.0 // indirect
 	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect

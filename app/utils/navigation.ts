@@ -6,10 +6,18 @@ export interface NavLink {
     icon: string
     label: string
     permission?: string
+    signedIn?: boolean
+    badge?: NavBadge
 }
+
+export type NavBadge = 'moderation'
+export type NavBadges = Partial<Record<NavBadge, number>>
+
+export type Zone = 'gym' | 'community' | 'you'
 
 export interface NavItem extends Partial<NavLink> {
     key: string
+    zone?: Zone
     signedIn?: boolean
     icon: string
     label: string
@@ -21,15 +29,46 @@ type Can = (permission: string) => boolean
 export const PLATFORM_ADMIN = 'platform_admin'
 export const PLATFORM_ADMIN_GRANTS = ['manage_settings', 'manage_users']
 
-export const BOTTOM_NAV: NavLink[] = [
-    { to: '/map', icon: 'i-lucide-map', label: 'routes.map' },
-    { to: '/scan', icon: 'i-lucide-scan-qr-code', label: 'routes.scan' },
+const YOU_TAB: NavLink = {
+    to: '/account',
+    icon: 'i-lucide-circle-user-round',
+    label: 'nav.you',
+}
+const SCAN_TAB: NavLink = {
+    to: '/scan',
+    icon: 'i-lucide-scan-qr-code',
+    label: 'routes.scan',
+}
+
+export const CLIMBER_TABS: NavLink[] = [
+    { to: '/routes', icon: 'i-lucide-mountain', label: 'nav.gym' },
+    { to: '/feed', icon: 'i-lucide-users', label: 'nav.community' },
+    SCAN_TAB,
+    { to: '/logbook', icon: 'i-lucide-book-check', label: 'routes.logbook' },
+    YOU_TAB,
+]
+
+export const STAFF_TABS: NavLink[] = [
     {
-        to: '/logbook',
-        icon: 'i-lucide-book-check',
-        label: 'routes.logbook',
+        to: '/manage/routes',
+        icon: 'i-lucide-waypoints',
+        label: 'routes.list',
+        permission: 'manage_routes',
     },
-    { to: '/account', icon: 'i-lucide-layout-grid', label: 'routes.me' },
+    {
+        to: '/manage/tasks',
+        icon: 'i-lucide-list-checks',
+        label: 'routes.tasks',
+        permission: 'manage_tasks',
+    },
+    {
+        to: '/manage/moderation',
+        icon: 'i-lucide-shield-check',
+        label: 'moderation.title',
+        permission: 'manage_comments',
+        badge: 'moderation',
+    },
+    { to: '/manage', icon: 'i-lucide-ellipsis', label: 'nav.more' },
 ]
 
 export const PLATFORM_LINKS: NavLink[] = [
@@ -38,6 +77,13 @@ export const PLATFORM_LINKS: NavLink[] = [
         icon: 'i-lucide-layout-dashboard',
         label: 'platform.overview.title',
         permission: PLATFORM_ADMIN,
+    },
+    {
+        to: '/platform/moderation',
+        icon: 'i-lucide-shield-alert',
+        label: 'moderation.title',
+        permission: PLATFORM_ADMIN,
+        badge: 'moderation',
     },
     {
         to: '/platform/gyms',
@@ -60,42 +106,68 @@ export const PLATFORM_LINKS: NavLink[] = [
 ]
 
 export const PLATFORM_BOTTOM_NAV: NavLink[] = [
-    ...PLATFORM_LINKS.slice(0, -1),
-    { ...PLATFORM_LINKS.at(-1)!, label: 'routes.settings' },
-    BOTTOM_NAV.at(-1)!,
+    ...PLATFORM_LINKS.slice(0, 4),
+    YOU_TAB,
 ]
 
 export const NAV_ITEMS: NavItem[] = [
     {
         key: 'home',
+        zone: 'gym',
         to: '/',
         icon: 'i-lucide-house',
         label: 'routes.home',
     },
     {
         key: 'list',
+        zone: 'gym',
         to: '/routes',
         icon: 'i-lucide-list',
         label: 'routes.list',
     },
     {
         key: 'map',
+        zone: 'gym',
         to: '/map',
         icon: 'i-lucide-map',
         label: 'routes.map',
     },
     {
+        key: 'feed',
+        zone: 'community',
+        to: '/feed',
+        icon: 'i-lucide-newspaper',
+        label: 'routes.feed',
+    },
+    {
+        key: 'leaderboard',
+        zone: 'community',
+        to: '/leaderboard',
+        icon: 'i-lucide-medal',
+        label: 'routes.leaderboard',
+    },
+    {
+        key: 'competitions',
+        zone: 'community',
+        to: '/competitions',
+        icon: 'i-lucide-trophy',
+        label: 'routes.competitions',
+    },
+    {
+        key: 'friends',
+        zone: 'community',
+        signedIn: true,
+        to: '/friends',
+        icon: 'i-lucide-users',
+        label: 'routes.friends',
+    },
+    {
         key: 'logbook',
+        zone: 'you',
         signedIn: true,
         to: '/logbook',
         icon: 'i-lucide-book-check',
         label: 'routes.logbook',
-    },
-    {
-        key: 'competitions',
-        to: '/competitions',
-        icon: 'i-lucide-trophy',
-        label: 'routes.competitions',
     },
     {
         key: 'manage',
@@ -152,16 +224,17 @@ export const NAV_ITEMS: NavItem[] = [
         label: 'nav.moderation',
         children: [
             {
-                to: '/manage/comments',
-                icon: 'i-lucide-message-square',
-                label: 'routes.comments',
+                to: '/manage/moderation',
+                icon: 'i-lucide-shield-check',
+                label: 'moderation.title',
                 permission: 'manage_comments',
+                badge: 'moderation',
             },
             {
-                to: '/manage/reports',
-                icon: 'i-lucide-flag',
-                label: 'routes.reports',
-                permission: 'manage_reports',
+                to: '/manage/comments',
+                icon: 'i-lucide-message-square',
+                label: 'moderation.reviewStats',
+                permission: 'manage_comments',
             },
         ],
     },
@@ -199,7 +272,14 @@ const PLATFORM_GROUP: NavItem = {
     children: PLATFORM_LINKS,
 }
 
-const GYMLESS_PATHS = ['/logbook', '/account', '/scan', '/platform']
+const GYMLESS_PATHS = [
+    '/logbook',
+    '/friends',
+    '/climber',
+    '/account',
+    '/scan',
+    '/platform',
+]
 
 const isGymless = (to: string) =>
     GYMLESS_PATHS.some((path) => to === path || to.startsWith(`${path}/`))
@@ -247,16 +327,24 @@ export function withGym<T extends { to?: string; children?: NavLink[] }>(
 const allowed = (can: Can) => (link: { permission?: string }) =>
     !link.permission || can(link.permission)
 
+const forViewer = (signedIn: boolean) => (link: { signedIn?: boolean }) =>
+    signedIn || !link.signedIn
+
 export function visibleNavItems(
     can: Can,
     signedIn = true,
     slug = '',
 ): NavItem[] {
     return withGym([...NAV_ITEMS, PLATFORM_GROUP], slug)
-        .filter((item) => signedIn || !item.signedIn)
+        .filter(forViewer(signedIn))
         .map((item) =>
             item.children
-                ? { ...item, children: item.children.filter(allowed(can)) }
+                ? {
+                      ...item,
+                      children: item.children
+                          .filter(allowed(can))
+                          .filter(forViewer(signedIn)),
+                  }
                 : item,
         )
         .filter((item) =>
@@ -264,19 +352,24 @@ export function visibleNavItems(
         )
 }
 
-export function staffSections(
-    can: Can,
-    slug = '',
-): { key: string; label: string; icon: string; links: NavLink[] }[] {
-    return withGym(NAV_ITEMS, slug)
-        .filter((item) => item.children)
+function navSections(can: Can, signedIn: boolean, slug: string) {
+    return visibleNavItems(can, signedIn, slug)
+        .filter((item) => item.key !== PLATFORM_GROUP.key && item.children)
         .map((group) => ({
             key: group.key,
             label: group.label,
             icon: group.icon,
-            links: group.children!.filter(allowed(can)),
+            links: group.children!,
         }))
-        .filter((section) => section.links.length > 0)
+}
+
+export function staffSections(
+    can: Can,
+    slug = '',
+): { key: string; label: string; icon: string; links: NavLink[] }[] {
+    return navSections(can, true, slug).filter((section) =>
+        section.links.every((link) => link.permission),
+    )
 }
 
 export interface SidebarItem {
@@ -285,19 +378,27 @@ export interface SidebarItem {
     to?: string
     testid: string
     current?: boolean
+    badge?: string
     defaultOpen?: boolean
     'aria-label'?: string
     children?: SidebarItem[]
 }
 
+export interface SidebarSection {
+    key: string
+    label: string
+    items: SidebarItem[]
+}
+
 const isWithin = (path: string, to: string) =>
     path === to || path.startsWith(`${to}/`)
 
-export type NavContext = 'gym' | 'platform' | 'global'
+export type NavContext = 'gym' | 'staff' | 'platform' | 'global'
 
 export function navContext(path: string, routeSlug: string): NavContext {
     if (isWithin(path, '/platform')) return 'platform'
-    return routeSlug ? 'gym' : 'global'
+    if (!routeSlug) return 'global'
+    return /^\/[^/]+\/(manage|admin)(\/|$)/.test(path) ? 'staff' : 'gym'
 }
 
 export function requestedSection(requested: unknown, ids: string[]) {
@@ -306,73 +407,180 @@ export function requestedSection(requested: unknown, ids: string[]) {
         : ids[0]!
 }
 
-const bottomNavMatches = (to: string, path: string) => {
-    if (to === '/account') return path === to
-    if (to === '/map') return /^\/[^/]+\/map$/.test(path)
-    return isWithin(path, to)
+const GLOBAL_PAGES = ['/route', '/auth', '/imprint', '/privacy']
+
+export function gymLocalPath(path: string): string | null {
+    const [, first = '', ...rest] = path.split('/')
+    const top = `/${first}`
+    if (!first || isGymless(top) || GLOBAL_PAGES.includes(top)) return null
+    return `/${rest.join('/')}`.replace(/\/$/, '') || '/'
 }
 
-export function bottomNavLinks(path: string, mapSlug: string) {
-    const links =
-        navContext(path, '') === 'platform' ? PLATFORM_BOTTOM_NAV : BOTTOM_NAV
-    const activeTo = links
-        .map((link) => link.to)
-        .filter((to) => bottomNavMatches(to, path))
-        .sort((a, b) => b.length - a.length)[0]
-    return links.map((link) => ({
+const GYM_PAGES = ['/', '/routes', '/map', '/route']
+const COMMUNITY_PAGES = ['/feed', '/leaderboard', '/competitions']
+
+export function zoneOfPath(path: string): Zone | null {
+    if (isWithin(path, '/friends') || isWithin(path, '/climber'))
+        return 'community'
+    if (isWithin(path, '/logbook')) return 'you'
+    const local = gymLocalPath(path)
+    if (!local) return null
+    if (GYM_PAGES.includes(local)) return 'gym'
+    if (COMMUNITY_PAGES.some((page) => isWithin(local, page)))
+        return 'community'
+    return null
+}
+
+const TAB_ZONES: Record<string, Zone> = {
+    '/routes': 'gym',
+    '/feed': 'community',
+}
+
+export function bottomNavLinks(
+    path: string,
+    gymSlug: string,
+    context: NavContext,
+    can: Can = () => true,
+) {
+    if (context === 'platform')
+        return PLATFORM_BOTTOM_NAV.map((link) => ({
+            ...link,
+            path: link.to,
+            active:
+                link.to ===
+                PLATFORM_BOTTOM_NAV.map((tab) => tab.to)
+                    .filter((to) => isWithin(path, to))
+                    .sort((a, b) => b.length - a.length)[0],
+        }))
+    if (context === 'staff') {
+        const local = gymLocalPath(path) ?? ''
+        const tabs = STAFF_TABS.filter(allowed(can))
+        const activeTo =
+            tabs
+                .map((tab) => tab.to)
+                .filter((to) => to !== '/manage' && isWithin(local, to))
+                .sort((a, b) => b.length - a.length)[0] ?? '/manage'
+        return tabs.map((link) => ({
+            ...link,
+            to: gymLink(link.to, gymSlug),
+            path: link.to,
+            active: link.to === activeTo,
+        }))
+    }
+    const zone = zoneOfPath(path)
+    return CLIMBER_TABS.map((link) => ({
         ...link,
-        to: link.to === '/map' ? (mapSlug ? `/${mapSlug}/map` : '/') : link.to,
+        to: TAB_ZONES[link.to]
+            ? gymSlug
+                ? `/${gymSlug}${link.to}`
+                : '/'
+            : link.to,
         path: link.to,
-        active: link.to === activeTo,
+        active: TAB_ZONES[link.to]
+            ? TAB_ZONES[link.to] === zone
+            : link.to === '/account'
+              ? path === link.to
+              : isWithin(path, link.to),
     }))
 }
 
-export function sidebarItems(
+const SECTION_TABS: Record<Zone, string[]> = {
+    gym: ['/routes', '/map', '/'],
+    community: ['/feed', '/leaderboard', '/competitions', '/friends'],
+    you: [],
+}
+
+export function sectionTabs(path: string, slug: string, signedIn = true) {
+    const local = path === '/friends' ? path : gymLocalPath(path)
+    const zone = zoneOfPath(path)
+    if (!slug || !local || !zone || !SECTION_TABS[zone].includes(local))
+        return []
+    return SECTION_TABS[zone]
+        .map((to) => NAV_ITEMS.find((entry) => entry.to === to)!)
+        .filter(forViewer(signedIn))
+        .map((item) => ({
+            to: gymLink(item.to!, slug),
+            label: item.label,
+            icon: item.icon,
+            testid: `section-tab-${navTestId(item.to!)}`,
+            active: item.to === local,
+        }))
+}
+
+const isPage = (item: NavItem) => !item.children && !item.permission
+
+export function sidebarSections(
     can: Can,
     signedIn: boolean,
     slug: string,
     currentPath: string,
     t: (key: string) => string,
-): SidebarItem[][] {
+    context: NavContext,
+    myId = '',
+    badges: NavBadges = {},
+): { sections: SidebarSection[]; staffEntry: string | null } {
     const toItem = (link: NavLink): SidebarItem => ({
         label: t(link.label),
+        'aria-label': t(link.label),
         icon: link.icon,
         to: link.to,
         testid: `nav-link-${navTestId(link.path ?? link.to)}`,
+        ...(link.badge && badges[link.badge]
+            ? { badge: String(badges[link.badge]) }
+            : {}),
     })
-    if (navContext(currentPath, '') === 'platform')
-        return [PLATFORM_LINKS.filter(allowed(can)).map(toItem)]
-    const pages = visibleNavItems(can, signedIn, slug)
-        .filter((item) => !item.children && !item.permission)
-        .map((item) => toItem(item as NavLink))
-    const groups = staffSections(can, slug).map((section) => {
-        const current = section.links.some((link) =>
-            isWithin(currentPath, link.to),
-        )
+    if (context === 'platform')
         return {
-            label: t(section.label),
-            'aria-label': t(section.label),
-            icon: section.icon,
-            testid: `nav-group-${section.key}`,
-            current,
-            defaultOpen: current,
-            children: section.links.map(toItem),
+            sections: [
+                {
+                    key: 'platform',
+                    label: t('nav.platform'),
+                    items: PLATFORM_LINKS.filter(allowed(can)).map(toItem),
+                },
+            ],
+            staffEntry: null,
         }
-    })
-    return [pages, groups]
-}
-
-export function pageLinks(signedIn: boolean, slug = ''): NavLink[] {
-    const inBottomNav = new Set(BOTTOM_NAV.map((link) => link.to))
-    return withGym(
-        NAV_ITEMS.filter(
-            (item) =>
-                item.to &&
-                !item.children &&
-                !item.permission &&
-                (signedIn || !item.signedIn) &&
-                !inBottomNav.has(item.to),
-        ),
-        slug,
-    ) as NavLink[]
+    const staff = staffSections(can, slug)
+    if (context === 'staff')
+        return {
+            sections: staff.map((section) => ({
+                key: section.key,
+                label: t(section.label),
+                items: section.links.map((link) => ({
+                    ...toItem(link),
+                    current: isWithin(currentPath, link.to),
+                })),
+            })),
+            staffEntry: null,
+        }
+    const pages = visibleNavItems(can, signedIn, slug).filter(isPage)
+    const zone = (key: Zone) =>
+        pages
+            .filter((item) => item.zone === key)
+            .map((item) => toItem(item as NavLink))
+    const you = [
+        ...zone('you'),
+        ...(signedIn && myId
+            ? [
+                  {
+                      label: t('friends.myProfile'),
+                      icon: 'i-lucide-id-card',
+                      to: `/climber?id=${myId}`,
+                      testid: 'nav-link-climber',
+                  },
+              ]
+            : []),
+    ]
+    return {
+        sections: [
+            { key: 'gym', label: t('nav.gym'), items: zone('gym') },
+            {
+                key: 'community',
+                label: t('nav.community'),
+                items: zone('community'),
+            },
+            { key: 'you', label: t('nav.you'), items: you },
+        ].filter((section) => section.items.length > 0),
+        staffEntry: slug && staff.length ? `/${slug}/manage` : null,
+    }
 }

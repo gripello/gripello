@@ -35,6 +35,7 @@ export default defineNuxtConfig({
     },
     nitro: {
         compressPublicAssets: { gzip: true, brotli: true },
+        serverAssets: [{ baseName: 'locales', dir: '../i18n/locales' }],
     },
     app: {
         head: {
@@ -71,7 +72,7 @@ export default defineNuxtConfig({
     },
     icon: {
         clientBundle: {
-            scan: { globInclude: ['app/**/*.{vue,ts}'] },
+            scan: { globInclude: ['app/**/*.{vue,ts}', 'shared/**/*.ts'] },
         },
     },
     i18n: {
@@ -86,7 +87,7 @@ export default defineNuxtConfig({
         locales: SUPPORTED_LOCALES.map(({ code, name }) => ({
             code,
             name,
-            file: `${code}.ts`,
+            file: { path: `${code}.ts`, cache: true },
         })),
     },
     imports: {

@@ -3,6 +3,7 @@ import { gotoSettled } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { waitForMail, mailCount, mailbox } from '../../support/mail'
+import { decide, openCase } from '../../support/moderation'
 
 test('Art. 16(4): the notifier gets a receipt and moderators get an alert', async ({
     adminPage: page,
@@ -11,7 +12,7 @@ test('Art. 16(4): the notifier gets a receipt and moderators get an alert', asyn
 }) => {
     const notifier = mailbox(testPrefix, 'notifier')
 
-    await gotoSettled(page, '/manage/reports', /\/manage\/reports/)
+    await gotoSettled(page, '/manage/moderation')
     const commentId = await createComment(
         page,
         route.id,
@@ -31,7 +32,7 @@ test('Art. 16(4): the notifier gets a receipt and moderators get an alert', asyn
         subject: /new content report/i,
         bodyIncludes: `${testPrefix}-receipt-explanation`,
     })
-    expect(alert.HTML).toContain('/manage/reports')
+    expect(alert.HTML).toContain('/manage/moderation')
 })
 
 test('Art. 16(5): the notifier is told the decision, exactly once', async ({
@@ -41,13 +42,13 @@ test('Art. 16(5): the notifier is told the decision, exactly once', async ({
 }) => {
     const notifier = mailbox(testPrefix, 'decision')
 
-    await gotoSettled(page, '/manage/reports', /\/manage\/reports/)
+    await gotoSettled(page, '/manage/moderation')
     const commentId = await createComment(
         page,
         route.id,
         `${testPrefix}-decide`,
     )
-    const reportId = await createReport(page, {
+    await createReport(page, {
         contentId: commentId,
         explanation: `${testPrefix}-decide-explanation`,
         notifierEmail: notifier,
@@ -55,15 +56,8 @@ test('Art. 16(5): the notifier is told the decision, exactly once', async ({
 
     await waitForMail(page, notifier, { subject: /received/i })
 
-    await gotoSettled(page, '/manage/reports')
-    const card = page.getByTestId(`report-card-${reportId}`)
-    await card.getByTestId('report-card-keep').click()
-    await page
-        .getByTestId('report-decision-reason')
-        .first()
-        .fill(`${testPrefix}-reasoning`)
-    await page.getByTestId('report-decision-confirm').click()
-    await expect(page.getByTestId('report-decision-dialog')).toBeHidden()
+    await openCase(page, `${testPrefix}-decide`)
+    await decide(page, 'hide', `${testPrefix}-reasoning`)
 
     const decision = await waitForMail(page, notifier, {
         subject: /decision/i,

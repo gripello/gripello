@@ -25,7 +25,7 @@ export async function authAsSuperuser(pb: PocketBase) {
 
 export async function ensureGym(pb: PocketBase) {
     const filter = pb.filter('slug = {:slug}', { slug: E2E_GYM_SLUG })
-    return pb
+    const gym = await pb
         .collection('gyms')
         .getFirstListItem(filter, { requestKey: null })
         .catch(() =>
@@ -33,8 +33,13 @@ export async function ensureGym(pb: PocketBase) {
                 slug: E2E_GYM_SLUG,
                 name: 'E2E Gym',
                 active: true,
+                features: { beta_videos: true },
             }),
         )
+    if (gym.features?.beta_videos) return gym
+    return pb.collection('gyms').update(gym.id, {
+        features: { ...gym.features, beta_videos: true },
+    })
 }
 
 let cachedE2eGymId: Promise<string> | null = null
@@ -319,7 +324,16 @@ export async function sweepTestData(
     const owned = `name ~ ${name} || location.name ~ ${name}${inLocation}`
 
     await deleteMatching(pb, 'notifications', `params ~ ${name}`)
-    await deleteMatching(pb, 'reports', `explanation ~ ${name}`)
+    await deleteMatching(
+        pb,
+        'moderation_items',
+        `snapshot ~ ${name} || snapshot ~ ${username} || author.email ~ ${name}`,
+    )
+    await deleteMatching(
+        pb,
+        'reports',
+        `explanation ~ ${name} || notifier_name ~ ${name}`,
+    )
     await deleteMatching(
         pb,
         'tasks',
@@ -332,6 +346,7 @@ export async function sweepTestData(
     )
     await deleteMatching(pb, 'ratings', `comment ~ ${name}`)
     await deleteMatching(pb, 'competitions', owned)
+    await deleteMatching(pb, 'seasons', `name ~ ${name}`)
     await deleteMatching(pb, 'routes', owned)
     await deleteMatching(pb, 'walls', owned)
     await deleteMatching(pb, 'locations', `name ~ ${name}`)

@@ -35,17 +35,15 @@
                     :validate="validateProfile"
                     class="grid gap-5 lg:grid-cols-2"
                 >
-                    <UFormField
-                        :label="t('accountSettings.avatar')"
-                        :description="t('accountSettings.avatarDescription')"
-                        class="flex flex-row-reverse items-center justify-end gap-4 lg:col-span-2"
-                    >
-                        <UserAvatarPicker
-                            :preview="avatarPreview"
-                            test-id-prefix="profile"
-                            @select="selectAvatar"
-                        />
-                    </UFormField>
+                    <UserProfileImages
+                        :banner="bannerPreview"
+                        :avatar="avatarPreview"
+                        :name="`${user.firstname ?? ''} ${user.name ?? ''}`"
+                        class="lg:col-span-2"
+                        @banner="selectBanner"
+                        @remove-banner="removeBanner"
+                        @avatar="selectAvatar"
+                    />
                     <UFormField
                         :label="t('account.firstname')"
                         name="firstname"
@@ -158,6 +156,8 @@
 
             <AccountPushSettings v-else-if="activeTab === 'notifications'" />
 
+            <AccountPrivacySettings v-else-if="activeTab === 'privacy'" />
+
             <template v-else>
                 <UPageCard variant="subtle" :ui="{ container: 'gap-y-4' }">
                     <UserPasswordChangeFields
@@ -249,6 +249,7 @@ const SECTIONS = [
     'profile',
     'preferences',
     'notifications',
+    'privacy',
     'security',
 ] as const
 type Section = (typeof SECTIONS)[number]
@@ -316,6 +317,45 @@ onMounted(() => {
     avatarPreview.value = savedAvatarUrl()
 })
 
+const bannerFile = ref<File | null>(null)
+const bannerRemoved = ref(false)
+const bannerPreview = ref<string | null>(null)
+
+const savedBannerUrl = () =>
+    user.banner ? usePbFileUrl(user, user.banner, { thumb: '1600x400' }) : null
+
+onMounted(() => {
+    bannerPreview.value = savedBannerUrl()
+})
+
+const revokeBlobUrl = (url: string | null | undefined) => {
+    if (url?.startsWith('blob:')) URL.revokeObjectURL(url)
+}
+watch(avatarPreview, (_, previous) => revokeBlobUrl(previous))
+watch(bannerPreview, (_, previous) => revokeBlobUrl(previous))
+onBeforeUnmount(() => {
+    revokeBlobUrl(avatarPreview.value)
+    revokeBlobUrl(bannerPreview.value)
+})
+
+function selectBanner(file: File) {
+    bannerFile.value = file
+    bannerRemoved.value = false
+    bannerPreview.value = URL.createObjectURL(file)
+}
+
+function removeBanner() {
+    bannerFile.value = null
+    bannerRemoved.value = !!user.banner
+    bannerPreview.value = null
+}
+
+function resetBanner() {
+    bannerFile.value = null
+    bannerRemoved.value = false
+    bannerPreview.value = savedBannerUrl()
+}
+
 function selectAvatar(file: File) {
     avatarFile.value = file
     avatarPreview.value = URL.createObjectURL(file)
@@ -357,6 +397,13 @@ const tabs = computed<NavigationMenuItem[]>(() => [
         'data-testid': 'profile-tab-notifications',
     },
     {
+        label: t('account.tabs.privacy'),
+        icon: 'i-lucide-eye',
+        to: { query: { tab: 'privacy' } },
+        active: activeTab.value === 'privacy',
+        'data-testid': 'profile-tab-privacy',
+    },
+    {
         label: t('account.tabs.security'),
         icon: 'i-lucide-shield-check',
         to: { query: { tab: 'security' } },
@@ -382,6 +429,7 @@ const sectionTitle = computed(
             profile: t('account.tabs.profile'),
             preferences: t('account.tabs.preferences'),
             notifications: t('account.tabs.notifications'),
+            privacy: t('account.tabs.privacy'),
             security: t('account.password'),
         })[activeTab.value],
 )
@@ -415,11 +463,14 @@ const emailChangeRequested = computed(
 const sectionChanged = computed<Record<Section, boolean>>(() => ({
     profile:
         !!avatarFile.value ||
+        !!bannerFile.value ||
+        bannerRemoved.value ||
         emailChangeRequested.value ||
         user.firstname !== original.firstname ||
         user.name !== original.name,
     preferences: user.language !== original.language,
     notifications: false,
+    privacy: false,
     security: passwordChangeRequested.value,
 }))
 
@@ -434,6 +485,7 @@ function resetSection(section: Section) {
         user.email = original.email
         avatarFile.value = null
         avatarPreview.value = savedAvatarUrl()
+        resetBanner()
     } else if (section === 'preferences') {
         user.language = original.language
     } else if (section === 'security') {
@@ -478,6 +530,8 @@ async function saveUser(section: Section) {
         formData.append('firstname', user.firstname ?? '')
         formData.append('name', user.name ?? '')
         if (avatarFile.value) formData.append('avatar', avatarFile.value)
+        if (bannerFile.value) formData.append('banner', bannerFile.value)
+        else if (bannerRemoved.value) formData.append('banner', '')
     } else if (section === 'preferences') {
         formData.append('language', user.language)
     } else {
@@ -496,6 +550,8 @@ async function saveUser(section: Section) {
             user.avatar = updated.avatar
             avatarFile.value = null
             avatarPreview.value = savedAvatarUrl()
+            user.banner = updated.banner
+            resetBanner()
             original.firstname = updated.firstname
             original.name = updated.name
         } else if (section === 'preferences') {

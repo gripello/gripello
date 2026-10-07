@@ -148,6 +148,9 @@ func writeAccountExport(app core.App, zw *zip.Writer, user *core.Record) error {
 	if avatar := user.GetString("avatar"); avatar != "" {
 		x.copyFile(user.BaseFilesPath()+"/"+avatar, "avatar"+path.Ext(avatar))
 	}
+	if banner := user.GetString("banner"); banner != "" {
+		x.copyFile(user.BaseFilesPath()+"/"+banner, "banner"+path.Ext(banner))
+	}
 
 	ticks := x.byUser("ticks", "user")
 	x.writeJSON("ticks.json", ticks)
@@ -218,6 +221,60 @@ func writeAccountExport(app core.App, zw *zip.Writer, user *core.Record) error {
 		}
 	}
 	x.writeJSON("reports.json", reports)
+
+	follows := []map[string]any{}
+	for _, relation := range []struct{ field, other, label string }{{"follower", "followee", "following"}, {"followee", "follower", "follower"}} {
+		for _, follow := range x.byUser("follows", relation.field) {
+			other := x.find("users", follow.GetString(relation.other))
+			name := ""
+			if other != nil {
+				name = fullName(other)
+			}
+			follows = append(follows, map[string]any{"relation": relation.label, "climber": name, "status": follow.GetString("status"), "since": follow.GetDateTime("created")})
+		}
+	}
+	x.writeJSON("follows.json", follows)
+
+	videos := []map[string]any{}
+	for _, video := range x.byUser("beta_videos", "user") {
+		data := ownFields(video, "user")
+		data["route"] = x.nameOf("routes", video.GetString("route"))
+		data["gym"] = x.nameOf("gyms", video.GetString("gym"))
+		videos = append(videos, data)
+		if file := video.GetString("file"); file != "" {
+			x.copyFile(video.BaseFilesPath()+"/"+file, "beta_videos/"+video.Id+"_"+file)
+		}
+	}
+	x.writeJSON("beta_videos.json", videos)
+	x.writeJSON("achievements.json", x.byUser("user_badges", "user"))
+
+	reviews := []map[string]any{}
+	for _, review := range x.byUser("ratings", "user") {
+		data := ownFields(review, "user")
+		data["route"] = x.nameOf("routes", review.GetString("route_id"))
+		data["gym"] = x.nameOf("gyms", review.GetString("gym"))
+		reviews = append(reviews, data)
+	}
+	x.writeJSON("reviews.json", reviews)
+
+	blocked := []map[string]any{}
+	for _, block := range x.byUser("blocks", "blocker") {
+		name := ""
+		if other := x.find("users", block.GetString("blocked")); other != nil {
+			name = fullName(other)
+		}
+		blocked = append(blocked, map[string]any{"climber": name, "since": block.GetDateTime("created")})
+	}
+	x.writeJSON("blocked_climbers.json", blocked)
+
+	moderation := []map[string]any{}
+	for _, item := range x.byUser("moderation_items", "author") {
+		moderation = append(moderation, ownFields(item, "author", "reviewed_by"))
+		for _, file := range item.GetStringSlice("files") {
+			x.copyFile(item.BaseFilesPath()+"/"+file, "moderation/"+item.Id+"_"+file)
+		}
+	}
+	x.writeJSON("moderation.json", moderation)
 	return x.err
 }
 

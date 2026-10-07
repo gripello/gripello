@@ -14,8 +14,18 @@ import (
 const (
 	openDefectsTopic  = "open_route_defects"
 	ownTicksTopic     = "own_ticks"
+	ownNotifications  = "own_notifications"
 	competitionsTopic = "competition_changes"
+	gymChangesPrefix  = "gym_changes:"
 )
+
+var gymChangeCollections = []string{"routes", "walls", "locations", "ratings", "beta_videos"}
+
+type gymChange struct {
+	Collection string         `json:"collection"`
+	Action     string         `json:"action"`
+	Record     map[string]any `json:"record"`
+}
 
 var competitionChangeKinds = map[string]string{
 	"competitions":           "competition",
@@ -47,7 +57,7 @@ type openDefectsChange struct {
 	Defects []openDefect `json:"defects"`
 }
 
-type tickChange struct {
+type ownRecordChange struct {
 	Action string         `json:"action"`
 	Record map[string]any `json:"record"`
 }
@@ -66,7 +76,7 @@ func registerLive(app core.App) {
 	onTickChange := func(action string) func(e *core.RecordEvent) error {
 		return func(e *core.RecordEvent) error {
 			userID := e.Record.GetString("user")
-			broadcast(e.App, ownTicksTopic, tickChange{Action: action, Record: e.Record.PublicExport()}, func(auth *core.Record) bool {
+			broadcast(e.App, ownTicksTopic, ownRecordChange{Action: action, Record: e.Record.PublicExport()}, func(auth *core.Record) bool {
 				return auth != nil && auth.Id == userID
 			})
 			return e.Next()
@@ -75,6 +85,19 @@ func registerLive(app core.App) {
 	app.OnRecordAfterCreateSuccess("ticks").BindFunc(onTickChange("create"))
 	app.OnRecordAfterUpdateSuccess("ticks").BindFunc(onTickChange("update"))
 	app.OnRecordAfterDeleteSuccess("ticks").BindFunc(onTickChange("delete"))
+
+	onNotificationChange := func(action string) func(e *core.RecordEvent) error {
+		return func(e *core.RecordEvent) error {
+			userID := e.Record.GetString("user")
+			broadcast(e.App, ownNotifications, ownRecordChange{Action: action, Record: e.Record.PublicExport()}, func(auth *core.Record) bool {
+				return auth != nil && auth.Id == userID
+			})
+			return e.Next()
+		}
+	}
+	app.OnRecordAfterCreateSuccess("notifications").BindFunc(onNotificationChange("create"))
+	app.OnRecordAfterUpdateSuccess("notifications").BindFunc(onNotificationChange("update"))
+	app.OnRecordAfterDeleteSuccess("notifications").BindFunc(onNotificationChange("delete"))
 
 	onCompetitionChange := func(e *core.RecordEvent) error {
 		change := competitionChangeOf(e.Record)
@@ -96,18 +119,72 @@ func registerLive(app core.App) {
 		app.OnRecordAfterUpdateSuccess(collection).BindFunc(onCompetitionChange)
 		app.OnRecordAfterDeleteSuccess(collection).BindFunc(onCompetitionChange)
 	}
+
+	onGymChange := func(action string) func(e *core.RecordEvent) error {
+		return func(e *core.RecordEvent) error {
+			broadcastGymChange(e.App, action, e.Record)
+			return e.Next()
+		}
+	}
+	for _, collection := range gymChangeCollections {
+		app.OnRecordAfterCreateSuccess(collection).BindFunc(onGymChange("create"))
+		app.OnRecordAfterUpdateSuccess(collection).BindFunc(onGymChange("update"))
+		app.OnRecordAfterDeleteSuccess(collection).BindFunc(onGymChange("delete"))
+	}
+}
+
+// broadcastGymChange sends a gym's public changes to that gym's subscribers, one payload per audience.
+func broadcastGymChange(app core.App, action string, record *core.Record) {
+	gymID := record.GetString("gym")
+	if gymID == "" {
+		return
+	}
+	topic := gymChangesPrefix + gymID
+	collection := record.Collection().Name
+	change := func(extra map[string]any) gymChange {
+		export := record.Fresh().PublicExport()
+		for key, value := range extra {
+			export[key] = value
+		}
+		return gymChange{Collection: collection, Action: action, Record: export}
+	}
+	if collection != "ratings" && collection != "beta_videos" {
+		broadcast(app, topic, change(nil), nil)
+		return
+	}
+	authorID := record.GetString("user")
+	signedIn := map[string]any{}
+	if author, ok := authorOf(app, authorID); ok && (collection == "beta_videos" || !author.anonymous) {
+		signedIn["author"] = author.climber
+	}
+	broadcast(app, topic, change(nil), func(auth *core.Record) bool { return auth == nil })
+	if collection == "beta_videos" {
+		broadcast(app, topic, change(signedIn), func(auth *core.Record) bool { return auth != nil })
+		return
+	}
+	broadcast(app, topic, change(merged(signedIn, "mine", false)), func(auth *core.Record) bool { return auth != nil && auth.Id != authorID })
+	broadcast(app, topic, change(merged(signedIn, "mine", true)), func(auth *core.Record) bool { return auth != nil && auth.Id == authorID })
+}
+
+func merged(fields map[string]any, key string, value any) map[string]any {
+	out := map[string]any{key: value}
+	for k, v := range fields {
+		out[k] = v
+	}
+	return out
 }
 
 func broadcastCompetitionChange(app core.App, change competitionChange, audience func(auth *core.Record) bool) {
+	topic := competitionsTopic + ":" + change.Competition
 	if change.User == "" {
-		broadcast(app, competitionsTopic, change, audience)
+		broadcast(app, topic, change, audience)
 		return
 	}
 	owner := change.User
-	broadcast(app, competitionsTopic, change, func(auth *core.Record) bool {
+	broadcast(app, topic, change, func(auth *core.Record) bool {
 		return auth != nil && auth.Id == owner && audience(auth)
 	})
-	broadcast(app, competitionsTopic, publicCompetitionChange(change), func(auth *core.Record) bool {
+	broadcast(app, topic, publicCompetitionChange(change), func(auth *core.Record) bool {
 		return (auth == nil || auth.Id != owner) && audience(auth)
 	})
 }
@@ -175,7 +252,7 @@ func broadcastOpenDefects(app core.App, gymID string, routes []string) {
 			})
 		}
 	}
-	broadcast(app, openDefectsTopic, openDefectsChange{Gym: gymID, Routes: routes, Defects: defects}, nil)
+	broadcast(app, openDefectsTopic+":"+gymID, openDefectsChange{Gym: gymID, Routes: routes, Defects: defects}, nil)
 }
 
 func broadcast(app core.App, topic string, data any, accept func(auth *core.Record) bool) {

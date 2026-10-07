@@ -6,6 +6,7 @@ import {
     defectsScope,
     replaceRouteDefects,
     servedStaleFromSsrCache,
+    isFollowKey,
     isLiveKey,
     mapRows,
     newRecordId,
@@ -20,6 +21,9 @@ import {
     type RatingLedger,
     patchExpanded,
     relinkRow,
+    gymChangesTopic,
+    gymDefectsTopic,
+    liveTopics,
 } from '~/utils/realtimeCache'
 import type {
     RatingRecord,
@@ -242,6 +246,10 @@ describe('cache keys', () => {
     it('knows which keys realtime keeps live', () => {
         expect(isLiveKey(cacheKeys.route('r1'))).toBe(true)
         expect(isLiveKey(cacheKeys.unplacedRoutes)).toBe(true)
+        expect(isLiveKey(cacheKeys.communityFeed)).toBe(true)
+        expect(isLiveKey(cacheKeys.follows)).toBe(true)
+        expect(isLiveKey(cacheKeys.friendsFeed)).toBe(true)
+        expect(isLiveKey('climber-ticks:u1')).toBe(true)
         expect(isLiveKey('cap-status')).toBe(false)
     })
 })
@@ -375,5 +383,36 @@ describe('replaceRouteDefects', () => {
     it('refreshes defect lists on reconnect', () => {
         expect(isLiveKey(cacheKeys.openDefects)).toBe(true)
         expect(isLiveKey(cacheKeys.routeDefects('r1'))).toBe(true)
+    })
+})
+
+describe('isFollowKey', () => {
+    it('matches the follow list and climber profiles only', () => {
+        expect(isFollowKey(cacheKeys.follows)).toBe(true)
+        expect(isFollowKey('climber:u1')).toBe(true)
+        expect(isFollowKey('climber-ticks:u1')).toBe(true)
+        expect(isFollowKey(cacheKeys.friendsFeed)).toBe(true)
+        expect(isFollowKey(cacheKeys.communityFeed)).toBe(true)
+        expect(isFollowKey('climber-compare-mine')).toBe(false)
+        expect(isFollowKey(cacheKeys.logbook)).toBe(false)
+    })
+})
+
+describe('gymChangesTopic', () => {
+    it('names one topic per gym', () => {
+        expect(gymChangesTopic('g1')).toBe('gym_changes:g1')
+        expect(gymChangesTopic('g1')).not.toBe(gymChangesTopic('g2'))
+    })
+})
+
+describe('liveTopics', () => {
+    it('sends notifications on the owner-only topic', () => {
+        expect(liveTopics.ownNotifications).toBe('own_notifications')
+    })
+})
+
+describe('gymDefectsTopic', () => {
+    it('keeps open defects within their gym', () => {
+        expect(gymDefectsTopic('g1')).toBe('open_route_defects:g1')
     })
 })

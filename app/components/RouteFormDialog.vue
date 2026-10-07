@@ -289,7 +289,11 @@ import {
     localDateYYYYMMDD,
 } from '#shared/utils/formatting'
 import { required, maxLength, type Rule } from '~/utils/validation'
-import { ROUTE_TYPES } from '~/utils/routes'
+import {
+    ROUTE_TYPES,
+    SETTER_SUGGESTION_ROUTES,
+    setterNames,
+} from '~/utils/routes'
 import {
     gradeIndex,
     gradeLabels,
@@ -606,12 +610,17 @@ const loadFromRoute = (route: RouteRecord) => {
 }
 
 const getSetters = async () => {
+    if (!gymId.value) return
     try {
-        const records = await pb
+        const recent = await pb
             .collection('routes')
-            .getFullList<RouteRecord>({ fields: 'creator', sort: '-created' })
-        const creators = records.flatMap((r) => normalizeCreators(r.creator))
-        setterItems.value = Array.from(new Set(creators.filter(Boolean)))
+            .getList<RouteRecord>(1, SETTER_SUGGESTION_ROUTES, {
+                filter: gymFilter(pb, gymId.value),
+                fields: 'creator',
+                sort: '-created',
+                skipTotal: true,
+            })
+        setterItems.value = setterNames(recent.items)
     } catch (error) {
         console.error('Failed to fetch route setters:', error)
     }

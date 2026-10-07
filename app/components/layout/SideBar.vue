@@ -3,15 +3,29 @@
         :open="open"
         collapsible="icon"
         :ui="{
-            container: 'z-40 bg-default',
-            header: 'px-3',
+            container: staff ? 'z-40 bg-muted' : 'z-40 bg-default',
+            header: 'flex-col items-stretch justify-center gap-2 px-3 py-2',
             body: 'p-0 overflow-hidden group-data-[state=collapsed]/sidebar:overflow-hidden',
             footer: 'p-3',
         }"
         data-testid="nav-sidebar"
+        :data-context="context"
     >
         <template #header>
             <LayoutGymSwitcher :collapsed="!open" />
+            <UButton
+                v-if="staff"
+                :to="`/${slug}/routes`"
+                color="neutral"
+                variant="soft"
+                icon="i-lucide-arrow-left"
+                :block="open"
+                :square="!open"
+                :aria-label="$t('nav.backToClimbing')"
+                data-testid="nav-back-to-climbing"
+            >
+                <span v-if="open">{{ $t('nav.backToClimbing') }}</span>
+            </UButton>
         </template>
 
         <div
@@ -26,8 +40,12 @@
                 tooltip
                 :popover="coarsePointer ? { mode: 'click' } : true"
                 highlight
-                :aria-label="$t('nav.mainNavigation')"
-                :ui="{ link: 'py-2', separator: 'my-2' }"
+                :aria-label="navLabel"
+                :ui="{
+                    link: 'py-2',
+                    label: 'pt-3 text-xs font-semibold tracking-wide text-muted uppercase',
+                    separator: 'my-2',
+                }"
                 data-testid="nav-desktop-links"
             >
                 <template #item-label="{ item, active }">
@@ -46,6 +64,21 @@
 
         <template #footer>
             <div class="flex w-full min-w-0 flex-col gap-2">
+                <UButton
+                    v-if="staffEntry"
+                    :to="staffEntry"
+                    color="primary"
+                    variant="soft"
+                    icon="i-lucide-wrench"
+                    :trailing-icon="open ? 'i-lucide-chevron-right' : undefined"
+                    :block="open"
+                    :square="!open"
+                    :aria-label="$t('nav.staffTools')"
+                    :ui="{ trailingIcon: 'ms-auto' }"
+                    data-testid="nav-staff-tools"
+                >
+                    <span v-if="open">{{ $t('nav.staffTools') }}</span>
+                </UButton>
                 <LayoutFootBar
                     :settings="footerSettings"
                     :gym-slug="footerGymSlug"
@@ -59,7 +92,12 @@
 
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
-import { sidebarItems, type SidebarItem } from '~/utils/navigation'
+import {
+    navContext,
+    sidebarSections,
+    type SidebarItem,
+} from '~/utils/navigation'
+import { gymTitle } from '~/utils/gymNames'
 import type { GymRecord, SettingsRecord } from '~/types/models'
 
 const props = defineProps<{
@@ -74,19 +112,42 @@ const route = useRoute()
 
 const { open } = useSidebar()
 const coarsePointer = useCoarsePointer()
-const { slug } = useGym()
+const { gym, slug } = useGym()
+const pb = usePocketbase()
 
 const scroller = useTemplateRef<HTMLElement>('scroller')
 const { style: scrollShadow } = useScrollShadow(scroller)
 
+const context = computed(() =>
+    navContext(route.path, routeGymSlug(route.params)),
+)
+const staff = computed(() => context.value === 'staff')
+const { badges } = useModerationSummary()
+const nav = computed(() =>
+    sidebarSections(
+        can,
+        props.loggedIn,
+        slug.value,
+        route.path,
+        t,
+        context.value,
+        pb.authStore.record?.id,
+        badges.value,
+    ),
+)
+const staffEntry = computed(() => nav.value.staffEntry)
 const navLists = computed(
     () =>
-        sidebarItems(
-            can,
-            props.loggedIn,
-            slug.value,
-            route.path,
-            t,
-        ) as NavigationMenuItem[][],
+        nav.value.sections.map((section) => [
+            ...(open.value
+                ? [{ label: section.label, type: 'label' as const }]
+                : []),
+            ...section.items,
+        ]) as NavigationMenuItem[][],
+)
+const navLabel = computed(() =>
+    context.value !== 'platform' && gym.value
+        ? gymTitle(gym.value)
+        : t('nav.mainNavigation'),
 )
 </script>

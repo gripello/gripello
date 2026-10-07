@@ -96,6 +96,9 @@
             --app-bottom: 64px;
             --app-bottom-inset: env(safe-area-inset-bottom, 0px);
         }
+        :root:has([data-section-tabs]) {
+            --app-top: 104px;
+        }
     }
 
     @font-face {
@@ -451,10 +454,6 @@
         .scope-list {
             max-height: calc(100vh - 320px);
         }
-    }
-
-    .page--narrow {
-        max-width: 560px;
     }
 
     .page--prose {
