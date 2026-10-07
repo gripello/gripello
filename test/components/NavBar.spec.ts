@@ -99,4 +99,11 @@ describe('NavBar', () => {
                 .map((tab) => tab.attributes('data-testid')),
         ).toEqual(['section-tab-routes', 'section-tab-map', 'section-tab-home'])
     })
+
+    it('divides the section tabs from the top bar', () => {
+        const tabs = mountNavBar(true).get('[data-section-tabs]')
+        expect(tabs.classes()).toEqual(
+            expect.arrayContaining(['border-t', 'border-default']),
+        )
+    })
 })
