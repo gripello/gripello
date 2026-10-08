@@ -1541,7 +1541,10 @@
             "install": "Installez d'abord l'application",
             "unsupported": "Non disponible dans ce navigateur",
             "blocked": "Les notifications sont bloquées dans les paramètres de votre navigateur.",
-            "followedWalls": "Murs suivis"
+            "followedWalls": "Murs suivis",
+            "sendTest": "Envoyer une notification de test",
+            "testSent": "Notification de test envoyée",
+            "testMessage": "Les notifications push fonctionnent sur cet appareil."
         },
         "privacy": {
             "followPolicy": "Qui peut me suivre",

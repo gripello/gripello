@@ -105,19 +105,17 @@ test.describe('browser bars', () => {
             page,
         }) => {
             await page.setViewportSize({ width: 1440, height: 900 })
+            const html = await (await page.request.get(path)).text()
+            expect(html).toMatch(
+                /<meta[^>]*name="theme-color"[^>]*media="\(prefers-color-scheme: light\)"[^>]*content="#FFFFFF"/i,
+            )
+            expect(html).toMatch(
+                /<meta[^>]*name="theme-color"[^>]*media="\(prefers-color-scheme: dark\)"[^>]*content="#161b22"/i,
+            )
             await gotoSettled(page, path)
             const bars = page.locator('meta[name="theme-color"]')
-            await expect(bars).toHaveCount(2)
-            await expect(
-                page.locator(
-                    'meta[name="theme-color"][media="(prefers-color-scheme: light)"]',
-                ),
-            ).toHaveAttribute('content', /^#FFFFFF$/i)
-            await expect(
-                page.locator(
-                    'meta[name="theme-color"][media="(prefers-color-scheme: dark)"]',
-                ),
-            ).toHaveAttribute('content', /^#161b22$/i)
+            await expect(bars).toHaveCount(1)
+            await expect(bars).toHaveAttribute('content', /^#FFFFFF$/i)
             await expect(page.locator('body')).toHaveCSS(
                 'background-color',
                 'rgb(248, 250, 243)',
@@ -164,8 +162,16 @@ test.describe('browser bars', () => {
             'content',
             'dark',
         )
+        await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+            'content',
+            /^#161b22$/i,
+        )
         await page.emulateMedia({ colorScheme: 'light' })
         await expect(page.locator(appRoot)).toHaveClass(/(^|\s)light(\s|$)/)
+        await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+            'content',
+            /^#FFFFFF$/i,
+        )
     })
 
     test('an explicit choice ignores OS appearance changes', async ({

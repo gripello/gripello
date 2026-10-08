@@ -69,13 +69,34 @@
                 />
             </g>
         </template>
-        <circle
-            v-if="selected"
-            :cx="at[0]"
-            :cy="at[1]"
-            :r="asGrade ? gradeRadius * 1.35 : dotRadius * 2.2"
-            class="map-dot-ring"
-        />
+        <template v-if="selected">
+            <circle
+                :cx="at[0]"
+                :cy="at[1]"
+                :r="ringRadius"
+                class="map-dot-ring map-dot-ring--still"
+            />
+            <!-- SMIL instead of a CSS transform: iOS Safari leaves stray lines around transformed SVG -->
+            <circle
+                :cx="at[0]"
+                :cy="at[1]"
+                :r="ringRadius"
+                class="map-dot-ring map-dot-ring--pulse"
+            >
+                <animate
+                    attributeName="r"
+                    :values="`${ringRadius * 0.7};${ringRadius * 1.5}`"
+                    dur="1.4s"
+                    repeatCount="indefinite"
+                />
+                <animate
+                    attributeName="opacity"
+                    values="1;0"
+                    dur="1.4s"
+                    repeatCount="indefinite"
+                />
+            </circle>
+        </template>
     </g>
 </template>
 
@@ -116,6 +137,9 @@ const { t } = useI18n()
 const dotRadius = computed(() => DOT_RADIUS_PX / props.pixelsPerUnit)
 const gradeRadius = computed(() => GRADE_RADIUS_PX / props.pixelsPerUnit)
 const badgeRadius = computed(() => BADGE_RADIUS_PX / props.pixelsPerUnit)
+const ringRadius = computed(() =>
+    props.asGrade ? gradeRadius.value * 1.35 : dotRadius.value * 2.2,
+)
 const hitRadius = computed(
     () =>
         (props.asGrade
@@ -267,25 +291,19 @@ const badges = computed(() => {
     stroke-width: 2.5;
     vector-effect: non-scaling-stroke;
     pointer-events: none;
-    animation: dot-pulse 1.4s ease-out infinite;
-    transform-box: fill-box;
-    transform-origin: center;
 }
 
-@keyframes dot-pulse {
-    0% {
-        opacity: 1;
-        transform: scale(0.7);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(1.5);
-    }
+.map-dot-ring--still {
+    display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .map-dot-ring {
-        animation: none;
+    .map-dot-ring--still {
+        display: inline;
+    }
+
+    .map-dot-ring--pulse {
+        display: none;
     }
 }
 </style>

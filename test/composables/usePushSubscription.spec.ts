@@ -50,3 +50,27 @@ describe('usePushSubscription', () => {
         expect(push.loadError.value).toBe(false)
     })
 })
+
+describe('usePushSubscription test push', () => {
+    it('sends the test push to this device only', async () => {
+        const send = vi.fn().mockResolvedValue(undefined)
+        pbMock = {
+            send,
+            collection: vi.fn().mockReturnValue({
+                getFullList: vi.fn().mockResolvedValue([]),
+            }),
+        }
+        const { usePushSubscription } =
+            await import('~/composables/usePushSubscription')
+        const push = usePushSubscription()
+        push.currentEndpoint.value = 'https://fcm.googleapis.com/fcm/send/abc'
+
+        await push.sendTest()
+
+        expect(send).toHaveBeenCalledWith('/api/notifications/test', {
+            method: 'POST',
+            body: { endpoint: 'https://fcm.googleapis.com/fcm/send/abc' },
+            requestKey: null,
+        })
+    })
+})

@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	pushTTLSeconds = 24 * 60 * 60
-	pushTimeout    = 10 * time.Second
+	pushTTLSeconds      = 24 * 60 * 60
+	pushTimeout         = 10 * time.Second
+	testPushesPerMinute = 3
 )
 
 var pushServiceHosts = []string{
@@ -68,8 +69,14 @@ func vapidKeys() (string, string) {
 	return os.Getenv("PB_VAPID_PUBLIC_KEY"), os.Getenv("PB_VAPID_PRIVATE_KEY")
 }
 
+var testPushes = newUserRateLimiter(testPushesPerMinute)
+
 func registerPush(app core.App) {
 	pushApp = app
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		se.Router.POST("/api/notifications/test", serveTestPush).Bind(apis.RequireAuth("users"), testPushes.middleware())
+		return se.Next()
+	})
 	app.OnRecordCreateRequest("push_subscriptions").BindFunc(func(e *core.RecordRequestEvent) error {
 		if !isPushServiceEndpoint(e.Record.GetString("endpoint")) {
 			return apis.NewBadRequestError("Unknown push service.", nil)
@@ -86,6 +93,45 @@ func registerPush(app core.App) {
 	})
 }
 
+func serveTestPush(e *core.RequestEvent) error {
+	body := struct {
+		Endpoint string `json:"endpoint"`
+	}{}
+	if err := e.BindBody(&body); err != nil || body.Endpoint == "" {
+		return e.BadRequestError("", err)
+	}
+	publicKey, privateKey := vapidKeys()
+	if publicKey == "" || privateKey == "" {
+		return e.Error(http.StatusServiceUnavailable, "Push is not configured.", nil)
+	}
+	subscription, err := e.App.FindFirstRecordByFilter("push_subscriptions", "user = {:user} && endpoint = {:endpoint}",
+		dbx.Params{"user": e.Auth.Id, "endpoint": body.Endpoint})
+	if err != nil {
+		return e.NotFoundError("", err)
+	}
+	payload, _ := json.Marshal(pushPayload{
+		Title: e.App.Settings().Meta.AppName,
+		Body:  loadedLocales(e.App).translate(e.Auth.GetString("language"), "accountSettings.push.testMessage", nil),
+		URL:   "/account/settings",
+		Tag:   "test",
+	})
+	deliverPush(e.App, []pushDelivery{{
+		id: subscription.Id,
+		subscription: webpush.Subscription{
+			Endpoint: subscription.GetString("endpoint"),
+			Keys:     webpush.Keys{P256dh: subscription.GetString("p256dh"), Auth: subscription.GetString("auth")},
+		},
+		payload: payload,
+	}}, &webpush.Options{
+		Subscriber:      vapidSubscriber(e.App),
+		VAPIDPublicKey:  publicKey,
+		VAPIDPrivateKey: privateKey,
+		TTL:             pushTTLSeconds,
+		HTTPClient:      &http.Client{Timeout: pushTimeout},
+	})
+	return e.NoContent(http.StatusNoContent)
+}
+
 func sendPush(app core.App, users []*core.Record, message notification) {
 	publicKey, privateKey := vapidKeys()
 	if publicKey == "" || privateKey == "" {
@@ -96,7 +142,7 @@ func sendPush(app core.App, users []*core.Record, message notification) {
 		return
 	}
 	options := &webpush.Options{
-		Subscriber:      os.Getenv("PB_SENDER_ADDRESS"),
+		Subscriber:      vapidSubscriber(app),
 		VAPIDPublicKey:  publicKey,
 		VAPIDPrivateKey: privateKey,
 		TTL:             pushTTLSeconds,
@@ -114,6 +160,11 @@ func sendPush(app core.App, users []*core.Record, message notification) {
 		return
 	}
 	routine.FireAndForget(deliver)
+}
+
+// webpush-go prefixes "mailto:" itself and signs an empty subject, which push services reject.
+func vapidSubscriber(app core.App) string {
+	return strings.TrimPrefix(firstNonEmpty(os.Getenv("PB_SENDER_ADDRESS"), app.Settings().Meta.SenderAddress), "mailto:")
 }
 
 func pushDeliveries(app core.App, messages localeMessages, users []*core.Record, message notification) []pushDelivery {

@@ -1541,7 +1541,10 @@
             "install": "Zuerst die App installieren",
             "unsupported": "In diesem Browser nicht verfügbar",
             "blocked": "Benachrichtigungen sind in den Browser-Einstellungen blockiert.",
-            "followedWalls": "Gefolgte Wände"
+            "followedWalls": "Gefolgte Wände",
+            "sendTest": "Testbenachrichtigung senden",
+            "testSent": "Testbenachrichtigung gesendet",
+            "testMessage": "Push-Benachrichtigungen funktionieren auf diesem Gerät."
         },
         "privacy": {
             "followPolicy": "Wer mir folgen darf",

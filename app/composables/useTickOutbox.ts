@@ -78,6 +78,7 @@ export function useTickOutbox() {
     function enqueue(op: TickOutboxOp) {
         queue.value = enqueueTickOp(queue.value, op)
         persist()
+        void navigator.storage?.persist?.().catch(() => {})
     }
 
     async function createTick(fields: Omit<TickRecord, 'id'>) {

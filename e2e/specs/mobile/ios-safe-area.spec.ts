@@ -3,9 +3,6 @@ import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 
 const themeColor = 'meta[name="theme-color"]'
-const lightBar =
-    'meta[name="theme-color"][media="(prefers-color-scheme: light)"]'
-const darkBar = 'meta[name="theme-color"][media="(prefers-color-scheme: dark)"]'
 
 test('the page extends under the iOS safe areas', async ({ page }) => {
     await gotoSettled(page, '/map')
@@ -20,8 +17,8 @@ test.describe('light theme', () => {
 
     test('tints the status bar with the light app bar', async ({ page }) => {
         await gotoSettled(page, '/map')
-        await expect(page.locator(themeColor)).toHaveCount(2)
-        await expect(page.locator(lightBar)).toHaveAttribute(
+        await expect(page.locator(themeColor)).toHaveCount(1)
+        await expect(page.locator(themeColor)).toHaveAttribute(
             'content',
             /^#FFFFFF$/i,
         )
@@ -31,7 +28,7 @@ test.describe('light theme', () => {
 test('the error page still tints the status bar', async ({ page }) => {
     await gotoSettled(page, '/this-page-does-not-exist')
     await expect(page.getByTestId('error-page')).toBeVisible()
-    await expect(page.locator(themeColor)).toHaveCount(2)
+    await expect(page.locator(themeColor)).toHaveCount(1)
 })
 
 test.describe('dark theme', () => {
@@ -48,7 +45,7 @@ test.describe('dark theme', () => {
 
     test('tints the status bar with the dark app bar', async ({ page }) => {
         await gotoSettled(page, '/map')
-        await expect(page.locator(darkBar)).toHaveAttribute(
+        await expect(page.locator(themeColor)).toHaveAttribute(
             'content',
             /^#161b22$/i,
         )

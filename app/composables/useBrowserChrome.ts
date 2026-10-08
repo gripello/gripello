@@ -52,16 +52,15 @@ export function useBrowserChrome() {
         return `background-color: ${withScrim(THEME_COLORS[currentName()][page])}`
     }
 
-    const lightBar = useTweenedColor(() => barTarget('light'))
-    const darkBar = useTweenedColor(() => barTarget('dark'))
     const activeBar = useTweenedColor(() => barTarget(currentName()))
 
+    // iOS Safari doesn't re-evaluate media-scoped theme-color tags when the OS appearance flips.
     const themeColorTags = () =>
-        isExplicitThemeMode(mode.value)
+        import.meta.client || isExplicitThemeMode(mode.value)
             ? [{ media: null, content: activeBar.value }]
             : [
-                  { media: LIGHT_QUERY, content: lightBar.value },
-                  { media: DARK_QUERY, content: darkBar.value },
+                  { media: LIGHT_QUERY, content: barTarget('light') },
+                  { media: DARK_QUERY, content: barTarget('dark') },
               ]
 
     useHead({

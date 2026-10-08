@@ -107,6 +107,17 @@ describe('MapRouteMarker', () => {
         ).toBe(true)
     })
 
+    it('pulses the selected ring through its radius, not a CSS transform', () => {
+        const pulse = createWrapper({ selected: true }).get(
+            '.map-dot-ring--pulse',
+        )
+        const radius = Number(pulse.attributes('r'))
+        expect(
+            pulse.get('animate[attributeName="r"]').attributes('values'),
+        ).toBe(`${radius * 0.7};${radius * 1.5}`)
+        expect(pulse.attributes('style')).toBeUndefined()
+    })
+
     it('passes interaction attributes to its root group', async () => {
         const clicks: string[] = []
         const wrapper = mount(MapRouteMarker, {

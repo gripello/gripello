@@ -6,7 +6,7 @@ const PUBLIC_DATA =
     /^\/(_i18n\/|api\/collections\/(walls|locations|averageRating|open_route_defects)\/records$)/
 const FILES = /^\/api\/files\//
 const PUBLIC_PAGE =
-    /^\/(?:(?:privacy|imprint|offline\.html)|(?!(?:account|admin|auth|logbook|manage|platform|scan|competitions)(?:\/|$))[a-z0-9-]{3,40}(?:\/(?:routes|map|route|imprint|privacy))?)?\/?$/
+    /^\/(?:(?:privacy|imprint|logbook|offline\.html)|(?!(?:account|admin|auth|logbook|manage|platform|scan|competitions)(?:\/|$))[a-z0-9-]{3,40}(?:\/(?:routes|map|route|imprint|privacy))?)?\/?$/
 const FILE_CACHE_LIMIT = 50
 const NETWORK_TIMEOUT_MS = 4000
 
@@ -84,7 +84,11 @@ self.addEventListener('fetch', (event) => {
 
     if (request.mode === 'navigate') {
         event.respondWith(
-            networkFirst(request, PAGES, isPublicPage(url)).then(
+            networkFirst(
+                request,
+                PAGES,
+                isPublicPage(url) && storablePage,
+            ).then(
                 async (response) =>
                     response ||
                     (await caches.match(OFFLINE_URL)) ||
@@ -127,6 +131,11 @@ function storable(response) {
     )
 }
 
+// Signed-in pages are no-store for the HTTP cache; PAGES is cleared on sign-out and user switch.
+function storablePage(response) {
+    return response.ok
+}
+
 function store(cacheName, request, response) {
     const copy = response.clone()
     return caches
@@ -159,7 +168,7 @@ async function trimFiles() {
         await cache.delete(key)
 }
 
-function networkFirst(request, cacheName, cacheable = true) {
+function networkFirst(request, cacheName, canStore = storable) {
     return new Promise((resolve) => {
         let settled = false
         const settle = (response) => {
@@ -176,7 +185,7 @@ function networkFirst(request, cacheName, cacheable = true) {
         fetch(request)
             .then((response) => {
                 clearTimeout(timer)
-                if (cacheable && storable(response))
+                if (canStore && canStore(response))
                     store(cacheName, request, response)
                 settle(response)
             })
