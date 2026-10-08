@@ -31,6 +31,7 @@
                     </UButton>
                 </template>
                 <UButton
+                    class="icon-btn"
                     v-if="isMobile"
                     icon="i-lucide-plus"
                     color="primary"
@@ -38,38 +39,20 @@
                     data-testid="routes-create-open"
                     @click="routeFormRef?.open()"
                 />
-                <UPopover v-if="isMobile" :content="{ align: 'end' }">
+                <UDropdownMenu
+                    v-if="isMobile"
+                    :items="moreItems"
+                    :content="{ align: 'end' }"
+                >
                     <UButton
                         icon="i-lucide-ellipsis-vertical"
                         color="neutral"
                         variant="ghost"
+                        class="icon-btn"
                         :aria-label="$t('routes.moreActions')"
                         data-testid="routes-more"
                     />
-                    <template #content="{ close }">
-                        <nav class="flex min-w-[200px] flex-col gap-0.5 p-1">
-                            <UButton
-                                color="neutral"
-                                variant="ghost"
-                                icon="i-lucide-file-input"
-                                data-testid="routes-import-open"
-                                @click="openImport(close)"
-                            >
-                                {{ $t('actions.import') }}
-                            </UButton>
-                            <UButton
-                                color="neutral"
-                                variant="ghost"
-                                icon="i-lucide-map-pinned"
-                                :to="gymPath('/manage/map')"
-                                data-testid="routes-place-on-map"
-                                @click="close()"
-                            >
-                                {{ $t('routes.mapPlacement') }}
-                            </UButton>
-                        </nav>
-                    </template>
-                </UPopover>
+                </UDropdownMenu>
             </template>
         </LayoutPageHeader>
 
@@ -241,6 +224,7 @@
                     >
                         <span
                             class="route-manager__name-text"
+                            :title="row.original.name"
                             data-testid="routes-row-name"
                             >{{ row.original.name }}</span
                         >
@@ -265,7 +249,10 @@
                     {{ formatAnchorPoint(row.original.anchor_point) }}
                 </template>
                 <template #comment-cell="{ row }">
-                    <div class="route-manager__comment">
+                    <div
+                        class="route-manager__comment"
+                        :title="row.original.comment ?? undefined"
+                    >
                         {{ row.original.comment }}
                     </div>
                 </template>
@@ -273,7 +260,12 @@
                     <RouteCreators :creators="row.original.creator ?? []" />
                 </template>
                 <template #location-cell="{ row }">
-                    {{ locationName(row.original) }}
+                    <div
+                        class="line-clamp-2 max-w-36"
+                        :title="locationName(row.original)"
+                    >
+                        {{ locationName(row.original) }}
+                    </div>
                 </template>
                 <template #type-cell="{ row }">
                     {{ row.original.type }}
@@ -284,6 +276,7 @@
                 <template #actions-cell="{ row }">
                     <div class="route-manager__row-actions">
                         <UButton
+                            class="icon-btn"
                             icon="i-lucide-pencil"
                             color="neutral"
                             variant="ghost"
@@ -297,7 +290,7 @@
                 </template>
             </UTable>
             <div
-                class="flex flex-wrap items-center justify-end gap-4 border-t px-2 py-3 text-sm"
+                class="flex flex-wrap items-center justify-end gap-4 px-2 py-3 text-sm"
             >
                 <div class="flex items-center gap-2">
                     <span class="text-muted">{{
@@ -328,9 +321,9 @@
         </div>
 
         <div v-else class="route-manager__mobile-section">
-            <USkeleton
+            <LayoutLoadingState
                 v-if="loading && routes.length === 0"
-                class="mt-4 h-40 w-full"
+                class="mt-4"
             />
             <LayoutEmptyState
                 v-else-if="!loading && routes.length === 0"
@@ -367,6 +360,7 @@
                 <div class="route-manager__pager-pill">
                     <div class="route-manager__pager">
                         <UButton
+                            class="icon-btn"
                             icon="i-lucide-chevron-left"
                             color="neutral"
                             variant="ghost"
@@ -419,6 +413,7 @@
                             </UButton>
                         </template>
                         <UButton
+                            class="icon-btn"
                             icon="i-lucide-chevron-right"
                             color="neutral"
                             variant="ghost"
@@ -541,10 +536,20 @@ const pageSizeOptions = [10, 25, 50, 100]
 
 const routeFormRef = useTemplateRef('routeFormRef')
 const importRouteRef = useTemplateRef('importRouteRef')
-const openImport = (close: () => void) => {
-    close()
-    importRouteRef.value?.open()
-}
+const moreItems = computed(() => [
+    {
+        label: t('actions.import'),
+        icon: 'i-lucide-file-input',
+        'data-testid': 'routes-import-open',
+        onSelect: () => importRouteRef.value?.open(),
+    },
+    {
+        label: t('routes.mapPlacement'),
+        icon: 'i-lucide-map-pinned',
+        to: gymPath('/manage/map'),
+        'data-testid': 'routes-place-on-map',
+    },
+])
 
 const { gradeColumnTitle } = useGradeSystems()
 
@@ -582,8 +587,8 @@ function toggleSort(key: string) {
 }
 
 const tableUi = {
-    th: 'px-2 xl:px-4',
-    td: 'px-2 py-2 xl:px-4 whitespace-normal text-default',
+    th: 'px-2 last:pe-4 2xl:px-4',
+    td: 'px-2 py-2 last:pe-4 2xl:px-4 whitespace-normal text-default',
 }
 
 const tableColumns = computed<TableColumn<RouteListItem>[]>(() => [
@@ -593,7 +598,6 @@ const tableColumns = computed<TableColumn<RouteListItem>[]>(() => [
     {
         id: 'difficulty',
         header: sortableHeader(gradeColumnTitle.value, 'difficulty'),
-        meta: { class: { td: 'whitespace-nowrap' } },
     },
     {
         id: 'anchor_point',
@@ -1004,19 +1008,21 @@ useHead(() => ({
 }
 
 .route-manager__comment {
-    max-width: 260px;
-    white-space: normal;
-    overflow-wrap: break-word;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .route-manager__name {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
 }
 
 .route-manager__name-text {
+    max-width: 224px;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-weight: 600;
 }
 

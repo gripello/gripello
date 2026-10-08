@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { Reporter, Suite } from '@playwright/test/reporter'
 
-const OUTPUT = path.join(__dirname, '..', 'results', 'flaky.txt')
+const OUTPUT = path.join(import.meta.dirname, '..', 'results', 'flaky.txt')
 
 export default class FlakyReporter implements Reporter {
     private root?: Suite

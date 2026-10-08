@@ -20,7 +20,7 @@
                 id="settings-branding"
                 :title="$t('settings.branding')"
                 :description="$t('settings.brandingHint')"
-                variant="subtle"
+                variant="outline"
             >
                 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     <article
@@ -62,7 +62,7 @@
                             </span>
                         </button>
 
-                        <div class="flex flex-1 flex-col gap-1 p-4">
+                        <div class="flex flex-1 flex-col gap-1 pt-3">
                             <div class="flex items-center gap-2">
                                 <span
                                     class="font-semibold text-highlighted"
@@ -157,7 +157,7 @@
                 :ui="formCardUi"
                 :title="$t('settings.organization')"
                 :description="$t('settings.organizationHint')"
-                variant="subtle"
+                variant="outline"
             >
                 <UFormField
                     :label="$t('settings.organizationName')"
@@ -382,7 +382,7 @@
                 v-if="activeSection === 'moderation'"
                 id="settings-moderation"
                 :title="$t('moderation.title')"
-                variant="subtle"
+                variant="outline"
                 :ui="formCardUi"
             >
                 <UFormField
@@ -402,7 +402,7 @@
                 id="settings-grading"
                 :title="$t('settings.grading')"
                 :description="$t('settings.gradingHint')"
-                variant="subtle"
+                variant="outline"
                 :ui="{ ...formCardUi, footer: 'pt-2 lg:col-span-2' }"
             >
                 <template #footer>
@@ -465,7 +465,7 @@
                 :ui="formCardUi"
                 :title="$t('settings.publicUrls')"
                 :description="$t('settings.publicUrlsHint')"
-                variant="subtle"
+                variant="outline"
             >
                 <UFormField
                     :label="$t('settings.imprintUrl')"
@@ -501,7 +501,7 @@
                 :ui="formCardUi"
                 :title="$t('settings.legalTitle')"
                 :description="$t('settings.legalIntro')"
-                variant="subtle"
+                variant="outline"
             >
                 <SettingsLegalFields :legal="copySettings" />
             </UPageCard>
@@ -982,15 +982,6 @@ async function saveSettings() {
 .asset-card {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    border: 1px solid var(--ui-border);
-    border-radius: calc(var(--ui-radius) * 2);
-    background: var(--ui-bg);
-    transition: border-color 0.18s;
-}
-
-.asset-card--dirty {
-    border-color: var(--ui-primary);
 }
 
 .asset-card__preview {
@@ -999,7 +990,9 @@ async function saveSettings() {
     justify-content: center;
     height: 160px;
     padding: 24px;
-    border-bottom: 1px solid var(--ui-border);
+    border: 1px solid var(--ui-border);
+    border-radius: calc(var(--ui-radius) * 2);
+    transition: border-color 0.18s;
     background-color: #f4f4f5;
     background-image:
         linear-gradient(45deg, #e4e4e7 25%, transparent 25%),
@@ -1017,7 +1010,11 @@ async function saveSettings() {
 
 .asset-card__preview--empty {
     background: var(--ui-bg-muted);
-    border-bottom-style: dashed;
+    border-style: dashed;
+}
+
+.asset-card--dirty .asset-card__preview {
+    border-color: var(--ui-primary);
 }
 
 .asset-card__preview:hover,

@@ -36,12 +36,7 @@
             v-if="isEditMode && review"
             class="flex items-center gap-3 mb-4 p-3 rounded-lg review-form__context"
         >
-            <span
-                class="inline-flex size-[30px] shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                :style="{ backgroundColor: avatarColor(review.userName) }"
-            >
-                {{ nameInitials(review.userName) }}
-            </span>
+            <ClimberAvatar :name="review.userName ?? ''" size="sm" />
             <div>
                 <div class="text-sm font-medium">
                     {{ review.userName }}
@@ -58,14 +53,15 @@
             @submit.prevent
         >
             <div class="grid grid-cols-12 items-end gap-4 mb-4">
-                <div
-                    class="col-span-12 sm:col-span-6 flex flex-col gap-1 review-form__rating"
+                <UFormField
+                    name="rating"
+                    class="col-span-12 sm:col-span-6 review-form__rating"
                 >
-                    <span
-                        id="review-form-rating-label"
-                        class="text-sm font-medium text-default"
-                        >{{ $t('ratings.stars') }}</span
-                    >
+                    <template #label>
+                        <span id="review-form-rating-label">{{
+                            $t('ratings.stars')
+                        }}</span>
+                    </template>
                     <div
                         role="radiogroup"
                         aria-labelledby="review-form-rating-label"
@@ -96,7 +92,7 @@
                             />
                         </button>
                     </div>
-                </div>
+                </UFormField>
 
                 <UFormField
                     :label="`${$t('ratings.difficulty')} (${$t(`gradeSystems.${gradeSystem}`)})`"
@@ -169,7 +165,6 @@ import {
     isGradeSystem,
 } from '#shared/utils/grades'
 import type { RatingRecord } from '~/types/models'
-import { avatarColor, nameInitials } from '~/utils/avatar'
 import { newRecordId } from '~/utils/realtimeCache'
 
 type EditableReview = RatingRecord & { userName?: string; routeName?: string }

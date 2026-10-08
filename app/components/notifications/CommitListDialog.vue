@@ -3,6 +3,7 @@
         v-model="dialog"
         max-width="640"
         closable
+        sheet-on-mobile
         :subtitle="
             $t('notifications.commitList.installedCommit', [props.installedSha])
         "
@@ -17,12 +18,12 @@
             {{ $t('notifications.commitList.title') }}
         </template>
 
-        <UAlert
+        <LayoutEmptyState
             v-if="!props.commits.length"
-            color="info"
-            variant="soft"
-            icon="i-lucide-info"
-            :description="$t('notifications.commitList.empty')"
+            icon="i-lucide-git-commit-horizontal"
+            :card="false"
+            :title="$t('notifications.commitList.empty')"
+            data-testid="commit-list-empty"
         />
 
         <div

@@ -1252,7 +1252,6 @@
     },
     "ticks": {
         "logbook": "Logbook",
-        "logbookSubtitle": "Your climbing history, stats and projects.",
         "empty": "No ascents yet",
         "emptyHint": "Open a route and tap “Log ascent” to start your logbook.",
         "sendCount": "Sends: {count}",
@@ -2422,5 +2421,10 @@
             "removeInterval": "Remove hours",
             "copyMonday": "Copy Monday to Tue–Fri"
         }
+    },
+    "imageCrop": {
+        "zoom": "Zoom",
+        "rotate": "Rotate",
+        "reset": "Reset"
     }
 }

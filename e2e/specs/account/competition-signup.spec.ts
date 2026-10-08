@@ -34,7 +34,7 @@ test('a climber signs up and the desk checks them in', async ({
     await expect(
         userPage.getByTestId('competition-rule-boulder.dynamicTop'),
     ).toBeVisible()
-    await userPage.getByTestId('competition-rules-back').click()
+    await userPage.getByTestId('page-back').click()
     await userPage.getByTestId('competition-register-name').fill(displayName)
     await userPage.getByTestId('competition-register-birth-year').fill('1990')
     await userPage.getByTestId('competition-register-birth-year').blur()

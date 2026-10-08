@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './app/utils/locales'
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './app/utils/locales.ts'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({

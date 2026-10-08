@@ -25,6 +25,7 @@ test('the route list filters by wall and shows the wall column', async ({
     await page
         .getByRole('option', { name: `${testPrefix} Map Hall`, exact: true })
         .click()
+    await expect(page.getByRole('listbox')).toBeHidden()
     await page.getByTestId('index-filter-wall').click()
     await page
         .getByRole('option', { name: `${testPrefix} Island`, exact: true })

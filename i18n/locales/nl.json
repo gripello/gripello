@@ -1252,7 +1252,6 @@
     },
     "ticks": {
         "logbook": "Logboek",
-        "logbookSubtitle": "Je klimgeschiedenis, statistieken en projecten.",
         "empty": "Nog geen beklimmingen",
         "emptyHint": "Open een route en tik op “Beklimming loggen” om je logboek te beginnen.",
         "sendCount": "Tops: {count}",
@@ -2422,5 +2421,10 @@
             "removeInterval": "Tijden verwijderen",
             "copyMonday": "Maandag naar di–vr kopiëren"
         }
+    },
+    "imageCrop": {
+        "zoom": "Zoomen",
+        "rotate": "Draaien",
+        "reset": "Herstellen"
     }
 }

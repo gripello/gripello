@@ -18,11 +18,11 @@
         </template>
     </LayoutEmptyState>
     <div v-else class="flex flex-col gap-6">
-        <section v-if="topics.length" class="flex flex-col gap-2">
-            <h3 class="push-heading">
+        <section v-if="topics.length" class="flex flex-col">
+            <LayoutEyebrow>
                 {{ t('accountSettings.push.topicsTitle') }}
-            </h3>
-            <UPageCard variant="subtle" :ui="{ container: LIST }">
+            </LayoutEyebrow>
+            <UPageCard variant="outline" :ui="{ container: LIST }">
                 <label
                     v-for="topic in topics"
                     :key="topic.key"
@@ -43,12 +43,12 @@
             </UPageCard>
         </section>
 
-        <section class="flex flex-col gap-2">
-            <h3 class="push-heading">
+        <section class="flex flex-col">
+            <LayoutEyebrow>
                 {{ t('accountSettings.push.devices') }}
-            </h3>
+            </LayoutEyebrow>
             <UPageCard
-                variant="subtle"
+                variant="outline"
                 :ui="{ container: LIST }"
                 data-testid="push-devices"
             >
@@ -150,12 +150,12 @@
             </UPageCard>
         </section>
 
-        <section v-if="followedWalls.length" class="flex flex-col gap-2">
-            <h3 class="push-heading">
+        <section v-if="followedWalls.length" class="flex flex-col">
+            <LayoutEyebrow>
                 {{ t('accountSettings.push.followedWalls') }}
-            </h3>
+            </LayoutEyebrow>
             <UPageCard
-                variant="subtle"
+                variant="outline"
                 :ui="{ container: LIST }"
                 data-testid="push-followed-walls"
             >
@@ -316,9 +316,5 @@ async function unfollow(wallId: string) {
 
 .push-icon {
     @apply inline-flex size-9 shrink-0 items-center justify-center rounded-lg;
-}
-
-.push-heading {
-    @apply px-1 text-xs font-semibold tracking-wide text-muted uppercase;
 }
 </style>

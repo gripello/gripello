@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 const page = (name: string) =>
-    readFileSync(path.resolve(__dirname, `../../app/pages/${name}.vue`), 'utf8')
+    readFileSync(
+        path.resolve(import.meta.dirname, `../../app/pages/${name}.vue`),
+        'utf8',
+    )
 
 describe('social pages', () => {
     it('remounts the climber page when only the id changes', () => {
@@ -18,7 +21,7 @@ describe('social pages', () => {
     it('refreshes contributions only when the logbook comes back', () => {
         const timeline = readFileSync(
             path.resolve(
-                __dirname,
+                import.meta.dirname,
                 '../../app/components/logbook/Timeline.vue',
             ),
             'utf8',
@@ -58,7 +61,7 @@ describe('social pages', () => {
     it('shows a load error in the moderation inbox instead of an empty list', () => {
         const inbox = readFileSync(
             path.resolve(
-                __dirname,
+                import.meta.dirname,
                 '../../app/components/moderation/Inbox.vue',
             ),
             'utf8',

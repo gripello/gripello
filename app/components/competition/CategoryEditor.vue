@@ -71,7 +71,7 @@
         <UButton
             icon="i-lucide-plus"
             color="neutral"
-            variant="outline"
+            variant="soft"
             class="self-start"
             data-testid="competition-category-add"
             @click="add"

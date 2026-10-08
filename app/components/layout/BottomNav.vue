@@ -27,10 +27,7 @@
                         v-bind="item.avatar"
                         size="xs"
                         class="size-7"
-                        :ui="{
-                            root: item.avatar.src ? '' : 'bg-primary',
-                            fallback: 'text-inverted font-bold',
-                        }"
+                        :ui="{ fallback: 'font-bold text-white' }"
                         :class="{ 'ring-2 ring-primary': active }"
                     />
                     <UIcon v-else :name="item.icon" class="size-6" />
@@ -58,7 +55,7 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { bottomNavLinks, navContext } from '~/utils/navigation'
-import { nameInitials } from '~/utils/avatar'
+import { avatarColor, nameInitials } from '~/utils/avatar'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -77,6 +74,7 @@ const youTab = computed(() =>
                           thumb: '100x100',
                       }) || undefined,
                   alt: '',
+                  style: { backgroundColor: avatarColor(user.value.id) },
                   text: nameInitials(
                       [user.value.firstname, user.value.name]
                           .filter(Boolean)

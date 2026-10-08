@@ -16,13 +16,10 @@
             :title="$t('competitions.standings.hidden')"
         />
         <template v-else-if="results">
-            <UTabs
+            <SegmentedControl
                 v-if="results.categories.length > 1"
                 v-model="activeCategory"
                 :items="categoryItems"
-                :content="false"
-                :size="large ? 'xl' : 'sm'"
-                class="w-full"
             />
             <LayoutEmptyState
                 v-if="!rows.length"
@@ -30,47 +27,49 @@
                 :title="$t('competitions.standings.empty')"
                 :card="false"
             />
-            <ol v-else class="flex flex-col" :class="large ? 'gap-2' : 'gap-1'">
+            <ol v-else class="flex flex-col gap-1">
                 <li
                     v-for="row in rows"
                     :key="row.entry"
-                    class="flex items-center gap-3 rounded-lg px-3"
-                    :class="[
-                        large ? 'py-3 text-2xl' : 'py-2',
+                    class="flex items-center gap-3 rounded-lg px-3 py-2"
+                    :class="
                         row.entry === highlightEntry
-                            ? 'bg-primary/10 ring ring-primary/40'
-                            : 'bg-elevated/40',
-                    ]"
+                            ? 'bg-primary/10'
+                            : (PODIUM_ROWS[row.rank] ?? 'bg-elevated/40')
+                    "
                     :data-testid="`standing-${row.bib}`"
                 >
                     <span
-                        class="w-10 shrink-0 text-center font-bold tabular-nums"
-                        :class="MEDAL_CLASSES[row.rank] ?? 'text-muted'"
+                        class="flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-black tabular-nums"
+                        :class="
+                            MEDALS[row.rank] ?? 'text-muted ring ring-default'
+                        "
                         :data-testid="`standing-rank-${row.bib}`"
                         >{{ row.rank }}</span
                     >
-                    <span class="w-12 shrink-0 text-sm text-muted tabular-nums"
-                        >#{{ row.bib }}</span
-                    >
-                    <span
-                        class="min-w-0 flex-1 truncate font-medium text-highlighted"
-                    >
-                        {{ row.name || $t('competitions.standings.anonymous') }}
-                    </span>
-                    <span
-                        v-if="results.format !== 'lead_height'"
-                        class="hidden text-sm text-muted tabular-nums sm:inline"
-                    >
-                        {{
-                            $t('competitions.standings.topsZones', {
-                                tops: row.tops,
-                                zones: row.zones,
-                            })
-                        }}
-                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate font-medium text-highlighted">
+                            {{
+                                row.name ||
+                                $t('competitions.standings.anonymous')
+                            }}
+                        </p>
+                        <p class="truncate text-xs text-muted tabular-nums">
+                            #{{ row.bib
+                            }}<template v-if="results.format !== 'lead_height'">
+                                ·
+                                {{
+                                    $t('competitions.standings.topsZones', {
+                                        tops: row.tops,
+                                        zones: row.zones,
+                                    })
+                                }}</template
+                            >
+                        </p>
+                    </div>
                     <span
                         v-if="results.format !== 'tops'"
-                        class="w-20 shrink-0 text-right font-semibold tabular-nums text-highlighted"
+                        class="shrink-0 text-right font-semibold tabular-nums text-highlighted"
                         :data-testid="`standing-points-${row.bib}`"
                     >
                         {{ formatScore(row) }}
@@ -95,17 +94,11 @@ import type {
     CompetitionResults,
     StandingRow,
 } from '#shared/utils/competitionResults'
-
-const MEDAL_CLASSES: Record<number, string> = {
-    1: 'text-warning',
-    2: 'text-toned',
-    3: 'text-[#b06b3a]',
-}
+import { MEDALS, PODIUM_ROWS } from '~/utils/themeColors'
 
 const props = defineProps<{
     results: CompetitionResults | null | undefined
     highlightEntry?: string | null
-    large?: boolean
 }>()
 
 const activeCategory = defineModel<string>('category', { default: '' })

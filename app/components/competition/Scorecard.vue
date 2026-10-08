@@ -1,13 +1,15 @@
 <template>
-    <section
-        class="flex flex-col gap-3 rounded-lg bg-default p-4 ring ring-default"
+    <LayoutPanel
+        :title="$t('competitions.scorecard.title')"
         data-testid="competition-scorecard"
     >
-        <div class="flex flex-wrap items-center gap-2">
-            <h2 class="flex-1 text-lg font-semibold text-highlighted">
-                {{ $t('competitions.scorecard.title') }}
-            </h2>
-            <UBadge color="success" variant="soft" data-testid="scorecard-tops">
+        <template #actions>
+            <UBadge
+                color="success"
+                variant="soft"
+                size="sm"
+                data-testid="scorecard-tops"
+            >
                 {{
                     $t(
                         'competitions.scorecard.tops',
@@ -16,7 +18,12 @@
                     )
                 }}
             </UBadge>
-            <UBadge v-if="summary.flashes" color="warning" variant="soft">
+            <UBadge
+                v-if="summary.flashes"
+                color="warning"
+                variant="soft"
+                size="sm"
+            >
                 {{
                     $t(
                         'competitions.scorecard.flashes',
@@ -29,6 +36,7 @@
                 v-if="pendingCount"
                 :color="offline ? 'warning' : 'neutral'"
                 variant="outline"
+                size="sm"
                 icon="i-lucide-cloud-off"
                 data-testid="scorecard-pending"
             >
@@ -40,15 +48,9 @@
                         : $t('competitions.scorecard.saving')
                 }}
             </UBadge>
-        </div>
+        </template>
 
-        <UTabs
-            v-model="filter"
-            :items="filterItems"
-            :content="false"
-            size="sm"
-            class="w-full"
-        />
+        <SegmentedControl v-model="filter" :items="filterItems" />
 
         <LayoutEmptyState
             v-if="!visibleRoutes.length"
@@ -56,38 +58,25 @@
             :title="$t('competitions.scorecard.nothingHere')"
             :card="false"
         />
-        <ul v-else class="flex flex-col gap-2">
+        <ul v-else class="divide-y divide-default">
             <li
                 v-for="compRoute in visibleRoutes"
                 :key="compRoute.id"
-                class="flex flex-col gap-3 rounded-lg p-3 ring sm:flex-row sm:items-center"
-                :class="
-                    scoreOf(compRoute).topAttempt
-                        ? 'bg-success/5 ring-success/40'
-                        : 'ring-default'
-                "
+                class="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
                 :data-testid="`scorecard-route-${compRoute.number}`"
             >
-                <div class="flex min-w-0 flex-1 items-center gap-3">
+                <div
+                    class="flex min-w-0 basis-full items-center gap-3 xl:flex-1 xl:basis-0"
+                >
                     <span
                         class="w-8 text-center text-lg font-bold tabular-nums text-highlighted"
                         >{{ compRoute.number }}</span
                     >
-                    <RouteColorDot
-                        :color="routeOf(compRoute)?.color"
+                    <RouteSummary
+                        :route="routeOf(compRoute)"
                         :ticked="!!scoreOf(compRoute).topAttempt"
-                        :size="28"
+                        class="flex-1"
                     />
-                    <div class="min-w-0 flex-1">
-                        <p class="truncate font-medium text-highlighted">
-                            {{ routeOf(compRoute)?.name }}
-                        </p>
-                        <GradeLabel
-                            v-if="routeOf(compRoute)"
-                            :source="routeOf(compRoute)!"
-                            class="text-xs text-muted"
-                        />
-                    </div>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
@@ -117,43 +106,14 @@
                         </UButton>
                     </div>
 
-                    <div class="flex items-center gap-1">
-                        <UButton
-                            icon="i-lucide-minus"
-                            color="neutral"
-                            variant="outline"
-                            class="icon-btn"
-                            :aria-label="
-                                $t('competitions.scorecard.undoAttempt')
-                            "
-                            :data-testid="`scorecard-undo-${compRoute.number}`"
-                            @click="act(compRoute, { type: 'undoAttempt' })"
-                        />
-                        <span
-                            class="min-w-16 text-center text-sm tabular-nums"
-                            :data-testid="`scorecard-attempts-${compRoute.number}`"
-                        >
-                            {{
-                                $t(
-                                    'competitions.scorecard.attempts',
-                                    { n: scoreOf(compRoute).attempts },
-                                    scoreOf(compRoute).attempts,
-                                )
-                            }}
-                        </span>
-                        <UButton
-                            icon="i-lucide-plus"
-                            color="neutral"
-                            variant="outline"
-                            class="icon-btn"
-                            :disabled="!!scoreOf(compRoute).topAttempt"
-                            :aria-label="
-                                $t('competitions.scorecard.addAttempt')
-                            "
-                            :data-testid="`scorecard-attempt-${compRoute.number}`"
-                            @click="act(compRoute, { type: 'attempt' })"
-                        />
-                    </div>
+                    <CompetitionAttemptStepper
+                        :attempts="scoreOf(compRoute).attempts"
+                        :add-disabled="!!scoreOf(compRoute).topAttempt"
+                        test-id-prefix="scorecard"
+                        :test-id-suffix="compRoute.number"
+                        @undo="act(compRoute, { type: 'undoAttempt' })"
+                        @add="act(compRoute, { type: 'attempt' })"
+                    />
 
                     <UButton
                         v-if="compRoute.zone"
@@ -197,7 +157,7 @@
                 </div>
             </li>
         </ul>
-    </section>
+    </LayoutPanel>
 </template>
 
 <script setup lang="ts">
@@ -257,9 +217,12 @@ const summary = computed(() => {
 })
 
 const filterItems = computed(() => [
-    { label: t('competitions.scorecard.filters.all'), value: 'all' },
-    { label: t('competitions.scorecard.filters.open'), value: 'open' },
-    { label: t('competitions.scorecard.filters.topped'), value: 'topped' },
+    { label: t('competitions.scorecard.filters.all'), value: 'all' as const },
+    { label: t('competitions.scorecard.filters.open'), value: 'open' as const },
+    {
+        label: t('competitions.scorecard.filters.topped'),
+        value: 'topped' as const,
+    },
 ])
 
 const visibleRoutes = computed(() =>

@@ -4,7 +4,7 @@ import FootBar from '~/components/layout/FootBar.vue'
 import LegalLinks from '~/components/layout/LegalLinks.vue'
 
 vi.stubGlobal('useVersionCheck', () => ({
-    appVersionLabel: ref('2.1.1'),
+    appVersionLabel: '2.1.1',
     installedNotes: ref(''),
     installedBase: ref('2.1.1'),
     installedPublishedAt: ref(''),
@@ -89,6 +89,9 @@ describe('LayoutFootBar', () => {
         )
         expect(menuItems(wrapper)).toContainEqual(
             expect.objectContaining({ href: 'mailto:a@b.c' }),
+        )
+        expect(menuItems(wrapper)).toContainEqual(
+            expect.objectContaining({ slot: 'version', label: '2.1.1' }),
         )
     })
 

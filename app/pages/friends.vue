@@ -68,7 +68,7 @@
                 class="flex flex-col gap-4 lg:col-start-3 lg:row-span-2 lg:row-start-1"
             >
                 <section
-                    class="overflow-hidden rounded-2xl bg-elevated/50 ring ring-default"
+                    class="overflow-hidden rounded-lg bg-default ring ring-default"
                     data-testid="friends-me"
                 >
                     <ClimberBanner
@@ -97,7 +97,7 @@
                             :name="nameOf(myId)"
                             :avatar="byId.get(myId)?.avatar"
                             size="lg"
-                            class="ring-4 ring-(--ui-bg-elevated)"
+                            class="ring-4 ring-(--ui-bg)"
                         />
                         <p
                             class="text-lg font-bold break-words text-highlighted"
@@ -109,22 +109,19 @@
                                 v-for="list in PEOPLE_LISTS"
                                 :key="list"
                                 type="button"
-                                class="rounded-xl px-2 py-2 transition"
+                                class="rounded-lg px-2 py-2 transition"
                                 :class="
                                     peopleList === list
                                         ? 'bg-primary/10 text-primary'
-                                        : 'bg-default hover:bg-accented/60'
+                                        : 'bg-elevated/50 hover:bg-accented/60'
                                 "
                                 :data-testid="`friends-count-${list}`"
                                 @click="peopleList = list"
                             >
-                                <span
-                                    class="block text-2xl font-black tabular-nums"
-                                    >{{ counts[list] }}</span
-                                >
-                                <span class="block text-xs text-muted">{{
-                                    t(`friends.tabs.${list}`)
-                                }}</span>
+                                <LayoutStatTile
+                                    :label="t(`friends.tabs.${list}`)"
+                                    :value="counts[list]"
+                                />
                             </button>
                         </div>
                         <UButton
@@ -186,13 +183,12 @@
                     <LayoutSectionHeader
                         :title="t(`friends.tabs.${peopleList}`)"
                     />
-                    <p
+                    <LayoutEmptyState
                         v-if="!people.length"
-                        class="rounded-xl bg-elevated/50 px-4 py-6 text-center text-sm text-muted"
+                        icon="i-lucide-users"
+                        :title="t(`friends.empty.${peopleList}`)"
                         :data-testid="`friends-${peopleList}-empty`"
-                    >
-                        {{ t(`friends.empty.${peopleList}`) }}
-                    </p>
+                    />
                     <ul v-else class="flex flex-col gap-2">
                         <li
                             v-for="person in shownPeople"

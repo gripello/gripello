@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const read = (path: string) => readFileSync(resolve(__dirname, path), 'utf8')
+const read = (path: string) =>
+    readFileSync(resolve(import.meta.dirname, path), 'utf8')
 
 describe('spa loading template', () => {
     const template = read('../../app/spa-loading-template.html')

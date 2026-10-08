@@ -1252,7 +1252,6 @@
     },
     "ticks": {
         "logbook": "Libreta",
-        "logbookSubtitle": "Tu historial, estadísticas y proyectos.",
         "empty": "Aún no hay ascensiones",
         "emptyHint": "Abre una vía y toca «Registrar ascensión» para empezar tu libreta.",
         "sendCount": "Encadenadas: {count}",
@@ -2422,5 +2421,10 @@
             "removeInterval": "Quitar franja",
             "copyMonday": "Copiar lunes a mar–vie"
         }
+    },
+    "imageCrop": {
+        "zoom": "Zoom",
+        "rotate": "Girar",
+        "reset": "Restablecer"
     }
 }

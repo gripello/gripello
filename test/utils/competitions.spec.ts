@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+    COMPETITION_PHASE_COLORS,
+    COMPETITION_PHASES,
     acceptsRegistrations,
     birthYearRange,
     categoriesFor,
@@ -328,5 +330,13 @@ describe('resultsChangedAt', () => {
 
     it('keeps the last change on a resync so the shared cache stays usable', () => {
         expect(resultsChangedAt(100, { kind: 'resync', at: 999 })).toBe(100)
+    })
+})
+
+describe('COMPETITION_PHASE_COLORS', () => {
+    it('gives every phase a colour', () => {
+        expect(Object.keys(COMPETITION_PHASE_COLORS).sort()).toEqual(
+            [...COMPETITION_PHASES].sort(),
+        )
     })
 })

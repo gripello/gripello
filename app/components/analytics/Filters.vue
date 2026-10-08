@@ -5,21 +5,12 @@
             @clear="clearFilters"
         >
             <template #search>
-                <div class="grow xl:grow-0 min-w-0">
-                    <div class="range-toggle flex gap-2 overflow-x-auto py-1">
-                        <UButton
-                            v-for="option in ANALYTICS_RANGES"
-                            :key="option"
-                            class="shrink-0 rounded-full"
-                            :color="option === range ? 'primary' : 'neutral'"
-                            :variant="option === range ? 'soft' : 'outline'"
-                            :aria-pressed="option === range"
-                            :data-testid="`analytics-range-${option}`"
-                            @click="option !== range && selectRange(option)"
-                        >
-                            {{ $t(`analytics.filters.ranges.${option}`) }}
-                        </UButton>
-                    </div>
+                <div class="min-w-0 grow max-sm:basis-0 xl:grow-0">
+                    <SegmentedControl
+                        v-model="rangeTab"
+                        :items="rangeOptions"
+                        test-id="analytics-range"
+                    />
                 </div>
             </template>
 
@@ -121,6 +112,8 @@ const typeOptions: string[] = [...ROUTE_TYPES]
 
 const emit = defineEmits<{ update: [patch: Partial<AnalyticsQuery>] }>()
 
+const { t } = useI18n()
+
 const range = computed<AnalyticsRange>(() =>
     ANALYTICS_RANGES.includes(props.query.range as AnalyticsRange)
         ? (props.query.range as AnalyticsRange)
@@ -142,6 +135,19 @@ const activeFilterCount = computed(
         ].filter(Boolean).length,
 )
 
+const rangeOptions = computed(() =>
+    ANALYTICS_RANGES.map((value) => ({
+        value,
+        label: t(`analytics.filters.ranges.${value}`),
+    })),
+)
+const rangeTab = computed({
+    get: () => range.value,
+    set: (value: AnalyticsRange) => {
+        if (value !== range.value) selectRange(value)
+    },
+})
+
 function selectRange(value: AnalyticsRange) {
     emit(
         'update',
@@ -155,10 +161,3 @@ function clearFilters() {
     emit('update', { location: '', type: '', archived: '' })
 }
 </script>
-
-<style scoped>
-.range-toggle {
-    max-width: 100%;
-    scrollbar-width: none;
-}
-</style>

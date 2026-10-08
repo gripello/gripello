@@ -1252,7 +1252,6 @@
     },
     "ticks": {
         "logbook": "Carnet",
-        "logbookSubtitle": "Votre historique, vos statistiques et vos projets.",
         "empty": "Aucune réussite pour le moment",
         "emptyHint": "Ouvrez une voie et appuyez sur « Enregistrer une réussite » pour commencer votre carnet.",
         "sendCount": "Réussites : {count}",
@@ -2422,5 +2421,10 @@
             "removeInterval": "Supprimer la plage",
             "copyMonday": "Copier lundi sur mar–ven"
         }
+    },
+    "imageCrop": {
+        "zoom": "Zoom",
+        "rotate": "Pivoter",
+        "reset": "Réinitialiser"
     }
 }

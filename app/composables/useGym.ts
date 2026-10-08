@@ -35,8 +35,13 @@ export async function loadGym(
     throw createError({ statusCode: 404, statusMessage: 'Gym not found' })
 }
 
+export function routeParam(params: Record<string, unknown>, name: string) {
+    const value = params[name]
+    return typeof value === 'string' ? value : ''
+}
+
 export function routeGymSlug(params: Record<string, unknown>) {
-    return typeof params.gym === 'string' ? params.gym : ''
+    return routeParam(params, 'gym')
 }
 
 export function useGymCookie() {

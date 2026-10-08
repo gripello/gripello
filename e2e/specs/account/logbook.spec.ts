@@ -49,7 +49,9 @@ test('a climber logs, edits and deletes an ascent', async ({
     const tick = page.getByTestId('logbook-tick').filter({
         hasText: route.name,
     })
-    await expect(tick.getByTestId('logbook-tick-route')).toHaveText(route.name)
+    await expect(tick.getByTestId('logbook-tick-route')).toContainText(
+        route.name,
+    )
     await expect(tick.getByTestId('logbook-tick-type')).toHaveText('Top')
     await expect(tick.getByTestId('logbook-tick-attempts')).toContainText('3')
     await expect(tick.getByTestId('logbook-tick-note')).toHaveText(
@@ -66,7 +68,9 @@ test('a climber logs, edits and deletes an ascent', async ({
 
     await root.collection('routes').update(route.id, { archived: true })
     await gotoSettled(page, '/logbook')
-    await expect(tick.getByTestId('logbook-tick-route')).toHaveText(route.name)
+    await expect(tick.getByTestId('logbook-tick-route')).toContainText(
+        route.name,
+    )
 
     await tick.getByTestId('logbook-tick-menu').click()
     await page.getByTestId('logbook-tick-delete').click()

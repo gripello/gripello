@@ -131,7 +131,7 @@ func TestLeaderboardEndpoint(t *testing.T) {
 
 	url := "/api/gyms/" + f.gymA.Id + "/leaderboard"
 	call(t, f.app, nil, http.MethodGet, url, "", http.StatusOK, `"total":1`, `"name":"Cleo C."`, `"score":3453`, `"sends":2`, `"me":null`)
-	call(t, f.app, f.climber, http.MethodGet, url, "", http.StatusOK, `"me":{"rank":1`, `"ahead":null`, `"mySends":[{"id":"`+hard.Id+`","name":"7A"`, `"stats":{"climbers":1,"sends":2,"flashes":1,"hardest":"7A"}`, `"topRoutes":[{"id":"`+hard.Id+`","name":"7A"`)
+	call(t, f.app, f.climber, http.MethodGet, url, "", http.StatusOK, `"me":{"rank":1`, `"ahead":null`, `"mySends":[{"id":"`+hard.Id+`","name":"7A"`, `"stats":{"climbers":1,"sends":2,"flashes":1,"hardest":"7A"}`, `"topRoutes":[{"id":"`+hard.Id+`","name":"7A"`, `"grade_system":"font"`)
 	call(t, f.app, nil, http.MethodGet, url+"?kind=route", "", http.StatusOK, `"score":1700`, `"hardest":"7a"`)
 
 	season := saveRecord(t, f.app, "seasons", map[string]any{

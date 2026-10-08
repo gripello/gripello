@@ -16,34 +16,34 @@
             >
                 <NuxtLink
                     :to="`/route?id=${route.id}`"
-                    class="suggestion rounded-lg bg-elevated p-3 flex items-center gap-3"
+                    class="flex items-center gap-2 rounded-lg bg-elevated p-3 transition-colors hover:bg-accented"
                     data-testid="logbook-suggestion"
                 >
-                    <RouteColorDot :color="route.color" :size="32" />
-                    <div class="grow suggestion__body">
-                        <div class="font-medium suggestion__name">
-                            {{ route.name }}
-                        </div>
-                        <div class="text-xs text-muted">
-                            {{
-                                locationName(route) ||
-                                (route.type &&
-                                    $t(
-                                        `routes.types.${route.type.toLowerCase()}`,
-                                    ))
-                            }}
-                        </div>
-                    </div>
-                    <UBadge
-                        v-if="isNew(route)"
-                        size="sm"
-                        color="primary"
-                        variant="solid"
+                    <RouteSummary
+                        :route="route"
+                        :meta="
+                            locationName(route) ||
+                            (route.type
+                                ? $t(`routes.types.${route.type.toLowerCase()}`)
+                                : undefined)
+                        "
+                        class="flex-1"
                     >
-                        {{ $t('ticks.suggestions.new') }}
-                    </UBadge>
-                    <GradeLabel :source="route" />
-                    <UIcon name="i-lucide-chevron-right" class="size-4" />
+                        <template v-if="isNew(route)" #markers>
+                            <UBadge
+                                size="sm"
+                                color="primary"
+                                variant="soft"
+                                class="ml-1 shrink-0"
+                            >
+                                {{ $t('ticks.suggestions.new') }}
+                            </UBadge>
+                        </template>
+                    </RouteSummary>
+                    <UIcon
+                        name="i-lucide-chevron-right"
+                        class="size-4 shrink-0 text-muted"
+                    />
                 </NuxtLink>
             </div>
         </div>
@@ -109,24 +109,3 @@ const suggestions = computed(() => {
         .slice(0, SUGGESTION_COUNT)
 })
 </script>
-
-<style scoped>
-.suggestion {
-    color: inherit;
-    text-decoration: none;
-}
-
-.suggestion:hover {
-    background: var(--ui-bg-accented);
-}
-
-.suggestion__body {
-    min-width: 0;
-}
-
-.suggestion__name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-</style>

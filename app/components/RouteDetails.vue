@@ -1,6 +1,7 @@
 <template>
     <div class="view-ratings-wrapper">
         <UButton
+            class="icon-btn"
             v-if="compact"
             icon="i-lucide-star"
             color="neutral"
@@ -27,7 +28,7 @@
             :title="$t('ratings.climber_reviews')"
             data-testid="route-details-sheet"
         >
-            <UProgress v-if="isLoading" size="2xs" />
+            <LayoutLoadingState v-if="isLoading" :count="2" />
 
             <div v-if="!isLoading && reviews.length">
                 <CommentsCard
@@ -39,6 +40,7 @@
                 >
                     <template #actions>
                         <UButton
+                            class="icon-btn"
                             icon="i-lucide-flag"
                             color="neutral"
                             variant="ghost"

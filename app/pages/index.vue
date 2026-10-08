@@ -4,7 +4,7 @@
             <template v-if="isPlatformAdmin" #actions>
                 <UButton
                     to="/platform/gyms"
-                    variant="link"
+                    variant="outline"
                     color="neutral"
                     icon="i-lucide-building-2"
                     data-testid="landing-platform-link"

@@ -103,15 +103,14 @@
                 <h3 class="text-sm font-semibold text-highlighted">
                     {{ t('platform.users.memberships') }}
                 </h3>
-                <ul
+                <LayoutListGroup
                     v-if="chips.length"
-                    class="divide-y divide-default rounded-lg border border-default"
                     data-testid="platform-user-memberships"
                 >
                     <li
                         v-for="chip in chips"
                         :key="chip.id"
-                        class="flex flex-wrap items-center gap-2 p-2"
+                        class="flex flex-wrap items-center gap-2 px-4 py-3"
                         :data-testid="`platform-user-membership-${chip.gym}`"
                     >
                         <span
@@ -142,7 +141,7 @@
                             @click="removeMembership(chip)"
                         />
                     </li>
-                </ul>
+                </LayoutListGroup>
                 <div
                     v-if="joinable.length"
                     class="flex flex-wrap items-center gap-2"

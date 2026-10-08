@@ -5,7 +5,12 @@ import { e2eGymId } from './seed'
 
 import { PLATFORM_SETTINGS_ID } from '../../shared/utils/platform'
 
-const SNAPSHOT_FILE = path.join(__dirname, '..', '.auth', 'snapshot.json')
+const SNAPSHOT_FILE = path.join(
+    import.meta.dirname,
+    '..',
+    '.auth',
+    'snapshot.json',
+)
 
 interface Snapshot {
     rateLimitsEnabled: boolean

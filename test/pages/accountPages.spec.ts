@@ -3,7 +3,10 @@ import path from 'node:path'
 
 const page = (name: string) =>
     readFileSync(
-        path.resolve(__dirname, `../../app/pages/account/${name}.vue`),
+        path.resolve(
+            import.meta.dirname,
+            `../../app/pages/account/${name}.vue`,
+        ),
         'utf8',
     )
 
@@ -31,13 +34,30 @@ describe('account pages', () => {
             expect(source).not.toContain(key)
     })
 
-    it('scrolls the settings tabs sideways instead of truncating them', () => {
+    it('uses the shared section tabs and keeps the active one in view', () => {
         const source = page('settings')
-        expect(source).toMatch(/class="account-tabs"/)
-        expect(source).toMatch(/w-max min-w-full/)
-        expect(source).toMatch(/\.account-tabs \{[^}]*overflow-x: auto/)
+        expect(source).toMatch(/<LayoutTabs/)
+        expect(source).not.toMatch(/UNavigationMenu/)
         expect(source).toMatch(
             /scrollIntoView\(\{ block: 'nearest', inline: 'center' \}\)/,
         )
+    })
+
+    it('lists activity entries as rows without leading separators', () => {
+        const source = page('activity')
+        expect(source).toMatch(/class="mx-auto w-full p-4"/)
+        expect(source).toMatch(/<LayoutListGroup[\s\S]*<AuditCard/)
+        const card = readFileSync(
+            path.resolve(
+                import.meta.dirname,
+                '../../app/components/audit/Card.vue',
+            ),
+            'utf8',
+        )
+        const meta = card.slice(
+            card.indexOf('audit-card__meta'),
+            card.indexOf('</template>'),
+        )
+        expect(meta).not.toContain('audit-card__dot')
     })
 })

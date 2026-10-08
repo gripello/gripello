@@ -13,12 +13,20 @@ const ButtonStub = defineComponent({
     },
 })
 
+const cropStub = {
+    name: 'ImageCropDialog',
+    props: ['file'],
+    emits: ['cropped', 'cancel'],
+    template: '<div />',
+}
+
 function mountPicker(props: { preview: string | null; removable?: boolean }) {
     return mount(AvatarPicker, {
         props: { testIdPrefix: 'p', ...props },
         global: {
             stubs: {
                 UTooltip: { template: '<div><slot /></div>' },
+                ImageCropDialog: cropStub,
                 UAvatar: true,
                 UIcon: true,
                 UButton: ButtonStub,
@@ -31,13 +39,19 @@ function mountPicker(props: { preview: string | null; removable?: boolean }) {
 vi.stubGlobal('useTemplateRef', useTemplateRef)
 
 describe('AvatarPicker', () => {
-    it('emits the chosen file', async () => {
+    it('emits the cropped file', async () => {
         const wrapper = mountPicker({ preview: null })
         const input = wrapper.get('[data-testid="p-avatar-input"]')
         const file = new File(['x'], 'a.png', { type: 'image/png' })
+        const cropped = new File(['c'], 'a.png', { type: 'image/png' })
         Object.defineProperty(input.element, 'files', { value: [file] })
         await input.trigger('change')
-        expect(wrapper.emitted('select')).toEqual([[file]])
+
+        const crop = wrapper.getComponent(cropStub)
+        expect(crop.props('file')).toBe(file)
+        expect(wrapper.emitted('select')).toBeUndefined()
+        crop.vm.$emit('cropped', cropped)
+        expect(wrapper.emitted('select')).toEqual([[cropped]])
     })
 
     it('offers removal only for an existing removable avatar', async () => {

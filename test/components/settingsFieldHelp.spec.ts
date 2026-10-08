@@ -3,7 +3,7 @@ import path from 'node:path'
 
 const source = (file: string) =>
     readFileSync(
-        path.resolve(__dirname, `../../app/components/${file}`),
+        path.resolve(import.meta.dirname, `../../app/components/${file}`),
         'utf8',
     )
 

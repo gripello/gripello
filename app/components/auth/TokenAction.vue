@@ -35,7 +35,6 @@
                         color="neutral"
                         variant="ghost"
                         block
-                        class="text-muted"
                         icon="i-lucide-arrow-left"
                         :disabled="loading"
                         @click="navigateTo('/auth/login')"
@@ -80,8 +79,9 @@
                         class="mb-4 size-[48px] text-error"
                     />
                     <UButton
-                        color="success"
-                        variant="soft"
+                        color="neutral"
+                        variant="ghost"
+                        icon="i-lucide-arrow-left"
                         block
                         class="mt-4"
                         :data-testid="`${testidPrefix}-back`"
@@ -128,7 +128,7 @@ const { t } = useI18n()
 const route = useRoute()
 const { error: notifyError } = useNotification()
 
-const token = String(route.params.token ?? '')
+const token = routeParam(route.params, 'token')
 const step = ref<Step>(token ? 'form' : 'invalid')
 const submitting = ref(false)
 const loading = computed(

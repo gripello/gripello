@@ -14,7 +14,7 @@ import {
 } from './seed'
 import { takeSnapshot } from './state-snapshot'
 
-const AUTH_DIR = path.join(__dirname, '..', '.auth')
+const AUTH_DIR = path.join(import.meta.dirname, '..', '.auth')
 const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
 const PREFIX = 'e2e'
 

@@ -8,9 +8,9 @@ const stubs = {
         template:
             '<div><slot name="activator" :props="{}" /><slot name="title" />{{ subtitle }}<slot /></div>',
     },
-    UAlert: {
-        props: ['description'],
-        template: '<div class="alert">{{ description }}</div>',
+    LayoutEmptyState: {
+        props: ['title'],
+        template: '<div>{{ title }}</div>',
     },
     UIcon: true,
 }
@@ -51,7 +51,9 @@ describe('CommitListDialog', () => {
     it('shows the empty state when there is nothing to list', () => {
         const wrapper = createWrapper({ commits: [] })
 
-        expect(wrapper.find('.alert').exists()).toBe(true)
+        expect(wrapper.find('[data-testid="commit-list-empty"]').exists()).toBe(
+            true,
+        )
         expect(wrapper.text()).toContain('notifications.commitList.empty')
     })
 

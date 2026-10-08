@@ -30,10 +30,13 @@ export default defineConfig({
     plugins: [vue(), importMetaPolyfill()],
     resolve: {
         alias: {
-            '~': path.resolve(__dirname, 'app'),
-            '@': path.resolve(__dirname, 'app'),
-            '#shared': path.resolve(__dirname, 'shared'),
-            '#imports': path.resolve(__dirname, 'test/__stubs__/imports.ts'),
+            '~': path.resolve(import.meta.dirname, 'app'),
+            '@': path.resolve(import.meta.dirname, 'app'),
+            '#shared': path.resolve(import.meta.dirname, 'shared'),
+            '#imports': path.resolve(
+                import.meta.dirname,
+                'test/__stubs__/imports.ts',
+            ),
         },
     },
     test: {

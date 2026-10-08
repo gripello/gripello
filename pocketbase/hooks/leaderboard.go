@@ -58,13 +58,14 @@ type leaderboardGrade struct {
 }
 
 type leaderboardRoute struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Color   string `json:"color"`
-	Grade   string `json:"grade"`
-	Sends   int    `json:"sends"`
-	Flashes int    `json:"flashes"`
-	Points  int    `json:"points,omitempty"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Color       string `json:"color"`
+	Grade       string `json:"grade"`
+	GradeSystem string `json:"grade_system"`
+	Sends       int    `json:"sends"`
+	Flashes     int    `json:"flashes"`
+	Points      int    `json:"points,omitempty"`
 }
 
 type leaderboardBoard struct {
@@ -235,6 +236,7 @@ func routeSummary(routes map[string]*core.Record, send leaderboardSend) leaderbo
 	if route := routes[send.Route]; route != nil {
 		summary.Name = route.GetString("name")
 		summary.Color = route.GetString("color")
+		summary.GradeSystem = route.GetString("grade_system")
 	}
 	return summary
 }
@@ -394,6 +396,7 @@ func buildLeaderboard(app core.App, gymID, kind string, from, to time.Time) (lea
 		if route := board.routes[top.ID]; route != nil {
 			board.topRoutes[i].Name = route.GetString("name")
 			board.topRoutes[i].Color = route.GetString("color")
+			board.topRoutes[i].GradeSystem = route.GetString("grade_system")
 		}
 	}
 	return board, nil

@@ -32,7 +32,7 @@
             </div>
             <UButton
                 v-if="scanning && torchSupported"
-                class="scan-torch"
+                class="icon-btn scan-torch"
                 :icon="
                     torchOn ? 'i-lucide-flashlight' : 'i-lucide-flashlight-off'
                 "

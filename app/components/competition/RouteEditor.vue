@@ -37,24 +37,18 @@
             <li
                 v-for="compRoute in compRoutes"
                 :key="compRoute.id"
-                class="flex flex-wrap items-center gap-3 rounded-lg bg-default p-3 ring ring-default"
+                class="flex flex-wrap items-end gap-3 rounded-lg bg-default p-3 ring ring-default md:items-center"
                 :class="{ 'opacity-60': compRoute.voided }"
                 :data-testid="`competition-route-${compRoute.number}`"
             >
-                <span
-                    class="w-8 text-center text-lg font-bold tabular-nums text-highlighted"
-                    >{{ compRoute.number }}</span
+                <div
+                    class="flex min-w-0 basis-full items-center gap-3 md:flex-1 md:basis-0"
                 >
-                <RouteColorDot :color="routeOf(compRoute)?.color" :size="24" />
-                <div class="min-w-0 flex-1">
-                    <p class="truncate font-medium text-highlighted">
-                        {{ routeOf(compRoute)?.name }}
-                    </p>
-                    <GradeLabel
-                        v-if="routeOf(compRoute)"
-                        :source="routeOf(compRoute)!"
-                        class="text-xs text-muted"
-                    />
+                    <span
+                        class="w-8 text-center text-lg font-bold tabular-nums text-highlighted"
+                        >{{ compRoute.number }}</span
+                    >
+                    <RouteSummary :route="routeOf(compRoute)" class="flex-1" />
                 </div>
                 <UFormField
                     v-if="usesPoints"
@@ -95,6 +89,7 @@
                     v-else
                     :model-value="compRoute.zone"
                     :label="$t('competitions.zone')"
+                    class="h-7 items-center"
                     :data-testid="`competition-route-zone-${compRoute.number}`"
                     @update:model-value="(zone) => patch(compRoute, { zone })"
                 />
@@ -102,6 +97,7 @@
                     v-if="competition.status !== 'draft'"
                     :model-value="compRoute.voided"
                     :label="$t('competitions.voided')"
+                    class="ms-auto h-7 items-center"
                     color="error"
                     :data-testid="`competition-route-voided-${compRoute.number}`"
                     @update:model-value="
@@ -113,7 +109,7 @@
                     icon="i-lucide-trash-2"
                     color="error"
                     variant="ghost"
-                    class="icon-btn"
+                    class="icon-btn ms-auto"
                     :aria-label="$t('actions.delete')"
                     :data-testid="`competition-route-delete-${compRoute.number}`"
                     @click="remove(compRoute)"

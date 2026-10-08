@@ -58,7 +58,7 @@
 
         <div
             v-if="current"
-            class="flex flex-wrap items-end gap-3 rounded-lg border border-default p-3"
+            class="flex flex-wrap items-end gap-3 rounded-lg p-3 ring ring-default"
             data-testid="boulder-band-details"
         >
             <UFormField :label="$t('settings.bandColor')">
@@ -125,6 +125,7 @@
                     {{ $t('settings.splitBand') }}
                 </UButton>
                 <UButton
+                    class="icon-btn"
                     color="error"
                     variant="ghost"
                     icon="i-lucide-trash-2"

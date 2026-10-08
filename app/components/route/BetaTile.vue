@@ -1,6 +1,6 @@
 <template>
     <article
-        class="max-w-full overflow-hidden rounded-2xl bg-elevated/50 ring transition-shadow duration-700"
+        class="max-w-full overflow-hidden rounded-lg bg-default ring transition-shadow duration-700"
         :style="{
             width: `calc(var(--beta-height, min(70vh, 32rem)) * ${ratio})`,
         }"

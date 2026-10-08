@@ -1,12 +1,9 @@
 <template>
-    <section
-        class="mb-6 flex flex-col gap-4 rounded-lg bg-default p-4 ring ring-default"
-        data-testid="competition-lifecycle"
-    >
+    <LayoutPanel class="mb-6" data-testid="competition-lifecycle">
         <div class="flex flex-wrap items-center gap-2">
             <UBadge
                 :icon="PHASE_ICONS[phase]"
-                :color="phase === 'running' ? 'success' : 'primary'"
+                :color="COMPETITION_PHASE_COLORS[phase]"
                 variant="soft"
                 size="lg"
                 class="me-auto"
@@ -77,6 +74,7 @@
                 readonly
                 icon="i-lucide-link"
                 class="flex-1"
+                :ui="{ base: 'text-ellipsis' }"
                 :aria-label="$t('competitions.shareLink')"
                 data-testid="competition-share-url"
             />
@@ -135,12 +133,13 @@
             :loading="pending"
             @confirm="confirm"
         />
-    </section>
+    </LayoutPanel>
 </template>
 
 <script setup lang="ts">
 import {
     COMPETITION_PHASES,
+    COMPETITION_PHASE_COLORS,
     competitionPhase,
     competitionShareUrl,
     LIFECYCLE_TARGET,

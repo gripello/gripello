@@ -9,26 +9,30 @@
                 class="min-w-48 flex-1"
                 data-testid="competition-entries-search"
             />
-            <UBadge color="neutral" variant="soft" size="lg">
-                {{
-                    $t(
-                        'competitions.entryCount',
-                        { n: activeEntries.length },
-                        activeEntries.length,
-                    )
-                }}
-            </UBadge>
-            <UBadge color="success" variant="soft" size="lg">
-                {{ $t('competitions.checkedInCount', { n: checkedInCount }) }}
-            </UBadge>
-            <UBadge
-                v-if="requiresPayment"
-                color="info"
-                variant="soft"
-                size="lg"
-            >
-                {{ $t('competitions.paidCount', { n: paidCount }) }}
-            </UBadge>
+            <div class="flex flex-wrap gap-2">
+                <UBadge color="neutral" variant="soft" size="lg">
+                    {{
+                        $t(
+                            'competitions.entryCount',
+                            { n: activeEntries.length },
+                            activeEntries.length,
+                        )
+                    }}
+                </UBadge>
+                <UBadge color="success" variant="soft" size="lg">
+                    {{
+                        $t('competitions.checkedInCount', { n: checkedInCount })
+                    }}
+                </UBadge>
+                <UBadge
+                    v-if="requiresPayment"
+                    color="info"
+                    variant="soft"
+                    size="lg"
+                >
+                    {{ $t('competitions.paidCount', { n: paidCount }) }}
+                </UBadge>
+            </div>
         </div>
 
         <LayoutEmptyState
@@ -44,17 +48,21 @@
                 :class="{ 'opacity-60': isInactive(entry) }"
                 :data-testid="`competition-entry-${entry.bib}`"
             >
-                <span
-                    class="w-10 text-center text-lg font-bold tabular-nums text-highlighted"
-                    >{{ entry.bib }}</span
+                <div
+                    class="flex min-w-0 basis-full items-center gap-3 md:flex-1 md:basis-0"
                 >
-                <div class="min-w-0 flex-1">
-                    <p class="truncate font-medium text-highlighted">
-                        {{ entry.display_name }}
-                    </p>
-                    <p class="truncate text-xs text-muted">
-                        {{ categoryName(entry) }} · {{ entry.birth_year }}
-                    </p>
+                    <span
+                        class="w-10 text-center text-lg font-bold tabular-nums text-highlighted"
+                        >{{ entry.bib }}</span
+                    >
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate font-medium text-highlighted">
+                            {{ entry.display_name }}
+                        </p>
+                        <p class="truncate text-xs text-muted">
+                            {{ categoryName(entry) }} · {{ entry.birth_year }}
+                        </p>
+                    </div>
                 </div>
                 <UBadge
                     :color="STATUS_COLORS[entry.status]"
@@ -85,7 +93,7 @@
                         icon="i-lucide-ellipsis-vertical"
                         color="neutral"
                         variant="ghost"
-                        class="icon-btn"
+                        class="icon-btn ms-auto md:ms-0"
                         :aria-label="$t('competitions.entryActions')"
                         :data-testid="`competition-entry-menu-${entry.bib}`"
                     />

@@ -1,6 +1,7 @@
 import { beforeEach, vi } from 'vitest'
 import {
     ref as vueRef,
+    shallowRef as vueShallowRef,
     computed as vueComputed,
     onMounted as vueOnMounted,
     onBeforeUnmount as vueOnBeforeUnmount,
@@ -129,6 +130,7 @@ vi.stubGlobal('useState', useStateGetter)
 vi.stubGlobal('useAsyncData', useAsyncDataGetter)
 vi.stubGlobal('useVersionCheck', useVersionCheck)
 vi.stubGlobal('useId', vueUseId)
+vi.stubGlobal('shallowRef', vueShallowRef)
 vi.stubGlobal('useDisplay', () => ({
     smAndDown: vueComputed(() => false),
     smAndUp: vueComputed(() => true),

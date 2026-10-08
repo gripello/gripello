@@ -1,13 +1,9 @@
 <template>
-    <section
+    <LayoutPanel
         v-if="entry || registrationOpen"
-        class="flex flex-col gap-4 rounded-lg bg-default p-4 ring ring-default"
+        :title="$t('competitions.register.title')"
         data-testid="competition-registration"
     >
-        <h2 class="text-lg font-semibold text-highlighted">
-            {{ $t('competitions.register.title') }}
-        </h2>
-
         <AuthGuestCta
             v-if="!userId"
             :redirect="gymPath(`/competitions/${competition.id}`)"
@@ -47,6 +43,7 @@
                     v-if="competition.requires_payment"
                     :color="entry.paid ? 'success' : 'neutral'"
                     variant="soft"
+                    size="sm"
                     data-testid="competition-my-paid"
                 >
                     {{
@@ -174,7 +171,7 @@
             :loading="pending"
             @confirm="withdraw"
         />
-    </section>
+    </LayoutPanel>
 </template>
 
 <script setup lang="ts">

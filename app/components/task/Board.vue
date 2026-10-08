@@ -6,19 +6,12 @@
         @touchstart.passive="startSwipe"
         @touchend="endSwipe"
     >
-        <UTabs
+        <LayoutTabs
             v-if="!mdAndUp"
             v-model="activeStatus"
             :items="tabItems"
             :content="false"
-            variant="pill"
-            size="sm"
-            class="sticky top-(--ui-header-height) z-10 -mx-4 mb-3 bg-default/90 px-4 py-2 backdrop-blur"
-            :ui="{
-                list: 'w-full',
-                trigger: 'min-w-0 flex-1 flex-col gap-0.5 px-1 py-1.5',
-                label: 'max-w-full truncate text-[11px]',
-            }"
+            class="mb-3"
             data-testid="task-board-tabs"
         />
         <div class="task-board" :class="{ 'task-board--single': !mdAndUp }">
@@ -44,7 +37,7 @@
                     <UIcon
                         :name="TASK_STATUS_ICONS[column.status]"
                         class="size-4"
-                        :class="STATUS_TEXT[column.status]"
+                        :class="STATUS_TEXT[taskStatusColor(column.status)]"
                     />
                     <h2 class="text-sm font-semibold text-highlighted">
                         {{ t(`tasks.statuses.${column.status}`) }}
@@ -96,8 +89,11 @@
                         size="xs"
                         :icon="TASK_STATUS_ICONS[column.status]"
                         :description="t('tasks.board.emptyColumn')"
-                        class="flex-1 rounded-lg border border-dashed border-default"
-                        :class="!mdAndUp && 'py-12'"
+                        class="flex-1"
+                        :class="
+                            !mdAndUp &&
+                            'rounded-lg border border-dashed border-default py-12'
+                        "
                     />
                 </div>
             </section>
@@ -152,7 +148,7 @@
                                 class="size-5"
                                 :class="
                                     longPress.target.value !== status &&
-                                    STATUS_TEXT[status]
+                                    STATUS_TEXT[taskStatusColor(status)]
                                 "
                             />
                             {{ t(`tasks.statuses.${status}`) }}
@@ -171,18 +167,19 @@ import {
     BOARD_STATUSES,
     statusesFilter,
     TASK_STATUS_ICONS,
+    taskStatusColor,
     taskTitle,
 } from '~/utils/tasks'
 import type { TaskRecord, TaskStatus } from '~/types/models'
 
 const ACTIVE_LIMIT = 200
 const DONE_LIMIT = 30
-const STATUS_TEXT: Record<TaskStatus, string> = {
-    open: 'text-warning',
-    in_progress: 'text-info',
-    waiting: 'text-secondary',
-    done: 'text-success',
-    dismissed: 'text-muted',
+const STATUS_TEXT: Record<ReturnType<typeof taskStatusColor>, string> = {
+    warning: 'text-warning',
+    info: 'text-info',
+    secondary: 'text-secondary',
+    success: 'text-success',
+    neutral: 'text-muted',
 }
 const DRAG_TYPE = 'application/x-gripello-task'
 
@@ -349,7 +346,7 @@ defineExpose({ reload })
 .task-board {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(280px, 1fr);
+    grid-auto-columns: minmax(220px, 1fr);
     gap: 12px;
     overflow-x: auto;
     padding-bottom: 8px;

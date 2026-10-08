@@ -1,5 +1,5 @@
 <template>
-    <div class="route-page p-0">
+    <div class="route-page">
         <LayoutLoadingState v-if="loading" variant="page" />
 
         <template v-else-if="metadata">
@@ -14,7 +14,7 @@
                         <UButton
                             icon="i-lucide-arrow-left"
                             color="neutral"
-                            class="route-hero__back bg-(--hero-tint) text-(--hero-ink) hover:bg-(--hero-tint)/80 rounded-full"
+                            class="icon-btn route-hero__back bg-(--hero-tint) text-(--hero-ink) hover:bg-(--hero-tint)/80 rounded-full"
                             :aria-label="t('errors.goBack')"
                             data-testid="route-back"
                             @click="goBack"
@@ -795,6 +795,7 @@ onMounted(async () => {
 .route-page {
     max-width: 600px;
     margin: 0 auto;
+    padding: 0;
 }
 
 .route-page__bottom-spacer {
@@ -930,8 +931,8 @@ onMounted(async () => {
 
 @variant lg {
     .route-page {
-        max-width: 1400px;
-        padding: 24px 24px 0;
+        max-width: none;
+        padding: 16px 16px 0;
     }
 
     .route-layout {

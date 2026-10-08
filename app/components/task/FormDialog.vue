@@ -163,24 +163,18 @@
                 class="flex items-center gap-3 rounded-lg bg-elevated/50 p-3 ring ring-default"
                 data-testid="task-form-route"
             >
-                <RouteColorDot :color="targetRoute.color" :size="24" />
-                <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-medium text-highlighted">
-                        {{ targetRoute.name }}
-                    </p>
-                    <p
-                        v-if="targetWallName"
-                        class="truncate text-xs text-muted"
-                    >
-                        {{ targetWallName }}
-                    </p>
-                </div>
+                <RouteSummary
+                    :route="targetRoute"
+                    :meta="targetWallName"
+                    class="flex-1"
+                />
                 <UButton
                     :to="gymPath(`/route?id=${targetRoute.id}`)"
                     icon="i-lucide-external-link"
                     color="neutral"
                     variant="ghost"
                     size="sm"
+                    class="icon-btn"
                     :aria-label="$t('tasks.openRoute')"
                 />
             </div>

@@ -145,11 +145,11 @@ function loadGyms() {
 
 function switchTo(slug: string) {
     return navigateTo(
-        route.params.gym
+        routeGymSlug(route.params)
             ? gymSwitchPath(
                   route.path,
                   slug,
-                  !!route.params.id || !!route.query.id,
+                  !!routeParam(route.params, 'id') || !!route.query.id,
               )
             : `/${slug}`,
     )

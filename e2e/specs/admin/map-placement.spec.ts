@@ -142,10 +142,11 @@ test('selecting a dot on the map shows its route in the placed list', async ({
         .locator(`[data-testid="placement-dot"][data-route-id="${routeId}"]`)
         .click()
 
-    await expect(page.getByTestId('placement-tab-placed')).toHaveAttribute(
-        'aria-selected',
-        'true',
-    )
+    await expect(
+        page
+            .getByRole('tab')
+            .filter({ has: page.getByTestId('placement-tab-placed') }),
+    ).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByTestId('placement-selected')).toContainText(
         `${testPrefix}-map-route-3`,
     )

@@ -1252,7 +1252,6 @@
     },
     "ticks": {
         "logbook": "Logbuch",
-        "logbookSubtitle": "Deine Begehungen, Statistiken und Projekte.",
         "empty": "Noch keine Begehungen",
         "emptyHint": "Öffne eine Route und tippe auf „Begehung eintragen“, um dein Logbuch zu beginnen.",
         "sendCount": "Durchstiege: {count}",
@@ -2422,5 +2421,10 @@
             "removeInterval": "Zeitraum entfernen",
             "copyMonday": "Montag auf Di–Fr übernehmen"
         }
+    },
+    "imageCrop": {
+        "zoom": "Zoom",
+        "rotate": "Drehen",
+        "reset": "Zurücksetzen"
     }
 }

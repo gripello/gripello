@@ -40,7 +40,7 @@
                 <UPageCard
                     v-if="activeSection === 'access'"
                     :title="t('platform.settings.access')"
-                    variant="subtle"
+                    variant="outline"
                     :ui="formCardUi"
                 >
                     <UFormField
@@ -71,7 +71,7 @@
                 <UPageCard
                     v-if="activeSection === 'links'"
                     :title="t('platform.settings.links')"
-                    variant="subtle"
+                    variant="outline"
                     :ui="formCardUi"
                 >
                     <UFormField
@@ -120,7 +120,7 @@
                 <UPageCard
                     v-if="activeSection === 'legal'"
                     :title="t('settings.legalTitle')"
-                    variant="subtle"
+                    variant="outline"
                     :ui="formCardUi"
                 >
                     <SettingsLegalFields

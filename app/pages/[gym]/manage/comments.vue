@@ -2,22 +2,20 @@
     <div class="comments-page mx-auto w-full p-4">
         <LayoutPageHeader :title="t('routes.comments')" />
 
-        <div class="stats-scroll mb-3">
-            <div class="stats-scroll__inner">
-                <div
-                    v-for="tile in statTiles"
-                    :key="tile.key"
-                    class="stat-chip rounded-lg border bg-default p-2 px-3"
-                    :data-testid="`comments-stat-${tile.key}`"
-                >
-                    <LayoutStatTile
-                        :label="tile.label"
-                        :value="tile.value"
-                        :color="tile.color"
-                        :icon="tile.icon"
-                        :icon-color="tile.iconColor"
-                    />
-                </div>
+        <div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div
+                v-for="tile in statTiles"
+                :key="tile.key"
+                class="min-w-0 rounded-lg bg-default px-3 py-2 ring ring-default"
+                :data-testid="`comments-stat-${tile.key}`"
+            >
+                <LayoutStatTile
+                    :label="tile.label"
+                    :value="tile.value"
+                    :color="tile.color"
+                    :icon="tile.icon"
+                    :icon-color="tile.iconColor"
+                />
             </div>
         </div>
 
@@ -64,61 +62,16 @@
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
-                    <div class="flex flex-wrap gap-2">
-                        <UButton
-                            size="xs"
-                            :color="
-                                selectedRating === 0 ? 'warning' : 'neutral'
-                            "
-                            variant="soft"
-                            :icon="
-                                selectedRating === 0
-                                    ? 'i-lucide-check'
-                                    : undefined
-                            "
-                            :aria-pressed="selectedRating === 0"
-                            data-testid="comments-filter-rating-all"
-                            @click="selectedRating = 0"
-                        >
-                            {{ t('filter.all') }}
-                        </UButton>
-                        <UButton
-                            v-for="star in [1, 2, 3, 4, 5]"
-                            :key="star"
-                            size="xs"
-                            color="warning"
-                            :variant="
-                                selectedRating === star ? 'solid' : 'soft'
-                            "
-                            :icon="
-                                selectedRating === star
-                                    ? 'i-lucide-check'
-                                    : undefined
-                            "
-                            :aria-pressed="selectedRating === star"
-                            :data-testid="`comments-filter-rating-${star}`"
-                            @click="selectedRating = star"
-                        >
-                            {{ star }}★
-                        </UButton>
-                    </div>
-                    <UFieldGroup data-testid="comments-filter-date">
-                        <UButton
-                            v-for="option in dateOptions"
-                            :key="option.value"
-                            size="sm"
-                            color="neutral"
-                            :variant="
-                                dateFilter === option.value
-                                    ? 'solid'
-                                    : 'outline'
-                            "
-                            :aria-pressed="dateFilter === option.value"
-                            @click="dateFilter = option.value"
-                        >
-                            {{ option.label }}
-                        </UButton>
-                    </UFieldGroup>
+                    <SegmentedControl
+                        v-model="ratingTab"
+                        :items="ratingOptions"
+                        test-id="comments-filter-rating"
+                    />
+                    <SegmentedControl
+                        v-model="dateTab"
+                        :items="dateOptions"
+                        test-id="comments-filter-date"
+                    />
                 </div>
             </template>
         </FilterBar>
@@ -146,6 +99,7 @@
                         <template #actions>
                             <UTooltip :text="t('actions.edit')">
                                 <UButton
+                                    class="icon-btn"
                                     icon="i-lucide-pencil"
                                     color="neutral"
                                     variant="ghost"
@@ -156,6 +110,7 @@
                             </UTooltip>
                             <UTooltip :text="t('moderation.moderate')">
                                 <UButton
+                                    class="icon-btn"
                                     icon="i-lucide-shield-check"
                                     color="neutral"
                                     variant="ghost"
@@ -180,11 +135,7 @@
                 }}
             </p>
             <div ref="sentinelRef" class="load-sentinel">
-                <UIcon
-                    v-if="loadingMore"
-                    name="i-lucide-loader-circle"
-                    class="size-6 animate-spin text-primary"
-                />
+                <LayoutLoadingState v-if="loadingMore" :count="1" />
             </div>
         </div>
 
@@ -332,10 +283,30 @@ const locations = computed(() =>
 )
 
 const dateOptions = computed(() => [
-    { label: t('filter.all'), value: '' },
+    { label: t('filter.all'), value: 'all' },
     { label: t('comments.thisWeek'), value: 'week' },
     { label: t('comments.thisMonth'), value: 'month' },
 ])
+const dateTab = computed({
+    get: () => dateFilter.value || 'all',
+    set: (value: string) => {
+        dateFilter.value = value === 'all' ? '' : value
+    },
+})
+
+const ratingOptions = computed(() => [
+    { label: t('filter.all'), value: 'all' },
+    ...[1, 2, 3, 4, 5].map((star) => ({
+        label: `${star}★`,
+        value: String(star),
+    })),
+])
+const ratingTab = computed({
+    get: () => (selectedRating.value ? String(selectedRating.value) : 'all'),
+    set: (value: string) => {
+        selectedRating.value = value === 'all' ? 0 : Number(value)
+    },
+})
 
 const sortOptions = computed(() => [
     { label: t('comments.sortNewest'), value: 'newest' },
@@ -611,33 +582,6 @@ onBeforeUnmount(() => {
 
 <style scoped>
 @reference "~/assets/css/main.css";
-
-.stats-scroll {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-}
-
-.stats-scroll::-webkit-scrollbar {
-    display: none;
-}
-
-.stats-scroll__inner {
-    display: flex;
-    gap: 8px;
-}
-
-.stat-chip {
-    flex: 1 0 auto;
-    min-width: 100px;
-}
-
-@variant sm {
-    .stat-chip {
-        flex: 1 1 0;
-        min-width: 0;
-    }
-}
 
 .slide-y-enter-active,
 .slide-y-leave-active {

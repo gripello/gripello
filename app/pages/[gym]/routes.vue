@@ -126,9 +126,12 @@
                         class="flex items-center"
                         :data-testid="`index-row-${row.original.id}`"
                     >
-                        <span class="route-name" data-testid="index-row-name">{{
-                            row.original.name
-                        }}</span>
+                        <span
+                            class="route-name"
+                            :title="row.original.name"
+                            data-testid="index-row-name"
+                            >{{ row.original.name }}</span
+                        >
                         <TaskDefectMarker
                             :severity="defectsByRoute.get(row.original.id)"
                             class="ml-2"
@@ -154,7 +157,12 @@
                     >
                 </template>
                 <template #comment-cell="{ row }">
-                    <div class="route-comment">{{ row.original.comment }}</div>
+                    <div
+                        class="route-comment"
+                        :title="row.original.comment ?? undefined"
+                    >
+                        {{ row.original.comment }}
+                    </div>
                 </template>
                 <template #creator-cell="{ row }">
                     <RouteCreators
@@ -176,7 +184,7 @@
                 </template>
             </UTable>
             <div
-                class="flex flex-wrap items-center justify-end gap-4 border-t px-2 py-3 text-sm"
+                class="flex flex-wrap items-center justify-end gap-4 px-2 py-3 text-sm"
             >
                 <span data-testid="table-page-info">{{ pageInfo }}</span>
                 <UPagination
@@ -351,8 +359,8 @@ function toggleSort(key: string) {
 }
 
 const tableUi = {
-    th: 'px-2 xl:px-4',
-    td: 'px-2 py-2 xl:px-4 whitespace-normal text-default',
+    th: 'px-2 last:pe-4 2xl:px-4',
+    td: 'px-2 py-2 last:pe-4 2xl:px-4 whitespace-normal text-default',
 }
 
 const columnsDesktop = computed<TableColumn<RouteListItem>[]>(() => [
@@ -361,7 +369,6 @@ const columnsDesktop = computed<TableColumn<RouteListItem>[]>(() => [
     {
         id: 'difficulty',
         header: sortableHeader(gradeColumnTitle.value, 'difficulty'),
-        meta: { class: { td: 'whitespace-nowrap' } },
     },
     {
         id: 'anchor_point',
@@ -509,16 +516,18 @@ function loadMore() {
 
 let scrollObserver: IntersectionObserver | null = null
 
-function setupScrollObserver() {
-    if (!sentinelRef.value) return
+watch(sentinelRef, (sentinel) => {
+    scrollObserver?.disconnect()
+    scrollObserver = null
+    if (!sentinel) return
     scrollObserver = new IntersectionObserver(
         (entries) => {
             if (entries[0]?.isIntersecting) loadMore()
         },
         { rootMargin: '200px' },
     )
-    scrollObserver.observe(sentinelRef.value)
-}
+    scrollObserver.observe(sentinel)
+})
 
 let debounceT: ReturnType<typeof setTimeout> | null = null
 watch(pbFilter, () => {
@@ -532,8 +541,6 @@ watch(pbFilter, () => {
     }, 300)
 })
 
-onMounted(setupScrollObserver)
-
 onBeforeUnmount(() => {
     if (debounceT) {
         clearTimeout(debounceT)
@@ -545,7 +552,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .route-name {
-    max-width: 260px;
+    max-width: 224px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -560,10 +567,8 @@ onBeforeUnmount(() => {
     color: var(--ui-text-muted);
 }
 .route-comment {
-    max-width: 320px;
-    display: -webkit-box;
+    max-width: 160px;
     overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    text-overflow: ellipsis;
 }
 </style>

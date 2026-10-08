@@ -2,7 +2,7 @@
     <UPageCard
         :title="$t('settings.locations')"
         :description="$t('settings.locationsIntro')"
-        variant="subtle"
+        variant="outline"
         data-testid="settings-locations"
     >
         <div class="location-list">
@@ -26,6 +26,7 @@
                     @keydown.enter="rename(location)"
                 />
                 <UButton
+                    class="icon-btn"
                     icon="i-lucide-trash-2"
                     variant="ghost"
                     color="error"

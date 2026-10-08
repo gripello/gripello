@@ -69,6 +69,9 @@
             </section>
         </div>
         <template #actions>
+            <UButton color="neutral" variant="ghost" @click="open = false">
+                {{ t('actions.cancel') }}
+            </UButton>
             <UButton
                 v-if="user && isSuspended(user)"
                 color="neutral"
@@ -79,6 +82,7 @@
             >
                 {{ t('platform.users.liftSuspension') }}
             </UButton>
+            <div class="flex-1" />
             <UButton
                 color="error"
                 :disabled="!ready"

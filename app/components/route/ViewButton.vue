@@ -1,6 +1,7 @@
 <template>
     <UTooltip v-if="compact" :text="$t('routes.view')">
         <UButton
+            class="icon-btn"
             :to="gymPath(`/route?id=${routeId}`)"
             variant="soft"
             color="neutral"

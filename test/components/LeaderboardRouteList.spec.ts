@@ -1,5 +1,8 @@
 import { mount } from '@vue/test-utils'
 import RouteList from '~/components/leaderboard/RouteList.vue'
+import LayoutListGroup from '~/components/layout/ListGroup.vue'
+import LayoutListRow from '~/components/layout/ListRow.vue'
+import RouteSummary from '~/components/route/Summary.vue'
 
 const route = {
     id: 'r1',
@@ -15,7 +18,12 @@ function mountList(routes: (typeof route & { points?: number })[]) {
     return mount(RouteList, {
         props: { routes },
         global: {
+            components: { LayoutListGroup, LayoutListRow, RouteSummary },
             stubs: {
+                GradeLabel: {
+                    props: ['source'],
+                    template: '<b>{{ source.grade }}</b>',
+                },
                 NuxtLink: {
                     props: ['to'],
                     template: '<a :href="to"><slot /></a>',

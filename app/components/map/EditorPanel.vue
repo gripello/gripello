@@ -1,7 +1,7 @@
 <template>
     <div class="editor-panel" data-testid="map-editor-panel">
         <section class="panel-section">
-            <p class="panel-heading">{{ $t('mapEditor.walls') }}</p>
+            <LayoutEyebrow>{{ $t('mapEditor.walls') }}</LayoutEyebrow>
             <form class="panel-row" @submit.prevent="submitWall">
                 <UFormField :label="$t('mapEditor.newWall')" class="flex-1">
                     <UInput
@@ -52,6 +52,7 @@
                         </span>
                     </button>
                     <UButton
+                        class="icon-btn"
                         icon="i-lucide-chevron-up"
                         size="xs"
                         color="neutral"
@@ -61,6 +62,7 @@
                         @click.stop="commit(moveWall(state, wall.key, -1))"
                     />
                     <UButton
+                        class="icon-btn"
                         icon="i-lucide-chevron-down"
                         size="xs"
                         color="neutral"
@@ -173,7 +175,7 @@
         </section>
 
         <section class="panel-section">
-            <p class="panel-heading">{{ $t('mapEditor.shapes') }}</p>
+            <LayoutEyebrow>{{ $t('mapEditor.shapes') }}</LayoutEyebrow>
             <div class="panel-list">
                 <button
                     v-for="(shape, index) in state.map.shapes"
@@ -220,7 +222,7 @@
         </section>
 
         <section class="panel-section">
-            <p class="panel-heading">{{ $t('mapEditor.canvas') }}</p>
+            <LayoutEyebrow>{{ $t('mapEditor.canvas') }}</LayoutEyebrow>
             <form class="panel-row" @submit.prevent="resize">
                 <UFormField :label="$t('mapEditor.width')" class="flex-1">
                     <UInput
@@ -264,7 +266,7 @@
         </section>
 
         <section class="panel-section">
-            <p class="panel-heading">{{ $t('mapEditor.trace') }}</p>
+            <LayoutEyebrow>{{ $t('mapEditor.trace') }}</LayoutEyebrow>
             <p class="text-xs text-muted mb-2">
                 {{ $t('mapEditor.traceHint') }}
             </p>
@@ -532,11 +534,6 @@ function onTraceChosen(event: Event) {
     gap: 20px;
     padding: 16px;
     overflow-y: auto;
-}
-
-.panel-heading {
-    font-weight: 600;
-    margin-bottom: 8px;
 }
 
 .panel-row {

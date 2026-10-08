@@ -1,6 +1,6 @@
 <template>
     <section>
-        <USkeleton v-if="loading" class="h-96 w-full rounded-lg" />
+        <LayoutLoadingState v-if="loading" />
 
         <LayoutEmptyState
             v-else-if="!roles.length"
@@ -12,15 +12,15 @@
             v-else
             class="grid items-start gap-4 md:grid-cols-[18rem_minmax(0,1fr)]"
         >
-            <ul
-                class="divide-y divide-default overflow-hidden rounded-lg border border-default bg-default md:sticky md:top-20"
+            <LayoutListGroup
+                class="md:sticky md:top-20"
                 :class="{ 'hidden md:block': routeRoleId }"
                 data-testid="role-list"
             >
                 <li v-for="role in roles" :key="role.id">
                     <button
                         type="button"
-                        class="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-start transition-colors hover:bg-elevated/50"
+                        class="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-start transition-colors hover:bg-elevated/50"
                         :class="{
                             'md:bg-elevated': role.id === selectedRole?.id,
                         }"
@@ -63,7 +63,7 @@
                         />
                     </button>
                 </li>
-            </ul>
+            </LayoutListGroup>
 
             <div
                 v-if="selectedRole"
@@ -150,7 +150,7 @@
                     <section
                         v-for="group in permissionGroups"
                         :key="group.key"
-                        class="rounded-lg border border-default bg-default"
+                        class="overflow-hidden rounded-lg bg-default ring ring-default"
                         :data-testid="`role-group-${group.key}`"
                     >
                         <div

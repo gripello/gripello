@@ -1,61 +1,61 @@
 <template>
-    <button
-        type="button"
-        class="flex w-full gap-3 rounded-2xl border bg-default p-4 text-start transition-colors"
-        :class="
-            selected
-                ? 'border-primary ring-1 ring-primary'
-                : 'border-default hover:border-accented'
-        "
-        :aria-pressed="selected"
-        :data-testid="`moderation-case-${item.id}`"
-        @click="emit('select')"
-    >
-        <span
-            class="flex size-9 shrink-0 items-center justify-center rounded-full"
-            :class="ICON_TONES[tone]"
+    <li>
+        <button
+            type="button"
+            class="flex w-full gap-3 px-4 py-3 text-start transition-colors"
+            :class="selected ? 'bg-primary/10' : 'hover:bg-elevated/60'"
+            :aria-pressed="selected"
+            :data-testid="`moderation-case-${item.id}`"
+            @click="emit('select')"
         >
-            <UIcon :name="icon" class="size-[18px]" />
-        </span>
-        <span class="flex min-w-0 flex-1 flex-col gap-1">
-            <span class="flex items-center gap-2">
-                <span class="truncate text-sm font-semibold text-highlighted">
-                    {{ heading }}
-                </span>
-                <UBadge
-                    v-if="openReports"
-                    :color="tone === 'error' ? 'error' : 'warning'"
-                    variant="soft"
-                    size="sm"
-                    class="shrink-0 whitespace-nowrap"
-                >
-                    {{ t('moderation.reports', openReports) }}
-                </UBadge>
-                <span
-                    v-if="isNew"
-                    class="size-2 shrink-0 rounded-full bg-primary"
-                    aria-hidden="true"
-                />
-                <span v-if="isNew" class="sr-only">{{
-                    t('moderation.new')
-                }}</span>
-                <time
-                    class="ms-auto shrink-0 text-xs text-muted"
-                    :datetime="item.created"
-                >
-                    {{ timeAgo(item.created, t, locale) }}
-                </time>
-            </span>
             <span
-                v-if="text"
-                class="truncate text-sm italic"
-                data-testid="moderation-case-text"
+                class="flex size-9 shrink-0 items-center justify-center rounded-full"
+                :class="ICON_TONES[tone]"
             >
-                {{ text }}
+                <UIcon :name="icon" class="size-[18px]" />
             </span>
-            <span class="truncate text-xs text-muted">{{ meta }}</span>
-        </span>
-    </button>
+            <span class="flex min-w-0 flex-1 flex-col gap-1">
+                <span class="flex items-center gap-2">
+                    <span
+                        class="truncate text-sm font-semibold text-highlighted"
+                    >
+                        {{ heading }}
+                    </span>
+                    <UBadge
+                        v-if="openReports"
+                        :color="tone === 'error' ? 'error' : 'warning'"
+                        variant="soft"
+                        size="sm"
+                        class="shrink-0 whitespace-nowrap"
+                    >
+                        {{ t('moderation.reports', openReports) }}
+                    </UBadge>
+                    <span
+                        v-if="isNew"
+                        class="size-2 shrink-0 rounded-full bg-primary"
+                        aria-hidden="true"
+                    />
+                    <span v-if="isNew" class="sr-only">{{
+                        t('moderation.new')
+                    }}</span>
+                    <time
+                        class="ms-auto shrink-0 text-xs text-muted"
+                        :datetime="item.created"
+                    >
+                        {{ timeAgo(item.created, t, locale) }}
+                    </time>
+                </span>
+                <span
+                    v-if="text"
+                    class="truncate text-sm italic"
+                    data-testid="moderation-case-text"
+                >
+                    {{ text }}
+                </span>
+                <span class="truncate text-xs text-muted">{{ meta }}</span>
+            </span>
+        </button>
+    </li>
 </template>
 
 <script setup lang="ts">
@@ -108,12 +108,15 @@ const icon = computed(() =>
 const heading = computed(() => {
     if (firstOpen.value) return t(`reports.reasons.${firstOpen.value.reason}`)
     if (props.item.state === 'pending') return t('moderation.waitingTitle')
-    return t(`moderation.types.${props.item.content_type}`)
+    return typeLabel.value
 })
 const text = computed(() => moderationText(props.item))
+const typeLabel = computed(() =>
+    t(`moderation.types.${props.item.content_type}`),
+)
 const meta = computed(() =>
     [
-        t(`moderation.types.${props.item.content_type}`),
+        heading.value === typeLabel.value ? '' : typeLabel.value,
         props.item.context?.author?.name,
         props.item.context?.route?.name ?? props.item.context?.competition,
         props.platform ? props.item.context?.gym_name : '',

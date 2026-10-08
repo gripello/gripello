@@ -150,7 +150,7 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
     [
         { type: 'label', slot: 'status' as const },
         {
-            label: appVersionLabel.value,
+            label: appVersionLabel,
             icon: 'i-lucide-tag',
             slot: 'version' as const,
             onSelect: () => (releaseNotesOpen.value = true),

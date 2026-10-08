@@ -2,9 +2,10 @@ import type { RouteLocationNormalized } from 'vue-router'
 import type { GymRecord } from '~/types/models'
 import { usePocketbase } from '#imports'
 import { staffLandingPath } from '~/utils/nav'
+import { routeGymSlug } from '~/composables/useGym'
 
 async function targetGymId(to: RouteLocationNormalized) {
-    const routeSlug = typeof to.params.gym === 'string' ? to.params.gym : ''
+    const routeSlug = routeGymSlug(to.params)
     const cached = useNuxtData<GymRecord>('gym').data.value
     if (cached && (!routeSlug || cached.slug === routeSlug)) return cached.id
     const gym = await loadGym(

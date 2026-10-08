@@ -6,14 +6,14 @@
         <div
             class="pointer-events-none absolute inset-x-0 top-0 h-72 bg-linear-to-b from-primary/10 to-transparent"
         />
-        <header class="relative flex items-center gap-6">
+        <header class="relative flex flex-wrap items-center gap-6">
             <LayoutBrandLogo
                 v-if="gym"
                 :gym="gym"
                 class="tv-logo hidden md:flex"
             />
-            <div class="min-w-0 flex-1">
-                <div class="mb-2 flex items-center gap-3">
+            <div class="min-w-0 flex-1 basis-full md:basis-0">
+                <div class="mb-2 flex flex-wrap items-center gap-3">
                     <span
                         v-if="isLive"
                         class="inline-flex items-center gap-2 rounded-full bg-error/15 px-3 py-1 text-sm font-bold tracking-wider text-error uppercase"
@@ -37,14 +37,14 @@
                     </span>
                     <span
                         v-if="countdown"
-                        class="text-lg text-muted tabular-nums"
+                        class="text-lg whitespace-nowrap text-muted tabular-nums"
                         data-testid="competition-tv-countdown"
                     >
                         {{ t('competitions.tv.endsIn') }} {{ countdown }}
                     </span>
                 </div>
                 <h1
-                    class="truncate text-4xl font-black tracking-tight text-highlighted lg:text-6xl"
+                    class="line-clamp-2 text-4xl font-black tracking-tight break-words text-highlighted lg:text-6xl"
                 >
                     {{ competition?.name }}
                 </h1>
@@ -198,30 +198,34 @@
                                 "
                                 >{{ row.rank }}</span
                             >
-                            <span
-                                class="min-w-0 flex-1 truncate text-xl font-semibold text-highlighted lg:text-2xl"
-                            >
-                                {{
-                                    row.name ||
-                                    t('competitions.standings.anonymous')
-                                }}
-                            </span>
-                            <span
-                                v-if="results?.format !== 'lead_height'"
-                                class="flex shrink-0 gap-1.5 text-base font-semibold tabular-nums"
+                            <div
+                                class="flex min-w-0 flex-1 flex-col gap-1 md:flex-row md:items-center md:gap-4"
                             >
                                 <span
-                                    class="rounded-md bg-success/15 px-2 py-0.5 text-highlighted"
-                                    >{{ row.tops }}T</span
+                                    class="min-w-0 truncate text-xl font-semibold text-highlighted md:flex-1 lg:text-2xl"
                                 >
+                                    {{
+                                        row.name ||
+                                        t('competitions.standings.anonymous')
+                                    }}
+                                </span>
                                 <span
-                                    class="rounded-md bg-info/15 px-2 py-0.5 text-highlighted"
-                                    >{{ row.zones }}Z</span
+                                    v-if="results?.format !== 'lead_height'"
+                                    class="flex shrink-0 gap-1.5 text-base font-semibold tabular-nums"
                                 >
-                            </span>
+                                    <span
+                                        class="rounded-md bg-success/15 px-2 py-0.5 text-highlighted"
+                                        >{{ row.tops }}T</span
+                                    >
+                                    <span
+                                        class="rounded-md bg-info/15 px-2 py-0.5 text-highlighted"
+                                        >{{ row.zones }}Z</span
+                                    >
+                                </span>
+                            </div>
                             <span
                                 v-if="results?.format !== 'tops'"
-                                class="w-24 shrink-0 text-right text-2xl font-black text-highlighted tabular-nums lg:text-3xl"
+                                class="w-16 shrink-0 lg:w-24 text-right text-2xl font-black text-highlighted tabular-nums lg:text-3xl"
                             >
                                 {{ formatScore(row) }}
                             </span>

@@ -2,7 +2,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { TestInfo } from '@playwright/test'
 
-const LOCALES_DIR = path.join(__dirname, '..', '..', 'i18n', 'locales')
+const LOCALES_DIR = path.join(
+    import.meta.dirname,
+    '..',
+    '..',
+    'i18n',
+    'locales',
+)
 
 type Messages = { [key: string]: string | Messages }
 

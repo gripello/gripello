@@ -1,17 +1,11 @@
 <template>
-    <section
-        v-if="invites?.length"
-        class="mb-4 rounded-lg border border-default bg-default"
-        data-testid="pending-invites"
-    >
-        <p class="px-3 pt-3 text-sm font-semibold text-highlighted">
-            {{ t('invites.pending') }}
-        </p>
-        <ul class="divide-y divide-default">
+    <section v-if="invites?.length" class="mb-4" data-testid="pending-invites">
+        <LayoutEyebrow>{{ t('invites.pending') }}</LayoutEyebrow>
+        <LayoutListGroup>
             <li
                 v-for="invite in invites"
                 :key="invite.id"
-                class="flex items-center gap-2 p-3"
+                class="flex items-center gap-2 px-4 py-3"
                 :data-testid="`pending-invite-${invite.email}`"
             >
                 <div class="min-w-0 flex-1">
@@ -54,7 +48,7 @@
                     />
                 </UTooltip>
             </li>
-        </ul>
+        </LayoutListGroup>
     </section>
 </template>
 

@@ -22,7 +22,7 @@ import {
     type SeededUser,
 } from './seed'
 
-const AUTH_DIR = path.join(__dirname, '..', '.auth')
+const AUTH_DIR = path.join(import.meta.dirname, '..', '.auth')
 
 type Role = 'admin' | 'routesetter' | 'user' | 'platform'
 

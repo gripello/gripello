@@ -1,75 +1,62 @@
 <template>
     <div class="flex flex-col gap-4">
-        <div
-            class="flex flex-wrap items-center gap-2 rounded-2xl border border-default bg-default p-3"
-        >
-            <UTabs
-                v-model="view"
-                :items="viewItems"
-                :content="false"
-                size="sm"
-                :ui="{
-                    list: 'overflow-x-auto',
-                    trigger: 'shrink-0',
-                    label: 'overflow-visible whitespace-nowrap',
-                }"
-                class="w-full max-w-full md:w-auto"
-                data-testid="moderation-views"
-            >
-                <template #default="{ item }">
-                    <span :data-testid="`moderation-view-${item.value}`">
-                        {{ item.label }}
-                    </span>
-                </template>
-            </UTabs>
-            <UInput
-                v-model="search"
-                icon="i-lucide-search"
-                :placeholder="t('actions.search')"
-                :aria-label="t('actions.search')"
-                class="min-w-48 flex-1"
-                data-testid="moderation-search"
-            />
-            <FilterSelect
-                v-model="contentType"
-                :label="t('moderation.filterType')"
-                :items="typeItems"
-                value-key="value"
-                :placeholder="t('filter.all')"
-                clear
-                data-testid="moderation-filter-type"
-                @clear="contentType = undefined"
-            />
-            <FilterSelect
-                v-if="platform"
-                v-model="gymFilter"
-                :label="t('moderation.filterGym')"
-                :items="gymItems"
-                value-key="value"
-                :placeholder="t('filter.all')"
-                clear
-                data-testid="moderation-filter-gym"
-                @clear="gymFilter = undefined"
-            />
-            <UBadge
-                v-if="authorFilter"
-                color="neutral"
-                variant="outline"
-                size="lg"
-                class="gap-1"
-            >
-                {{ authorFilter.name }}
-                <UButton
-                    icon="i-lucide-x"
-                    color="neutral"
-                    variant="link"
-                    size="xs"
-                    :aria-label="t('filter.clear')"
-                    data-testid="moderation-author-clear"
-                    @click="authorFilter = null"
+        <LayoutPanel as="div">
+            <div class="flex flex-wrap items-center gap-2">
+                <SegmentedControl
+                    v-model="view"
+                    :items="viewItems"
+                    test-id="moderation-view"
+                    data-testid="moderation-views"
                 />
-            </UBadge>
-        </div>
+                <UInput
+                    v-model="search"
+                    icon="i-lucide-search"
+                    :placeholder="t('actions.search')"
+                    :aria-label="t('actions.search')"
+                    class="min-w-48 flex-1"
+                    data-testid="moderation-search"
+                />
+                <FilterSelect
+                    v-model="contentType"
+                    :label="t('moderation.filterType')"
+                    :items="typeItems"
+                    value-key="value"
+                    :placeholder="t('filter.all')"
+                    clear
+                    data-testid="moderation-filter-type"
+                    @clear="contentType = undefined"
+                />
+                <FilterSelect
+                    v-if="platform"
+                    v-model="gymFilter"
+                    :label="t('moderation.filterGym')"
+                    :items="gymItems"
+                    value-key="value"
+                    :placeholder="t('filter.all')"
+                    clear
+                    data-testid="moderation-filter-gym"
+                    @clear="gymFilter = undefined"
+                />
+                <UBadge
+                    v-if="authorFilter"
+                    color="neutral"
+                    variant="outline"
+                    size="lg"
+                    class="gap-1"
+                >
+                    {{ authorFilter.name }}
+                    <UButton
+                        icon="i-lucide-x"
+                        color="neutral"
+                        variant="link"
+                        size="xs"
+                        :aria-label="t('filter.clear')"
+                        data-testid="moderation-author-clear"
+                        @click="authorFilter = null"
+                    />
+                </UBadge>
+            </div>
+        </LayoutPanel>
 
         <p
             v-if="newCount"
@@ -100,15 +87,17 @@
                 class="flex w-full flex-col gap-2.5 lg:w-[26rem] lg:shrink-0"
                 data-testid="moderation-list"
             >
-                <ModerationCaseCard
-                    v-for="item in items"
-                    :key="item.id"
-                    :item="item"
-                    :selected="lgAndUp && item.id === selected?.id"
-                    :is-new="isNewSince(item.created, seenBefore)"
-                    :platform="platform"
-                    @select="select(item)"
-                />
+                <LayoutListGroup>
+                    <ModerationCaseCard
+                        v-for="item in items"
+                        :key="item.id"
+                        :item="item"
+                        :selected="lgAndUp && item.id === selected?.id"
+                        :is-new="isNewSince(item.created, seenBefore)"
+                        :platform="platform"
+                        @select="select(item)"
+                    />
+                </LayoutListGroup>
                 <UButton
                     v-if="hasMore"
                     color="neutral"

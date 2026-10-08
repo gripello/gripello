@@ -60,6 +60,7 @@
             <UButton color="neutral" variant="ghost" @click="open = false">
                 {{ t('actions.cancel') }}
             </UButton>
+            <div class="flex-1" />
             <UButton
                 color="error"
                 :disabled="!reason"

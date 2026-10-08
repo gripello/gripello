@@ -10,33 +10,10 @@
                 data-testid="logbook-project"
                 :data-route-id="project.route"
             >
-                <div class="flex items-center gap-3">
-                    <RouteColorDot :color="project.record?.color" :size="32" />
-                    <div class="grow project__body">
-                        <div class="font-medium project__name">
-                            {{ project.record?.name }}
-                        </div>
-                        <div class="text-xs text-muted">
-                            {{
-                                $t('ticks.attemptCount', {
-                                    count: project.attempts,
-                                })
-                            }}
-                            ·
-                            {{
-                                $t('ticks.projects.lastTried', {
-                                    date: formatDate(
-                                        tickDate(project.lastTried),
-                                        {
-                                            locale,
-                                        },
-                                    ),
-                                })
-                            }}
-                        </div>
-                    </div>
-                    <GradeLabel :source="project.record" />
-                </div>
+                <RouteSummary
+                    :route="project.record"
+                    :meta="`${$t('ticks.attemptCount', { count: project.attempts })} · ${$t('ticks.projects.lastTried', { date: formatDate(tickDate(project.lastTried), { locale }) })}`"
+                />
                 <div class="flex gap-2 justify-end mt-auto">
                     <UButton
                         :to="`/route?id=${project.route}`"
@@ -75,15 +52,3 @@ const emit = defineEmits<{ log: [routeId: string] }>()
 
 const { locale } = useI18n()
 </script>
-
-<style scoped>
-.project__body {
-    min-width: 0;
-}
-
-.project__name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-</style>

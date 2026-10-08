@@ -4,10 +4,9 @@ export function useHydrated() {
     onMounted(() => {
         if (!nuxtApp.isHydrating) hydrated.value = true
         else
-            nuxtApp.hooks.hookOnce(
-                'app:suspense:resolve',
-                () => (hydrated.value = true),
-            )
+            nuxtApp.hooks.hookOnce('app:suspense:resolve', () => {
+                hydrated.value = true
+            })
     })
     return hydrated
 }

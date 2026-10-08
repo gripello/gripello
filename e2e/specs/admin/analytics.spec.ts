@@ -99,10 +99,11 @@ test('filters live in the url and survive a reload', async ({
     await expect(trend(page, 'routesSet')).toBeVisible()
 
     await gotoSettled(page, page.url())
-    await expect(page.getByTestId('analytics-range-30d')).toHaveAttribute(
-        'aria-pressed',
-        'true',
-    )
+    await expect(
+        page
+            .getByRole('tab')
+            .filter({ has: page.getByTestId('analytics-range-30d') }),
+    ).toHaveAttribute('aria-selected', 'true')
 
     await gotoSettled(page, '/manage/analytics?range=all&type=Boulder')
     await expect(page.getByTestId('analytics-filter-type')).toContainText(

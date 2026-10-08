@@ -77,6 +77,7 @@ const activatorProps = { onClick: () => (open.value = true) }
                         icon="i-lucide-x"
                         color="neutral"
                         variant="ghost"
+                        class="icon-btn"
                         :aria-label="$t('actions.close')"
                         data-testid="dialog-close"
                         @click="open = false"

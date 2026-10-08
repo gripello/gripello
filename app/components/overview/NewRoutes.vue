@@ -8,14 +8,7 @@
             data-testid="overview-new-route"
             :data-route-id="route.id"
         >
-            <RouteColorDot
-                :color="route.color"
-                :size="28"
-                class="new-route__dot"
-            />
-            <span class="new-route__name">{{ route.name }}</span>
-            <GradeLabel :source="route" class="new-route__grade" />
-            <span class="new-route__meta">{{ metaFor(route) }}</span>
+            <RouteSummary :route="route" :meta="metaFor(route)" />
         </NuxtLink>
     </div>
     <div v-else class="new-routes-empty" data-testid="overview-new-empty">
@@ -71,7 +64,7 @@ function metaFor(route: RouteListItem) {
 .new-routes {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(168px, 1fr);
+    grid-auto-columns: minmax(min(260px, 80%), 1fr);
     gap: 12px;
     overflow-x: auto;
     padding-bottom: 6px;
@@ -79,11 +72,7 @@ function metaFor(route: RouteListItem) {
 }
 
 .new-route {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    column-gap: 10px;
-    row-gap: 2px;
+    display: block;
     padding: 12px 14px;
     border-radius: 12px;
     border: 1px solid var(--ui-border);
@@ -98,29 +87,5 @@ function metaFor(route: RouteListItem) {
 .new-route:focus-visible {
     background: color-mix(in oklab, var(--ui-primary) 12%, transparent);
     outline: none;
-}
-
-.new-route__dot {
-    grid-row: span 2;
-}
-
-.new-route__name {
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.new-route__grade {
-    font-weight: 700;
-}
-
-.new-route__meta {
-    grid-column: 2 / span 2;
-    font-size: 0.75rem;
-    color: var(--ui-text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 </style>

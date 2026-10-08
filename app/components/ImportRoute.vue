@@ -13,6 +13,8 @@
             v-model="showPreviewDialog"
             max-width="900"
             persistent
+            closable
+            sheet-on-mobile
             :title="$t('importRoutes.title')"
             data-testid="import-route-dialog"
         >
@@ -20,14 +22,11 @@
                 {{ $t('importRoutes.intro') }}
             </p>
 
-            <div
-                v-if="smAndDown"
-                class="divide-y rounded-lg border"
-                data-testid="import-route-list"
-            >
+            <LayoutListGroup v-if="smAndDown" data-testid="import-route-list">
                 <UCollapsible
                     v-for="(item, index) in routesToImport"
                     :key="index"
+                    as="li"
                     data-testid="import-route-list-item"
                 >
                     <button
@@ -60,7 +59,7 @@
                         </div>
                     </template>
                 </UCollapsible>
-            </div>
+            </LayoutListGroup>
 
             <UTable
                 v-else
@@ -77,6 +76,7 @@
 
                 <template #expand-cell="{ row }">
                     <UButton
+                        class="icon-btn"
                         color="neutral"
                         variant="ghost"
                         :icon="

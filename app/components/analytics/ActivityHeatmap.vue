@@ -1,20 +1,39 @@
 <template>
     <div class="heatmap" data-testid="analytics-heatmap">
         <div class="heatmap-main">
-            <div class="heatmap-title" data-testid="analytics-heatmap-total">
-                {{
-                    selectedYear === null
-                        ? t(
-                              'analytics.heatmap.totalLastYear',
-                              { n: rangeTotal },
-                              rangeTotal,
-                          )
-                        : t(
-                              'analytics.heatmap.total',
-                              { n: rangeTotal, year: selectedYear },
-                              rangeTotal,
-                          )
-                }}
+            <div class="heatmap-header">
+                <div
+                    class="heatmap-title"
+                    data-testid="analytics-heatmap-total"
+                >
+                    {{
+                        selectedYear === null
+                            ? t(
+                                  'analytics.heatmap.totalLastYear',
+                                  { n: rangeTotal },
+                                  rangeTotal,
+                              )
+                            : t(
+                                  'analytics.heatmap.total',
+                                  { n: rangeTotal, year: selectedYear },
+                                  rangeTotal,
+                              )
+                    }}
+                </div>
+                <nav class="heatmap-years">
+                    <UButton
+                        v-for="year in availableYears"
+                        :key="year"
+                        size="sm"
+                        :color="year === selectedYear ? 'primary' : 'neutral'"
+                        :variant="year === selectedYear ? 'solid' : 'ghost'"
+                        :aria-pressed="year === selectedYear"
+                        :data-testid="`analytics-heatmap-year-${year}`"
+                        @click="selectedYear = year"
+                    >
+                        {{ year }}
+                    </UButton>
+                </nav>
             </div>
             <div class="heatmap-box">
                 <div
@@ -84,22 +103,6 @@
                 </div>
             </div>
         </div>
-
-        <nav class="heatmap-years">
-            <UButton
-                v-for="year in availableYears"
-                :key="year"
-                size="sm"
-                class="heatmap-year"
-                :color="year === selectedYear ? 'primary' : 'neutral'"
-                :variant="year === selectedYear ? 'solid' : 'ghost'"
-                :aria-pressed="year === selectedYear"
-                :data-testid="`analytics-heatmap-year-${year}`"
-                @click="selectedYear = year"
-            >
-                {{ year }}
-            </UButton>
-        </nav>
 
         <teleport to="body">
             <div
@@ -295,28 +298,22 @@ function showCellTooltip(event: MouseEvent) {
 <style scoped>
 @reference "~/assets/css/main.css";
 
-.heatmap {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
+.heatmap-main {
+    min-width: 0;
 }
 
-.heatmap-main {
-    flex: 1;
-    min-width: 0;
+.heatmap-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
 }
 
 .heatmap-title {
     font-size: 0.875rem;
-    margin-bottom: 8px;
     color: var(--ui-text-highlighted);
-}
-
-.heatmap-box {
-    border: 1px solid
-        color-mix(in oklab, var(--ui-text-highlighted) 12%, transparent);
-    border-radius: 8px;
-    padding: 12px 16px 10px;
 }
 
 .heatmap-scroll {
@@ -401,17 +398,8 @@ function showCellTooltip(event: MouseEvent) {
 
 .heatmap-years {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 2px;
-    padding-top: 28px;
-    flex-shrink: 0;
-    max-height: 220px;
-    overflow-y: auto;
-}
-
-.heatmap-year {
-    justify-content: flex-start;
-    min-width: 72px;
 }
 
 .heatmap-tooltip {
@@ -428,24 +416,5 @@ function showCellTooltip(event: MouseEvent) {
     border: 1px solid
         color-mix(in oklab, var(--ui-text-highlighted) 10%, transparent);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
-
-@variant max-lg {
-    .heatmap {
-        flex-direction: column-reverse;
-        align-items: stretch;
-        gap: 8px;
-    }
-
-    .heatmap-years {
-        flex-direction: row;
-        flex-wrap: wrap;
-        padding-top: 0;
-        max-height: none;
-    }
-
-    .heatmap-year {
-        min-width: 0;
-    }
 }
 </style>

@@ -43,23 +43,17 @@
                                     @report="reportTarget = video"
                                     @delete="deleteTarget = video"
                                 />
-                                <NuxtLink
+                                <RouteSummary
                                     v-if="video.expand?.route"
+                                    :route="video.expand.route"
                                     :to="
                                         gymPath(
                                             `/route?id=${video.route}#beta-${video.id}`,
                                         )
                                     "
-                                    class="flex w-0 min-w-full items-center gap-2 px-1 text-sm font-medium hover:text-primary"
-                                >
-                                    <RouteColorDot
-                                        :color="video.expand.route.color"
-                                        :size="16"
-                                    />
-                                    <span class="truncate">{{
-                                        video.expand.route.name
-                                    }}</span>
-                                </NuxtLink>
+                                    size="sm"
+                                    class="w-0 min-w-full px-1"
+                                />
                             </figure>
                         </LayoutScrollStrip>
                     </section>
@@ -108,43 +102,24 @@
                         :card="false"
                         :title="t('feed.noNewRoutes')"
                     />
-                    <ul
-                        v-else
-                        class="divide-y divide-default overflow-hidden rounded-2xl bg-elevated/50 ring ring-default"
-                    >
-                        <li
+                    <LayoutListGroup v-else>
+                        <LayoutListRow
                             v-for="route in data.routes.slice(0, ROUTE_PREVIEW)"
                             :key="route.id"
+                            :to="gymPath(`/route?id=${route.id}`)"
+                            data-testid="feed-route"
                         >
-                            <NuxtLink
-                                :to="gymPath(`/route?id=${route.id}`)"
-                                class="flex items-center gap-3 px-4 py-2.5 hover:bg-accented/60"
-                                data-testid="feed-route"
-                            >
-                                <RouteColorDot
-                                    :color="route.color"
-                                    :size="24"
-                                />
-                                <span class="min-w-0 flex-1">
-                                    <span
-                                        class="block truncate text-sm font-medium"
-                                    >
-                                        {{ route.name }}
-                                    </span>
-                                    <span
-                                        class="block truncate text-xs text-muted"
-                                    >
-                                        {{
-                                            [wallOf(route), ago(route.created)]
-                                                .filter(Boolean)
-                                                .join(' · ')
-                                        }}
-                                    </span>
-                                </span>
-                                <GradeLabel :source="route" />
-                            </NuxtLink>
-                        </li>
-                    </ul>
+                            <RouteSummary
+                                :route="route"
+                                :meta="
+                                    [wallOf(route), ago(route.created)]
+                                        .filter(Boolean)
+                                        .join(' · ')
+                                "
+                                class="flex-1"
+                            />
+                        </LayoutListRow>
+                    </LayoutListGroup>
                     <UButton
                         v-if="data.routes.length > ROUTE_PREVIEW"
                         :to="gymPath('/routes')"

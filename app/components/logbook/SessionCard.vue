@@ -1,6 +1,6 @@
 <template>
     <div
-        class="h-full rounded-lg bg-elevated"
+        class="h-full rounded-lg bg-default ring ring-default"
         :data-testid="testId ?? `logbook-day-${day}`"
     >
         <slot name="header" />
@@ -12,7 +12,7 @@
             @click="open = !open"
         >
             <div class="grow text-left">
-                <h2 class="text-sm font-medium font-bold mb-2">
+                <h2 class="text-sm font-bold mb-2">
                     {{ formattedDay }}
                 </h2>
                 <div class="flex flex-wrap gap-2">

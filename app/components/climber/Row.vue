@@ -1,6 +1,6 @@
 <template>
     <div
-        class="flex items-center gap-3 rounded-xl bg-elevated/50 px-3 py-2"
+        class="flex items-center gap-3 rounded-lg bg-elevated/50 px-3 py-2"
         :data-testid="testId"
     >
         <NuxtLink

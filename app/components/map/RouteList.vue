@@ -1,16 +1,14 @@
 <template>
     <div class="map-route-list">
         <template v-for="group in groups" :key="group.id">
-            <p
+            <LayoutEyebrow
                 v-if="showHeadings"
-                class="map-route-list__heading"
+                as="p"
+                class="mt-3"
                 data-testid="map-list-group"
             >
-                {{ group.name }}
-                <span class="map-route-list__muted">
-                    · {{ group.routes.length }}</span
-                >
-            </p>
+                {{ group.name }} · {{ group.routes.length }}
+            </LayoutEyebrow>
             <div
                 v-for="route in group.routes"
                 :key="route.id"
@@ -32,28 +30,19 @@
                     :data-testid="linkRows ? 'route-view' : undefined"
                     @click="linkRows || emit('select', route.id)"
                 >
-                    <RouteColorDot
-                        :color="route.color"
+                    <RouteSummary
+                        :route="route"
                         :ticked="tickedIds.has(route.id)"
-                        :size="26"
-                    />
-                    <span class="map-route-row__text">
-                        <span class="map-route-row__name"
-                            >{{ route.name }}
+                        :meta="subtitle(route)"
+                        class="flex-1"
+                    >
+                        <template #markers>
                             <TaskDefectMarker
                                 :severity="defects?.get(route.id)"
                                 size="sm"
-                                class="align-[-2px]"
-                        /></span>
-                        <span class="map-route-row__meta">{{
-                            subtitle(route)
-                        }}</span>
-                    </span>
-                    <GradeLabel
-                        :source="route"
-                        :show-system="isUnexpectedSystem(route)"
-                        class="map-route-row__grade"
-                    />
+                            />
+                        </template>
+                    </RouteSummary>
                     <UIcon
                         v-if="linkRows"
                         name="i-lucide-chevron-right"
@@ -100,7 +89,6 @@ defineProps<{
 const NuxtLink = resolveComponent('NuxtLink')
 const emit = defineEmits<{ select: [routeId: string] }>()
 const { t } = useI18n()
-const { isUnexpectedSystem } = useGradeSystems()
 
 function subtitle(route: RouteListItem) {
     const anchor = formatAnchorPoint(route.anchor_point)
@@ -115,15 +103,6 @@ function subtitle(route: RouteListItem) {
 </script>
 
 <style scoped>
-.map-route-list__heading {
-    margin: 12px 8px 4px;
-    font-weight: 600;
-}
-
-.map-route-list__muted {
-    color: var(--ui-text-muted);
-}
-
 .map-route-row {
     display: flex;
     align-items: center;
@@ -167,31 +146,6 @@ function subtitle(route: RouteListItem) {
 .map-route-row__open:focus-visible {
     outline: 2px solid var(--ui-primary);
     outline-offset: -2px;
-}
-
-.map-route-row__text {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-width: 0;
-}
-
-.map-route-row__name {
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.map-route-row__meta {
-    font-size: 0.75rem;
-    color: var(--ui-text-muted);
-}
-
-.map-route-row__grade {
-    flex: 0 0 auto;
-    font-weight: 700;
-    font-size: 1rem;
 }
 
 .map-route-row__open {
