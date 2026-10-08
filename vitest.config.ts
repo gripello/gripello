@@ -8,6 +8,12 @@ const importMetaFlags: Record<string, string> = {
     'import.meta.client': '(process.server !== true)',
 }
 
+// vmThreads reuses one happy-dom per worker; these break inside a vm context (cross-realm typed arrays, process.env.TZ)
+const NEEDS_OWN_PROCESS = [
+    'test/server/tag-qr.spec.ts',
+    'test/shared/formatting.spec.ts',
+]
+
 const importMetaPolyfill = (): PluginOption => ({
     name: 'import-meta-polyfill',
     enforce: 'pre',
@@ -43,8 +49,25 @@ export default defineConfig({
         environment: 'happy-dom',
         globals: true,
         setupFiles: ['./test/setup.ts'],
-        include: ['test/**/*.spec.ts'],
-        exclude: ['e2e/**', 'node_modules/**'],
+        projects: [
+            {
+                extends: true,
+                test: {
+                    name: 'vm',
+                    pool: 'vmThreads',
+                    include: ['test/**/*.spec.ts'],
+                    exclude: NEEDS_OWN_PROCESS,
+                },
+            },
+            {
+                extends: true,
+                test: {
+                    name: 'forks',
+                    pool: 'forks',
+                    include: NEEDS_OWN_PROCESS,
+                },
+            },
+        ],
         coverage: {
             reporter: ['text', 'lcov'],
         },
