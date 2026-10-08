@@ -41,6 +41,8 @@ func saveUser(t *testing.T, app core.App, email string) *core.Record {
 	}
 	user := core.NewRecord(users)
 	user.SetEmail(email)
+	// The random default (users + 6 digits) occasionally collides across a fixture.
+	user.Set("username", strings.NewReplacer("@", "_", "+", "_").Replace(email))
 	user.SetPassword("1234567890")
 	if err := app.Save(user); err != nil {
 		t.Fatalf("saving user %s: %v", email, err)
