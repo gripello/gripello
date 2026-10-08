@@ -1187,12 +1187,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@iconify-json/simple-icons@npm:^1.2.98":
-  version: 1.2.98
-  resolution: "@iconify-json/simple-icons@npm:1.2.98"
+"@iconify-json/simple-icons@npm:^1.2.99":
+  version: 1.2.99
+  resolution: "@iconify-json/simple-icons@npm:1.2.99"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/c12b165c23ec994edb7556b9b498663b4f26d2d1d8ac9a0b28ee877cff95e25c919745cb57f55668269393b0b97c17d4763aeab394b8cca62988e84debae3dfd
+  checksum: 10c0/da0cde2322c29b9e53b2a2b974e9823c31fb3e614641bdd9b47ee81aab257f12e5e9af9ef0db675405dcf31b4b37fcc3bcf574b930336d0f913080f782cb3ac7
   languageName: node
   linkType: hard
 
@@ -8395,7 +8395,7 @@ __metadata:
     "@cap.js/wasm": "npm:0.0.8"
     "@cj-tech-master/excelts": "npm:10.2.0"
     "@iconify-json/lucide": "npm:^1.2.138"
-    "@iconify-json/simple-icons": "npm:^1.2.98"
+    "@iconify-json/simple-icons": "npm:^1.2.99"
     "@nuxt/ui": "npm:^4.11.2"
     "@nuxtjs/i18n": "npm:10.6.0"
     "@playwright/test": "npm:^1.63.0"
