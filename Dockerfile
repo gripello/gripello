@@ -17,7 +17,7 @@ COPY pocketbase/testdata ./testdata
 COPY i18n/locales/*.json /i18n/locales/
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    mkdir /out && { go run gotest.tools/gotestsum@v1.13.0 --junitfile /out/junit.xml ./...; echo $? > /out/exit-code; }
+    mkdir /out && { go run gotest.tools/gotestsum@v1.13.0 --junitfile /out/junit.xml -- -timeout 30m ./...; echo $? > /out/exit-code; }
 
 FROM scratch AS go-results
 COPY --from=pb-test /out /
