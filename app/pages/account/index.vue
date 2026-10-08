@@ -229,7 +229,7 @@ const { data: settings } = useNuxtData<SettingsRecord>('settings')
 
 useSeoMeta({ title: () => t('page.title.me') })
 
-const user = ref(pb.authStore.record)
+const user = useAuthRecord()
 const loggingOut = ref(false)
 
 const displayName = computed(

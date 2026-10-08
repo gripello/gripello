@@ -22,6 +22,12 @@ describe('account pages', () => {
         },
     )
 
+    it('follows the shared auth record so a revoked session shows the guest view', () => {
+        const source = page('index')
+        expect(source).toContain('const user = useAuthRecord()')
+        expect(source).not.toMatch(/ref\(pb\.authStore\.record\)/)
+    })
+
     it('keeps settings fields free of usage hints', () => {
         const source = page('settings')
         for (const key of [
