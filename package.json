@@ -25,7 +25,7 @@
         "@cap.js/wasm": "0.0.8",
         "@cj-tech-master/excelts": "10.2.0",
         "@iconify-json/lucide": "^1.2.138",
-        "@iconify-json/simple-icons": "^1.2.98",
+        "@iconify-json/simple-icons": "^1.2.99",
         "@nuxt/ui": "^4.11.2",
         "@nuxtjs/i18n": "10.6.0",
         "@playwright/test": "^1.63.0",
