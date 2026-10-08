@@ -8,6 +8,7 @@ import {
     platformUserFilter,
     rolesOfGym,
     userDisplayName,
+    userKeptThroughReload,
     type PlatformUser,
 } from '~/utils/platformUsers'
 
@@ -154,5 +155,22 @@ describe('suspensionEnd', () => {
 
     it('leaves permanent suspensions without a date', () => {
         expect(suspensionEnd('permanent', '', now)).toBeNull()
+    })
+})
+
+describe('userKeptThroughReload', () => {
+    const paula = { id: 'u1', username: 'paula' } as PlatformUser
+    const fresh = { id: 'u1', username: 'paula2' } as PlatformUser
+
+    it('prefers the reloaded record', () => {
+        expect(userKeptThroughReload([fresh], 'u1', paula)).toBe(fresh)
+    })
+
+    it('keeps the previous record while the list is empty', () => {
+        expect(userKeptThroughReload([], 'u1', paula)).toBe(paula)
+    })
+
+    it('drops a previous record of another user', () => {
+        expect(userKeptThroughReload([], 'u2', paula)).toBeNull()
     })
 })
