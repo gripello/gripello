@@ -24,7 +24,7 @@ const { status, label } = useOpenStatus(() => props.gym.opening_hours)
                 v-if="logoUrl"
                 :src="logoUrl"
                 alt=""
-                class="size-10 shrink-0 object-contain"
+                class="logo-mono size-10 shrink-0 object-contain"
             />
             <div class="min-w-0 flex-1">
                 <h2 class="truncate font-semibold">{{ gymTitle(gym) }}</h2>
@@ -33,10 +33,19 @@ const { status, label } = useOpenStatus(() => props.gym.opening_hours)
                 </p>
             </div>
             <UButton
+                :to="`/${gym.slug}/info`"
+                icon="i-lucide-info"
+                color="neutral"
+                variant="ghost"
+                class="icon-btn"
+                :aria-label="$t('routes.info')"
+                data-testid="gym-map-card-info"
+            />
+            <UButton
                 icon="i-lucide-x"
                 color="neutral"
                 variant="ghost"
-                size="sm"
+                class="icon-btn"
                 :aria-label="$t('actions.close')"
                 data-testid="gym-map-card-close"
                 @click="$emit('close')"
@@ -65,15 +74,6 @@ const { status, label } = useOpenStatus(() => props.gym.opening_hours)
                 data-testid="gym-map-card-open"
             />
             <GymDirectionsButton v-if="hasLocation(gym)" :gym="gym" />
-            <UButton
-                :to="`/${gym.slug}/info`"
-                icon="i-lucide-info"
-                color="neutral"
-                variant="ghost"
-                class="icon-btn"
-                :aria-label="$t('routes.info')"
-                data-testid="gym-map-card-info"
-            />
         </div>
     </article>
 </template>

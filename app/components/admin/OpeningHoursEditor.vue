@@ -62,17 +62,22 @@ function copyMondayToWeekdays() {
             :key="day"
             :label="dayLabel(day)"
             orientation="horizontal"
-            :ui="{ root: 'items-start', container: 'flex flex-col gap-2' }"
+            :ui="{
+                root: 'grid grid-cols-1 items-start gap-x-2 gap-y-1 sm:grid-cols-[9rem_1fr]',
+                labelWrapper: 'flex items-center sm:min-h-9',
+                container: 'mt-0 flex min-w-0 flex-col items-start gap-2',
+            }"
             :data-testid="`opening-hours-${day}`"
         >
             <div
                 v-for="(interval, index) in hours[day] ?? []"
                 :key="index"
-                class="flex items-center gap-2"
+                class="flex w-full max-w-sm items-center gap-2"
             >
                 <UInput
                     :model-value="interval[0]"
                     type="time"
+                    class="min-w-0 flex-1"
                     :aria-label="`${dayLabel(day)} ${$t('gymInfo.settings.opens')}`"
                     :data-testid="`opening-hours-${day}-${index}-opens`"
                     @update:model-value="setTime(day, index, 0, String($event))"
@@ -81,6 +86,7 @@ function copyMondayToWeekdays() {
                 <UInput
                     :model-value="interval[1]"
                     type="time"
+                    class="min-w-0 flex-1"
                     :aria-label="`${dayLabel(day)} ${$t('gymInfo.settings.closes')}`"
                     :data-testid="`opening-hours-${day}-${index}-closes`"
                     @update:model-value="setTime(day, index, 1, String($event))"
@@ -95,7 +101,7 @@ function copyMondayToWeekdays() {
                     @click="removeInterval(day, index)"
                 />
             </div>
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex min-h-9 flex-wrap items-center gap-2">
                 <UBadge
                     v-if="!hours[day]?.length"
                     color="neutral"

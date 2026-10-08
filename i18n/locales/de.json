@@ -694,7 +694,8 @@
             "leaderboard": "Rangliste - Gripello",
             "friends": "Freunde - Gripello",
             "climber": "{name} - Gripello",
-            "feed": "Feed"
+            "feed": "Feed",
+            "info": "Halleninfo - Gripello"
         },
         "content": {
             "settings": "Einstellungen",

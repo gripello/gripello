@@ -51,7 +51,7 @@
                 :markers="markers"
                 :zoom="13"
                 :selected="selectedId"
-                class="lg:sticky lg:top-4 lg:order-last lg:h-[calc(100dvh-var(--app-top,64px)-11rem)]"
+                class="max-lg:h-[26rem] lg:sticky lg:top-4 lg:order-last lg:h-[calc(100dvh-var(--app-top,64px)-11rem)]"
                 @select="selectedId = $event"
             >
                 <GymMapCard
@@ -95,7 +95,7 @@
                                     v-if="gym.page_logo"
                                     :src="logoUrl(gym)"
                                     alt=""
-                                    class="landing-gym__logo"
+                                    class="landing-gym__logo logo-mono"
                                 />
                                 <UIcon
                                     v-else

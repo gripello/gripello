@@ -25,6 +25,7 @@ let map: LeafletMap | null = null
 let layer: LayerGroup | null = null
 let leaflet: typeof import('leaflet') | null = null
 let framed = false
+const overlay = ref<HTMLElement>()
 
 onMounted(() => {
     try {
@@ -152,17 +153,20 @@ watch(
 )
 watch(
     () => props.selected,
-    (id) => {
+    async (id) => {
         drawMarkers(false)
         const target = props.markers.find((m) => m.id === id)
-        if (map && target)
-            map.flyTo(
-                [target.lat, target.lng],
-                Math.max(map.getZoom(), props.zoom),
-                {
-                    duration: 0.5,
-                },
-            )
+        if (!map || !target) return
+        await nextTick()
+        const zoom = Math.max(map.getZoom(), props.zoom)
+        const coveredHeight = overlay.value?.offsetHeight ?? 0
+        const center = map.unproject(
+            map
+                .project([target.lat, target.lng], zoom)
+                .add([0, coveredHeight / 2]),
+            zoom,
+        )
+        map.flyTo(center, zoom, { duration: 0.5 })
     },
 )
 </script>
@@ -192,6 +196,7 @@ watch(
         </LayoutEmptyState>
         <div
             v-if="consented && $slots.default"
+            ref="overlay"
             class="absolute inset-x-3 bottom-8 z-[1000] sm:right-auto sm:w-96"
         >
             <slot />
@@ -239,6 +244,7 @@ watch(
     width: 24px;
     height: 24px;
     object-fit: contain;
+    filter: brightness(0);
 }
 
 .gym-map-pin__inner svg {
@@ -249,6 +255,7 @@ watch(
 .gym-location-map .leaflet-tile-container img {
     width: 256.5px !important;
     height: 256.5px !important;
+    mix-blend-mode: normal !important;
 }
 
 .dark .gym-location-map .leaflet-tile-pane {
@@ -256,27 +263,27 @@ watch(
 }
 
 .dark .gym-location-map .leaflet-container {
-    background: var(--ui-bg-elevated);
+    background: var(--ui-bg-elevated) !important;
 }
 
 .dark .gym-location-map .leaflet-bar a,
 .dark .gym-location-map .leaflet-control-attribution {
-    background: var(--ui-bg-elevated);
-    color: var(--ui-text);
-    border-color: var(--ui-border);
+    background: var(--ui-bg-elevated) !important;
+    color: var(--ui-text) !important;
+    border-color: var(--ui-border) !important;
 }
 
 .dark .gym-location-map .leaflet-control-attribution a {
-    color: var(--ui-text-highlighted);
+    color: var(--ui-text-highlighted) !important;
 }
 
 .dark .leaflet-tooltip {
-    background: var(--ui-bg-elevated);
-    color: var(--ui-text);
-    border-color: var(--ui-border);
+    background: var(--ui-bg-elevated) !important;
+    color: var(--ui-text) !important;
+    border-color: var(--ui-border) !important;
 }
 
 .dark .leaflet-tooltip-top::before {
-    border-top-color: var(--ui-bg-elevated);
+    border-top-color: var(--ui-bg-elevated) !important;
 }
 </style>
