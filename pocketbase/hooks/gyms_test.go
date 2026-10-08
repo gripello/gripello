@@ -10,7 +10,6 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/plugins/jsvm"
 	"github.com/pocketbase/pocketbase/tests"
 )
 
@@ -52,12 +51,8 @@ func TestValidateGymSlug(t *testing.T) {
 
 func newGymTestApp(t *testing.T) *tests.TestApp {
 	t.Helper()
-	app, err := tests.NewTestApp()
+	app, err := tests.NewTestApp(migratedDataDir)
 	if err != nil {
-		t.Fatal(err)
-	}
-	jsvm.MustRegister(app, jsvm.Config{MigrationsDir: "../pb_migrations"})
-	if err := app.RunAllMigrations(); err != nil {
 		t.Fatal(err)
 	}
 	Register(app)

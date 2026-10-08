@@ -10,13 +10,33 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/mails"
+	"github.com/pocketbase/pocketbase/plugins/jsvm"
+	"github.com/pocketbase/pocketbase/tests"
 )
 
 var realLocalesDir = filepath.Join("..", "..", "i18n", "locales")
 
+var migratedDataDir string
+
 func TestMain(m *testing.M) {
 	os.Setenv("PB_LOCALES_DIR", realLocalesDir)
-	os.Exit(m.Run())
+	migratedDataDir = migrateTemplateDataDir()
+	code := m.Run()
+	os.RemoveAll(migratedDataDir)
+	os.Exit(code)
+}
+
+func migrateTemplateDataDir() string {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		panic(err)
+	}
+	jsvm.MustRegister(app, jsvm.Config{MigrationsDir: "../pb_migrations"})
+	if err := app.RunAllMigrations(); err != nil {
+		panic(err)
+	}
+	app.ResetBootstrapState()
+	return app.DataDir()
 }
 
 var leftoverPlaceholder = regexp.MustCompile(`\{[a-zA-Z]+\}`)
