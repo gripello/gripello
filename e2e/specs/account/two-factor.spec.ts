@@ -129,8 +129,8 @@ test.describe('account security', () => {
         await expect(page.getByTestId('two-factor-passkey')).toHaveCount(1)
 
         await page.context().clearCookies()
-        await gotoSettled(page, '/auth/login')
-        await page.getByTestId('login-passkey').click()
+        // the virtual authenticator answers the login page's autofill request without a click
+        await page.goto('/auth/login')
         await expect(page).not.toHaveURL(/\/auth\/login/)
     })
 })
