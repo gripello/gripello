@@ -1541,7 +1541,10 @@
             "install": "Installeer eerst de app",
             "unsupported": "Niet beschikbaar in deze browser",
             "blocked": "Meldingen zijn geblokkeerd in je browserinstellingen.",
-            "followedWalls": "Gevolgde wanden"
+            "followedWalls": "Gevolgde wanden",
+            "sendTest": "Testmelding sturen",
+            "testSent": "Testmelding verstuurd",
+            "testMessage": "Pushmeldingen werken op dit apparaat."
         },
         "privacy": {
             "followPolicy": "Wie mij mag volgen",

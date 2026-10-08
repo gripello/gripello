@@ -98,6 +98,17 @@
                         </p>
                     </div>
                     <UButton
+                        v-if="device.endpoint === push.currentEndpoint.value"
+                        color="neutral"
+                        variant="ghost"
+                        icon="i-lucide-send"
+                        class="icon-btn"
+                        :aria-label="t('accountSettings.push.sendTest')"
+                        :loading="testPush.pending.value"
+                        data-testid="push-send-test"
+                        @click="sendTest"
+                    />
+                    <UButton
                         color="neutral"
                         variant="ghost"
                         icon="i-lucide-x"
@@ -230,6 +241,7 @@ const push = usePushSubscription()
 const { memberships, isPlatformAdmin } = usePermissions()
 const { followed, setFollowing } = useFollowedWalls()
 const { error: notifyError } = useNotification()
+const testPush = useAsyncAction()
 
 const grantedPermissions = computed(
     () =>
@@ -261,6 +273,12 @@ async function addThisDevice() {
         console.error('Push subscription failed:', err)
         notifyError(t('notifications.error.edit'))
     }
+}
+
+function sendTest() {
+    return testPush.run(() => push.sendTest(), {
+        success: t('accountSettings.push.testSent'),
+    })
 }
 
 async function removeDevice(device: PushSubscriptionRecord) {

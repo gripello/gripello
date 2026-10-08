@@ -16,6 +16,7 @@ import (
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tests"
 )
 
 func savePushSubscription(t *testing.T, app core.App, userID, endpoint string) *core.Record {
@@ -264,5 +265,77 @@ func TestPublishingACompetitionNotifiesEntrants(t *testing.T) {
 	}
 	if rows := notificationsOf(t, f.app, f.setterB.Id, "competition_published"); len(rows) != 0 {
 		t.Error("withdrawn entrant notified")
+	}
+}
+
+func TestVapidSubscriberIsNeverEmptyOrDoublePrefixed(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	app.Settings().Meta.SenderAddress = "settings@gripello.app"
+
+	t.Setenv("PB_SENDER_ADDRESS", "")
+	if got := vapidSubscriber(app); got != "settings@gripello.app" {
+		t.Errorf("unset env: got %q, want the app's sender address", got)
+	}
+	t.Setenv("PB_SENDER_ADDRESS", "mailto:env@gripello.app")
+	if got := vapidSubscriber(app); got != "env@gripello.app" {
+		t.Errorf("mailto env: got %q, webpush-go adds the prefix itself", got)
+	}
+}
+
+func TestTestPushOnlyReachesTheCallersOwnDevice(t *testing.T) {
+	privateKey, publicKey, err := webpush.GenerateVAPIDKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PB_VAPID_PUBLIC_KEY", publicKey)
+	t.Setenv("PB_VAPID_PRIVATE_KEY", privateKey)
+	pushed := 0
+	device := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		pushed++
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer device.Close()
+
+	for _, c := range []struct {
+		name     string
+		signedIn bool
+		endpoint string
+		status   int
+	}{
+		{"guest", false, "/mine", http.StatusUnauthorized},
+		{"someone else's device", true, "/theirs", http.StatusNotFound},
+		{"own device", true, "/mine", http.StatusNoContent},
+	} {
+		f := newMemberFixture(t)
+		savePushSubscription(t, f.app, f.climber.Id, device.URL+"/mine")
+		savePushSubscription(t, f.app, f.adminA.Id, device.URL+"/theirs")
+		headers := map[string]string{"Content-Type": "application/json"}
+		if c.signedIn {
+			token, err := f.climber.NewAuthToken()
+			if err != nil {
+				t.Fatal(err)
+			}
+			headers["Authorization"] = token
+		}
+		scenario := tests.ApiScenario{
+			Name:           c.name,
+			Method:         http.MethodPost,
+			URL:            "/api/notifications/test",
+			Headers:        headers,
+			Body:           strings.NewReader(`{"endpoint":"` + device.URL + c.endpoint + `"}`),
+			ExpectedStatus: c.status,
+			TestAppFactory: func(testing.TB) *tests.TestApp { return f.app },
+		}
+		if c.status != http.StatusNoContent {
+			scenario.ExpectedContent = []string{"{"}
+		}
+		scenario.Test(t)
+	}
+	if pushed != 1 {
+		t.Errorf("pushes sent = %d, want only the caller's own device", pushed)
 	}
 }

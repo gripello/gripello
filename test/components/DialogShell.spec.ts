@@ -9,19 +9,23 @@ import {
     watch,
 } from 'vue'
 import DialogShell from '~/components/layout/DialogShell.vue'
+import { listenBeforeRouter } from '~/utils/dialogHistory'
+
+listenBeforeRouter()
 
 const width = ref(1440)
 
 const overlayStub = (name: string) =>
     defineComponent({
         name,
-        props: ['open', 'content'],
+        props: ['open', 'content', 'noBodyStyles'],
         setup(props, { slots }) {
             return () =>
                 h(
                     'div',
                     {
                         'data-overlay': name,
+                        'data-no-body-styles': props.noBodyStyles,
                         style: props.content?.style,
                     },
                     props.open ? slots.content?.() : [],
@@ -84,5 +88,36 @@ describe('DialogShell', () => {
         const wrapper = createWrapper()
         await wrapper.setProps({ modelValue: true })
         expect(wrapper.find('[data-overlay="UDrawer"]').exists()).toBe(true)
+    })
+
+    it('leaves body scroll locking of sheets to the dialog, not vaul', async () => {
+        width.value = 390
+        const wrapper = createWrapper()
+        await wrapper.setProps({ modelValue: true })
+        expect(
+            wrapper
+                .find('[data-overlay="UDrawer"]')
+                .attributes('data-no-body-styles'),
+        ).toBe('true')
+        wrapper.unmount()
+    })
+
+    it('closes on the back gesture instead of leaving the page', async () => {
+        const wrapper = createWrapper()
+        await wrapper.setProps({ modelValue: true })
+        expect(history.state.dialogShell).toBeTypeOf('number')
+
+        window.dispatchEvent(new PopStateEvent('popstate', { state: null }))
+
+        expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
+        wrapper.unmount()
+    })
+
+    it('keeps persistent dialogs out of the history', async () => {
+        const before = history.length
+        const wrapper = createWrapper({ persistent: true })
+        await wrapper.setProps({ modelValue: true })
+        expect(history.length).toBe(before)
+        wrapper.unmount()
     })
 })

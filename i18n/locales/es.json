@@ -1541,7 +1541,10 @@
             "install": "Instala primero la app",
             "unsupported": "No disponible en este navegador",
             "blocked": "Las notificaciones están bloqueadas en los ajustes de tu navegador.",
-            "followedWalls": "Paredes que sigues"
+            "followedWalls": "Paredes que sigues",
+            "sendTest": "Enviar notificación de prueba",
+            "testSent": "Notificación de prueba enviada",
+            "testMessage": "Las notificaciones push funcionan en este dispositivo."
         },
         "privacy": {
             "followPolicy": "Quién puede seguirme",

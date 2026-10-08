@@ -89,6 +89,14 @@ export function usePushSubscription() {
         }
     }
 
+    function sendTest() {
+        return pb.send('/api/notifications/test', {
+            method: 'POST',
+            body: { endpoint: currentEndpoint.value },
+            requestKey: null,
+        })
+    }
+
     const { subscribe } = usePbSubscription(refresh)
 
     onMounted(() => {
@@ -110,5 +118,6 @@ export function usePushSubscription() {
         refresh,
         addThisDevice,
         removeDevice,
+        sendTest,
     }
 }

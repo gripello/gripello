@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { pushDialogEntry } from '~/utils/dialogHistory'
+
 defineOptions({ inheritAttrs: false })
 
 const open = defineModel<boolean>({ default: false })
@@ -30,6 +32,20 @@ watch(
     },
     { flush: 'sync' },
 )
+let releaseHistoryEntry: (() => void) | undefined
+watch(
+    open,
+    (isOpen) => {
+        if (isOpen && !props.persistent && import.meta.client)
+            releaseHistoryEntry ??= pushDialogEntry(() => (open.value = false))
+        else if (!isOpen) {
+            releaseHistoryEntry?.()
+            releaseHistoryEntry = undefined
+        }
+    },
+    { immediate: true },
+)
+onBeforeUnmount(() => releaseHistoryEntry?.())
 watch(prefersSheet, (sheet) => {
     if (!open.value) asSheet.value = sheet
 })
@@ -53,6 +69,7 @@ const activatorProps = { onClick: () => (open.value = true) }
         :title="title || ' '"
         :description="subtitle"
         :dismissible="!persistent"
+        v-bind="asSheet ? { noBodyStyles: true } : {}"
         :content="asSheet ? undefined : { style: widthStyle }"
         :ui="{
             content: asSheet

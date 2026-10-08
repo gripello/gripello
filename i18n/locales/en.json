@@ -1541,7 +1541,10 @@
             "install": "Install the app first",
             "unsupported": "Not available in this browser",
             "blocked": "Notifications are blocked in your browser settings.",
-            "followedWalls": "Followed walls"
+            "followedWalls": "Followed walls",
+            "sendTest": "Send test notification",
+            "testSent": "Test notification sent",
+            "testMessage": "Push notifications work on this device."
         },
         "privacy": {
             "followPolicy": "Who can follow me",
