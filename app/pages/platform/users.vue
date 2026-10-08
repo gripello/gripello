@@ -335,8 +335,10 @@ function reloadAll() {
 }
 
 const editingId = ref<string | null>(null)
-const editingUser = computed(
-    () => users.value.find((user) => user.id === editingId.value) ?? null,
+const editingUser = computed<PlatformUser | null>(
+    (previous) =>
+        users.value.find((user) => user.id === editingId.value) ??
+        (previous?.id === editingId.value ? previous : null),
 )
 const editOpen = ref(false)
 

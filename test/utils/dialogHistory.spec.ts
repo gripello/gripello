@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { pushDialogEntry } from '~/utils/dialogHistory'
+import { pushDialogEntry, settleDialogHistory } from '~/utils/dialogHistory'
 
 function back(state: unknown) {
     const routerListener = vi.fn()
@@ -63,5 +63,45 @@ describe('dialog history', () => {
         expect(historyBack).not.toHaveBeenCalled()
         expect(back({ position: 3 })).toHaveBeenCalledOnce()
         historyBack.mockRestore()
+    })
+
+    it('steps back over open dialogs before the router writes a navigation', async () => {
+        const historyGo = vi.spyOn(history, 'go').mockImplementation(() => {})
+        const close = vi.fn()
+        pushDialogEntry(close)
+        pushDialogEntry(close)
+
+        let settled = false
+        void settleDialogHistory()?.then(() => (settled = true))
+        expect(historyGo).toHaveBeenCalledWith(-2)
+        await Promise.resolve()
+        expect(settled).toBe(false)
+
+        expect(back({ position: 3 })).not.toHaveBeenCalled()
+        await Promise.resolve()
+        expect(settled).toBe(true)
+        expect(close).not.toHaveBeenCalled()
+        historyGo.mockRestore()
+    })
+
+    it('holds a navigation until a closing dialog stepped back', async () => {
+        const historyBack = vi
+            .spyOn(history, 'back')
+            .mockImplementation(() => {})
+        pushDialogEntry(vi.fn())()
+
+        let settled = false
+        void settleDialogHistory()?.then(() => (settled = true))
+        await Promise.resolve()
+        expect(settled).toBe(false)
+
+        back({ position: 3 })
+        await Promise.resolve()
+        expect(settled).toBe(true)
+        historyBack.mockRestore()
+    })
+
+    it('lets a navigation through when no dialog is open', () => {
+        expect(settleDialogHistory()).toBeUndefined()
     })
 })

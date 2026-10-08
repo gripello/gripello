@@ -6,6 +6,7 @@ interface OpenDialog {
 const openDialogs: OpenDialog[] = []
 let lastId = 0
 let ownBackSteps = 0
+const backStepWaiters: (() => void)[] = []
 let routerPath = () => currentUrlPath()
 
 function currentUrlPath() {
@@ -26,12 +27,29 @@ function onPopState(event: PopStateEvent) {
     const path = routerPath()
     if (path !== currentUrlPath())
         history.replaceState({ ...history.state, current: path }, '', path)
-    if (ownBackStep) ownBackSteps--
-    else {
+    if (ownBackStep) {
+        ownBackSteps--
+        if (!ownBackSteps) backStepWaiters.splice(0).forEach((done) => done())
+    } else {
         openDialogs.pop()
         top!.close()
     }
     stopListeningWhenIdle()
+}
+
+export function settleDialogHistory(): Promise<void> | undefined {
+    const top = openDialogs.at(-1)
+    if (top && history.state?.dialogShell === top.id) {
+        const steps = openDialogs.length
+        openDialogs.length = 0
+        ownBackSteps++
+        history.go(-steps)
+    }
+    if (!ownBackSteps) return
+    return new Promise((resolve) => {
+        backStepWaiters.push(resolve)
+        setTimeout(resolve, 1000)
+    })
 }
 
 export function trackDialogPath(currentPath: () => string) {
