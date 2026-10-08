@@ -77,4 +77,33 @@ describe('usePasskeyLogin', () => {
         passkey.stopAutofill()
         await expect(pending).resolves.toBeUndefined()
     })
+
+    it('stays quiet when autofill fails before a passkey is picked', async () => {
+        vi.stubGlobal('navigator', {
+            credentials: {
+                get: vi
+                    .fn()
+                    .mockRejectedValue(new DOMException('', 'SecurityError')),
+            },
+        })
+        send.mockResolvedValue({ ceremony: 'x', options: {} })
+        await expect(setup().autofill()).resolves.toBeUndefined()
+
+        send.mockReset().mockRejectedValue(new Error('offline'))
+        await expect(setup().autofill()).resolves.toBeUndefined()
+    })
+
+    it('reports a picked passkey the server rejects', async () => {
+        vi.stubGlobal('navigator', {
+            credentials: {
+                get: vi.fn().mockResolvedValue({ toJSON: () => ({ id: 'c' }) }),
+            },
+        })
+        const rejected = Object.assign(new Error('unknown'), { status: 400 })
+        send.mockResolvedValueOnce({
+            ceremony: 'x',
+            options: {},
+        }).mockRejectedValueOnce(rejected)
+        await expect(setup().autofill()).rejects.toBe(rejected)
+    })
 })

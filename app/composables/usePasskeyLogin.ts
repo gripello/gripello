@@ -16,22 +16,27 @@ export function usePasskeyLogin() {
     onMounted(() => (supported.value = passkeysSupported()))
     onBeforeUnmount(() => autofillAbort?.abort())
 
-    async function signIn(
-        options: { mfaId?: string; autofill?: AbortController } = {},
-    ): Promise<AuthResult> {
+    async function pickPasskey(autofill?: AbortController) {
         const ceremony = await pb.send<{ ceremony: string; options: unknown }>(
             '/api/auth/passkey/options',
             { method: 'POST' },
         )
-        const credential = await getPasskey(ceremony.options, options.autofill)
+        const credential = await getPasskey(ceremony.options, autofill)
+        return { ceremony: ceremony.ceremony, credential }
+    }
+
+    function verify(
+        picked: { ceremony: string; credential: unknown },
+        mfaId?: string,
+    ) {
         return pb.send<AuthResult>('/api/auth/passkey', {
             method: 'POST',
-            body: {
-                ceremony: ceremony.ceremony,
-                credential,
-                ...(options.mfaId && { mfaId: options.mfaId }),
-            },
+            body: { ...picked, ...(mfaId && { mfaId }) },
         })
+    }
+
+    async function signIn(options: { mfaId?: string } = {}) {
+        return verify(await pickPasskey(), options.mfaId)
     }
 
     async function autofill(): Promise<AuthResult | undefined> {
@@ -40,12 +45,8 @@ export function usePasskeyLogin() {
         const abort = new AbortController()
         autofillAbort = abort
         autofillActive.value = true
-        try {
-            return await signIn({ autofill: abort })
-        } catch (err) {
-            if (abort.signal.aborted) return undefined
-            throw err
-        }
+        const picked = await pickPasskey(abort).catch(() => undefined)
+        return picked && verify(picked)
     }
 
     function stopAutofill() {
