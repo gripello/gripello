@@ -261,7 +261,7 @@
                 </template>
                 <template #location-cell="{ row }">
                     <div
-                        class="max-w-36 truncate"
+                        class="line-clamp-2 max-w-36"
                         :title="locationName(row.original)"
                     >
                         {{ locationName(row.original) }}
@@ -604,11 +604,7 @@ const tableColumns = computed<TableColumn<RouteListItem>[]>(() => [
         header: sortableHeader(t('climbing.anchor_point'), 'anchor_point'),
     },
     { id: 'comment', header: t('climbing.comment') },
-    {
-        id: 'creator',
-        header: t('routes.route_setter'),
-        meta: { class: { td: 'min-w-24 whitespace-normal' } },
-    },
+    { id: 'creator', header: t('routes.route_setter') },
     {
         id: 'location',
         header: sortableHeader(t('climbing.location'), 'location'),

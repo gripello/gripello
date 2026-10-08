@@ -1,5 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
+import { settledBox } from '../../support/map'
 
 test('dragging the banner crop moves the image, not the sheet', async ({
     createUser,
@@ -28,7 +29,7 @@ test('dragging the banner crop moves the image, not the sheet', async ({
     await expect(stage).toBeVisible()
     const image = stage.locator('img')
     await expect(image).toBeVisible()
-    const sheetBefore = (await dialog.boundingBox())!
+    const sheetBefore = await settledBox(dialog)
     const imageBefore = await image.evaluate(
         (element) => element.style.transform,
     )
