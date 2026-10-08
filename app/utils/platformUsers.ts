@@ -89,6 +89,17 @@ export function rolesOfGym(roles: RoleRecord[], gymId: string) {
     return roles.filter((role) => role.gym === gymId)
 }
 
+export function userKeptThroughReload(
+    users: PlatformUser[],
+    id: string | null,
+    previous: PlatformUser | null | undefined,
+) {
+    return (
+        users.find((user) => user.id === id) ??
+        (previous && previous.id === id ? previous : null)
+    )
+}
+
 export function isPermanentlySuspended(
     user: Pick<UserRecord, 'suspended_until'>,
 ) {
