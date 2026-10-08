@@ -378,7 +378,6 @@ const columnsDesktop = computed<TableColumn<RouteListItem>[]>(() => [
     {
         id: 'creator',
         header: sortableHeader(t('climbing.creators'), 'creator'),
-        meta: { class: { td: 'min-w-24 whitespace-normal' } },
     },
     { id: 'score', header: sortableHeader(t('ratings.score'), 'score') },
     {
