@@ -423,7 +423,7 @@ export function gymLocalPath(path: string): string | null {
     return `/${rest.join('/')}`.replace(/\/$/, '') || '/'
 }
 
-const GYM_PAGES = ['/', '/routes', '/map', '/route']
+const GYM_PAGES = ['/', '/routes', '/map', '/info', '/route']
 const COMMUNITY_PAGES = ['/feed', '/leaderboard', '/competitions']
 
 export function zoneOfPath(path: string): Zone | null {

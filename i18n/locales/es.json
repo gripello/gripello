@@ -694,7 +694,8 @@
             "leaderboard": "Clasificación - Gripello",
             "friends": "Amigos - Gripello",
             "climber": "{name} - Gripello",
-            "feed": "Novedades"
+            "feed": "Novedades",
+            "info": "Info del rocódromo - Gripello"
         },
         "content": {
             "settings": "Ajustes",

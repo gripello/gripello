@@ -97,7 +97,7 @@
                 </UCard>
             </div>
 
-            <div class="flex flex-col gap-4">
+            <div class="order-first flex flex-col gap-4 lg:order-none">
                 <UCard v-if="hasHours" data-testid="gym-info-hours">
                     <template #header>
                         <h2 class="font-semibold">
@@ -190,7 +190,7 @@ const {
 const contacts = computed(() => (gym.value ? gymContacts(gym.value) : []))
 
 useSeoMeta({
-    title: () => t('gymInfo.title', { name: title.value }),
+    title: () => t('page.title.info'),
     ogTitle: () => t('gymInfo.title', { name: title.value }),
     description: () => gym.value?.description?.slice(0, 160),
     ogDescription: () => gym.value?.description?.slice(0, 160),

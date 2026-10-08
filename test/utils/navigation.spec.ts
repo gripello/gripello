@@ -346,6 +346,7 @@ describe('zoneOfPath', () => {
     it('places pages in gym, community or you', () => {
         expect(zoneOfPath('/gym-a')).toBe('gym')
         expect(zoneOfPath('/gym-a/map')).toBe('gym')
+        expect(zoneOfPath('/gym-a/info')).toBe('gym')
         expect(zoneOfPath('/gym-a/route')).toBe('gym')
         expect(zoneOfPath('/gym-a/competitions/abc')).toBe('community')
         expect(zoneOfPath('/friends')).toBe('community')
@@ -371,6 +372,9 @@ describe('sectionTabs', () => {
             ['/gym-a/info', false],
             ['/gym-a', false],
         ])
+        expect(
+            sectionTabs('/gym-a/info', 'gym-a').find((tab) => tab.active),
+        ).toMatchObject({ to: '/gym-a/info' })
         expect(sectionTabs('/gym-a/leaderboard', 'gym-a')[1]).toMatchObject({
             testid: 'section-tab-leaderboard',
             active: true,

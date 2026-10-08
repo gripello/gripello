@@ -694,7 +694,8 @@
             "leaderboard": "Leaderboard - Gripello",
             "friends": "Friends - Gripello",
             "climber": "{name} - Gripello",
-            "feed": "Feed"
+            "feed": "Feed",
+            "info": "Gym info - Gripello"
         },
         "content": {
             "settings": "Settings",

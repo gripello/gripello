@@ -78,6 +78,12 @@ describe('docker ui build', () => {
         )
     })
 
+    it('gives the go hook tests more than the default ten minutes', () => {
+        expect(read('Dockerfile')).toContain(
+            'gotestsum@v1.13.0 --junitfile /out/junit.xml -- -timeout 30m ./...',
+        )
+    })
+
     it('ships the locales pocketbase renders push texts from', () => {
         expect(read('Dockerfile')).toMatch(
             /^COPY i18n\/locales\/\*\.json \/pb\/locales\/$/m,
