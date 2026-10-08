@@ -9,7 +9,7 @@
 
         <template v-else-if="profile">
             <header
-                class="relative mb-6 overflow-hidden rounded-2xl bg-elevated/50 ring ring-default"
+                class="relative mb-6 overflow-hidden rounded-lg bg-default ring ring-default"
                 data-testid="climber-header"
             >
                 <ClimberBanner
@@ -18,7 +18,8 @@
                         climberFileUrl(climberId, profile.avatar, '100x100')
                     "
                     :name="profile.name"
-                    class="h-24 sm:h-40"
+                    :id="profile.id"
+                    class="aspect-[4/1] max-h-60 w-full"
                 />
                 <div
                     class="relative flex flex-col gap-4 px-4 pb-4 sm:flex-row sm:items-end sm:px-6"
@@ -28,7 +29,7 @@
                         :name="profile.name"
                         :avatar="profile.avatar"
                         size="xl"
-                        class="-mt-14 ring-4 ring-(--ui-bg-elevated) sm:-mt-16"
+                        class="-mt-14 ring-4 ring-(--ui-bg) sm:-mt-16"
                     />
                     <div class="min-w-0 flex-1">
                         <h1
@@ -131,7 +132,7 @@
                     <li
                         v-for="stat in compareRows"
                         :key="stat.key"
-                        class="flex flex-col gap-1 rounded-2xl odd:last:col-span-2 xl:odd:last:col-span-1 bg-elevated/50 p-4 ring ring-default"
+                        class="flex flex-col gap-1 rounded-lg bg-default p-4 ring ring-default odd:last:col-span-2 xl:odd:last:col-span-1"
                         :data-testid="`compare-${stat.key}`"
                     >
                         <span
@@ -158,48 +159,37 @@
                     class="mb-8 grid gap-8"
                     :class="{ 'lg:grid-cols-2': !isSelf && suggestions.length }"
                 >
-                    <section data-testid="climber-recent">
+                    <section class="min-w-0" data-testid="climber-recent">
                         <LayoutSectionHeader :title="t('friends.recent')" />
                         <FeedActivity
                             v-if="recent.length"
                             :ticks="recent"
                             hide-user
                         />
-                        <p
+                        <LayoutEmptyState
                             v-else
-                            class="rounded-xl bg-elevated/50 px-4 py-6 text-center text-sm text-muted"
-                        >
-                            {{ t('ticks.empty') }}
-                        </p>
+                            icon="i-lucide-history"
+                            :title="t('ticks.empty')"
+                        />
                     </section>
 
-                    <section v-if="!isSelf && suggestions.length">
+                    <section
+                        v-if="!isSelf && suggestions.length"
+                        class="min-w-0"
+                    >
                         <LayoutSectionHeader :title="t('friends.onlyTheirs')" />
-                        <ul
-                            class="flex flex-col gap-2"
-                            data-testid="climber-suggestions"
-                        >
-                            <li
+                        <LayoutListGroup data-testid="climber-suggestions">
+                            <LayoutListRow
                                 v-for="routeRecord in suggestions"
                                 :key="routeRecord.id"
+                                :to="`/route?id=${routeRecord.id}`"
                             >
-                                <NuxtLink
-                                    :to="`/route?id=${routeRecord.id}`"
-                                    class="flex items-center gap-3 rounded-xl bg-elevated/50 px-3 py-2 ring ring-default hover:bg-accented/60"
-                                >
-                                    <RouteColorDot
-                                        :color="routeRecord.color"
-                                        :size="28"
-                                    />
-                                    <span
-                                        class="min-w-0 flex-1 truncate font-medium"
-                                    >
-                                        {{ routeRecord.name }}
-                                    </span>
-                                    <GradeLabel :source="routeRecord" />
-                                </NuxtLink>
-                            </li>
-                        </ul>
+                                <RouteSummary
+                                    :route="routeRecord"
+                                    class="flex-1"
+                                />
+                            </LayoutListRow>
+                        </LayoutListGroup>
                     </section>
                 </div>
 

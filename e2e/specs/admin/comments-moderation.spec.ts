@@ -44,10 +44,11 @@ test('edits a comment', async ({ adminPage: page, testPrefix, route }) => {
 test('filters comments by star rating', async ({ adminPage: page }) => {
     await gotoSettled(page, '/manage/comments')
     await page.getByTestId('comments-filter-rating-5').click()
-    await expect(page.getByTestId('comments-filter-rating-5')).toHaveAttribute(
-        'aria-pressed',
-        'true',
-    )
+    await expect(
+        page
+            .getByTestId('comments-filter-rating')
+            .getByRole('tab', { name: '5★' }),
+    ).toHaveAttribute('aria-selected', 'true')
 })
 
 test('a user without manage_comments is redirected away from /manage/comments', async ({

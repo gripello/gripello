@@ -11,12 +11,13 @@ defineProps<{
 </script>
 
 <template>
-    <div v-if="ratings?.length" class="my-4 rounded-lg border bg-default">
-        <div class="px-4 pt-3 pb-1 text-base font-semibold">
-            {{ $t('importRoutes.ratingsFor', { name }) }}
-        </div>
-        <ul class="py-1">
-            <li v-for="(rating, i) in ratings" :key="i" class="px-4 py-1.5">
+    <LayoutPanel
+        v-if="ratings?.length"
+        :title="$t('importRoutes.ratingsFor', { name })"
+        class="my-4"
+    >
+        <ul class="flex flex-col gap-3">
+            <li v-for="(rating, i) in ratings" :key="i">
                 <div class="text-sm">
                     <strong>{{ $t('importRoutes.ratingLabel') }}:</strong>
                     {{ rating.rating }}/5,
@@ -28,8 +29,11 @@ defineProps<{
                 </div>
             </li>
         </ul>
-    </div>
-    <p v-else class="text-center p-4 text-sm text-muted">
-        {{ $t('importRoutes.noRatings') }}
-    </p>
+    </LayoutPanel>
+    <LayoutEmptyState
+        v-else
+        :card="false"
+        icon="i-lucide-message-square-off"
+        :title="$t('importRoutes.noRatings')"
+    />
 </template>

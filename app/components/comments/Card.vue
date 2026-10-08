@@ -1,6 +1,6 @@
 <template>
     <div
-        class="list-card comment-card rounded-lg bg-elevated"
+        class="list-card comment-card rounded-lg bg-default ring ring-default"
         :id="`comment-${comment.id}`"
         :data-testid="`comment-card-${comment.id}`"
     >
@@ -15,19 +15,11 @@
                 data-testid="comment-card-checkbox"
                 @update:model-value="$emit('toggle-select')"
             />
-            <img
-                v-if="comment.userAvatar"
+            <ClimberAvatar
                 :src="comment.userAvatar"
-                :alt="comment.userName"
-                class="size-8 shrink-0 rounded-full object-cover"
+                :name="comment.userName"
+                size="sm"
             />
-            <span
-                v-else
-                class="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                :style="{ backgroundColor: avatarColor(comment.userName) }"
-            >
-                {{ nameInitials(comment.userName) }}
-            </span>
 
             <div class="list-card__title">
                 <NuxtLink
@@ -69,8 +61,6 @@
                 <slot name="actions" />
             </div>
         </div>
-
-        <USeparator />
 
         <div class="list-card__meta">
             <div
@@ -159,7 +149,6 @@
 </template>
 
 <script setup lang="ts">
-import { avatarColor, nameInitials } from '~/utils/avatar'
 import { formatDate, timeAgo as sharedTimeAgo } from '#shared/utils/formatting'
 
 const gymPath = useGymPath()

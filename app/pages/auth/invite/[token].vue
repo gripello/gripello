@@ -23,8 +23,9 @@
 
         <div v-if="step === 'invalid'" data-testid="invite-invalid">
             <UButton
-                color="success"
-                variant="soft"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-arrow-left"
                 block
                 to="/auth/login"
                 data-testid="invite-back"

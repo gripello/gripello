@@ -1,5 +1,5 @@
 <template>
-    <UFormField :label="$t('settings.legalAddress')" :ui="fieldUi">
+    <UFormField :label="$t('settings.legalAddress')" :ui="SETTINGS_FIELD_UI">
         <UTextarea
             v-model="legal.legal_address"
             :placeholder="$t('settings.legalAddressPlaceholder')"
@@ -10,7 +10,7 @@
             :data-testid="`${testIdPrefix}-legal-address`"
         />
     </UFormField>
-    <UFormField :label="$t('settings.legalPhone')" :ui="fieldUi">
+    <UFormField :label="$t('settings.legalPhone')" :ui="SETTINGS_FIELD_UI">
         <UInput
             v-model="legal.legal_phone"
             type="tel"
@@ -19,7 +19,7 @@
             :data-testid="`${testIdPrefix}-legal-phone`"
         />
     </UFormField>
-    <UFormField :label="$t('settings.legalRegister')" :ui="fieldUi">
+    <UFormField :label="$t('settings.legalRegister')" :ui="SETTINGS_FIELD_UI">
         <UInput
             v-model="legal.legal_register"
             :placeholder="$t('settings.legalRegisterPlaceholder')"
@@ -28,7 +28,7 @@
             :data-testid="`${testIdPrefix}-legal-register`"
         />
     </UFormField>
-    <UFormField :label="$t('settings.legalVatId')" :ui="fieldUi">
+    <UFormField :label="$t('settings.legalVatId')" :ui="SETTINGS_FIELD_UI">
         <UInput
             v-model="legal.legal_vat_id"
             placeholder="DE123456789"
@@ -40,7 +40,7 @@
     <UFormField
         :label="$t('settings.legalEditorial')"
         :help="$t('settings.legalEditorialHint')"
-        :ui="fieldUi"
+        :ui="SETTINGS_FIELD_UI"
     >
         <UInput
             v-model="legal.legal_editorial"
@@ -51,7 +51,7 @@
     </UFormField>
     <UFormField
         :label="$t('settings.legalRepresentatives')"
-        :ui="fieldUi"
+        :ui="SETTINGS_FIELD_UI"
         class="lg:col-span-2"
     >
         <div class="person-list">
@@ -82,7 +82,7 @@
                     icon="i-lucide-trash-2"
                     variant="ghost"
                     color="error"
-                    class="self-end"
+                    class="icon-btn self-end"
                     :aria-label="$t('settings.legalRemovePerson')"
                     :title="$t('settings.legalRemovePerson')"
                     :data-testid="`${testIdPrefix}-legal-remove-representative`"
@@ -106,13 +106,12 @@
 
 <script setup lang="ts">
 import type { LegalFieldsState } from '~/utils/legalFields'
+import { SETTINGS_FIELD_UI } from '~/utils/settingsUi'
 
 withDefaults(
     defineProps<{ legal: LegalFieldsState; testIdPrefix?: string }>(),
     { testIdPrefix: 'settings' },
 )
-
-const fieldUi = { container: 'w-full' }
 </script>
 
 <style scoped>

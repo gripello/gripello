@@ -57,7 +57,7 @@ const topLevelArguments = (source: string, openParen: number): string[] => {
 }
 
 const pluralCallsWithoutCount = () => {
-    const appDirectory = path.resolve(__dirname, '../../app')
+    const appDirectory = path.resolve(import.meta.dirname, '../../app')
     const offenders: string[] = []
     for (const file of sourceFiles(appDirectory)) {
         const source = readFileSync(file, 'utf8')

@@ -1,5 +1,8 @@
 import { mount } from '@vue/test-utils'
 import MemberIdentity from '~/components/admin/MemberIdentity.vue'
+import ClimberAvatar from '~/components/climber/Avatar.vue'
+
+const global = { components: { ClimberAvatar } }
 
 const member = {
     user: 'u1',
@@ -11,7 +14,7 @@ const member = {
 
 describe('MemberIdentity', () => {
     it('shows name, email and initials without an avatar', () => {
-        const wrapper = mount(MemberIdentity, { props: { member } })
+        const wrapper = mount(MemberIdentity, { props: { member }, global })
 
         expect(wrapper.attributes('data-testid')).toBe('member-card-u1')
         expect(wrapper.get('[data-testid="member-card-name"]').text()).toBe(
@@ -25,6 +28,7 @@ describe('MemberIdentity', () => {
     it('shows the avatar image when there is one', () => {
         const wrapper = mount(MemberIdentity, {
             props: { member: { ...member, avatarUrl: '/a.png' } },
+            global,
         })
 
         expect(wrapper.get('img').attributes('src')).toBe('/a.png')

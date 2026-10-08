@@ -13,6 +13,7 @@
             />
             <template v-if="hasMap">
                 <UButton
+                    class="icon-btn"
                     icon="i-lucide-undo-2"
                     color="neutral"
                     variant="ghost"
@@ -23,6 +24,7 @@
                     @click="editor.undo()"
                 />
                 <UButton
+                    class="icon-btn"
                     icon="i-lucide-redo-2"
                     color="neutral"
                     variant="ghost"
@@ -33,6 +35,7 @@
                     @click="editor.redo()"
                 />
                 <UButton
+                    class="icon-btn"
                     :icon="preview ? 'i-lucide-pencil' : 'i-lucide-eye'"
                     color="neutral"
                     variant="ghost"
@@ -68,65 +71,53 @@
             :title="$t('mapEditor.noLocations')"
         />
 
-        <div
+        <LayoutPanel
             v-else-if="!hasMap"
-            class="setup-card m-4 rounded-lg border bg-default"
+            :title="$t('mapEditor.setupTitle')"
+            :subtitle="$t('mapEditor.setupIntro')"
+            class="m-4"
             data-testid="map-editor-setup"
         >
-            <div class="p-4">
-                <p class="text-sm font-medium font-semibold mb-1">
-                    {{ $t('mapEditor.setupTitle') }}
-                </p>
-                <p class="text-xs text-muted mb-4">
-                    {{ $t('mapEditor.setupIntro') }}
-                </p>
-                <form class="setup-row" @submit.prevent="createFloorPlan">
-                    <UFormField
-                        :label="$t('mapEditor.width')"
-                        class="setup-field"
+            <form class="setup-row" @submit.prevent="createFloorPlan">
+                <UFormField :label="$t('mapEditor.width')" class="setup-field">
+                    <UInput
+                        v-model.number="setupWidth"
+                        type="number"
+                        :min="MAP_LIMITS.minSize"
+                        :max="MAP_LIMITS.maxSize"
+                        class="w-full"
+                        data-testid="map-editor-setup-width"
                     >
-                        <UInput
-                            v-model.number="setupWidth"
-                            type="number"
-                            :min="MAP_LIMITS.minSize"
-                            :max="MAP_LIMITS.maxSize"
-                            class="w-full"
-                            data-testid="map-editor-setup-width"
-                        >
-                            <template #trailing>
-                                <span class="text-xs text-muted">m</span>
-                            </template>
-                        </UInput>
-                    </UFormField>
-                    <UFormField
-                        :label="$t('mapEditor.height')"
-                        class="setup-field"
+                        <template #trailing>
+                            <span class="text-xs text-muted">m</span>
+                        </template>
+                    </UInput>
+                </UFormField>
+                <UFormField :label="$t('mapEditor.height')" class="setup-field">
+                    <UInput
+                        v-model.number="setupHeight"
+                        type="number"
+                        :min="MAP_LIMITS.minSize"
+                        :max="MAP_LIMITS.maxSize"
+                        class="w-full"
+                        data-testid="map-editor-setup-height"
                     >
-                        <UInput
-                            v-model.number="setupHeight"
-                            type="number"
-                            :min="MAP_LIMITS.minSize"
-                            :max="MAP_LIMITS.maxSize"
-                            class="w-full"
-                            data-testid="map-editor-setup-height"
-                        >
-                            <template #trailing>
-                                <span class="text-xs text-muted">m</span>
-                            </template>
-                        </UInput>
-                    </UFormField>
-                    <UButton
-                        type="submit"
-                        color="primary"
-                        class="self-end"
-                        :disabled="!validSetupSize"
-                        data-testid="map-editor-create"
-                    >
-                        {{ $t('mapEditor.create') }}
-                    </UButton>
-                </form>
-            </div>
-        </div>
+                        <template #trailing>
+                            <span class="text-xs text-muted">m</span>
+                        </template>
+                    </UInput>
+                </UFormField>
+                <UButton
+                    type="submit"
+                    color="primary"
+                    class="self-end"
+                    :disabled="!validSetupSize"
+                    data-testid="map-editor-create"
+                >
+                    {{ $t('mapEditor.create') }}
+                </UButton>
+            </form>
+        </LayoutPanel>
 
         <div v-else class="map-screen__body">
             <div class="map-screen__stage">

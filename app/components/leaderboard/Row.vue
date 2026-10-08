@@ -2,7 +2,7 @@
     <component
         :is="linked ? NuxtLink : 'div'"
         :to="linked ? `/climber?id=${row.user}` : undefined"
-        class="flex items-center gap-3 rounded-xl px-3 py-2.5"
+        class="flex items-center gap-3 rounded-lg px-3 py-2.5"
         :class="[
             highlighted
                 ? 'bg-primary/10 ring ring-primary/40'

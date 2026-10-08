@@ -1,6 +1,10 @@
 import { mount } from '@vue/test-utils'
 import { computed, ref } from 'vue'
 import FeedActivity from '~/components/feed/Activity.vue'
+import LayoutEyebrow from '~/components/layout/Eyebrow.vue'
+import LayoutListGroup from '~/components/layout/ListGroup.vue'
+import LayoutListRow from '~/components/layout/ListRow.vue'
+import RouteSummary from '~/components/route/Summary.vue'
 import type { FeedTick } from '~/utils/friends'
 
 const tick = (id: string, user: string, date: string): FeedTick =>
@@ -24,6 +28,12 @@ function mountActivity(props: Record<string, unknown>, hydrated = true) {
     return mount(FeedActivity, {
         props,
         global: {
+            components: {
+                LayoutEyebrow,
+                LayoutListGroup,
+                LayoutListRow,
+                RouteSummary,
+            },
             stubs: {
                 NuxtLink: {
                     props: ['to'],

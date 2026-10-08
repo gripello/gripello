@@ -21,7 +21,7 @@
             <RouteColorDot :color="route.color" :size="28" />
             <span class="manage-row__text">
                 <span class="manage-row__name">
-                    {{ route.name }}
+                    <span class="min-w-0 truncate">{{ route.name }}</span>
                     <TaskDefectMarker :severity="defect" size="sm" />
                     <RouteRatedMarker v-if="route.has_ratings" size="sm" />
                     <UBadge
@@ -134,10 +134,8 @@ const meta = computed(() => {
     display: flex;
     align-items: center;
     gap: 4px;
+    min-width: 0;
     font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .manage-row__meta {

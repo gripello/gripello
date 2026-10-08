@@ -27,12 +27,12 @@ function handleClear() {
 </script>
 
 <template>
-    <div class="mb-4 rounded-lg border bg-default">
+    <div class="mb-4 rounded-lg bg-default ring ring-default">
         <div class="flex flex-wrap items-center gap-2 p-3">
             <slot name="search">
                 <UInput
                     v-model="search"
-                    :placeholder="searchPlaceholder || searchLabel"
+                    :placeholder="(smAndUp && searchPlaceholder) || searchLabel"
                     :aria-label="searchLabel"
                     :icon="searchIcon"
                     class="min-w-0 flex-1 sm:min-w-72"
@@ -85,42 +85,26 @@ function handleClear() {
         <slot name="below" />
     </div>
 
-    <UDrawer
+    <LayoutDialogShell
         v-if="!smAndUp"
-        v-model:open="sheetOpen"
+        v-model="sheetOpen"
         :title="$t('filter.title')"
+        closable
+        sheet-on-mobile
+        data-testid="filter-sheet"
     >
-        <template #content>
-            <div
-                class="pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]"
-                data-testid="filter-sheet"
+        <div class="flex flex-col gap-3">
+            <slot name="filters" />
+        </div>
+        <template v-if="activeFilterCount > 0" #actions>
+            <UButton
+                variant="ghost"
+                color="error"
+                data-testid="filter-sheet-clear"
+                @click="handleClear"
             >
-                <div class="flex items-center gap-1 px-4 pt-1">
-                    <span class="text-base font-semibold">
-                        {{ $t('filter.title') }}
-                    </span>
-                    <div class="flex-1" />
-                    <UButton
-                        v-if="activeFilterCount > 0"
-                        variant="ghost"
-                        size="sm"
-                        color="error"
-                        @click="handleClear"
-                    >
-                        {{ $t('actions.clear') }}
-                    </UButton>
-                    <UButton
-                        icon="i-lucide-x"
-                        color="neutral"
-                        variant="ghost"
-                        :aria-label="$t('actions.close')"
-                        @click="sheetOpen = false"
-                    />
-                </div>
-                <div class="flex flex-col gap-3 p-4">
-                    <slot name="filters" />
-                </div>
-            </div>
+                {{ $t('actions.clear') }}
+            </UButton>
         </template>
-    </UDrawer>
+    </LayoutDialogShell>
 </template>

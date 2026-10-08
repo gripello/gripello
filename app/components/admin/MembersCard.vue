@@ -37,7 +37,7 @@
             v-else-if="mdAndUp"
             :data="members"
             :columns="columns"
-            class="rounded-lg border border-default bg-default"
+            class="rounded-lg bg-default ring ring-default"
             data-testid="members-table"
         >
             <template #member-cell="{ row }">
@@ -75,15 +75,11 @@
             </template>
         </UTable>
 
-        <ul
-            v-else
-            class="divide-y divide-default rounded-lg border border-default bg-default"
-            data-testid="members-list"
-        >
+        <LayoutListGroup v-else data-testid="members-list">
             <li
                 v-for="member in members"
                 :key="member.id"
-                class="flex flex-col gap-2 p-3"
+                class="flex flex-col gap-2 px-4 py-3"
             >
                 <AdminMemberIdentity :member="member" />
                 <div class="flex items-center gap-2">
@@ -113,7 +109,7 @@
                     </UTooltip>
                 </div>
             </li>
-        </ul>
+        </LayoutListGroup>
 
         <div v-if="!loading && members.length" class="text-center mt-4">
             <UButton

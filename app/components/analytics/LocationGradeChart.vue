@@ -45,7 +45,7 @@ const option = computed(() => {
             data: locations.value,
             axisLine: { show: false },
             axisTick: { show: false },
-            axisLabel: { ...axisLabel, width: 110, overflow: 'truncate' },
+            axisLabel: { ...axisLabel, width: 80, overflow: 'truncate' },
         },
         visualMap: {
             min: 0,

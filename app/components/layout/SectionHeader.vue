@@ -7,15 +7,15 @@ defineProps<{
 
 <template>
     <header
-        class="section-header flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4"
+        class="section-header flex flex-wrap items-center justify-between gap-3 mb-4"
     >
-        <div>
+        <div class="min-w-0">
             <h2 class="section-header__title">{{ title }}</h2>
             <p v-if="subtitle" class="section-header__subtitle mb-0">
                 {{ subtitle }}
             </p>
         </div>
-        <div v-if="$slots.actions" class="flex items-center gap-2">
+        <div v-if="$slots.actions" class="flex flex-wrap items-center gap-2">
             <slot name="actions" />
         </div>
     </header>

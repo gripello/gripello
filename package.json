@@ -2,6 +2,7 @@
     "name": "gripello",
     "version": "2.2.0",
     "private": true,
+    "type": "module",
     "license": "BUSL-1.1",
     "scripts": {
         "build": "nuxt build",

@@ -21,7 +21,7 @@ test('the week filter sends a PocketBase-formatted cutoff and keeps new comments
     })
     await page
         .getByTestId('comments-filter-date')
-        .getByRole('button', { name: 'This week' })
+        .getByRole('tab', { name: 'This week' })
         .click()
 
     const filter = new URL((await filterRequest).url()).searchParams.get(

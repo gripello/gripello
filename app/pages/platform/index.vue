@@ -176,24 +176,24 @@
                             <li
                                 v-for="admin in admins"
                                 :key="admin.id"
-                                class="px-4 py-3"
+                                class="flex items-center gap-3 px-4 py-3"
                                 :data-testid="`platform-admin-${admin.id}`"
                             >
-                                <UUser
+                                <ClimberAvatar
+                                    :id="admin.id"
+                                    :avatar="admin.avatar"
                                     :name="userDisplayName(admin)"
-                                    :description="admin.email"
-                                    :avatar="{
-                                        src:
-                                            usePbFileUrl(admin, admin.avatar, {
-                                                thumb: '100x100',
-                                            }) || undefined,
-                                        alt: userDisplayName(admin),
-                                    }"
-                                    :ui="{
-                                        name: 'truncate',
-                                        description: 'truncate',
-                                    }"
                                 />
+                                <div class="min-w-0 flex-1">
+                                    <p
+                                        class="truncate text-sm font-semibold text-highlighted"
+                                    >
+                                        {{ userDisplayName(admin) }}
+                                    </p>
+                                    <p class="truncate text-xs text-muted">
+                                        {{ admin.email }}
+                                    </p>
+                                </div>
                             </li>
                         </ul>
                     </AnalyticsSection>

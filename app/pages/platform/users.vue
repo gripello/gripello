@@ -49,25 +49,39 @@
             :title="t('users.noUsers')"
         />
 
-        <ul
-            v-else
-            class="divide-y divide-default rounded-lg border border-default bg-default"
-            data-testid="platform-user-list"
-        >
+        <LayoutListGroup v-else data-testid="platform-user-list">
             <li
                 v-for="user in rows"
                 :key="user.id"
-                class="flex flex-wrap items-center gap-x-3 gap-y-2 p-3"
+                class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3"
                 :data-testid="`platform-user-${user.id}`"
             >
                 <AdminMemberIdentity
                     :member="user.identity"
-                    class="min-w-0 flex-1 md:w-72 md:flex-none"
+                    class="min-w-0 flex-1 md:max-w-1/2 md:min-w-72 md:flex-none"
                 />
                 <div
                     class="order-last flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:order-none md:flex-1 md:basis-auto"
                 >
                     <UBadge
+                        size="sm"
+                        :color="user.verified ? 'success' : 'warning'"
+                        variant="soft"
+                        :icon="
+                            user.verified
+                                ? 'i-lucide-badge-check'
+                                : 'i-lucide-mail-warning'
+                        "
+                        data-testid="platform-user-verified-badge"
+                    >
+                        {{
+                            user.verified
+                                ? t('platform.users.verified')
+                                : t('platform.users.unverified')
+                        }}
+                    </UBadge>
+                    <UBadge
+                        size="sm"
                         v-if="user.platform_admin"
                         color="primary"
                         variant="soft"
@@ -77,6 +91,7 @@
                         {{ t('platform.users.platformAdmin') }}
                     </UBadge>
                     <UBadge
+                        size="sm"
                         v-if="isSuspended(user)"
                         color="error"
                         variant="soft"
@@ -94,24 +109,9 @@
                         }}
                     </UBadge>
                     <UBadge
-                        :color="user.verified ? 'success' : 'warning'"
-                        variant="soft"
-                        :icon="
-                            user.verified
-                                ? 'i-lucide-badge-check'
-                                : 'i-lucide-mail-warning'
-                        "
-                        data-testid="platform-user-verified-badge"
-                    >
-                        {{
-                            user.verified
-                                ? t('platform.users.verified')
-                                : t('platform.users.unverified')
-                        }}
-                    </UBadge>
-                    <UBadge
                         v-for="chip in user.chips"
                         :key="chip.id"
+                        size="sm"
                         color="neutral"
                         variant="outline"
                         class="max-w-full"
@@ -161,7 +161,7 @@
                     />
                 </div>
             </li>
-        </ul>
+        </LayoutListGroup>
 
         <div v-if="hasMore" class="mt-4 text-center">
             <UButton

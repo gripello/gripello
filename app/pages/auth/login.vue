@@ -121,9 +121,10 @@
                             data-testid="login-remember-me"
                         />
                         <UButton
-                            variant="ghost"
+                            variant="link"
                             color="primary"
                             size="sm"
+                            class="px-0"
                             data-testid="login-goto-reset"
                             @click="view = 'requestReset'"
                         >
@@ -161,7 +162,7 @@
                         color="neutral"
                         variant="ghost"
                         block
-                        class="text-muted mb-1"
+                        class="mb-1"
                         icon="i-lucide-arrow-left"
                         :disabled="loading"
                         @click="navigateTo('/')"

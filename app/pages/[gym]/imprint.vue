@@ -17,21 +17,23 @@
 
         <LegalImprintDoc :source="gym" :name="gym?.name" />
 
-        <div class="mt-3 flex flex-wrap gap-2">
+        <div class="mt-3 flex flex-wrap gap-x-4">
             <UButton
                 v-bind="legalLinkProps(gym?.privacy_url, path('/privacy'))"
-                variant="ghost"
+                variant="link"
                 color="primary"
                 icon="i-lucide-shield"
+                class="px-0"
                 data-testid="imprint-privacy-link"
             >
                 {{ $t('legal.privacy') }}
             </UButton>
             <UButton
                 to="/imprint"
-                variant="ghost"
-                color="neutral"
+                variant="link"
+                color="primary"
                 icon="i-lucide-scale"
+                class="px-0"
                 data-testid="gym-imprint-platform-link"
             >
                 {{ $t('legal.gymPage.platformImprint') }}

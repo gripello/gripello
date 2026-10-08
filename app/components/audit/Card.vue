@@ -1,73 +1,64 @@
 <template>
-    <div
-        class="list-card audit-card rounded-lg bg-elevated"
+    <li
+        class="flex items-start gap-3 px-4 py-3"
         :data-testid="`audit-card-${entry.id}`"
     >
-        <div class="audit-card__body">
-            <UIcon
-                :name="actionIcon(entry.action)"
-                class="audit-card__icon size-[20px]"
-                :class="actionTextClass"
-            />
+        <UIcon
+            :name="actionIcon(entry.action)"
+            class="audit-card__icon size-[20px]"
+            :class="actionTextClass"
+        />
 
-            <div class="audit-card__text">
-                <div class="audit-card__summary">
-                    <span
-                        class="font-medium"
-                        :class="actionTextClass"
-                        data-testid="audit-card-action"
-                    >
-                        {{ t(`audit.action.${entry.action}`) }}
-                    </span>
-                    <template v-if="targetLabel">
-                        <span class="audit-card__dot">·</span>
-                        <span
-                            class="font-medium"
-                            data-testid="audit-card-target"
-                            >{{ targetLabel }}</span
-                        >
-                    </template>
-                </div>
-
-                <div class="audit-card__meta text-xs">
-                    <span data-testid="audit-card-actor">{{ actorName }}</span>
-                    <template v-if="entry.record_id">
-                        <span class="audit-card__dot">·</span>
-                        <NuxtLink
-                            v-if="targetUrl"
-                            :to="targetUrl"
-                            class="audit-card__link"
-                            data-testid="audit-card-record"
-                            >{{ entry.record_id }}</NuxtLink
-                        >
-                        <span v-else>{{ entry.record_id }}</span>
-                    </template>
-                    <template v-if="ip">
-                        <span class="audit-card__dot">·</span>
-                        <span>{{ ip }}</span>
-                    </template>
-                </div>
-
-                <div
-                    v-if="changedFields.length"
-                    class="audit-card__meta text-xs"
+        <div class="audit-card__text">
+            <div class="audit-card__summary">
+                <span
+                    class="font-medium"
+                    :class="actionTextClass"
+                    data-testid="audit-card-action"
                 >
-                    <span>{{ t('audit.changedLabel') }}:</span>
-                    <span data-testid="audit-card-fields">{{
-                        changedFields.join(', ')
+                    {{ t(`audit.action.${entry.action}`) }}
+                </span>
+                <template v-if="targetLabel">
+                    <span class="audit-card__dot">·</span>
+                    <span class="font-medium" data-testid="audit-card-target">{{
+                        targetLabel
                     }}</span>
-                </div>
+                </template>
             </div>
 
-            <time
-                class="audit-card__time text-xs"
-                :datetime="entry.created ?? undefined"
-                :title="absoluteTime"
-                data-testid="audit-card-time"
-                >{{ relativeTime }}</time
-            >
+            <div class="audit-card__meta text-xs">
+                <span data-testid="audit-card-actor">{{ actorName }}</span>
+                <template v-if="entry.record_id">
+                    <NuxtLink
+                        v-if="targetUrl"
+                        :to="targetUrl"
+                        class="audit-card__link"
+                        data-testid="audit-card-record"
+                        >{{ entry.record_id }}</NuxtLink
+                    >
+                    <span v-else>{{ entry.record_id }}</span>
+                </template>
+                <span v-if="ip">{{ ip }}</span>
+            </div>
+
+            <div v-if="changedFields.length" class="audit-card__meta text-xs">
+                <span
+                    >{{ t('audit.changedLabel') }}:
+                    <span data-testid="audit-card-fields">{{
+                        changedFields.join(', ')
+                    }}</span></span
+                >
+            </div>
         </div>
-    </div>
+
+        <time
+            class="audit-card__time text-xs"
+            :datetime="entry.created ?? undefined"
+            :title="absoluteTime"
+            data-testid="audit-card-time"
+            >{{ relativeTime }}</time
+        >
+    </li>
 </template>
 
 <script setup lang="ts">
@@ -129,13 +120,6 @@ const absoluteTime = computed(() =>
 </script>
 
 <style scoped>
-.audit-card__body {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 10px 14px;
-}
-
 .audit-card__icon {
     flex-shrink: 0;
     margin-top: 2px;
@@ -159,7 +143,7 @@ const absoluteTime = computed(() =>
 .audit-card__meta {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 2px 12px;
     flex-wrap: wrap;
     color: color-mix(in oklab, var(--ui-text-highlighted) 70%, transparent);
 }

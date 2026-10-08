@@ -21,7 +21,7 @@
                     />
                     <UButton
                         v-if="scanning && torchSupported"
-                        class="scanner-viewport__torch"
+                        class="scanner-viewport__torch icon-btn"
                         :icon="
                             torchOn
                                 ? 'i-lucide-flashlight'
@@ -42,6 +42,7 @@
                     >
                         <template #actions>
                             <UButton
+                                class="icon-btn"
                                 icon="i-lucide-refresh-cw"
                                 color="neutral"
                                 variant="ghost"
@@ -53,6 +54,7 @@
                                 @click="resetDialog = true"
                             />
                             <UButton
+                                class="icon-btn"
                                 icon="i-lucide-info"
                                 color="neutral"
                                 variant="ghost"
@@ -198,33 +200,18 @@
 
             <div class="inventory-layout__lists" data-testid="inventory-lists">
                 <template v-if="!isWideLayout">
-                    <div class="inventory-segments mx-4 mt-4" role="tablist">
-                        <button
-                            v-for="tab in inventoryTabs"
-                            :key="tab.value"
-                            type="button"
-                            role="tab"
-                            class="inventory-tab"
-                            :class="{
-                                'inventory-tab--active':
-                                    activeTab === tab.value,
-                            }"
-                            :aria-selected="activeTab === tab.value"
-                            :data-testid="`inventory-tab-${tab.value}`"
-                            @click="activeTab = tab.value"
-                        >
-                            {{ tab.label }}
-                            <UBadge
-                                size="sm"
-                                variant="soft"
-                                :color="tab.color"
-                                class="ml-2"
-                                :data-testid="`inventory-${tab.value}-count`"
-                            >
-                                {{ tab.count }}
-                            </UBadge>
-                        </button>
-                    </div>
+                    <LayoutTabs
+                        v-model="activeTab"
+                        :items="inventoryTabs"
+                        :content="false"
+                        class="px-4 pt-4"
+                    >
+                        <template #default="{ item }">
+                            <span :data-testid="`inventory-tab-${item.value}`">
+                                {{ item.label }}
+                            </span>
+                        </template>
+                    </LayoutTabs>
 
                     <div class="px-4 pt-3 pb-6" role="tabpanel">
                         <template v-if="activeTab === 'missing'">
@@ -268,7 +255,7 @@
                         data-testid="inventory-column-missing"
                     >
                         <div class="flex items-center gap-2 mb-2">
-                            <h2 class="text-sm font-medium font-semibold">
+                            <h2 class="text-sm font-semibold">
                                 {{ $t('inventory.stillToFind') }}
                             </h2>
                             <UBadge
@@ -306,7 +293,7 @@
                         data-testid="inventory-column-found"
                     >
                         <div class="flex items-center gap-2 mb-2">
-                            <h2 class="text-sm font-medium font-semibold">
+                            <h2 class="text-sm font-semibold">
                                 {{ $t('inventory.reviewFoundTitle') }}
                             </h2>
                             <UBadge
@@ -333,7 +320,6 @@
         <LayoutDialogShell
             v-model="instructionsDialog"
             max-width="400"
-            closable
             :title="$t('inventory.instructionsTitle')"
         >
             <p class="text-sm text-muted mb-3">
@@ -380,9 +366,9 @@
                     />
                 </template>
             </UInput>
-            <ul
+            <LayoutListGroup
                 v-if="manualMatches.length"
-                class="scope-list rounded-lg border"
+                class="scope-list overflow-y-auto"
             >
                 <li v-for="route in manualMatches" :key="route.id">
                     <button
@@ -394,15 +380,10 @@
                         <span class="anchor-badge">{{
                             formatAnchorPoint(route.anchor_point)
                         }}</span>
-                        <span class="min-w-0 flex-1 truncate text-sm">
-                            {{ route.name }}
-                        </span>
-                        <span class="text-xs text-muted">
-                            <GradeLabel :source="route" />
-                        </span>
+                        <RouteSummary :route="route" size="sm" class="flex-1" />
                     </button>
                 </li>
-            </ul>
+            </LayoutListGroup>
             <LayoutEmptyState
                 v-else
                 :card="false"
@@ -418,7 +399,7 @@
             :subtitle="sessionLocation || undefined"
             data-testid="inventory-finish-dialog"
         >
-            <div class="text-sm font-medium font-semibold mb-1">
+            <div class="text-sm font-semibold mb-1">
                 {{ $t('inventory.reviewMissingTitle') }}
                 <UBadge size="sm" variant="soft" color="error" class="ml-1">
                     {{ archiveIds.length }}
@@ -427,7 +408,10 @@
             <p v-if="missing.length" class="text-xs text-muted mb-2">
                 {{ $t('inventory.reviewMissingDescription') }}
             </p>
-            <ul class="review-list rounded-lg border">
+            <LayoutListGroup
+                v-if="missing.length"
+                class="review-list overflow-y-auto"
+            >
                 <li
                     v-for="route in missing"
                     :key="`missing-${route.id}`"
@@ -441,20 +425,15 @@
                             toggleArchive(route.id, $event === true)
                         "
                     />
-                    <span class="min-w-0 flex-1 truncate text-sm">
-                        {{ route.name }}
-                    </span>
-                    <span class="text-xs text-muted">
-                        <GradeLabel :source="route" />
-                    </span>
+                    <RouteSummary :route="route" size="sm" class="flex-1" />
                 </li>
-                <li
-                    v-if="missing.length === 0"
-                    class="flex min-h-10 items-center px-4 py-1 text-sm text-muted"
-                >
-                    {{ $t('inventory.nothingToArchive') }}
-                </li>
-            </ul>
+            </LayoutListGroup>
+            <LayoutEmptyState
+                v-else
+                :card="false"
+                icon="i-lucide-check-check"
+                :title="$t('inventory.nothingToArchive')"
+            />
 
             <p class="text-xs text-muted mt-3 mb-0">
                 {{
@@ -582,14 +561,22 @@ const inventoryTabs = computed(() => [
     {
         value: 'missing' as const,
         label: t('inventory.stillToFind'),
-        count: missing.value.length,
-        color: 'warning' as const,
+        badge: {
+            label: String(missing.value.length),
+            color: 'warning' as const,
+            variant: 'soft' as const,
+            'data-testid': 'inventory-missing-count',
+        },
     },
     {
         value: 'found' as const,
         label: t('inventory.reviewFoundTitle'),
-        count: foundRoutes.value.length,
-        color: 'success' as const,
+        badge: {
+            label: String(foundRoutes.value.length),
+            color: 'success' as const,
+            variant: 'soft' as const,
+            'data-testid': 'inventory-found-count',
+        },
     },
 ])
 const { pending: archiving, run: runArchive } = useAsyncAction()
@@ -1068,36 +1055,6 @@ watch(instructionsDialog, (open) => {
     position: absolute;
     bottom: 12px;
     right: 12px;
-}
-
-.inventory-segments {
-    display: flex;
-    gap: 4px;
-    padding: 4px;
-    border-radius: 12px;
-    background: var(--ui-bg-elevated);
-}
-
-.inventory-tab {
-    flex: 1 1 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-    padding: 0 12px;
-    border-radius: 9px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--ui-text-muted);
-    transition:
-        background-color 0.15s ease,
-        color 0.15s ease;
-}
-
-.inventory-tab--active {
-    color: var(--ui-text-highlighted);
-    background: var(--ui-bg);
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
 }
 
 .inventory-row-button:hover {

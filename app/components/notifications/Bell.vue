@@ -98,6 +98,7 @@
                             </div>
                         </div>
                         <UButton
+                            class="icon-btn"
                             icon="i-lucide-x"
                             size="xs"
                             color="neutral"

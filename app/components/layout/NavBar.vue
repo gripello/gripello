@@ -39,7 +39,7 @@
                 color="neutral"
                 variant="ghost"
                 size="xl"
-                class="hidden lg:inline-flex"
+                class="icon-btn hidden lg:inline-flex"
                 :aria-label="$t('nav.toggleSidebar')"
                 :aria-expanded="sidebarOpen"
                 data-testid="nav-sidebar-toggle"
@@ -55,6 +55,7 @@
                 :ui="{ content: 'w-60' }"
             >
                 <UButton
+                    class="icon-btn"
                     ref="themeButton"
                     :icon="themeModeIcon"
                     color="neutral"

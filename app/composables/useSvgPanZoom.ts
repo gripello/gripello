@@ -395,12 +395,12 @@ export function useSvgPanZoom(options: PanZoomOptions) {
         fitTo(initial.bounds, { padding: initial.padding, animate: false })
     }
 
-    let gestureRoot: HTMLElement | SVGSVGElement | null = null
+    let gestureRoot: HTMLElement | null = null
 
     onMounted(() => {
         const svg = svgRef.value
-        if (!svg) return
-        gestureRoot = svg.parentElement ?? svg
+        gestureRoot = svg?.parentElement ?? null
+        if (!svg || !gestureRoot) return
         gestureRoot.addEventListener('pointerdown', onPointerDown)
         window.addEventListener('pointermove', onPointerMove)
         window.addEventListener('pointerup', onPointerUp)

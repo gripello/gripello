@@ -52,9 +52,7 @@
 
         <template v-else>
             <section class="overview-section">
-                <div class="overview-section__head">
-                    <h2>{{ $t('overview.newRoutes') }}</h2>
-                </div>
+                <LayoutSectionHeader :title="$t('overview.newRoutes')" />
                 <OverviewNewRoutes
                     :routes="freshRoutes"
                     :wall-names="wallNames"
@@ -64,25 +62,24 @@
             <div class="overview-grid">
                 <div class="overview-main">
                     <section v-if="walls.length" class="overview-section">
-                        <div class="overview-section__head">
-                            <h2>{{ $t('overview.walls') }}</h2>
-                            <UButton
-                                :to="gymPath('/map')"
-                                color="neutral"
-                                variant="ghost"
-                                trailing-icon="i-lucide-map"
-                                data-testid="overview-open-map"
-                            >
-                                {{ $t('overview.openMap') }}
-                            </UButton>
-                        </div>
+                        <LayoutSectionHeader :title="$t('overview.walls')">
+                            <template #actions>
+                                <UButton
+                                    :to="gymPath('/map')"
+                                    color="neutral"
+                                    variant="ghost"
+                                    trailing-icon="i-lucide-map"
+                                    data-testid="overview-open-map"
+                                >
+                                    {{ $t('overview.openMap') }}
+                                </UButton>
+                            </template>
+                        </LayoutSectionHeader>
                         <OverviewWallTiles :walls="walls" />
                     </section>
 
                     <section class="overview-section">
-                        <div class="overview-section__head">
-                            <h2>{{ $t('overview.popular') }}</h2>
-                        </div>
+                        <LayoutSectionHeader :title="$t('overview.popular')" />
                         <MapRouteList
                             v-if="popular.length"
                             class="overview-popular"
@@ -95,22 +92,21 @@
                             link-rows
                             data-testid="overview-popular"
                         />
-                        <p v-else class="text-sm text-muted">
-                            {{ $t('overview.popularEmpty') }}
-                        </p>
+                        <LayoutEmptyState
+                            v-else
+                            icon="i-lucide-star"
+                            :title="$t('overview.popularEmpty')"
+                        />
                     </section>
                 </div>
 
                 <aside class="overview-side">
-                    <section
+                    <LayoutPanel
                         v-if="isLoggedIn"
-                        class="overview-card"
+                        :title="$t('overview.progressTitle')"
                         data-testid="overview-progress"
                     >
-                        <p class="overview-card__title">
-                            {{ $t('overview.progressTitle') }}
-                        </p>
-                        <p class="overview-card__value">
+                        <p class="text-sm">
                             {{
                                 $t('overview.progress', {
                                     sent: progress.sent,
@@ -122,7 +118,6 @@
                             :model-value="progressPercent"
                             color="primary"
                             size="lg"
-                            class="my-3"
                         />
                         <UButton
                             to="/logbook"
@@ -133,30 +128,29 @@
                         >
                             {{ $t('overview.openLogbook') }}
                         </UButton>
-                    </section>
+                    </LayoutPanel>
                     <AuthGuestCta
                         v-else
                         redirect="/logbook"
                         test-id-prefix="overview"
                     />
 
-                    <section
-                        v-if="routeBars.length || boulderBars.length"
-                        class="overview-card"
-                    >
-                        <p class="overview-card__title">
-                            {{ $t('overview.gradeSpread') }}
-                        </p>
-                        <div class="flex flex-col gap-5">
-                            <OverviewGradeSpread
-                                :title="$t('map.routes')"
-                                :bars="routeBars"
-                            />
-                            <OverviewGradeSpread
-                                :title="$t('map.boulders')"
-                                :bars="boulderBars"
-                            />
-                        </div>
+                    <section v-if="routeBars.length || boulderBars.length">
+                        <LayoutSectionHeader
+                            :title="$t('overview.gradeSpread')"
+                        />
+                        <LayoutPanel>
+                            <div class="flex flex-col gap-5">
+                                <OverviewGradeSpread
+                                    :title="$t('map.routes')"
+                                    :bars="routeBars"
+                                />
+                                <OverviewGradeSpread
+                                    :title="$t('map.boulders')"
+                                    :bars="boulderBars"
+                                />
+                            </div>
+                        </LayoutPanel>
                     </section>
                 </aside>
             </div>
@@ -325,20 +319,17 @@ const progressPercent = computed(() =>
 }
 
 .overview-section {
-    margin-bottom: 28px;
+    margin-bottom: 24px;
 }
 
-.overview-section__head {
+.overview-main {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 12px;
+    flex-direction: column;
+    gap: 24px;
 }
 
-.overview-section__head h2 {
-    font-size: 1.15rem;
-    font-weight: 700;
+.overview-main .overview-section {
+    margin-bottom: 0;
 }
 
 .overview-popular {
@@ -361,24 +352,7 @@ const progressPercent = computed(() =>
 .overview-side {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-}
-
-.overview-card {
-    padding: 16px;
-    border-radius: 12px;
-    border: 1px solid var(--ui-border);
-    background: var(--ui-bg);
-}
-
-.overview-card__title {
-    font-weight: 700;
-    margin-bottom: 8px;
-}
-
-.overview-card__value {
-    margin: 0;
-    font-size: 0.95rem;
+    gap: 24px;
 }
 
 @variant max-lg {

@@ -28,6 +28,7 @@ const props = defineProps<{
     banner?: string | null
     avatar?: string | null
     name?: string | null
+    id?: string | null
 }>()
 
 const SAMPLE_SIZE = 32
@@ -37,7 +38,7 @@ const palette = ref<string[]>([])
 const gradient = computed(() => {
     const fromAvatar = paletteGradient(palette.value)
     if (fromAvatar) return fromAvatar
-    const color = avatarColor(props.name)
+    const color = avatarColor(props.id || props.name)
     return `linear-gradient(135deg, ${color}, color-mix(in oklab, ${color} 35%, var(--ui-bg)))`
 })
 

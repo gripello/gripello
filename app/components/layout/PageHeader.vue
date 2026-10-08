@@ -3,10 +3,23 @@ defineProps<{
     title: string
     subtitle?: string
     inlineActions?: boolean
+    backTo?: string
+    backLabel?: string
 }>()
 </script>
 
 <template>
+    <UButton
+        v-if="backTo"
+        :to="backTo"
+        variant="link"
+        color="neutral"
+        icon="i-lucide-arrow-left"
+        class="mb-2 px-0"
+        data-testid="page-back"
+    >
+        {{ backLabel }}
+    </UButton>
     <header
         class="page-header flex justify-between gap-4 mb-4"
         :class="

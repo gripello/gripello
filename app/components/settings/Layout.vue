@@ -1,15 +1,18 @@
 <template>
     <div :class="{ 'max-lg:pb-24': hasChanges }">
-        <nav
-            class="settings-nav-mobile lg:hidden"
+        <LayoutTabs
+            v-model="selectedSection"
+            :items="sectionTabItems"
+            :content="false"
+            class="mb-4 lg:hidden"
             :aria-label="$t('settings.sections')"
         >
-            <UNavigationMenu
-                :items="sectionNavItems"
-                highlight
-                class="w-max min-w-full"
-            />
-        </nav>
+            <template #default="{ item }">
+                <span :data-testid="`${testIdPrefix}-section-${item.value}`">
+                    {{ item.label }}
+                </span>
+            </template>
+        </LayoutTabs>
 
         <div class="flex gap-8">
             <aside class="hidden w-52 shrink-0 lg:block">
@@ -27,6 +30,7 @@
 
             <div class="flex min-w-0 flex-1 flex-col gap-6">
                 <LayoutSaveBar
+                    class="lg:-mb-6"
                     :show="hasChanges"
                     :loading="saving"
                     :test-id-prefix="testIdPrefix"
@@ -67,6 +71,19 @@ const activeSection = computed(() =>
     ),
 )
 
+const selectedSection = computed({
+    get: () => activeSection.value,
+    set: (section: string) => navigateTo({ query: { section } }),
+})
+
+const sectionTabItems = computed(() =>
+    props.sections.map((section) => ({
+        label: section.label,
+        icon: section.icon,
+        value: section.id,
+    })),
+)
+
 const sectionNavItems = computed(() =>
     props.sections.map((section) => ({
         label: section.label,
@@ -84,17 +101,6 @@ onBeforeRouteLeave(() => confirmDiscard())
 </script>
 
 <style scoped>
-.settings-nav-mobile {
-    position: sticky;
-    top: calc(var(--app-top) + var(--app-top-inset, 0px));
-    z-index: 10;
-    margin: 0 -16px 16px;
-    padding: 0 16px;
-    overflow-x: auto;
-    background: var(--app-bg);
-    scrollbar-width: none;
-}
-
 .settings-nav-desktop {
     position: sticky;
     top: calc(var(--app-top) + var(--app-top-inset, 0px) + 16px);

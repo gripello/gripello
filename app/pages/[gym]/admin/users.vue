@@ -23,13 +23,7 @@
             </template>
         </LayoutPageHeader>
 
-        <UTabs
-            v-model="activeTab"
-            :items="tabs"
-            variant="link"
-            class="w-full"
-            data-testid="users-tabs"
-        >
+        <LayoutTabs v-model="activeTab" :items="tabs" data-testid="users-tabs">
             <template #members>
                 <AdminMembersCard
                     ref="membersCard"
@@ -40,12 +34,11 @@
             <template #roles>
                 <AdminRolePermissionsEditor ref="rolesEditor" class="mt-4" />
             </template>
-        </UTabs>
+        </LayoutTabs>
     </div>
 </template>
 
 <script setup lang="ts">
-import type { TabsItem } from '@nuxt/ui'
 import {
     adminUsersTabFromHash,
     adminUsersTabHash,
@@ -60,15 +53,15 @@ const membersCard = useTemplateRef<{ openInvite: () => void }>('membersCard')
 const rolesEditor = useTemplateRef<{ startCreate: () => void }>('rolesEditor')
 
 const activeTab = ref<AdminUsersTab>('members')
-const tabs = computed<TabsItem[]>(() => [
+const tabs = computed(() => [
     {
-        value: 'members',
+        value: 'members' as const,
         slot: 'members',
         label: t('members.title'),
         icon: 'i-lucide-users-round',
     },
     {
-        value: 'roles',
+        value: 'roles' as const,
         slot: 'roles',
         label: t('permissions.title'),
         icon: 'i-lucide-shield-user',

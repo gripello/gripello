@@ -1,7 +1,7 @@
 <template>
-    <ul
+    <LayoutListGroup
         v-if="routes.length"
-        class="scope-list scope-list--page divide-y divide-default rounded-lg border border-default bg-default"
+        class="scope-list scope-list--page overflow-y-auto"
     >
         <li
             v-for="route in routes"
@@ -17,25 +17,20 @@
                 name="i-lucide-circle-check"
                 class="mr-3 size-[16px] text-success"
             />
-            <RouteColorDot :color="route.color" :size="20" class="mr-3" />
-            <span class="min-w-0 flex-1 truncate text-sm text-highlighted">
-                {{ route.name }}
-            </span>
-            <span class="mr-2 text-sm font-semibold text-default">
-                <GradeLabel :source="route" />
-            </span>
+            <RouteSummary :route="route" size="sm" class="mr-2 flex-1" />
             <UButton
                 :icon="
                     mode === 'missing' ? 'i-lucide-check' : 'i-lucide-undo-2'
                 "
                 color="neutral"
                 variant="ghost"
+                class="icon-btn"
                 :aria-label="actionLabel"
                 :data-testid="`inventory-${actionPrefix}-${route.id}`"
                 @click="emit('action', route)"
             />
         </li>
-    </ul>
+    </LayoutListGroup>
 
     <LayoutEmptyState v-else :icon="emptyIcon" :title="emptyTitle" />
 </template>

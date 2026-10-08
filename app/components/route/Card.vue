@@ -1,6 +1,6 @@
 <template>
     <div
-        class="list-card route-card rounded-lg bg-elevated"
+        class="list-card route-card rounded-lg bg-default ring ring-default"
         :data-testid="`route-card-${route.id}`"
     >
         <div class="list-card__header">
@@ -13,7 +13,7 @@
                 @update:model-value="$emit('update:modelValue', !!$event)"
             />
             <RouteColorDot :color="route.color" :ticked="ticked" :size="32" />
-            <div class="list-card__title">
+            <div class="list-card__title flex-row items-center gap-1.5">
                 <span class="list-card__name" data-testid="route-card-name">{{
                     route.name
                 }}</span>
@@ -40,8 +40,6 @@
             />
         </div>
 
-        <USeparator />
-
         <div class="list-card__meta">
             <div
                 v-if="route.comment"
@@ -54,27 +52,11 @@
                 <span class="route-card__comment">{{ route.comment }}</span>
             </div>
 
-            <div
-                v-if="route.creator?.length"
-                class="list-card__meta-row list-card__meta-row--full"
-            >
-                <UIcon
-                    name="i-lucide-hard-hat"
-                    class="list-card__meta-icon size-[15px]"
-                />
-                <div class="flex flex-wrap gap-1">
-                    <UBadge
-                        v-for="c in route.creator"
-                        :key="c"
-                        size="sm"
-                        color="neutral"
-                        variant="soft"
-                        >{{ c }}</UBadge
-                    >
-                </div>
-            </div>
-
             <div class="list-card__pills">
+                <span v-if="route.creator?.length" class="list-card__pill">
+                    <UIcon name="i-lucide-hard-hat" class="size-[13px]" />
+                    {{ route.creator.join(', ') }}
+                </span>
                 <span v-if="anchorPoint !== '—'" class="list-card__pill">
                     {{ $t('climbing.anchor_point') }} {{ anchorPoint }}
                 </span>
@@ -178,6 +160,7 @@ const score = computed(() => formatScore(props.route, locale.value))
 
 .route-card__badges {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 4px;
 }

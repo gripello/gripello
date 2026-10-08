@@ -22,22 +22,22 @@
             data-testid="user-menu-activator"
             :aria-label="$t('nav.userMenu')"
         >
-            <UUser
+            <ClimberAvatar
+                :id="user?.id"
                 :name="displayName"
-                :description="user?.email"
-                :avatar="{
-                    src: image || undefined,
-                    text: initials,
-                    class: image ? undefined : 'bg-primary',
-                    ui: { fallback: 'text-inverted font-bold' },
-                }"
-                class="min-w-0 flex-1 text-start"
-                :ui="{
-                    wrapper: collapsed ? 'hidden' : 'min-w-0',
-                    name: 'truncate',
-                    description: 'truncate',
-                }"
+                :avatar="user?.avatar"
+                :size="collapsed ? 'xs' : 'sm'"
             />
+            <span v-if="!collapsed" class="min-w-0 flex-1 text-start">
+                <span
+                    class="block truncate text-sm font-medium text-highlighted"
+                >
+                    {{ displayName }}
+                </span>
+                <span class="block truncate text-xs text-muted">
+                    {{ user?.email }}
+                </span>
+            </span>
             <UIcon
                 v-if="!collapsed"
                 name="i-lucide-chevrons-up-down"
@@ -49,6 +49,7 @@
 
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
+import { avatarColor, nameInitials } from '~/utils/avatar'
 
 defineProps<{ collapsed?: boolean }>()
 
@@ -72,15 +73,6 @@ const displayName = computed(
         t('account.unknownUser'),
 )
 
-const initials = computed(() => {
-    const name = displayName.value
-    return name
-        .split(' ')
-        .slice(0, 2)
-        .map((part: string) => part[0]?.toUpperCase() ?? '')
-        .join('')
-})
-
 const isLoggingOut = ref(false)
 
 const menuItems = computed<DropdownMenuItem[][]>(() => [
@@ -91,8 +83,10 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
             description: user.value?.email,
             avatar: {
                 src: image.value || undefined,
-                text: initials.value,
+                text: nameInitials(displayName.value),
                 alt: displayName.value,
+                class: 'text-white',
+                style: { backgroundColor: avatarColor(user.value?.id) },
             },
         },
     ],

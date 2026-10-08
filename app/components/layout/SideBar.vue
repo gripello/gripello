@@ -2,6 +2,7 @@
     <USidebar
         :open="open"
         collapsible="icon"
+        @update:open="keepOpenControlled"
         :ui="{
             container: staff ? 'z-40 bg-muted' : 'z-40 bg-default',
             header: 'flex-col items-stretch justify-center gap-2 px-3 py-2',
@@ -111,6 +112,8 @@ const { t } = useI18n()
 const route = useRoute()
 
 const { open } = useSidebar()
+// A listener makes USidebar's `open` model controlled; without it, crossing the mobile breakpoint leaves the rail collapsed while `open` is still true.
+const keepOpenControlled = () => {}
 const coarsePointer = useCoarsePointer()
 const { gym, slug } = useGym()
 const pb = usePocketbase()

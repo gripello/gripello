@@ -6,16 +6,16 @@
         <div
             class="pointer-events-none absolute inset-x-0 top-0 h-72 bg-linear-to-b from-primary/10 to-transparent"
         />
-        <header class="relative flex items-center gap-6">
+        <header class="relative flex flex-wrap items-center gap-6">
             <LayoutBrandLogo
                 v-if="gym"
                 :gym="gym"
                 class="tv-logo hidden md:flex"
             />
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 flex-1 basis-full md:basis-0">
                 <p class="mb-1 text-xl text-muted">{{ seasonLabel }}</p>
                 <h1
-                    class="truncate text-4xl font-black tracking-tight text-highlighted lg:text-6xl"
+                    class="line-clamp-2 text-4xl font-black tracking-tight break-words text-highlighted lg:text-6xl"
                 >
                     {{ t('leaderboard.title') }}
                 </h1>

@@ -18,7 +18,7 @@
         />
         <button
             type="button"
-            class="relative block h-28 w-full overflow-hidden rounded-2xl ring ring-default sm:h-40"
+            class="relative block aspect-[4/1] max-h-60 w-full overflow-hidden rounded-lg ring ring-default"
             :aria-label="$t('account.changeBanner')"
             data-testid="profile-banner-upload"
             @click="bannerInput?.click()"
@@ -27,6 +27,7 @@
                 :banner="banner"
                 :avatar="avatar"
                 :name="name"
+                :id="userId"
                 class="size-full"
             />
             <span
@@ -48,21 +49,14 @@
         />
         <button
             type="button"
-            class="absolute start-4 bottom-0 rounded-full ring-4 ring-(--ui-bg-elevated) sm:start-6"
+            class="absolute start-4 bottom-0 rounded-full ring-4 ring-(--ui-bg) sm:start-6"
             :aria-label="$t('account.changeAvatar')"
             data-testid="profile-avatar-upload"
             @click="avatarInput?.click()"
         >
-            <UAvatar
-                :src="avatar || undefined"
-                :text="initials"
-                :icon="initials ? undefined : 'i-lucide-user'"
-                class="size-24 text-3xl font-bold"
-                :class="avatar ? undefined : 'bg-primary'"
-                :ui="{ fallback: 'text-inverted', icon: 'text-inverted' }"
-            />
+            <ClimberAvatar :id="userId" :src="avatar" :name="name" size="lg" />
             <span
-                class="absolute end-0 bottom-0 flex size-8 items-center justify-center rounded-full bg-primary text-inverted ring-2 ring-(--ui-bg-elevated)"
+                class="absolute end-0 bottom-0 flex size-8 items-center justify-center rounded-full bg-primary text-inverted ring-2 ring-(--ui-bg)"
             >
                 <UIcon name="i-lucide-camera" class="size-4" />
             </span>
@@ -72,16 +66,31 @@
         >
             {{ name }}
         </p>
+        <ImageCropDialog
+            :file="pending?.file ?? null"
+            :title="
+                pending?.kind === 'banner'
+                    ? $t('account.changeBanner')
+                    : $t('account.changeAvatar')
+            "
+            :aspect="pending?.kind === 'banner' ? BANNER_ASPECT : 1"
+            :output-width="pending?.kind === 'banner' ? 1600 : 640"
+            :round="pending?.kind === 'avatar'"
+            :avatar-marker="pending?.kind === 'banner'"
+            @cropped="onCropped"
+            @cancel="pending = null"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
-import { nameInitials } from '~/utils/avatar'
+const BANNER_ASPECT = 4
 
-const props = defineProps<{
+defineProps<{
     banner: string | null
     avatar: string | null
     name: string
+    userId?: string
 }>()
 const emit = defineEmits<{
     banner: [file: File]
@@ -91,15 +100,26 @@ const emit = defineEmits<{
 
 const bannerInput = useTemplateRef<HTMLInputElement>('bannerInput')
 const avatarInput = useTemplateRef<HTMLInputElement>('avatarInput')
-const initials = computed(() => nameInitials(props.name) || undefined)
+const pending = shallowRef<{ kind: 'banner' | 'avatar'; file: File } | null>(
+    null,
+)
 
 function pick(event: Event, kind: 'banner' | 'avatar') {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
-    if (file) {
-        if (kind === 'banner') emit('banner', file)
-        else emit('avatar', file)
-    }
     input.value = ''
+    if (!file) return
+    if (file.type === 'image/svg+xml') emitImage(kind, file)
+    else pending.value = { kind, file }
+}
+
+function onCropped(file: File) {
+    if (pending.value) emitImage(pending.value.kind, file)
+    pending.value = null
+}
+
+function emitImage(kind: 'banner' | 'avatar', file: File) {
+    if (kind === 'banner') emit('banner', file)
+    else emit('avatar', file)
 }
 </script>

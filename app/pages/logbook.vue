@@ -1,9 +1,6 @@
 <template>
     <div class="mx-auto w-full p-4">
-        <LayoutPageHeader
-            :title="t('ticks.logbook')"
-            :subtitle="t('ticks.logbookSubtitle')"
-        >
+        <LayoutPageHeader :title="t('ticks.logbook')">
             <template v-if="allTicks.length" #actions>
                 <div class="flex flex-wrap gap-2">
                     <USelect
@@ -89,40 +86,19 @@
                 </div>
             </div>
 
-            <div
-                role="tablist"
-                class="mb-4 flex gap-1 overflow-x-auto border-b"
+            <LayoutTabs
+                v-model="tab"
+                :items="tabItems"
+                :content="false"
+                class="mb-4"
                 data-testid="logbook-tabs"
             >
-                <UButton
-                    v-for="option in LOGBOOK_TABS"
-                    :key="option"
-                    role="tab"
-                    :aria-selected="tab === option"
-                    color="neutral"
-                    variant="ghost"
-                    :class="[
-                        '-mb-px shrink-0 rounded-none border-b-2',
-                        tab === option
-                            ? 'border-primary text-primary'
-                            : 'border-transparent',
-                    ]"
-                    :data-testid="`logbook-tab-${option}`"
-                    @click="tab = option"
-                >
-                    {{ t(`ticks.tabs.${option}`) }}
-                    <UBadge
-                        v-if="option === 'projects' && projects.length"
-                        size="sm"
-                        color="neutral"
-                        variant="soft"
-                        class="ms-2"
-                        data-testid="logbook-projects-count"
-                    >
-                        {{ projects.length }}
-                    </UBadge>
-                </UButton>
-            </div>
+                <template #default="{ item }">
+                    <span :data-testid="`logbook-tab-${item.value}`">
+                        {{ item.label }}
+                    </span>
+                </template>
+            </LayoutTabs>
 
             <div v-if="tab === 'sessions'" role="tabpanel">
                 <div class="grid grid-cols-12 gap-3">
@@ -321,6 +297,19 @@ const logbookTicks = computed(() => ticksInGym(allTicks.value, gymId.value))
 const kind = ref<LogbookKind>(preferredKind(logbookTicks.value))
 const range = ref<LogbookRange>('12m')
 const tab = ref<(typeof LOGBOOK_TABS)[number]>('sessions')
+const tabItems = computed(() =>
+    LOGBOOK_TABS.map((value) => ({
+        value,
+        label: t(`ticks.tabs.${value}`),
+        badge:
+            value === 'projects' && projects.value.length
+                ? {
+                      label: projects.value.length,
+                      'data-testid': 'logbook-projects-count',
+                  }
+                : undefined,
+    })),
+)
 const routeType = computed(() =>
     kind.value === 'boulder' ? 'Boulder' : 'Route',
 )

@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import InfoList from '~/components/layout/InfoList.vue'
 
 vi.stubGlobal('useVersionCheck', () => ({
-    appVersionLabel: ref('2.1.1'),
+    appVersionLabel: '2.1.1',
     installedNotes: ref(''),
     installedBase: ref('2.1.1'),
     installedPublishedAt: ref(''),

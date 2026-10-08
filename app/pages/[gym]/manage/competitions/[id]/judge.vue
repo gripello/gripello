@@ -1,21 +1,14 @@
 <template>
     <div class="mx-auto w-full p-4">
-        <UButton
-            v-if="competition"
-            :to="backTo"
-            icon="i-lucide-arrow-left"
-            color="neutral"
-            variant="link"
-            class="mb-2 px-0"
-            data-testid="judge-back"
-        >
-            {{
+        <LayoutPageHeader
+            :title="t('competitions.judge.title')"
+            :back-to="competition ? backTo : undefined"
+            :back-label="
                 backTo === JUDGE_PICKER
                     ? t('competitions.judge.title')
-                    : competition.name
-            }}
-        </UButton>
-        <LayoutPageHeader :title="t('competitions.judge.title')">
+                    : competition?.name
+            "
+        >
             <template v-if="competitionItems.length > 1" #actions>
                 <USelect
                     :model-value="competitionId"
@@ -49,7 +42,7 @@
                         :variant="
                             compRoute.id === routeId ? 'solid' : 'outline'
                         "
-                        class="shrink-0 tabular-nums"
+                        class="max-w-full shrink-0 tabular-nums"
                         :data-testid="`judge-route-${compRoute.number}`"
                         :data-route-chip="compRoute.id"
                         @click="pickedRouteId = compRoute.id"
@@ -59,7 +52,7 @@
                             :size="14"
                         />
                         <span class="font-bold">{{ compRoute.number }}</span>
-                        <span class="max-w-32 truncate">{{
+                        <span class="truncate">{{
                             routeOf(compRoute)?.name
                         }}</span>
                         <span class="text-xs opacity-70"
@@ -73,38 +66,33 @@
                     v-if="currentRoute"
                     class="flex flex-col gap-2 lg:flex-row lg:items-center"
                 >
-                    <div class="flex min-w-0 flex-1 items-center gap-3">
-                        <RouteColorDot
-                            :color="routeOf(currentRoute)?.color"
-                            :size="36"
-                        />
-                        <div class="min-w-0">
-                            <p
-                                class="truncate text-lg font-semibold text-highlighted"
-                                data-testid="judge-route-name"
-                            >
-                                {{ currentRoute.number }} ·
-                                {{ routeOf(currentRoute)?.name }}
-                            </p>
-                            <p
-                                class="flex flex-wrap items-center gap-x-2 text-sm text-muted"
-                                data-testid="judge-route-details"
-                            >
-                                <span>{{
-                                    translatedColorName(
-                                        t,
-                                        routeOf(currentRoute)?.color,
-                                    )
+                    <div
+                        class="flex min-w-0 flex-1 items-center gap-3"
+                        data-testid="judge-route-name"
+                    >
+                        <span
+                            class="text-lg font-bold tabular-nums text-highlighted"
+                            >{{ currentRoute.number }}</span
+                        >
+                        <RouteSummary
+                            :route="routeOf(currentRoute)"
+                            size="lg"
+                            class="min-w-0"
+                        >
+                            <template #meta>
+                                <span data-testid="judge-route-details">{{
+                                    [
+                                        translatedColorName(
+                                            t,
+                                            routeOf(currentRoute)?.color,
+                                        ),
+                                        wallOf(currentRoute),
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' · ')
                                 }}</span>
-                                <GradeLabel
-                                    v-if="routeOf(currentRoute)"
-                                    :source="routeOf(currentRoute)!"
-                                />
-                                <span v-if="wallOf(currentRoute)">{{
-                                    wallOf(currentRoute)
-                                }}</span>
-                            </p>
-                        </div>
+                            </template>
+                        </RouteSummary>
                     </div>
                     <div class="flex gap-2">
                         <UInput
@@ -118,13 +106,11 @@
                             data-testid="judge-search"
                             @keydown.esc="search = ''"
                         />
-                        <UTabs
+                        <SegmentedControl
                             v-model="filter"
                             :items="filterItems"
-                            :content="false"
-                            size="sm"
-                            class="w-auto shrink-0"
-                            data-testid="judge-filter"
+                            test-id="judge-filter"
+                            class="shrink-0"
                         />
                     </div>
                 </div>
@@ -161,13 +147,15 @@
                         >
                         <div class="min-w-0 flex-1">
                             <p
-                                class="flex items-center gap-2 truncate font-medium text-highlighted"
+                                class="flex min-w-0 items-center gap-2 font-medium text-highlighted"
                             >
-                                {{ entry.display_name }}
+                                <span class="truncate">{{
+                                    entry.display_name
+                                }}</span>
                                 <UIcon
                                     v-if="saving.has(entry.id)"
                                     name="i-lucide-loader-circle"
-                                    class="size-4 animate-spin text-muted"
+                                    class="size-4 shrink-0 animate-spin text-muted"
                                 />
                             </p>
                             <p class="truncate text-xs text-muted">
@@ -247,45 +235,15 @@
                         v-else
                         class="flex flex-wrap items-center justify-end gap-2"
                     >
-                        <div class="flex items-center gap-1">
-                            <UButton
-                                icon="i-lucide-minus"
-                                color="neutral"
-                                variant="outline"
-                                size="lg"
-                                class="icon-btn"
-                                :aria-label="
-                                    t('competitions.scorecard.undoAttempt')
-                                "
-                                :data-testid="`judge-undo-${entry.bib}`"
-                                @click="act(entry, { type: 'undoAttempt' })"
-                            />
-                            <span
-                                class="min-w-16 text-center text-base font-semibold tabular-nums"
-                                :data-testid="`judge-attempts-${entry.bib}`"
-                            >
-                                {{
-                                    t(
-                                        'competitions.scorecard.attempts',
-                                        { n: stateOf(entry).attempts },
-                                        stateOf(entry).attempts,
-                                    )
-                                }}
-                            </span>
-                            <UButton
-                                icon="i-lucide-plus"
-                                color="neutral"
-                                variant="outline"
-                                size="lg"
-                                class="icon-btn"
-                                :disabled="!!stateOf(entry).topAttempt"
-                                :aria-label="
-                                    t('competitions.scorecard.addAttempt')
-                                "
-                                :data-testid="`judge-attempt-${entry.bib}`"
-                                @click="act(entry, { type: 'attempt' })"
-                            />
-                        </div>
+                        <CompetitionAttemptStepper
+                            :attempts="stateOf(entry).attempts"
+                            :add-disabled="!!stateOf(entry).topAttempt"
+                            size="lg"
+                            test-id-prefix="judge"
+                            :test-id-suffix="entry.bib"
+                            @undo="act(entry, { type: 'undoAttempt' })"
+                            @add="act(entry, { type: 'attempt' })"
+                        />
                         <UButton
                             v-if="currentRoute.zone"
                             :color="
@@ -513,9 +471,12 @@ const toppedByRoute = computed(() => {
     return counts
 })
 const filterItems = computed(() => [
-    { label: t('competitions.scorecard.filters.all'), value: 'all' },
-    { label: t('competitions.scorecard.filters.open'), value: 'open' },
-    { label: t('competitions.scorecard.filters.topped'), value: 'topped' },
+    { label: t('competitions.scorecard.filters.all'), value: 'all' as const },
+    { label: t('competitions.scorecard.filters.open'), value: 'open' as const },
+    {
+        label: t('competitions.scorecard.filters.topped'),
+        value: 'topped' as const,
+    },
 ])
 
 watch(routeId, async (id) => {

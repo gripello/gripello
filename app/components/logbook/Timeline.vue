@@ -22,14 +22,10 @@
             data-testid="timeline-empty"
         />
         <div v-for="group in days" :key="group.day" class="mb-6 last:mb-0">
-            <h3
-                class="mb-2 text-xs font-semibold tracking-wide text-muted uppercase"
-            >
+            <LayoutEyebrow>
                 {{ activityDayLabel(group.day, t, locale) }}
-            </h3>
-            <ul
-                class="divide-y divide-default overflow-hidden rounded-2xl bg-elevated/50 ring ring-default"
-            >
+            </LayoutEyebrow>
+            <LayoutListGroup>
                 <li
                     v-for="entry in group.entries"
                     :key="`${entry.kind}-${entry.id}`"
@@ -42,60 +38,66 @@
                         <UIcon :name="KIND_ICONS[entry.kind]" class="size-5" />
                     </span>
                     <span class="min-w-0 flex-1">
-                        <span class="flex min-w-0 items-center gap-2 text-sm">
-                            <RouteColorDot :color="entry.color" :size="14" />
-                            <NuxtLink
-                                v-if="entry.routeId"
-                                :to="routeLink(entry)"
-                                class="truncate font-semibold text-highlighted hover:underline"
-                            >
-                                {{ entry.routeName || t('timeline.deleted') }}
-                            </NuxtLink>
-                            <span
-                                v-else
-                                class="truncate font-semibold text-muted"
-                                data-testid="timeline-removed-route"
-                            >
-                                {{ entry.routeName || t('ticks.removedRoute') }}
-                            </span>
-                            <UBadge
-                                v-if="entry.tickType"
-                                :color="TICK_COLORS[entry.tickType]"
-                                variant="soft"
-                                size="sm"
-                                class="shrink-0"
-                            >
-                                {{ t(`ticks.types.${entry.tickType}`) }}
-                            </UBadge>
-                            <span
-                                v-else-if="entry.rating"
-                                class="flex shrink-0"
-                                role="img"
-                                :aria-label="`${entry.rating}/5`"
-                            >
-                                <UIcon
-                                    v-for="star in 5"
-                                    :key="star"
-                                    name="i-lucide-star"
-                                    mode="svg"
-                                    class="size-3.5"
-                                    :class="
-                                        star <= entry.rating
-                                            ? 'text-amber-500 **:fill-current'
-                                            : 'text-dimmed'
-                                    "
-                                />
-                            </span>
-                            <UBadge
-                                v-else-if="entry.kind === 'beta'"
-                                color="neutral"
-                                variant="soft"
-                                size="sm"
-                                class="shrink-0"
-                            >
-                                {{ t('timeline.beta') }}
-                            </UBadge>
-                        </span>
+                        <RouteSummary
+                            :route="{
+                                name:
+                                    entry.routeName ||
+                                    t(
+                                        entry.routeId
+                                            ? 'timeline.deleted'
+                                            : 'ticks.removedRoute',
+                                    ),
+                                color: entry.color,
+                            }"
+                            :to="entry.routeId ? routeLink(entry) : undefined"
+                            :data-testid="
+                                entry.routeId
+                                    ? undefined
+                                    : 'timeline-removed-route'
+                            "
+                            size="sm"
+                            hide-grade
+                        >
+                            <template #markers>
+                                <UBadge
+                                    v-if="entry.tickType"
+                                    :color="TICK_TYPE_COLORS[entry.tickType]"
+                                    variant="soft"
+                                    size="sm"
+                                    class="ml-1 shrink-0"
+                                >
+                                    {{ t(`ticks.types.${entry.tickType}`) }}
+                                </UBadge>
+                                <span
+                                    v-else-if="entry.rating"
+                                    class="ml-1 flex shrink-0"
+                                    role="img"
+                                    :aria-label="`${entry.rating}/5`"
+                                >
+                                    <UIcon
+                                        v-for="star in 5"
+                                        :key="star"
+                                        name="i-lucide-star"
+                                        mode="svg"
+                                        class="size-3.5"
+                                        :class="
+                                            star <= entry.rating
+                                                ? 'text-amber-500 **:fill-current'
+                                                : 'text-dimmed'
+                                        "
+                                    />
+                                </span>
+                                <UBadge
+                                    v-else-if="entry.kind === 'beta'"
+                                    color="neutral"
+                                    variant="soft"
+                                    size="sm"
+                                    class="ml-1 shrink-0"
+                                >
+                                    {{ t('timeline.beta') }}
+                                </UBadge>
+                            </template>
+                        </RouteSummary>
                         <span
                             v-if="entry.comment"
                             class="mt-1 line-clamp-2 text-sm text-muted"
@@ -107,7 +109,7 @@
                         {{ timeAgo(entry.at, t, locale) }}
                     </span>
                 </li>
-            </ul>
+            </LayoutListGroup>
         </div>
     </div>
 </template>
@@ -115,6 +117,7 @@
 <script setup lang="ts">
 import { timeAgo } from '#shared/utils/formatting'
 import { activityDayLabel } from '~/utils/feed'
+import { TICK_TYPE_COLORS } from '~/utils/ticks'
 import {
     TIMELINE_KINDS,
     timelineDays,
@@ -129,11 +132,6 @@ const KIND_ICONS = {
     attempt: 'i-lucide-repeat',
     review: 'i-lucide-message-square-text',
     beta: 'i-lucide-video',
-} as const
-const TICK_COLORS = {
-    flash: 'warning',
-    top: 'success',
-    attempt: 'neutral',
 } as const
 
 const props = defineProps<{

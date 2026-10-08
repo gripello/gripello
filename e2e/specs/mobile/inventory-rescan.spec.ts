@@ -7,7 +7,13 @@ import { gotoSettled } from '../../support/nav'
 import { PB_URL } from '../../support/map'
 import { authAsSuperuser, e2eGymId, uiaa } from '../../support/seed'
 
-const AUTH_FILE = path.join(__dirname, '..', '..', '.auth', 'admin.json')
+const AUTH_FILE = path.join(
+    import.meta.dirname,
+    '..',
+    '..',
+    '.auth',
+    'admin.json',
+)
 
 test('a code shown again after undo is scanned again', async ({
     baseURL,

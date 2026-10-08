@@ -49,7 +49,7 @@ describe('SegmentedControl', () => {
 
         expect(
             wrapper.get('[data-testid="kind"]').attributes('data-size'),
-        ).toBe('xs')
+        ).toBe('sm')
         expect(wrapper.get('[data-testid="kind-boulder"]').text()).toBe(
             'Boulders',
         )

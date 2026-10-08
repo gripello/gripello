@@ -3,6 +3,7 @@
         v-model="dialog"
         max-width="680"
         closable
+        sheet-on-mobile
         :subtitle="
             $t('notifications.releaseNotes.installedVersion', [
                 installedVersion,
@@ -19,32 +20,25 @@
             {{ $t('notifications.releaseNotes.title') }}
         </template>
 
-        <div
+        <LayoutLoadingState
             v-if="loading"
-            class="flex justify-center py-8"
+            :count="2"
             data-testid="release-notes-loading"
-        >
-            <UIcon
-                name="i-lucide-loader-circle"
-                class="size-6 animate-spin text-primary"
-            />
-        </div>
+        />
 
-        <UAlert
+        <LayoutEmptyState
             v-else-if="error"
-            color="error"
-            variant="soft"
-            icon="i-lucide-circle-alert"
-            :description="$t('notifications.releaseNotes.error')"
+            variant="error"
+            :card="false"
+            :title="$t('notifications.releaseNotes.error')"
             data-testid="release-notes-error"
         />
 
-        <UAlert
+        <LayoutEmptyState
             v-else-if="!notes && !commits.length"
-            color="info"
-            variant="soft"
-            icon="i-lucide-info"
-            :description="$t('notifications.releaseNotes.notFound')"
+            icon="i-lucide-tag"
+            :card="false"
+            :title="$t('notifications.releaseNotes.notFound')"
             data-testid="release-notes-empty"
         />
 

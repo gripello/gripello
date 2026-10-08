@@ -65,7 +65,7 @@
                 </template>
                 <template v-else-if="file">
                     <div
-                        class="overflow-hidden rounded-2xl ring ring-default [&_video]:max-h-[45vh]"
+                        class="overflow-hidden rounded-lg ring ring-default [&_video]:max-h-[45vh]"
                         data-testid="beta-file-preview"
                     >
                         <RouteBetaPlayer :src="fileUrl" />
@@ -100,7 +100,7 @@
                 </template>
                 <label
                     v-else
-                    class="flex h-48 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-4 text-center transition"
+                    class="flex h-48 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-4 text-center transition"
                     :class="
                         dragging
                             ? 'border-primary bg-primary/10 text-primary'

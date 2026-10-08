@@ -13,6 +13,7 @@
                 data-testid="placement-location"
             />
             <UButton
+                class="icon-btn"
                 icon="i-lucide-undo-2"
                 color="neutral"
                 variant="ghost"
@@ -22,36 +23,16 @@
                 data-testid="placement-undo"
                 @click="placement.undo()"
             />
-            <UPopover :content="{ align: 'end' }">
+            <UDropdownMenu :items="moreItems" :content="{ align: 'end' }">
                 <UButton
                     icon="i-lucide-ellipsis-vertical"
                     color="neutral"
                     variant="ghost"
+                    class="icon-btn"
                     :aria-label="$t('mapPlacement.more')"
                     data-testid="placement-more"
                 />
-                <template #content="{ close }">
-                    <div class="flex min-w-[200px] flex-col gap-0.5 p-1">
-                        <UButton
-                            icon="i-lucide-circle-x"
-                            color="neutral"
-                            variant="ghost"
-                            :label="$t('mapPlacement.discard')"
-                            :disabled="!placement.changes.value.length"
-                            data-testid="placement-discard"
-                            @click="runAndClose(close, discard)"
-                        />
-                        <UButton
-                            v-if="can('manage_settings')"
-                            icon="i-lucide-land-plot"
-                            color="neutral"
-                            variant="ghost"
-                            :label="$t('routes.mapEditor')"
-                            :to="gymPath(`/admin/map?location=${locationId}`)"
-                        />
-                    </div>
-                </template>
-            </UPopover>
+            </UDropdownMenu>
             <UButton
                 color="primary"
                 variant="solid"
@@ -122,23 +103,14 @@
                 @cover="sheetCover = $event"
             >
                 <template #header>
-                    <span
+                    <RouteSummary
                         v-if="hint === null && placement.selectedPlaced.value"
-                        class="flex min-w-0 flex-1 items-center gap-2"
+                        :route="placement.selectedPlaced.value"
+                        size="sm"
+                        class="flex-1"
                         aria-live="polite"
                         data-testid="placement-selected"
-                    >
-                        <RouteColorDot
-                            :color="placement.selectedPlaced.value.color"
-                            :size="18"
-                        />
-                        <span class="truncate text-sm font-semibold">{{
-                            placement.selectedPlaced.value.name
-                        }}</span>
-                        <span class="shrink-0 text-xs text-muted">{{
-                            formatGrade(placement.selectedPlaced.value)
-                        }}</span>
-                    </span>
+                    />
                     <span
                         v-else
                         class="placement-hint text-xs"
@@ -163,6 +135,7 @@
                             placement.armedRouteId.value ||
                             placement.checkedIds.value.size
                         "
+                        class="icon-btn"
                         icon="i-lucide-x"
                         color="neutral"
                         variant="ghost"
@@ -173,6 +146,7 @@
                     />
                     <template v-else-if="placement.selectedPlaced.value">
                         <UButton
+                            class="icon-btn"
                             icon="i-lucide-chevron-left"
                             color="neutral"
                             variant="soft"
@@ -183,6 +157,7 @@
                             @click="placement.nudge(-1)"
                         />
                         <UButton
+                            class="icon-btn"
                             icon="i-lucide-chevron-right"
                             color="neutral"
                             variant="soft"
@@ -193,6 +168,7 @@
                             @click="placement.nudge(1)"
                         />
                         <UButton
+                            class="icon-btn"
                             icon="i-lucide-map-pin-x"
                             color="neutral"
                             variant="ghost"
@@ -227,6 +203,7 @@
                             </span>
                         </p>
                         <UButton
+                            class="icon-btn"
                             icon="i-lucide-x"
                             color="neutral"
                             variant="ghost"
@@ -314,24 +291,18 @@
                     </UButton>
                 </div>
 
-                <div class="placement-tabs" role="tablist">
-                    <button
-                        v-for="tab in placementTabs"
-                        :key="tab.value"
-                        type="button"
-                        role="tab"
-                        class="placement-tab"
-                        :class="{
-                            'placement-tab--active':
-                                placement.tab.value === tab.value,
-                        }"
-                        :aria-selected="placement.tab.value === tab.value"
-                        :data-testid="`placement-tab-${tab.value}`"
-                        @click="placement.tab.value = tab.value"
-                    >
-                        {{ tab.label }}
-                    </button>
-                </div>
+                <LayoutTabs
+                    v-model="placement.tab.value"
+                    :items="placementTabs"
+                    :content="false"
+                    data-testid="placement-tabs"
+                >
+                    <template #default="{ item }">
+                        <span :data-testid="`placement-tab-${item.value}`">
+                            {{ item.label }}
+                        </span>
+                    </template>
+                </LayoutTabs>
 
                 <div class="placement-tools">
                     <UInput
@@ -416,21 +387,15 @@
                                 placement.toggleChecked(item.id)
                             "
                         />
-                        <RouteColorDot
-                            :color="item.color"
-                            :size="20"
-                            class="mr-3"
+                        <RouteSummary
+                            :route="item"
+                            size="sm"
+                            :meta="anchorLabel(item)"
+                            class="flex-1"
                         />
-                        <span class="min-w-0 flex-1">
-                            <span class="block truncate text-sm">{{
-                                item.name
-                            }}</span>
-                            <span class="block truncate text-xs text-muted">
-                                {{ routeSubtitle(item) }}
-                            </span>
-                        </span>
                         <UButton
                             v-if="item.wall"
+                            class="icon-btn"
                             icon="i-lucide-map-pin-x"
                             color="neutral"
                             variant="ghost"
@@ -494,7 +459,6 @@
 import type { RouteRecord } from '~/types/models'
 import type { SheetSnap } from '~/components/map/Sheet.vue'
 import { formatAnchorPoint, formatDate } from '#shared/utils/formatting'
-import { formatGrade } from '#shared/utils/grades'
 import { cacheKeys } from '~/utils/realtimeCache'
 
 const gymPath = useGymPath()
@@ -565,6 +529,25 @@ const placementTabs = computed(() => [
     },
 ])
 
+const moreItems = computed(() => [
+    {
+        label: t('mapPlacement.discard'),
+        icon: 'i-lucide-circle-x',
+        disabled: !placement.changes.value.length,
+        onSelect: discard,
+        'data-testid': 'placement-discard',
+    },
+    ...(can('manage_settings')
+        ? [
+              {
+                  label: t('routes.mapEditor'),
+                  icon: 'i-lucide-land-plot',
+                  to: gymPath(`/admin/map?location=${locationId.value}`),
+              },
+          ]
+        : []),
+])
+
 const sheetSnap = ref<SheetSnap>('half')
 const sheetCover = ref(0)
 
@@ -604,12 +587,11 @@ const hint = computed(() => {
     return t('mapPlacement.hints.idle')
 })
 
-function routeSubtitle(item: RouteRecord) {
-    const grade = formatGrade(item)
+function anchorLabel(item: RouteRecord) {
     const anchor = formatAnchorPoint(item.anchor_point)
     return ['—', '-'].includes(String(anchor))
-        ? grade
-        : `${grade} · ${t('climbing.anchor_point')} ${anchor}`
+        ? undefined
+        : `${t('climbing.anchor_point')} ${anchor}`
 }
 
 function selectFromMap(routeId: string | null) {
@@ -638,11 +620,6 @@ function revealMap() {
 watch(placement.canvasArmedId, (armedId) => {
     if (armedId) revealMap()
 })
-
-function runAndClose(close: () => void, action: () => unknown) {
-    close()
-    action()
-}
 
 async function discard() {
     if (await confirmDiscard()) placement.reset()
@@ -886,26 +863,6 @@ onBeforeUnmount(() => {
 
 .placement-search {
     flex: 1 1 180px;
-}
-
-.placement-tabs {
-    display: flex;
-    border-bottom: 1px solid var(--ui-border);
-}
-
-.placement-tab {
-    flex: 1 1 auto;
-    min-height: 40px;
-    padding: 0 12px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--ui-text-muted);
-    border-bottom: 2px solid transparent;
-}
-
-.placement-tab--active {
-    color: var(--ui-primary);
-    border-bottom-color: var(--ui-primary);
 }
 
 .placement-route:hover {

@@ -1,5 +1,5 @@
 <template>
-    <div class="activity-page mx-auto w-full px-4">
+    <div class="mx-auto w-full p-4">
         <LayoutPageHeader
             :title="seesEverything ? t('audit.title') : t('audit.titleOwn')"
         />
@@ -77,12 +77,13 @@
                 :hint="t('audit.emptyHint')"
             />
 
-            <AuditCard
-                v-for="entry in loading ? [] : entries"
-                :key="entry.id"
-                :entry="entry"
-                class="mb-2"
-            />
+            <LayoutListGroup v-if="!loading && entries.length">
+                <AuditCard
+                    v-for="entry in entries"
+                    :key="entry.id"
+                    :entry="entry"
+                />
+            </LayoutListGroup>
 
             <div v-if="hasMore" class="text-center mt-4">
                 <UButton

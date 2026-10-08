@@ -23,16 +23,12 @@
             </template>
         </LayoutEmptyState>
         <template v-else>
-            <UButton
-                :to="gymPath('/competitions')"
-                icon="i-lucide-arrow-left"
-                color="neutral"
-                variant="link"
-                class="mb-2 px-0"
+            <LayoutPageHeader
+                :title="competition.name"
+                :subtitle="windowText"
+                :back-to="gymPath('/competitions')"
+                :back-label="t('competitions.public.title')"
             >
-                {{ t('competitions.public.title') }}
-            </UButton>
-            <LayoutPageHeader :title="competition.name" :subtitle="windowText">
                 <template v-if="can('manage_competitions')" #actions>
                     <UButton
                         :to="gymPath(`/manage/competitions/${competition.id}`)"
@@ -46,16 +42,14 @@
                 </template>
             </LayoutPageHeader>
 
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+            <div
+                class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[2fr_1fr]"
+            >
                 <div class="flex flex-col gap-4">
-                    <section
-                        class="flex flex-col gap-3 rounded-lg bg-default p-4 ring ring-default"
-                    >
+                    <LayoutPanel>
                         <div class="flex flex-wrap items-center gap-2">
                             <UBadge
-                                :color="
-                                    phase === 'running' ? 'success' : 'neutral'
-                                "
+                                :color="COMPETITION_PHASE_COLORS[phase]"
                                 variant="soft"
                                 data-testid="competition-public-phase"
                             >
@@ -97,23 +91,18 @@
                         >
                             {{ competition.description }}
                         </p>
-                    </section>
+                    </LayoutPanel>
                     <CompetitionScorecard
                         v-if="canSelfScore && myEntry"
                         :competition="competition"
                         :entry="myEntry"
                     />
-                    <section
+                    <LayoutPanel
                         v-if="showResults"
-                        class="flex flex-col gap-3 rounded-lg bg-default p-4 ring ring-default"
+                        :title="t('competitions.standings.title')"
                         data-testid="competition-results"
                     >
-                        <div class="flex items-center gap-2">
-                            <h2
-                                class="flex-1 text-lg font-semibold text-highlighted"
-                            >
-                                {{ t('competitions.standings.title') }}
-                            </h2>
+                        <template #actions>
                             <UButton
                                 :to="
                                     gymPath(
@@ -129,12 +118,12 @@
                             >
                                 {{ t('competitions.standings.tv') }}
                             </UButton>
-                        </div>
+                        </template>
                         <CompetitionStandings
                             :results="results"
                             :highlight-entry="myEntry?.id"
                         />
-                    </section>
+                    </LayoutPanel>
                     <UAlert
                         v-if="judgedByStaff && myEntry"
                         icon="i-lucide-clipboard-pen"
@@ -156,7 +145,11 @@
 </template>
 
 <script setup lang="ts">
-import { competitionPhase, formatCompetitionWindow } from '~/utils/competitions'
+import {
+    COMPETITION_PHASE_COLORS,
+    competitionPhase,
+    formatCompetitionWindow,
+} from '~/utils/competitions'
 import { JUDGE_ONLY_FORMATS } from '#shared/utils/competitionScoring'
 import type { CompetitionEntryRecord, CompetitionRecord } from '~/types/models'
 

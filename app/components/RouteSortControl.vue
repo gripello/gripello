@@ -45,6 +45,7 @@ function toggleOrder() {
             @update:model-value="onKeyChange"
         />
         <UButton
+            class="icon-btn"
             variant="soft"
             color="neutral"
             :icon="

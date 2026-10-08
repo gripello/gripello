@@ -43,6 +43,15 @@
             :data-testid="`${testIdPrefix}-avatar-remove`"
             @click="emit('remove')"
         />
+        <ImageCropDialog
+            :file="pending"
+            :title="$t('account.changeAvatar')"
+            :aspect="1"
+            :output-width="640"
+            round
+            @cropped="onCropped"
+            @cancel="pending = null"
+        />
     </div>
 </template>
 
@@ -60,10 +69,19 @@ function openPicker() {
     fileInput.value?.click()
 }
 
+const pending = shallowRef<File | null>(null)
+
 function onFileChange(event: Event) {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
-    if (file) emit('select', file)
     input.value = ''
+    if (!file) return
+    if (file.type === 'image/svg+xml') emit('select', file)
+    else pending.value = file
+}
+
+function onCropped(file: File) {
+    pending.value = null
+    emit('select', file)
 }
 </script>

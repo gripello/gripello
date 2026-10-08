@@ -1,5 +1,6 @@
 <template>
     <UButton
+        class="icon-btn"
         icon="i-lucide-search"
         color="neutral"
         variant="ghost"

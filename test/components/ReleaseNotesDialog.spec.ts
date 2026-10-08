@@ -8,10 +8,11 @@ const stubs = {
         template:
             '<div><slot name="activator" :props="{}" /><slot name="title" />{{ subtitle }}<slot /></div>',
     },
-    UAlert: {
-        props: ['description'],
-        template: '<div>{{ description }}</div>',
+    LayoutEmptyState: {
+        props: ['title'],
+        template: '<div>{{ title }}</div>',
     },
+    LayoutLoadingState: { template: '<div />' },
     UBadge: { template: '<span class="chip"><slot /></span>' },
     UIcon: true,
     UButton: { template: '<button><slot /></button>' },
@@ -43,7 +44,7 @@ describe('ReleaseNotesDialog', () => {
         expect(wrapper.text()).toContain('Fixed a thing')
     })
 
-    it('shows a spinner while the shared check is still in flight', () => {
+    it('shows a loading state while the shared check is still in flight', () => {
         const wrapper = createWrapper({
             tag: 'v1.9.0',
             notes: null,

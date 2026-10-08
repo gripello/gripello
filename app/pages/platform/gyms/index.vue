@@ -36,7 +36,7 @@
             :columns="columns"
             :get-row-id="(row: PlatformGym) => row.id"
             :empty="t('table.no_data')"
-            class="rounded-lg border border-default bg-default"
+            class="rounded-lg bg-default ring ring-default"
             :ui="{ tr: 'cursor-pointer' }"
             data-testid="platform-gym-table"
             @select="(_event, row) => navigateTo(detailPath(row.original))"
@@ -109,15 +109,11 @@
             :title="t('table.no_data')"
         />
 
-        <ul
-            v-else
-            class="divide-y divide-default rounded-lg border border-default bg-default"
-            data-testid="platform-gym-list"
-        >
+        <LayoutListGroup v-else data-testid="platform-gym-list">
             <li
                 v-for="gym in gyms"
                 :key="gym.id"
-                class="flex items-center gap-2 p-3"
+                class="flex items-center gap-2 px-4 py-3"
             >
                 <ULink
                     :to="detailPath(gym)"
@@ -133,6 +129,16 @@
                     @update:model-value="(active) => requestActive(gym, active)"
                 />
                 <UButton
+                    v-if="gym.active"
+                    :to="`/${gym.slug}`"
+                    icon="i-lucide-external-link"
+                    variant="ghost"
+                    color="neutral"
+                    class="icon-btn"
+                    :aria-label="t('platform.gyms.open')"
+                    :data-testid="`platform-gym-open-${gym.slug}`"
+                />
+                <UButton
                     :to="detailPath(gym)"
                     icon="i-lucide-pencil"
                     variant="ghost"
@@ -142,7 +148,7 @@
                     :data-testid="`platform-gym-edit-${gym.slug}`"
                 />
             </li>
-        </ul>
+        </LayoutListGroup>
 
         <ConfirmDialog
             :model-value="!!offlineTarget"

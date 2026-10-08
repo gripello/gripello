@@ -23,17 +23,11 @@
             </template>
         </LayoutEmptyState>
         <template v-else>
-            <UButton
-                :to="gymPath(`/competitions/${competition.id}`)"
-                icon="i-lucide-arrow-left"
-                color="neutral"
-                variant="link"
-                class="mb-2 px-0"
-                data-testid="competition-rules-back"
-            >
-                {{ competition.name }}
-            </UButton>
-            <LayoutPageHeader :title="t('competitions.rules.title')" />
+            <LayoutPageHeader
+                :title="t('competitions.rules.title')"
+                :back-to="gymPath(`/competitions/${competition.id}`)"
+                :back-label="competition.name"
+            />
             <div class="-mt-2 mb-6 flex flex-wrap gap-2">
                 <UBadge
                     color="neutral"
@@ -56,15 +50,12 @@
             </div>
 
             <div class="flex flex-col gap-4">
-                <section
+                <LayoutPanel
                     v-for="{ section, lines } in rules"
                     :key="section"
-                    class="rounded-lg bg-default p-4 ring ring-default"
+                    :title="t(`competitions.rules.sections.${section}`)"
                     :data-testid="`competition-rules-${section}`"
                 >
-                    <LayoutSectionHeader
-                        :title="t(`competitions.rules.sections.${section}`)"
-                    />
                     <ul class="flex flex-col gap-3">
                         <li
                             v-for="line in lines"
@@ -87,7 +78,7 @@
                             </p>
                         </li>
                     </ul>
-                </section>
+                </LayoutPanel>
             </div>
         </template>
     </div>

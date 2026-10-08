@@ -24,7 +24,11 @@
                 {{ windowText }}
             </p>
         </div>
-        <UBadge :color="PHASE_COLORS[phase]" variant="soft">
+        <UBadge
+            :color="COMPETITION_PHASE_COLORS[phase]"
+            variant="soft"
+            size="sm"
+        >
             {{ $t(`competitions.phases.${phase}.title`) }}
         </UBadge>
     </ULink>
@@ -32,22 +36,12 @@
 
 <script setup lang="ts">
 import {
+    COMPETITION_PHASE_COLORS,
     competitionPhase,
     formatCompetitionWindow,
     type CompetitionPhase,
 } from '~/utils/competitions'
 import type { CompetitionRecord } from '~/types/models'
-
-const PHASE_COLORS: Record<
-    CompetitionPhase,
-    'neutral' | 'success' | 'warning' | 'info' | 'primary'
-> = {
-    draft: 'neutral',
-    registration: 'primary',
-    running: 'success',
-    ended: 'warning',
-    published: 'info',
-}
 
 const props = defineProps<{ competition: CompetitionRecord; to: string }>()
 

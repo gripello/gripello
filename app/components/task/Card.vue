@@ -32,24 +32,22 @@
                         taskTitle(task, t)
                     }}</span>
                 </button>
+                <RouteSummary
+                    v-if="route"
+                    :route="route"
+                    size="sm"
+                    :meta="wallLabel"
+                    class="mt-1"
+                />
                 <div
-                    v-if="route || wallLabel"
+                    v-else-if="wallLabel"
                     class="mt-0.5 flex items-center gap-1.5 text-xs text-muted min-w-0"
                 >
-                    <RouteColorDot
-                        v-if="route"
-                        :color="route.color"
-                        :size="12"
-                        class="shrink-0"
-                    />
                     <UIcon
-                        v-else
                         name="i-lucide-brick-wall"
                         class="size-3.5 shrink-0"
                     />
-                    <span class="truncate">{{
-                        [route?.name, wallLabel].filter(Boolean).join(' · ')
-                    }}</span>
+                    <span class="truncate">{{ wallLabel }}</span>
                 </div>
             </div>
 
@@ -117,7 +115,7 @@
                 class="flex min-w-0 items-center gap-1.5"
                 data-testid="task-card-assignee"
             >
-                <UAvatar :alt="assigneeName" size="3xs" />
+                <ClimberAvatar :name="assigneeName" size="xs" />
                 <span class="truncate text-xs text-toned">{{
                     assigneeName
                 }}</span>
@@ -126,6 +124,7 @@
             <div class="ml-auto flex shrink-0 items-center gap-0.5">
                 <UTooltip v-if="route" :text="t('tasks.openRoute')">
                     <UButton
+                        class="icon-btn"
                         :to="gymPath(`/route?id=${route.id}`)"
                         icon="i-lucide-external-link"
                         color="neutral"
@@ -137,6 +136,7 @@
                 </UTooltip>
                 <UTooltip :text="t('actions.edit')">
                     <UButton
+                        class="icon-btn"
                         icon="i-lucide-pencil"
                         color="neutral"
                         variant="ghost"
@@ -148,7 +148,8 @@
                 </UTooltip>
                 <UDropdownMenu :items="moveItems" :content="{ align: 'end' }">
                     <UButton
-                        icon="i-lucide-ellipsis"
+                        class="icon-btn"
+                        icon="i-lucide-ellipsis-vertical"
                         color="neutral"
                         variant="ghost"
                         size="xs"
@@ -161,6 +162,7 @@
                     :text="t('tasks.actions.start')"
                 >
                     <UButton
+                        class="icon-btn"
                         icon="i-lucide-play"
                         color="neutral"
                         variant="soft"

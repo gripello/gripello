@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ComponentModel } from 'echarts/core'
 import { initEchart } from '~/utils/echartsCore'
 
-const appDir = path.resolve(__dirname, '../../app')
+const appDir = path.resolve(import.meta.dirname, '../../app')
 
 const chartSources = readdirSync(path.join(appDir, 'components'), {
     recursive: true,

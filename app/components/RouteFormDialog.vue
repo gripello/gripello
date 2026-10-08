@@ -2,6 +2,7 @@
     <LayoutDialogShell
         v-model="dialogOpen"
         max-width="560"
+        closable
         sheet-on-mobile
         :title="isEditMode ? $t('actions.edit') : $t('climbing.create')"
         :persistent="hasChanges"
@@ -120,32 +121,30 @@
                 />
             </UFormField>
 
-            <div
-                class="divide-y divide-default rounded-lg border border-default"
-            >
-                <label
-                    v-for="flag in routeFlags"
-                    :key="flag.key"
-                    class="flex cursor-pointer items-center gap-3 px-3 py-2.5"
-                >
-                    <UIcon
-                        :name="flag.icon"
-                        class="size-5 shrink-0 text-muted"
-                    />
-                    <span class="min-w-0 grow">
-                        <span class="block text-sm font-medium">
-                            {{ $t(`climbing.${flag.key}`) }}
+            <LayoutListGroup>
+                <li v-for="flag in routeFlags" :key="flag.key">
+                    <label
+                        class="flex cursor-pointer items-center gap-3 px-4 py-3"
+                    >
+                        <UIcon
+                            :name="flag.icon"
+                            class="size-5 shrink-0 text-muted"
+                        />
+                        <span class="min-w-0 grow">
+                            <span class="block text-sm font-medium">
+                                {{ $t(`climbing.${flag.key}`) }}
+                            </span>
+                            <span class="block text-xs text-muted">
+                                {{ $t(`climbing.${flag.key}Help`) }}
+                            </span>
                         </span>
-                        <span class="block text-xs text-muted">
-                            {{ $t(`climbing.${flag.key}Help`) }}
-                        </span>
-                    </span>
-                    <USwitch
-                        v-model="form[flag.key]"
-                        :data-testid="`route-form-${flag.key}`"
-                    />
-                </label>
-            </div>
+                        <USwitch
+                            v-model="form[flag.key]"
+                            :data-testid="`route-form-${flag.key}`"
+                        />
+                    </label>
+                </li>
+            </LayoutListGroup>
 
             <UFormField
                 :label="$t('climbing.comment')"
@@ -236,6 +235,13 @@
         </UForm>
         <template #actions>
             <UButton
+                color="neutral"
+                variant="ghost"
+                data-testid="route-form-cancel"
+                @click="close"
+                >{{ $t('actions.cancel') }}</UButton
+            >
+            <UButton
                 v-if="isEditMode"
                 color="error"
                 variant="ghost"
@@ -246,13 +252,6 @@
                 {{ $t('actions.delete') }}
             </UButton>
             <div class="flex-1" />
-            <UButton
-                color="neutral"
-                variant="ghost"
-                data-testid="route-form-cancel"
-                @click="close"
-                >{{ $t('actions.cancel') }}</UButton
-            >
             <UButton
                 color="primary"
                 :loading="saving"

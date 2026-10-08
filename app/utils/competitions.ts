@@ -116,6 +116,17 @@ export const COMPETITION_PHASES = [
 ] as const
 export type CompetitionPhase = (typeof COMPETITION_PHASES)[number]
 
+export const COMPETITION_PHASE_COLORS: Record<
+    CompetitionPhase,
+    'neutral' | 'success' | 'warning' | 'info' | 'primary'
+> = {
+    draft: 'neutral',
+    registration: 'primary',
+    running: 'success',
+    ended: 'warning',
+    published: 'info',
+}
+
 export function competitionPhase(
     competition: Pick<CompetitionRecord, 'status' | 'starts_at' | 'ends_at'>,
     now: Date,

@@ -19,10 +19,10 @@
 
         <UButton
             to="/privacy"
-            variant="ghost"
+            variant="link"
             color="primary"
             icon="i-lucide-shield"
-            class="mt-3"
+            class="mt-3 px-0"
             data-testid="imprint-privacy-link"
         >
             {{ $t('legal.privacy') }}

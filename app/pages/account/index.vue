@@ -14,16 +14,16 @@
                     :banner="climberFileUrl(user.id, user.banner, '1600x400')"
                     :avatar="avatar"
                     :name="displayName"
-                    class="h-24"
+                    :id="user.id"
+                    class="aspect-[4/1] max-h-60 w-full"
                 />
                 <span class="relative flex items-end gap-3 px-4 pb-4">
-                    <UAvatar
-                        :src="avatar || undefined"
-                        :alt="displayName"
-                        :text="initials"
-                        class="-mt-8 size-18 text-2xl font-bold ring-4 ring-(--ui-bg)"
-                        :class="avatar ? undefined : 'bg-primary'"
-                        :ui="{ fallback: 'text-inverted' }"
+                    <ClimberAvatar
+                        :id="user.id"
+                        :src="avatar"
+                        :name="displayName"
+                        size="lg"
+                        class="-mt-8 ring-4 ring-(--ui-bg)"
                     />
                     <span class="native-row__text pb-1">
                         <span
@@ -157,6 +157,7 @@
                             </UBadge>
                         </NuxtLink>
                         <UButton
+                            class="icon-btn"
                             icon="i-lucide-log-out"
                             color="error"
                             variant="ghost"
@@ -236,13 +237,6 @@ const displayName = computed(
         user.value?.username ||
         user.value?.email ||
         t('account.unknownUser'),
-)
-const initials = computed(() =>
-    displayName.value
-        .split(' ')
-        .slice(0, 2)
-        .map((part: string) => part[0]?.toUpperCase() ?? '')
-        .join(''),
 )
 const avatar = computed(() =>
     usePbFileUrl(user.value, user.value?.avatar, { thumb: '100x100' }),

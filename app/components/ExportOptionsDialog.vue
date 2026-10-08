@@ -178,6 +178,8 @@ const confirm = async () => {
 <template>
     <LayoutDialogShell
         v-model="open"
+        closable
+        sheet-on-mobile
         :title="$t(format === 'pdf' ? 'export.title_pdf' : 'export.title')"
         data-testid="export-options-dialog"
     >
@@ -247,6 +249,7 @@ const confirm = async () => {
                 />
                 <div class="flex-1" />
                 <UButton
+                    class="icon-btn"
                     icon="i-lucide-chevron-up"
                     color="neutral"
                     variant="ghost"
@@ -257,6 +260,7 @@ const confirm = async () => {
                     @click="move(column.key, -1)"
                 />
                 <UButton
+                    class="icon-btn"
                     icon="i-lucide-chevron-down"
                     color="neutral"
                     variant="ghost"

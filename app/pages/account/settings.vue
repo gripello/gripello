@@ -6,13 +6,27 @@
     >
         <div data-testid="profile-header">
             <LayoutPageHeader :title="t('accountSettings.title')" />
-            <nav ref="tabNav" class="account-tabs">
-                <UNavigationMenu
+            <div ref="tabNav" class="mb-4">
+                <LayoutTabs
+                    v-model="selectedTab"
                     :items="tabs"
-                    highlight
-                    class="w-max min-w-full border-b border-default"
-                />
-            </nav>
+                    :content="false"
+                >
+                    <template #default="{ item }">
+                        <UChip
+                            :show="
+                                item.value === 'security' && showSecurityWarning
+                            "
+                            color="warning"
+                            size="sm"
+                        >
+                            <span :data-testid="`profile-tab-${item.value}`">
+                                {{ item.label }}
+                            </span>
+                        </UChip>
+                    </template>
+                </LayoutTabs>
+            </div>
         </div>
 
         <div class="flex flex-col gap-4 sm:gap-6 pb-8">
@@ -21,14 +35,13 @@
                 :loading="saving"
                 :disabled="!canSave(activeTab) || saving"
                 test-id-prefix="profile"
+                class="lg:-mb-6"
                 cancelable
                 @save="saveUser(activeTab)"
                 @cancel="resetSection(activeTab)"
             />
 
-            <UPageCard :title="sectionTitle" variant="naked" />
-
-            <UPageCard v-if="activeTab === 'profile'" variant="subtle">
+            <UPageCard v-if="activeTab === 'profile'" variant="outline">
                 <UForm
                     ref="profileForm"
                     :state="user"
@@ -39,6 +52,7 @@
                         :banner="bannerPreview"
                         :avatar="avatarPreview"
                         :name="`${user.firstname ?? ''} ${user.name ?? ''}`"
+                        :user-id="user.id"
                         class="lg:col-span-2"
                         @banner="selectBanner"
                         @remove-banner="removeBanner"
@@ -97,7 +111,7 @@
 
             <UPageCard
                 v-else-if="activeTab === 'preferences'"
-                variant="subtle"
+                variant="outline"
                 :ui="{ container: 'lg:grid-cols-2 gap-y-5' }"
             >
                 <UFormField :label="t('accountSettings.language')">
@@ -159,7 +173,7 @@
             <AccountPrivacySettings v-else-if="activeTab === 'privacy'" />
 
             <template v-else>
-                <UPageCard variant="subtle" :ui="{ container: 'gap-y-4' }">
+                <UPageCard variant="outline" :ui="{ container: 'gap-y-4' }">
                     <UserPasswordChangeFields
                         class="lg:grid lg:grid-cols-2 lg:gap-x-6 lg:[&>*:nth-child(2)]:col-start-1"
                         v-model:old-password="user.oldPassword"
@@ -173,7 +187,7 @@
                 <UPageCard
                     :title="t('account.exportData')"
                     :description="t('account.exportDataHint')"
-                    variant="subtle"
+                    variant="outline"
                     orientation="horizontal"
                 >
                     <UButton
@@ -192,7 +206,7 @@
                 <UPageCard
                     :title="t('account.deleteAccount')"
                     :description="t('account.deleteAccountHint')"
-                    variant="subtle"
+                    variant="outline"
                     orientation="horizontal"
                     highlight
                     highlight-color="error"
@@ -233,7 +247,7 @@
 <script setup lang="ts">
 import { required, validEmail, validateRules } from '~/utils/validation'
 import type { ClientResponseError } from 'pocketbase'
-import type { Form, NavigationMenuItem } from '@nuxt/ui'
+import type { Form } from '@nuxt/ui'
 import { SUPPORTED_LOCALES, isLocaleCode } from '~/utils/locales'
 import type { ThemeMode } from '~/composables/useThemeMode'
 import type { UserRecord } from '~/types/models'
@@ -374,65 +388,35 @@ const showSecurityWarning = computed(
         !passwordFieldsValid.value,
 )
 
-const tabs = computed<NavigationMenuItem[]>(() => [
-    {
-        label: t('account.tabs.profile'),
-        icon: 'i-lucide-user-pen',
-        to: { query: { tab: 'profile' } },
-        active: activeTab.value === 'profile',
-        'data-testid': 'profile-tab-profile',
-    },
-    {
-        label: t('account.tabs.preferences'),
-        icon: 'i-lucide-sliders-horizontal',
-        to: { query: { tab: 'preferences' } },
-        active: activeTab.value === 'preferences',
-        'data-testid': 'profile-tab-preferences',
-    },
-    {
-        label: t('account.tabs.notifications'),
-        icon: 'i-lucide-bell',
-        to: { query: { tab: 'notifications' } },
-        active: activeTab.value === 'notifications',
-        'data-testid': 'profile-tab-notifications',
-    },
-    {
-        label: t('account.tabs.privacy'),
-        icon: 'i-lucide-eye',
-        to: { query: { tab: 'privacy' } },
-        active: activeTab.value === 'privacy',
-        'data-testid': 'profile-tab-privacy',
-    },
-    {
-        label: t('account.tabs.security'),
-        icon: 'i-lucide-shield-check',
-        to: { query: { tab: 'security' } },
-        active: activeTab.value === 'security',
-        chip: showSecurityWarning.value ? { color: 'warning' } : undefined,
-        'data-testid': 'profile-tab-security',
-    },
-])
+const tabIcons: Record<Section, string> = {
+    profile: 'i-lucide-user-pen',
+    preferences: 'i-lucide-sliders-horizontal',
+    notifications: 'i-lucide-bell',
+    privacy: 'i-lucide-eye',
+    security: 'i-lucide-shield-check',
+}
+const tabs = computed(() =>
+    SECTIONS.map((section) => ({
+        label: t(`account.tabs.${section}`),
+        icon: tabIcons[section],
+        value: section,
+    })),
+)
+const selectedTab = computed({
+    get: () => activeTab.value,
+    set: (tab: Section) => navigateTo({ query: { tab } }),
+})
 
 const tabNav = useTemplateRef<HTMLElement>('tabNav')
 watch(
     [activeTab, tabNav],
     () =>
         tabNav.value
-            ?.querySelector('[aria-current="page"]')
+            ?.querySelector('[data-state="active"]')
             ?.scrollIntoView({ block: 'nearest', inline: 'center' }),
     { flush: 'post' },
 )
 
-const sectionTitle = computed(
-    () =>
-        ({
-            profile: t('account.tabs.profile'),
-            preferences: t('account.tabs.preferences'),
-            notifications: t('account.tabs.notifications'),
-            privacy: t('account.tabs.privacy'),
-            security: t('account.password'),
-        })[activeTab.value],
-)
 const validateProfile = (state: Record<string, unknown>) =>
     validateRules(state, {
         firstname: [required(t)],
@@ -635,17 +619,6 @@ async function deleteAccount() {
 </script>
 
 <style scoped>
-.account-tabs {
-    position: sticky;
-    top: calc(var(--app-top) + var(--app-top-inset, 0px));
-    z-index: 10;
-    margin: 0 -16px 24px;
-    padding: 0 16px;
-    overflow-x: auto;
-    background: var(--app-bg);
-    scrollbar-width: none;
-}
-
 .locale-code {
     min-width: 28px;
     padding: 2px 0;

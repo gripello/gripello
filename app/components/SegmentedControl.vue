@@ -4,9 +4,13 @@
         :items="items"
         :content="false"
         variant="pill"
-        :size="size ?? 'xs'"
-        class="w-auto"
-        :ui="{ list: 'w-auto', trigger: 'flex-none' }"
+        :size="size ?? 'sm'"
+        class="w-auto max-w-full"
+        :ui="{
+            list: 'w-auto max-w-full overflow-x-auto overflow-y-hidden',
+            trigger: 'flex-none',
+            label: 'overflow-visible whitespace-nowrap',
+        }"
         :data-testid="testId"
     >
         <template #default="{ item }">
@@ -19,7 +23,7 @@
 
 <script setup lang="ts" generic="T extends string">
 defineProps<{
-    items: { value: T; label: string }[]
+    items: { value: T; label: string; badge?: string | number }[]
     size?: 'xs' | 'sm' | 'md'
     testId?: string
 }>()

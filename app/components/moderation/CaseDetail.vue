@@ -1,39 +1,33 @@
 <template>
     <article
-        class="flex flex-col rounded-2xl border border-default bg-default"
+        class="flex flex-col overflow-hidden rounded-lg bg-default ring ring-default"
         :data-testid="`moderation-detail-${item.id}`"
     >
         <header
             class="flex flex-wrap items-center gap-3 border-b border-default px-5 py-4"
         >
-            <RouteColorDot
+            <RouteSummary
                 v-if="context.route"
-                :color="context.route.color"
-                :size="28"
+                :route="context.route"
+                :meta="typeLine"
+                class="flex-1"
             />
-            <UIcon
-                v-else
-                :name="CONTENT_ICONS[item.content_type]"
-                class="size-6 text-muted"
-            />
-            <div class="min-w-0 flex-1">
-                <h2 class="truncate text-base font-bold text-highlighted">
-                    {{ title }}
-                    <span v-if="context.route" class="ms-1">
-                        {{ context.route.grade }}
-                    </span>
-                </h2>
-                <p class="text-xs text-muted">
-                    {{
-                        [
-                            t(`moderation.types.${item.content_type}`),
-                            platform ? context.gym_name : '',
-                        ]
-                            .filter(Boolean)
-                            .join(' · ')
-                    }}
-                </p>
-            </div>
+            <template v-else>
+                <span
+                    class="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-primary"
+                >
+                    <UIcon
+                        :name="CONTENT_ICONS[item.content_type]"
+                        class="size-[18px]"
+                    />
+                </span>
+                <div class="min-w-0 flex-1">
+                    <h2 class="truncate text-base font-bold text-highlighted">
+                        {{ title }}
+                    </h2>
+                    <p class="text-xs text-muted">{{ typeLine }}</p>
+                </div>
+            </template>
             <UButton
                 v-if="contextLink"
                 :to="contextLink"
@@ -49,10 +43,10 @@
 
         <div class="flex flex-col gap-5 px-5 py-4">
             <div class="flex gap-3">
-                <UAvatar
-                    :src="authorAvatar ?? undefined"
-                    :alt="context.author?.name || t('comments.anonymous')"
-                    size="md"
+                <ClimberAvatar
+                    :src="authorAvatar"
+                    :name="context.author?.name || t('comments.anonymous')"
+                    size="sm"
                 />
                 <div class="flex min-w-0 flex-1 flex-col gap-2">
                     <p class="text-sm">
@@ -108,7 +102,7 @@
 
             <p
                 v-if="item.state === 'hidden' || item.state === 'approved'"
-                class="rounded-xl border border-default px-4 py-3 text-sm"
+                class="rounded-lg px-4 py-3 text-sm ring ring-default"
                 data-testid="moderation-decision-note"
             >
                 <strong class="text-highlighted">{{ decisionTitle }}</strong>
@@ -122,9 +116,7 @@
                 <h3 class="text-sm font-semibold text-highlighted">
                     {{ t('moderation.reportsTitle', context.reports.length) }}
                 </h3>
-                <ul
-                    class="divide-y divide-default rounded-xl border border-default"
-                >
+                <LayoutListGroup>
                     <li
                         v-for="report in context.reports"
                         :key="report.id"
@@ -152,7 +144,7 @@
                             {{ report.explanation }}
                         </span>
                     </li>
-                </ul>
+                </LayoutListGroup>
             </section>
 
             <section
@@ -182,7 +174,8 @@
                     {{ t('moderation.author.hideAll') }}
                 </UButton>
                 <UButton
-                    color="neutral"
+                    color="error"
+                    variant="outline"
                     size="sm"
                     data-testid="moderation-author-suspend"
                     @click="emit('suspendAuthor')"
@@ -247,8 +240,8 @@ const emit = defineEmits<{
     suspendAuthor: []
 }>()
 
-const ACTION_COLORS: Record<ModerationAction, 'primary' | 'neutral' | 'error'> =
-    { approve: 'primary', restore: 'neutral', reject: 'error', hide: 'error' }
+const ACTION_COLORS: Record<ModerationAction, 'success' | 'neutral' | 'error'> =
+    { approve: 'success', restore: 'neutral', reject: 'error', hide: 'error' }
 const ACTION_ICONS: Record<ModerationAction, string> = {
     approve: 'i-lucide-check',
     restore: 'i-lucide-eye',
@@ -277,6 +270,14 @@ const title = computed(
         context.value.route?.name ??
         context.value.competition ??
         t(`moderation.types.${props.item.content_type}`),
+)
+const typeLine = computed(() =>
+    [
+        t(`moderation.types.${props.item.content_type}`),
+        props.platform ? context.value.gym_name : '',
+    ]
+        .filter(Boolean)
+        .join(' · '),
 )
 const contextLink = computed(() => {
     const route = context.value.route

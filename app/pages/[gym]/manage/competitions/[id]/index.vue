@@ -23,17 +23,12 @@
             </template>
         </LayoutEmptyState>
         <template v-else>
-            <UButton
-                :to="gymPath('/manage/competitions')"
-                icon="i-lucide-arrow-left"
-                color="neutral"
-                variant="link"
-                class="mb-2 px-0"
-                data-testid="competition-back"
+            <LayoutPageHeader
+                :title="competition.name"
+                :subtitle="windowText"
+                :back-to="gymPath('/manage/competitions')"
+                :back-label="t('competitions.pageTitle')"
             >
-                {{ t('competitions.pageTitle') }}
-            </UButton>
-            <LayoutPageHeader :title="competition.name" :subtitle="windowText">
                 <template #actions>
                     <UButton
                         :to="
@@ -81,11 +76,9 @@
                 @status="setStatus"
             />
 
-            <UTabs
+            <LayoutTabs
                 v-model="activeTab"
                 :items="tabs"
-                variant="link"
-                class="w-full"
                 data-testid="competition-tabs"
             >
                 <template #routes>
@@ -130,7 +123,7 @@
                         :requires-payment="competition.requires_payment"
                     />
                 </template>
-            </UTabs>
+            </LayoutTabs>
 
             <CompetitionFormDialog
                 v-model="formOpen"
@@ -252,7 +245,7 @@ const checklist = computed(() =>
         : [],
 )
 
-const activeTab = ref(
+const activeTab = ref<'routes' | 'categories' | 'entries' | 'results'>(
     competition.value?.status === 'draft' ? 'routes' : 'entries',
 )
 
@@ -266,7 +259,7 @@ const tabs = computed(() => [
         label: t(
             `competitions.items.${competition.value?.discipline ?? 'boulder'}.tab`,
         ),
-        value: 'routes',
+        value: 'routes' as const,
         slot: 'routes' as const,
         icon:
             competition.value?.discipline === 'rope'
@@ -275,19 +268,19 @@ const tabs = computed(() => [
     },
     {
         label: t('competitions.categories'),
-        value: 'categories',
+        value: 'categories' as const,
         slot: 'categories' as const,
         icon: 'i-lucide-tags',
     },
     {
         label: t('competitions.entries'),
-        value: 'entries',
+        value: 'entries' as const,
         slot: 'entries' as const,
         icon: 'i-lucide-users',
     },
     {
         label: t('competitions.standings.title'),
-        value: 'results',
+        value: 'results' as const,
         slot: 'results' as const,
         icon: 'i-lucide-trophy',
     },

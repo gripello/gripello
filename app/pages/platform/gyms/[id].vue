@@ -18,43 +18,50 @@
         </LayoutEmptyState>
 
         <template v-else>
-            <LayoutPageHeader :title="gymTitle(gym)" :subtitle="`/${gym.slug}`">
-                <template #actions>
-                    <USwitch
-                        :model-value="!!gym.active"
-                        :label="t('platform.gyms.active')"
-                        data-testid="platform-gym-active"
-                        @update:model-value="requestActive"
-                    />
-                    <UButton
-                        :to="`/platform/moderation?gym=${gym.id}`"
-                        color="neutral"
-                        variant="outline"
-                        icon="i-lucide-shield-alert"
-                        data-testid="platform-gym-moderation"
-                    >
-                        {{ t('moderation.title') }}
-                        <UBadge
-                            v-if="openCases"
-                            color="error"
-                            variant="soft"
-                            size="sm"
+            <div class="[&_header_p]:font-mono">
+                <LayoutPageHeader
+                    :title="gymTitle(gym)"
+                    :subtitle="`/${gym.slug}`"
+                    back-to="/platform/gyms"
+                    :back-label="t('platform.gyms.title')"
+                >
+                    <template #actions>
+                        <USwitch
+                            :model-value="!!gym.active"
+                            :label="t('platform.gyms.active')"
+                            data-testid="platform-gym-active"
+                            @update:model-value="requestActive"
+                        />
+                        <UButton
+                            :to="`/platform/moderation?gym=${gym.id}`"
+                            color="neutral"
+                            variant="outline"
+                            icon="i-lucide-shield-alert"
+                            data-testid="platform-gym-moderation"
                         >
-                            {{ openCases }}
-                        </UBadge>
-                    </UButton>
-                    <UButton
-                        v-if="gym.active"
-                        :to="`/${gym.slug}`"
-                        color="neutral"
-                        variant="outline"
-                        icon="i-lucide-external-link"
-                        data-testid="platform-gym-open"
-                    >
-                        {{ t('platform.gyms.open') }}
-                    </UButton>
-                </template>
-            </LayoutPageHeader>
+                            {{ t('moderation.title') }}
+                            <UBadge
+                                v-if="openCases"
+                                color="error"
+                                variant="soft"
+                                size="sm"
+                            >
+                                {{ openCases }}
+                            </UBadge>
+                        </UButton>
+                        <UButton
+                            v-if="gym.active"
+                            :to="`/${gym.slug}`"
+                            color="neutral"
+                            variant="outline"
+                            icon="i-lucide-external-link"
+                            data-testid="platform-gym-open"
+                        >
+                            {{ t('platform.gyms.open') }}
+                        </UButton>
+                    </template>
+                </LayoutPageHeader>
+            </div>
 
             <AdminGymSettingsForm
                 :gym="gym"
@@ -82,7 +89,7 @@
                 <template #features>
                     <UPageCard
                         :title="t('platform.features.title')"
-                        variant="subtle"
+                        variant="outline"
                     >
                         <USwitch
                             v-for="flag in FEATURE_FLAGS"
@@ -98,7 +105,7 @@
                 <template #danger>
                     <UPageCard
                         :title="t('platform.gyms.delete')"
-                        variant="subtle"
+                        variant="outline"
                         class="ring-error/40"
                     >
                         <div>

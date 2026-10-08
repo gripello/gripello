@@ -11,7 +11,7 @@
                 <div
                     v-for="tile in streakTiles"
                     :key="tile.key"
-                    class="flex items-center gap-3 rounded-xl bg-elevated p-4"
+                    class="flex items-center gap-3 rounded-lg bg-default p-4 ring ring-default"
                     :data-testid="`streak-${tile.key}`"
                 >
                     <UIcon
@@ -45,7 +45,7 @@
                     <li
                         v-for="item in group.items"
                         :key="item.key"
-                        class="flex flex-col items-center gap-2 rounded-xl p-4 text-center ring ring-default"
+                        class="flex flex-col items-center gap-2 rounded-lg p-4 text-center ring ring-default"
                         :class="item.tier ? 'bg-default' : 'bg-elevated/40'"
                         :data-testid="`badge-${item.key}`"
                         :data-tier="item.tier"
@@ -87,6 +87,10 @@
                                 :max="goalOf(item)"
                                 size="sm"
                                 class="w-full"
+                                :ui="{
+                                    indicator:
+                                        item.value > 0 ? '' : 'invisible',
+                                }"
                             />
                             <span class="text-xs text-muted tabular-nums">
                                 {{ item.value }} / {{ goalOf(item) }}

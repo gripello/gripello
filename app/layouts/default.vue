@@ -61,7 +61,9 @@ const refreshSession = async () => {
 }
 
 const route = useRoute()
-const gymSlug = computed(() => (route.params.gym ? gym.value?.slug : ''))
+const gymSlug = computed(() =>
+    routeGymSlug(route.params) ? gym.value?.slug : '',
+)
 
 useHead(
     computed(() => ({

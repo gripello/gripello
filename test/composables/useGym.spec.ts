@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type PocketBase from 'pocketbase'
-import { findGym, loadGym, routeGymSlug } from '~/composables/useGym'
+import {
+    findGym,
+    loadGym,
+    routeGymSlug,
+    routeParam,
+} from '~/composables/useGym'
 
 vi.stubGlobal(
     'createError',
@@ -91,5 +96,13 @@ describe('routeGymSlug', () => {
         expect(routeGymSlug({ gym: 'first' })).toBe('first')
         expect(routeGymSlug({})).toBe('')
         expect(routeGymSlug({ gym: ['a'] })).toBe('')
+    })
+})
+
+describe('routeParam', () => {
+    it('reads a single string param of any typed route', () => {
+        expect(routeParam({ token: 'abc' }, 'token')).toBe('abc')
+        expect(routeParam({ id: ['a', 'b'] }, 'id')).toBe('')
+        expect(routeParam({}, 'id')).toBe('')
     })
 })
