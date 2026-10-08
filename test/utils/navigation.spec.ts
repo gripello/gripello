@@ -73,6 +73,7 @@ describe('visibleNavItems', () => {
             '/gym-a',
             '/gym-a/routes',
             '/gym-a/map',
+            '/gym-a/info',
             '/gym-a/feed',
             '/gym-a/leaderboard',
             '/gym-a/competitions',
@@ -87,6 +88,7 @@ describe('visibleNavItems', () => {
             'home',
             'list',
             'map',
+            'info',
             'feed',
             'leaderboard',
             'competitions',
@@ -263,7 +265,15 @@ describe('sidebarSections', () => {
         expect(
             sections.map((section) => [section.label, testids(section.items)]),
         ).toEqual([
-            ['t:nav.gym', ['nav-link-home', 'nav-link-routes', 'nav-link-map']],
+            [
+                't:nav.gym',
+                [
+                    'nav-link-home',
+                    'nav-link-routes',
+                    'nav-link-map',
+                    'nav-link-info',
+                ],
+            ],
             [
                 't:nav.community',
                 [
@@ -358,6 +368,7 @@ describe('sectionTabs', () => {
         ).toEqual([
             ['/gym-a/routes', false],
             ['/gym-a/map', true],
+            ['/gym-a/info', false],
             ['/gym-a', false],
         ])
         expect(sectionTabs('/gym-a/leaderboard', 'gym-a')[1]).toMatchObject({

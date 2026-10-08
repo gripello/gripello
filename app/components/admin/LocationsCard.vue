@@ -64,6 +64,7 @@
 
 <script setup lang="ts">
 import type { LocationRecord } from '~/types/models'
+import { syncDrafts } from '~/utils/drafts'
 
 const pb = usePocketbase()
 const gymId = useCurrentGymId()
@@ -74,14 +75,11 @@ const { data: locations, refresh } = useLocations()
 const newName = ref('')
 const busyId = ref<string | null>(null)
 const draftNames = reactive<Record<string, string>>({})
+const syncedNames: Record<string, string> = {}
 
-watch(
-    locations,
-    (records) => {
-        for (const record of records) draftNames[record.id] = record.name
-    },
-    { immediate: true },
-)
+watch(locations, (records) => syncDrafts(draftNames, syncedNames, records), {
+    immediate: true,
+})
 
 async function run(id: string, action: () => Promise<unknown>) {
     busyId.value = id

@@ -176,7 +176,8 @@
         "rated": "Hat Bewertungen",
         "leaderboard": "Rangliste",
         "friends": "Freunde",
-        "feed": "Feed"
+        "feed": "Feed",
+        "info": "Info"
     },
     "dashboard": {
         "online": "{0} online"
@@ -589,7 +590,7 @@
             },
             "thirdParties": {
                 "title": "Kein Tracking, keine Drittanbieter",
-                "body": "Diese Anwendung verwendet keine Analyse-, Werbe- oder Social-Media-Dienste, keine Schriften oder Skripte von fremden Servern und keine eingebetteten Videos. Alle Daten werden auf unseren eigenen Servern in der Europäischen Union verarbeitet. Eine Übermittlung in Drittländer findet nur statt, wenn du Push-Benachrichtigungen aktivierst (Push-Dienst deines Browser-Herstellers) oder selbst einen Beta-Video-Link öffnest. Für Nutzende aus der Schweiz: Die Speicherung in der EU ist eine Bekanntgabe ins Ausland in einen Staat mit angemessenem Datenschutz nach Art. 16 Abs. 1 DSG."
+                "body": "Diese Anwendung verwendet keine Analyse-, Werbe- oder Social-Media-Dienste, keine Schriften oder Skripte von fremden Servern und keine eingebetteten Videos. Alle Daten werden auf unseren eigenen Servern in der Europäischen Union verarbeitet. Eine Übermittlung in Drittländer findet nur statt, wenn du Push-Benachrichtigungen aktivierst (Push-Dienst deines Browser-Herstellers) oder selbst einen Beta-Video-Link öffnest. Für Nutzende aus der Schweiz: Die Speicherung in der EU ist eine Bekanntgabe ins Ausland in einen Staat mit angemessenem Datenschutz nach Art. 16 Abs. 1 DSG. Karten werden erst von OpenStreetMap geladen, wenn du sie anzeigen lässt (siehe Karten)."
             },
             "storage": {
                 "title": "Cookies und lokaler Speicher",
@@ -608,6 +609,10 @@
                     "withdrawal": "Recht auf jederzeitigen Widerruf einer Einwilligung, etwa für Push-Benachrichtigungen (Art. 7 Abs. 3 DSGVO)"
                 },
                 "complaint": "Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO), in Deutschland bei der Landesbeauftragten oder dem Landesbeauftragten deines Bundeslands, in Österreich bei der Datenschutzbehörde (Barichgasse 40–42, 1030 Wien, dsb{'@'}dsb.gv.at). Für Nutzende aus der Schweiz gelten zusätzlich das Datenschutzgesetz (DSG) mit dem Auskunftsrecht nach Art. 25 DSG; Aufsichtsbehörde ist der Eidgenössische Datenschutz- und Öffentlichkeitsbeauftragte (EDÖB)."
+            },
+            "map": {
+                "title": "Karten",
+                "body": "Karten auf Hallenseiten werden erst geladen, wenn du „Karte anzeigen“ wählst. Dein Browser lädt dann Kartenkacheln von der OpenStreetMap Foundation (Vereinigtes Königreich), die deine IP-Adresse und Browserangaben erhält (Art. 6 Abs. 1 lit. a DSGVO, deine Einwilligung). Die Auswahl wird auf deinem Gerät gespeichert; lösche die Websitedaten, um sie zu widerrufen. Wenn Mitarbeitende in den Einstellungen eine Hallenadresse suchen oder die Stecknadel verschieben, werden diese Adresse bzw. die Koordinaten an OpenStreetMap Nominatim gesendet."
             }
         },
         "storage": {
@@ -635,7 +640,8 @@
                 "recentGyms": "Zeigt die zuletzt besuchten Hallen auf der Startseite",
                 "mapRouteType": "Merkt sich, ob die Karte Boulder oder Routen zeigt",
                 "offlinePages": "Hält App-Grundgerüst, öffentliche Seiten, Hallendaten und Bilder offline verfügbar",
-                "moderationSeen": "Merkt sich, wann du die Moderation zuletzt geöffnet hast, um neue Fälle zu markieren"
+                "moderationSeen": "Merkt sich, wann du die Moderation zuletzt geöffnet hast, um neue Fälle zu markieren",
+                "mapConsent": "Merkt sich, dass du Karten laden möchtest"
             },
             "durations": {
                 "session": "Bis zur Abmeldung",
@@ -901,7 +907,8 @@
         "assets": {
             "logo": "App-Logo",
             "icon": "Browser-Icon",
-            "sign": "Logo auf Routenschildern"
+            "sign": "Logo auf Routenschildern",
+            "cover": "Titelbild"
         },
         "grading": "Bewertungsskalen",
         "routeGradeSystem": "Skala für Routen",
@@ -916,7 +923,8 @@
         "assetHints": {
             "logo": "PNG, JPG, SVG oder WebP. Wird in der Navigationsleiste angezeigt.",
             "icon": "ICO-Datei, die im Browser-Tab angezeigt wird.",
-            "sign": "PNG, JPG, SVG oder WebP. Wird auf Routenschilder gedruckt."
+            "sign": "PNG, JPG, SVG oder WebP. Wird auf Routenschilder gedruckt.",
+            "cover": "PNG, JPG oder WebP. Oben auf der Halleninfo-Seite."
         },
         "boulderBands": "Boulderfarben",
         "boulderBandsHint": "Erscheint als Farbbalken neben Bouldergraden und auf gedruckten Schildern. Ziehe die Griffe, um festzulegen, wo eine Farbe endet; wähle eine Farbe, um sie umzubenennen, umzufärben, zu teilen oder zu entfernen.",
@@ -1886,7 +1894,9 @@
         "myGyms": "Meine Hallen",
         "recent": "Zuletzt besucht",
         "allGyms": "Alle Hallen",
-        "empty": "Keine Hallen gefunden"
+        "empty": "Keine Hallen gefunden",
+        "openGym": "Zur Halle",
+        "showOnMap": "Auf der Karte zeigen"
     },
     "gym": {
         "notFound": "Diese Halle gibt es nicht oder sie ist nicht aktiv."
@@ -2353,5 +2363,63 @@
         "authorPosts": "{count} Beitrag | {count} Beiträge",
         "authorHidden": "{count} ausgeblendet",
         "decidedElsewhere": "Dieser Fall wurde anderswo entschieden"
+    },
+    "gymInfo": {
+        "title": "{name} · Info",
+        "empty": "Die Halle hat noch keine Informationen hinterlegt.",
+        "location": "Anfahrt",
+        "amenitiesTitle": "Ausstattung",
+        "hoursTitle": "Öffnungszeiten",
+        "holiday": "Feiertage",
+        "closed": "Geschlossen",
+        "openUntil": "Geöffnet bis {time}",
+        "opensAt": "Öffnet um {time}",
+        "opensOn": "Öffnet {day} {time}",
+        "contact": "Kontakt",
+        "directions": {
+            "osm": "OpenStreetMap",
+            "google": "Google Maps",
+            "apple": "Apple Karten",
+            "route": "Route",
+            "other": "Andere Karten-Apps"
+        },
+        "map": {
+            "show": "Karte anzeigen",
+            "consent": "Lädt Kartenkacheln von {provider}; dabei wird deine IP-Adresse übermittelt."
+        },
+        "amenities": {
+            "toilets": "WC",
+            "showers": "Duschen",
+            "changing_rooms": "Umkleiden",
+            "lockers": "Schließfächer",
+            "cafe": "Café",
+            "shop": "Shop",
+            "rental": "Materialverleih",
+            "parking": "Parkplätze",
+            "bike_parking": "Fahrradstellplätze",
+            "public_transport": "ÖPNV",
+            "kids_area": "Kinderbereich",
+            "training_area": "Trainingsbereich",
+            "outdoor_area": "Außenbereich",
+            "yoga": "Yoga",
+            "sauna": "Sauna",
+            "wheelchair": "Barrierefrei",
+            "wifi": "WLAN"
+        },
+        "settings": {
+            "title": "Halleninfo",
+            "description": "Beschreibung",
+            "address": "Adresse",
+            "locate": "Suchen",
+            "website": "Website",
+            "hoursNote": "Hinweis zu den Öffnungszeiten",
+            "invalidHours": "Gib für jeden Zeitraum Beginn und Ende an.",
+            "notFound": "Adresse nicht gefunden",
+            "opens": "öffnet",
+            "closes": "schließt",
+            "addInterval": "Zeitraum hinzufügen",
+            "removeInterval": "Zeitraum entfernen",
+            "copyMonday": "Montag auf Di–Fr übernehmen"
+        }
     }
 }

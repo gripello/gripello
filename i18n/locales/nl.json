@@ -176,7 +176,8 @@
         "rated": "Heeft beoordelingen",
         "leaderboard": "Ranglijst",
         "friends": "Vrienden",
-        "feed": "Feed"
+        "feed": "Feed",
+        "info": "Info"
     },
     "dashboard": {
         "online": "{0} online"
@@ -589,7 +590,7 @@
             },
             "thirdParties": {
                 "title": "Geen tracking, geen derden",
-                "body": "Deze applicatie gebruikt geen analyse-, advertentie- of socialemediaplug-ins en laadt geen bronnen van servers van derden. Alle gegevens worden op onze eigen servers in de EU verwerkt en we verkopen geen gegevens. Doorgifte naar derde landen kan alleen plaatsvinden als je pushmeldingen inschakelt (pushdienst van je browserleverancier) of zelf een link naar een bètavideo opent (zie de secties hierboven)."
+                "body": "Deze applicatie gebruikt geen analyse-, advertentie- of socialemediaplug-ins en laadt geen bronnen van servers van derden. Alle gegevens worden op onze eigen servers in de EU verwerkt en we verkopen geen gegevens. Doorgifte naar derde landen kan alleen plaatsvinden als je pushmeldingen inschakelt (pushdienst van je browserleverancier) of zelf een link naar een bètavideo opent (zie de secties hierboven). Kaarten worden pas van OpenStreetMap geladen als je ervoor kiest ze te tonen (zie Kaarten)."
             },
             "storage": {
                 "title": "Cookies en lokale opslag",
@@ -608,6 +609,10 @@
                     "withdrawal": "Recht om je toestemming te allen tijde in te trekken (art. 7, lid 3, AVG)"
                 },
                 "complaint": "Je hebt het recht om een klacht in te dienen bij de toezichthoudende autoriteit (art. 77 AVG): in Nederland de Autoriteit Persoonsgegevens (autoriteitpersoonsgegevens.nl), in België de Gegevensbeschermingsautoriteit (gegevensbeschermingsautoriteit.be)."
+            },
+            "map": {
+                "title": "Kaarten",
+                "body": "Kaarten op halpagina’s worden pas geladen als je Kaart tonen kiest. Je browser vraagt dan kaarttegels op bij de OpenStreetMap Foundation (VK), die je IP-adres en browsergegevens ontvangt (art. 6 lid 1 sub a AVG, je toestemming). We onthouden de keuze op je apparaat; wis de sitegegevens om haar in te trekken. Medewerkers die in de instellingen een haladres opzoeken of de kaartspeld verplaatsen, sturen dat adres of de coördinaten naar OpenStreetMap Nominatim."
             }
         },
         "storage": {
@@ -635,7 +640,8 @@
                 "recentGyms": "Toont de hallen die je onlangs hebt bezocht op de startpagina",
                 "mapRouteType": "Onthoudt of de kaart boulders of routes toont",
                 "offlinePages": "Houdt de basis van de app, openbare pagina’s, gegevens van de hal en afbeeldingen offline beschikbaar",
-                "moderationSeen": "Onthoudt wanneer je de moderatie voor het laatst opende, om nieuwe zaken te markeren"
+                "moderationSeen": "Onthoudt wanneer je de moderatie voor het laatst opende, om nieuwe zaken te markeren",
+                "mapConsent": "Onthoudt dat je kaarten wilt laden"
             },
             "durations": {
                 "session": "Tot het uitloggen",
@@ -901,7 +907,8 @@
         "assets": {
             "logo": "App-logo",
             "icon": "Browserpictogram",
-            "sign": "Logo op routebordjes"
+            "sign": "Logo op routebordjes",
+            "cover": "Omslagfoto"
         },
         "grading": "Graadschalen",
         "routeGradeSystem": "Schaal voor routes",
@@ -916,7 +923,8 @@
         "assetHints": {
             "logo": "PNG, JPG, SVG of WebP. Wordt getoond in de navigatiebalk.",
             "icon": "ICO-bestand dat in het browsertabblad wordt getoond.",
-            "sign": "PNG, JPG, SVG of WebP. Wordt op routebordjes geprint."
+            "sign": "PNG, JPG, SVG of WebP. Wordt op routebordjes geprint.",
+            "cover": "PNG, JPG of WebP. Bovenaan de halinfo-pagina."
         },
         "boulderBands": "Boulderkleuren",
         "boulderBandsHint": "Verschijnt als kleurbalk naast bouldergraden en op geprinte bordjes. Sleep de grepen om te bepalen waar een kleur eindigt; kies een kleur om die te hernoemen, van kleur te veranderen, te splitsen of te verwijderen.",
@@ -1886,7 +1894,9 @@
         "myGyms": "Mijn hallen",
         "recent": "Recent bezocht",
         "allGyms": "Alle hallen",
-        "empty": "Geen hallen gevonden"
+        "empty": "Geen hallen gevonden",
+        "openGym": "Naar de hal",
+        "showOnMap": "Op de kaart tonen"
     },
     "gym": {
         "notFound": "Deze hal bestaat niet of is niet actief."
@@ -2353,5 +2363,63 @@
         "authorPosts": "{count} bijdrage | {count} bijdragen",
         "authorHidden": "{count} verborgen",
         "decidedElsewhere": "Deze zaak is elders beslist"
+    },
+    "gymInfo": {
+        "title": "{name} · Info",
+        "empty": "De hal heeft nog geen informatie toegevoegd.",
+        "location": "Locatie",
+        "amenitiesTitle": "Voorzieningen",
+        "hoursTitle": "Openingstijden",
+        "holiday": "Feestdagen",
+        "closed": "Gesloten",
+        "openUntil": "Open tot {time}",
+        "opensAt": "Opent om {time}",
+        "opensOn": "Opent {day} {time}",
+        "contact": "Contact",
+        "directions": {
+            "osm": "OpenStreetMap",
+            "google": "Google Maps",
+            "apple": "Apple Kaarten",
+            "route": "Route",
+            "other": "Andere kaart-apps"
+        },
+        "map": {
+            "show": "Kaart tonen",
+            "consent": "Laadt kaarttegels van {provider}, dat je IP-adres ontvangt."
+        },
+        "amenities": {
+            "toilets": "Toiletten",
+            "showers": "Douches",
+            "changing_rooms": "Kleedkamers",
+            "lockers": "Kluisjes",
+            "cafe": "Café",
+            "shop": "Winkel",
+            "rental": "Materiaalverhuur",
+            "parking": "Parkeren",
+            "bike_parking": "Fietsenstalling",
+            "public_transport": "Openbaar vervoer",
+            "kids_area": "Kinderhoek",
+            "training_area": "Trainingsruimte",
+            "outdoor_area": "Buitenruimte",
+            "yoga": "Yoga",
+            "sauna": "Sauna",
+            "wheelchair": "Rolstoeltoegankelijk",
+            "wifi": "Wifi"
+        },
+        "settings": {
+            "title": "Halinfo",
+            "description": "Beschrijving",
+            "address": "Adres",
+            "locate": "Zoeken",
+            "website": "Website",
+            "hoursNote": "Opmerking bij openingstijden",
+            "invalidHours": "Vul voor elke periode een begin- en eindtijd in.",
+            "notFound": "Adres niet gevonden",
+            "opens": "opent",
+            "closes": "sluit",
+            "addInterval": "Tijden toevoegen",
+            "removeInterval": "Tijden verwijderen",
+            "copyMonday": "Maandag naar di–vr kopiëren"
+        }
     }
 }

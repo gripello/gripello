@@ -176,7 +176,8 @@
         "rated": "A des avis",
         "leaderboard": "Classement",
         "friends": "Amis",
-        "feed": "Fil d’actu"
+        "feed": "Fil d’actu",
+        "info": "Infos"
     },
     "dashboard": {
         "online": "{0} en ligne"
@@ -589,7 +590,7 @@
             },
             "thirdParties": {
                 "title": "Aucun traçage, aucun tiers",
-                "body": "Cette application n’utilise aucun outil d’analyse, de publicité ni de plugin de réseaux sociaux et ne charge aucune ressource depuis des serveurs tiers. Toutes les données sont traitées sur nos propres serveurs dans l’Union européenne ; un transfert hors de l’UE n’a lieu que si vous activez les notifications push (service push de l’éditeur de votre navigateur) ou ouvrez vous-même un lien de vidéo de bêta (voir les sections ci-dessus). Nous ne vendons ni ne louons vos données et ne prenons aucune décision automatisée produisant des effets juridiques à votre égard."
+                "body": "Cette application n’utilise aucun outil d’analyse, de publicité ni de plugin de réseaux sociaux et ne charge aucune ressource depuis des serveurs tiers. Toutes les données sont traitées sur nos propres serveurs dans l’Union européenne ; un transfert hors de l’UE n’a lieu que si vous activez les notifications push (service push de l’éditeur de votre navigateur) ou ouvrez vous-même un lien de vidéo de bêta (voir les sections ci-dessus). Nous ne vendons ni ne louons vos données et ne prenons aucune décision automatisée produisant des effets juridiques à votre égard. Les cartes ne sont chargées depuis OpenStreetMap que si vous choisissez de les afficher (voir Cartes)."
             },
             "storage": {
                 "title": "Cookies et stockage local",
@@ -608,6 +609,10 @@
                     "withdrawal": "Droit de retirer votre consentement à tout moment, sans remettre en cause les traitements déjà effectués (article 7, paragraphe 3, du RGPD)"
                 },
                 "complaint": "Vous avez également le droit d’introduire une réclamation auprès d’une autorité de contrôle (article 77 du RGPD), notamment celle de votre lieu de résidence : la CNIL en France, l’Autorité de protection des données (APD) en Belgique, la CNPD au Luxembourg ou le Préposé fédéral à la protection des données et à la transparence (PFPDT) en Suisse."
+            },
+            "map": {
+                "title": "Cartes",
+                "body": "Les cartes des pages de salle ne sont chargées qu’après avoir choisi Afficher la carte. Votre navigateur demande alors des tuiles à l’OpenStreetMap Foundation (Royaume-Uni), qui reçoit votre adresse IP et des informations sur votre navigateur (art. 6, par. 1, point a) RGPD, votre consentement). Nous mémorisons ce choix sur votre appareil ; effacez les données du site pour le retirer. Le personnel qui recherche l’adresse d’une salle ou déplace le repère de la carte dans les paramètres envoie cette adresse ou les coordonnées à OpenStreetMap Nominatim."
             }
         },
         "storage": {
@@ -635,7 +640,8 @@
                 "recentGyms": "Affiche les salles récemment visitées sur la page d’accueil",
                 "mapRouteType": "Mémorise si la carte affiche les blocs ou les voies",
                 "offlinePages": "Garde la structure de l’application, les pages publiques, les données de la salle et les images disponibles hors ligne",
-                "moderationSeen": "Retient quand tu as ouvert la modération pour la dernière fois, pour marquer les nouveaux cas"
+                "moderationSeen": "Retient quand tu as ouvert la modération pour la dernière fois, pour marquer les nouveaux cas",
+                "mapConsent": "Mémorise que vous avez choisi de charger les cartes"
             },
             "durations": {
                 "session": "Jusqu’à la déconnexion",
@@ -901,7 +907,8 @@
         "assets": {
             "logo": "Logo de l’application",
             "icon": "Icône du navigateur",
-            "sign": "Logo sur les étiquettes de voies"
+            "sign": "Logo sur les étiquettes de voies",
+            "cover": "Image de couverture"
         },
         "grading": "Échelles de cotation",
         "routeGradeSystem": "Échelle des voies",
@@ -916,7 +923,8 @@
         "assetHints": {
             "logo": "PNG, JPG, SVG ou WebP. Affiché dans la barre de navigation.",
             "icon": "Fichier ICO affiché dans l’onglet du navigateur.",
-            "sign": "PNG, JPG, SVG ou WebP. Imprimé sur les étiquettes de voies."
+            "sign": "PNG, JPG, SVG ou WebP. Imprimé sur les étiquettes de voies.",
+            "cover": "PNG, JPG ou WebP. En haut de la page d’infos de la salle."
         },
         "boulderBands": "Couleurs des blocs",
         "boulderBandsHint": "Affiché sous forme de barre de couleur à côté des cotations de bloc et sur les étiquettes imprimées. Faites glisser les poignées pour définir où une couleur se termine ; sélectionnez une couleur pour la renommer, la recolorer, la scinder ou la supprimer.",
@@ -1886,7 +1894,9 @@
         "myGyms": "Mes salles",
         "recent": "Visitées récemment",
         "allGyms": "Toutes les salles",
-        "empty": "Aucune salle trouvée"
+        "empty": "Aucune salle trouvée",
+        "openGym": "Aller à la salle",
+        "showOnMap": "Afficher sur la carte"
     },
     "gym": {
         "notFound": "Cette salle n'existe pas ou n'est pas active."
@@ -2353,5 +2363,63 @@
         "authorPosts": "{count} publication | {count} publications",
         "authorHidden": "{count} masqué | {count} masqués",
         "decidedElsewhere": "Ce cas a été décidé ailleurs"
+    },
+    "gymInfo": {
+        "title": "{name} · Infos",
+        "empty": "La salle n’a pas encore ajouté d’informations.",
+        "location": "Accès",
+        "amenitiesTitle": "Équipements",
+        "hoursTitle": "Horaires",
+        "holiday": "Jours fériés",
+        "closed": "Fermé",
+        "openUntil": "Ouvert jusqu’à {time}",
+        "opensAt": "Ouvre à {time}",
+        "opensOn": "Ouvre {day} {time}",
+        "contact": "Contact",
+        "directions": {
+            "osm": "OpenStreetMap",
+            "google": "Google Maps",
+            "apple": "Plans Apple",
+            "route": "Itinéraire",
+            "other": "Autres applis de cartes"
+        },
+        "map": {
+            "show": "Afficher la carte",
+            "consent": "Charge les tuiles de carte depuis {provider}, qui reçoit votre adresse IP."
+        },
+        "amenities": {
+            "toilets": "Toilettes",
+            "showers": "Douches",
+            "changing_rooms": "Vestiaires",
+            "lockers": "Casiers",
+            "cafe": "Café",
+            "shop": "Boutique",
+            "rental": "Location de matériel",
+            "parking": "Parking",
+            "bike_parking": "Parking vélos",
+            "public_transport": "Transports en commun",
+            "kids_area": "Espace enfants",
+            "training_area": "Espace d’entraînement",
+            "outdoor_area": "Espace extérieur",
+            "yoga": "Yoga",
+            "sauna": "Sauna",
+            "wheelchair": "Accès fauteuil roulant",
+            "wifi": "Wi-Fi"
+        },
+        "settings": {
+            "title": "Infos de la salle",
+            "description": "Description",
+            "address": "Adresse",
+            "locate": "Rechercher",
+            "website": "Site web",
+            "hoursNote": "Remarque sur les horaires",
+            "invalidHours": "Indiquez une heure de début et de fin pour chaque plage.",
+            "notFound": "Adresse introuvable",
+            "opens": "ouvre",
+            "closes": "ferme",
+            "addInterval": "Ajouter une plage",
+            "removeInterval": "Supprimer la plage",
+            "copyMonday": "Copier lundi sur mar–ven"
+        }
     }
 }
