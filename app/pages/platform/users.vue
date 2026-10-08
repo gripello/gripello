@@ -215,6 +215,7 @@ import {
     membershipChips,
     platformUserFilter,
     userDisplayName,
+    userKeptThroughReload,
     type PlatformUser,
     type PlatformUserFilter,
 } from '~/utils/platformUsers'
@@ -335,8 +336,8 @@ function reloadAll() {
 }
 
 const editingId = ref<string | null>(null)
-const editingUser = computed(
-    () => users.value.find((user) => user.id === editingId.value) ?? null,
+const editingUser = computed<PlatformUser | null>((previous) =>
+    userKeptThroughReload(users.value, editingId.value, previous),
 )
 const editOpen = ref(false)
 
