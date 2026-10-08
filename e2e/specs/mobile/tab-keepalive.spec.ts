@@ -63,7 +63,7 @@ test('an ascent logged on the route shows up in the open logbook tab', async ({
     await page.getByTestId('tick-submit').click()
     await expect(page.getByTestId('route-ticked')).toBeVisible()
 
-    await page.goForward()
+    await page.getByTestId('bottom-nav-logbook').click()
     await page.waitForURL('**/logbook')
     await expect(
         page.getByTestId('logbook-tick').filter({ hasText: route.name }),

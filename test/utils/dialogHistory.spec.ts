@@ -1,5 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { pushDialogEntry, settleDialogHistory } from '~/utils/dialogHistory'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import {
+    listenBeforeRouter,
+    pushDialogEntry,
+    settleDialogHistory,
+} from '~/utils/dialogHistory'
 
 function back(state: unknown) {
     const routerListener = vi.fn()
@@ -10,6 +14,7 @@ function back(state: unknown) {
 }
 
 describe('dialog history', () => {
+    beforeAll(listenBeforeRouter)
     const releases: (() => void)[] = []
     afterEach(() => {
         releases.splice(0).forEach((release) => release())

@@ -9,6 +9,9 @@ import {
     watch,
 } from 'vue'
 import DialogShell from '~/components/layout/DialogShell.vue'
+import { listenBeforeRouter } from '~/utils/dialogHistory'
+
+listenBeforeRouter()
 
 const width = ref(1440)
 

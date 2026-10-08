@@ -13,16 +13,10 @@ function currentUrlPath() {
     return location.pathname + location.search + location.hash
 }
 
-function stopListeningWhenIdle() {
-    if (!openDialogs.length && !ownBackSteps)
-        window.removeEventListener('popstate', onPopState, true)
-}
-
 function onPopState(event: PopStateEvent) {
     const ownBackStep = ownBackSteps > 0
     const top = openDialogs.at(-1)
     if (!ownBackStep && (!top || event.state?.dialogShell === top.id)) return
-    // Runs before vue-router's listener, which must not see a back step that only closes a dialog.
     event.stopImmediatePropagation()
     const path = routerPath()
     if (path !== currentUrlPath())
@@ -34,7 +28,6 @@ function onPopState(event: PopStateEvent) {
         openDialogs.pop()
         top!.close()
     }
-    stopListeningWhenIdle()
 }
 
 export function settleDialogHistory(): Promise<void> | undefined {
@@ -52,13 +45,16 @@ export function settleDialogHistory(): Promise<void> | undefined {
     })
 }
 
+// Window listeners fire in registration order, so this must be added before vue-router's own.
+export function listenBeforeRouter() {
+    window.addEventListener('popstate', onPopState)
+}
+
 export function trackDialogPath(currentPath: () => string) {
     routerPath = currentPath
 }
 
 export function pushDialogEntry(close: () => void) {
-    if (!openDialogs.length && !ownBackSteps)
-        window.addEventListener('popstate', onPopState, true)
     const id = ++lastId
     history.pushState({ ...history.state, dialogShell: id }, '')
     openDialogs.push({ id, close })
@@ -73,5 +69,4 @@ function releaseDialogEntry(id: number) {
         ownBackSteps++
         history.back()
     }
-    stopListeningWhenIdle()
 }
