@@ -193,6 +193,16 @@ func writeAccountExport(app core.App, zw *zip.Writer, user *core.Record) error {
 		devices = append(devices, map[string]any{"device": subscription.GetString("device"), "created": subscription.GetDateTime("created")})
 	}
 	x.writeJSON("devices.json", devices)
+	sessions := []map[string]any{}
+	for _, session := range x.byUser("sessions", "user") {
+		sessions = append(sessions, ownFields(session, "user"))
+	}
+	x.writeJSON("sessions.json", sessions)
+	factors := []map[string]any{}
+	for _, factor := range x.byUser("mfa_factors", "user") {
+		factors = append(factors, factorSummary(factor))
+	}
+	x.writeJSON("two_factor.json", factors)
 	x.writeJSON("notifications.json", x.byUser("notifications", "user"))
 	x.writeJSON("activity_log.json", x.byUser("audit_logs", "actor"))
 

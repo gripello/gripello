@@ -140,7 +140,57 @@
         "leaveGymConfirm": "Je verliest je rol en teamtoegang in deze hal. Je logboek blijft bewaard.",
         "leftGym": "Je hebt de hal verlaten.",
         "lastAdmin": "De hal heeft eerst nog een beheerder nodig voordat je kunt vertrekken.",
-        "changeBanner": "Banner wijzigen"
+        "changeBanner": "Banner wijzigen",
+        "twoFactor": {
+            "title": "Tweestapsverificatie",
+            "verify": "Bevestigen",
+            "code": "Code uit je authenticator-app",
+            "recoveryCode": "Herstelcode",
+            "usePasskey": "Passkey gebruiken",
+            "signInWithPasskey": "Inloggen met passkey",
+            "invalidCode": "Die code werkte niet",
+            "passkeyFailed": "Inloggen met passkey mislukt",
+            "authenticatorApp": "Authenticator-app",
+            "setUp": "Instellen",
+            "removeAuthenticator": "Authenticator-app verwijderen",
+            "passkey": "Passkey",
+            "passkeys": "Passkeys",
+            "addPasskey": "Passkey toevoegen",
+            "removePasskey": "Passkey {name} verwijderen",
+            "recoveryCodes": "Herstelcodes",
+            "codesLeft": "{n} code over | {n} codes over",
+            "newCodes": "Nieuwe herstelcodes",
+            "renewCodes": "Vernieuwen",
+            "qrAlt": "QR-code voor je authenticator-app",
+            "lastUsed": "Laatst gebruikt {date}",
+            "added": "Toegevoegd {date}",
+            "enabled": "Tweestapsverificatie staat aan",
+            "passkeyAdded": "Passkey toegevoegd",
+            "copy": "Kopiëren",
+            "download": "Downloaden",
+            "done": "Klaar",
+            "copied": "Gekopieerd",
+            "name": "Naam",
+            "titleCode": "Code invoeren",
+            "titlePasskey": "Bevestigen met passkey",
+            "titleRecovery": "Herstelcode",
+            "otherMethod": "Andere methode",
+            "backToLogin": "Terug naar inloggen",
+            "invalidRecoveryCode": "Die herstelcode werkte niet",
+            "method": {
+                "totp": "Authenticator-app",
+                "passkey": "Passkey",
+                "recovery": "Herstelcode"
+            }
+        },
+        "sessions": {
+            "title": "Actieve sessies",
+            "thisDevice": "Dit apparaat",
+            "unknownDevice": "Onbekend apparaat",
+            "signOut": "{device} uitloggen",
+            "signOutOthers": "Andere apparaten uitloggen",
+            "signOutOthersConfirm": "Alle andere apparaten worden uitgelogd."
+        }
     },
     "routes": {
         "home": "Overzicht",
@@ -423,7 +473,9 @@
             "resetLinkInvalid": "Deze link om je wachtwoord te resetten is ongeldig of verlopen. Vraag op de inlogpagina een nieuwe aan.",
             "captcha": "De spamcontrole is mislukt. Probeer het opnieuw.",
             "verificationMail": "Je account is aangemaakt, maar de bevestigingsmail kon niet worden verstuurd. Vraag op de inlogpagina een nieuwe aan.",
-            "account_suspended": "Dit account is geschorst."
+            "account_suspended": "Dit account is geschorst.",
+            "account_locked": "Te veel mislukte pogingen. Probeer het over 15 minuten opnieuw.",
+            "mfa_expired": "Het inloggen duurde te lang. Log opnieuw in."
         },
         "deleteItem": "Dit item verwijderen? Dit kan niet ongedaan worden gemaakt.",
         "deleteMoreItems": "De geselecteerde items verwijderen? Dit kan niet ongedaan worden gemaakt.",
@@ -1177,7 +1229,15 @@
             "password_reset_request": "Wachtwoordherstel aangevraagd",
             "password_reset": "Wachtwoord hersteld",
             "email_change_request": "E-mailwijziging aangevraagd",
-            "email_change": "E-mailadres gewijzigd"
+            "email_change": "E-mailadres gewijzigd",
+            "login_second_factor": "Wachtwoord bevestigd, tweede stap open",
+            "account_locked": "Account geblokkeerd na mislukte pogingen",
+            "mfa_enabled": "Authenticator-app toegevoegd",
+            "mfa_disabled": "Authenticator-app verwijderd",
+            "passkey_added": "Passkey toegevoegd",
+            "passkey_removed": "Passkey verwijderd",
+            "sessions_revoked": "Andere apparaten uitgelogd",
+            "recovery_code_used": "Herstelcode gebruikt"
         },
         "collection": {
             "routes": "Routes",
@@ -1187,7 +1247,8 @@
             "permissions": "Rechten",
             "settings": "Instellingen",
             "reports": "Meldingen",
-            "tasks": "Taken"
+            "tasks": "Taken",
+            "sessions": "Sessies"
         },
         "target": {
             "routes": "Route",
@@ -1197,7 +1258,8 @@
             "permissions": "Recht",
             "settings": "Instellingen",
             "reports": "Melding",
-            "tasks": "Taak"
+            "tasks": "Taak",
+            "sessions": "Sessie"
         },
         "changedLabel": "Gewijzigd",
         "filter": {

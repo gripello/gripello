@@ -69,7 +69,8 @@ export function usePermissions() {
             console.error('Failed to fetch permissions:', err)
             memberships.value = []
             platformAdmin.value = false
-            if (!loadFailed.value) notifyError($i18n.t('permissions.loadError'))
+            if (!loadFailed.value && !authRejected.value)
+                notifyError($i18n.t('permissions.loadError'))
             loadFailed.value = true
             loadedForUser.value = ''
             loaded.value = true

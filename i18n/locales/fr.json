@@ -140,7 +140,57 @@
         "leaveGymConfirm": "Vous perdez votre rôle et votre accès d'équipe dans cette salle. Votre carnet est conservé.",
         "leftGym": "Vous avez quitté la salle.",
         "lastAdmin": "La salle a besoin d'un autre administrateur avant que vous puissiez la quitter.",
-        "changeBanner": "Changer la bannière"
+        "changeBanner": "Changer la bannière",
+        "twoFactor": {
+            "title": "Authentification à deux facteurs",
+            "verify": "Vérifier",
+            "code": "Code de ton application d’authentification",
+            "recoveryCode": "Code de récupération",
+            "usePasskey": "Utiliser une clé d’accès",
+            "signInWithPasskey": "Se connecter avec une clé d’accès",
+            "invalidCode": "Ce code n’a pas fonctionné",
+            "passkeyFailed": "La connexion par clé d’accès a échoué",
+            "authenticatorApp": "Application d’authentification",
+            "setUp": "Configurer",
+            "removeAuthenticator": "Retirer l’application d’authentification",
+            "passkey": "Clé d’accès",
+            "passkeys": "Clés d’accès",
+            "addPasskey": "Ajouter une clé d’accès",
+            "removePasskey": "Retirer la clé d’accès {name}",
+            "recoveryCodes": "Codes de récupération",
+            "codesLeft": "{n} code restant | {n} codes restants",
+            "newCodes": "Nouveaux codes de récupération",
+            "renewCodes": "Renouveler",
+            "qrAlt": "QR code pour ton application d’authentification",
+            "lastUsed": "Dernière utilisation {date}",
+            "added": "Ajoutée {date}",
+            "enabled": "L’authentification à deux facteurs est activée",
+            "passkeyAdded": "Clé d’accès ajoutée",
+            "copy": "Copier",
+            "download": "Télécharger",
+            "done": "Terminé",
+            "copied": "Copié",
+            "name": "Nom",
+            "titleCode": "Saisir le code",
+            "titlePasskey": "Confirmer avec une clé d’accès",
+            "titleRecovery": "Code de récupération",
+            "otherMethod": "Autre méthode",
+            "backToLogin": "Retour à la connexion",
+            "invalidRecoveryCode": "Ce code de récupération n’a pas fonctionné",
+            "method": {
+                "totp": "Application d’authentification",
+                "passkey": "Clé d’accès",
+                "recovery": "Code de récupération"
+            }
+        },
+        "sessions": {
+            "title": "Sessions actives",
+            "thisDevice": "Cet appareil",
+            "unknownDevice": "Appareil inconnu",
+            "signOut": "Déconnecter {device}",
+            "signOutOthers": "Déconnecter les autres appareils",
+            "signOutOthersConfirm": "Tous les autres appareils seront déconnectés."
+        }
     },
     "routes": {
         "home": "Aperçu",
@@ -423,7 +473,9 @@
             "resetLinkInvalid": "Ce lien de réinitialisation du mot de passe n’est pas valide ou a expiré. Demandez-en un nouveau depuis la page de connexion.",
             "captcha": "La vérification anti-spam a échoué. Veuillez réessayer.",
             "verificationMail": "Votre compte a été créé, mais l’e-mail de confirmation n’a pas pu être envoyé. Demandez-en un nouveau depuis la page de connexion.",
-            "account_suspended": "Ce compte est suspendu."
+            "account_suspended": "Ce compte est suspendu.",
+            "account_locked": "Trop de tentatives échouées. Réessaie dans 15 minutes.",
+            "mfa_expired": "La connexion a pris trop de temps. Reconnecte-toi."
         },
         "deleteItem": "Supprimer cet élément ? Cette action est irréversible.",
         "deleteMoreItems": "Supprimer les éléments sélectionnés ? Cette action est irréversible.",
@@ -1177,7 +1229,15 @@
             "password_reset_request": "Réinitialisation du mot de passe demandée",
             "password_reset": "Mot de passe réinitialisé",
             "email_change_request": "Changement d'e-mail demandé",
-            "email_change": "E-mail modifié"
+            "email_change": "E-mail modifié",
+            "login_second_factor": "Mot de passe confirmé, second facteur en attente",
+            "account_locked": "Compte bloqué après des tentatives échouées",
+            "mfa_enabled": "Application d’authentification ajoutée",
+            "mfa_disabled": "Application d’authentification retirée",
+            "passkey_added": "Clé d’accès ajoutée",
+            "passkey_removed": "Clé d’accès retirée",
+            "sessions_revoked": "Autres appareils déconnectés",
+            "recovery_code_used": "Code de récupération utilisé"
         },
         "collection": {
             "routes": "Voies",
@@ -1187,7 +1247,8 @@
             "permissions": "Autorisations",
             "settings": "Paramètres",
             "reports": "Signalements",
-            "tasks": "Tâches"
+            "tasks": "Tâches",
+            "sessions": "Sessions"
         },
         "target": {
             "routes": "Voie",
@@ -1197,7 +1258,8 @@
             "permissions": "Autorisation",
             "settings": "Paramètres",
             "reports": "Signalement",
-            "tasks": "Tâche"
+            "tasks": "Tâche",
+            "sessions": "Session"
         },
         "changedLabel": "Modifié",
         "filter": {

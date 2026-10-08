@@ -224,6 +224,9 @@ func TestAccountExportCoversEveryUserLink(t *testing.T) {
 		"moderation_items.author":      true,
 		"moderation_items.files":       true,
 		"moderation_items.reviewed_by": false, // moderator identity
+		"sessions.user":                true,
+		"mfa_factors.user":             true,
+		"mfa_recovery_codes.user":      false, // only hashes of one-time secrets
 	}
 	users, err := app.FindCollectionByNameOrId("users")
 	if err != nil {

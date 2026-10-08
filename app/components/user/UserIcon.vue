@@ -48,6 +48,7 @@
 </template>
 
 <script setup lang="ts">
+import { signOut } from '~/utils/session'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { avatarColor, nameInitials } from '~/utils/avatar'
 
@@ -123,7 +124,7 @@ async function logout() {
     if (isLoggingOut.value) return
     try {
         isLoggingOut.value = true
-        pb.authStore.clear()
+        signOut(pb)
         await router.push('/auth/login')
     } finally {
         isLoggingOut.value = false

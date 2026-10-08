@@ -45,7 +45,11 @@
                             v-model="identity"
                             :icon="identityIcon"
                             :type="identityInputType"
-                            :autocomplete="identityAutocomplete"
+                            :autocomplete="
+                                passkey.autofillActive.value
+                                    ? `${identityAutocomplete} webauthn`
+                                    : identityAutocomplete
+                            "
                             :name="identityAutocomplete"
                             :disabled="loading"
                             color="success"
@@ -143,6 +147,20 @@
                     >
                         <CaptchaLoader v-if="loading" />
                         <template v-else>{{ $t('account.login') }}</template>
+                    </UButton>
+
+                    <UButton
+                        v-if="passkey.supported.value"
+                        color="neutral"
+                        variant="outline"
+                        block
+                        icon="i-lucide-key-round"
+                        class="mb-3"
+                        :disabled="loading"
+                        data-testid="login-passkey"
+                        @click="loginWithPasskey"
+                    >
+                        {{ $t('account.twoFactor.signInWithPasskey') }}
                     </UButton>
 
                     <UButton
@@ -347,6 +365,17 @@
                         {{ $t('actions.cancel') }}
                     </UButton>
                 </UForm>
+
+                <AuthTwoFactorStep
+                    v-else-if="view === 'twoFactor'"
+                    key="twoFactor"
+                    v-model:method="secondFactorMethod"
+                    :mfa-id="mfaId"
+                    :methods="secondFactorMethods"
+                    @authenticated="finishLogin"
+                    @failed="abandonSecondFactor"
+                    @back="leaveSecondFactor"
+                />
             </Transition>
         </div>
     </LayoutAuthLayout>
@@ -363,6 +392,9 @@ import {
     validUsername,
 } from '~/utils/validation'
 import { safeRedirect, staffLandingPath } from '~/utils/nav'
+import { isPasskeyCancel } from '~/utils/webauthn'
+import type { SecondFactorMethod } from '~/components/auth/TwoFactorStep.vue'
+import type { AuthResult } from '~/composables/usePasskeyLogin'
 defineOptions({ name: 'LoginPage' })
 
 const { t, locale } = useI18n()
@@ -418,6 +450,11 @@ const rememberMe = ref(true)
 const capsLockOn = ref(false)
 const unverified = ref(false)
 const registerPasswordValid = ref(false)
+const mfaId = ref('')
+const secondFactorMethods = ref<SecondFactorMethod[]>([])
+const secondFactorMethod = ref<SecondFactorMethod>('totp')
+const passkey = usePasskeyLogin()
+onMounted(offerPasskeyAutofill)
 
 type AnyForm = Form<Record<string, unknown>>
 const loginForm = useTemplateRef<AnyForm>('loginForm')
@@ -454,6 +491,7 @@ const viewEyebrow = computed(
             requestReset: t('account.eyebrowAccountRecovery'),
             register: t('account.eyebrowRegister'),
             resendVerification: t('account.eyebrowVerifyEmail'),
+            twoFactor: t('account.eyebrowWelcomeBack'),
         })[view.value] ?? '',
 )
 const viewTitle = computed(
@@ -463,6 +501,11 @@ const viewTitle = computed(
             requestReset: t('account.reset_password'),
             register: t('account.createAccount'),
             resendVerification: t('account.resendVerification'),
+            twoFactor: {
+                totp: t('account.twoFactor.titleCode'),
+                passkey: t('account.twoFactor.titlePasskey'),
+                recovery: t('account.twoFactor.titleRecovery'),
+            }[secondFactorMethod.value],
         })[view.value] ?? '',
 )
 const viewSubtitle = computed(
@@ -472,6 +515,7 @@ const viewSubtitle = computed(
             requestReset: t('account.reset_hint'),
             register: t('account.register_hint'),
             resendVerification: t('account.reset_hint'),
+            twoFactor: identity.value,
         })[view.value] ?? '',
 )
 
@@ -577,6 +621,8 @@ function resolveAuthError(err: unknown) {
         return t('notifications.error.invalid_credentials')
     if (isUnverifiedError(err))
         return t('notifications.error.email_not_verified')
+    if (/locked/i.test(msg)) return t('notifications.error.account_locked')
+    if (/MFA session/i.test(msg)) return t('notifications.error.mfa_expired')
     if (/too many/i.test(msg)) return t('notifications.error.too_many_attempts')
     if (/captcha/i.test(msg)) return t('notifications.error.captcha')
     return t('notifications.error.unknown')
@@ -595,10 +641,75 @@ async function submitLogin() {
             })
         await navigateTo(await afterLoginPath(), { replace: true })
     } catch (err) {
+        const pendingMfa = (
+            err as {
+                response?: { mfaId?: string; methods?: SecondFactorMethod[] }
+            }
+        )?.response
+        if (pendingMfa?.mfaId) {
+            passkey.stopAutofill()
+            mfaId.value = pendingMfa.mfaId
+            secondFactorMethods.value = pendingMfa.methods?.length
+                ? pendingMfa.methods
+                : ['totp', 'recovery']
+            secondFactorMethod.value = secondFactorMethods.value[0]!
+            view.value = 'twoFactor'
+            return
+        }
         unverified.value = isUnverifiedError(err)
         notifyError(resolveAuthError(err))
     } finally {
         loading.value = false
+    }
+}
+
+async function finishLogin(result: AuthResult) {
+    loading.value = true
+    pb.authStore.save(result.token, result.record)
+    await navigateTo(await afterLoginPath(), { replace: true })
+}
+
+function leaveSecondFactor() {
+    mfaId.value = ''
+    view.value = 'login'
+    offerPasskeyAutofill()
+}
+
+function abandonSecondFactor(err: unknown) {
+    notifyError(resolveAuthError(err))
+    leaveSecondFactor()
+}
+
+function notifyPasskeyError(err: unknown) {
+    if (isPasskeyCancel(err)) return
+    notifyError(
+        isSuspendedError(err)
+            ? resolveAuthError(err)
+            : t('account.twoFactor.passkeyFailed'),
+    )
+}
+
+async function offerPasskeyAutofill() {
+    setAuthPersistent(rememberMe.value)
+    try {
+        const result = await passkey.autofill()
+        if (result) await finishLogin(result)
+    } catch (err) {
+        notifyPasskeyError(err)
+        if ((err as { status?: number })?.status === 400) offerPasskeyAutofill()
+    }
+}
+
+async function loginWithPasskey() {
+    passkey.stopAutofill()
+    loading.value = true
+    setAuthPersistent(rememberMe.value)
+    try {
+        await finishLogin(await passkey.signIn())
+    } catch (err) {
+        loading.value = false
+        notifyPasskeyError(err)
+        offerPasskeyAutofill()
     }
 }
 
