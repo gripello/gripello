@@ -10,6 +10,9 @@ export const TAG_PADDING = 10
 
 const TEXT_WIDTH = 150
 const QR_SIZE = 110
+const QR_QUIET_ZONE = 3
+const LOGO_GAP = 4
+const LOGO_BOTTOM_INSET = 2
 const CIRCLE_RADIUS = 12
 const CIRCLE_BORDER = 1.5
 const BAND_WIDTH = TAG_PADDING - 2
@@ -132,6 +135,11 @@ export function drawRouteTag(
     doc.fillColor('black')
 
     if (options.show.logo && options.logo) {
-        doc.image(options.logo, x + 165, y + 105, { fit: [100, 50] })
+        const logoY = qrY + QR_SIZE - QR_QUIET_ZONE + LOGO_GAP
+        const logoBottom = y + TAG_HEIGHT - TAG_PADDING - LOGO_BOTTOM_INSET
+        doc.image(options.logo, qrX + QR_QUIET_ZONE, logoY, {
+            fit: [QR_SIZE - 2 * QR_QUIET_ZONE, logoBottom - logoY],
+            align: 'center',
+        })
     }
 }
