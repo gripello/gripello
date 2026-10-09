@@ -48,6 +48,134 @@ test('imports routes from a JSON file', async ({
     await expect(page.getByTestId('routes-table')).toContainText('6B')
 })
 
+test('imports routes from a CSV file with a manual column mapping', async ({
+    adminPage: page,
+    testPrefix,
+    workerLocation,
+}, testInfo) => {
+    const name = `${testPrefix}-csv`
+    const file = testInfo.outputPath('import.csv')
+    fs.writeFileSync(
+        file,
+        `Name;Grade;Type;Location;Schrauber\n${name};6b;Boulder;${workerLocation.name};CSV Setter\n`,
+    )
+
+    await gotoSettled(page, '/manage/routes')
+    const fileChooserPromise = page.waitForEvent('filechooser')
+    await page.getByTestId('routes-import-open').click()
+    const chooser = await fileChooserPromise
+    await chooser.setFiles(file)
+
+    await expect(page.getByTestId('import-route-dialog')).toBeVisible()
+    await page.getByTestId('import-route-map-creator').click()
+    await page.getByRole('option', { name: 'Schrauber' }).click()
+    await page.getByTestId('import-route-confirm').click()
+    await expect(page.getByTestId('global-snackbar').last()).not.toContainText(
+        /issues/i,
+    )
+
+    await page.getByTestId('filter-search').fill(name)
+    await expect(page.getByTestId('routes-table')).toContainText('6B')
+    await expect(page.getByTestId('routes-table')).toContainText('CSV Setter')
+})
+
+async function chooseImportFile(
+    page: Parameters<typeof gotoSettled>[0],
+    file: string,
+) {
+    const fileChooserPromise = page.waitForEvent('filechooser')
+    await page.getByTestId('routes-import-open').click()
+    const chooser = await fileChooserPromise
+    await chooser.setFiles(file)
+    await expect(page.getByTestId('import-route-dialog')).toBeVisible()
+}
+
+test('imports reviews of an older system onto the routes imported before', async ({
+    adminPage: page,
+    root,
+    testPrefix,
+    workerLocation,
+}, testInfo) => {
+    const name = `${testPrefix}-legacy`
+    const routesFile = testInfo.outputPath('routes.csv')
+    const reviewsFile = testInfo.outputPath('reviews.csv')
+    fs.writeFileSync(
+        routesFile,
+        `Old ID;Name;Grade;Type;Location\n${testPrefix}-17;${name};6b;Boulder;${workerLocation.name}\n`,
+    )
+    fs.writeFileSync(
+        reviewsFile,
+        `Route ID;Stars;Text;Date\n${testPrefix}-17;4;${name} first;2021-03-04 09:30:00Z\n${testPrefix}-17;5;${name} second;2022-05-06 10:00:00Z\nunknown;3;lost;2022-01-01\n`,
+    )
+
+    await gotoSettled(page, '/manage/routes')
+    await chooseImportFile(page, routesFile)
+    await page.getByTestId('import-route-confirm').click()
+    await expect(page.getByTestId('import-route-dialog')).toBeHidden()
+
+    await chooseImportFile(page, reviewsFile)
+    await page.getByTestId('import-mode-reviews').click()
+    await expect(page.getByTestId('import-review-count')).toContainText('2')
+    await expect(page.getByTestId('import-review-row')).toHaveCount(3)
+    await page.getByTestId('import-route-confirm').click()
+    await expect(page.getByTestId('global-snackbar').last()).toContainText(
+        /without a route/i,
+    )
+
+    const ratings = await root.collection('ratings').getFullList({
+        filter: root.filter('route_id.name = {:name}', { name }),
+        sort: 'created',
+    })
+    expect(ratings.map((rating) => [rating.comment, rating.created])).toEqual([
+        [`${name} first`, '2021-03-04 09:30:00.000Z'],
+        [`${name} second`, '2022-05-06 10:00:00.000Z'],
+    ])
+    expect(ratings.every((rating) => !rating.user)).toBe(true)
+})
+
+test('keeps review dates of a Gripello JSON export', async ({
+    adminPage: page,
+    root,
+    testPrefix,
+    workerLocation,
+}, testInfo) => {
+    const name = `${testPrefix}-json-dates`
+    const file = testInfo.outputPath('import.json')
+    fs.writeFileSync(
+        file,
+        JSON.stringify([
+            {
+                name,
+                ...uiaa('6'),
+                location: workerLocation.name,
+                type: 'Route',
+                ratings: [
+                    {
+                        rating: 4,
+                        comment: name,
+                        created: '2020-02-03 04:05:06.000Z',
+                    },
+                ],
+            },
+        ]),
+    )
+
+    await gotoSettled(page, '/manage/routes')
+    await chooseImportFile(page, file)
+    await page.getByTestId('import-route-confirm').click()
+    await expect(page.getByTestId('import-route-dialog')).toBeHidden()
+
+    await expect
+        .poll(async () =>
+            (
+                await root.collection('ratings').getFullList({
+                    filter: root.filter('comment = {:name}', { name }),
+                })
+            ).map((rating) => rating.created),
+        )
+        .toEqual(['2020-02-03 04:05:06.000Z'])
+})
+
 test('reports import issues when route creation fails server-side', async ({
     adminPage: page,
     testPrefix,

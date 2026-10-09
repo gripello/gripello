@@ -49,6 +49,8 @@ func archivedAt(wasArchived, isArchived bool, current, now types.DateTime) types
 	return current
 }
 
+const maxImportedRatings = 500
+
 func registerRatingImport(app core.App) {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.POST("/api/import/ratings", func(e *core.RequestEvent) error {
@@ -62,16 +64,25 @@ func registerRatingImport(app core.App) {
 			if !hasPermission(e.App, e.Auth.Id, body.Gym, "manage_routes") {
 				return e.ForbiddenError("Importing ratings requires manage_routes.", nil)
 			}
+			if len(body.Ratings) > maxImportedRatings {
+				return e.BadRequestError("Too many ratings in one request.", nil)
+			}
 			collection, err := e.App.FindCachedCollectionByNameOrId("ratings")
 			if err != nil {
 				return err
 			}
 			failed := 0
 			for _, data := range body.Ratings {
-				delete(data, "id")
-				delete(data, "gym")
+				created := importedRatingDate(data["created"], types.NowDateTime())
+				for _, key := range []string{"id", "gym", "user", "created", "updated"} {
+					delete(data, key)
+				}
 				record := core.NewRecord(collection)
 				record.Load(data)
+				if !created.IsZero() {
+					record.SetRaw("created", created)
+					record.SetRaw("updated", created)
+				}
 				if route, err := e.App.FindRecordById("routes", record.GetString("route_id")); err != nil || route.GetString("gym") != body.Gym {
 					failed++
 					continue
@@ -84,4 +95,12 @@ func registerRatingImport(app core.App) {
 		}).Bind(apis.RequireAuth("users"))
 		return se.Next()
 	})
+}
+
+func importedRatingDate(value any, now types.DateTime) types.DateTime {
+	date, err := types.ParseDateTime(value)
+	if err != nil || date.IsZero() || date.After(now) {
+		return types.DateTime{}
+	}
+	return date
 }

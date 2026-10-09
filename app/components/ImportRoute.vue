@@ -4,7 +4,7 @@
             ref="fileInput"
             type="file"
             class="hidden"
-            accept="application/json"
+            accept=".json,.csv,.tsv,.txt,.xlsx,application/json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             data-testid="import-route-file-input"
             @change="handleFileChange"
         />
@@ -22,7 +22,97 @@
                 {{ $t('importRoutes.intro') }}
             </p>
 
-            <LayoutListGroup v-if="smAndDown" data-testid="import-route-list">
+            <SegmentedControl
+                v-model="mode"
+                :items="modeItems"
+                test-id="import-mode"
+                class="mb-4"
+            />
+
+            <LayoutPanel :title="$t('export.columns')" class="mb-4">
+                <div
+                    class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                    data-testid="import-route-mapping"
+                >
+                    <UFormField
+                        v-for="field in fields"
+                        :key="field"
+                        :label="fieldLabels[field]"
+                    >
+                        <USelect
+                            :model-value="mapping[field] ?? NOT_MAPPED"
+                            :items="columnItems"
+                            class="w-full"
+                            :data-testid="`import-route-map-${field}`"
+                            @update:model-value="setMapping(field, $event)"
+                        />
+                    </UFormField>
+                </div>
+            </LayoutPanel>
+
+            <LayoutLoadingState v-if="mode === 'reviews' && routesLoading" />
+            <template v-else-if="mode === 'reviews'">
+                <LayoutEyebrow class="mb-2" data-testid="import-review-count">
+                    {{
+                        $t('importRoutes.matchedCount', {
+                            matched: matchedReviews.length,
+                            total: reviewsToImport.length,
+                        })
+                    }}
+                </LayoutEyebrow>
+                <LayoutEmptyState
+                    v-if="routesError"
+                    variant="error"
+                    :card="false"
+                    :title="$t('importRoutes.failed')"
+                />
+                <LayoutListGroup v-else>
+                    <LayoutListRow
+                        v-for="(review, index) in reviewPreview"
+                        :key="index"
+                        data-testid="import-review-row"
+                    >
+                        <RouteSummary
+                            v-if="review.route"
+                            :route="review.route"
+                            size="sm"
+                            :meta="review.route.expand?.location?.name"
+                            class="w-2/5 shrink-0"
+                        />
+                        <p
+                            v-else
+                            class="w-2/5 shrink-0 truncate text-sm text-error"
+                        >
+                            {{ $t('importRoutes.noMatch') }}:
+                            {{ review.routeName || review.routeKey }}
+                        </p>
+                        <div class="min-w-0 flex-1 text-sm">
+                            <p class="truncate">
+                                {{
+                                    review.comment ||
+                                    $t('importRoutes.noComment')
+                                }}
+                            </p>
+                            <p class="truncate text-xs text-muted">
+                                {{
+                                    [
+                                        review.rating && `${review.rating}/5`,
+                                        review.grade,
+                                        formatDate(review.created, { locale }),
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' · ')
+                                }}
+                            </p>
+                        </div>
+                    </LayoutListRow>
+                </LayoutListGroup>
+            </template>
+
+            <LayoutListGroup
+                v-else-if="smAndDown"
+                data-testid="import-route-list"
+            >
                 <UCollapsible
                     v-for="(item, index) in routesToImport"
                     :key="index"
@@ -110,6 +200,10 @@
                 <UButton
                     color="primary"
                     :loading="loading"
+                    :disabled="
+                        mode === 'reviews' &&
+                        (routesLoading || !matchedReviews.length)
+                    "
                     data-testid="import-route-confirm"
                     @click="confirmImport"
                 >
@@ -120,35 +214,40 @@
     </div>
 </template>
 <script setup lang="ts">
-import { normalizeCreators } from '#shared/utils/formatting'
-import {
-    resolveImportedGrading,
-    type ImportedGrading,
-} from '#shared/utils/grades'
+import { formatDate, normalizeCreators } from '#shared/utils/formatting'
+import { resolveImportedGrading } from '#shared/utils/grades'
 import type { TableColumn } from '@nuxt/ui'
-import type { UserRecord, WallRecord } from '~/types/models'
+import type {
+    LocationRecord,
+    RouteRecord,
+    UserRecord,
+    WallRecord,
+} from '~/types/models'
+import { ROUTE_TYPES } from '~/utils/routes'
+import {
+    REVIEW_IMPORT_FIELDS,
+    ROUTE_IMPORT_FIELDS,
+    guessImportMapping,
+    matchReviewRoute,
+    tableFromCsv,
+    tableFromJson,
+    tableFromXlsx,
+    toImportedReview,
+    toImportedRoute,
+    type ImportField,
+    type ImportTable,
+    type ImportedRating,
+    type ImportedRoute,
+} from '~/utils/routeImport'
 
-interface ImportedRating extends ImportedGrading {
-    rating?: unknown
-    comment?: unknown
-    user?: string
+type ImportMode = 'routes' | 'reviews'
+type ExistingRoute = RouteRecord & {
+    expand?: { location?: Pick<LocationRecord, 'name'> }
 }
 
-interface ImportedRoute extends ImportedGrading {
-    name?: unknown
-    anchor_point?: unknown
-    location?: unknown
-    type?: string | null
-    comment?: unknown
-    creator?: unknown
-    screw_date?: string | null
-    color?: string | null
-    archived?: unknown
-    wall?: unknown
-    wall_position?: unknown
-    ratings?: ImportedRating[]
-    ratingsCount?: number
-}
+const NOT_MAPPED = '__none__'
+const REVIEW_PREVIEW_LIMIT = 100
+const RATING_CHUNK = 200
 
 const pb = usePocketbase()
 const gymId = useCurrentGymId()
@@ -158,15 +257,156 @@ const currentUser = pb.authStore.record as UserRecord | null
 const fileInput = ref<HTMLInputElement | null>(null)
 const showPreviewDialog = ref(false)
 const loading = ref(false)
-const routesToImport = ref<ImportedRoute[]>([])
+const table = ref<ImportTable>({ headers: [], rows: [] })
+const mapping = ref<Partial<Record<ImportField, string>>>({})
+const mode = ref<ImportMode>('routes')
+const existingRoutes = ref<ExistingRoute[]>([])
+const routesError = ref(false)
+const routesLoading = ref(false)
+let routesRequest = 0
+const sourceIds = new Map<string, string>()
 const expanded = ref<Record<string, boolean>>({})
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { notify, error: notifyError } = useNotification()
 const { data: locationRecords } = useLocations()
 const { gradeSystemFor } = useGradeSystems()
 
 const { smAndDown } = useDisplay()
+
+const fieldLabels = computed<Record<ImportField, string>>(() => ({
+    source_id: t('importRoutes.sourceId'),
+    route: t('importRoutes.routeId'),
+    route_name: t('climbing.routename'),
+    rating: t('importRoutes.ratingLabel'),
+    created: t('importRoutes.reviewDate'),
+    name: t('routes.name'),
+    grade: t('climbing.difficulty'),
+    grade_system: t('importRoutes.gradeSystem'),
+    type: t('climbing.type'),
+    location: t('climbing.location'),
+    wall: t('map.wall'),
+    anchor_point: t('climbing.anchor_point'),
+    color: t('climbing.color'),
+    creator: t('climbing.creators'),
+    screw_date: t('routes.screwed_at'),
+    comment: t('climbing.comment'),
+    archived: t('climbing.archived'),
+}))
+
+const columnItems = computed(() => [
+    { label: t('importRoutes.notMapped'), value: NOT_MAPPED },
+    ...table.value.headers.map((header) => ({ label: header, value: header })),
+])
+
+const modeItems = computed(() => [
+    { value: 'routes' as const, label: t('routes.list') },
+    { value: 'reviews' as const, label: t('routes.comments') },
+])
+
+const fields = computed(() =>
+    mode.value === 'routes' ? ROUTE_IMPORT_FIELDS : REVIEW_IMPORT_FIELDS,
+)
+
+const setMapping = (field: ImportField, header: string) => {
+    mapping.value = {
+        ...mapping.value,
+        [field]: header === NOT_MAPPED ? undefined : header,
+    }
+}
+
+const typeByLabel = computed(
+    () =>
+        new Map(
+            ROUTE_TYPES.flatMap((type) => [
+                [type.toLowerCase(), type],
+                [t(`routes.types.${type.toLowerCase()}`).toLowerCase(), type],
+            ]),
+        ),
+)
+
+const routesToImport = computed(() =>
+    table.value.rows.map((row) =>
+        toImportedRoute(row, mapping.value, {
+            typeByLabel: typeByLabel.value,
+            gradeSystemFor,
+            locale: locale.value,
+        }),
+    ),
+)
+
+const matchableRoutes = computed(() =>
+    existingRoutes.value.map((route) => ({
+        id: route.id,
+        name: route.name,
+        location: route.expand?.location?.name ?? '',
+        date: route.screw_date || route.created || '',
+    })),
+)
+
+const routeById = computed(
+    () => new Map(existingRoutes.value.map((route) => [route.id, route])),
+)
+
+const reviewsToImport = computed(() =>
+    mode.value === 'reviews'
+        ? table.value.rows.map((row) => {
+              const review = toImportedReview(row, mapping.value, locale.value)
+              const routeId = matchReviewRoute(
+                  review,
+                  matchableRoutes.value,
+                  sourceIds,
+              )
+              return {
+                  ...review,
+                  route: routeId ? routeById.value.get(routeId) : undefined,
+              }
+          })
+        : [],
+)
+
+const matchedReviews = computed(() =>
+    reviewsToImport.value.filter((review) => review.route),
+)
+
+// ponytail: preview capped, the import itself sends every row
+const reviewPreview = computed(() =>
+    [...reviewsToImport.value]
+        .sort((left, right) => Number(!!left.route) - Number(!!right.route))
+        .slice(0, REVIEW_PREVIEW_LIMIT),
+)
+
+const loadExistingRoutes = async () => {
+    const request = ++routesRequest
+    routesLoading.value = true
+    routesError.value = false
+    try {
+        const routes = await pb
+            .collection('routes')
+            .getFullList<ExistingRoute>({
+                filter: gymFilter(pb, gymId.value),
+                fields: 'id,name,type,color,grade,grade_system,grade_index,screw_date,created,expand.location.name',
+                expand: 'location',
+                requestKey: null,
+            })
+        if (request === routesRequest) existingRoutes.value = routes
+    } catch (error) {
+        if (request !== routesRequest) return
+        console.error('Failed to load routes for review import', error)
+        routesError.value = true
+    } finally {
+        if (request === routesRequest) routesLoading.value = false
+    }
+}
+
+watch(mode, (current) => {
+    mapping.value = guessImportMapping(
+        fields.value,
+        table.value.headers,
+        fieldLabels.value,
+    )
+    if (current === 'reviews' && showPreviewDialog.value) loadExistingRoutes()
+})
 
 const previewSummary = (route: ImportedRoute) =>
     [
@@ -202,39 +442,98 @@ const open = () => {
 
 defineExpose({ open })
 
+const readTable = async (file: File) => {
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    if (extension === 'xlsx') return tableFromXlsx(await file.arrayBuffer())
+    const text = await file.text()
+    return extension === 'json' || file.type === 'application/json'
+        ? tableFromJson(JSON.parse(text))
+        : tableFromCsv(text)
+}
+
 const handleFileChange = async (event: Event) => {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
+    input.value = ''
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = () => {
-        try {
-            const parsedData = JSON.parse(String(reader.result))
-            if (!Array.isArray(parsedData)) {
-                throw new Error('JSON file is not an array.')
-            }
-            routesToImport.value = parsedData.map((route: ImportedRoute) => ({
-                ...route,
-                ratingsCount: route.ratings?.length || 0,
-            }))
-            showPreviewDialog.value = true
-        } catch (error) {
-            console.error('Error parsing JSON file:', error)
-            notifyError(t('importRoutes.invalidJson'))
-        }
+    try {
+        table.value = await readTable(file)
+        if (table.value.rows.length === 0) throw new Error('No rows.')
+        mapping.value = guessImportMapping(
+            fields.value,
+            table.value.headers,
+            fieldLabels.value,
+        )
+        if (mode.value === 'reviews') await loadExistingRoutes()
+        showPreviewDialog.value = true
+    } catch (error) {
+        console.error('Error reading import file:', error)
+        notifyError(t('importRoutes.invalidFile'))
     }
-    reader.onerror = () => {
-        notifyError(t('importRoutes.readFailed'))
-    }
-    reader.readAsText(file)
-
-    input.value = ''
 }
 
 const cancelImport = () => {
     showPreviewDialog.value = false
-    routesToImport.value = []
+    table.value = { headers: [], rows: [] }
+    mapping.value = {}
+    existingRoutes.value = []
+}
+
+const notifyResult = (parts: string[]) => {
+    if (parts.length === 0) {
+        notify(t('importRoutes.success'))
+    } else {
+        notify(
+            t('importRoutes.issues', { details: parts.join(', ') }),
+            'warning',
+        )
+    }
+}
+
+const postRatings = async (
+    ratings: ReturnType<typeof sanitizeRatingPayload>[],
+) => {
+    let failed = 0
+    for (let start = 0; start < ratings.length; start += RATING_CHUNK) {
+        const chunk = ratings.slice(start, start + RATING_CHUNK)
+        try {
+            const response = await pb.send<{ failed: number }>(
+                '/api/import/ratings',
+                { method: 'POST', body: { gym: gymId.value, ratings: chunk } },
+            )
+            failed += response.failed
+        } catch (error) {
+            console.error('Failed to insert ratings', error)
+            failed += chunk.length
+        }
+    }
+    return failed
+}
+
+const confirmReviewImport = async () => {
+    const ratings = matchedReviews.value.map((review) =>
+        sanitizeRatingPayload(review, {
+            routeId: review.route!.id,
+            routeType: review.route!.type,
+        }),
+    )
+    const failed = await postRatings(ratings)
+    const unmatched = reviewsToImport.value.length - ratings.length
+    notifyResult([
+        ...(failed
+            ? [t('importRoutes.commentsFailed', { count: failed }, failed)]
+            : []),
+        ...(unmatched
+            ? [
+                  t(
+                      'importRoutes.reviewsUnmatched',
+                      { count: unmatched },
+                      unmatched,
+                  ),
+              ]
+            : []),
+    ])
 }
 
 const confirmImport = async () => {
@@ -242,6 +541,11 @@ const confirmImport = async () => {
     const jsonData = routesToImport.value
 
     try {
+        if (mode.value === 'reviews') {
+            await confirmReviewImport()
+            emit('closed')
+            return
+        }
         const fallbackCreator = buildFallbackCreator(currentUser)
         const locationIdByName = new Map(
             (locationRecords.value ?? []).map((location) => [
@@ -270,28 +574,19 @@ const confirmImport = async () => {
                     ),
                     gym: gymId.value,
                 })
+                if (route.source_id) {
+                    sourceIds.set(route.source_id, createdRoute.id)
+                }
 
                 if (Array.isArray(route.ratings) && route.ratings.length > 0) {
-                    const ratings = route.ratings.map((rating) =>
-                        sanitizeRatingPayload(rating, {
-                            routeId: createdRoute.id,
-                            routeType: route.type,
-                            fallbackUserId: currentUser?.id,
-                        }),
+                    failedRatings += await postRatings(
+                        route.ratings.map((rating) =>
+                            sanitizeRatingPayload(rating, {
+                                routeId: createdRoute.id,
+                                routeType: route.type,
+                            }),
+                        ),
                     )
-                    try {
-                        const { failed } = await pb.send<{ failed: number }>(
-                            '/api/import/ratings',
-                            {
-                                method: 'POST',
-                                body: { gym: gymId.value, ratings },
-                            },
-                        )
-                        failedRatings += failed
-                    } catch (ratingError) {
-                        console.error('Failed to insert ratings', ratingError)
-                        failedRatings += ratings.length
-                    }
                 }
             } catch (routeError) {
                 console.error('Failed to insert route', routeError)
@@ -299,33 +594,26 @@ const confirmImport = async () => {
             }
         }
 
-        if (failedRoutes === 0 && failedRatings === 0) {
-            notify(t('importRoutes.success'))
-        } else {
-            const summaryParts: string[] = []
-            if (failedRoutes > 0) {
-                summaryParts.push(
-                    t(
-                        'importRoutes.routesFailed',
-                        { count: failedRoutes },
-                        failedRoutes,
-                    ),
-                )
-            }
-            if (failedRatings > 0) {
-                summaryParts.push(
-                    t(
-                        'importRoutes.commentsFailed',
-                        { count: failedRatings },
-                        failedRatings,
-                    ),
-                )
-            }
-            notify(
-                t('importRoutes.issues', { details: summaryParts.join(', ') }),
-                'warning',
-            )
-        }
+        notifyResult([
+            ...(failedRoutes
+                ? [
+                      t(
+                          'importRoutes.routesFailed',
+                          { count: failedRoutes },
+                          failedRoutes,
+                      ),
+                  ]
+                : []),
+            ...(failedRatings
+                ? [
+                      t(
+                          'importRoutes.commentsFailed',
+                          { count: failedRatings },
+                          failedRatings,
+                      ),
+                  ]
+                : []),
+        ])
 
         emit('closed')
     } catch (error) {
@@ -388,21 +676,23 @@ function sanitizeRoutePayload(
 
 function sanitizeRatingPayload(
     rating: ImportedRating,
-    meta: {
-        routeId: string
-        routeType?: string | null
-        fallbackUserId?: string
-    },
+    meta: { routeId: string; routeType?: string | null },
 ) {
-    const userId = rating.user || meta.fallbackUserId
     return {
         route_id: meta.routeId,
-        rating: Number.isFinite(Number(rating.rating))
-            ? Number(rating.rating)
-            : null,
+        rating:
+            rating.rating !== null &&
+            rating.rating !== undefined &&
+            rating.rating !== '' &&
+            Number.isFinite(Number(rating.rating))
+                ? Number(rating.rating)
+                : null,
         ...resolveImportedGrading(
             {
                 ...rating,
+                grade_system:
+                    rating.grade_system ??
+                    (rating.grade ? gradeSystemFor(meta.routeType) : undefined),
                 difficulty_sign:
                     rating.difficulty_sign === false
                         ? null
@@ -411,7 +701,7 @@ function sanitizeRatingPayload(
             gradeSystemFor(meta.routeType),
         ),
         comment: typeof rating.comment === 'string' ? rating.comment : '',
-        ...(userId ? { user: userId } : {}),
+        created: typeof rating.created === 'string' ? rating.created : null,
     }
 }
 
