@@ -93,6 +93,23 @@ describe('usePasskeyLogin', () => {
         await expect(setup().autofill()).resolves.toBeUndefined()
     })
 
+    it('offers autofill again after the passkey sheet is dismissed', async () => {
+        const get = vi
+            .fn()
+            .mockRejectedValueOnce(new DOMException('', 'NotAllowedError'))
+            .mockResolvedValueOnce({ toJSON: () => ({ id: 'c' }) })
+        vi.stubGlobal('navigator', { credentials: { get } })
+        send.mockResolvedValueOnce({ ceremony: 'x', options: {} })
+            .mockResolvedValueOnce({ ceremony: 'y', options: {} })
+            .mockResolvedValueOnce({ token: 't' })
+        await expect(setup().autofill()).resolves.toEqual({ token: 't' })
+        expect(get).toHaveBeenCalledTimes(2)
+        expect(send).toHaveBeenLastCalledWith('/api/auth/passkey', {
+            method: 'POST',
+            body: { ceremony: 'y', credential: { id: 'c' } },
+        })
+    })
+
     it('reports a picked passkey the server rejects', async () => {
         vi.stubGlobal('navigator', {
             credentials: {
