@@ -1,6 +1,7 @@
 import type { RecordModel } from 'pocketbase'
 import {
     getPasskey,
+    isPasskeyCancel,
     passkeyAutofillAvailable,
     passkeysSupported,
 } from '~/utils/webauthn'
@@ -45,8 +46,16 @@ export function usePasskeyLogin() {
         const abort = new AbortController()
         autofillAbort = abort
         autofillActive.value = true
-        const picked = await pickPasskey(abort).catch(() => undefined)
-        return picked && verify(picked)
+        let picked: Awaited<ReturnType<typeof pickPasskey>>
+        try {
+            picked = await pickPasskey(abort)
+        } catch (err) {
+            // A dismissed or failed provider sheet ends the conditional request.
+            return !abort.signal.aborted && isPasskeyCancel(err)
+                ? autofill()
+                : undefined
+        }
+        return verify(picked)
     }
 
     function stopAutofill() {
