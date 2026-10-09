@@ -269,7 +269,7 @@ import {
     wallName,
 } from '#shared/utils/formatting'
 import { toPbSort, type SortOption } from '~/utils/sorting'
-import { cacheKeys } from '~/utils/realtimeCache'
+import { cacheKeys, unlessQueryChanged } from '~/utils/realtimeCache'
 
 const { t, locale } = useI18n()
 const pb = usePocketbase() as PocketBase
@@ -448,9 +448,14 @@ function fetchRoutes(
 
 function fetchLoadedRoutes() {
     const { page, itemsPerPage } = tableOptions
-    return isWideLayout.value
-        ? fetchRoutes(page, itemsPerPage, null)
-        : fetchRoutes(1, page * itemsPerPage, null)
+    return unlessQueryChanged(
+        () => JSON.stringify([pbFilter.value, tableOptions.sortBy]),
+        () =>
+            isWideLayout.value
+                ? fetchRoutes(page, itemsPerPage, null)
+                : fetchRoutes(1, page * itemsPerPage, null),
+        () => routePage.value,
+    )
 }
 
 const { data: routePage } = await useAsyncData(

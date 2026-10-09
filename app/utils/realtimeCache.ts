@@ -318,6 +318,16 @@ export function coalesce(task: () => Promise<unknown>, delayMs = 1000) {
     }
 }
 
+export async function unlessQueryChanged<T>(
+    query: () => string,
+    fetch: () => Promise<T>,
+    current: () => T,
+): Promise<T> {
+    const before = query()
+    const result = await fetch()
+    return query() === before ? result : current()
+}
+
 const RECORD_ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
 
 export function newRecordId(length = 15) {
