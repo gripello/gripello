@@ -55,7 +55,7 @@ async function drawTag(locale: keyof typeof LOCALES) {
     )
 
     const texts: (Box & { fits: boolean })[] = []
-    const images: Box[] = []
+    const images: (Box & { options: PDFKit.Mixins.ImageOption })[] = []
 
     const drawText = doc.text.bind(doc)
     doc.text = ((
@@ -87,7 +87,7 @@ async function drawTag(locale: keyof typeof LOCALES) {
         options: PDFKit.Mixins.ImageOption,
     ) => {
         const [width, height] = options.fit ?? [options.width!, options.height!]
-        images.push({ label: 'image', x, y, width, height })
+        images.push({ label: 'image', x, y, width, height, options })
         return drawImage(src, x, y, options)
     }) as typeof doc.image
 
@@ -259,5 +259,20 @@ describe('route tag difficulty band', () => {
         expect(
             await fillsFor({ type: 'Route', grade: '6', grade_system: 'uiaa' }),
         ).not.toContain('#2563eb')
+    })
+})
+
+describe('route tag logo', () => {
+    it('is centred under the QR code', async () => {
+        const { images } = await drawTag('en')
+        const [qr, logo] = images
+        expect(logo!.x + logo!.width / 2).toBe(qr!.x + qr!.width / 2)
+        expect(logo!.width).toBe(104)
+        expect(logo!.y).toBe(qr!.y + qr!.height + 1)
+        expect(logo!.y + logo!.height).toBe(
+            TAG_Y + TAG_HEIGHT - TAG_PADDING - 2,
+        )
+        expect(logo!.height).toBe(56)
+        expect(logo!.options).toMatchObject({ align: 'center' })
     })
 })
