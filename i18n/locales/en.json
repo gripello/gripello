@@ -140,7 +140,57 @@
         "leaveGymConfirm": "You lose your role and staff access in this gym. Your logbook stays.",
         "leftGym": "You left the gym.",
         "lastAdmin": "The gym needs another admin before you can leave.",
-        "changeBanner": "Change banner"
+        "changeBanner": "Change banner",
+        "twoFactor": {
+            "title": "Two-factor authentication",
+            "verify": "Verify",
+            "code": "Code from your authenticator app",
+            "recoveryCode": "Recovery code",
+            "usePasskey": "Use a passkey",
+            "signInWithPasskey": "Sign in with a passkey",
+            "invalidCode": "That code didn’t work",
+            "passkeyFailed": "Passkey sign-in failed",
+            "authenticatorApp": "Authenticator app",
+            "setUp": "Set up",
+            "removeAuthenticator": "Remove authenticator app",
+            "passkey": "Passkey",
+            "passkeys": "Passkeys",
+            "addPasskey": "Add passkey",
+            "removePasskey": "Remove passkey {name}",
+            "recoveryCodes": "Recovery codes",
+            "codesLeft": "{n} code left | {n} codes left",
+            "newCodes": "New recovery codes",
+            "renewCodes": "Renew",
+            "qrAlt": "QR code for your authenticator app",
+            "lastUsed": "Last used {date}",
+            "added": "Added {date}",
+            "enabled": "Two-factor authentication is on",
+            "passkeyAdded": "Passkey added",
+            "copy": "Copy",
+            "download": "Download",
+            "done": "Done",
+            "copied": "Copied",
+            "name": "Name",
+            "titleCode": "Enter code",
+            "titlePasskey": "Confirm with passkey",
+            "titleRecovery": "Recovery code",
+            "otherMethod": "Other method",
+            "backToLogin": "Back to sign-in",
+            "invalidRecoveryCode": "That recovery code didn’t work",
+            "method": {
+                "totp": "Authenticator app",
+                "passkey": "Passkey",
+                "recovery": "Recovery code"
+            }
+        },
+        "sessions": {
+            "title": "Active sessions",
+            "thisDevice": "This device",
+            "unknownDevice": "Unknown device",
+            "signOut": "Sign out {device}",
+            "signOutOthers": "Sign out other devices",
+            "signOutOthersConfirm": "Every other device will be signed out."
+        }
     },
     "routes": {
         "home": "Overview",
@@ -423,7 +473,9 @@
             "resetLinkInvalid": "This password reset link is invalid or has expired. Request a new one from the sign-in page.",
             "captcha": "The spam check failed. Please try again.",
             "verificationMail": "Your account was created, but the verification email could not be sent. Request a new one from the sign-in page.",
-            "account_suspended": "This account is suspended."
+            "account_suspended": "This account is suspended.",
+            "account_locked": "Too many failed attempts. Try again in 15 minutes.",
+            "mfa_expired": "The sign-in took too long. Please sign in again."
         },
         "deleteItem": "Delete this item? This cannot be undone.",
         "deleteMoreItems": "Delete the selected items? This cannot be undone.",
@@ -1177,7 +1229,15 @@
             "password_reset_request": "Password reset requested",
             "password_reset": "Password reset",
             "email_change_request": "Email change requested",
-            "email_change": "Email changed"
+            "email_change": "Email changed",
+            "login_second_factor": "Password confirmed, second factor pending",
+            "account_locked": "Account locked after failed attempts",
+            "mfa_enabled": "Authenticator app added",
+            "mfa_disabled": "Authenticator app removed",
+            "passkey_added": "Passkey added",
+            "passkey_removed": "Passkey removed",
+            "sessions_revoked": "Other devices signed out",
+            "recovery_code_used": "Recovery code used"
         },
         "collection": {
             "routes": "Routes",
@@ -1187,7 +1247,8 @@
             "permissions": "Permissions",
             "settings": "Settings",
             "reports": "Reports",
-            "tasks": "Tasks"
+            "tasks": "Tasks",
+            "sessions": "Sessions"
         },
         "target": {
             "routes": "Route",
@@ -1197,7 +1258,8 @@
             "permissions": "Permission",
             "settings": "Settings",
             "reports": "Report",
-            "tasks": "Task"
+            "tasks": "Task",
+            "sessions": "Session"
         },
         "changedLabel": "Changed",
         "filter": {

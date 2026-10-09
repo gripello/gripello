@@ -184,6 +184,10 @@
                     />
                 </UPageCard>
 
+                <AccountTwoFactorSettings ref="twoFactor" />
+
+                <AccountSessionList />
+
                 <UPageCard
                     :title="t('account.exportData')"
                     :description="t('account.exportDataHint')"
@@ -444,6 +448,12 @@ const emailChangeRequested = computed(
         normalizedEmail(user.email) !== normalizedEmail(original.email),
 )
 
+const twoFactor = useTemplateRef<{
+    namesChanged: boolean
+    saveNames: () => Promise<void>
+    resetNames: () => void
+}>('twoFactor')
+
 const sectionChanged = computed<Record<Section, boolean>>(() => ({
     profile:
         !!avatarFile.value ||
@@ -455,7 +465,7 @@ const sectionChanged = computed<Record<Section, boolean>>(() => ({
     preferences: user.language !== original.language,
     notifications: false,
     privacy: false,
-    security: passwordChangeRequested.value,
+    security: passwordChangeRequested.value || !!twoFactor.value?.namesChanged,
 }))
 
 const hasChanges = computed(() =>
@@ -476,6 +486,7 @@ function resetSection(section: Section) {
         user.oldPassword = ''
         user.password = ''
         user.passwordConfirm = ''
+        twoFactor.value?.resetNames()
     }
 }
 
@@ -483,7 +494,9 @@ const resetAll = () => SECTIONS.forEach(resetSection)
 
 const canSave = (section: Section) =>
     sectionChanged.value[section] &&
-    (section !== 'security' || passwordFieldsValid.value)
+    (section !== 'security' ||
+        !passwordChangeRequested.value ||
+        passwordFieldsValid.value)
 
 const { discardDialogOpen, confirmDiscard, settleDiscard } = useDiscardConfirm(
     () => hasChanges.value,
@@ -502,7 +515,24 @@ async function saveUser(section: Section) {
     )
         return
 
-    if (section === 'security' && !passwordFieldsValid.value) return
+    if (section === 'security') {
+        if (passwordChangeRequested.value && !passwordFieldsValid.value) return
+        if (twoFactor.value?.namesChanged) {
+            saving.value = true
+            try {
+                await twoFactor.value.saveNames()
+            } catch {
+                notifyError(t('notifications.error.edit'))
+                saving.value = false
+                return
+            }
+            saving.value = false
+        }
+        if (!passwordChangeRequested.value) {
+            notify(t('notifications.success.edit'))
+            return
+        }
+    }
 
     saving.value = true
 

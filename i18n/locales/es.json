@@ -140,7 +140,57 @@
         "leaveGymConfirm": "Pierdes tu rol y tu acceso de equipo en este rocódromo. Tu libreta se conserva.",
         "leftGym": "Has salido del rocódromo.",
         "lastAdmin": "El rocódromo necesita otro administrador antes de que puedas salir.",
-        "changeBanner": "Cambiar banner"
+        "changeBanner": "Cambiar banner",
+        "twoFactor": {
+            "title": "Verificación en dos pasos",
+            "verify": "Verificar",
+            "code": "Código de tu app de autenticación",
+            "recoveryCode": "Código de recuperación",
+            "usePasskey": "Usar una llave de acceso",
+            "signInWithPasskey": "Iniciar sesión con llave de acceso",
+            "invalidCode": "Ese código no ha funcionado",
+            "passkeyFailed": "No se pudo iniciar sesión con la llave de acceso",
+            "authenticatorApp": "App de autenticación",
+            "setUp": "Configurar",
+            "removeAuthenticator": "Quitar la app de autenticación",
+            "passkey": "Llave de acceso",
+            "passkeys": "Llaves de acceso",
+            "addPasskey": "Añadir llave de acceso",
+            "removePasskey": "Quitar la llave de acceso {name}",
+            "recoveryCodes": "Códigos de recuperación",
+            "codesLeft": "Queda {n} código | Quedan {n} códigos",
+            "newCodes": "Nuevos códigos de recuperación",
+            "renewCodes": "Renovar",
+            "qrAlt": "Código QR para tu app de autenticación",
+            "lastUsed": "Último uso {date}",
+            "added": "Añadida {date}",
+            "enabled": "La verificación en dos pasos está activada",
+            "passkeyAdded": "Llave de acceso añadida",
+            "copy": "Copiar",
+            "download": "Descargar",
+            "done": "Listo",
+            "copied": "Copiado",
+            "name": "Nombre",
+            "titleCode": "Introduce el código",
+            "titlePasskey": "Confirmar con llave de acceso",
+            "titleRecovery": "Código de recuperación",
+            "otherMethod": "Otro método",
+            "backToLogin": "Volver al inicio de sesión",
+            "invalidRecoveryCode": "Ese código de recuperación no ha funcionado",
+            "method": {
+                "totp": "App de autenticación",
+                "passkey": "Llave de acceso",
+                "recovery": "Código de recuperación"
+            }
+        },
+        "sessions": {
+            "title": "Sesiones activas",
+            "thisDevice": "Este dispositivo",
+            "unknownDevice": "Dispositivo desconocido",
+            "signOut": "Cerrar sesión en {device}",
+            "signOutOthers": "Cerrar sesión en otros dispositivos",
+            "signOutOthersConfirm": "Se cerrará la sesión en todos los demás dispositivos."
+        }
     },
     "routes": {
         "home": "Resumen",
@@ -423,7 +473,9 @@
             "resetLinkInvalid": "Este enlace para restablecer la contraseña no es válido o ha caducado. Solicita uno nuevo en la página de inicio de sesión.",
             "captcha": "La comprobación antispam ha fallado. Inténtalo de nuevo.",
             "verificationMail": "Tu cuenta se ha creado, pero no se pudo enviar el correo de verificación. Solicita uno nuevo en la página de inicio de sesión.",
-            "account_suspended": "Esta cuenta está suspendida."
+            "account_suspended": "Esta cuenta está suspendida.",
+            "account_locked": "Demasiados intentos fallidos. Vuelve a intentarlo en 15 minutos.",
+            "mfa_expired": "El inicio de sesión tardó demasiado. Vuelve a iniciar sesión."
         },
         "deleteItem": "¿Eliminar este elemento? No se puede deshacer.",
         "deleteMoreItems": "¿Eliminar los elementos seleccionados? No se puede deshacer.",
@@ -1177,7 +1229,15 @@
             "password_reset_request": "Restablecimiento de contraseña solicitado",
             "password_reset": "Contraseña restablecida",
             "email_change_request": "Cambio de correo solicitado",
-            "email_change": "Correo cambiado"
+            "email_change": "Correo cambiado",
+            "login_second_factor": "Contraseña confirmada, falta el segundo paso",
+            "account_locked": "Cuenta bloqueada tras intentos fallidos",
+            "mfa_enabled": "App de autenticación añadida",
+            "mfa_disabled": "App de autenticación quitada",
+            "passkey_added": "Llave de acceso añadida",
+            "passkey_removed": "Llave de acceso quitada",
+            "sessions_revoked": "Sesión cerrada en otros dispositivos",
+            "recovery_code_used": "Código de recuperación usado"
         },
         "collection": {
             "routes": "Vías",
@@ -1187,7 +1247,8 @@
             "permissions": "Permisos",
             "settings": "Ajustes",
             "reports": "Denuncias",
-            "tasks": "Tareas"
+            "tasks": "Tareas",
+            "sessions": "Sesiones"
         },
         "target": {
             "routes": "Vía",
@@ -1197,7 +1258,8 @@
             "permissions": "Permiso",
             "settings": "Ajustes",
             "reports": "Denuncia",
-            "tasks": "Tarea"
+            "tasks": "Tarea",
+            "sessions": "Sesión"
         },
         "changedLabel": "Cambiado",
         "filter": {

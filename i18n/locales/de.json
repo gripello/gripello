@@ -140,7 +140,57 @@
         "leaveGymConfirm": "Du verlierst deine Rolle und den Teamzugang in dieser Halle. Dein Logbuch bleibt erhalten.",
         "leftGym": "Du hast die Halle verlassen.",
         "lastAdmin": "Die Halle braucht erst einen weiteren Admin, bevor du sie verlassen kannst.",
-        "changeBanner": "Banner ändern"
+        "changeBanner": "Banner ändern",
+        "twoFactor": {
+            "title": "Zwei-Faktor-Authentifizierung",
+            "verify": "Bestätigen",
+            "code": "Code aus deiner Authenticator-App",
+            "recoveryCode": "Wiederherstellungscode",
+            "usePasskey": "Passkey verwenden",
+            "signInWithPasskey": "Mit Passkey anmelden",
+            "invalidCode": "Der Code hat nicht funktioniert",
+            "passkeyFailed": "Anmeldung mit Passkey fehlgeschlagen",
+            "authenticatorApp": "Authenticator-App",
+            "setUp": "Einrichten",
+            "removeAuthenticator": "Authenticator-App entfernen",
+            "passkey": "Passkey",
+            "passkeys": "Passkeys",
+            "addPasskey": "Passkey hinzufügen",
+            "removePasskey": "Passkey {name} entfernen",
+            "recoveryCodes": "Wiederherstellungscodes",
+            "codesLeft": "{n} Code übrig | {n} Codes übrig",
+            "newCodes": "Neue Wiederherstellungscodes",
+            "renewCodes": "Erneuern",
+            "qrAlt": "QR-Code für deine Authenticator-App",
+            "lastUsed": "Zuletzt verwendet {date}",
+            "added": "Hinzugefügt {date}",
+            "enabled": "Zwei-Faktor-Authentifizierung ist aktiv",
+            "passkeyAdded": "Passkey hinzugefügt",
+            "copy": "Kopieren",
+            "download": "Herunterladen",
+            "done": "Fertig",
+            "copied": "Kopiert",
+            "name": "Name",
+            "titleCode": "Code eingeben",
+            "titlePasskey": "Mit Passkey bestätigen",
+            "titleRecovery": "Wiederherstellungscode",
+            "otherMethod": "Andere Methode",
+            "backToLogin": "Zurück zur Anmeldung",
+            "invalidRecoveryCode": "Der Wiederherstellungscode hat nicht funktioniert",
+            "method": {
+                "totp": "Authenticator-App",
+                "passkey": "Passkey",
+                "recovery": "Wiederherstellungscode"
+            }
+        },
+        "sessions": {
+            "title": "Aktive Sitzungen",
+            "thisDevice": "Dieses Gerät",
+            "unknownDevice": "Unbekanntes Gerät",
+            "signOut": "{device} abmelden",
+            "signOutOthers": "Andere Geräte abmelden",
+            "signOutOthersConfirm": "Alle anderen Geräte werden abgemeldet."
+        }
     },
     "routes": {
         "home": "Übersicht",
@@ -423,7 +473,9 @@
             "resetLinkInvalid": "Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Fordere auf der Anmeldeseite einen neuen an.",
             "captcha": "Die Spam-Prüfung ist fehlgeschlagen. Bitte versuche es erneut.",
             "verificationMail": "Dein Konto wurde erstellt, aber die Bestätigungs-E-Mail konnte nicht gesendet werden. Fordere auf der Anmeldeseite eine neue an.",
-            "account_suspended": "Dieses Konto ist gesperrt."
+            "account_suspended": "Dieses Konto ist gesperrt.",
+            "account_locked": "Zu viele Fehlversuche. Versuche es in 15 Minuten erneut.",
+            "mfa_expired": "Die Anmeldung hat zu lange gedauert. Bitte melde dich erneut an."
         },
         "deleteItem": "Diesen Eintrag löschen? Das kann nicht rückgängig gemacht werden.",
         "deleteMoreItems": "Die ausgewählten Einträge löschen? Das kann nicht rückgängig gemacht werden.",
@@ -1177,7 +1229,15 @@
             "password_reset_request": "Passwort-Zurücksetzung angefordert",
             "password_reset": "Passwort zurückgesetzt",
             "email_change_request": "E-Mail-Änderung angefordert",
-            "email_change": "E-Mail geändert"
+            "email_change": "E-Mail geändert",
+            "login_second_factor": "Passwort bestätigt, zweiter Faktor ausstehend",
+            "account_locked": "Konto nach Fehlversuchen gesperrt",
+            "mfa_enabled": "Authenticator-App hinzugefügt",
+            "mfa_disabled": "Authenticator-App entfernt",
+            "passkey_added": "Passkey hinzugefügt",
+            "passkey_removed": "Passkey entfernt",
+            "sessions_revoked": "Andere Geräte abgemeldet",
+            "recovery_code_used": "Wiederherstellungscode verwendet"
         },
         "collection": {
             "routes": "Routen",
@@ -1187,7 +1247,8 @@
             "permissions": "Berechtigungen",
             "settings": "Einstellungen",
             "reports": "Meldungen",
-            "tasks": "Aufgaben"
+            "tasks": "Aufgaben",
+            "sessions": "Sitzungen"
         },
         "target": {
             "routes": "Route",
@@ -1197,7 +1258,8 @@
             "permissions": "Berechtigung",
             "settings": "Einstellungen",
             "reports": "Meldung",
-            "tasks": "Aufgabe"
+            "tasks": "Aufgabe",
+            "sessions": "Sitzung"
         },
         "changedLabel": "Geändert",
         "filter": {

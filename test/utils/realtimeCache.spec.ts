@@ -16,6 +16,7 @@ import {
     routeRowsScope,
     shiftScore,
     trackRating,
+    unlessQueryChanged,
     upsertById,
     wallsScope,
     type RatingLedger,
@@ -283,6 +284,28 @@ describe('coalesce', () => {
         await vi.advanceTimersByTimeAsync(200)
         expect(task).toHaveBeenCalledTimes(2)
         vi.useRealTimers()
+    })
+})
+
+describe('unlessQueryChanged', () => {
+    it('keeps the current data when the query changed while fetching', async () => {
+        let query = 'a'
+        const stale = unlessQueryChanged(
+            () => query,
+            async () => {
+                query = 'b'
+                return 'old'
+            },
+            () => 'current',
+        )
+        await expect(stale).resolves.toBe('current')
+        await expect(
+            unlessQueryChanged(
+                () => query,
+                async () => 'fresh',
+                () => 'current',
+            ),
+        ).resolves.toBe('fresh')
     })
 })
 

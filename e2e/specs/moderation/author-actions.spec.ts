@@ -54,12 +54,19 @@ test('the platform hides everything a spammer posted and suspends them', async (
             )
             .toBe('gone')
     }
-    const notices = await root.collection('notifications').getFullList({
-        filter: root.filter('user = {:user} && type = "content_hidden"', {
-            user: spammer.id,
-        }),
-    })
-    expect(notices).toHaveLength(1)
+    await expect
+        .poll(
+            async () =>
+                (
+                    await root.collection('notifications').getFullList({
+                        filter: root.filter(
+                            'user = {:user} && type = "content_hidden"',
+                            { user: spammer.id },
+                        ),
+                    })
+                ).length,
+        )
+        .toBe(1)
 
     await gotoSettled(platformPage, '/platform/moderation')
     await platformPage.getByTestId('moderation-view-hidden').click()

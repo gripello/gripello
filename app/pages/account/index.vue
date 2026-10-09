@@ -211,6 +211,7 @@
 </template>
 
 <script setup lang="ts">
+import { signOut } from '~/utils/session'
 import type { MembershipRecord, SettingsRecord } from '~/types/models'
 import { gymTitle } from '~/utils/gymNames'
 import { staffSections } from '~/utils/navigation'
@@ -228,7 +229,7 @@ const { data: settings } = useNuxtData<SettingsRecord>('settings')
 
 useSeoMeta({ title: () => t('page.title.me') })
 
-const user = ref(pb.authStore.record)
+const user = useAuthRecord()
 const loggingOut = ref(false)
 
 const displayName = computed(
@@ -280,7 +281,7 @@ async function leaveGym() {
 async function logout() {
     loggingOut.value = true
     try {
-        pb.authStore.clear()
+        signOut(pb)
         await router.push('/auth/login')
     } finally {
         loggingOut.value = false

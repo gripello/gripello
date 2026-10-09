@@ -46,6 +46,7 @@ function toggleVisibility() {
             v-bind="$attrs"
             :type="visible ? 'text' : 'password'"
             :autocomplete="autocomplete"
+            :name="name"
             :placeholder="placeholder"
             :icon="icon"
             class="w-full"

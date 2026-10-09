@@ -452,6 +452,15 @@ export interface NotificationRecord extends BaseRecord {
     read: boolean
 }
 
+export interface SessionRecord extends BaseRecord {
+    user: string
+    method: string
+    user_agent: string
+    ip: string
+    last_seen: string
+    created: string
+}
+
 export interface PushSubscriptionRecord extends BaseRecord {
     user: RecordId
     endpoint: string

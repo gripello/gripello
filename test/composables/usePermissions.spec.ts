@@ -243,7 +243,7 @@ describe('usePermissions', () => {
             getOne: vi
                 .fn()
                 .mockRejectedValue(
-                    Object.assign(new Error('gone'), { status: 404 }),
+                    Object.assign(new Error('gone'), { status: 500 }),
                 ),
         })
         const consoleError = vi
@@ -266,6 +266,22 @@ describe('usePermissions', () => {
             vi.stubGlobal('useNotification', () => ({ error: notifyErrorMock }))
             consoleError.mockRestore()
         }
+    })
+
+    it('stays quiet when the session was revoked', async () => {
+        pbMock.collection = vi.fn().mockReturnValue({
+            getOne: vi
+                .fn()
+                .mockRejectedValue(
+                    Object.assign(new Error('gone'), { status: 404 }),
+                ),
+        })
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        notifyErrorMock.mockClear()
+        const { refreshPermissions, authRejected } = await loadComposable()
+        await refreshPermissions()
+        expect(authRejected.value).toBe(true)
+        expect(notifyErrorMock).not.toHaveBeenCalled()
     })
 
     it('handles role with no expanded permissions gracefully', async () => {

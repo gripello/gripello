@@ -4,16 +4,18 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"slices"
 	"strings"
 
 	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 )
 
 const defaultAuditRetentionDays = 90
 
-var auditSkippedCollections = []string{"audit_logs", "_mfas", "_otps", "_externalAuths", "_authOrigins"}
+var auditSkippedCollections = []string{"audit_logs", "mfa_factors", "mfa_recovery_codes", "login_lockouts", "_mfas", "_otps", "_externalAuths", "_authOrigins"}
 
 var auditIgnoredFields = []string{"updated", "tokenKey"}
 
@@ -76,7 +78,10 @@ func registerAudit(app core.App) {
 	})
 
 	app.OnRecordAuthWithPasswordRequest().BindFunc(func(e *core.RecordAuthWithPasswordRequestEvent) error {
-		if err := e.Next(); err != nil {
+		if err := e.Next(); errors.Is(err, apis.ErrMFA) {
+			writeAuthEvent(e.RequestEvent, e.Collection, e.Record, "login_second_factor", e.Identity)
+			return err
+		} else if err != nil {
 			writeAuthEvent(e.RequestEvent, e.Collection, e.Record, "login_failed", maskedIdentity(e.Identity))
 			return err
 		}

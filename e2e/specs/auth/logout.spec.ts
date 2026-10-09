@@ -1,7 +1,8 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 
-test('logs out and redirects to login', async ({ adminPage: page }) => {
+test('logs out and redirects to login', async ({ createUser, pageAs }) => {
+    const page = await pageAs(await createUser('admin', 'logout'))
     await gotoSettled(page, '/manage/routes', '**/manage/routes')
     if ((page.viewportSize()?.width ?? 0) >= 1280) {
         await page.getByTestId('user-menu-activator').click()
