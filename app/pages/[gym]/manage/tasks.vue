@@ -77,24 +77,20 @@
         <TaskBoard
             ref="boardRef"
             class="mt-4"
-            :filter="boardFilter"
+            :query="boardQuery"
             :assignee-names="assigneeNames"
-            :file-token="fileToken"
             @edit="openForm"
         />
 
-        <TaskFormDialog
-            v-model="formOpen"
-            :task="editedTask"
-            :file-token="fileToken"
-            @saved="reload"
-        />
+        <TaskFormDialog v-model="formOpen" :task="editedTask" @saved="reload" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { TASK_KINDS, tasksFilter } from '~/utils/tasks'
-import type { TaskAssigneeRecord, TaskRecord } from '~/types/models'
+import { TASK_KINDS } from '~/utils/tasks'
+import { listTaskAssignees, type TaskQuery } from '~/api/tasks'
+import { useAuthState } from '~/api/auth'
+import type { TaskKind, TaskRecord } from '~/types/models'
 
 definePageMeta({
     middleware: ['auth'],
@@ -104,9 +100,7 @@ definePageMeta({
 const MINE = 'mine'
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
-const { subscribe } = usePbSubscription()
 const { data: locationRecords } = useLocations()
 
 const boardRef = ref<{ reload: () => Promise<void> }>()
@@ -119,7 +113,6 @@ const urgentOnly = ref(false)
 const overdueOnly = ref(false)
 const formOpen = ref(false)
 const editedTask = ref<TaskRecord | null>(null)
-const fileToken = ref('')
 
 const activeFilterCount = computed(
     () =>
@@ -129,10 +122,7 @@ const activeFilterCount = computed(
 )
 
 const { data: assignees } = await useAsyncData('task-assignees', () =>
-    pb.collection('task_assignees').getFullList<TaskAssigneeRecord>({
-        filter: pb.filter('gym = {:gym}', { gym: gymId.value }),
-        sort: 'name',
-    }),
+    listTaskAssignees(gymId.value),
 )
 
 const assigneeNames = computed(
@@ -184,33 +174,20 @@ const quickFilters = computed(() => [
     },
 ])
 
-const boardFilter = computed(() => {
-    const filter = tasksFilter({
-        gym: gymId.value,
-        kind: kindFilter.value,
-        assignee:
-            assigneeFilter.value === MINE
-                ? pb.authStore.record?.id
-                : assigneeFilter.value,
-        location: locationFilter.value,
-        urgent: urgentOnly.value,
-        overdue: overdueOnly.value,
-    })
-    const term = debouncedSearch.value.trim()
-    if (!term) return filter
-    const searchFilter = pb.filter(
-        '(title ~ {:term} || description ~ {:term} || route.name ~ {:term} || wall.name ~ {:term})',
-        { term },
-    )
-    return filter ? `${filter} && ${searchFilter}` : searchFilter
-})
-
-async function refreshFileToken() {
-    fileToken.value = await pb.files.getToken().catch(() => '')
-}
+const boardQuery = computed<TaskQuery>(() => ({
+    kind: kindFilter.value as TaskKind | null,
+    assignee:
+        assigneeFilter.value === MINE
+            ? useAuthState().currentUserId()
+            : assigneeFilter.value,
+    location: locationFilter.value,
+    urgent: urgentOnly.value,
+    overdue: overdueOnly.value,
+    q: debouncedSearch.value.trim(),
+}))
 
 async function reload() {
-    await Promise.all([boardRef.value?.reload(), refreshFileToken()])
+    await boardRef.value?.reload()
 }
 
 useHead({ title: t('page.title.tasks') })
@@ -222,13 +199,13 @@ watch(search, (term) => {
 })
 
 let realtimeDebounce: ReturnType<typeof setTimeout> | undefined
-onMounted(async () => {
-    await refreshFileToken()
-    await subscribe('tasks', () => {
+useRealtime(
+    () => `tasks:${gymId.value}`,
+    () => {
         clearTimeout(realtimeDebounce)
         realtimeDebounce = setTimeout(() => void reload(), 500)
-    })
-})
+    },
+)
 
 onBeforeUnmount(() => {
     clearTimeout(searchDebounce)

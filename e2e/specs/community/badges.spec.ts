@@ -1,20 +1,25 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { signInAs } from '../../support/auth'
+import {
+    apiAs,
+    createTick,
+    notificationsOfType,
+    waitForNotificationOfType,
+} from '../../support/api'
 
 test('the logbook shows achievements and the first one is announced', async ({
     page,
-    root,
     createUser,
     route,
 }) => {
     const climber = await createUser('user', 'badges')
-    await root.collection('ticks').create({
-        user: climber.id,
+    const climberApi = await apiAs(climber)
+    await createTick(climberApi, {
         route: route.id,
         type: 'flash',
         attempts: 1,
-        date: `${new Date().toISOString().slice(0, 10)} 12:00:00.000Z`,
+        date: `${new Date().toISOString().slice(0, 10)}T12:00:00Z`,
     })
 
     await signInAs(page, climber.email, climber.password)
@@ -35,8 +40,10 @@ test('the logbook shows achievements and the first one is announced', async ({
     )
     await expect(page.getByTestId('streak-current')).toContainText('1')
 
-    const notifications = await root.collection('notifications').getFullList({
-        filter: `user = "${climber.id}" && type = "achievement_earned"`,
-    })
+    await waitForNotificationOfType(climberApi, 'achievement_earned')
+    const notifications = await notificationsOfType(
+        climberApi,
+        'achievement_earned',
+    )
     expect(notifications).toHaveLength(1)
 })

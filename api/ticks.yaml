@@ -1,0 +1,380 @@
+openapi: 3.1.0
+info:
+  title: Gripello ticks, feed, leaderboards and seasons
+  version: 1.0.0
+paths:
+  /me/ticks:
+    get:
+      operationId: listOwnTicks
+      tags: [ticks]
+      description: The logbook, newest first. `expand.route` (with `expand.gym`) is set while the route exists; otherwise the snapshot fields (route_name, grade*) remain.
+      parameters:
+        - { name: route, in: query, schema: { type: string } }
+        - { name: since, in: query, description: date at or after, schema: { type: string } }
+        - name: sort
+          in: query
+          schema: { type: string, enum: ['-date,-created', date, '-created', created, '-grade_index', grade_index], default: '-date,-created' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Total'
+      responses:
+        '200': { $ref: '#/components/responses/TickPage' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createTick
+      tags: [ticks]
+      description: grade, grade_system, grade_index and route_name are copied from the route. A flash always has one attempt. Dates more than 36 h ahead are rejected. A client-chosen `id` (15 chars a-z0-9) makes offline replays idempotent; a duplicate answers 400 with `data.id.code = validation_pk_invalid`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [route, type, date]
+              properties:
+                id: { type: string, pattern: '^[a-z0-9]{15}$' }
+                user: { type: string, description: must be the caller when sent }
+                route: { type: string }
+                type: { $ref: '#/components/schemas/TickType' }
+                attempts: { type: integer, minimum: 1, maximum: 999 }
+                date: { type: string }
+                note: { type: string, maxLength: 500 }
+      responses:
+        '201': { $ref: '#/components/responses/Tick' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /me/ticks/sends:
+    get:
+      operationId: listSentRoutes
+      tags: [ticks]
+      description: Ids of routes the caller has sent (tick_sends view).
+      responses:
+        '200':
+          description: Route ids
+          content:
+            application/json:
+              schema: { type: array, items: { type: string } }
+        '401': { $ref: '#/components/responses/Error' }
+  /ticks/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      operationId: updateTick
+      tags: [ticks]
+      description: Own ticks only (404 otherwise). user, route, grade, grade_system, grade_index and route_name are locked; sending a different value answers 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { $ref: '#/components/schemas/TickType' }
+                attempts: { type: integer, minimum: 1, maximum: 999 }
+                date: { type: string }
+                note: { type: string, maxLength: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/Tick' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteTick
+      tags: [ticks]
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /me/feed:
+    get:
+      operationId: listFeed
+      tags: [ticks]
+      description: Ticks of climbers the caller follows (accepted, ticks not private), without notes, with `climber` and `expand.route`.
+      parameters:
+        - { name: gym, in: query, description: only routes of this gym id, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string, enum: ['-date', '-created'], default: '-date' } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Total'
+      responses:
+        '200': { $ref: '#/components/responses/TickPage' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /climbers/{id}/ticks:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listClimberTicks
+      tags: [ticks]
+      description: All own ticks for yourself; a followed climber's ticks (no notes) when the follow is accepted and their ticks aren't private; otherwise no items. Paged like /me/ticks (limit up to 1000).
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Total'
+      responses:
+        '200': { $ref: '#/components/responses/TickPage' }
+        '401': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/leaderboard:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      description: Public. Per climber the best 10 distinct sends in the window score grade_index × 100 (+33 per flash). Without a season the window is the rolling last 60 days. Climbers with leaderboard_hidden or ticks_private are left out. `me`, `ahead` and `mySends` are filled for a signed-in climber on the board.
+      parameters:
+        - { name: kind, in: query, schema: { type: string, enum: [boulder, route], default: boulder } }
+        - { name: season, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Leaderboard
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Leaderboard' }
+        '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/seasons:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listSeasons
+      tags: [leaderboard]
+      description: Public, newest start first.
+      responses:
+        '200':
+          description: Seasons
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Season' } }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createSeason
+      tags: [leaderboard]
+      description: Needs manage_competitions in the gym.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeasonInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Season' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /seasons/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      operationId: updateSeason
+      tags: [leaderboard]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeasonInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Season' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteSeason
+      tags: [leaderboard]
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Gym:
+      name: gym
+      in: path
+      required: true
+      description: gym id or slug
+      schema: { type: string }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    Page:
+      { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+    Limit:
+      { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 50 } }
+    Total:
+      { name: total, in: query, description: 'true adds `total`', schema: { type: string, enum: ['true'] } }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Tick:
+      description: Tick
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Tick' }
+    TickPage:
+      description: One page of ticks
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items, page, limit]
+            properties:
+              items: { type: array, items: { $ref: '#/components/schemas/Tick' } }
+              page: { type: integer }
+              limit: { type: integer }
+              total: { type: integer }
+    Season:
+      description: Season
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Season' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    TickType:
+      type: string
+      enum: [flash, top, attempt]
+    Tick:
+      type: object
+      required: [id, created, updated, user, route, type, attempts, date, note, grade, grade_system, grade_index, route_name]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        user: { type: string }
+        route: { type: string, description: empty once the route is deleted }
+        type: { $ref: '#/components/schemas/TickType' }
+        attempts: { type: integer }
+        date: { type: string, format: date-time }
+        note: { type: string, description: empty on other climbers' ticks }
+        grade: { type: string }
+        grade_system: { type: string }
+        grade_index: { type: number }
+        route_name: { type: string }
+        climber: { $ref: '#/components/schemas/Climber' }
+        expand:
+          type: object
+          properties:
+            route: { $ref: '#/components/schemas/RouteSummary' }
+    Climber:
+      type: object
+      required: [id, name, avatar]
+      properties:
+        id: { type: string }
+        name: { type: string, description: '"First L."' }
+        avatar: { type: string, description: thumb URL or empty }
+    RouteSummary:
+      type: object
+      required: [id, gym, name, type, color, grade, grade_system, grade_index, archived, permanent, location, wall, expand]
+      properties:
+        id: { type: string }
+        gym: { type: string }
+        name: { type: string }
+        type: { type: string }
+        color: { type: string }
+        grade: { type: string }
+        grade_system: { type: string }
+        grade_index: { type: number }
+        archived: { type: boolean }
+        permanent: { type: boolean }
+        location: { type: string }
+        wall: { type: string }
+        expand:
+          type: object
+          required: [gym]
+          properties:
+            gym:
+              type: object
+              required: [id, slug, name]
+              properties:
+                id: { type: string }
+                slug: { type: string }
+                name: { type: string }
+    Season:
+      type: object
+      required: [id, created, updated, gym, name, starts_at, ends_at]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        gym: { type: string }
+        name: { type: string, maxLength: 60 }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+    SeasonInput:
+      type: object
+      description: ends_at must lie after starts_at; gym can't change.
+      properties:
+        name: { type: string, maxLength: 60 }
+        starts_at: { type: string }
+        ends_at: { type: string }
+    LeaderboardRow:
+      type: object
+      required: [rank, user, name, avatar, score, sends, flashes, hardest]
+      properties:
+        rank: { type: integer }
+        user: { type: string }
+        name: { type: string }
+        avatar: { type: string }
+        score: { type: integer }
+        sends: { type: integer }
+        flashes: { type: integer }
+        hardest: { type: string }
+    LeaderboardRoute:
+      type: object
+      required: [id, name, color, grade, grade_system, sends, flashes]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        color: { type: string }
+        grade: { type: string }
+        grade_system: { type: string }
+        sends: { type: integer }
+        flashes: { type: integer }
+        points: { type: integer }
+    Leaderboard:
+      type: object
+      required: [from, to, total, rows, me, ahead, mySends, stats, grades, topRoutes]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        total: { type: integer }
+        rows: { type: array, maxItems: 100, items: { $ref: '#/components/schemas/LeaderboardRow' } }
+        me: { oneOf: [{ $ref: '#/components/schemas/LeaderboardRow' }, { type: 'null' }] }
+        ahead: { type: [integer, 'null'] }
+        mySends: { type: array, items: { $ref: '#/components/schemas/LeaderboardRoute' } }
+        stats:
+          type: object
+          required: [climbers, sends, flashes, hardest]
+          properties:
+            climbers: { type: integer }
+            sends: { type: integer }
+            flashes: { type: integer }
+            hardest: { type: string }
+        grades:
+          type: array
+          items:
+            type: object
+            required: [grade, sends, flashes]
+            properties:
+              grade: { type: string }
+              sends: { type: integer }
+              flashes: { type: integer }
+        topRoutes: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/LeaderboardRoute' } }

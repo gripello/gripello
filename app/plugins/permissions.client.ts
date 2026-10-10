@@ -1,5 +1,6 @@
+import { useAuthState } from '~/api/auth'
+
 export default defineNuxtPlugin(() => {
-    const pb = usePocketbase()
     const { ensureLoaded } = usePermissions()
-    pb.authStore.onChange(() => ensureLoaded())
+    useAuthState().onAuthChange(() => ensureLoaded())
 })

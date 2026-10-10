@@ -268,11 +268,11 @@ export interface GymStatsRecord extends BaseRecord {
 export interface InviteRecord extends BaseRecord {
     gym: RecordId
     role: RecordId
+    role_name: string
     email: string
     firstname: string
     name: string
     expires_at: string
-    expand?: { role?: RoleRecord }
 }
 
 export interface InviteDetails {

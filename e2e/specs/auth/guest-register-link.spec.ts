@@ -1,11 +1,9 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { PLATFORM_SETTINGS_ID } from '../../../shared/utils/platform'
+import { updateSettings } from '../../support/api'
 
-test.beforeEach(async ({ root }) => {
-    await root
-        .collection('settings')
-        .update(PLATFORM_SETTINGS_ID, { allow_registration: true })
+test.beforeEach(async ({ api }) => {
+    await updateSettings(api, { allow_registration: true })
 })
 
 test('the guest register button opens the registration form', async ({

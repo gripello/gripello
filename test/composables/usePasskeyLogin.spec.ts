@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import { usePasskeyLogin } from '~/composables/usePasskeyLogin'
+import { routeApi } from '../api/apiMock'
 
 const send = vi.fn()
 
@@ -20,7 +21,8 @@ function setup() {
 describe('usePasskeyLogin', () => {
     beforeEach(() => {
         send.mockReset()
-        globalThis.__POCKETBASE_CLIENT__ = { send }
+        globalThis.__AUTH_STORE__ = {}
+        routeApi(send)
         vi.stubGlobal('onBeforeUnmount', () => {})
         vi.stubGlobal('PublicKeyCredential', {
             parseCreationOptionsFromJSON: vi.fn(),
@@ -41,7 +43,7 @@ describe('usePasskeyLogin', () => {
         }).mockResolvedValueOnce({})
         const passkey = setup()
         await passkey.signIn()
-        expect(send).toHaveBeenLastCalledWith('/api/auth/passkey', {
+        expect(send).toHaveBeenLastCalledWith('/auth/passkey', {
             method: 'POST',
             body: { ceremony: 'x', credential: { id: 'c' } },
         })
@@ -50,7 +52,7 @@ describe('usePasskeyLogin', () => {
             options: {},
         }).mockResolvedValueOnce({})
         await passkey.signIn({ mfaId: 'm' })
-        expect(send).toHaveBeenLastCalledWith('/api/auth/passkey', {
+        expect(send).toHaveBeenLastCalledWith('/auth/passkey', {
             method: 'POST',
             body: { ceremony: 'y', credential: { id: 'c' }, mfaId: 'm' },
         })
@@ -104,7 +106,7 @@ describe('usePasskeyLogin', () => {
             .mockResolvedValueOnce({ token: 't' })
         await expect(setup().autofill()).resolves.toEqual({ token: 't' })
         expect(get).toHaveBeenCalledTimes(2)
-        expect(send).toHaveBeenLastCalledWith('/api/auth/passkey', {
+        expect(send).toHaveBeenLastCalledWith('/auth/passkey', {
             method: 'POST',
             body: { ceremony: 'y', credential: { id: 'c' } },
         })

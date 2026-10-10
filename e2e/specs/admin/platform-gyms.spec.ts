@@ -1,19 +1,26 @@
-import type PocketBase from 'pocketbase'
+import type { GymRecord, UserRecord } from '../../../types/models'
+import {
+    addMembership,
+    createGym,
+    deleteGym,
+    findRole,
+    listInvites,
+    updateGym,
+    type Api,
+} from '../../support/api'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 
-async function gymBySlug(root: PocketBase, slug: string) {
-    return root
-        .collection('gyms')
-        .getFirstListItem(root.filter('slug = {:slug}', { slug }), {
-            requestKey: null,
-        })
-        .catch(() => null)
+async function gymBySlug(api: Api, slug: string) {
+    const { items } = await api.get<{ items: GymRecord[] }>('/gyms', {
+        all: '1',
+    })
+    return items.find((gym) => gym.slug === slug) ?? null
 }
 
 test('platform admin creates, manages, deactivates and deletes a gym', async ({
     platformPage: page,
-    root,
+    api,
 }) => {
     const slug = `e2e-pg-${Date.now()}`
     const adminEmail = `${slug}@gripello.test`
@@ -31,27 +38,23 @@ test('platform admin creates, manages, deactivates and deletes a gym', async ({
 
         const link = page.getByTestId(`platform-gym-link-${slug}`)
         await expect(link).toBeVisible()
-        const gym = await gymBySlug(root, slug)
-        const firstAdmin = await root.collection('invites').getFirstListItem(
-            root.filter('gym = {:gym} && email = {:email}', {
-                gym: gym!.id,
-                email: adminEmail,
-            }),
-            { expand: 'role', requestKey: null },
+        const gym = await gymBySlug(api, slug)
+        const firstAdmin = (await listInvites(api, gym!.id)).find(
+            (invite) => invite.email === adminEmail,
         )
-        expect(firstAdmin.expand?.role?.name).toBe('admin')
+        expect(firstAdmin?.role_name).toBe('admin')
 
         expect((await page.request.get(`/${slug}`)).status()).toBe(200)
 
         await page.getByTestId(`platform-gym-active-${slug}`).click()
         await page.getByTestId('confirm-dialog-confirm').click()
         await expect
-            .poll(async () => (await gymBySlug(root, slug))?.active)
+            .poll(async () => (await gymBySlug(api, slug))?.active)
             .toBe(false)
         expect((await page.request.get(`/${slug}`)).status()).toBe(404)
         await page.getByTestId(`platform-gym-active-${slug}`).click()
         await expect
-            .poll(async () => (await gymBySlug(root, slug))?.active)
+            .poll(async () => (await gymBySlug(api, slug))?.active)
             .toBe(true)
 
         await link.click()
@@ -75,23 +78,25 @@ test('platform admin creates, manages, deactivates and deletes a gym', async ({
         await expect(page.getByTestId(`platform-gym-link-${slug}`)).toHaveCount(
             0,
         )
-        await expect.poll(() => gymBySlug(root, slug)).toBeNull()
+        await expect.poll(() => gymBySlug(api, slug)).toBeNull()
     } finally {
-        const gym = await gymBySlug(root, slug)
-        if (gym) await root.collection('gyms').delete(gym.id)
+        const gym = await gymBySlug(api, slug)
+        if (gym) await deleteGym(api, gym.id)
     }
 })
 
 test('renamed gym slugs redirect and stay taken until released', async ({
     platformPage: page,
-    root,
+    api,
 }) => {
     const stamp = Date.now()
     const oldSlug = `e2e-old-${stamp}`
     const newSlug = `e2e-new-${stamp}`
-    const gym = await root
-        .collection('gyms')
-        .create({ slug: oldSlug, name: `E2E Rename ${stamp}`, active: true })
+    const gym = await createGym(api, {
+        slug: oldSlug,
+        name: `E2E Rename ${stamp}`,
+        active: true,
+    })
     const organization = `/platform/gyms/${gym.id}?section=organization`
     try {
         await gotoSettled(page, organization)
@@ -111,9 +116,7 @@ test('renamed gym slugs redirect and stay taken until released', async ({
         )
 
         await expect(
-            root
-                .collection('gyms')
-                .create({ slug: oldSlug, name: 'E2E Taken', active: true }),
+            createGym(api, { slug: oldSlug, name: 'E2E Taken', active: true }),
         ).rejects.toMatchObject({ status: 400 })
 
         await page.getByTestId(`platform-gym-release-${oldSlug}`).click()
@@ -125,26 +128,25 @@ test('renamed gym slugs redirect and stay taken until released', async ({
         await expect
             .poll(
                 async () =>
-                    (await gymBySlug(root, newSlug))?.previous_slugs ?? null,
+                    (await gymBySlug(api, newSlug))?.previous_slugs ?? null,
             )
             .toEqual([])
 
-        await root
-            .collection('gyms')
-            .create({ slug: oldSlug, name: 'E2E Reused', active: true })
+        await createGym(api, {
+            slug: oldSlug,
+            name: 'E2E Reused',
+            active: true,
+        })
     } finally {
-        await root
-            .collection('gyms')
-            .delete(gym.id)
-            .catch(() => {})
-        const reused = await gymBySlug(root, oldSlug)
-        if (reused) await root.collection('gyms').delete(reused.id)
+        await deleteGym(api, gym.id).catch(() => {})
+        const reused = await gymBySlug(api, oldSlug)
+        if (reused) await deleteGym(api, reused.id)
     }
 })
 
 test('the platform overview counts gyms and lists platform admins', async ({
     platformPage: page,
-    root,
+    api,
 }) => {
     await gotoSettled(page, '/platform')
     await expect(
@@ -156,10 +158,10 @@ test('the platform overview counts gyms and lists platform admins', async ({
             .getByTestId('gym-switcher-platform'),
     ).toBeVisible()
     await expect(page.getByTestId('gym-switcher-name')).toHaveCount(0)
-    const admins = await root.collection('users').getFullList({
-        filter: 'platform_admin = true',
-        requestKey: null,
-    })
+    const { items: admins } = await api.get<{ items: UserRecord[] }>(
+        '/platform/users',
+        { filter: 'platform_admins', limit: 0 },
+    )
     for (const admin of admins) {
         await expect(
             page.getByTestId(`platform-admin-${admin.id}`),
@@ -169,25 +171,20 @@ test('the platform overview counts gyms and lists platform admins', async ({
 
 test('inactive gyms drop out of every gym picker', async ({
     platformPage: adminPage,
-    root,
+    api,
     createUser,
     pageAs,
 }) => {
     const slug = `e2e-inactive-${Date.now()}`
-    const gym = await root
-        .collection('gyms')
-        .create({ slug, name: 'E2E Inactive Gym', active: true })
+    const gym = await createGym(api, {
+        slug,
+        name: 'E2E Inactive Gym',
+        active: true,
+    })
     try {
-        const role = await root
-            .collection('roles')
-            .getFirstListItem(
-                root.filter('gym = {:gym} && name = "admin"', { gym: gym.id }),
-                { requestKey: null },
-            )
+        const role = await findRole(api, 'admin', gym.id)
         const member = await createUser('user', 'inactive-member')
-        await root
-            .collection('memberships')
-            .create({ user: member.id, gym: gym.id, role: role.id })
+        await addMembership(api, member.id, role.id, gym.id)
         const page = await pageAs(member)
 
         const expectListed = async (count: number) => {
@@ -211,15 +208,12 @@ test('inactive gyms drop out of every gym picker', async ({
         await adminPage.getByTestId(`platform-gym-active-${slug}`).click()
         await adminPage.getByTestId('confirm-dialog-confirm').click()
         await expect
-            .poll(async () => (await gymBySlug(root, slug))?.active)
+            .poll(async () => (await gymBySlug(api, slug))?.active)
             .toBe(false)
 
         await expectListed(0)
     } finally {
-        await root
-            .collection('gyms')
-            .delete(gym.id)
-            .catch(() => {})
+        await deleteGym(api, gym.id).catch(() => {})
     }
 })
 
@@ -235,7 +229,7 @@ test('climbers and gym admins are sent away from the platform page', async ({
 
 test('a failed first-admin invite still opens the new gym', async ({
     platformPage: page,
-    root,
+    api,
 }) => {
     const slug = `e2e-invite-${Date.now()}`
     try {
@@ -251,17 +245,17 @@ test('a failed first-admin invite still opens the new gym', async ({
             .fill(`${slug}@gripello.test`)
         await page.getByTestId('platform-gym-submit').click()
 
-        await expect.poll(() => gymBySlug(root, slug)).not.toBeNull()
-        const gym = await gymBySlug(root, slug)
+        await expect.poll(() => gymBySlug(api, slug)).not.toBeNull()
+        const gym = await gymBySlug(api, slug)
         await page.waitForURL(`**/platform/gyms/${gym!.id}`)
         await expect(page.getByTestId('platform-gym-dialog')).toHaveCount(0)
         await expect(page.getByTestId('platform-gym-open')).toBeVisible()
 
-        await root.collection('gyms').update(gym!.id, { active: false })
+        await updateGym(api, gym!.id, { active: false })
         await gotoSettled(page, `/platform/gyms/${gym!.id}`)
         await expect(page.getByTestId('platform-gym-open')).toHaveCount(0)
     } finally {
-        const gym = await gymBySlug(root, slug)
-        if (gym) await root.collection('gyms').delete(gym.id)
+        const gym = await gymBySlug(api, slug)
+        if (gym) await deleteGym(api, gym.id)
     }
 })

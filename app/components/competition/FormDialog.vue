@@ -267,6 +267,11 @@
 </template>
 
 <script setup lang="ts">
+import {
+    createCategory,
+    createCompetition,
+    updateCompetition,
+} from '~/api/competitions'
 import { maxLength, nonBlank, validateRules } from '~/utils/validation'
 import {
     defaultCategories,
@@ -299,7 +304,7 @@ const emit = defineEmits<{ saved: [competition: CompetitionRecord] }>()
 
 const open = defineModel<boolean>({ default: false })
 
-const pb = usePocketbase()
+const gymId = useCurrentGymId()
 const { t } = useI18n()
 const { pending, run } = useAsyncAction()
 const { data: locationRecords } = useLocations()
@@ -445,28 +450,19 @@ async function save() {
     if ((await formRef.value?.validate({ silent: true })) === false) return
     await run(
         async () => {
-            const competitions = pb.collection('competitions')
             if (props.competition) {
                 emit(
                     'saved',
-                    await competitions.update<CompetitionRecord>(
-                        props.competition.id,
-                        buildBody(),
-                    ),
+                    await updateCompetition(props.competition.id, buildBody()),
                 )
             } else {
-                const created = await competitions.create<CompetitionRecord>({
+                const created = await createCompetition(gymId.value, {
                     ...buildBody(),
                     status: 'draft',
                 })
                 await Promise.all(
                     defaultCategories(t).map((category) =>
-                        pb
-                            .collection('competition_categories')
-                            .create(
-                                { ...category, competition: created.id },
-                                { requestKey: null },
-                            ),
+                        createCategory(created.id, category),
                     ),
                 )
                 emit('saved', created)

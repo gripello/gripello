@@ -262,7 +262,8 @@
 </template>
 
 <script setup lang="ts">
-import type { RouteListItem, RouteScoreRecord } from '~/types/models'
+import { listRoutes } from '~/api/routes'
+import type { RouteListItem } from '~/types/models'
 import type { SheetSnap } from '~/components/map/Sheet.vue'
 import type { RouteTypeFilter } from '~/components/map/FilterChips.vue'
 import { normalizeCreators } from '#shared/utils/formatting'
@@ -279,12 +280,13 @@ const MAP_ROUTE_FIELDS =
 const TYPE_STORAGE_KEY = 'map-route-type'
 
 const { t } = useI18n()
-const pb = usePocketbase()
+const authStore = useAuthStore()
+const gymId = useCurrentGymId()
 const route = useRoute()
 const router = useRouter()
 const { polite: announce } = useAnnouncer()
 const { mdAndUp } = useDisplay()
-const isLoggedIn = computed(() => pb.authStore.isValid)
+const isLoggedIn = computed(() => authStore.isValid)
 const { tickedRouteIds, refreshTickedRoutes } = useTickedRoutes()
 const { defectsByRoute } = useOpenDefects()
 const { gradeColumnTitle } = useGradeSystems()
@@ -292,7 +294,7 @@ const {
     searchRouteName,
     selectedDifficulty,
     difficulties,
-    pbFilter,
+    routeQuery,
     clearFilters,
 } = useRouteFilters()
 const mapType = ref<RouteTypeFilter>('')
@@ -321,13 +323,15 @@ const {
     cacheKeys.mapRoutes,
     () =>
         locationId.value
-            ? pb.collection('averageRating').getFullList<RouteScoreRecord>({
-                  filter: pb.filter('archived = false && location = {:id}', {
-                      id: locationId.value,
-                  }),
-                  fields: MAP_ROUTE_FIELDS,
-                  requestKey: 'mapRoutes',
-              })
+            ? listRoutes(
+                  gymId.value,
+                  { location: locationId.value },
+                  {
+                      rated: true,
+                      fields: MAP_ROUTE_FIELDS,
+                      requestKey: 'mapRoutes',
+                  },
+              ).then((list) => list.items)
             : Promise.resolve([]),
     { watch: [locationId], default: () => [] },
 )
@@ -385,24 +389,31 @@ const gradeFilter = computed({
     set: (value: string | null) => (selectedDifficulty.value = value ?? ''),
 })
 
+const hasServerFilter = computed(() => Object.keys(routeQuery.value).length > 0)
+const routeQueryKey = computed(() => JSON.stringify(routeQuery.value))
+
 const { data: serverMatches } = useAsyncData(
     'map-matching',
     () =>
-        locationId.value && pbFilter.value
-            ? pb.collection('averageRating').getFullList<{ id: string }>({
-                  filter: `archived = false && location = "${locationId.value}" && (${pbFilter.value})`,
-                  fields: 'id',
-                  requestKey: 'mapMatching',
-              })
+        locationId.value && hasServerFilter.value
+            ? listRoutes<{ id: string }>(
+                  gymId.value,
+                  { ...routeQuery.value, location: locationId.value },
+                  { rated: true, fields: 'id', requestKey: 'mapMatching' },
+              ).then((list) => list.items)
             : Promise.resolve(null),
-    { watch: [pbFilter, locationId], server: false, default: () => null },
+    {
+        watch: [routeQueryKey, locationId],
+        server: false,
+        default: () => null,
+    },
 )
 
 const matchingIds = computed<Set<string> | null>(() => {
-    const hasServerFilter = !!pbFilter.value
     const hasSentFilter = isLoggedIn.value && sentFilter.value !== 'all'
-    if (!hasServerFilter && !hasSentFilter && !colorFilter.value) return null
-    const serverIds = hasServerFilter
+    if (!hasServerFilter.value && !hasSentFilter && !colorFilter.value)
+        return null
+    const serverIds = hasServerFilter.value
         ? new Set((serverMatches.value ?? []).map((match) => match.id))
         : null
     return new Set(

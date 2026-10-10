@@ -1,5 +1,7 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled, authHeader } from '../../support/nav'
+import { apiOf, gotoSettled } from '../../support/nav'
+import { E2E_GYM_SLUG } from '../../support/seed'
+import { findReport, listReports, listRouteRatings } from '../../support/api'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { decide, openCase } from '../../support/moderation'
@@ -15,7 +17,7 @@ test('a report shows up in the inbox with its notice details', async ({
         route.id,
         `${testPrefix}-reported`,
     )
-    await createReport(page, {
+    await createReport({
         contentId: commentId,
         explanation: `${testPrefix}-explanation`,
     })
@@ -27,7 +29,7 @@ test('a report shows up in the inbox with its notice details', async ({
 
 test('hiding a reported comment closes the report', async ({
     adminPage: page,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
@@ -37,7 +39,7 @@ test('hiding a reported comment closes the report', async ({
         route.id,
         `${testPrefix}-remove-me`,
     )
-    const reportId = await createReport(page, {
+    const reportId = await createReport({
         contentId: commentId,
         explanation: `${testPrefix}-remove`,
     })
@@ -48,20 +50,16 @@ test('hiding a reported comment closes the report', async ({
     await expect
         .poll(
             async () =>
-                (await root.collection('reports').getOne(reportId)).status,
+                (await findReport(adminApi, reportId, E2E_GYM_SLUG))?.status,
         )
         .toBe('actioned')
-    const headers = await authHeader(page)
-    const res = await page.request.get(
-        `/api/collections/ratings/records/${commentId}`,
-        { headers },
-    )
-    expect(res.status()).toBe(404)
+    const ratings = await listRouteRatings(adminApi, route.id)
+    expect(ratings.map((rating) => rating.id)).not.toContain(commentId)
 })
 
 test('keeping a reported comment rejects the report and leaves it in place', async ({
     adminPage: page,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
@@ -71,7 +69,7 @@ test('keeping a reported comment rejects the report and leaves it in place', asy
         route.id,
         `${testPrefix}-keep-me`,
     )
-    const reportId = await createReport(page, {
+    const reportId = await createReport({
         contentId: commentId,
         explanation: `${testPrefix}-keep`,
     })
@@ -82,15 +80,11 @@ test('keeping a reported comment rejects the report and leaves it in place', asy
     await expect
         .poll(
             async () =>
-                (await root.collection('reports').getOne(reportId)).status,
+                (await findReport(adminApi, reportId, E2E_GYM_SLUG))?.status,
         )
         .toBe('rejected')
-    const headers = await authHeader(page)
-    const res = await page.request.get(
-        `/api/collections/ratings/records/${commentId}`,
-        { headers },
-    )
-    expect(res.status()).toBe(200)
+    const ratings = await listRouteRatings(adminApi, route.id)
+    expect(ratings.map((rating) => rating.id)).toContain(commentId)
 })
 
 test('the old reports address leads to the inbox', async ({
@@ -106,9 +100,7 @@ test('a user without moderation rights cannot reach the inbox or reports', async
     await gotoSettled(page, '/manage/moderation')
     await page.waitForURL((url) => !url.pathname.endsWith('/manage/moderation'))
 
-    const headers = await authHeader(page)
-    const res = await page.request.get('/api/collections/reports/records', {
-        headers,
-    })
-    expect((await res.json()).totalItems).toBe(0)
+    await expect(
+        listReports(await apiOf(page), {}, E2E_GYM_SLUG),
+    ).rejects.toMatchObject({ status: 403 })
 })

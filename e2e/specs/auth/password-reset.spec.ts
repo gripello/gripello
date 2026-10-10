@@ -26,9 +26,8 @@ test('shows an error when the reset request fails outright', async ({
 }) => {
     await gotoSettled(page, '/auth/login')
     await page.getByTestId('login-goto-reset').click()
-    await page.route(
-        '**/api/collections/users/request-password-reset',
-        (route) => route.abort('failed'),
+    await page.route('**/api/auth/password-reset/request', (route) =>
+        route.abort('failed'),
     )
     await page.getByTestId('reset-email').fill('e2e-user@gripello.test')
     await page.getByTestId('reset-submit').click()

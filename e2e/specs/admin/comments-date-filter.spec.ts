@@ -2,7 +2,7 @@ import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { createComment } from '../../support/comments'
 
-test('the week filter sends a PocketBase-formatted cutoff and keeps new comments', async ({
+test('the week filter sends an RFC 3339 cutoff and keeps new comments', async ({
     adminPage: page,
     testPrefix,
     route,
@@ -15,8 +15,8 @@ test('the week filter sends a PocketBase-formatted cutoff and keeps new comments
     const filterRequest = page.waitForRequest((request) => {
         const url = new URL(request.url())
         return (
-            url.pathname === '/api/collections/ratings/records' &&
-            (url.searchParams.get('filter') ?? '').includes('created >=')
+            /^\/api\/gyms\/[^/]+\/ratings$/.test(url.pathname) &&
+            url.searchParams.has('since')
         )
     })
     await page
@@ -24,10 +24,8 @@ test('the week filter sends a PocketBase-formatted cutoff and keeps new comments
         .getByRole('tab', { name: 'This week' })
         .click()
 
-    const filter = new URL((await filterRequest).url()).searchParams.get(
-        'filter',
-    )
-    expect(filter).toMatch(/created >= "\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)
-    expect(filter).not.toMatch(/created >= "[^"]*T/)
+    const since = new URL((await filterRequest).url()).searchParams.get('since')
+    expect(since).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
+    expect(Number.isNaN(Date.parse(since!))).toBe(false)
     await expect(page.getByTestId(`comment-card-${id}`)).toBeVisible()
 })

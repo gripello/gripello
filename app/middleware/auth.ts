@@ -1,15 +1,14 @@
 import type { RouteLocationNormalized } from 'vue-router'
 import type { GymRecord } from '~/types/models'
-import { usePocketbase } from '#imports'
 import { staffLandingPath } from '~/utils/nav'
 import { routeGymSlug } from '~/composables/useGym'
+import { useAuthState } from '~/api/auth'
 
 async function targetGymId(to: RouteLocationNormalized) {
     const routeSlug = routeGymSlug(to.params)
     const cached = useNuxtData<GymRecord>('gym').data.value
     if (cached && (!routeSlug || cached.slug === routeSlug)) return cached.id
     const gym = await loadGym(
-        usePocketbase(),
         routeSlug,
         useCookie<string | null>('gym').value ?? '',
     )
@@ -17,8 +16,7 @@ async function targetGymId(to: RouteLocationNormalized) {
 }
 
 export default defineNuxtRouteMiddleware(async (to) => {
-    const pb = usePocketbase()
-    const isValidSession = pb.authStore.isValid
+    const isValidSession = useAuthState().isSignedIn()
 
     if (to.meta.auth === false) {
         if (isValidSession) {

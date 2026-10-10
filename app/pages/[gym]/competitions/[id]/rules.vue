@@ -86,12 +86,11 @@
 
 <script setup lang="ts">
 import { competitionRules } from '~/utils/competitions'
-import type { CompetitionRecord } from '~/types/models'
+import { getCompetition } from '~/api/competitions'
 
 const gymPath = useGymPath()
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 const route = useRoute()
 
 const competitionId = computed(() => String(route.params.id ?? ''))
@@ -103,10 +102,7 @@ const {
     refresh,
 } = await useAsyncData(
     () => `rules-competition:${competitionId.value}`,
-    () =>
-        pb
-            .collection('competitions')
-            .getOne<CompetitionRecord>(competitionId.value),
+    () => getCompetition(competitionId.value),
     { enabled: () => !!competitionId.value },
 )
 

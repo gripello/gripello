@@ -1,5 +1,11 @@
 import { test, expect } from '../../support/fixtures'
-import { authHeader, gotoSettled } from '../../support/nav'
+import { apiOf, gotoSettled } from '../../support/nav'
+import {
+    acceptFollow,
+    createFollow,
+    createRating,
+    listFollows,
+} from '../../support/api'
 
 test('blocking a climber stops follows both ways and can be undone', async ({
     createUser,
@@ -15,14 +21,9 @@ test('blocking a climber stops follows both ways and can be undone', async ({
     await blockerPage.getByRole('menuitem', { name: /^Block$/ }).click()
     await blockerPage.getByTestId('confirm-dialog-confirm').click()
 
-    const follow = await blockedPage.request.post(
-        '/api/collections/follows/records',
-        {
-            headers: await authHeader(blockedPage),
-            data: { follower: blocked.id, followee: blocker.id },
-        },
-    )
-    expect(follow.status()).toBe(403)
+    await expect(
+        createFollow(await apiOf(blockedPage), blocker.id),
+    ).rejects.toMatchObject({ status: 400 })
 
     await gotoSettled(blockerPage, '/account/settings?tab=privacy')
     await expect(blockerPage.getByTestId('privacy-blocked')).toHaveCount(1)
@@ -31,9 +32,9 @@ test('blocking a climber stops follows both ways and can be undone', async ({
 })
 
 test('a block removes existing follows and hides the other person’s reviews', async ({
-    root,
     route,
     createUser,
+    apiAs,
     pageAs,
     testPrefix,
 }) => {
@@ -43,23 +44,17 @@ test('a block removes existing follows and hides the other person’s reviews', 
         [blocker, blocked],
         [blocked, blocker],
     ]) {
-        await root.collection('follows').create({
-            follower: follower!.id,
-            followee: followee!.id,
-            status: 'accepted',
-        })
+        const follow = await createFollow(await apiAs(follower!), followee!.id)
+        if (follow.status !== 'accepted')
+            await acceptFollow(await apiAs(followee!), follow.id)
     }
     const blockedPage = await pageAs(blocked)
     await gotoSettled(blockedPage, `/route?id=${route.id}`)
     const text = `${testPrefix}-their-review`
-    const res = await blockedPage.request.post(
-        '/api/collections/ratings/records',
-        {
-            headers: await authHeader(blockedPage),
-            data: { route_id: route.id, rating: 3, comment: text },
-        },
-    )
-    expect(res.ok()).toBe(true)
+    await createRating(await apiOf(blockedPage), route.id, {
+        rating: 3,
+        comment: text,
+    })
 
     const blockerPage = await pageAs(blocker)
     await gotoSettled(blockerPage, `/route?id=${route.id}`)
@@ -71,16 +66,14 @@ test('a block removes existing follows and hides the other person’s reviews', 
     await blockerPage.getByRole('menuitem', { name: /^Block$/ }).click()
     await blockerPage.getByTestId('confirm-dialog-confirm').click()
 
+    const blockerApi = await apiAs(blocker)
     await expect
         .poll(
             async () =>
-                (
-                    await root.collection('follows').getFullList({
-                        filter: root.filter(
-                            '(follower = {:a} && followee = {:b}) || (follower = {:b} && followee = {:a})',
-                            { a: blocker.id, b: blocked.id },
-                        ),
-                    })
+                (await listFollows(blockerApi)).filter(
+                    (follow) =>
+                        follow.follower === blocked.id ||
+                        follow.followee === blocked.id,
                 ).length,
         )
         .toBe(0)
@@ -88,11 +81,9 @@ test('a block removes existing follows and hides the other person’s reviews', 
     await gotoSettled(blockerPage, `/route?id=${route.id}`)
     await expect(reviews.getByText(text)).toHaveCount(0)
 
-    const profile = await blockedPage.request.get(
-        `/api/climbers/${blocker.id}`,
-        { headers: await authHeader(blockedPage) },
-    )
-    expect(profile.status()).toBe(404)
+    await expect(
+        (await apiOf(blockedPage)).get(`/climbers/${blocker.id}`),
+    ).rejects.toMatchObject({ status: 404 })
 
     await gotoSettled(blockerPage, '/account/settings?tab=privacy')
     await blockerPage.getByTestId('privacy-unblock').click()

@@ -1,28 +1,21 @@
-import type { TickRecord } from '~/types/models'
+import { listSentRoutes } from '~/api/ticks'
 import { cacheKeys } from '~/utils/realtimeCache'
 import { isOfflineError, opsOfUser } from '~/utils/tickOutbox'
 
 export function useTickedRoutes() {
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     const outbox = useTickOutbox()
     const { data } = useAsyncData(
         cacheKeys.tickedRoutes,
         async () => {
-            if (!pb.authStore.isValid) return []
-            const sends = await pb
-                .collection('tick_sends')
-                .getFullList<Pick<TickRecord, 'route'>>({
-                    fields: 'route',
-                    requestKey: null,
-                })
-                .catch(async (error) =>
-                    isOfflineError(error)
-                        ? (await outbox.cachedTicks()).filter(
-                              (tick) => tick.type !== 'attempt',
-                          )
-                        : [],
-                )
-            return sends.map((send) => send.route ?? '')
+            if (!authStore.isValid) return []
+            return listSentRoutes().catch(async (error) =>
+                isOfflineError(error)
+                    ? (await outbox.cachedTicks())
+                          .filter((tick) => tick.type !== 'attempt')
+                          .map((tick) => tick.route ?? '')
+                    : [],
+            )
         },
         { default: () => [] },
     )
@@ -34,7 +27,7 @@ export function useTickedRoutes() {
                     ...data.value,
                     ...opsOfUser(
                         outbox.queue.value,
-                        pb.authStore.record?.id,
+                        authStore.record?.id,
                     ).flatMap((op) =>
                         op.op === 'create' &&
                         !op.failed &&

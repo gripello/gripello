@@ -1,0 +1,224 @@
+openapi: 3.1.0
+info:
+  title: Gripello follows, blocks and climber lookups
+  version: 1.0.0
+paths:
+  /climbers:
+    get:
+      operationId: listClimbers
+      tags: [social]
+      description: Either a search (`q`, at least 3 characters, 30 searches per minute per user, up to 3 words each matching first name, last name or username; 20 results; never yourself or closed profiles) or a lookup (`ids`, comma-separated, up to 200). Climbers who blocked the caller and closed profiles the caller is not connected to are left out. Rate-limited to 120 requests per minute per user (shared with /climbers/{id}).
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: ids, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Climbers
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Climber' } }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /climbers/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getClimber
+      tags: [social]
+      description: 404 when the climber blocked the caller, or has a closed profile and neither follows the caller nor is followed (accepted) by them. Rate-limited like /climbers.
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClimberProfile' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /me/follows:
+    get:
+      operationId: listFollows
+      tags: [social]
+      description: Follows the caller is part of, newest first. Changes arrive on the realtime topic `follow_changes` as `{action, record}` for both parties.
+      parameters:
+        - { name: direction, in: query, schema: { type: string, enum: [followers, following] } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/FollowStatus' } }
+      responses:
+        '200':
+          description: Follows
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Follow' } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /follows:
+    post:
+      operationId: createFollow
+      tags: [social]
+      description: The followee's follow_policy decides the status — approve (default) → pending, open → accepted. Yourself, an unknown climber, a closed profile or a block in either direction all answer the same 400; an existing follow answers 400 validation_not_unique. Follow creates and deletes share a limit of 60 per hour per user (429).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [followee]
+              properties:
+                followee: { type: string }
+      responses:
+        '201': { $ref: '#/components/responses/Follow' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /follows/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: acceptFollow
+      tags: [social]
+      description: Only the followee (404 for anyone else); 400 unless the request is pending.
+      responses:
+        '200': { $ref: '#/components/responses/Follow' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /follows/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      operationId: deleteFollow
+      tags: [social]
+      description: Either party (unfollow, decline, remove a follower). Shares the follow limit of POST /follows.
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /me/blocks:
+    get:
+      operationId: listBlocks
+      tags: [social]
+      description: Climbers the caller blocked, newest first.
+      responses:
+        '200':
+          description: Blocks
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Block' } }
+        '401': { $ref: '#/components/responses/Error' }
+  /blocks:
+    post:
+      operationId: createBlock
+      tags: [social]
+      description: Ends follows in both directions and hides the caller's search entry and profile from the blocked climber.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [blocked]
+              properties:
+                blocked: { type: string }
+      responses:
+        '201':
+          description: Block
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Block' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /blocks/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      operationId: deleteBlock
+      tags: [social]
+      description: Own blocks only (404 otherwise).
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Follow:
+      description: Follow
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Follow' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    FollowStatus:
+      type: string
+      enum: [pending, accepted]
+    Follow:
+      type: object
+      required: [id, created, updated, follower, followee, status]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        follower: { type: string }
+        followee: { type: string }
+        status: { $ref: '#/components/schemas/FollowStatus' }
+    Block:
+      type: object
+      required: [id, created, updated, blocker, blocked]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        blocker: { type: string }
+        blocked: { type: string }
+    Climber:
+      type: object
+      required: [id, name, avatar, banner]
+      properties:
+        id: { type: string }
+        name: { type: string, description: full "First Last", the username when both are empty }
+        avatar: { type: string, description: 100x100 thumb URL or empty }
+        banner: { type: string, description: 1600x400 thumb URL or empty }
+    ClimberProfile:
+      allOf:
+        - $ref: '#/components/schemas/Climber'
+        - type: object
+          required: [closed, private, followers, following, follow, sends_visible]
+          properties:
+            closed: { type: boolean, description: follow_policy is closed }
+            private: { type: boolean, description: ticks_private }
+            followers: { type: integer, description: accepted }
+            following: { type: integer, description: accepted }
+            follow:
+              description: the caller's follow of this climber
+              oneOf:
+                - type: 'null'
+                - type: object
+                  required: [id, status]
+                  properties:
+                    id: { type: string }
+                    status: { $ref: '#/components/schemas/FollowStatus' }
+            sends_visible: { type: boolean, description: yourself, or an accepted follow of a climber whose ticks are not private }

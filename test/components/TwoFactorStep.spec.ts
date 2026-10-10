@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import TwoFactorStep from '~/components/auth/TwoFactorStep.vue'
+import { routeApi } from '../api/apiMock'
 
 const send = vi.fn()
 const signIn = vi.fn()
@@ -46,7 +47,8 @@ describe('TwoFactorStep', () => {
     beforeEach(() => {
         send.mockReset()
         signIn.mockReset()
-        globalThis.__POCKETBASE_CLIENT__ = { send }
+        globalThis.__AUTH_STORE__ = {}
+        routeApi(send)
         vi.stubGlobal('usePasskeyLogin', () => ({ signIn }))
         vi.stubGlobal('useTemplateRef', () => ref(null))
         vi.stubGlobal('nextTick', nextTick)
@@ -72,7 +74,7 @@ describe('TwoFactorStep', () => {
         await wrapper.get('[data-testid="two-factor-code"]').setValue('123456')
         await flushPromises()
         expect(send).toHaveBeenCalledTimes(1)
-        expect(send).toHaveBeenCalledWith('/api/auth/totp', {
+        expect(send).toHaveBeenCalledWith('/auth/totp', {
             method: 'POST',
             body: { mfaId: 'mfa1', code: '123456' },
         })
@@ -118,7 +120,7 @@ describe('TwoFactorStep', () => {
             .setValue('ABCDEFGHIJKLMNOP')
         await wrapper.get('form').trigger('submit')
         await flushPromises()
-        expect(send).toHaveBeenCalledWith('/api/auth/recovery', {
+        expect(send).toHaveBeenCalledWith('/auth/recovery', {
             method: 'POST',
             body: { mfaId: 'mfa1', code: 'abcd-efgh-ijkl-mnop' },
         })

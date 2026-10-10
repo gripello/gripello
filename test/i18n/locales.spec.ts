@@ -21,11 +21,12 @@ const flatten = (messages: Messages, prefix = ''): Record<string, string> =>
 const english = flatten(en)
 const translations = { de, nl, fr, es }
 
-const seededPermissions = readdirSync('pocketbase/pb_migrations')
-    .filter((file) => file.endsWith('.js'))
+const migrationsDir = 'backend/internal/platform/db/migrations'
+const seededPermissions = readdirSync(migrationsDir)
+    .filter((file) => file.endsWith('.sql'))
     .flatMap((file) => [
-        ...readFileSync(`pocketbase/pb_migrations/${file}`, 'utf8').matchAll(
-            /(?:set\('name', |name: )'((?:manage|view|run)_[a-z_]+)'/g,
+        ...readFileSync(`${migrationsDir}/${file}`, 'utf8').matchAll(
+            /\('[a-z0-9]{15}', '([a-z]+_[a-z_]+)', '/g,
         ),
     ])
     .map((match) => match[1]!)

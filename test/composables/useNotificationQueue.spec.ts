@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref as vueRef, computed as vueComputed } from 'vue'
+import { routeApi } from '../api/apiMock'
 
-// ── Nuxt auto-import stubs ──────────────────────────────────────────────────
 const useStateMocks: Record<string, { value: unknown }> = {}
 
 vi.stubGlobal('useState', (key: string, init?: () => unknown) => {
@@ -15,22 +15,28 @@ vi.stubGlobal('ref', vueRef)
 vi.stubGlobal('computed', vueComputed)
 
 let pbMock: any
-vi.stubGlobal('usePocketbase', () => pbMock)
+vi.stubGlobal('useAuthStore', () => pbMock.authStore)
 
 function record(id: string, read = false) {
     return { id, user: 'u1', type: 'report_filed', read, created: '' }
+}
+
+let api: ReturnType<typeof vi.fn>
+
+function serve(items: unknown[], mutate: () => unknown = () => undefined) {
+    api = vi.fn(async (path: string, options?: { method?: string }) =>
+        path === '/me/notifications' && !options?.method
+            ? { items, page: 1, limit: 200, total: items.length }
+            : mutate(),
+    )
+    routeApi(api)
 }
 
 describe('useNotificationQueue', () => {
     beforeEach(() => {
         vi.resetModules()
         for (const key of Object.keys(useStateMocks)) delete useStateMocks[key]
-
-        pbMock = {
-            authStore: { isValid: true },
-            collection: vi.fn(),
-            createBatch: vi.fn(),
-        }
+        pbMock = { authStore: { isValid: true } }
     })
 
     async function loadComposable() {
@@ -39,15 +45,7 @@ describe('useNotificationQueue', () => {
     }
 
     it('counts only unread items', async () => {
-        pbMock.collection = vi.fn().mockReturnValue({
-            getFullList: vi
-                .fn()
-                .mockResolvedValue([
-                    record('a'),
-                    record('b', true),
-                    record('c'),
-                ]),
-        })
+        serve([record('a'), record('b', true), record('c')])
 
         const { refresh, items, unreadCount } = await loadComposable()
         await refresh()
@@ -57,25 +55,21 @@ describe('useNotificationQueue', () => {
     })
 
     it('marks one item read and drops the count', async () => {
-        const update = vi.fn().mockResolvedValue({})
-        pbMock.collection = vi.fn().mockReturnValue({
-            getFullList: vi.fn().mockResolvedValue([record('a'), record('b')]),
-            update,
-        })
+        serve([record('a'), record('b')])
 
         const { refresh, markRead, unreadCount } = await loadComposable()
         await refresh()
         await markRead('a')
 
-        expect(update).toHaveBeenCalledWith('a', { read: true })
+        expect(api).toHaveBeenLastCalledWith('/me/notifications/read', {
+            method: 'POST',
+            body: { ids: ['a'] },
+        })
         expect(unreadCount.value).toBe(1)
     })
 
     it('restores the item when marking read fails', async () => {
-        pbMock.collection = vi.fn().mockReturnValue({
-            getFullList: vi.fn().mockResolvedValue([record('a')]),
-            update: vi.fn().mockRejectedValue(new Error('offline')),
-        })
+        serve([record('a')], () => Promise.reject(new Error('offline')))
 
         const consoleError = vi
             .spyOn(console, 'error')
@@ -89,25 +83,22 @@ describe('useNotificationQueue', () => {
     })
 
     it('removes a dismissed item', async () => {
-        const del = vi.fn().mockResolvedValue(true)
-        pbMock.collection = vi.fn().mockReturnValue({
-            getFullList: vi.fn().mockResolvedValue([record('a'), record('b')]),
-            delete: del,
-        })
+        serve([record('a'), record('b')])
 
         const { refresh, dismiss, items } = await loadComposable()
         await refresh()
         await dismiss('a')
 
-        expect(del).toHaveBeenCalledWith('a')
+        expect(api).toHaveBeenLastCalledWith('/me/notifications/a', {
+            method: 'DELETE',
+        })
         expect(items.value.map((i: any) => i.id)).toEqual(['b'])
     })
 
     it('puts a dismissed item back when the delete fails', async () => {
-        pbMock.collection = vi.fn().mockReturnValue({
-            getFullList: vi.fn().mockResolvedValue([record('a'), record('b')]),
-            delete: vi.fn().mockRejectedValue(new Error('offline')),
-        })
+        serve([record('a'), record('b')], () =>
+            Promise.reject(new Error('offline')),
+        )
 
         const consoleError = vi
             .spyOn(console, 'error')
@@ -120,48 +111,24 @@ describe('useNotificationQueue', () => {
         consoleError.mockRestore()
     })
 
-    it('clears every unread flag in one batch', async () => {
-        const batchUpdate = vi.fn()
-        const send = vi.fn().mockResolvedValue([])
-        pbMock.createBatch = vi.fn().mockReturnValue({
-            collection: () => ({ update: batchUpdate }),
-            send,
-        })
-        pbMock.collection = vi.fn().mockReturnValue({
-            getFullList: vi
-                .fn()
-                .mockResolvedValue([
-                    record('a'),
-                    record('b'),
-                    record('c', true),
-                ]),
-        })
+    it('clears every unread flag in one request', async () => {
+        serve([record('a'), record('b'), record('c', true)])
 
         const { refresh, markAllRead, unreadCount } = await loadComposable()
         await refresh()
         await markAllRead()
 
-        expect(send).toHaveBeenCalledTimes(1)
-        expect(batchUpdate).toHaveBeenCalledTimes(2)
+        expect(api).toHaveBeenLastCalledWith('/me/notifications/read', {
+            method: 'POST',
+            body: { ids: ['a', 'b'] },
+        })
         expect(unreadCount.value).toBe(0)
     })
 
-    it('only restores items from chunks that failed to send', async () => {
-        const send = vi
-            .fn()
-            .mockResolvedValueOnce([])
-            .mockRejectedValueOnce(new Error('offline'))
-        pbMock.createBatch = vi.fn().mockReturnValue({
-            collection: () => ({ update: vi.fn() }),
-            send,
-        })
-        pbMock.collection = vi.fn().mockReturnValue({
-            getFullList: vi
-                .fn()
-                .mockResolvedValue(
-                    Array.from({ length: 152 }, (_, i) => record(`n${i}`)),
-                ),
-        })
+    it('restores every unread flag when marking all fails', async () => {
+        serve([record('a'), record('b')], () =>
+            Promise.reject(new Error('offline')),
+        )
 
         const consoleError = vi
             .spyOn(console, 'error')
@@ -174,48 +141,44 @@ describe('useNotificationQueue', () => {
         consoleError.mockRestore()
     })
 
-    it('keeps the list when a refresh is auto-cancelled', async () => {
-        pbMock.collection = vi.fn().mockReturnValue({
-            getFullList: vi
-                .fn()
-                .mockResolvedValueOnce([record('a')])
-                .mockRejectedValueOnce(
-                    Object.assign(new Error('autocancelled'), {
-                        isAbort: true,
-                        status: 0,
-                    }),
-                ),
-        })
-
+    it('keeps the list when a refresh is aborted', async () => {
+        serve([record('a')])
         const { refresh, items } = await loadComposable()
         await refresh()
+        routeApi(() =>
+            Promise.reject(
+                Object.assign(new Error('aborted'), {
+                    isAbort: true,
+                    status: 0,
+                }),
+            ),
+        )
         await refresh()
 
         expect(items.value).toHaveLength(1)
     })
 
     it('applies realtime events without refetching', async () => {
-        const getFullList = vi.fn().mockResolvedValue([record('a')])
-        pbMock.collection = vi.fn().mockReturnValue({ getFullList })
+        serve([record('a')])
 
         const { refresh, applyEvent, items } = await loadComposable()
         await refresh()
-        applyEvent({ action: 'create', record: record('b') })
-        applyEvent({ action: 'update', record: record('a', true) })
-        applyEvent({ action: 'delete', record: record('b') })
+        applyEvent({ action: 'create', record: record('b') } as never)
+        applyEvent({ action: 'update', record: record('a', true) } as never)
+        applyEvent({ action: 'delete', record: record('b') } as never)
 
         expect(items.value).toEqual([record('a', true)])
-        expect(getFullList).toHaveBeenCalledTimes(1)
+        expect(api).toHaveBeenCalledTimes(1)
     })
 
     it('empties the queue when signed out', async () => {
         pbMock.authStore.isValid = false
-        pbMock.collection = vi.fn()
+        serve([record('a')])
 
         const { refresh, items } = await loadComposable()
         await refresh()
 
         expect(items.value).toEqual([])
-        expect(pbMock.collection).not.toHaveBeenCalled()
+        expect(api).not.toHaveBeenCalled()
     })
 })

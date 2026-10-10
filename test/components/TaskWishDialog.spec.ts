@@ -3,6 +3,9 @@ import { computed, ref } from 'vue'
 import WishDialog from '~/components/task/WishDialog.vue'
 
 const create = vi.fn()
+vi.mock('~/api/tasks', () => ({
+    createTask: (...args: unknown[]) => create(...args),
+}))
 const slotStub = { template: '<div><slot /><slot name="actions" /></div>' }
 const buttonStub = {
     props: ['disabled'],
@@ -30,9 +33,6 @@ function mountDialog(props: Record<string, unknown>) {
 describe('TaskWishDialog', () => {
     beforeEach(() => {
         create.mockReset()
-        globalThis.__POCKETBASE_CLIENT__ = {
-            collection: () => ({ create }),
-        }
         vi.stubGlobal('useCapToken', () => ({
             capHeaders: async () => ({ 'X-Cap-Token': 'token' }),
         }))
@@ -47,6 +47,7 @@ describe('TaskWishDialog', () => {
             gradeSystemFor: () => 'font',
         }))
         vi.stubGlobal('computed', computed)
+        vi.stubGlobal('useCurrentGymId', () => ref('g1'))
     })
 
     it('sends a wish prefilled from the current filters', async () => {
@@ -63,6 +64,7 @@ describe('TaskWishDialog', () => {
         await flushPromises()
 
         expect(create).toHaveBeenCalledWith(
+            'g1',
             {
                 kind: 'wish',
                 location: 'hall',
@@ -71,6 +73,7 @@ describe('TaskWishDialog', () => {
                 grade: '6A',
                 description: '',
             },
+            null,
             { headers: { 'X-Cap-Token': 'token' } },
         )
     })

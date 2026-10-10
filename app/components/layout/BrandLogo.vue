@@ -30,6 +30,7 @@
 </template>
 
 <script setup lang="ts">
+import { fileUrl } from '~/api/client'
 import type { GymRecord } from '~/types/models'
 
 const props = defineProps<{ gym?: Partial<GymRecord> | null }>()
@@ -37,7 +38,7 @@ const gymPath = useGymPath()
 
 const logoAlt = computed(() => props.gym?.name || 'Gripello')
 const logoUrl = computed(() =>
-    usePbFileUrl(props.gym, props.gym?.page_logo, { thumb: '0x200' }),
+    fileUrl('gyms', props.gym, props.gym?.page_logo, { thumb: '0x200' }),
 )
 </script>
 

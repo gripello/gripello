@@ -7,7 +7,7 @@
             :to="`/climber?id=${id}`"
             class="flex min-w-0 flex-1 items-center gap-3"
         >
-            <ClimberAvatar :id="id" :name="name" :avatar="avatar" />
+            <ClimberAvatar :id="id" :name="name" :src="avatar" />
             <span class="truncate font-semibold">{{ name }}</span>
         </NuxtLink>
         <slot />

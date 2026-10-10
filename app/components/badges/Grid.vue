@@ -115,6 +115,7 @@
 </template>
 
 <script setup lang="ts">
+import { listClimberAchievements } from '~/api/social'
 import { formatDate } from '#shared/utils/formatting'
 import { tickDate } from '#shared/utils/ticks'
 import {
@@ -133,7 +134,6 @@ const TIER_STYLES = {
 }
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 
 const {
     data: achievements,
@@ -141,11 +141,7 @@ const {
     error,
 } = useAsyncData(
     `achievements:${props.userId}`,
-    () =>
-        pb.send<AchievementView[]>(
-            `/api/climbers/${props.userId}/achievements`,
-            { requestKey: null },
-        ),
+    () => listClimberAchievements(props.userId),
     { default: () => [] },
 )
 

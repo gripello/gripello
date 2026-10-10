@@ -1,3 +1,5 @@
+import { getModerationSummary } from '~/api/moderation'
+import { useAuthState } from '~/api/auth'
 import type { NavBadges } from '~/utils/navigation'
 import { navContext } from '~/utils/navigation'
 import {
@@ -6,7 +8,6 @@ import {
 } from '~/utils/moderation'
 
 export function useModerationSummary() {
-    const pb = usePocketbase()
     const route = useRouter().currentRoute
     const gymId = useCurrentGymId()
     const { can } = usePermissions()
@@ -29,16 +30,13 @@ export function useModerationSummary() {
     })
 
     async function refresh() {
-        if (!scope.value || !pb.authStore.isValid) {
+        if (!scope.value || !useAuthState().isSignedIn()) {
             summary.value = null
             return
         }
-        summary.value = await pb
-            .send<ModerationSummary>('/api/moderation/summary', {
-                query: scope.value === 'platform' ? {} : { gym: scope.value },
-                requestKey: null,
-            })
-            .catch(() => null)
+        summary.value = await getModerationSummary(
+            scope.value === 'platform' ? undefined : scope.value,
+        ).catch(() => null)
     }
 
     const badges = computed<NavBadges>(() =>

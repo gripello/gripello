@@ -6,7 +6,23 @@ import {
     gotoSubscribed,
     gymPath,
 } from '../../support/nav'
-import { e2eGym, gradeOf, uiaa } from '../../support/seed'
+import { gradeOf, uiaa } from '../../support/seed'
+import {
+    archiveRoute,
+    createRating,
+    createRoute,
+    e2eGymId,
+    routeInput,
+    updateRoute,
+    type Api,
+} from '../../support/api'
+
+const newRoute = (
+    api: Api,
+    name: string,
+    location: string,
+    data: Record<string, unknown>,
+) => createRoute(api, routeInput(name, location, data))
 
 function stat(page: Page, key: string) {
     return page
@@ -116,13 +132,12 @@ test('filters live in the url and survive a reload', async ({
 
 test('grade charts switch discipline in place and follow the type filter', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
+    workerLocation,
 }) => {
     for (const type of ['Route', 'Boulder']) {
-        await root.collection('routes').create({
-            gym: await e2eGym(),
-            name: `${testPrefix}-${type}`,
+        await newRoute(adminApi, `${testPrefix}-${type}`, workerLocation.id, {
             ...(type === 'Boulder' ? gradeOf('font', '6A') : uiaa('6')),
             type,
             creator: [`${testPrefix}-setter`],
@@ -198,18 +213,21 @@ test('custom range writes the dates into the url', async ({
 
 test('updates live when a route is created elsewhere', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
+    workerLocation,
 }) => {
-    await gotoSubscribed(page, '/manage/analytics?range=30d', 'routes/*')
+    await gotoSubscribed(
+        page,
+        '/manage/analytics?range=30d',
+        `gym_changes:${await e2eGymId()}`,
+    )
 
     const setter = `${testPrefix}-live-setter`
     const liveRefresh = page.waitForResponse((response) =>
         analyticsListsSetter(response, setter),
     )
-    await root.collection('routes').create({
-        gym: await e2eGym(),
-        name: `${testPrefix}-live-route`,
+    await newRoute(adminApi, `${testPrefix}-live-route`, workerLocation.id, {
         ...uiaa('5'),
         type: 'Route',
         creator: [setter],
@@ -220,10 +238,15 @@ test('updates live when a route is created elsewhere', async ({
 
 test('refreshes during a steady stream of route changes', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
+    workerLocation,
 }) => {
-    await gotoSubscribed(page, '/manage/analytics?range=30d', 'routes/*')
+    await gotoSubscribed(
+        page,
+        '/manage/analytics?range=30d',
+        `gym_changes:${await e2eGymId()}`,
+    )
 
     const setter = `${testPrefix}-stream-setter`
     let refreshed = false
@@ -235,14 +258,17 @@ test('refreshes during a steady stream of route changes', async ({
         .poll(
             async () => {
                 if (!refreshed) {
-                    await root.collection('routes').create({
-                        gym: await e2eGym(),
-                        name: `${testPrefix}-stream-route-${index++}`,
-                        ...uiaa('5'),
-                        type: 'Route',
-                        creator: [setter],
-                        screw_date: new Date().toISOString(),
-                    })
+                    await newRoute(
+                        adminApi,
+                        `${testPrefix}-stream-route-${index++}`,
+                        workerLocation.id,
+                        {
+                            ...uiaa('5'),
+                            type: 'Route',
+                            creator: [setter],
+                            screw_date: new Date().toISOString(),
+                        },
+                    )
                 }
                 return refreshed
             },
@@ -270,16 +296,15 @@ test('heatmap tooltip hides when the page scrolls', async ({
 
 test('heatmap switches years and shows day counts', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
+    workerLocation,
 }) => {
-    await root.collection('routes').create({
-        gym: await e2eGym(),
-        name: `${testPrefix}-heatmap-route`,
+    await newRoute(adminApi, `${testPrefix}-heatmap-route`, workerLocation.id, {
         ...uiaa('5'),
         type: 'Route',
         creator: [`${testPrefix}-heatmap-setter`],
-        screw_date: '2011-06-15 12:00:00.000Z',
+        screw_date: '2011-06-15',
     })
     await gotoSettled(page, '/manage/analytics?range=all')
     const heatmap = page.getByTestId('analytics-heatmap')
@@ -303,23 +328,23 @@ test('heatmap switches years and shows day counts', async ({
 
 test('reports routes whose grade votes are harder than the set grade', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
+    workerLocation,
 }) => {
-    const route = await root.collection('routes').create({
-        gym: await e2eGym(),
-        name: `${testPrefix}-sandbag`,
-        ...uiaa('1'),
-        type: 'Route',
-        creator: ['Sandbagger'],
-        screw_date: new Date().toISOString(),
-    })
+    const route = await newRoute(
+        adminApi,
+        `${testPrefix}-sandbag`,
+        workerLocation.id,
+        {
+            ...uiaa('1'),
+            type: 'Route',
+            creator: ['Sandbagger'],
+            screw_date: new Date().toISOString(),
+        },
+    )
     for (let vote = 0; vote < 3; vote++) {
-        await root.collection('ratings').create({
-            route_id: route.id,
-            rating: 4,
-            ...uiaa('10'),
-        })
+        await createRating(adminApi, route.id, { rating: 4, ...uiaa('10') })
     }
     await gotoSettled(page, '/manage/analytics?range=all&type=Route')
     await expect(
@@ -327,7 +352,7 @@ test('reports routes whose grade votes are harder than the set grade', async ({
     ).toBeVisible()
 
     const response = await page.request.get(
-        `/api/manage/analytics?range=all&gym=${await e2eGym()}`,
+        `/api/manage/analytics?range=all&gym=${await e2eGymId()}`,
         {
             headers: await authHeader(page),
         },
@@ -343,49 +368,56 @@ test('reports routes whose grade votes are harder than the set grade', async ({
 })
 
 test('archiving a route stamps archived_at and restoring clears it', async ({
-    root,
+    adminApi,
     testPrefix,
+    workerLocation,
 }) => {
-    const routes = root.collection('routes')
-    const route = await routes.create({
-        gym: await e2eGym(),
-        name: `${testPrefix}-archive`,
-        ...uiaa('4'),
-        type: 'Boulder',
-        creator: [`${testPrefix}-archive-setter`],
-    })
-    expect(route.archived_at).toBe('')
+    const route = await newRoute(
+        adminApi,
+        `${testPrefix}-archive`,
+        workerLocation.id,
+        {
+            ...uiaa('4'),
+            type: 'Boulder',
+            creator: [`${testPrefix}-archive-setter`],
+        },
+    )
+    expect(route.archived_at).toBeFalsy()
 
-    const archived = await routes.update(route.id, { archived: true })
-    expect(archived.archived_at).not.toBe('')
+    const archived = await archiveRoute(adminApi, route.id)
+    expect(archived.archived_at).toBeTruthy()
 
-    const edited = await routes.update(route.id, {
+    const edited = await updateRoute(adminApi, route.id, {
         name: `${testPrefix}-archive-renamed`,
     })
     expect(edited.archived_at).toBe(archived.archived_at)
 
-    const restored = await routes.update(route.id, { archived: false })
-    expect(restored.archived_at).toBe('')
+    const restored = await archiveRoute(adminApi, route.id, false)
+    expect(restored.archived_at).toBeFalsy()
 })
 
 test('archived routes are left out like on the routes page unless included', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
+    workerLocation,
 }) => {
     const setter = `${testPrefix}-archived-setter`
-    await root.collection('routes').create({
-        gym: await e2eGym(),
-        name: `${testPrefix}-archived-analytics`,
-        ...uiaa('5'),
-        type: 'Boulder',
-        creator: [setter],
-        archived: true,
-    })
+    await newRoute(
+        adminApi,
+        `${testPrefix}-archived-analytics`,
+        workerLocation.id,
+        {
+            ...uiaa('5'),
+            type: 'Boulder',
+            creator: [setter],
+            archived: true,
+        },
+    )
     await gotoSettled(page, '/manage/analytics')
     const settersFor = async (query: string) => {
         const response = await page.request.get(
-            `/api/manage/analytics?range=all&gym=${await e2eGym()}${query}`,
+            `/api/manage/analytics?range=all&gym=${await e2eGymId()}${query}`,
             { headers: await authHeader(page) },
         )
         const body = (await response.json()) as {

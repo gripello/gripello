@@ -1,0 +1,521 @@
+openapi: 3.1.0
+info:
+  title: Gripello authentication
+  version: 1.0.0
+paths:
+  /auth/methods:
+    get:
+      operationId: listAuthMethods
+      tags: [authn]
+      description: PocketBase listAuthMethods shape; only password login is offered, second factors are per account.
+      responses:
+        '200':
+          description: Methods
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [password, oauth2, mfa, otp]
+                properties:
+                  password: { type: object, properties: { enabled: { type: boolean }, identityFields: { type: array, items: { type: string } } } }
+                  oauth2: { type: object, properties: { enabled: { type: boolean }, providers: { type: array, items: { type: object } } } }
+                  mfa: { type: object, properties: { enabled: { type: boolean }, duration: { type: integer } } }
+                  otp: { type: object, properties: { enabled: { type: boolean }, duration: { type: integer } } }
+  /auth/login:
+    post:
+      operationId: login
+      tags: [authn]
+      description: 'Password login (identity = email or username). Needs the X-Cap-Token header (scope login) when CAP_SECRET is set. Accounts with second factors get 401 {mfaId, methods}. 10 failures in 15 min lock the account (429).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [identity, password], properties: { identity: { type: string }, password: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401':
+          description: Second factor required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MFARequired' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/totp:
+    post:
+      operationId: loginWithTOTP
+      tags: [authn]
+      description: Second step with an authenticator code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [mfaId, code], properties: { mfaId: { type: string }, code: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/recovery:
+    post:
+      operationId: loginWithRecoveryCode
+      tags: [authn]
+      description: Second step with a single-use recovery code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [mfaId, code], properties: { mfaId: { type: string }, code: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/passkey/options:
+    post:
+      operationId: passkeyLoginOptions
+      tags: [authn]
+      description: Starts a discoverable passkey login; the ceremony expires after 10 minutes.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PasskeyCeremony' }
+  /auth/passkey:
+    post:
+      operationId: passkeyLogin
+      tags: [authn]
+      description: Passkey login; a full login on its own, the second step when mfaId is sent. Ignores the lockout.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [ceremony, credential], properties: { ceremony: { type: string }, credential: { type: object }, mfaId: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /auth/refresh:
+    post:
+      operationId: refreshAuth
+      tags: [authn]
+      description: Re-signs the token with the same session (tokens without a session get one) and touches the session.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [authn]
+      description: Ends the current session.
+      responses:
+        '204': { description: Done }
+        '401': { $ref: '#/components/responses/Error' }
+  /auth/register:
+    post:
+      operationId: register
+      tags: [authn]
+      description: "Only while settings.allow_registration is on; needs X-Cap-Token (scope register) when CAP_SECRET is set. Answers 202 without a body whether or not the e-mail is taken: a free address gets the verification mail, a taken one an 'already registered' mail to its owner. Username defaults to users + 6 digits."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterInput' }
+      responses:
+        '202': { description: Accepted }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /auth/password-reset/request:
+    post:
+      operationId: requestPasswordReset
+      tags: [authn]
+      description: Always 204. Guests need X-Cap-Token (scope password-reset) when CAP_SECRET is set.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string } } }
+      responses:
+        '204': { description: Done }
+        '400': { $ref: '#/components/responses/Error' }
+  /auth/password-reset/confirm:
+    post:
+      operationId: confirmPasswordReset
+      tags: [authn]
+      description: Sets the password, verifies the email, ends all sessions and clears the lockout. Tokens live 30 min.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [token, password, passwordConfirm], properties: { token: { type: string }, password: { type: string }, passwordConfirm: { type: string } } }
+      responses:
+        '204': { description: Done }
+        '400': { $ref: '#/components/responses/Error' }
+  /auth/verification/request:
+    post:
+      operationId: requestVerification
+      tags: [authn]
+      description: Always 204; mails only unverified accounts. Needs X-Cap-Token (scope verification) when CAP_SECRET is set.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string } } }
+      responses:
+        '204': { description: Done }
+        '400': { $ref: '#/components/responses/Error' }
+  /auth/verification/confirm:
+    post:
+      operationId: confirmVerification
+      tags: [authn]
+      description: Tokens live 7 days.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [token], properties: { token: { type: string } } }
+      responses:
+        '204': { description: Done }
+        '400': { $ref: '#/components/responses/Error' }
+  /auth/email-change/request:
+    post:
+      operationId: requestEmailChange
+      tags: [authn]
+      description: Signed in. Mails a confirmation link to the new address; a taken address answers the same 204 and its owner gets an "already registered" mail.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [newEmail], properties: { newEmail: { type: string } } }
+      responses:
+        '204': { description: Done }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /auth/email-change/confirm:
+    post:
+      operationId: confirmEmailChange
+      tags: [authn]
+      description: Needs the current password; ends all sessions. Tokens live 30 min.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [token, password], properties: { token: { type: string }, password: { type: string } } }
+      responses:
+        '204': { description: Done }
+        '400': { $ref: '#/components/responses/Error' }
+  /me/password:
+    post:
+      operationId: changePassword
+      tags: [authn]
+      description: Ends every session and returns a new login for this device.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [oldPassword, password, passwordConfirm], properties: { oldPassword: { type: string }, password: { type: string }, passwordConfirm: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/mfa:
+    get:
+      operationId: listMFAFactors
+      tags: [authn]
+      description: Own second factors.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [factors, recoveryCodesLeft], properties: { factors: { type: array, items: { $ref: '#/components/schemas/Factor' } }, recoveryCodesLeft: { type: integer } } }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/mfa/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      operationId: renameMFAFactor
+      tags: [authn]
+      description: Name is trimmed to 60 characters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name], properties: { name: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Factor' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteMFAFactor
+      tags: [authn]
+      description: Needs the password; removing the last factor drops the recovery codes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [password], properties: { password: { type: string } } }
+      responses:
+        '204': { description: Done }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /me/totp/setup:
+    post:
+      operationId: totpSetup
+      tags: [authn]
+      description: Needs the password. Returns a new secret and otpauth URI; nothing is stored yet.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [password], properties: { password: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [secret, uri], properties: { secret: { type: string }, uri: { type: string } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /me/totp:
+    post:
+      operationId: totpEnable
+      tags: [authn]
+      description: Stores the authenticator after a valid code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [password, secret, code], properties: { password: { type: string }, secret: { type: string }, code: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FactorAdded' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /me/recovery-codes:
+    post:
+      operationId: regenerateRecoveryCodes
+      tags: [authn]
+      description: Needs the password; replaces all recovery codes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [password], properties: { password: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [recoveryCodes], properties: { recoveryCodes: { type: array, items: { type: string } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /me/passkeys/options:
+    post:
+      operationId: passkeyRegistrationOptions
+      tags: [authn]
+      description: Needs the password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [password], properties: { password: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PasskeyCeremony' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /me/passkeys:
+    post:
+      operationId: passkeyRegister
+      tags: [authn]
+      description: Finishes the registration ceremony.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [ceremony, credential], properties: { ceremony: { type: string }, credential: { type: object }, name: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FactorAdded' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/sessions:
+    get:
+      operationId: listSessions
+      tags: [authn]
+      description: Own sessions, most recently seen first.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Session' } } } }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/sessions/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    delete:
+      operationId: revokeSession
+      tags: [authn]
+      description: Revokes the token and drops the session's realtime auth.
+      responses:
+        '204': { description: Done }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /me/sessions/sign-out-others:
+    post:
+      operationId: signOutOtherSessions
+      tags: [authn]
+      description: Revokes every session but the current one.
+      responses:
+        '204': { description: Done }
+        '401': { $ref: '#/components/responses/Error' }
+components:
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    User:
+      type: object
+      description: Own user record (no password hash or token key)
+      required: [id, email, username, verified, platform_admin]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        email: { type: string }
+        email_visibility: { type: boolean }
+        verified: { type: boolean }
+        username: { type: string }
+        firstname: { type: string }
+        name: { type: string }
+        avatar: { type: string }
+        banner: { type: string }
+        language: { type: string, enum: ['', en, de, nl, fr, es] }
+        platform_admin: { type: boolean }
+        notification_prefs: { type: [object, 'null'] }
+        followed_walls: { type: array, items: { type: string } }
+        leaderboard_hidden: { type: boolean }
+        follow_policy: { type: string, enum: ['', approve, open, closed] }
+        reviews_anonymous: { type: boolean }
+        ticks_private: { type: boolean }
+        suspended_until: { type: [string, 'null'], format: date-time }
+        suspension_reason: { type: string }
+    AuthResponse:
+      type: object
+      required: [token, record]
+      properties:
+        token: { type: string, description: 'HS256 JWT with claims id, type, collectionId, refreshable, sid, exp' }
+        record: { $ref: '#/components/schemas/User' }
+    MFARequired:
+      type: object
+      required: [mfaId, methods]
+      properties:
+        mfaId: { type: string, description: Valid for 10 minutes }
+        methods: { type: array, items: { type: string, enum: [totp, passkey, recovery] } }
+    RegisterInput:
+      type: object
+      required: [email, password, passwordConfirm]
+      properties:
+        email: { type: string, format: email }
+        username: { type: string, minLength: 3, maxLength: 150, pattern: '^[\w][\w.\-]*$' }
+        password: { type: string, minLength: 8, maxLength: 71 }
+        passwordConfirm: { type: string }
+        firstname: { type: string, maxLength: 5000 }
+        name: { type: string, maxLength: 5000 }
+        language: { type: string, enum: ['', en, de, nl, fr, es] }
+    Factor:
+      type: object
+      required: [id, kind, name, created]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [totp, passkey] }
+        name: { type: string }
+        created: { type: string, format: date-time }
+        last_used: { type: [string, 'null'], format: date-time }
+    FactorAdded:
+      type: object
+      required: [factor]
+      properties:
+        factor: { $ref: '#/components/schemas/Factor' }
+        recoveryCodes: { type: array, items: { type: string }, description: Only with the first factor or when none are left }
+    PasskeyCeremony:
+      type: object
+      required: [ceremony, options]
+      properties:
+        ceremony: { type: string }
+        options: { type: object, description: WebAuthn publicKey options }
+    Session:
+      type: object
+      required: [id, created, method, user_agent, ip, current]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        method: { type: string, enum: ['', password, totp, passkey, recovery] }
+        user_agent: { type: string }
+        ip: { type: string }
+        last_seen: { type: [string, 'null'], format: date-time }
+        current: { type: boolean }

@@ -2,8 +2,7 @@ const BUILD = new URL(self.location.href).searchParams.get('build')
 const CACHE = `gripello-${BUILD}`
 const PAGES = `${CACHE}-pages`
 const OFFLINE_URL = '/offline.html'
-const PUBLIC_DATA =
-    /^\/(_i18n\/|api\/collections\/(walls|locations|averageRating|open_route_defects)\/records$)/
+const PUBLIC_DATA = /^\/(_i18n\/|api\/gyms\/[^/]+\/(walls|locations)$)/
 const FILES = /^\/api\/files\//
 const PUBLIC_PAGE =
     /^\/(?:(?:privacy|imprint|logbook|offline\.html)|(?!(?:account|admin|auth|logbook|manage|platform|scan|competitions)(?:\/|$))[a-z0-9-]{3,40}(?:\/(?:routes|map|route|imprint|privacy))?)?\/?$/

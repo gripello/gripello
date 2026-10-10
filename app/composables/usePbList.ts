@@ -1,25 +1,21 @@
 import type { Ref } from 'vue'
 import { isAbortError } from '~/utils/errors'
 
-interface PbListQuery {
-    filter?: string
-    sort?: string
-    expand?: string
-    fields?: string
-}
+export type PbListFetch<TRecord> = (
+    page: number,
+    perPage: number,
+) => Promise<{ items: TRecord[]; total?: number }>
 
 interface PbListOptions<TRecord, TItem> {
     perPage: number
     requestKey: string
-    query: () => PbListQuery
     map?: (record: TRecord) => TItem
 }
 
 export function usePbList<
     TRecord,
     TItem extends { id: string } = TRecord & { id: string },
->(collection: string, options: PbListOptions<TRecord, TItem>) {
-    const pb = usePocketbase()
+>(load: PbListFetch<TRecord>, options: PbListOptions<TRecord, TItem>) {
     const { t } = useI18n()
     const { error: notifyError } = useNotification()
 
@@ -44,22 +40,17 @@ export function usePbList<
         busy.value = true
         error.value = null
         try {
-            const result = await pb
-                .collection(collection)
-                .getList<TRecord>(target, perPage, {
-                    ...options.query(),
-                    requestKey: options.requestKey,
-                })
+            const result = await load(target, perPage)
             const mapped = result.items.map(toItem)
             const loadedIds = new Set(items.value.map((item) => item.id))
             const unseen = mapped.filter((item) => !loadedIds.has(item.id))
             items.value = target === 1 ? mapped : [...items.value, ...unseen]
             exhausted.value = target !== 1 && unseen.length === 0
-            totalItems.value = result.totalItems
+            totalItems.value = result.total ?? 0
         } catch (err) {
             if (isAbortError(err)) return
             error.value = err
-            console.error(`Failed to fetch ${collection}:`, err)
+            console.error(`Failed to fetch ${options.requestKey}:`, err)
             notifyError(t('notifications.error.generic'))
         } finally {
             busy.value = false

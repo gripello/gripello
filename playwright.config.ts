@@ -26,7 +26,6 @@ export default defineConfig({
           ]
         : 'list',
     globalSetup: './e2e/support/global-setup.ts',
-    globalTeardown: './e2e/support/global-teardown.ts',
     use: {
         baseURL,
         ignoreHTTPSErrors: true,

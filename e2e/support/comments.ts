@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
-import { authHeader } from './nav'
-import { uiaa } from './seed'
+import { createRating, deleteRating } from './api'
+import { apiOf } from './nav'
 
 export async function createComment(
     page: Page,
@@ -8,20 +8,10 @@ export async function createComment(
     comment: string,
     rating = 5,
 ): Promise<string> {
-    const res = await page.request.post('/api/collections/ratings/records', {
-        headers: await authHeader(page),
-        data: {
-            route_id: routeId,
-            rating,
-            ...uiaa('5'),
-            comment,
-        },
-    })
-    return (await res.json()).id as string
+    return (await createRating(await apiOf(page), routeId, { rating, comment }))
+        .id
 }
 
 export async function deleteComment(page: Page, id: string) {
-    await page.request.delete(`/api/collections/ratings/records/${id}`, {
-        headers: await authHeader(page),
-    })
+    await deleteRating(await apiOf(page), id)
 }

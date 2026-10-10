@@ -1,4 +1,8 @@
-import type { PushSubscriptionRecord } from '~/types/models'
+import {
+    createPushSubscription,
+    getNotificationSettings,
+    listPushSubscriptions,
+} from '~/api/notifications'
 import {
     browserPushSupport,
     deviceLabel,
@@ -13,7 +17,7 @@ import {
 const subscribedHere = ref(false)
 
 export async function subscribeThisDevice(
-    pb: ReturnType<typeof usePocketbase>,
+    userId: string | undefined,
     publicKey: string,
 ) {
     if ((await Notification.requestPermission()) !== 'granted') return null
@@ -24,20 +28,17 @@ export async function subscribeThisDevice(
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(publicKey),
         }))
-    const device = await pb
-        .collection('push_subscriptions')
-        .create<PushSubscriptionRecord>({
-            user: pb.authStore.record?.id,
-            device: deviceLabel(navigator.userAgent),
-            ...subscriptionKeys(subscription),
-        })
-    setPushDeclined(pb.authStore.record?.id, false)
+    const device = await createPushSubscription({
+        device: deviceLabel(navigator.userAgent),
+        ...subscriptionKeys(subscription),
+    })
+    setPushDeclined(userId, false)
     subscribedHere.value = true
     return { device, subscription }
 }
 
 export function usePushOffer() {
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     const support = ref<PushSupport>('unsupported')
     const permission = ref<NotificationPermission>()
     const pushKey = ref('')
@@ -46,7 +47,7 @@ export function usePushOffer() {
 
     const offered = computed(() =>
         shouldOfferPush({
-            signedIn: pb.authStore.isValid,
+            signedIn: authStore.isValid,
             support: support.value,
             permission: permission.value,
             hasKey: !!pushKey.value,
@@ -59,7 +60,7 @@ export function usePushOffer() {
     async function load() {
         support.value = browserPushSupport()
         permission.value = window.Notification?.permission
-        declined.value = pushDeclinedBy(pb.authStore.record?.id)
+        declined.value = pushDeclinedBy(authStore.record?.id)
         if (support.value !== 'ok' || declined.value) return
         if (permission.value === 'denied') return
         const registration = await navigator.serviceWorker?.getRegistration()
@@ -67,26 +68,20 @@ export function usePushOffer() {
             !!(await registration?.pushManager.getSubscription())
         if (subscribedHere.value) return
         const [settings, devices] = await Promise.all([
-            pb.send<{ pushKey: string }>('/api/notifications/settings', {
-                requestKey: null,
-            }),
-            permission.value === 'granted'
-                ? pb
-                      .collection('push_subscriptions')
-                      .getList(1, 1, { fields: 'id', skipTotal: true })
-                : null,
+            getNotificationSettings(),
+            permission.value === 'granted' ? listPushSubscriptions() : null,
         ])
-        pushKey.value = settings.pushKey
+        pushKey.value = settings.publicKey
         hasDevices.value = !!devices?.items.length
     }
 
     async function turnOn() {
-        await subscribeThisDevice(pb, pushKey.value)
+        await subscribeThisDevice(authStore.record?.id, pushKey.value)
         permission.value = Notification.permission
     }
 
     onMounted(() => {
-        if (!pb.authStore.isValid) return
+        if (!authStore.isValid) return
         load().catch((err) => console.error('Push offer failed:', err))
     })
 

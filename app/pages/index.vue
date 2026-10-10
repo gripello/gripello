@@ -141,13 +141,15 @@
 </template>
 
 <script setup lang="ts">
+import { fileUrl } from '~/api/client'
+import { listGyms } from '~/api/gyms'
 import type { GymRecord } from '~/types/models'
 import { readRecentGyms } from '~/utils/recentGyms'
 import { gymSubtitle, gymTitle, landingSections } from '~/utils/gymNames'
 import { gymMarkers, hasLocation } from '~/utils/gymInfo'
 
 const { t } = useI18n()
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const { gymMemberships, isPlatformAdmin } = usePermissions()
 const search = ref('')
 const recentSlugs = ref<string[]>([])
@@ -157,23 +159,13 @@ const {
     data: gyms,
     error,
     refresh,
-} = await useAsyncData(
-    'landing-gyms',
-    () =>
-        pb.collection('gyms').getFullList<GymRecord>({
-            filter: 'active = true',
-            fields: 'id,collectionId,slug,name,unit_name,page_logo,cover_image,latitude,longitude,opening_hours,hours_note,address,legal_phone,contact_email,website_url,amenities',
-            sort: 'name',
-            requestKey: null,
-        }),
-    { default: () => [] },
-)
+} = await useAsyncData('landing-gyms', () => listGyms(), { default: () => [] })
 
 const onlyGym = gyms.value.length === 1 ? gyms.value[0] : undefined
 if (
     import.meta.server &&
     onlyGym &&
-    !pb.authStore.isValid &&
+    !authStore.isValid &&
     !useGymCookie().value
 )
     await navigateTo(`/${onlyGym.slug}`, { redirectCode: 302 })
@@ -186,7 +178,7 @@ const matching = computed(() => {
 })
 
 const logoUrl = (gym: GymRecord) =>
-    gym.page_logo ? usePbFileUrl(gym, gym.page_logo, { thumb: '0x200' }) : ''
+    gym.page_logo ? fileUrl('gyms', gym, gym.page_logo, { thumb: '0x200' }) : ''
 const markers = computed(() => gymMarkers(matching.value, logoUrl))
 const hasMap = computed(() => markers.value.length > 0)
 

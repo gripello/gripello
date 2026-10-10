@@ -1,10 +1,12 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
+import { listModerationCases } from '../../support/api'
+import { E2E_GYM_SLUG } from '../../support/seed'
 
 test('a moderator decides cases from a phone', async ({
     adminPage,
-    root,
+    adminApi,
     route,
     createUser,
     pageAs,
@@ -42,15 +44,15 @@ test('a moderator decides cases from a phone', async ({
     await adminPage.getByTestId('moderation-reason').fill('Off topic.')
     await adminPage.getByTestId('moderation-decision-confirm').click()
     await expect
-        .poll(async () =>
-            root
-                .collection('moderation_items')
-                .getFirstListItem(
-                    root.filter('snapshot ~ {:text}', {
-                        text: `${testPrefix}-hide-phone`,
-                    }),
-                )
-                .then((item) => item.state),
+        .poll(
+            async () =>
+                (
+                    await listModerationCases(adminApi, {
+                        gym: E2E_GYM_SLUG,
+                        q: `${testPrefix}-hide-phone`,
+                        state: ['hidden'],
+                    })
+                )[0]?.state,
         )
         .toBe('hidden')
 })

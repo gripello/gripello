@@ -3,11 +3,6 @@ import type { TickRecord } from '~/types/models'
 
 describe('useTickOutbox', () => {
     it('asks the browser to keep storage once a tick waits offline', async () => {
-        globalThis.__POCKETBASE_CLIENT__ = {
-            collection: () => ({
-                create: () => Promise.reject({ status: 0 }),
-            }),
-        }
         vi.stubGlobal('indexedDB', { open: () => ({}) })
         const persist = vi.fn().mockResolvedValue(true)
         vi.stubGlobal('navigator', { ...navigator, storage: { persist } })

@@ -3,6 +3,7 @@ import type {
     ModerationAction,
     ModerationContentType,
     ModerationItemRecord,
+    ModerationState,
 } from '~/types/models'
 
 export const GYM_VIEWS = ['decide', 'approval', 'hidden', 'history'] as const
@@ -19,37 +20,24 @@ export const MODERATION_CONTENT_TYPES: ModerationContentType[] = [
     'route',
 ]
 
-const VIEW_FILTERS: Record<ModerationView, string> = {
-    decide: 'state = "unreviewed"',
-    all: '(state = "unreviewed" || state = "pending")',
-    approval: 'state = "pending"',
-    hidden: 'state = "hidden"',
-    history: 'state = "approved"',
+const VIEW_STATES: Record<ModerationView, ModerationState[]> = {
+    decide: ['unreviewed'],
+    all: ['unreviewed', 'pending'],
+    approval: ['pending'],
+    hidden: ['hidden'],
+    history: ['approved'],
 }
 
-// The platform's own queue is reported content and gym-less profiles; the rest is the gyms' work.
-const PLATFORM_DECIDE = '(reports_count > 0 || gym = "")'
-
-export function moderationFilter(
-    view: ModerationView,
-    options: {
-        platform?: boolean
-        gymFilter?: string
-        contentType?: ModerationContentType | null
-        authorFilter?: string
-        searchFilter?: string
-    } = {},
-): string {
-    return [
-        options.gymFilter,
-        VIEW_FILTERS[view],
-        options.platform && view === 'decide' && PLATFORM_DECIDE,
-        options.contentType && `content_type = "${options.contentType}"`,
-        options.authorFilter,
-        options.searchFilter,
-    ]
-        .filter(Boolean)
-        .join(' && ')
+export function moderationViewQuery(view: ModerationView, platform = false) {
+    return {
+        state: VIEW_STATES[view],
+        ...(platform && view === 'decide'
+            ? { queue: 'platform' as const }
+            : {}),
+        ...(view === 'hidden' || view === 'history'
+            ? { sort: 'reviewed' as const }
+            : {}),
+    }
 }
 
 // Mirrors moderationAllowed in pocketbase/hooks/moderation.go.

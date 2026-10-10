@@ -6,10 +6,10 @@ test.use({ viewport: { width: 360, height: 740 } })
 
 test('route hero chips wrap instead of being clipped', async ({
     page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, `${testPrefix}-long-location-name`, {
+    const seeded = await seedMap(adminApi, `${testPrefix}-long-location-name`, {
         routes: 1,
     })
     await gotoSettled(page, `/route?id=${seeded.routeIds[0]}`)

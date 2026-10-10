@@ -216,13 +216,24 @@
 </template>
 
 <script setup lang="ts">
+import type { GymEvent } from '~/composables/useRealtime'
 import type { Form, TableColumn } from '@nuxt/ui'
 import { required, validEmail, validateRules } from '~/utils/validation'
-import type { MembershipRecord } from '~/types/models'
 import { canGrantRole, membershipIn } from '#shared/utils/memberships'
 import { coalesce } from '~/utils/realtimeCache'
+import {
+    changeMembershipRole,
+    deleteMembership,
+    inviteMember,
+    listMembers,
+    type Member as ApiMember,
+} from '~/api/members'
+import { fileUrl } from '~/api/client'
 
-type Member = MembershipRecord & {
+type Member = {
+    id: string
+    user: string
+    role: string
     displayName: string
     email: string
     initials: string
@@ -230,7 +241,7 @@ type Member = MembershipRecord & {
 }
 
 const { t } = useI18n()
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const props = defineProps<{ gymId: string }>()
 const gymId = computed(() => props.gymId)
 
@@ -255,7 +266,7 @@ const columns = computed<TableColumn<Member>[]>(() => [
     },
     { id: 'actions', meta: { class: { th: 'w-px', td: 'w-px' } } },
 ])
-const currentUserId = computed(() => pb.authStore.record?.id ?? null)
+const currentUserId = computed(() => authStore.record?.id ?? null)
 
 const { data: roles, refresh: refreshRoles } = useRoles(gymId)
 const { memberships: ownMemberships, isPlatformAdmin } = usePermissions()
@@ -287,39 +298,21 @@ function canManage(member: Member) {
     )
 }
 
-function mapMember(membership: MembershipRecord): Member {
-    const user = membership.expand?.user
-    const fullName = [user?.firstname, user?.name].filter(Boolean).join(' ')
-    const displayName = fullName || user?.username || user?.email || '?'
+function mapMember({ id, user, role }: ApiMember): Member {
+    const fullName = [user.firstname, user.name].filter(Boolean).join(' ')
     return {
-        ...membership,
-        displayName,
-        email: user?.email ?? '',
+        id,
+        user: user.id,
+        role: role.id,
+        displayName: fullName || user.username || user.email || '?',
+        email: user.email ?? '',
         initials:
-            [user?.firstname, user?.name]
+            [user.firstname, user.name]
                 .map((part) => part?.[0]?.toUpperCase() ?? '')
                 .join('') || '?',
-        avatarUrl: user
-            ? usePbFileUrl(user, user.avatar, { thumb: '100x100' }) || null
-            : null,
+        avatarUrl:
+            fileUrl('users', user, user.avatar, { thumb: '100x100' }) || null,
     }
-}
-
-function buildFilter() {
-    const parts = [pb.filter('gym = {:gym}', { gym: gymId.value })]
-    const term = search.value.trim()
-    if (term) {
-        parts.push(
-            pb.filter(
-                '(user.username ~ {:term} || user.email ~ {:term} || user.name ~ {:term} || user.firstname ~ {:term})',
-                { term },
-            ),
-        )
-    }
-    if (selectedRole.value) {
-        parts.push(pb.filter('role = {:role}', { role: selectedRole.value }))
-    }
-    return parts.join(' && ')
 }
 
 const {
@@ -331,16 +324,18 @@ const {
     reloadLoaded,
     loadMore,
     prefetch,
-} = usePbList<MembershipRecord, Member>('memberships', {
-    perPage: 48,
-    requestKey: 'membersList',
-    query: () => ({
-        sort: '-created',
-        filter: buildFilter(),
-        expand: 'user,role',
-    }),
-    map: mapMember,
-})
+} = usePbList<ApiMember, Member>(
+    (page, limit) =>
+        listMembers(gymId.value, {
+            q: search.value.trim(),
+            role: selectedRole.value ?? undefined,
+            sort: '-created',
+            page,
+            limit,
+            total: true,
+        }),
+    { perPage: 48, requestKey: 'membersList', map: mapMember },
+)
 
 function clearFilters() {
     selectedRole.value = null
@@ -359,7 +354,7 @@ async function changeRole(member: Member, role: string) {
     if (changingRole.value || role === member.role) return
     await runRoleChange(
         async () => {
-            await pb.collection('memberships').update(member.id, { role })
+            await changeMembershipRole(member.id, role)
             await reloadLoaded()
         },
         {
@@ -408,15 +403,11 @@ function inviteErrorMessage(error: unknown) {
 async function sendInvite() {
     await runInvite(
         async () => {
-            await pb.send(`/api/gyms/${gymId.value}/members`, {
-                method: 'POST',
-                body: {
-                    email: invite.email.trim(),
-                    role: invite.role,
-                    firstname: invite.firstname.trim(),
-                    name: invite.name.trim(),
-                },
-                requestKey: null,
+            await inviteMember(gymId.value, {
+                email: invite.email.trim(),
+                role: invite.role,
+                firstname: invite.firstname.trim(),
+                name: invite.name.trim(),
             })
             inviteDialog.value = false
             notifySuccess(t('members.invited'))
@@ -440,7 +431,7 @@ async function removeMember() {
     if (!target) return
     await runRemove(
         async () => {
-            await pb.collection('memberships').delete(target.id)
+            await deleteMembership(target.id)
             members.value = members.value.filter(
                 (member) => member.id !== target.id,
             )
@@ -456,16 +447,18 @@ async function removeMember() {
 
 defineExpose({ openInvite })
 
-const { subscribe } = usePbSubscription()
-
 void prefetch(`admin-members-${props.gymId}`)
 
 const reloadSoon = coalesce(() => Promise.all([refreshRoles(), reloadLoaded()]))
 
-onMounted(() => {
-    void subscribe('roles', reloadSoon)
-    void subscribe('memberships', (e) => {
-        if (e.record.gym === gymId.value) reloadSoon()
-    })
-})
+useRealtime(
+    () => `gym:${gymId.value}`,
+    (event: GymEvent) => {
+        if (
+            event.kind === 'membership.changed' ||
+            event.kind === 'role.changed'
+        )
+            reloadSoon()
+    },
+)
 </script>

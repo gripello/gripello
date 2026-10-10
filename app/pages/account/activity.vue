@@ -114,13 +114,12 @@
 </template>
 
 <script setup lang="ts">
-import type {
-    AuditAction,
-    AuditLogRecord,
-    GymRecord,
-    ListResult,
-    MembershipRecord,
-} from '~/types/models'
+import type { RecordChange } from '~/composables/useRealtime'
+import { listGyms } from '~/api/gyms'
+import { listMembers } from '~/api/members'
+import { useAuthState } from '~/api/auth'
+import { listGymAudit, listOwnAudit, listPlatformAudit } from '~/api/audit'
+import type { AuditAction, AuditLogRecord } from '~/types/models'
 import { gymTitle } from '~/utils/gymNames'
 import {
     AUDIT_ACTOR_GUESTS,
@@ -129,15 +128,14 @@ import {
     matchesAuditActor,
     AUDIT_PERIODS,
     AUDITED_COLLECTIONS,
-    buildAuditFilter,
+    auditPeriodStart,
     type AuditPeriod,
 } from '~/utils/audit'
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const { can, isPlatformAdmin, gymMemberships } = usePermissions()
 const { id: cookieGymId } = useGym()
-const currentUserId = pb.authStore.record?.id ?? ''
+const currentUserId = useAuthState().currentUserId()
 
 const PER_PAGE = 48
 
@@ -158,12 +156,7 @@ const { data: auditGyms } = await useAsyncData(
     'audit-gyms',
     async () =>
         isPlatformAdmin.value
-            ? pb.collection('gyms').getFullList<GymRecord>({
-                  filter: 'active = true',
-                  fields: 'id,name,unit_name',
-                  sort: 'name',
-                  requestKey: null,
-              })
+            ? listGyms()
             : gymMemberships.value.flatMap((membership) =>
                   membership.expand?.gym &&
                   can('view_audit_log', membership.gym)
@@ -187,15 +180,7 @@ const gymItems = computed(() =>
 
 const { data: auditMembers } = useAsyncData(
     'audit-members',
-    () =>
-        pb.collection('memberships').getFullList<MembershipRecord>({
-            filter: pb.filter('gym = {:gym}', {
-                gym: gymFilter.value ?? cookieGymId.value,
-            }),
-            expand: 'user',
-            fields: 'id,user,expand.user.id,expand.user.firstname,expand.user.name,expand.user.username',
-            requestKey: null,
-        }),
+    async () => (await listMembers(gymFilter.value ?? cookieGymId.value)).items,
     {
         default: () => [],
         server: false,
@@ -210,9 +195,8 @@ const actorItems = computed(() => [
     { value: currentUserId, title: t('audit.actor.me') },
     { value: AUDIT_ACTOR_GUESTS, title: t('audit.actor.guests') },
     { value: AUDIT_ACTOR_PLATFORM, title: t('audit.superuser') },
-    ...auditMembers.value.flatMap((membership) => {
-        const user = membership.expand?.user
-        if (!user || user.id === currentUserId) return []
+    ...auditMembers.value.flatMap(({ user }) => {
+        if (user.id === currentUserId) return []
         const fullName = [user.firstname, user.name].filter(Boolean).join(' ')
         return [{ value: user.id, title: fullName || user.username }]
     }),
@@ -249,23 +233,23 @@ const periodItems = computed(() =>
 )
 
 async function fetchList(target = 1) {
-    const result = (await pb
-        .collection('audit_logs')
-        .getList<AuditLogRecord>(target, PER_PAGE, {
-            sort: '-created',
-            expand: 'gym',
-            filter: buildAuditFilter({
-                search: search.value,
-                action: actionFilter.value,
-                collection: collectionFilter.value,
-                period: periodFilter.value,
-                actor: actorFilter.value,
-                gym: gymFilter.value,
-            }),
-            requestKey: 'auditList',
-        })) as ListResult<AuditLogRecord>
+    const query = {
+        q: search.value,
+        action: actionFilter.value,
+        collection: collectionFilter.value,
+        from: auditPeriodStart(periodFilter.value),
+        actor: actorFilter.value,
+        page: target,
+        limit: PER_PAGE,
+    }
+    const options = { requestKey: 'auditList' }
+    const result = gymFilter.value
+        ? await listGymAudit(gymFilter.value, query, options)
+        : isPlatformAdmin.value
+          ? await listPlatformAudit(query, options)
+          : await listOwnAudit(query, options)
 
-    totalItems.value = result.totalItems
+    totalItems.value = result.total ?? 0
     entries.value =
         target === 1 ? result.items : [...entries.value, ...result.items]
     page.value = target
@@ -285,17 +269,13 @@ loading.value = false
 const { data: settings } = useNuxtData('settings')
 const retentionDays = computed(() => settings.value?.audit_retention_days ?? 90)
 
-const { subscribe } = usePbSubscription()
-
-onMounted(async () => {
-    await subscribe('audit_logs', (e) => {
-        if (e.action !== 'create' || !e.record) return
-        if (page.value !== 1) return
-        if (!matchesFilters(e.record)) return
-        if (entries.value.some((entry) => entry.id === e.record.id)) return
-        entries.value = [e.record as AuditLogRecord, ...entries.value]
-        totalItems.value += 1
-    })
+useRealtime('audit_logs', (e: RecordChange<AuditLogRecord>) => {
+    if (e.action !== 'create' || !e.record) return
+    if (page.value !== 1) return
+    if (!matchesFilters(e.record)) return
+    if (entries.value.some((entry) => entry.id === e.record.id)) return
+    entries.value = [e.record as AuditLogRecord, ...entries.value]
+    totalItems.value += 1
 })
 
 function matchesFilters(record: AuditLogRecord) {

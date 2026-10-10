@@ -104,15 +104,13 @@
 </template>
 
 <script setup lang="ts">
-import type { SeasonRecord } from '~/types/models'
+import { getLeaderboard, listSeasons } from '~/api/ticks'
 import { formatNumber } from '#shared/utils/number'
 import { localDay } from '#shared/utils/ticks'
 import {
     LEADERBOARD_KINDS,
     ROLLING_SEASON,
     defaultSeason,
-    leaderboardPath,
-    type Leaderboard,
 } from '~/utils/leaderboard'
 import { MEDALS, PODIUM_ROWS } from '~/utils/themeColors'
 
@@ -122,7 +120,6 @@ const TV_ROWS = 15
 const REFRESH_MS = 60_000
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
 const gymPath = useGymPath()
 const { gym } = useGym()
@@ -134,34 +131,24 @@ const requestUrl = useRequestURL({
 useHead({ title: t('page.title.leaderboard') })
 
 function loadSeason() {
-    return pb
-        .collection('seasons')
-        .getFullList<SeasonRecord>({
-            filter: gymFilter(pb, gymId.value),
-            requestKey: null,
-        })
-        .then(
-            (seasons) =>
-                seasons.find(
-                    (entry) =>
-                        entry.id ===
-                        defaultSeason(seasons, localDay(new Date())),
-                ) ?? null,
-        )
+    return listSeasons(gymId.value).then(
+        (seasons) =>
+            seasons.find(
+                (entry) =>
+                    entry.id === defaultSeason(seasons, localDay(new Date())),
+            ) ?? null,
+    )
 }
 
 function loadBoards(seasonId: string) {
     return Promise.all(
         LEADERBOARD_KINDS.map((kind) =>
-            pb
-                .send<Leaderboard>(
-                    leaderboardPath(gymId.value, kind, seasonId),
-                    { requestKey: null },
-                )
-                .then((board) => ({
+            getLeaderboard(gymId.value, { kind, season: seasonId }).then(
+                (board) => ({
                     kind,
                     rows: board.rows.slice(0, TV_ROWS),
-                })),
+                }),
+            ),
         ),
     )
 }

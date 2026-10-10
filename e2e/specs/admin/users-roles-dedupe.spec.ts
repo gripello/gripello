@@ -6,7 +6,7 @@ test('fetches the role list once per page load', async ({
 }) => {
     const roleRequests: string[] = []
     page.on('request', (req) => {
-        if (/\/api\/collections\/roles\/records/.test(req.url())) {
+        if (/\/api\/gyms\/[^/]+\/roles(\?|$)/.test(req.url())) {
             roleRequests.push(req.url())
         }
     })

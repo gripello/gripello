@@ -1,21 +1,19 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { mailbox, waitForMail } from '../../support/mail'
-import { uiaa } from '../../support/seed'
+import { createRating } from '../../support/api'
 
 test.use({ locale: 'fr-FR' })
 
 test('the notifier gets the receipt in the language they reported in', async ({
     page,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
     const notifier = mailbox(testPrefix, 'fr')
-    await root.collection('ratings').create({
-        route_id: route.id,
+    await createRating(adminApi, route.id, {
         rating: 2,
-        ...uiaa('5'),
         comment: `${testPrefix}-reportable`,
     })
 

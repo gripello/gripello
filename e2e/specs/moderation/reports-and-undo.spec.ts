@@ -2,6 +2,7 @@ import { test, expect } from '../../support/fixtures'
 import { gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { decide, openCase } from '../../support/moderation'
+import { guestApi, listRouteRatings } from '../../support/api'
 
 test('a reported profile reaches the platform inbox', async ({
     platformPage,
@@ -54,11 +55,9 @@ test('undo brings a hidden review straight back', async ({
 
     await expect
         .poll(async () =>
-            (
-                await adminPage.request.get(
-                    `/api/collections/ratings/records/${commentId}`,
-                )
-            ).status(),
+            (await listRouteRatings(guestApi(), route.id)).some(
+                (rating) => rating.id === commentId,
+            ),
         )
-        .toBe(200)
+        .toBe(true)
 })

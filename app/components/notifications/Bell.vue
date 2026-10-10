@@ -118,13 +118,13 @@
 <script setup lang="ts">
 import { achievementToast } from '~/utils/achievements'
 import { timeAgo } from '#shared/utils/formatting'
-import type { RecordSubscription } from 'pocketbase'
+import type { RecordChange } from '~/composables/useRealtime'
 import type { NotificationRecord } from '~/types/models'
 import { liveTopics } from '~/utils/realtimeCache'
 import { notificationLabelKey } from '~/utils/notificationLabel'
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const {
     items,
     unreadCount,
@@ -161,29 +161,17 @@ async function turnOnPush() {
     }
 }
 
-let unmounted = false
-let unsubscribe: (() => Promise<void>) | undefined
+useRealtime(
+    () => (authStore.isValid ? liveTopics.ownNotifications : null),
+    (event: RecordChange<NotificationRecord>) => {
+        applyEvent(event)
+        const text = achievementToast(event, t)
+        if (text) notify(text)
+    },
+)
 
-onMounted(async () => {
-    if (!pb.authStore.isValid) return
-
-    const subscribed = pb.realtime.subscribe(
-        liveTopics.ownNotifications,
-        (event: RecordSubscription<NotificationRecord>) => {
-            applyEvent(event)
-            const text = achievementToast(event, t)
-            if (text) notify(text)
-        },
-    )
-    await refresh()
-    const stop = await subscribed
-    if (unmounted) await stop()
-    else unsubscribe = stop
-})
-
-onBeforeUnmount(() => {
-    unmounted = true
-    void unsubscribe?.()
+onMounted(() => {
+    if (authStore.isValid) void refresh()
 })
 </script>
 

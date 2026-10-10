@@ -5,7 +5,6 @@ import {
     defaultSeason,
     gradePyramid,
     keepSelectableSeason,
-    leaderboardPath,
     seasonState,
     selectableSeasons,
 } from '~/utils/leaderboard'
@@ -45,17 +44,6 @@ describe('selectableSeasons', () => {
                 (entry) => entry.id,
             ),
         ).toEqual(['autumn', 'spring'])
-    })
-})
-
-describe('leaderboardPath', () => {
-    it('only sends a season when one is picked', () => {
-        expect(leaderboardPath('g 1', 'boulder', ROLLING_SEASON)).toBe(
-            '/api/gyms/g%201/leaderboard?kind=boulder',
-        )
-        expect(leaderboardPath('g', 'route', 'autumn')).toBe(
-            '/api/gyms/g/leaderboard?kind=route&season=autumn',
-        )
     })
 })
 

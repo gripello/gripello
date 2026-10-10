@@ -1,11 +1,18 @@
 import { test, expect } from '../../support/fixtures'
-import { authHeader, gotoSettled } from '../../support/nav'
+import { apiOf, gotoSettled } from '../../support/nav'
+import {
+    archiveRoute,
+    createDefect,
+    getTask,
+    listTasks,
+    notificationsOfType,
+} from '../../support/api'
 import { reportDefect } from '../../support/tasks'
 
 test('a setter fixes a reported defect and the reporter is notified', async ({
     setterPage,
     userPage,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
@@ -27,22 +34,19 @@ test('a setter fixes a reported defect and the reporter is notified', async ({
             .getByTestId(`task-card-${taskId}`),
     ).toBeVisible()
 
-    const task = await root.collection('tasks').getOne(taskId)
+    const task = await getTask(adminApi, taskId)
     expect(task.done_by).toBeTruthy()
     expect(task.done_at).toBeTruthy()
 
-    const headers = await authHeader(userPage)
+    const userApi = await apiOf(userPage)
     await expect
-        .poll(async () => {
-            const res = await userPage.request.get(
-                `/api/collections/notifications/records?filter=${encodeURIComponent('type="task_defect_fixed"')}&perPage=200`,
-                { headers },
-            )
-            return ((await res.json()).items ?? []).some(
-                (item: { params?: { route?: string } }) =>
-                    item.params?.route === route.name,
-            )
-        })
+        .poll(async () =>
+            (await notificationsOfType(userApi, 'task_defect_fixed')).some(
+                (item) =>
+                    (item.params as { route?: string } | undefined)?.route ===
+                    route.name,
+            ),
+        )
         .toBe(true)
 
     await gotoSettled(userPage, `/route?id=${route.id}`)
@@ -51,16 +55,16 @@ test('a setter fixes a reported defect and the reporter is notified', async ({
 
 test('a setter drags a task across the board', async ({
     setterPage,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
-    const task = await root.collection('tasks').create({
-        kind: 'defect',
-        route: route.id,
-        category: 'label_tag',
-        description: `${testPrefix} tag missing`,
-    })
+    const task = await createDefect(
+        adminApi,
+        route.id,
+        `${testPrefix} tag missing`,
+        'label_tag',
+    )
 
     await gotoSettled(setterPage, '/manage/tasks', /\/manage\/tasks/)
     await setterPage
@@ -84,25 +88,23 @@ test('a setter drags a task across the board', async ({
             .getByTestId(`task-card-${task.id}`),
     ).toBeVisible()
     await expect
-        .poll(
-            async () => (await root.collection('tasks').getOne(task.id)).status,
-        )
+        .poll(async () => (await getTask(adminApi, task.id)).status)
         .toBe('in_progress')
 })
 
 test('a task moves to waiting via the keyboard and stays a known problem', async ({
     setterPage,
     page,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
-    const task = await root.collection('tasks').create({
-        kind: 'defect',
-        route: route.id,
-        category: 'broken_hold',
-        description: `${testPrefix} hold ordered`,
-    })
+    const task = await createDefect(
+        adminApi,
+        route.id,
+        `${testPrefix} hold ordered`,
+        'broken_hold',
+    )
 
     await gotoSettled(setterPage, '/manage/tasks', /\/manage\/tasks/)
     const card = setterPage.getByTestId(`task-card-${task.id}`)
@@ -124,22 +126,22 @@ test('a task moves to waiting via the keyboard and stays a known problem', async
 
 test('the urgent quick filter hides minor tasks', async ({
     setterPage,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
-    const urgent = await root.collection('tasks').create({
-        kind: 'defect',
-        route: route.id,
-        category: 'loose_bolt',
-        description: `${testPrefix} urgent`,
-    })
-    const minor = await root.collection('tasks').create({
-        kind: 'defect',
-        route: route.id,
-        category: 'label_tag',
-        description: `${testPrefix} minor`,
-    })
+    const urgent = await createDefect(
+        adminApi,
+        route.id,
+        `${testPrefix} urgent`,
+        'loose_bolt',
+    )
+    const minor = await createDefect(
+        adminApi,
+        route.id,
+        `${testPrefix} minor`,
+        'label_tag',
+    )
 
     await gotoSettled(setterPage, '/manage/tasks', /\/manage\/tasks/)
     await expect(setterPage.getByTestId(`task-card-${minor.id}`)).toBeVisible()
@@ -152,7 +154,7 @@ test('the urgent quick filter hides minor tasks', async ({
 
 test('a setter adds a task for a route from the route page', async ({
     setterPage,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
@@ -164,9 +166,7 @@ test('a setter adds a task for a route from the route page', async ({
     await setterPage.getByTestId('task-form-save').click()
     await expect(setterPage.getByTestId('task-form-dialog')).toBeHidden()
 
-    const task = await root
-        .collection('tasks')
-        .getFirstListItem(root.filter('route = {:id}', { id: route.id }))
+    const [task] = await listTasks(adminApi, { route: route.id })
     expect(task).toMatchObject({
         kind: 'maintenance',
         status: 'open',
@@ -175,23 +175,21 @@ test('a setter adds a task for a route from the route page', async ({
 })
 
 test('archiving a route closes its open tasks', async ({
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
-    const task = await root.collection('tasks').create({
-        kind: 'defect',
-        route: route.id,
-        category: 'spinning_hold',
-        description: `${testPrefix} spins`,
-    })
+    const task = await createDefect(
+        adminApi,
+        route.id,
+        `${testPrefix} spins`,
+        'spinning_hold',
+    )
 
-    await root.collection('routes').update(route.id, { archived: true })
+    await archiveRoute(adminApi, route.id)
 
     await expect
-        .poll(
-            async () => (await root.collection('tasks').getOne(task.id)).status,
-        )
+        .poll(async () => (await getTask(adminApi, task.id)).status)
         .toBe('done')
 })
 

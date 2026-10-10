@@ -1,13 +1,14 @@
 import { test, expect } from '../../support/fixtures'
+import { updateRoute } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
 import { centerOf, seedMap, settledBox, touchInput } from '../../support/map'
 
 test('the map fills the phone screen and the list sits in a sheet', async ({
     page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 2 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 2 })
     try {
         await gotoSettled(page, `/map?location=${seeded.locationId}`)
         const svg = page.getByTestId('map-svg')
@@ -38,10 +39,10 @@ test('the map fills the phone screen and the list sits in a sheet', async ({
 
 test('dragging the sheet up expands it and tapping a route shows it in the sheet', async ({
     page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 2 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 2 })
     try {
         await gotoSettled(page, `/map?location=${seeded.locationId}`)
         const sheet = page.getByTestId('map-list')
@@ -79,14 +80,14 @@ test('dragging the sheet up expands it and tapping a route shows it in the sheet
 
 test('max zoom separates routes 20 cm apart for tapping', async ({
     page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 3 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 3 })
     try {
         const [, neighbour, islandRoute] = seeded.routeIds
         const islandEdgeLength = 17
-        await root.collection('routes').update(neighbour!, {
+        await updateRoute(adminApi, neighbour!, {
             wall: seeded.islandWallId,
             wall_position: 0.75 + 0.2 / islandEdgeLength,
         })
@@ -133,13 +134,13 @@ test('max zoom separates routes 20 cm apart for tapping', async ({
 
 test('routes on the same spot open from a cluster', async ({
     page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 3 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 3 })
     try {
         const [, neighbour, islandRoute] = seeded.routeIds
-        await root.collection('routes').update(neighbour!, {
+        await updateRoute(adminApi, neighbour!, {
             wall: seeded.islandWallId,
             wall_position: 0.75,
         })
@@ -175,10 +176,10 @@ test('routes on the same spot open from a cluster', async ({
 
 test('zooming in keeps labels of off-screen walls hidden and the chips scroll inside the map', async ({
     page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 2 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 2 })
     try {
         await gotoSettled(page, `/map?location=${seeded.locationId}`)
         expect(
@@ -206,10 +207,10 @@ test('zooming in keeps labels of off-screen walls hidden and the chips scroll in
 
 test('a pinch that starts on a wall label zooms instead of panning or selecting', async ({
     page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 2 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 2 })
     try {
         await gotoSettled(page, `/map?location=${seeded.locationId}`)
         const svg = page.getByTestId('map-svg')

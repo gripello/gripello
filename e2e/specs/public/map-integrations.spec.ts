@@ -1,15 +1,12 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser, e2eGym } from '../../support/seed'
+import { e2eGymId } from '../../support/api'
 import { authHeader, gotoSettled } from '../../support/nav'
-import { PB_URL, seedMap, type SeededMap } from '../../support/map'
+import { seedMap, type SeededMap } from '../../support/map'
 
 let seeded: SeededMap
 
-test.beforeEach(async ({ testPrefix }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    seeded = await seedMap(root, testPrefix, { routes: 3 })
+test.beforeEach(async ({ adminApi, testPrefix }) => {
+    seeded = await seedMap(adminApi, testPrefix, { routes: 3 })
 })
 
 test.afterEach(async () => {
@@ -59,7 +56,7 @@ test('the JSON export carries the wall', async ({
     await gotoSettled(page, '/manage/routes')
     const response = await page.request.post('/api/ui/json', {
         headers: await authHeader(page),
-        data: { gym: await e2eGym(), ids: [seeded.routeIds[0]] },
+        data: { gym: await e2eGymId(), ids: [seeded.routeIds[0]] },
     })
     expect(response.ok()).toBe(true)
     const [route] = await response.json()

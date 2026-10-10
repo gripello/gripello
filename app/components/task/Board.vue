@@ -65,7 +65,6 @@
                         :key="task.id"
                         :task="task"
                         :assignee-name="assigneeNames.get(task.assignee ?? '')"
-                        :file-token="fileToken"
                         :draggable="mdAndUp ? 'true' : undefined"
                         :class="[
                             mdAndUp
@@ -161,11 +160,11 @@
 </template>
 
 <script setup lang="ts">
+import { listTasks, setTaskStatus, type TaskQuery } from '~/api/tasks'
 import { isAbortError } from '~/utils/errors'
 import {
     ACTIVE_TASK_STATUSES,
     BOARD_STATUSES,
-    statusesFilter,
     TASK_STATUS_ICONS,
     taskStatusColor,
     taskTitle,
@@ -184,15 +183,14 @@ const STATUS_TEXT: Record<ReturnType<typeof taskStatusColor>, string> = {
 const DRAG_TYPE = 'application/x-gripello-task'
 
 const props = defineProps<{
-    filter: string
+    query: TaskQuery
     assigneeNames: ReadonlyMap<string, string>
-    fileToken?: string
 }>()
 
 const emit = defineEmits<{ edit: [task: TaskRecord] }>()
 
 const { t } = useI18n()
-const pb = usePocketbase()
+const gymId = useCurrentGymId()
 const { run } = useAsyncAction()
 const { error: notifyError } = useNotification()
 
@@ -268,25 +266,20 @@ function endSwipe(event: TouchEvent) {
     if (next) activeStatus.value = next
 }
 
-function withFilter(statusFilter: string) {
-    return props.filter ? `${statusFilter} && ${props.filter}` : statusFilter
-}
-
 async function reload() {
     try {
-        const collection = pb.collection('tasks')
         const [active, done] = await Promise.all([
-            collection.getList<TaskRecord>(1, ACTIVE_LIMIT, {
-                filter: withFilter(statusesFilter(ACTIVE_TASK_STATUSES)),
+            listTasks(gymId.value, {
+                ...props.query,
+                status: [...ACTIVE_TASK_STATUSES],
                 sort: '-priority,due_date,-created',
-                expand: 'route,wall',
-                requestKey: 'taskBoardActive',
+                limit: ACTIVE_LIMIT,
             }),
-            collection.getList<TaskRecord>(1, DONE_LIMIT, {
-                filter: withFilter('status = "done"'),
+            listTasks(gymId.value, {
+                ...props.query,
+                status: ['done'],
                 sort: '-done_at',
-                expand: 'route,wall',
-                requestKey: 'taskBoardDone',
+                limit: DONE_LIMIT,
             }),
         ])
         tasks.value = [...active.items, ...done.items]
@@ -303,13 +296,7 @@ async function changeStatus(task: TaskRecord, status: TaskStatus) {
     if (task.status === status) return
     await run(
         async () => {
-            const updated = await pb
-                .collection('tasks')
-                .update<TaskRecord>(
-                    task.id,
-                    { status },
-                    { expand: 'route,wall' },
-                )
+            const updated = await setTaskStatus(task.id, status)
             tasks.value = tasks.value.map((item) =>
                 item.id === updated.id ? updated : item,
             )
@@ -334,7 +321,7 @@ function endDrag() {
     dropTarget.value = null
 }
 
-watch(() => props.filter, reload)
+watch(() => JSON.stringify(props.query), reload)
 onMounted(reload)
 
 defineExpose({ reload })

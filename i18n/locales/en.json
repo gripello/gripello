@@ -478,6 +478,7 @@
             "mfa_expired": "The sign-in took too long. Please sign in again."
         },
         "deleteItem": "Delete this item? This cannot be undone.",
+        "deleteRouteWithHistory": "This route has reviews, beta videos or competition results. Deleting it removes them too. Archive it instead to keep them.",
         "deleteMoreItems": "Delete the selected items? This cannot be undone.",
         "archiveMoreItems": "Archive the selected routes?",
         "updateAvailable": "Update available",
@@ -521,6 +522,7 @@
                 "task_wish_done": "Your route wish for {location} has been set — enjoy!",
                 "wall_new_routes": "New routes on {wall}: {count}",
                 "competition_published": "Results for “{competition}” are online",
+                "competition_entry_added": "You were registered for “{competition}”",
                 "follow_requested": "{name} wants to follow you",
                 "follow_accepted": "{name} accepted your follow request",
                 "new_follower": "{name} follows you now",
@@ -2145,6 +2147,17 @@
         "accountSuspended": {
             "subject": "Your account has been suspended",
             "body": "Your account has been suspended. You cannot sign in until the date below."
+        },
+        "accountExists": {
+            "subject": "You already have an account",
+            "body": "Someone tried to sign up for {app} with this email address or to move another account to it. It already belongs to your account, so nothing was changed.",
+            "action": "Sign in",
+            "note": "Forgot your password? Reset it on the sign-in page. If this wasn't you, you can ignore this email."
+        },
+        "emailChangedByAdmin": {
+            "subject": "Your email address was changed",
+            "body": "The platform team changed the email address of your {app} account to {email}. You have been signed out on every device.",
+            "note": "If you didn't ask for this, reply to this email right away."
         }
     },
     "leaderboard": {

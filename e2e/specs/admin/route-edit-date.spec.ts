@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test as base, expect, authFile } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
+import { getRoute } from '../../support/api'
 
 const test = base.extend<{ newYorkAdminPage: Page }>({
     newYorkAdminPage: async ({ browser, deviceOptions }, use) => {
@@ -17,9 +18,9 @@ const test = base.extend<{ newYorkAdminPage: Page }>({
 test('editing a route west of UTC keeps its set date', async ({
     newYorkAdminPage: page,
     createRoute,
-    root,
+    adminApi,
 }) => {
-    const route = await createRoute({ screw_date: '2026-03-14 00:00:00.000Z' })
+    const route = await createRoute({ screw_date: '2026-03-14' })
 
     await gotoSettled(page, '/manage/routes')
     await page.getByTestId('filter-search').fill(route.name)
@@ -33,9 +34,6 @@ test('editing a route west of UTC keeps its set date', async ({
     await expect(page.getByTestId('route-form-dialog')).toBeHidden()
 
     await expect
-        .poll(
-            async () =>
-                (await root.collection('routes').getOne(route.id)).screw_date,
-        )
+        .poll(async () => (await getRoute(adminApi, route.id)).screw_date)
         .toMatch(/^2026-03-14/)
 })

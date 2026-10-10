@@ -1,65 +1,29 @@
-import type PocketBase from 'pocketbase'
 import {
     buildStandings,
-    resultsVisibility,
     type CompetitionResults,
     type ResultsInput,
 } from '#shared/utils/competitionResults'
 import type { CompetitionRecord } from '../../types/models'
+import type { Api } from './api-server'
 
 export async function loadResults(
-    pb: PocketBase,
-    competition: CompetitionRecord,
-    staff: boolean,
+    api: Api,
+    id: string,
 ): Promise<CompetitionResults> {
-    const visibility = staff
-        ? competition.status === 'published'
-            ? 'final'
-            : 'live'
-        : resultsVisibility(competition, new Date())
-    const base = {
-        visibility,
-        format: competition.scoring_format,
-        updated: new Date().toISOString(),
-    }
-    if (visibility === 'hidden' || visibility === 'frozen') {
-        return { ...base, categories: [] }
-    }
-    const filter = pb.filter('competition = {:id}', { id: competition.id })
-    const options = { filter, batch: 1000, requestKey: null }
-    const [categories, entries, routes, scores] = await Promise.all([
-        pb
-            .collection('competition_categories')
-            .getFullList<ResultsInput['categories'][number]>({
-                ...options,
-                sort: 'sort,name',
-            }),
-        staff
-            ? pb
-                  .collection('competition_entries')
-                  .getFullList<ResultsInput['entries'][number]>({
-                      ...options,
-                      filter: `${filter} && (status = "registered" || status = "checked_in")`,
-                  })
-            : pb
-                  .collection('competition_standings')
-                  .getFullList<ResultsInput['entries'][number]>(options),
-        pb
-            .collection('competition_routes')
-            .getFullList<ResultsInput['routes'][number]>(options),
-        pb
-            .collection('competition_scores')
-            .getFullList<ResultsInput['scores'][number]>(options),
-    ])
+    const { visibility, ...input } = await api<
+        ResultsInput & {
+            visibility: CompetitionResults['visibility']
+            competition: CompetitionRecord
+        }
+    >(`/competitions/${id}/results`)
     return {
-        ...base,
-        categories: buildStandings({
-            competition,
-            categories,
-            entries,
-            routes,
-            scores,
-        }),
+        visibility,
+        format: input.competition.scoring_format,
+        updated: new Date().toISOString(),
+        categories:
+            visibility === 'hidden' || visibility === 'frozen'
+                ? []
+                : buildStandings(input),
     }
 }
 

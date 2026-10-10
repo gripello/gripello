@@ -1,15 +1,12 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser, e2eGymId } from '../../support/seed'
+import { createLocation, deleteLocation } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
-import { PB_URL, seedMap, type SeededMap } from '../../support/map'
+import { seedMap, type SeededMap } from '../../support/map'
 
 let seeded: SeededMap
 
-test.beforeEach(async ({ testPrefix }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    seeded = await seedMap(root, testPrefix, { routes: 3 })
+test.beforeEach(async ({ adminApi, testPrefix }) => {
+    seeded = await seedMap(adminApi, testPrefix, { routes: 3 })
 })
 
 test.afterEach(async () => {
@@ -105,15 +102,12 @@ test('a location without a floor plan points to the list', async ({
     page,
     testPrefix,
 }) => {
-    const plain = await seeded.root.collection('locations').create({
-        name: `${testPrefix} No Map`,
-        gym: await e2eGymId(seeded.root),
-    })
+    const plain = await createLocation(seeded.api, `${testPrefix} No Map`)
     try {
         await gotoSettled(page, `/map?location=${plain.id}`)
         await expect(page.getByTestId('map-empty')).toBeVisible()
     } finally {
-        await seeded.root.collection('locations').delete(plain.id)
+        await deleteLocation(seeded.api, plain.id)
     }
 })
 

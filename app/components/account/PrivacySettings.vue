@@ -63,6 +63,8 @@
 
 <script setup lang="ts">
 import type { FollowPolicy, UserRecord } from '~/types/models'
+import { updateMe } from '~/api/account'
+import { useAuthState } from '~/api/auth'
 
 type HiddenField = 'leaderboard_hidden' | 'reviews_anonymous' | 'ticks_private'
 type PrivacyChange = Partial<Pick<UserRecord, 'follow_policy' | HiddenField>>
@@ -86,14 +88,14 @@ const TOGGLES: { field: HiddenField; label: string; icon: string }[] = [
 ]
 
 const { t } = useI18n()
-const pb = usePocketbase()
+const { currentUser } = useAuthState()
 const { blocks, unblock } = useBlocks()
 const { byId } = useClimbers(
     computed(() => blocks.value.map((entry) => entry.blocked)),
 )
 const { error: notifyError } = useNotification()
 
-const record = () => pb.authStore.record as UserRecord | null
+const record = () => currentUser<UserRecord>()
 const followPolicy = ref<FollowPolicy>(record()?.follow_policy || 'approve')
 const hidden = reactive(
     Object.fromEntries(
@@ -128,10 +130,7 @@ async function save(change: PrivacyChange) {
     for (const key of keys) latestSave[key] = saveId
     apply(change)
     try {
-        const updated = await pb
-            .collection('users')
-            .update(record()!.id, change, { requestKey: null })
-        pb.authStore.save(pb.authStore.token, updated)
+        await updateMe(change)
     } catch {
         apply(
             Object.fromEntries(

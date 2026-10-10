@@ -115,13 +115,13 @@
 </template>
 
 <script setup lang="ts">
+import { listContributions } from '~/api/ratings'
 import { timeAgo } from '#shared/utils/formatting'
 import { activityDayLabel } from '~/utils/feed'
 import { TICK_TYPE_COLORS } from '~/utils/ticks'
 import {
     TIMELINE_KINDS,
     timelineDays,
-    type Contribution,
     type TimelineEntry,
     type TimelineFilter,
     type TimelineTick,
@@ -141,7 +141,6 @@ const props = defineProps<{
 }>()
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 const filter = ref<TimelineFilter>('all')
 const filterItems = computed(() =>
     TIMELINE_KINDS.map((value) => ({
@@ -155,15 +154,10 @@ const {
     pending,
     error: contributionsError,
     refresh: refreshContributions,
-} = useAsyncData(
-    'my-contributions',
-    () =>
-        pb.send<{ reviews: Contribution[]; betas: Contribution[] }>(
-            '/api/account/contributions',
-            { requestKey: null },
-        ),
-    { server: false, default: () => ({ reviews: [], betas: [] }) },
-)
+} = useAsyncData('my-contributions', () => listContributions(), {
+    server: false,
+    default: () => ({ reviews: [], betas: [] }),
+})
 
 let activated = false
 onActivated(() => {

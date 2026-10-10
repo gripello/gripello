@@ -18,16 +18,23 @@
 </template>
 
 <script setup lang="ts">
-import type { ClientResponseError, UnsubscribeFunc } from 'pocketbase'
-import type { GymRecord, SettingsRecord } from '~/types/models'
+import { fileUrl } from '~/api/client'
+import { refreshAuth } from '~/api/auth'
+import type { ApiError } from '~/api/client'
+import {
+    subscribeRealtime,
+    type GymEvent,
+    type UserEvent,
+} from '~/composables/useRealtime'
+import type { SettingsRecord } from '~/types/models'
 import { sessionNeedsRefresh } from '~/utils/session'
 
 const hydrated = useHydrated()
 
-const pb = usePocketbase()
-const isLoggedIn = ref(pb.authStore.isValid)
+const authStore = useAuthStore()
+const isLoggedIn = ref(authStore.isValid)
 const authRecord = useAuthRecord()
-authRecord.value = pb.authStore.record
+authRecord.value = authStore.record
 const {
     refreshPermissions,
     ensureLoaded,
@@ -44,17 +51,17 @@ watch(settingsData, (val) => {
     if (val) settings.value = val
 })
 
-await callOnce('user-permissions', refreshPermissions)
+await callOnce('user-permissions', ensureLoaded)
 
 const refreshSession = async () => {
     try {
-        await pb.collection('users').authRefresh()
-        isLoggedIn.value = pb.authStore.isValid
-        authRecord.value = pb.authStore.record
+        await refreshAuth()
+        isLoggedIn.value = authStore.isValid
+        authRecord.value = authStore.record
     } catch (error) {
-        const status = (error as ClientResponseError)?.status
+        const status = (error as ApiError)?.status
         if (status !== 401 && status !== 403) return
-        pb.authStore.clear()
+        authStore.clear()
         isLoggedIn.value = false
         authRecord.value = null
     }
@@ -76,7 +83,7 @@ useHead(
                 rel: 'icon',
                 href:
                     gymSlug.value && gym.value?.page_icon
-                        ? usePbFileUrl(gym.value, gym.value.page_icon)
+                        ? fileUrl('gyms', gym.value, gym.value.page_icon)
                         : '/favicon.ico',
             },
         ],
@@ -84,136 +91,90 @@ useHead(
 )
 
 let unsubAuthChange: (() => void) | null = null
-let unsubUser: UnsubscribeFunc | null = null
-let unsubGym: UnsubscribeFunc | null = null
-let unsubMemberships: UnsubscribeFunc | null = null
-let unsubRoles: UnsubscribeFunc | null = null
-let unmounted = false
-
-function releaseIfUnmounted(unsub: UnsubscribeFunc): UnsubscribeFunc | null {
-    if (!unmounted) return unsub
-    unsub().catch(() => {})
-    return null
-}
-
-function unsubscribeFromMemberships() {
-    unsubMemberships?.()?.catch?.(() => {})
-    unsubMemberships = null
-    unsubRoles?.()?.catch?.(() => {})
-    unsubRoles = null
-}
-
-async function subscribeToMemberships() {
-    unsubscribeFromMemberships()
-    if (!pb.authStore.isValid) return
-    const [membershipsSubscription, rolesSubscription] = (
-        await Promise.allSettled([
-            pb.collection('memberships').subscribe('*', (e) => {
-                if (e.record.user === pb.authStore.record?.id)
-                    refreshPermissions()
-            }),
-            pb.collection('roles').subscribe('*', (e) => {
-                if (memberships.value.some((m) => m.role === e.record.id))
-                    refreshPermissions()
-            }),
-        ])
-    ).map((result) => (result.status === 'fulfilled' ? result.value : null))
-    if (!pb.authStore.isValid) {
-        void membershipsSubscription?.().catch(() => {})
-        void rolesSubscription?.().catch(() => {})
-        return
-    }
-    if (membershipsSubscription)
-        unsubMemberships = releaseIfUnmounted(membershipsSubscription)
-    if (rolesSubscription) unsubRoles = releaseIfUnmounted(rolesSubscription)
-}
-
-async function subscribeToGym(gymId: string | undefined) {
-    unsubGym?.()?.catch?.(() => {})
-    unsubGym = null
-    if (!gymId) return
-    const unsub = await pb.collection('gyms').subscribe(gymId, (e) => {
-        if (e.action === 'update') gym.value = e.record as GymRecord
-    })
-    if (gym.value?.id !== gymId) {
-        unsub().catch(() => {})
-        return
-    }
-    unsubGym = releaseIfUnmounted(unsub)
-}
-
-async function subscribeToUser(userId: string) {
-    unsubUser?.()?.catch?.(() => {})
-    unsubUser = null
-    const unsubscribe = await pb.collection('users').subscribe(userId, (e) => {
-        if (e.action === 'delete') {
-            pb.authStore.clear()
-        } else {
-            pb.authStore.save(pb.authStore.token, e.record)
-            isLoggedIn.value = true
-        }
-    })
-    if (pb.authStore.record?.id !== userId) {
-        void unsubscribe().catch(() => {})
-        return
-    }
-    unsubUser = releaseIfUnmounted(unsubscribe)
-}
-
-watch(
-    () => gym.value?.id,
-    (gymId) => void subscribeToGym(gymId),
+const realtimeUserId = ref('')
+const realtimeGyms = computed(() =>
+    [
+        ...new Set([
+            gym.value?.id,
+            ...(realtimeUserId.value
+                ? memberships.value.map((membership) => membership.gym)
+                : []),
+        ]),
+    ]
+        .filter(Boolean)
+        .join(','),
 )
+
+function onGymEvent(event: GymEvent) {
+    if (event.kind === 'gym.updated') {
+        if (event.record.id === gym.value?.id) gym.value = event.record
+    } else if (event.kind === 'membership.changed') {
+        if (event.users?.includes(realtimeUserId.value)) refreshPermissions()
+    } else if (event.kind === 'role.changed') {
+        if (memberships.value.some((m) => m.role === event.id))
+            refreshPermissions()
+    }
+}
+
+function onUserEvent(event: UserEvent) {
+    if (event.kind === 'user.deleted') {
+        authStore.clear()
+    } else {
+        authStore.save(authStore.token, event.record)
+        isLoggedIn.value = true
+    }
+}
+
+function subscribeRealtimeTopics() {
+    watch(
+        realtimeGyms,
+        (gymIds, _, onCleanup) => {
+            const stops = gymIds
+                .split(',')
+                .filter(Boolean)
+                .map((gymId) => subscribeRealtime(`gym:${gymId}`, onGymEvent))
+            onCleanup(() => stops.forEach((stop) => stop()))
+        },
+        { immediate: true },
+    )
+    watch(
+        realtimeUserId,
+        (userId, _, onCleanup) => {
+            if (userId)
+                onCleanup(subscribeRealtime(`user:${userId}`, onUserEvent))
+        },
+        { immediate: true },
+    )
+}
 
 onMounted(async () => {
     try {
-        const userId = pb.authStore.isValid ? pb.authStore.record?.id : ''
+        const userId = authStore.isValid ? authStore.record?.id : ''
         if (userId && verifiedUser.value?.id === userId) {
-            pb.authStore.save(pb.authStore.token, verifiedUser.value)
-            authRecord.value = pb.authStore.record
+            authStore.save(authStore.token, verifiedUser.value)
+            authRecord.value = authStore.record
         }
-        let subscribedUserId = userId
-        unsubAuthChange = pb.authStore.onChange((token, record) => {
+        realtimeUserId.value = userId || ''
+        unsubAuthChange = authStore.onChange((token, record) => {
             isLoggedIn.value = !!token
             authRecord.value = token ? record : null
-            const nextUserId = (token && record?.id) || ''
-            if (nextUserId === subscribedUserId) return
-            subscribedUserId = nextUserId
-            if (nextUserId) {
-                subscribeToUser(nextUserId)
-                subscribeToMemberships()
-            } else {
-                unsubUser?.()?.catch?.(() => {})
-                unsubUser = null
-                unsubscribeFromMemberships()
-            }
+            realtimeUserId.value = (token && record?.id) || ''
         })
+        subscribeRealtimeTopics()
 
-        await Promise.all([
-            userId && subscribeToUser(userId),
-            subscribeToMemberships(),
-            subscribeToGym(gym.value?.id),
-            (async () => {
-                if (
-                    userId &&
-                    (authRejected.value ||
-                        sessionNeedsRefresh(pb.authStore.token))
-                )
-                    await refreshSession()
-                await ensureLoaded()
-            })(),
-        ])
+        if (
+            userId &&
+            (authRejected.value || sessionNeedsRefresh(authStore.token))
+        )
+            await refreshSession()
+        await ensureLoaded()
     } catch (error) {
         console.error('Error during initialization:', error)
     }
 })
 
 onBeforeUnmount(() => {
-    unmounted = true
     unsubAuthChange?.()
-    unsubUser?.()?.catch?.(() => {})
-    unsubscribeFromMemberships()
-    unsubGym?.()?.catch?.(() => {})
 })
 </script>
 

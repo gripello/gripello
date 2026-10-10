@@ -1,4 +1,10 @@
-import type { RecordSubscription } from 'pocketbase'
+import { listRoutes } from '~/api/routes'
+import {
+    isRealtimeConnected,
+    onConnect as onRealtimeConnect,
+    subscribeRealtime,
+    type RecordChange,
+} from '~/composables/useRealtime'
 import type {
     BetaVideoRecord,
     LocationRecord,
@@ -47,7 +53,7 @@ import {
 const RECONNECT_SPREAD_MS = 5000
 
 export default defineNuxtPlugin((nuxtApp) => {
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     // ponytail: grows by one small entry per rating seen this session
     const ratingLedger: RatingLedger = new Map()
     const routesToRescore = new Set<string>()
@@ -126,17 +132,23 @@ export default defineNuxtPlugin((nuxtApp) => {
     const rescoreSoon = coalesce(async () => {
         const ids = [...routesToRescore]
         routesToRescore.clear()
-        const scores = await pb
-            .collection('averageRating')
-            .getFullList<RouteScoreRecord>({
-                filter: ids
-                    .map((id) => pb.filter('id = {:id}', { id }))
-                    .join(' || '),
+        const { items: scores } = await listRoutes(
+            null,
+            { ids, archived: 'all' },
+            {
+                rated: true,
                 fields: 'id,average_rating,ratings_count',
                 requestKey: null,
-            })
-        for (const score of scores)
-            patchRouteRows((rows) => patchList(rows, score, null))
+            },
+        )
+        for (const { id, average_rating, ratings_count } of scores)
+            patchRouteRows((rows) =>
+                patchList(
+                    rows,
+                    { id, average_rating, ratings_count } as RouteScoreRecord,
+                    null,
+                ),
+            )
     })
 
     const refreshUnplacedSoon = coalesce(() =>
@@ -297,8 +309,8 @@ export default defineNuxtPlugin((nuxtApp) => {
         return keys.length ? refreshNuxtData(keys) : Promise.resolve()
     }, 300)
 
-    function onOwnTick({ record }: RecordSubscription<TickRecord>) {
-        if (record.user === pb.authStore.record?.id) refreshOwnTicksSoon()
+    function onOwnTick({ record }: RecordChange<TickRecord>) {
+        if (record.user === authStore.record?.id) refreshOwnTicksSoon()
     }
 
     const refreshFollowsSoon = coalesce(() => {
@@ -309,7 +321,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     const hydratedFromStaleCache = servedStaleFromSsrCache(
         document.documentElement.dataset.ssrAge,
     )
-    let awaitingFirstConnect = !pb.realtime.isConnected
+    let awaitingFirstConnect = !isRealtimeConnected()
 
     function refreshLiveKeys(spreadMs: number) {
         setTimeout(() => {
@@ -320,8 +332,11 @@ export default defineNuxtPlugin((nuxtApp) => {
         }, Math.random() * spreadMs)
     }
 
-    function onConnect() {
-        if (!awaitingFirstConnect) return refreshLiveKeys(RECONNECT_SPREAD_MS)
+    function onConnect(afterDrop: boolean) {
+        if (!awaitingFirstConnect) {
+            if (afterDrop) refreshLiveKeys(RECONNECT_SPREAD_MS)
+            return
+        }
         awaitingFirstConnect = false
         if (hydratedFromStaleCache) refreshLiveKeys(0)
     }
@@ -346,39 +361,18 @@ export default defineNuxtPlugin((nuxtApp) => {
             liveGym,
             (gymId, _, onCleanup) => {
                 if (!gymId) return
-                const topics = [
-                    [gymChangesTopic(gymId), onGymChange],
-                    [gymDefectsTopic(gymId), onOpenDefects],
-                ] as const
-                const subscribed = topics.map(([topic, listener]) => {
-                    const subscription = pb.realtime.subscribe(topic, listener)
-                    subscription.catch((error) =>
-                        console.error('Realtime subscription failed:', error),
-                    )
-                    return { topic, subscription }
-                })
-                onCleanup(() => {
-                    for (const { topic, subscription } of subscribed)
-                        void subscription
-                            .then(
-                                (unsubscribe) => unsubscribe(),
-                                () => pb.realtime.unsubscribe(topic),
-                            )
-                            .catch(() => {})
-                })
+                const stops = [
+                    subscribeRealtime(gymChangesTopic(gymId), onGymChange),
+                    subscribeRealtime(gymDefectsTopic(gymId), onOpenDefects),
+                ]
+                onCleanup(() => stops.forEach((stop) => stop()))
             },
             { immediate: true },
         )
-        const subscriptions = [
-            pb.realtime.subscribe('PB_CONNECT', onConnect),
-            pb.realtime.subscribe(liveTopics.ownTicks, onOwnTick),
-            pb.realtime.subscribe(liveTopics.followChanges, refreshFollowsSoon),
-            pb.realtime.subscribe(liveTopics.followedTicks, refreshFollowsSoon),
-        ]
-        for (const subscription of subscriptions)
-            subscription.catch((error) =>
-                console.error('Realtime subscription failed:', error),
-            )
+        onRealtimeConnect(onConnect)
+        subscribeRealtime(liveTopics.ownTicks, onOwnTick)
+        subscribeRealtime(liveTopics.followChanges, refreshFollowsSoon)
+        subscribeRealtime(liveTopics.followedTicks, refreshFollowsSoon)
     })
 
     return { provide: { realtimeCache: { applyRating, revertRating } } }

@@ -1,38 +1,26 @@
-import type PocketBase from 'pocketbase'
+import {
+    addMembership,
+    findRole,
+    listInvites,
+    membershipOf,
+    type Api,
+} from '../../support/api'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { e2eGymId } from '../../support/seed'
 
-async function roleOf(root: PocketBase, user: string) {
-    const membership = await root
-        .collection('memberships')
-        .getFirstListItem(
-            root.filter('user = {:user} && gym = {:gym}', {
-                user,
-                gym: await e2eGymId(root),
-            }),
-            { expand: 'role', requestKey: null },
-        )
-        .catch(() => null)
-    return membership?.expand?.role?.name ?? null
+async function roleOf(api: Api, user: string) {
+    return (await membershipOf(api, user))?.role.name ?? null
 }
 
 test('changes a member role and removes them again', async ({
     adminPage: page,
-    root,
+    api,
+    adminApi,
     createUser,
 }) => {
     const climber = await createUser('user', 'joiner')
-    const gym = await e2eGymId(root)
-    const setterRole = await root
-        .collection('roles')
-        .getFirstListItem(
-            root.filter('gym = {:gym} && name = "routesetter"', { gym }),
-            { requestKey: null },
-        )
-    await root
-        .collection('memberships')
-        .create({ user: climber.id, gym, role: setterRole.id })
+    const setterRole = await findRole(adminApi, 'routesetter')
+    await addMembership(api, climber.id, setterRole.id)
     await gotoSettled(page, '/admin/users')
 
     const card = page
@@ -43,17 +31,17 @@ test('changes a member role and removes them again', async ({
 
     await card.getByTestId('member-card-role').click()
     await page.getByRole('option', { name: 'admin', exact: true }).click()
-    await expect.poll(() => roleOf(root, climber.id)).toBe('admin')
+    await expect.poll(() => roleOf(adminApi, climber.id)).toBe('admin')
 
     await card.getByTestId('member-card-remove').click()
     await page.getByTestId('confirm-dialog-confirm').click()
     await expect(card).toHaveCount(0)
-    await expect.poll(() => roleOf(root, climber.id)).toBeNull()
+    await expect.poll(() => roleOf(adminApi, climber.id)).toBeNull()
 })
 
 test('inviting an account only leaves a pending invite that can be revoked', async ({
     adminPage: page,
-    root,
+    adminApi,
     createUser,
 }) => {
     const climber = await createUser('user', 'pending')
@@ -69,20 +57,15 @@ test('inviting an account only leaves a pending invite that can be revoked', asy
     const pending = page.getByTestId(`pending-invite-${climber.email}`)
     await expect(pending).toBeVisible()
     await expect(page.getByTestId(`member-card-${climber.id}`)).toHaveCount(0)
-    expect(await roleOf(root, climber.id)).toBeNull()
+    expect(await roleOf(adminApi, climber.id)).toBeNull()
 
     await pending.getByTestId('pending-invite-revoke').click()
     await expect(pending).toHaveCount(0)
     await expect
         .poll(
             async () =>
-                (
-                    await root.collection('invites').getFullList({
-                        filter: root.filter('email = {:email}', {
-                            email: climber.email,
-                        }),
-                        requestKey: null,
-                    })
+                (await listInvites(adminApi)).filter(
+                    (invite) => invite.email === climber.email,
                 ).length,
         )
         .toBe(0)

@@ -455,8 +455,8 @@
 </template>
 
 <script setup lang="ts">
+import { archiveRoutes, listRoutes, type RouteQuery } from '~/api/routes'
 import { isAbortError } from '~/utils/errors'
-import { sendInBatches } from '~/utils/batch'
 import type { ExportOptions } from '~/components/ExportOptionsDialog.vue'
 import {
     formatAnchorPoint,
@@ -465,9 +465,13 @@ import {
     normalizeCreators,
 } from '#shared/utils/formatting'
 import { toPbSort, type SortOption } from '~/utils/sorting'
-import { coalesce } from '~/utils/realtimeCache'
+import {
+    coalesce,
+    gymChangesTopic,
+    type GymChange,
+} from '~/utils/realtimeCache'
 import type { TableColumn } from '@nuxt/ui'
-import type { RouteListItem, RouteScoreRecord } from '~/types/models'
+import type { RouteListItem } from '~/types/models'
 
 const gymPath = useGymPath()
 
@@ -482,7 +486,6 @@ definePageMeta({
     requiredPermission: 'manage_routes',
 })
 
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
 const { t, locale } = useI18n()
 const { mdAndDown, width: displayWidth } = useDisplay()
@@ -501,7 +504,7 @@ const {
     types,
     locations,
     activeFilterCount: routeFilterCount,
-    pbFilter: baseFilter,
+    routeQuery: baseQuery,
     clearFilters: clearRouteFilters,
 } = useRouteFilters()
 
@@ -629,13 +632,11 @@ const pageInfo = computed(() => {
     return `${start}-${end} / ${totalItems.value}`
 })
 
-const pbFilter = computed(() => {
-    const parts = [gymFilter(pb, gymId.value)]
-    if (!displayArchived.value) parts.push('archived = false')
-    const base = baseFilter.value
-    if (base) parts.push(base)
-    return parts.join(' && ')
-})
+const routeQuery = computed<RouteQuery>(() => ({
+    ...baseQuery.value,
+    archived: displayArchived.value ? 'all' : false,
+}))
+const routeQueryKey = computed(() => JSON.stringify(routeQuery.value))
 
 const {
     selectedRouteIds,
@@ -647,7 +648,7 @@ const {
     remove: removeSelectedIds,
     toggleAll,
     invalidate: invalidateAllRouteIdsCache,
-} = useRouteSelection(pbFilter, totalItems)
+} = useRouteSelection(gymId, routeQuery, totalItems)
 
 const selectAllAction = computed(() =>
     areAllSelected.value ? t('actions.deselect_all') : t('actions.select_all'),
@@ -722,7 +723,7 @@ const selectAll = async () => {
 const toPbSortRoutes = (sortByArr: SortOption[]) =>
     toPbSort(sortByArr, '-created', {
         score: 'average_rating',
-        location: 'location.name',
+        location: 'location',
         difficulty: 'type,grade_index',
     })
 
@@ -762,18 +763,18 @@ const loadRoutes = async (options: LoadOptions = {}) => {
     loading.value = true
 
     try {
-        const list = await pb
-            .collection('averageRating')
-            .getList<RouteScoreRecord>(
-                tableOptions.page,
-                tableOptions.itemsPerPage,
-                {
-                    filter: pbFilter.value || undefined,
-                    sort: toPbSortRoutes(tableOptions.sortBy),
-                    expand: 'location',
-                    requestKey: 'adminRoutesList',
-                },
-            )
+        const list = await listRoutes(
+            gymId.value,
+            {
+                ...routeQuery.value,
+                sort: toPbSortRoutes(tableOptions.sortBy),
+                include: ['location'],
+                page: tableOptions.page,
+                limit: tableOptions.itemsPerPage,
+                total: true,
+            },
+            { rated: true, requestKey: 'adminRoutesList' },
+        )
 
         const normalizedRoutes = list.items.map((route) => {
             const hasRatings =
@@ -790,7 +791,7 @@ const loadRoutes = async (options: LoadOptions = {}) => {
         })
 
         routes.value = normalizedRoutes
-        totalItems.value = list.totalItems
+        totalItems.value = list.total ?? 0
     } catch (error) {
         if (isAbortError(error)) return
         console.error('Failed to load routes:', error)
@@ -855,24 +856,15 @@ const archiveSelected = async () => {
 
     await runAction(
         async () => {
-            const archivedIds: string[] = []
+            let archived = false
             try {
-                await sendInBatches(
-                    pb,
-                    ids,
-                    (batch, id) =>
-                        batch
-                            .collection('routes')
-                            .update(id, { archived: true }),
-                    (chunk) => archivedIds.push(...chunk),
-                )
+                await archiveRoutes(gymId.value, ids)
+                archived = true
                 showArchiveConfirmation.value = false
             } finally {
-                if (archivedIds.length) {
-                    invalidateAllRouteIdsCache()
-                    removeSelectedIds(archivedIds)
-                    await reloadRoutes()
-                }
+                invalidateAllRouteIdsCache()
+                if (archived) removeSelectedIds(ids)
+                await reloadRoutes()
             }
         },
         { success: t('notifications.success.edit') },
@@ -916,7 +908,7 @@ const onItemsPerPageChange = (value: number | string) => {
 
 let filterDebounceTimer: ReturnType<typeof setTimeout> | undefined
 
-watch(pbFilter, () => {
+watch(routeQueryKey, () => {
     if (filterDebounceTimer) {
         clearTimeout(filterDebounceTimer)
     }
@@ -937,8 +929,6 @@ const queueReload = coalesce(async () => {
     await reloadRoutes()
 }, 500)
 
-const { subscribe } = usePbSubscription()
-
 const { data: initial } = await useAsyncData('admin-routes', async () => {
     await loadRoutes({
         page: tableOptions.page,
@@ -953,15 +943,16 @@ if (initial.value) {
     totalItems.value = initial.value.totalItems
 }
 
-onMounted(async () => {
-    await Promise.all([
-        subscribe('routes', (event) => {
-            if (event.action === 'delete') removeSelectedIds([event.record.id])
+useRealtime(
+    () => gymChangesTopic(gymId.value),
+    (change: GymChange) => {
+        if (change.collection === 'routes') {
+            if (change.action === 'delete')
+                removeSelectedIds([change.record.id as string])
             queueReload()
-        }),
-        subscribe('ratings', queueReload),
-    ])
-})
+        } else if (change.collection === 'ratings') queueReload()
+    },
+)
 
 onBeforeUnmount(() => {
     clearTimeout(filterDebounceTimer)

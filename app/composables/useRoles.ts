@@ -1,19 +1,11 @@
 import type { Ref } from 'vue'
 import type { RoleRecord } from '~/types/models'
+import { listRoles } from '~/api/members'
 
 export function useRoles(gymId: Readonly<Ref<string>> = useCurrentGymId()) {
-    const pb = usePocketbase()
-
     return useAsyncData<RoleRecord[]>(
         'roles',
-        () =>
-            gymId.value
-                ? pb.collection('roles').getFullList<RoleRecord>({
-                      filter: pb.filter('gym = {:gym}', { gym: gymId.value }),
-                      sort: 'name',
-                      requestKey: 'rolesList',
-                  })
-                : Promise.resolve([]),
+        () => (gymId.value ? listRoles(gymId.value) : Promise.resolve([])),
         { default: () => [], watch: [gymId] },
     )
 }

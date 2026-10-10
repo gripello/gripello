@@ -199,6 +199,7 @@
 </template>
 
 <script setup lang="ts">
+import { listOwnTicks } from '~/api/ticks'
 import type { RouteRecord, TickRecord } from '~/types/models'
 import { groupTicksByDay } from '#shared/utils/ticks'
 import {
@@ -238,7 +239,7 @@ const LOGBOOK_TABS = [
 ] as const
 
 const { t } = useI18n()
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const { notify, error: notifyError } = useNotification()
 const { refreshTickedRoutes } = useTickedRoutes()
 const outbox = useTickOutbox()
@@ -260,11 +261,10 @@ const {
     cacheKeys.logbook,
     async () => {
         try {
-            const list = await pb.collection('ticks').getFullList<LoggedTick>({
-                sort: '-date,-created',
-                expand: 'route.gym',
-                requestKey: null,
-            })
+            const { items: list } = await listOwnTicks<LoggedTick>(
+                { sort: '-date,-created', include: ['route.gym'] },
+                { requestKey: null },
+            )
             outbox.cacheTicks(list)
             return list
         } catch (error) {
@@ -276,17 +276,15 @@ const {
 )
 
 const allTicks = computed(() =>
-    applyTickOutbox(
-        ticks.value,
-        outbox.queue.value,
-        pb.authStore.record?.id,
-    ).map((tick) => ({
-        ...tick,
-        routeArchived: !!tick.expand?.route?.archived,
-    })),
+    applyTickOutbox(ticks.value, outbox.queue.value, authStore.record?.id).map(
+        (tick) => ({
+            ...tick,
+            routeArchived: !!tick.expand?.route?.archived,
+        }),
+    ),
 )
 const tickGyms = computed(() => gymsInTicks(allTicks.value))
-const myUserId = pb.authStore.record?.id ?? ''
+const myUserId = authStore.record?.id ?? ''
 const gymId = ref(ALL_GYMS)
 const gymItems = computed(() => [
     { label: t('ticks.allGyms'), value: ALL_GYMS },

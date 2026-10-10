@@ -1,17 +1,18 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { e2eGymId } from '../../support/seed'
+import { E2E_GYM_SLUG } from '../../support/seed'
+import { getGym } from '../../support/api'
 
 test('saving settings only sends the fields that were edited', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
     await gotoSettled(page, '/admin/settings?section=organization')
-    const current = await root.collection('gyms').getOne(await e2eGymId(root))
+    const current = await getGym(adminApi, E2E_GYM_SLUG)
 
     let sentFields: string[] = []
-    await page.route('**/api/collections/gyms/records/**', async (route) => {
+    await page.route(/\/api\/gyms\/[^/?]+(\?|$)/, async (route) => {
         if (route.request().method() !== 'PATCH') return route.fallback()
         const body = route.request().postDataJSON()
         sentFields = Object.keys(body)

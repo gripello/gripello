@@ -6,8 +6,8 @@ import {
     moderationActions,
     moderationBadgeCount,
     moderationFiles,
-    moderationFilter,
     moderationText,
+    moderationViewQuery,
     openReportCount,
     viewOfState,
 } from '~/utils/moderation'
@@ -15,30 +15,23 @@ import {
 const staff = { platform: false, gymStaff: true }
 const platform = { platform: true, gymStaff: false }
 
-describe('moderationFilter', () => {
-    it('combines gym, view, type and search', () => {
-        expect(
-            moderationFilter('hidden', {
-                gymFilter: 'gym = "g"',
-                contentType: 'rating',
-                searchFilter: 'snapshot ~ "x"',
-            }),
-        ).toBe(
-            'gym = "g" && state = "hidden" && content_type = "rating" && snapshot ~ "x"',
-        )
+describe('moderationViewQuery', () => {
+    it('maps a view to its states and order', () => {
+        expect(moderationViewQuery('hidden')).toEqual({
+            state: ['hidden'],
+            sort: 'reviewed',
+        })
+        expect(moderationViewQuery('approval')).toEqual({ state: ['pending'] })
     })
 
     it('limits the platform queue to reported or gym-less cases', () => {
-        expect(moderationFilter('decide', { platform: true })).toBe(
-            'state = "unreviewed" && (reports_count > 0 || gym = "")',
-        )
-        expect(moderationFilter('all', { platform: true })).toBe(
-            '(state = "unreviewed" || state = "pending")',
-        )
-    })
-
-    it('shows waiting uploads under approval', () => {
-        expect(moderationFilter('approval')).toBe('state = "pending"')
+        expect(moderationViewQuery('decide', true)).toEqual({
+            state: ['unreviewed'],
+            queue: 'platform',
+        })
+        expect(moderationViewQuery('all', true)).toEqual({
+            state: ['unreviewed', 'pending'],
+        })
     })
 })
 

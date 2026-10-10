@@ -214,15 +214,12 @@
     </div>
 </template>
 <script setup lang="ts">
+import { importRatings } from '~/api/ratings'
+import { createRoute, listRoutes, listWalls } from '~/api/routes'
 import { formatDate, normalizeCreators } from '#shared/utils/formatting'
 import { resolveImportedGrading } from '#shared/utils/grades'
 import type { TableColumn } from '@nuxt/ui'
-import type {
-    LocationRecord,
-    RouteRecord,
-    UserRecord,
-    WallRecord,
-} from '~/types/models'
+import type { LocationRecord, RouteRecord, UserRecord } from '~/types/models'
 import { ROUTE_TYPES } from '~/utils/routes'
 import {
     REVIEW_IMPORT_FIELDS,
@@ -249,10 +246,10 @@ const NOT_MAPPED = '__none__'
 const REVIEW_PREVIEW_LIMIT = 100
 const RATING_CHUNK = 200
 
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const gymId = useCurrentGymId()
 const emit = defineEmits<{ closed: [] }>()
-const currentUser = pb.authStore.record as UserRecord | null
+const currentUser = authStore.record as UserRecord | null
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const showPreviewDialog = ref(false)
@@ -381,14 +378,14 @@ const loadExistingRoutes = async () => {
     routesLoading.value = true
     routesError.value = false
     try {
-        const routes = await pb
-            .collection('routes')
-            .getFullList<ExistingRoute>({
-                filter: gymFilter(pb, gymId.value),
+        const { items: routes } = await listRoutes<ExistingRoute>(
+            gymId.value,
+            { archived: 'all', include: ['location'] },
+            {
                 fields: 'id,name,type,color,grade,grade_system,grade_index,screw_date,created,expand.location.name',
-                expand: 'location',
                 requestKey: null,
-            })
+            },
+        )
         if (request === routesRequest) existingRoutes.value = routes
     } catch (error) {
         if (request !== routesRequest) return
@@ -498,10 +495,7 @@ const postRatings = async (
     for (let start = 0; start < ratings.length; start += RATING_CHUNK) {
         const chunk = ratings.slice(start, start + RATING_CHUNK)
         try {
-            const response = await pb.send<{ failed: number }>(
-                '/api/import/ratings',
-                { method: 'POST', body: { gym: gymId.value, ratings: chunk } },
-            )
+            const response = await importRatings(gymId.value, chunk)
             failed += response.failed
         } catch (error) {
             console.error('Failed to insert ratings', error)
@@ -553,10 +547,11 @@ const confirmImport = async () => {
                 location.id,
             ]),
         )
-        const walls = await pb.collection('walls').getFullList<WallRecord>({
-            filter: gymFilter(pb, gymId.value),
-            fields: 'id,name,location',
-        })
+        const walls = await listWalls(
+            gymId.value,
+            {},
+            { fields: 'id,name,location' },
+        )
         const wallIdByKey = new Map(
             walls.map((wall) => [wallKey(wall.location, wall.name), wall.id]),
         )
@@ -565,15 +560,15 @@ const confirmImport = async () => {
 
         for (const route of jsonData) {
             try {
-                const createdRoute = await pb.collection('routes').create({
-                    ...sanitizeRoutePayload(
+                const createdRoute = await createRoute(
+                    gymId.value,
+                    sanitizeRoutePayload(
                         route,
                         fallbackCreator,
                         locationIdByName,
                         wallIdByKey,
                     ),
-                    gym: gymId.value,
-                })
+                )
                 if (route.source_id) {
                     sourceIds.set(route.source_id, createdRoute.id)
                 }

@@ -146,6 +146,7 @@
 </template>
 
 <script setup lang="ts">
+import { fileUrl } from '~/api/client'
 import { GYM_AMENITIES } from '#shared/utils/gymAmenities'
 import { hasOpeningHours, toSchemaOrgHours } from '#shared/utils/openingHours'
 import {
@@ -164,7 +165,7 @@ const subtitle = computed(() => (gym.value ? gymSubtitle(gym.value) : ''))
 
 const coverUrl = computed(() =>
     gym.value?.cover_image
-        ? usePbFileUrl(gym.value, gym.value.cover_image, {
+        ? fileUrl('gyms', gym.value, gym.value.cover_image, {
               thumb: '1600x500',
           })
         : '',
@@ -174,7 +175,7 @@ const markers = computed(() =>
     gym.value
         ? gymMarkers([gym.value], (g) =>
               g.page_logo
-                  ? usePbFileUrl(g, g.page_logo, { thumb: '0x200' })
+                  ? fileUrl('gyms', g, g.page_logo, { thumb: '0x200' })
                   : '',
           )
         : [],

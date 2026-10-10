@@ -7,7 +7,7 @@ test('a failing route request shows a server error instead of 404', async ({
 }) => {
     await gotoSettled(page, '/routes')
     await searchRoutes(page, route.name)
-    await page.route(`**/api/collections/routes/records/${route.id}*`, (r) =>
+    await page.route(`**/api/routes/${route.id}*`, (r) =>
         r.fulfill({ status: 500, json: { status: 500, message: 'boom' } }),
     )
     await page.getByTestId('route-view').first().click()
@@ -20,9 +20,7 @@ test('an unreachable backend shows a server error instead of 404', async ({
 }) => {
     await gotoSettled(page, '/routes')
     await searchRoutes(page, route.name)
-    await page.route(`**/api/collections/routes/records/${route.id}*`, (r) =>
-        r.abort('failed'),
-    )
+    await page.route(`**/api/routes/${route.id}*`, (r) => r.abort('failed'))
     await page.getByTestId('route-view').first().click()
     await expect(page.getByTestId('error-status')).toContainText('503')
 })

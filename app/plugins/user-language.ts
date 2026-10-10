@@ -1,7 +1,8 @@
 import { isLocaleCode } from '~/utils/locales'
+import { useAuthState } from '~/api/auth'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
-    const pb = usePocketbase()
+    const auth = useAuthState()
     const i18n = nuxtApp.$i18n
 
     const applyUserLanguage = async (language?: string | null) => {
@@ -14,11 +15,9 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         }
     }
 
-    await applyUserLanguage(pb.authStore.record?.language)
+    await applyUserLanguage(auth.currentUser()?.language)
 
     if (import.meta.client) {
-        pb.authStore.onChange((_, record) =>
-            applyUserLanguage(record?.language),
-        )
+        auth.onAuthChange((_, record) => applyUserLanguage(record?.language))
     }
 })

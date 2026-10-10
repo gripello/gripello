@@ -50,3 +50,8 @@ test-results/
 .playwright-mcp/
 CLAUDE.md
 pocketbase/tmp/
+
+# Go backend local state
+backend/data/
+backend/tmp/
+/backend/gripello

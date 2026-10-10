@@ -2,21 +2,25 @@ import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { seedMap } from '../../support/map'
 import { signInAs } from '../../support/auth'
-import { ensureUser, getRoleIds, uiaa } from '../../support/seed'
+import { uiaa } from '../../support/seed'
 
 test('switching tabs back to the map reuses its loaded routes', async ({
     userPage: page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 2 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 2 })
     try {
         await gotoSettled(page, `/map?location=${seeded.locationId}`)
         await expect(page.getByTestId('map-svg')).toBeVisible()
 
         const routeRequests: string[] = []
         page.on('request', (request) => {
-            if (request.url().includes('/api/collections/averageRating/'))
+            const url = new URL(request.url())
+            if (
+                /\/api\/gyms\/[^/]+\/routes$/.test(url.pathname) &&
+                url.searchParams.get('location') === seeded.locationId
+            )
                 routeRequests.push(request.url())
         })
 
@@ -34,19 +38,15 @@ test('switching tabs back to the map reuses its loaded routes', async ({
 
 test('an ascent logged on the route shows up in the open logbook tab', async ({
     page,
-    root,
     testPrefix,
-    workerLocation,
+    createUser,
+    createRoute,
 }) => {
-    const roleIds = await getRoleIds(root)
-    const climber = await ensureUser(root, roleIds.user, 'user', testPrefix)
-    const route = await root.collection('routes').create({
+    const climber = await createUser()
+    const route = await createRoute({
         name: `${testPrefix}-keepalive-route`,
         ...uiaa('6+'),
-        location: workerLocation.id,
-        type: 'Route',
         color: '#2196F3',
-        creator: ['E2E'],
         screw_date: '2026-09-01',
     })
 

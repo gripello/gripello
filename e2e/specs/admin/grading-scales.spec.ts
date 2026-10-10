@@ -1,6 +1,7 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { e2eGymId, gradeOf } from '../../support/seed'
+import { gradeOf } from '../../support/seed'
+import { createRoute, listRoutes, routeInput } from '../../support/api'
 
 test('settings show the grading scale per route type', async ({
     adminPage: page,
@@ -33,7 +34,7 @@ test('settings show the grading scale per route type', async ({
 
 test('creates a boulder graded on the boulder scale', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
     workerLocation,
 }) => {
@@ -61,9 +62,9 @@ test('creates a boulder graded on the boulder scale', async ({
     await page.getByTestId('route-form-submit').click()
     await expect(page.getByTestId('route-form-dialog')).toBeHidden()
 
-    const created = await root
-        .collection('routes')
-        .getFirstListItem(root.filter('name = {:name}', { name }))
+    const created = (await listRoutes(adminApi, { q: name })).find(
+        (route) => route.name === name,
+    )
     expect(created).toMatchObject({
         grade: '6A+',
         grade_system: 'font',
@@ -79,20 +80,21 @@ test('creates a boulder graded on the boulder scale', async ({
 
 test('editing keeps the route scale and switching type resets the grade', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
+    workerLocation,
 }) => {
     const name = `${testPrefix}-french-route`
-    await root.collection('routes').create({
-        gym: await e2eGymId(root),
-        name,
-        ...gradeOf('french', '6b'),
-        type: 'Route',
-        anchor_point: 3,
-        creator: ['E2E'],
-    })
+    await createRoute(
+        adminApi,
+        routeInput(name, workerLocation.id, {
+            ...gradeOf('french', '6b'),
+            anchor_point: 3,
+        }),
+    )
     await gotoSettled(page, '/manage/routes')
     await page.getByTestId('filter-search').fill(name)
+    await expect(page.getByTestId('routes-row-name')).toHaveText([name])
     await expect(page.getByTestId('routes-table')).toContainText('6b')
     await expect(page.getByTestId('routes-table')).toContainText('Fr')
     await expect(
@@ -116,17 +118,17 @@ test('editing keeps the route scale and switching type resets the grade', async 
 
 test('route page links its grade to the IRCRA conversion table', async ({
     page,
-    root,
+    adminApi,
     testPrefix,
+    workerLocation,
 }) => {
-    const route = await root.collection('routes').create({
-        gym: await e2eGymId(root),
-        name: `${testPrefix}-conversion`,
-        ...gradeOf('french', '7a'),
-        type: 'Route',
-        anchor_point: 2,
-        creator: ['E2E'],
-    })
+    const route = await createRoute(
+        adminApi,
+        routeInput(`${testPrefix}-conversion`, workerLocation.id, {
+            ...gradeOf('french', '7a'),
+            anchor_point: 2,
+        }),
+    )
     await gotoSettled(page, `/route?id=${route.id}`)
     await expect(page.getByTestId('route-grade-system')).toHaveText('Fr')
     await page.getByTestId('route-grade-badge').click()

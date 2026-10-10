@@ -1,7 +1,8 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { signInAs } from '../../support/auth'
-import { E2E_GYM_SLUG, ensureUser, getRoleIds, uiaa } from '../../support/seed'
+import { listOwnTicks } from '../../support/api'
+import { E2E_GYM_SLUG, uiaa } from '../../support/seed'
 
 test.use({
     launchOptions: { args: ['--ignore-certificate-errors'] },
@@ -10,19 +11,16 @@ test.use({
 
 test('an ascent logged offline syncs when the connection returns', async ({
     page,
-    root,
+    apiAs,
     testPrefix,
-    workerLocation,
+    createUser,
+    createRoute,
 }) => {
-    const roleIds = await getRoleIds(root)
-    const climber = await ensureUser(root, roleIds.user, 'user', testPrefix)
-    const route = await root.collection('routes').create({
+    const climber = await createUser()
+    const route = await createRoute({
         name: `${testPrefix}-offline-route`,
         ...uiaa('6'),
-        location: workerLocation.id,
-        type: 'Route',
         color: '#2196F3',
-        creator: ['E2E'],
         screw_date: '2026-09-01',
     })
     const routeUrl = `/${E2E_GYM_SLUG}/route?id=${route.id}`
@@ -49,13 +47,14 @@ test('an ascent logged offline syncs when the connection returns', async ({
 
     await page.context().setOffline(false)
     await page.evaluate(() => window.dispatchEvent(new Event('online')))
+    const climberApi = await apiAs(climber)
     await expect
-        .poll(async () => {
-            const result = await root.collection('ticks').getList(1, 1, {
-                filter: `route = "${route.id}"`,
-            })
-            return result.totalItems
-        })
+        .poll(
+            async () =>
+                (await listOwnTicks(climberApi)).filter(
+                    (tick) => tick.route === route.id,
+                ).length,
+        )
         .toBe(1)
     await expect(pending).toHaveCount(0)
     await expect(

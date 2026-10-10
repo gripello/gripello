@@ -1,9 +1,10 @@
 import { eventHandler, createError } from 'h3'
-import { requirePermission } from '../../utils/pb-server'
+import { requirePermission } from '../../utils/api-server'
 import {
     resolveRouteIds,
     resolveExportGymId,
-    fetchRecordsByIds,
+    fetchRatingsByRoutes,
+    fetchRoutesByIds,
 } from '../../utils/export'
 import {
     locationName,
@@ -14,7 +15,7 @@ import type { RatingRecord, RouteRecord } from '../../../types/models'
 
 export default eventHandler(async (event) => {
     const gymId = await resolveExportGymId(event)
-    const pb = await requirePermission(event, 'manage_routes', gymId)
+    const api = await requirePermission(event, 'manage_routes', gymId)
     const ids = await resolveRouteIds(event)
 
     if (ids.length === 0) {
@@ -26,21 +27,11 @@ export default eventHandler(async (event) => {
 
     try {
         const uniqueIds = Array.from(new Set(ids))
-        const routes = await fetchRecordsByIds(pb, {
-            collection: 'routes',
-            ids: uniqueIds,
-            field: 'id',
-            expand: 'location,wall',
-            requestKey: 'export-json-routes',
-            gym: gymId,
-        })
-        const ratings = await fetchRecordsByIds<RatingRecord>(pb, {
-            collection: 'ratings',
-            ids: uniqueIds,
-            field: 'route_id',
-            requestKey: 'export-json-ratings',
-            gym: gymId,
-        })
+        const routes = await fetchRoutesByIds(api, gymId, uniqueIds, [
+            'location',
+            'wall',
+        ])
+        const ratings = await fetchRatingsByRoutes(api, gymId, uniqueIds)
 
         const routeById = new Map<string, RouteRecord>()
         for (const route of routes) {

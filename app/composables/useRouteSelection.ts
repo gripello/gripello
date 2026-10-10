@@ -1,10 +1,12 @@
 import type { Ref } from 'vue'
+import { listRoutes, type RouteQuery } from '~/api/routes'
 
 export function useRouteSelection(
-    pbFilter: Readonly<Ref<string>>,
+    gym: Readonly<Ref<string>>,
+    routeQuery: Readonly<Ref<RouteQuery>>,
     totalItems: Readonly<Ref<number>>,
 ) {
-    const pb = usePocketbase()
+    const queryKey = () => JSON.stringify([gym.value, routeQuery.value])
 
     const selectedRouteIds = ref(new Set<string>())
     let cachedIds: { filter: string; ids: string[] } | null = null
@@ -20,19 +22,17 @@ export function useRouteSelection(
     }
 
     const loadAllRouteIds = async () => {
-        const filter = pbFilter.value
+        const filter = queryKey()
         if (cachedIds?.filter === filter && cachedIds.ids.length) {
             return cachedIds.ids
         }
         invalidate()
-        const records = await pb
-            .collection('routes')
-            .getFullList<{ id: string }>({
-                batch: 200,
-                fields: 'id',
-                filter: filter || undefined,
-            })
-        const ids = records.map((route) => route.id).filter(Boolean)
+        const { items } = await listRoutes<{ id: string }>(
+            gym.value,
+            routeQuery.value,
+            { fields: 'id' },
+        )
+        const ids = items.map((route) => route.id).filter(Boolean)
         cachedIds = { filter, ids }
         return ids
     }
@@ -55,16 +55,16 @@ export function useRouteSelection(
         selectedRouteIds.value = next
     }
 
-    watch(pbFilter, clear)
+    watch(queryKey, clear)
 
     const toggleAll = async () => {
         if (areAllSelected.value) {
             clear()
             return
         }
-        const filter = pbFilter.value
+        const filter = queryKey()
         const ids = await loadAllRouteIds()
-        if (filter === pbFilter.value) selectedRouteIds.value = new Set(ids)
+        if (filter === queryKey()) selectedRouteIds.value = new Set(ids)
     }
 
     return {

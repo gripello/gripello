@@ -1,16 +1,13 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser } from '../../support/seed'
 import { gotoSettled } from '../../support/nav'
-import { PB_URL, seedMap } from '../../support/map'
+import { seedMap } from '../../support/map'
 
 test('logging an ascent from the map updates the wall counter', async ({
     userPage: page,
+    adminApi,
     testPrefix,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const seeded = await seedMap(root, testPrefix, { routes: 3 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 3 })
     try {
         await gotoSettled(page, `/map?location=${seeded.locationId}`)
         const northLabel = page.locator(

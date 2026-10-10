@@ -3,6 +3,12 @@ import { gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { decide, openCase } from '../../support/moderation'
+import { guestApi, listRouteRatings } from '../../support/api'
+
+const ratingVisible = async (routeId: string, id: string) =>
+    (await listRouteRatings(guestApi(), routeId)).some(
+        (rating) => rating.id === id,
+    )
 
 test('the platform hides a reported review and only the platform restores it', async ({
     platformPage,
@@ -14,7 +20,7 @@ test('the platform hides a reported review and only the platform restores it', a
     await gotoSettled(userPage, gymPath('/'))
     const text = `${testPrefix}-spam`
     const commentId = await createComment(userPage, route.id, text)
-    await createReport(userPage, { contentId: commentId, explanation: text })
+    await createReport({ contentId: commentId, explanation: text })
 
     await openCase(platformPage, text, '/platform/moderation')
     await decide(platformPage, 'hide', 'Spam')
@@ -22,10 +28,7 @@ test('the platform hides a reported review and only the platform restores it', a
         platformPage.getByTestId('global-snackbar-action').first(),
     ).toBeVisible()
 
-    const gone = await userPage.request.get(
-        `/api/collections/ratings/records/${commentId}`,
-    )
-    expect(gone.status()).toBe(404)
+    expect(await ratingVisible(route.id, commentId)).toBe(false)
 
     await gotoSettled(adminPage, `/manage/moderation?search=${text}`)
     await adminPage.getByTestId('moderation-view-hidden').click()
@@ -47,15 +50,7 @@ test('the platform hides a reported review and only the platform restores it', a
         .getByRole('button', { name: new RegExp(text) })
         .click()
     await decide(platformPage, 'restore')
-    await expect
-        .poll(async () =>
-            (
-                await userPage.request.get(
-                    `/api/collections/ratings/records/${commentId}`,
-                )
-            ).status(),
-        )
-        .toBe(200)
+    await expect.poll(() => ratingVisible(route.id, commentId)).toBe(true)
 })
 
 test('the staff badge counts open cases', async ({

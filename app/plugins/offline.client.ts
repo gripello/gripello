@@ -1,8 +1,12 @@
+import { onConnect } from '~/composables/useRealtime'
+
+import { useAuthState } from '~/api/auth'
+
 export default defineNuxtPlugin((nuxtApp) => {
-    const pb = usePocketbase()
+    const auth = useAuthState()
     const outbox = useTickOutbox()
     const flush = () => outbox.flush().catch(() => {})
-    let cachedUserId = pb.authStore.record?.id
+    let cachedUserId = auth.currentUser()?.id
 
     function forgetUserCaches() {
         void outbox.clearCachedTicks()
@@ -17,10 +21,10 @@ export default defineNuxtPlugin((nuxtApp) => {
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') void flush()
         })
-        pb.realtime.subscribe('PB_CONNECT', flush).catch(() => {})
+        onConnect(flush)
     })
 
-    pb.authStore.onChange((token, record) => {
+    auth.onAuthChange((token, record) => {
         if (!token) {
             cachedUserId = undefined
             return forgetUserCaches()

@@ -1,9 +1,17 @@
 import { test, expect } from '../../support/fixtures'
-import { authHeader, gotoSettled, gymPath } from '../../support/nav'
+import { apiOf, gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { mailCount, mailbox, waitForMail } from '../../support/mail'
 import { decide, openCase } from '../../support/moderation'
+import {
+    decideModerationCase,
+    fileReport,
+    findReport,
+    guestApi,
+    listModerationCases,
+    updateMe,
+} from '../../support/api'
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 2000))
 const toasts = (page: import('@playwright/test').Page) =>
@@ -12,7 +20,7 @@ const toasts = (page: import('@playwright/test').Page) =>
 test('two moderators hiding the same case at once decide it only once', async ({
     adminPage,
     setterPage,
-    root,
+    api,
     route,
     createUser,
     pageAs,
@@ -24,7 +32,7 @@ test('two moderators hiding the same case at once decide it only once', async ({
     const text = `${testPrefix}-contested`
     const id = await createComment(authorPage, route.id, text)
     const notifier = mailbox(testPrefix, 'notifier')
-    const reportId = await createReport(adminPage, {
+    const reportId = await createReport({
         contentId: id,
         explanation: `${testPrefix}-r`,
         notifierEmail: notifier,
@@ -50,9 +58,7 @@ test('two moderators hiding the same case at once decide it only once', async ({
     await expect.poll(messages).toMatch(/Hidden/)
     await expect.poll(messages).toMatch(/decided elsewhere/i)
 
-    expect((await root.collection('reports').getOne(reportId)).status).toBe(
-        'actioned',
-    )
+    expect((await findReport(api, reportId))?.status).toBe('actioned')
     await waitForMail(adminPage, notifier, { subject: /decision/i })
     await waitForMail(adminPage, author.email, { subject: /hidden/i })
     await settle()
@@ -72,7 +78,7 @@ test('a double click on “Keep visible” decides once', async ({
     const text = `${testPrefix}-double`
     const id = await createComment(author, route.id, text)
     const notifier = mailbox(testPrefix, 'double')
-    await createReport(adminPage, {
+    await createReport({
         contentId: id,
         explanation: `${testPrefix}-r`,
         notifierEmail: notifier,
@@ -133,55 +139,38 @@ test('reporting a review that is already hidden is refused', async ({
     await decide(adminPage, 'hide', 'Spam.')
 
     const late = mailbox(testPrefix, 'late')
-    const res = await adminPage.request.post(
-        '/api/collections/reports/records',
-        {
-            data: {
-                content_type: 'rating',
-                content_id: id,
-                content_url: '/',
-                reason: 'spam_fraud',
-                explanation: `${testPrefix}-late`,
-                notifier_name: 'Late',
-                notifier_email: late,
-                good_faith: true,
-            },
-        },
-    )
     // The review is gone, so the report has nothing to point at any more.
-    expect(res.status()).toBe(400)
+    await expect(
+        fileReport(guestApi(), {
+            contentType: 'rating',
+            contentId: id,
+            explanation: `${testPrefix}-late`,
+            notifierName: 'Late',
+            notifierEmail: late,
+        }),
+    ).rejects.toMatchObject({ status: 400 })
 })
 
 test('a report on a profile that is already hidden is answered at once', async ({
     platformPage,
-    root,
+    apiAs,
     createUser,
     testPrefix,
 }) => {
     const person = await createUser('user', 'hidden-profile')
-    await root
-        .collection('users')
-        .update(person.id, { firstname: `${testPrefix}-Gone` })
+    await updateMe(await apiAs(person), { firstname: `${testPrefix}-Gone` })
     await openCase(platformPage, `${testPrefix}-Gone`, '/platform/moderation')
     await decide(platformPage, 'hide', 'Offensive name.')
 
     const late = mailbox(testPrefix, 'late-profile')
-    const res = await platformPage.request.post(
-        '/api/collections/reports/records',
-        {
-            data: {
-                content_type: 'profile',
-                content_id: person.id,
-                content_url: '/',
-                reason: 'harassment',
-                explanation: `${testPrefix}-late-profile`,
-                notifier_name: 'Late',
-                notifier_email: late,
-                good_faith: true,
-            },
-        },
-    )
-    expect(res.ok()).toBe(true)
+    await fileReport(guestApi(), {
+        contentType: 'profile',
+        contentId: person.id,
+        reason: 'harassment',
+        explanation: `${testPrefix}-late-profile`,
+        notifierName: 'Late',
+        notifierEmail: late,
+    })
     const decision = await waitForMail(platformPage, late, {
         subject: /decision/i,
     })
@@ -190,27 +179,17 @@ test('a report on a profile that is already hidden is answered at once', async (
 
 test('a profile edited after being hidden comes back for review', async ({
     platformPage,
-    root,
+    apiAs,
     createUser,
-    pageAs,
     testPrefix,
 }) => {
     const person = await createUser('user', 'renamer')
-    await root
-        .collection('users')
-        .update(person.id, { firstname: `${testPrefix}-Rude` })
+    const personApi = await apiAs(person)
+    await updateMe(personApi, { firstname: `${testPrefix}-Rude` })
     await openCase(platformPage, `${testPrefix}-Rude`, '/platform/moderation')
     await decide(platformPage, 'hide', 'Offensive name.')
 
-    const personPage = await pageAs(person)
-    const res = await personPage.request.patch(
-        `/api/collections/users/records/${person.id}`,
-        {
-            headers: await authHeader(personPage),
-            data: { firstname: `${testPrefix}-Again` },
-        },
-    )
-    expect(res.ok()).toBe(true)
+    await updateMe(personApi, { firstname: `${testPrefix}-Again` })
 
     await openCase(platformPage, `${testPrefix}-Again`, '/platform/moderation')
 })
@@ -218,7 +197,7 @@ test('a profile edited after being hidden comes back for review', async ({
 test('undo after someone else restored the post explains instead of failing', async ({
     adminPage,
     setterPage,
-    root,
+    api,
     route,
     createUser,
     pageAs,
@@ -231,17 +210,8 @@ test('undo after someone else restored the post explains instead of failing', as
 
     await openCase(adminPage, text)
     await decide(adminPage, 'hide', 'Mistake.')
-    const item = await root
-        .collection('moderation_items')
-        .getFirstListItem(root.filter('snapshot ~ {:text}', { text }))
-    const restored = await setterPage.request.post(
-        `/api/moderation/${item.id}`,
-        {
-            headers: await authHeader(setterPage),
-            data: { action: 'restore', reason: '' },
-        },
-    )
-    expect(restored.ok()).toBe(true)
+    const [item] = await listModerationCases(api, { q: text })
+    await decideModerationCase(await apiOf(setterPage), item!.id, 'restore')
 
     await adminPage.getByTestId('global-snackbar-action').first().click()
     await expect(toasts(adminPage).last()).toContainText(/decided elsewhere/i)

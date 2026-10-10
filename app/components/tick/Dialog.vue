@@ -125,7 +125,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{ saved: [tick: TickRecord] }>()
 
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const { t } = useI18n()
 const { notify, error: notifyError } = useNotification()
 const { createTick, updateTick } = useTickOutbox()
@@ -185,7 +185,7 @@ async function submit() {
             ? await updateTick(props.tick, fields)
             : await createTick({
                   ...fields,
-                  user: pb.authStore.record?.id ?? '',
+                  user: authStore.record?.id ?? '',
                   route: props.routeId,
               })
         notify(t(queued ? 'ticks.savedOffline' : 'ticks.saved'))

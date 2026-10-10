@@ -1,6 +1,7 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, gymPath } from '../../support/nav'
-import { E2E_GYM_SLUG, e2eGymId } from '../../support/seed'
+import { E2E_GYM_SLUG } from '../../support/seed'
+import { getGym, updateGym } from '../../support/api'
 
 test.beforeEach(async ({ page }) => {
     await page.route('https://tile.openstreetmap.org/**', (route) =>
@@ -10,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 
 test('staff save opening hours and the info page shows them', async ({
     adminPage: page,
-    root,
+    adminApi,
 }) => {
     await gotoSettled(page, '/admin/settings?section=info')
     const description = `E2E gym ${Date.now()}`
@@ -25,10 +26,10 @@ test('staff save opening hours and the info page shows them', async ({
     await page.getByTestId('settings-save').click()
     await expect(page.getByTestId('settings-save')).toBeHidden()
 
-    const gym = await root.collection('gyms').getOne(await e2eGymId(root))
+    const gym = await getGym(adminApi, E2E_GYM_SLUG)
     expect(gym.description).toBe(description)
-    expect(gym.opening_hours.mon).toEqual([['07:00', '23:00']])
-    expect(gym.opening_hours.fri).toEqual([['07:00', '23:00']])
+    expect(gym.opening_hours?.mon).toEqual([['07:00', '23:00']])
+    expect(gym.opening_hours?.fri).toEqual([['07:00', '23:00']])
 
     await gotoSettled(page, gymPath('/info'))
     await expect(page.getByTestId('gym-info-description')).toHaveText(
@@ -42,9 +43,9 @@ test('staff save opening hours and the info page shows them', async ({
 
 test('the info page and the landing map show the gym location after consent', async ({
     page,
-    root,
+    adminApi,
 }) => {
-    await root.collection('gyms').update(await e2eGymId(root), {
+    await updateGym(adminApi, E2E_GYM_SLUG, {
         latitude: 52.52,
         longitude: 13.405,
         address: 'Hauptstr. 1\n10115 Berlin',

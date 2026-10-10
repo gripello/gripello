@@ -30,13 +30,10 @@ test.describe('login', () => {
     }) => {
         await gotoSettled(page, '/auth/login')
         let aborted = 0
-        await page.route(
-            /\/api\/collections\/users\/auth-with-password/,
-            (route) => {
-                aborted++
-                return route.abort('failed')
-            },
-        )
+        await page.route(/\/api\/auth\/login$/, (route) => {
+            aborted++
+            return route.abort('failed')
+        })
         await fillLogin(page, 'e2e-admin@gripello.test', 'E2ePassw0rd!')
         await page.getByTestId('login-submit').click()
         await expect(page.getByTestId('global-snackbar').last()).toBeVisible()

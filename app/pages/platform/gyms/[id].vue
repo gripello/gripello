@@ -149,15 +149,15 @@
 </template>
 
 <script setup lang="ts">
-import type { GymRecord } from '~/types/models'
+import { deleteGym as deleteGymRecord, getGymById, updateGym } from '~/api/gyms'
 import type { FeatureFlag } from '#shared/utils/featureFlags'
 import { FEATURE_FLAGS, hasFeature } from '#shared/utils/featureFlags'
+import { setGymFeatures } from '~/api/platform'
 import { gymTitle } from '~/utils/gymNames'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const route = useRoute()
 const gymId = String(route.params.id)
 const membersCard = useTemplateRef<{ openInvite: () => void }>('membersCard')
@@ -166,9 +166,7 @@ const {
     data: gym,
     error,
     refresh,
-} = await useAsyncData(`platform-gym-${gymId}`, () =>
-    pb.collection('gyms').getOne<GymRecord>(gymId, { requestKey: null }),
-)
+} = await useAsyncData(`platform-gym-${gymId}`, () => getGymById(gymId))
 
 useHead({
     title: () => (gym.value ? gymTitle(gym.value) : t('platform.gyms.title')),
@@ -199,9 +197,7 @@ function requestActive(active: boolean) {
 async function setActive(active: boolean) {
     offlineDialogOpen.value = false
     await runToggle(async () => {
-        gym.value = await pb
-            .collection('gyms')
-            .update<GymRecord>(gymId, { active })
+        gym.value = await updateGym(gymId, { active })
     })
 }
 
@@ -209,8 +205,9 @@ const { pending: savingFeature, run: runFeature } = useAsyncAction()
 
 async function setFeature(flag: FeatureFlag, on: boolean) {
     await runFeature(async () => {
-        gym.value = await pb.collection('gyms').update<GymRecord>(gymId, {
-            features: { ...gym.value?.features, [flag]: on },
+        gym.value = await setGymFeatures(gymId, {
+            ...gym.value?.features,
+            [flag]: on,
         })
     })
 }
@@ -226,7 +223,7 @@ const { pending: removing, run: runRemove } = useAsyncAction()
 async function deleteGym() {
     await runRemove(
         async () => {
-            await pb.collection('gyms').delete(gymId)
+            await deleteGymRecord(gymId)
             deleteDialogOpen.value = false
             await navigateTo('/platform/gyms')
         },

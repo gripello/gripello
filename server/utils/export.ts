@@ -1,6 +1,5 @@
 import { createError, readBody, getRequestURL, type H3Event } from 'h3'
-import type PocketBase from 'pocketbase'
-import type { RouteRecord } from '../../types/models'
+import type { RatingRecord, RouteRecord } from '../../types/models'
 import {
     formatDate,
     locationName,
@@ -8,6 +7,7 @@ import {
     normalizeCreators,
 } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
+import { fetchAll, type Api } from './api-server'
 
 interface ExportBody {
     ids?: unknown[]
@@ -17,15 +17,6 @@ interface ExportBody {
     typeLabels?: Record<string, unknown>
     columns?: unknown[]
     show?: Record<string, unknown>
-}
-
-interface FetchByIdsOptions {
-    collection: string
-    ids: string[]
-    field: string
-    requestKey: string
-    expand?: string
-    gym: string
 }
 
 export interface ExportColumn {
@@ -92,13 +83,6 @@ export async function pdfBuffer(
     return done
 }
 
-export function buildIdFilter(pb: PocketBase, ids: string[], field: string) {
-    if (ids.length === 0) {
-        return ''
-    }
-    return ids.map((id) => pb.filter(`${field} = {:id}`, { id })).join(' || ')
-}
-
 export function chunk<T>(source: T[], size: number): T[][] {
     const output: T[][] = []
     for (let index = 0; index < source.length; index += size) {
@@ -107,26 +91,43 @@ export function chunk<T>(source: T[], size: number): T[][] {
     return output
 }
 
-export async function fetchRecordsByIds<T = RouteRecord>(
-    pb: PocketBase,
-    options: FetchByIdsOptions,
-): Promise<T[]> {
-    const { collection, ids, field, requestKey, expand, gym } = options
-    if (ids.length === 0) {
-        return []
-    }
+export async function fetchRatingsByRoutes(
+    api: Api,
+    gym: string,
+    routeIds: string[],
+): Promise<RatingRecord[]> {
+    const lists = await Promise.all(
+        chunk(routeIds, 25).map((chunkIds) =>
+            fetchAll<RatingRecord>(
+                api,
+                `/gyms/${gym}/ratings`,
+                { route: chunkIds.join(',') },
+                500,
+            ),
+        ),
+    )
+    return lists.flat()
+}
 
-    const chunks = chunk(ids, 25)
-    const requests = chunks.map((chunkIds, index) => {
-        return pb.collection(collection).getFullList<T>({
-            filter: `(${buildIdFilter(pb, chunkIds, field)}) && ${pb.filter('gym = {:gym}', { gym })}`,
-            expand,
-            requestKey: `${requestKey}-${index}`,
-        })
-    })
-
-    const results = await Promise.all(requests)
-    return results.flat()
+export async function fetchRoutesByIds(
+    api: Api,
+    gym: string,
+    ids: string[],
+    include: ('location' | 'wall')[] = [],
+): Promise<RouteRecord[]> {
+    const lists = await Promise.all(
+        chunk(ids, 200).map((chunkIds) =>
+            api<{ items: RouteRecord[] }>(`/gyms/${gym}/routes`, {
+                query: {
+                    ids: chunkIds.join(','),
+                    archived: 'all',
+                    limit: 1000,
+                    ...(include.length && { include: include.join(',') }),
+                },
+            }),
+        ),
+    )
+    return lists.flatMap((list) => list.items)
 }
 
 export function resolveApplicationUrl(event: H3Event) {
@@ -282,18 +283,4 @@ export function attachmentHeader(filename: string) {
             .replace(/[^\w.-]+/g, '-')
             .replace(/^-+|-+$/g, '') || 'export'
     return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`
-}
-
-export async function fetchLogo(url: string) {
-    if (!url) {
-        return null
-    }
-    try {
-        const response = await fetch(url)
-        if (!response.ok) throw new Error('Failed to fetch logo')
-        return Buffer.from(await response.arrayBuffer())
-    } catch (error) {
-        console.error('Failed to fetch logo:', error)
-        return null
-    }
 }
