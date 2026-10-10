@@ -1,24 +1,23 @@
 <script setup lang="ts">
-import type { LocationRecord, RouteRecord, WallRecord } from '~/types/models'
+import { listLocations, listRoutes, listWalls } from '~/api/routes'
+import type { RouteRecord } from '~/types/models'
 import { sanitizeGymMap } from '#shared/utils/mapGeometry'
 import { cacheKeys } from '~/utils/realtimeCache'
 
 const gymPath = useGymPath()
 
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
 
 const { data: unplaced } = useAsyncData(
     cacheKeys.unplacedRoutes,
     async () => {
         const [walls, locations] = await Promise.all([
-            pb.collection('walls').getFullList<WallRecord>({
-                filter: gymFilter(pb, gymId.value),
-                fields: 'location',
-                requestKey: 'unplacedWalls',
-            }),
-            pb.collection('locations').getFullList<LocationRecord>({
-                filter: gymFilter(pb, gymId.value),
+            listWalls(
+                gymId.value,
+                {},
+                { fields: 'location', requestKey: 'unplacedWalls' },
+            ),
+            listLocations(gymId.value, {
                 fields: 'id,map',
                 requestKey: 'unplacedLocations',
             }),
@@ -36,21 +35,15 @@ const { data: unplaced } = useAsyncData(
             ),
         ]
         if (!locationIds.length) return null
-        const locationFilter = locationIds
-            .map((id, index) =>
-                pb.filter(`location = {:l${index}}`, { [`l${index}`]: id }),
-            )
-            .join(' || ')
-        const result = await pb
-            .collection('routes')
-            .getList<RouteRecord>(1, 1, {
-                filter: `archived = false && wall = "" && (${locationFilter})`,
-                fields: 'location',
-                sort: 'location',
-                requestKey: 'unplacedRoutes',
-            })
-        return result.totalItems
-            ? { count: result.totalItems, location: result.items[0]!.location }
+        const wanted = new Set(locationIds)
+        const { items } = await listRoutes<RouteRecord>(
+            gymId.value,
+            { wall: 'none', sort: 'location' },
+            { fields: 'location', requestKey: 'unplacedRoutes' },
+        )
+        const unplaced = items.filter((route) => wanted.has(route.location!))
+        return unplaced.length
+            ? { count: unplaced.length, location: unplaced[0]!.location }
             : null
     },
     { server: false, default: () => null },

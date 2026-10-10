@@ -41,6 +41,7 @@
 </template>
 
 <script setup lang="ts">
+import { fileUrl } from '~/api/client'
 import type { GymRecord } from '~/types/models'
 import { avatarColor, nameInitials } from '~/utils/avatar'
 import { gymTitle } from '~/utils/gymNames'
@@ -49,6 +50,6 @@ const props = defineProps<{ gym: GymRecord }>()
 
 const title = computed(() => gymTitle(props.gym))
 const logoUrl = computed(() =>
-    usePbFileUrl(props.gym, props.gym.page_logo, { thumb: '0x200' }),
+    fileUrl('gyms', props.gym, props.gym.page_logo, { thumb: '0x200' }),
 )
 </script>

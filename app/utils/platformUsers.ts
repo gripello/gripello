@@ -21,11 +21,6 @@ export interface MembershipChip {
     roleColor: string | null
 }
 
-type Filter = (raw: string, params?: Record<string, unknown>) => string
-
-export const PLATFORM_USER_FIELDS =
-    'id,collectionId,email,username,firstname,name,avatar,verified,platform_admin,suspended_until,suspension_reason,created,expand.memberships_via_user.id,expand.memberships_via_user.gym,expand.memberships_via_user.role'
-
 export function userDisplayName(user: UserRecord) {
     return (
         [user.firstname, user.name].filter(Boolean).join(' ') ||
@@ -33,28 +28,6 @@ export function userDisplayName(user: UserRecord) {
         user.email ||
         ''
     )
-}
-
-export function platformUserFilter(
-    filter: Filter,
-    term: string,
-    kind: PlatformUserFilter | null,
-    emailMatchIds: string[] = [],
-) {
-    const parts: string[] = []
-    const needle = term.trim()
-    if (needle) {
-        const byId = emailMatchIds.map((id) => filter('id = {:id}', { id }))
-        const fields = filter(
-            'email ~ {:term} || username ~ {:term} || firstname ~ {:term} || name ~ {:term}',
-            { term: needle },
-        )
-        parts.push(`(${[fields, ...byId].join(' || ')})`)
-    }
-    if (kind === 'platform_admins') parts.push('platform_admin = true')
-    if (kind === 'unverified') parts.push('verified = false')
-    if (kind === 'suspended') parts.push('suspended_until > @now')
-    return parts.join(' && ')
 }
 
 export function membershipChips(

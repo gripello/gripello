@@ -1,1 +1,1 @@
-export const usePocketbase = (): unknown => (globalThis as any).usePocketbase()
+export const useAuthStore = (): unknown => (globalThis as any).useAuthStore()

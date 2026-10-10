@@ -1,24 +1,22 @@
+import {
+    deleteUser,
+    e2eGymId,
+    getPlatformUser,
+    setUserFlags,
+} from '../../support/api'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 
 test('platform admin edits a user, manages memberships and deletes the account', async ({
     platformPage: page,
-    root,
+    api,
+    createUser,
 }) => {
     const stamp = Date.now()
-    const email = `e2e-pu-${stamp}@gripello.test`
-    const user = await root.collection('users').create({
-        email,
-        username: `e2e_pu_${stamp}`,
-        password: 'e2e-password-123',
-        passwordConfirm: 'e2e-password-123',
-        firstname: 'Paula',
-        name: 'User',
-        verified: false,
-    })
-    const gym = await root
-        .collection('gyms')
-        .getFirstListItem('slug = "e2e"', { requestKey: null })
+    const user = await createUser('user', 'pu')
+    const email = user.email
+    setUserFlags(user.id, { verified: false })
+    const gym = { id: await e2eGymId() }
     try {
         await gotoSettled(page, '/platform/users')
         await page.getByTestId('filter-search').fill(email)
@@ -42,7 +40,7 @@ test('platform admin edits a user, manages memberships and deletes the account',
         await expect(dialog).toBeHidden()
         await expect
             .poll(async () => {
-                const saved = await root.collection('users').getOne(user.id)
+                const saved = await getPlatformUser(api, user.id)
                 return [saved.username, saved.firstname, saved.verified]
             })
             .toEqual([`e2e_renamed_${stamp}`, 'Renamed', true])
@@ -70,16 +68,13 @@ test('platform admin edits a user, manages memberships and deletes the account',
         await page.getByTestId('platform-user-delete-account').click()
         await page.getByTestId('confirm-dialog-confirm').click()
         await expect(row).toHaveCount(0)
-        await expect(
-            root.collection('users').getOne(user.id),
-        ).rejects.toMatchObject({
+        await expect(getPlatformUser(api, user.id)).rejects.toMatchObject({
             status: 404,
         })
     } finally {
-        await root
-            .collection('users')
-            .delete(user.id)
-            .catch(() => {})
+        try {
+            deleteUser(user.id)
+        } catch {}
     }
 })
 

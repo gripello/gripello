@@ -38,7 +38,7 @@
                                 <RouteBetaTile
                                     :video="video"
                                     :deletable="
-                                        video.user === pb.authStore.record?.id
+                                        video.user === authStore.record?.id
                                     "
                                     @report="reportTarget = video"
                                     @delete="deleteTarget = video"
@@ -162,6 +162,9 @@
 </template>
 
 <script setup lang="ts">
+import { deleteBeta, listGymBetas } from '~/api/ratings'
+import { listFeed } from '~/api/ticks'
+import { listRoutes } from '~/api/routes'
 import { timeAgo } from '#shared/utils/formatting'
 import type { FeedBeta, FeedRoute } from '~/utils/feed'
 import type { FeedTick } from '~/utils/friends'
@@ -174,10 +177,10 @@ const ROUTE_PREVIEW = 8
 const SEND_LIMIT = 100
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const gymId = useCurrentGymId()
 const gymPath = useGymPath()
-const signedIn = pb.authStore.isValid
+const signedIn = authStore.isValid
 
 useHead({ title: t('page.title.feed') })
 
@@ -187,33 +190,21 @@ const { data, error, refresh } = await useAsyncData(
         const gym = gymId.value
         const since = new Date(Date.now() - NEW_ROUTE_DAYS * 86_400_000)
         const [routes, betas, ticks] = await Promise.all([
-            pb.collection('routes').getFullList<FeedRoute>({
-                filter: gymFilter(
-                    pb,
-                    gym,
-                    pb.filter('archived = false && created >= {:since}', {
-                        since,
-                    }),
-                ),
-                sort: '-created',
-                expand: 'wall',
-                requestKey: null,
-            }),
-            pb.collection('beta_videos').getList<FeedBeta>(1, BETA_LIMIT, {
-                filter: gymFilter(pb, gym),
-                sort: '-created',
-                expand: 'route',
-                requestKey: null,
+            listRoutes<FeedRoute>(
+                gym,
+                { since, sort: '-created', include: ['wall'] },
+                { requestKey: null },
+            ).then((list) => list.items),
+            listGymBetas<FeedBeta>(gym, {
+                page: 1,
+                limit: BETA_LIMIT,
+                include: ['route'],
             }),
             signedIn
-                ? pb
-                      .collection('friend_ticks')
-                      .getList<FeedTick>(1, SEND_LIMIT, {
-                          filter: pb.filter('route.gym = {:gym}', { gym }),
-                          sort: '-created',
-                          expand: 'route',
-                          requestKey: null,
-                      })
+                ? listFeed(
+                      { gym, sort: '-created', page: 1, limit: SEND_LIMIT },
+                      { requestKey: null },
+                  )
                 : { items: [] as FeedTick[] },
         ])
         return { routes, betas: betas.items, ticks: ticks.items }
@@ -242,7 +233,7 @@ const { pending: deleting, run: runDelete } = useAsyncAction()
 async function confirmDelete() {
     const video = deleteTarget.value
     if (!video) return
-    await runDelete(() => pb.collection('beta_videos').delete(video.id), {
+    await runDelete(() => deleteBeta(video.id), {
         success: t('beta.deleted'),
     })
     deleteTarget.value = null

@@ -64,10 +64,10 @@
 </template>
 
 <script setup lang="ts">
+import { createLocation, deleteLocation, updateLocation } from '~/api/routes'
 import type { LocationRecord } from '~/types/models'
 import { syncDrafts } from '~/utils/drafts'
 
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
 const { t } = useI18n()
 const { run: runAction } = useAsyncAction()
@@ -107,11 +107,7 @@ async function run(id: string, action: () => Promise<unknown>) {
 async function add() {
     const name = newName.value.trim()
     if (!name) return
-    if (
-        await run('new', () =>
-            pb.collection('locations').create({ name, gym: gymId.value }),
-        )
-    ) {
+    if (await run('new', () => createLocation(gymId.value, { name }))) {
         newName.value = ''
     }
 }
@@ -123,15 +119,13 @@ async function rename(location: LocationRecord) {
         return
     }
     const saved = await run(location.id, () =>
-        pb.collection('locations').update(location.id, { name }),
+        updateLocation(location.id, { name }),
     )
     if (!saved) draftNames[location.id] = location.name
 }
 
 function remove(location: LocationRecord) {
-    return run(location.id, () =>
-        pb.collection('locations').delete(location.id),
-    )
+    return run(location.id, () => deleteLocation(location.id))
 }
 </script>
 

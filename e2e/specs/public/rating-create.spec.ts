@@ -32,8 +32,10 @@ test('rolls the review back when the submit fails', async ({ page, route }) => {
     await page.getByTestId('review-open-cta').click()
     await expect(page.getByTestId('review-form-dialog')).toBeVisible()
 
-    await page.route('**/api/collections/ratings/records', (route) =>
-        route.abort('failed'),
+    await page.route('**/api/routes/*/ratings', (route) =>
+        route.request().method() === 'POST'
+            ? route.abort('failed')
+            : route.fallback(),
     )
 
     await page

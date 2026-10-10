@@ -18,7 +18,7 @@ test('Art. 16(4): the notifier gets a receipt and moderators get an alert', asyn
         route.id,
         `${testPrefix}-receipt`,
     )
-    const reportId = await createReport(page, {
+    const reportId = await createReport({
         contentId: commentId,
         explanation: `${testPrefix}-receipt-explanation`,
         notifierEmail: notifier,
@@ -48,7 +48,7 @@ test('Art. 16(5): the notifier is told the decision, exactly once', async ({
         route.id,
         `${testPrefix}-decide`,
     )
-    await createReport(page, {
+    await createReport({
         contentId: commentId,
         explanation: `${testPrefix}-decide-explanation`,
         notifierEmail: notifier,

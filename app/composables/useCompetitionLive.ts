@@ -20,37 +20,22 @@ export function useCompetitionLive(
     competitionId: Ref<string>,
     onChange: (change: CompetitionChange) => void,
 ) {
-    const pb = usePocketbase()
-    const subscribed: Promise<() => Promise<void>>[] = []
-    const release = (subscription: Promise<() => Promise<void>>) =>
-        void subscription.then((unsubscribe) => unsubscribe()).catch(() => {})
-
+    let stopResync: (() => void) | undefined
     onMounted(() => {
-        subscribed.push(
-            pb.realtime.subscribe('PB_CONNECT', () =>
-                onChange({
-                    competition: competitionId.value,
-                    kind: 'resync',
-                    at: Date.now(),
-                }),
-            ),
-        )
-        watch(
-            competitionId,
-            (id, _, onCleanup) => {
-                const subscription = pb.realtime.subscribe(
-                    competitionTopic(id),
-                    (change: CompetitionChange) => {
-                        if (change.competition === competitionId.value)
-                            onChange(change)
-                    },
-                )
-                subscription.catch(() => {})
-                onCleanup(() => release(subscription))
-            },
-            { immediate: true },
+        stopResync = onConnect(() =>
+            onChange({
+                competition: competitionId.value,
+                kind: 'resync',
+                at: Date.now(),
+            }),
         )
     })
+    onBeforeUnmount(() => stopResync?.())
 
-    onBeforeUnmount(() => subscribed.forEach(release))
+    useRealtime(
+        () => competitionTopic(competitionId.value),
+        (change: CompetitionChange) => {
+            if (change.competition === competitionId.value) onChange(change)
+        },
+    )
 }

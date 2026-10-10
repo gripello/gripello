@@ -1,27 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed as vueComputed, ref as vueRef } from 'vue'
+import { routeApi } from '../api/apiMock'
 
 vi.stubGlobal('ref', vueRef)
 vi.stubGlobal('computed', vueComputed)
 vi.stubGlobal('onMounted', () => {})
-vi.stubGlobal('usePbSubscription', () => ({ subscribe: vi.fn() }))
+vi.stubGlobal('useRealtime', vi.fn())
+vi.stubGlobal('useAuthStore', () => ({ record: { id: 'u1' } }))
 
-let pbMock: any
-vi.stubGlobal('usePocketbase', () => pbMock)
+const SETTINGS = {
+    enabled: true,
+    publicKey: 'key',
+    topics: [{ key: 'new_routes' }],
+}
 
 describe('usePushSubscription', () => {
-    let getFullList: ReturnType<typeof vi.fn>
+    let devices: () => Promise<unknown>
+    let api: ReturnType<typeof vi.fn>
 
     beforeEach(() => {
         vi.resetModules()
-        getFullList = vi.fn().mockResolvedValue([{ id: 'd1', endpoint: 'e' }])
-        pbMock = {
-            send: vi.fn().mockResolvedValue({
-                pushKey: 'key',
-                topics: [{ key: 'new_routes' }],
-            }),
-            collection: vi.fn().mockReturnValue({ getFullList }),
-        }
+        devices = async () => ({ items: [{ id: 'd1', endpoint: 'e' }] })
+        api = vi.fn(async (path: string) =>
+            path === '/notifications/settings'
+                ? SETTINGS
+                : path === '/me/push-subscriptions'
+                  ? devices()
+                  : undefined,
+        )
+        routeApi(api)
     })
 
     async function load() {
@@ -38,39 +45,27 @@ describe('usePushSubscription', () => {
     })
 
     it('flags a load error instead of showing an empty account', async () => {
-        getFullList.mockRejectedValue(new Error('offline'))
+        devices = () => Promise.reject(new Error('offline'))
         vi.spyOn(console, 'error').mockImplementation(() => {})
         const push = await load()
         await push.refresh()
         expect(push.loadError.value).toBe(true)
         expect(push.topics.value).toEqual([])
 
-        getFullList.mockResolvedValue([])
+        devices = async () => ({ items: [] })
         await push.refresh()
         expect(push.loadError.value).toBe(false)
     })
-})
 
-describe('usePushSubscription test push', () => {
     it('sends the test push to this device only', async () => {
-        const send = vi.fn().mockResolvedValue(undefined)
-        pbMock = {
-            send,
-            collection: vi.fn().mockReturnValue({
-                getFullList: vi.fn().mockResolvedValue([]),
-            }),
-        }
-        const { usePushSubscription } =
-            await import('~/composables/usePushSubscription')
-        const push = usePushSubscription()
+        const push = await load()
         push.currentEndpoint.value = 'https://fcm.googleapis.com/fcm/send/abc'
 
         await push.sendTest()
 
-        expect(send).toHaveBeenCalledWith('/api/notifications/test', {
+        expect(api).toHaveBeenCalledWith('/me/push/test', {
             method: 'POST',
             body: { endpoint: 'https://fcm.googleapis.com/fcm/send/abc' },
-            requestKey: null,
         })
     })
 })

@@ -150,6 +150,16 @@
 </template>
 
 <script setup lang="ts">
+import {
+    createCategory,
+    createCompetition,
+    deleteCompetition,
+    getCompetition,
+    listCategories,
+    listCompetitionRoutes,
+    publishCompetition,
+    updateCompetition,
+} from '~/api/competitions'
 import type { LocaleCode } from '~/utils/locales'
 import type {
     CompetitionExportFormat,
@@ -161,12 +171,7 @@ import {
     setupChecklist,
     type SetupStep,
 } from '~/utils/competitions'
-import type {
-    CompetitionCategoryRecord,
-    CompetitionRecord,
-    CompetitionRouteRecord,
-    CompetitionStatus,
-} from '~/types/models'
+import type { CompetitionStatus } from '~/types/models'
 
 const gymPath = useGymPath()
 
@@ -176,7 +181,6 @@ definePageMeta({
 })
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 const route = useRoute()
 const { pending, run } = useAsyncAction()
 const { pending: exporting, download } = useCompetitionExport()
@@ -194,10 +198,7 @@ const {
     refresh,
 } = await useAsyncData(
     () => `manage-competition:${competitionId.value}`,
-    () =>
-        pb
-            .collection('competitions')
-            .getOne<CompetitionRecord>(competitionId.value),
+    () => getCompetition(competitionId.value),
     { enabled: () => !!competitionId.value },
 )
 
@@ -207,22 +208,11 @@ if (competition.value && competition.value.gym !== useCurrentGymId().value)
 const { data: setup, refresh: refreshSetup } = useAsyncData(
     () => `manage-competition-setup:${competitionId.value}`,
     async () => {
-        const filter = pb.filter('competition = {:id}', {
-            id: competitionId.value,
-        })
         const [categories, routes] = await Promise.all([
-            pb
-                .collection('competition_categories')
-                .getList(1, 1, { filter, requestKey: null }),
-            pb
-                .collection('competition_routes')
-                .getFullList<CompetitionRouteRecord>({
-                    filter,
-                    fields: 'points,hold_count,voided',
-                    requestKey: null,
-                }),
+            listCategories(competitionId.value),
+            listCompetitionRoutes(competitionId.value),
         ])
-        return { categoryCount: categories.totalItems, routes }
+        return { categoryCount: categories.length, routes }
     },
     { enabled: () => !!competitionId.value },
 )
@@ -372,9 +362,9 @@ async function setStatus(next: CompetitionStatus) {
     if (!current || current.status === next) return
     const updated = await run(
         () =>
-            pb
-                .collection('competitions')
-                .update<CompetitionRecord>(current.id, { status: next }),
+            next === 'published'
+                ? publishCompetition(current.id)
+                : updateCompetition(current.id, { status: next }),
         { success: t('competitions.saved') },
     )
     if (updated) competition.value = updated
@@ -385,33 +375,24 @@ async function copy() {
     if (!source) return
     copying.value = true
     const created = await run(async () => {
-        const copied = await pb
-            .collection('competitions')
-            .create<CompetitionRecord>(
-                copiedCompetition(
-                    source,
-                    t('competitions.copyName', { name: source.name }),
-                ),
-            )
-        const categories = await pb
-            .collection('competition_categories')
-            .getFullList<CompetitionCategoryRecord>({
-                filter: pb.filter('competition = {:id}', { id: source.id }),
-            })
+        const copied = await createCompetition(
+            source.gym ?? '',
+            copiedCompetition(
+                source,
+                t('competitions.copyName', { name: source.name }),
+            ),
+        )
+        const categories = await listCategories(source.id)
         await Promise.all(
             categories.map(
                 ({ name, gender, min_birth_year, max_birth_year, sort }) =>
-                    pb.collection('competition_categories').create(
-                        {
-                            competition: copied.id,
-                            name,
-                            gender,
-                            min_birth_year,
-                            max_birth_year,
-                            sort,
-                        },
-                        { requestKey: null },
-                    ),
+                    createCategory(copied.id, {
+                        name,
+                        gender,
+                        min_birth_year,
+                        max_birth_year,
+                        sort,
+                    }),
             ),
         )
         return copied
@@ -424,7 +405,7 @@ async function remove() {
     const current = competition.value
     if (!current) return
     await run(async () => {
-        await pb.collection('competitions').delete(current.id)
+        await deleteCompetition(current.id)
         deleteOpen.value = false
         await navigateTo(gymPath('/manage/competitions'))
     })

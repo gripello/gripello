@@ -1,5 +1,6 @@
-import PocketBase from 'pocketbase'
 import type { Page } from '@playwright/test'
+import { execFileSync } from 'node:child_process'
+import { apiFetch } from './auth'
 import {
     gradeIndex,
     gradeLabels,
@@ -17,165 +18,93 @@ export interface SeededUser {
     role: 'admin' | 'routesetter' | 'user' | 'platform'
 }
 
-export async function authAsSuperuser(pb: PocketBase) {
-    const email = process.env.PB_SUPERUSER_EMAIL || 'e2e-super@gripello.test'
-    const password = process.env.PB_SUPERUSER_PASSWORD || 'e2e-superuser-pw-123'
-    await pb.collection('_superusers').authWithPassword(email, password)
+export function gripelloAdmin(...args: string[]) {
+    const command =
+        process.env.E2E_GRIPELLO || 'go -C backend run ./cmd/gripello'
+    return execFileSync(
+        'sh',
+        ['-c', `${command} admin "$@"`, 'gripello', ...args],
+        {
+            encoding: 'utf8',
+            env: {
+                DATABASE_URL:
+                    'postgres://postgres:dev@localhost:5433/gripello?sslmode=disable',
+                ...process.env,
+            },
+        },
+    ).trim()
 }
 
-export async function ensureGym(pb: PocketBase) {
-    const filter = pb.filter('slug = {:slug}', { slug: E2E_GYM_SLUG })
-    const gym = await pb
-        .collection('gyms')
-        .getFirstListItem(filter, { requestKey: null })
-        .catch(() =>
-            pb.collection('gyms').create({
-                slug: E2E_GYM_SLUG,
-                name: 'E2E Gym',
-                active: true,
-                features: { beta_videos: true },
-            }),
-        )
-    if (gym.features?.beta_videos) return gym
-    return pb.collection('gyms').update(gym.id, {
-        features: { ...gym.features, beta_videos: true },
-    })
-}
-
-let cachedE2eGymId: Promise<string> | null = null
-
-export function e2eGymId(pb: PocketBase) {
-    cachedE2eGymId ??= pb
-        .collection('gyms')
-        .getFirstListItem(pb.filter('slug = {:slug}', { slug: E2E_GYM_SLUG }), {
-            requestKey: null,
-        })
-        .then((gym) => gym.id)
-        .catch((error) => {
-            cachedE2eGymId = null
-            throw error
-        })
-    return cachedE2eGymId
-}
-
-export function e2eGym() {
-    return e2eGymId(adminClient())
-}
-
-export async function getRoleIds(pb: PocketBase) {
-    const roles = await pb.collection('roles').getFullList({
-        filter: pb.filter('gym = {:gym}', { gym: await e2eGymId(pb) }),
-        requestKey: null,
-    })
-    const byName: Record<string, string> = {}
-    for (const r of roles) byName[r.name] = r.id
-    return byName
-}
-
-export async function e2eRole(pb: PocketBase, name: string) {
-    return pb.collection('roles').getFirstListItem(
-        pb.filter('gym = {:gym} && name = {:name}', {
-            gym: await e2eGymId(pb),
-            name,
-        }),
-        { requestKey: null },
+export function ensureGym() {
+    return gripelloAdmin(
+        'create-gym',
+        '--slug',
+        E2E_GYM_SLUG,
+        '--name',
+        'E2E Gym',
+        '--features',
+        JSON.stringify({ beta_videos: true }),
     )
 }
 
+export async function getRoleIds(): Promise<Record<string, string>> {
+    return { admin: 'admin', routesetter: 'routesetter' }
+}
+
 export async function setMembership(
-    pb: PocketBase,
+    _pb: unknown,
     userId: string,
     roleId: string | undefined,
 ) {
-    const gym = await e2eGymId(pb)
-    const existing = await pb
-        .collection('memberships')
-        .getFirstListItem(
-            pb.filter('user = {:user} && gym = {:gym}', { user: userId, gym }),
-            { requestKey: null },
-        )
-        .catch(() => null)
-    if (!roleId) {
-        if (existing) await pb.collection('memberships').delete(existing.id)
-        return null
-    }
-    if (existing) {
-        return pb
-            .collection('memberships')
-            .update(existing.id, { role: roleId })
-    }
-    return pb
-        .collection('memberships')
-        .create({ user: userId, gym, role: roleId })
+    return (
+        gripelloAdmin(
+            'add-membership',
+            '--user',
+            userId,
+            '--gym',
+            E2E_GYM_SLUG,
+            '--role',
+            roleId ?? '',
+        ) || null
+    )
 }
 
 export async function ensureUser(
-    pb: PocketBase,
+    pb: unknown,
     roleId: string | undefined,
     role: SeededUser['role'],
     prefix: string,
+    platformAdmin = false,
 ): Promise<SeededUser> {
     const email = `${prefix}-${role}@gripello.test`
     const password = 'E2ePassw0rd!'
-
-    const existing = await pb
-        .collection('users')
-        .getFirstListItem(pb.filter('email = {:email}', { email }), {
-            requestKey: null,
-        })
-        .catch(() => null)
-
-    let record
-    if (existing) {
-        record = await pb.collection('users').update(existing.id, {
-            password,
-            passwordConfirm: password,
-            verified: true,
-        })
-    } else {
-        record = await pb.collection('users').create({
-            email,
-            emailVisibility: true,
-            password,
-            passwordConfirm: password,
-            verified: true,
-            username: `${prefix}${role}`,
-            firstname: 'E2E',
-            name: role,
-        })
-    }
-    await setMembership(pb, record.id, roleId)
-
-    return { id: record.id, email, password, role }
-}
-
-export async function ensureLocations(pb: PocketBase) {
-    const idByName: Record<string, string> = {}
-    for (const name of LOCATIONS) {
-        let record
-        try {
-            record = await pb
-                .collection('locations')
-                .getFirstListItem(pb.filter('name = {:name}', { name }), {
-                    requestKey: null,
-                })
-        } catch {
-            record = await pb
-                .collection('locations')
-                .create({ name, gym: await e2eGymId(pb) })
-        }
-        idByName[name] = record.id
-    }
-    return idByName
+    const id = gripelloAdmin(
+        'create-user',
+        '--email',
+        email,
+        '--password',
+        password,
+        '--username',
+        `${prefix}${role}`,
+        '--firstname',
+        'E2E',
+        '--name',
+        role,
+        '--verified',
+        ...(platformAdmin ? ['--platform-admin'] : []),
+    )
+    await setMembership(pb, id, roleId)
+    return { id, email, password, role }
 }
 
 export async function locationId(page: Page, name: string) {
     const response = await page.request.get(
-        '/api/collections/locations/records',
-        { params: { filter: `name = "${name}"` } },
+        `/api/gyms/${E2E_GYM_SLUG}/locations`,
     )
-    const { items } = await response.json()
-    return items[0].id as string
+    const { items } = (await response.json()) as {
+        items: { id: string; name: string }[]
+    }
+    return items.find((location) => location.name === name)!.id
 }
 
 export function gradeOf(system: GradeSystem, grade: string) {
@@ -194,171 +123,71 @@ function randomGrade(type: string) {
     return gradeOf(system, labels[Math.floor(Math.random() * labels.length)]!)
 }
 
-export async function seedRoutes(pb: PocketBase, prefix: string, count = 60) {
-    const locationIds = await ensureLocations(pb)
-    const locationFor = (index: number) =>
-        locationIds[LOCATIONS[index % LOCATIONS.length]]
-
-    const existing = await pb.collection('routes').getFullList({
-        filter: `name ~ "${prefix}-route-"`,
-        requestKey: null,
-    })
-    for (const route of existing) {
-        const index = Number(route.name.split('-').pop())
-        const archived = index % 10 === 0
-        if (
-            route.location !== locationFor(index) ||
-            route.archived !== archived
-        ) {
-            await pb
-                .collection('routes')
-                .update(route.id, { location: locationFor(index), archived })
-        }
+export async function seedRoutes(token: string, prefix: string, count = 60) {
+    const gymPath = `/gyms/${E2E_GYM_SLUG}`
+    const { items: locations } = await apiFetch<{
+        items: { id: string; name: string }[]
+    }>(`${gymPath}/locations`, { token })
+    const locationIds: Record<string, string> = {}
+    for (const name of LOCATIONS) {
+        locationIds[name] =
+            locations.find((location) => location.name === name)?.id ??
+            (
+                await apiFetch<{ id: string }>(`${gymPath}/locations`, {
+                    token,
+                    method: 'POST',
+                    body: { name },
+                })
+            ).id
     }
-    if (existing.length >= count) return existing
-
-    const created = [...existing]
-    for (let i = existing.length; i < count; i++) {
-        const route = await pb.collection('routes').create({
-            name: `${prefix}-route-${i}`,
-            ...randomGrade(TYPES[i % TYPES.length]!),
-            anchor_point: 1 + (i % 40),
-            location: locationFor(i),
-            type: TYPES[i % TYPES.length],
-            comment: `Seed comment ${i}`,
-            creator: [`Setter ${1 + (i % 5)}`],
-            screw_date: new Date(Date.now() - i * 86_400_000)
-                .toISOString()
-                .slice(0, 10),
-            color: '#F44336',
-            archived: i % 10 === 0,
-        })
-        created.push(route)
+    const { items: existing } = await apiFetch<{
+        items: { id: string; name: string }[]
+    }>(
+        `${gymPath}/routes?archived=all&limit=1000&q=${encodeURIComponent(`${prefix}-route-`)}`,
+        { token },
+    )
+    const names = new Set(existing.map((route) => route.name))
+    const routes = [...existing]
+    for (let i = 0; i < count; i++) {
+        const name = `${prefix}-route-${i}`
+        if (names.has(name)) continue
+        routes.push(
+            await apiFetch<{ id: string; name: string }>(`${gymPath}/routes`, {
+                token,
+                method: 'POST',
+                body: {
+                    name,
+                    ...randomGrade(TYPES[i % TYPES.length]!),
+                    anchor_point: 1 + (i % 40),
+                    location: locationIds[LOCATIONS[i % LOCATIONS.length]!],
+                    type: TYPES[i % TYPES.length],
+                    comment: `Seed comment ${i}`,
+                    creator: [`Setter ${1 + (i % 5)}`],
+                    screw_date: new Date(Date.now() - i * 86_400_000)
+                        .toISOString()
+                        .slice(0, 10),
+                    color: '#F44336',
+                    archived: i % 10 === 0,
+                },
+            }),
+        )
     }
-    return created
+    return { routes, created: routes.length > existing.length }
 }
 
 export async function seedRatings(
-    pb: PocketBase,
     prefix: string,
     routes: { id: string }[],
     count = 40,
 ) {
-    const existing = await pb.collection('ratings').getFullList({
-        filter: `comment ~ "${prefix}-rating-"`,
-        requestKey: null,
-    })
-    if (existing.length >= count) return existing
-
-    const created = [...existing]
-    for (let i = existing.length; i < count; i++) {
-        const route = routes[i % routes.length]
-        const rating = await pb.collection('ratings').create({
-            route_id: route.id,
-            rating: 1 + (i % 5),
-            ...uiaa(String(1 + (i % 10))),
-            comment: `${prefix}-rating-${i}`,
+    for (let i = 0; i < count; i++) {
+        await apiFetch(`/routes/${routes[i % routes.length]!.id}/ratings`, {
+            method: 'POST',
+            body: {
+                rating: 1 + (i % 5),
+                ...uiaa(String(1 + (i % 10))),
+                comment: `${prefix}-rating-${i}`,
+            },
         })
-        created.push(rating)
     }
-    return created
-}
-
-export function adminClient() {
-    const pb = new PocketBase(process.env.E2E_PB_URL || 'https://localhost')
-    pb.autoCancellation(false)
-    return pb
-}
-
-export async function createRole(
-    pb: PocketBase,
-    name: string,
-    permissionNames: string[] = [],
-) {
-    const permissions = permissionNames.length
-        ? await pb.collection('permissions').getFullList({
-              filter: permissionNames
-                  .map((permission) =>
-                      pb.filter('name = {:permission}', { permission }),
-                  )
-                  .join(' || '),
-          })
-        : []
-    return pb.collection('roles').create({
-        gym: await e2eGymId(pb),
-        name,
-        permissions: permissions.map((permission) => permission.id),
-    })
-}
-
-async function deleteMatching(
-    pb: PocketBase,
-    collection: string,
-    filter: string,
-) {
-    const records = await pb
-        .collection(collection)
-        .getFullList({ filter, fields: 'id' })
-    for (const record of records) {
-        await pb
-            .collection(collection)
-            .delete(record.id)
-            .catch(() => {})
-    }
-}
-
-export async function sweepTestData(
-    pb: PocketBase,
-    prefix: string,
-    locationId?: string,
-) {
-    const name = pb.filter('{:prefix}', { prefix })
-    const username = pb.filter('{:username}', {
-        username: prefix.replace(/-/g, ''),
-    })
-    const location = pb.filter('{:locationId}', {
-        locationId: locationId ?? '',
-    })
-    const inLocation = locationId ? ` || location = ${location}` : ''
-    const routeInLocation = locationId ? ` || route.location = ${location}` : ''
-    const owned = `name ~ ${name} || location.name ~ ${name}${inLocation}`
-
-    await deleteMatching(pb, 'notifications', `params ~ ${name}`)
-    await deleteMatching(
-        pb,
-        'moderation_items',
-        `snapshot ~ ${name} || snapshot ~ ${username} || author.email ~ ${name}`,
-    )
-    await deleteMatching(
-        pb,
-        'reports',
-        `explanation ~ ${name} || notifier_name ~ ${name}`,
-    )
-    await deleteMatching(
-        pb,
-        'tasks',
-        `title ~ ${name} || description ~ ${name} || route.name ~ ${name}${routeInLocation}${inLocation}`,
-    )
-    await deleteMatching(
-        pb,
-        'ticks',
-        `route.name ~ ${name} || route.location.name ~ ${name} || user.email ~ ${name}${routeInLocation}`,
-    )
-    await deleteMatching(pb, 'ratings', `comment ~ ${name}`)
-    await deleteMatching(pb, 'competitions', owned)
-    await deleteMatching(pb, 'seasons', `name ~ ${name}`)
-    await deleteMatching(pb, 'routes', owned)
-    await deleteMatching(pb, 'walls', owned)
-    await deleteMatching(pb, 'locations', `name ~ ${name}`)
-    await deleteMatching(
-        pb,
-        'memberships',
-        `user.email ~ ${name} || user.username ~ ${username} || role.name ~ ${name}`,
-    )
-    await deleteMatching(
-        pb,
-        'users',
-        `email ~ ${name} || username ~ ${username}`,
-    )
-    await deleteMatching(pb, 'roles', `name ~ ${name}`)
 }

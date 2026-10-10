@@ -10,9 +10,8 @@ async function fillNewPassword(page: import('@playwright/test').Page) {
 test('resets the password and sends the user back to sign in', async ({
     page,
 }) => {
-    await page.route(
-        '**/api/collections/users/confirm-password-reset',
-        (route) => route.fulfill({ status: 204, body: '' }),
+    await page.route('**/api/auth/password-reset/confirm', (route) =>
+        route.fulfill({ status: 204, body: '' }),
     )
 
     await gotoSettled(page, '/auth/confirm-password-reset/looks-like-a-token')
@@ -25,13 +24,11 @@ test('resets the password and sends the user back to sign in', async ({
 })
 
 test('keeps the form and notifies on a non-token error', async ({ page }) => {
-    await page.route(
-        '**/api/collections/users/confirm-password-reset',
-        (route) =>
-            route.fulfill({
-                status: 400,
-                json: { message: 'Password too weak', data: {} },
-            }),
+    await page.route('**/api/auth/password-reset/confirm', (route) =>
+        route.fulfill({
+            status: 400,
+            json: { message: 'Password too weak', data: {} },
+        }),
     )
 
     await gotoSettled(page, '/auth/confirm-password-reset/looks-like-a-token')

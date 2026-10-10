@@ -1,11 +1,10 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { e2eGymId } from '../../support/seed'
+import { createLocation, getRoute, type Api } from '../../support/api'
 
-async function isArchived(page: Page, id: string) {
-    const res = await page.request.get(`/api/collections/routes/records/${id}`)
-    return (await res.json()).archived === true
+async function isArchived(api: Api, id: string) {
+    return (await getRoute(api, id)).archived === true
 }
 
 async function seedSession(page: Page, location: string, ids: string[]) {
@@ -25,16 +24,14 @@ async function seedSession(page: Page, location: string, ids: string[]) {
 
 test('archives only the checked routes at the scanned location', async ({
     adminPage: page,
-    root,
+    adminApi,
     createRoute,
     workerLocation,
     testPrefix,
 }) => {
     const hallA = []
     for (let index = 0; index < 4; index++) hallA.push(await createRoute())
-    const otherHall = await root
-        .collection('locations')
-        .create({ name: `${testPrefix} Other Hall`, gym: await e2eGymId(root) })
+    const otherHall = await createLocation(adminApi, `${testPrefix} Other Hall`)
     const hallB = [await createRoute({ location: otherHall.id })]
 
     const missing = hallA.slice(-2)
@@ -77,9 +74,9 @@ test('archives only the checked routes at the scanned location', async ({
     await page.getByTestId('inventory-finish-confirm').click()
     await expect(dialog).toBeHidden()
 
-    await expect.poll(() => isArchived(page, toArchive.id)).toBe(true)
-    expect(await isArchived(page, toKeep.id)).toBe(false)
-    expect(await isArchived(page, hallB[0]!.id)).toBe(false)
+    await expect.poll(() => isArchived(adminApi, toArchive.id)).toBe(true)
+    expect(await isArchived(adminApi, toKeep.id)).toBe(false)
+    expect(await isArchived(adminApi, hallB[0]!.id)).toBe(false)
 })
 
 test('requires a location before scanning can start', async ({

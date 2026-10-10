@@ -125,7 +125,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ClientResponseError } from 'pocketbase'
+import type { ApiError } from '~/api/client'
+import { createRole, updateRole } from '~/api/members'
 import type { Form } from '@nuxt/ui'
 import { required, maxLength, validateRules } from '~/utils/validation'
 import type { RoleRecord } from '~/types/models'
@@ -158,7 +159,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
 const { error: notifyError } = useNotification()
 
@@ -249,20 +249,19 @@ async function save() {
     saving.value = true
     try {
         const saved = isEdit.value
-            ? await pb.collection('roles').update(props.role!.id!, payload)
-            : await pb.collection('roles').create({
+            ? await updateRole(props.role!.id!, payload)
+            : await createRole(gymId.value, {
                   ...payload,
-                  gym: gymId.value,
                   permissions: props.role?.permissions ?? [],
               })
         emit('saved', isEdit.value ? 'updated' : 'created', saved.id)
         close()
     } catch (err) {
-        if ((err as ClientResponseError)?.response?.data?.name) {
+        if ((err as ApiError)?.response?.data?.name) {
             nameError.value = t('permissions.nameTaken')
             return
         }
-        if ((err as ClientResponseError)?.status === 403) {
+        if ((err as ApiError)?.status === 403) {
             notifyError(t('permissions.cannotGrant'))
             return
         }

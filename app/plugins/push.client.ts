@@ -1,9 +1,9 @@
 export default defineNuxtPlugin(() => {
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     const { followed } = useFollowedWalls()
-    let cachedUserId = pb.authStore.record?.id
+    let cachedUserId = authStore.record?.id
 
-    pb.authStore.onChange((_, record) => {
+    authStore.onChange((_, record) => {
         followed.value = record?.followed_walls ?? []
         if (record?.id === cachedUserId) return
         cachedUserId = record?.id

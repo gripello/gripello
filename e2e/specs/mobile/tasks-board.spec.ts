@@ -1,20 +1,21 @@
 import type { Locator } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
+import { createTask, getTask, setTaskStatus } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
 
 test('the mobile board shows one status at a time behind tabs', async ({
     setterPage: page,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
-    const task = await root.collection('tasks').create({
+    const task = await createTask(adminApi, {
         kind: 'defect',
         route: route.id,
         category: 'label_tag',
         description: `${testPrefix} tag faded`,
     })
-    await root.collection('tasks').update(task.id, { status: 'in_progress' })
+    await setTaskStatus(adminApi, task.id, 'in_progress')
 
     await gotoSettled(page, '/manage/tasks', /\/manage\/tasks/)
     await page.getByTestId('filter-search').fill(`${testPrefix} tag faded`)
@@ -68,11 +69,11 @@ async function centerOf(locator: Locator) {
 
 test('a long press drags a card onto another status', async ({
     setterPage: page,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
-    const task = await root.collection('tasks').create({
+    const task = await createTask(adminApi, {
         kind: 'defect',
         route: route.id,
         category: 'sharp_edge',
@@ -96,8 +97,6 @@ test('a long press drags a card onto another status', async ({
 
     await expect(page.getByTestId('task-drop-overlay')).toBeHidden()
     await expect
-        .poll(
-            async () => (await root.collection('tasks').getOne(task.id)).status,
-        )
+        .poll(async () => (await getTask(adminApi, task.id)).status)
         .toBe('waiting')
 })

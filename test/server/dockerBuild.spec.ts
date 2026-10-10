@@ -74,7 +74,7 @@ describe('docker ui build', () => {
 
     it('gives the go tests the locales they check against', () => {
         expect(read('Dockerfile')).toMatch(
-            /^COPY i18n\/locales\/\*\.json \/i18n\/locales\/$/m,
+            /^COPY i18n\/locales\/\*\.json \/src\/i18n\/locales\/$/m,
         )
     })
 
@@ -84,10 +84,57 @@ describe('docker ui build', () => {
         )
     })
 
-    it('ships the locales pocketbase renders push texts from', () => {
+    it('ships the locales the api renders mails and push texts from', () => {
         expect(read('Dockerfile')).toMatch(
-            /^COPY i18n\/locales\/\*\.json \/pb\/locales\/$/m,
+            /^COPY i18n\/locales\/\*\.json \/app\/locales\/$/m,
         )
-        expect(read('Dockerfile')).toContain('PB_LOCALES_DIR=/pb/locales')
+        expect(read('Dockerfile')).toContain('LOCALES_DIR=/app/locales')
+    })
+
+    it('builds and starts the go api instead of pocketbase', () => {
+        const dockerfile = read('Dockerfile')
+        expect(dockerfile).toContain('-o /out/gripello ./cmd/gripello')
+        expect(dockerfile).toContain(
+            '-X gripello/internal/platform/config.Version=',
+        )
+        expect(dockerfile).not.toMatch(/pocketbase/i)
+        for (const dir of ['cmd', 'internal']) {
+            expect(dockerfile).toContain(`COPY backend/${dir} ./${dir}`)
+            expect(read('.dockerignore')).toMatch(
+                new RegExp(`^!backend/${dir}$`, 'm'),
+            )
+        }
+        const entrypoint = read('.docker/docker-entrypoint.sh')
+        expect(entrypoint).toContain('gripello migrate')
+        expect(entrypoint).toContain('gripello serve --http=:8080 &')
+        expect(read('.docker/healthcheck.mjs')).toContain(
+            'http://127.0.0.1:8080/api/health',
+        )
+    })
+
+    it('rate-limits the api in nginx and keeps the realtime stream open', () => {
+        const nginx = read('.docker/nginx.conf')
+        expect(nginx).toContain('limit_req_status 429;')
+        expect(nginx).toContain('include /etc/nginx/rate-limit.conf;')
+        expect(nginx).toMatch(
+            /location = \/api\/realtime \{[^}]*proxy_buffering off;[^}]*proxy_read_timeout 35m;/,
+        )
+        expect(nginx).toContain(
+            'limit_conn_zone $rl_key zone=realtime_conn:10m;',
+        )
+        expect(nginx).toMatch(
+            /location = \/api\/realtime \{[^}]*limit_conn realtime_conn \d+;/,
+        )
+        expect(nginx).toMatch(
+            /location \/api\/v1\/ \{\s*rewrite \^\/api\/v1\/\(\.\*\)\$ \/api\/\$1 last;\s*\}/,
+        )
+        expect(nginx).not.toContain('location /_/')
+        const zones = [
+            ...nginx.matchAll(/limit_req_zone \S+ +zone=(\w+):/g),
+        ].map((match) => match[1])
+        const used = [...nginx.matchAll(/limit_req zone=(\w+) /g)].map(
+            (match) => match[1],
+        )
+        expect(new Set(used)).toEqual(new Set(zones))
     })
 })

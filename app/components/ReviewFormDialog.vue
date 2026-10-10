@@ -152,6 +152,7 @@
 </template>
 
 <script setup lang="ts">
+import { createRating, updateRating } from '~/api/ratings'
 import {
     required,
     nonBlank,
@@ -191,7 +192,6 @@ const emit = defineEmits<{
     saved: [rating: RatingRecord | null]
 }>()
 
-const pb = usePocketbase()
 const { t } = useI18n()
 const { error: notifyError } = useNotification()
 const { capHeaders } = useCapToken()
@@ -315,9 +315,13 @@ async function submit() {
     emit('saved', null)
     close()
     try {
-        await pb.collection('ratings').create(rating, {
-            headers: await capHeaders('rating'),
-        })
+        const created = await createRating(
+            props.routeId!,
+            rating,
+            await capHeaders('rating'),
+        )
+        $realtimeCache.revertRating(rating)
+        $realtimeCache.applyRating(created)
     } catch (err) {
         $realtimeCache.revertRating(rating)
         console.error('Failed to save review:', err)
@@ -328,13 +332,11 @@ async function submit() {
 async function saveEdit() {
     saving.value = true
     try {
-        const updated = await pb
-            .collection('ratings')
-            .update<RatingRecord>(props.review!.id, {
-                rating: form.rating,
-                ...gradingFields(),
-                comment: form.comment,
-            })
+        const updated = await updateRating(props.review!.id, {
+            rating: form.rating,
+            ...gradingFields(),
+            comment: form.comment,
+        })
         emit('saved', updated)
         close()
     } catch (err) {

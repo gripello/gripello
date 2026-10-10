@@ -1,0 +1,609 @@
+openapi: 3.1.0
+info:
+  title: Gripello competitions
+  version: 1.0.0
+paths:
+  /gyms/{gym}/competitions:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listCompetitions
+      tags: [competitions]
+      description: Drafts only for manage_competitions.
+      parameters:
+        - name: status
+          in: query
+          description: repeatable or comma-separated; matches any
+          schema: { type: array, items: { $ref: '#/components/schemas/CompetitionStatus' } }
+          style: form
+          explode: true
+        - $ref: '#/components/parameters/IncludeLocation'
+        - { name: sort, in: query, schema: { type: string, enum: [starts_at, -starts_at], default: starts_at } }
+      responses:
+        '200':
+          description: Competitions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Competition' } }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCompetition
+      tags: [competitions]
+      description: >
+        manage_competitions in the gym. The location must belong to the gym. Status defaults to draft; freeze_at is
+        stamped from ends_at - freeze_minutes when live_ranking is on.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompetitionInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Competition' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /competitions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getCompetition
+      tags: [competitions]
+      description: Drafts are 404 without manage_competitions.
+      parameters:
+        - $ref: '#/components/parameters/IncludeLocation'
+      responses:
+        '200': { $ref: '#/components/responses/Competition' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      operationId: updateCompetition
+      tags: [competitions]
+      description: >
+        manage_competitions. The location must stay in the gym. Setting status to published copies tops into the
+        logbook and notifies the entrants, like POST /competitions/{id}/publish.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompetitionInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Competition' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteCompetition
+      tags: [competitions]
+      description: manage_competitions. Deletes entries (and their scores) first, then categories and routes.
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /competitions/{id}/publish:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: publishCompetition
+      tags: [competitions]
+      description: >
+        manage_competitions. Sets status published; on the first transition every non-voided top becomes a tick
+        (flash for top_attempt 1, dated noon UTC of the end day or today, note = competition name, skipped when the
+        climber already has a tick on that route that day) and every non-withdrawn entrant gets competition_published.
+      responses:
+        '200': { $ref: '#/components/responses/Competition' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /competitions/{id}/categories:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listCompetitionCategories
+      tags: [competitions]
+      description: Visible unless the competition is a draft the caller can't manage. Sorted by sort, name.
+      responses:
+        '200':
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Category' } }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCompetitionCategory
+      tags: [competitions]
+      description: manage_competitions.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Category' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /competition-categories/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      operationId: updateCompetitionCategory
+      tags: [competitions]
+      description: manage_competitions. A different `competition` is rejected.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Category' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteCompetitionCategory
+      tags: [competitions]
+      description: manage_competitions. 400 while entries use it.
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /competitions/{id}/routes:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listCompetitionRoutes
+      tags: [competitions]
+      description: Visible unless a draft the caller can't manage. Sorted by number; items carry expand.route (with expand.wall).
+      parameters:
+        - { name: voided, in: query, schema: { type: boolean } }
+      responses:
+        '200':
+          description: Competition routes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/CompRoute' } }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCompetitionRoute
+      tags: [competitions]
+      description: >
+        manage_competitions. The route must be in the competition's gym and of the discipline's type (Boulder/Route);
+        rope routes drop zone, boulders drop hold_count.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompRouteInput' }
+      responses:
+        '201': { $ref: '#/components/responses/CompRoute' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /competition-routes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      operationId: updateCompetitionRoute
+      tags: [competitions]
+      description: manage_competitions. A different `competition` is rejected.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompRouteInput' }
+      responses:
+        '200': { $ref: '#/components/responses/CompRoute' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteCompetitionRoute
+      tags: [competitions]
+      description: manage_competitions. Deletes its scores.
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /competitions/{id}/entries:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listCompetitionEntries
+      tags: [competitions]
+      description: >
+        manage_competitions sees every entry, judge_competitions too unless the competition is a draft; others their own
+        plus not-hidden entries of a non-draft competition, with user emptied and birth_year, guardian_consent and paid
+        zeroed on other climbers' entries (a `user` filter for somebody else returns nothing). Sorted by bib; items
+        carry expand.category.
+      parameters:
+        - name: status
+          in: query
+          description: repeatable or comma-separated
+          schema: { type: array, items: { $ref: '#/components/schemas/EntryStatus' } }
+          style: form
+          explode: true
+        - { name: user, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Entry' } }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCompetitionEntry
+      tags: [competitions]
+      description: >
+        Signed in. Climbers register themselves while status is open and ends_at is ahead; user, status, paid and bib
+        are server-owned for them (bib = highest + 1) and the birth year must fit the category. Managers may register
+        any user with any status, bib and paid; that user gets a competition_entry_added notification and may withdraw.
+        Under 16 needs guardian_consent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EntryInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Entry' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /competition-entries/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      operationId: updateCompetitionEntry
+      tags: [competitions]
+      description: >
+        manage_competitions or the owner. Owners can't change competition, user, bib or paid (ignored); they may
+        withdraw (unless disqualified), re-register while registration is open, and change category only then.
+        A different `competition` from a manager is rejected. 403 for display_name/hidden changes while moderation
+        keeps the entry hidden.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EntryInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Entry' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteCompetitionEntry
+      tags: [competitions]
+      description: manage_competitions, or the owner while the entry is not disqualified and has no scores (403; withdraw instead).
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /competitions/{id}/scores:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listCompetitionScores
+      tags: [competitions]
+      description: >
+        manage/judge_competitions see all; others the scores of their own entry, and everyone's once published or
+        while live_ranking runs on a non-draft competition before freeze_at.
+      parameters:
+        - { name: entry, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Scores
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Score' } }
+        '404': { $ref: '#/components/responses/Error' }
+    put:
+      operationId: upsertCompetitionScores
+      tags: [competitions]
+      description: >
+        Upserts by (entry, comp_route) in one transaction. Judges and managers score any entry; climbers only their
+        own active entry, while the competition is open and inside starts_at..ends_at, never voided routes or
+        lead_height, and never over a score a judge wrote (403). Judges don't score drafts. Scores are normalised to the discipline (zone/top clamping, rope style, lead height from hold_count).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scores]
+              properties:
+                scores: { type: array, minItems: 1, maxItems: 500, items: { $ref: '#/components/schemas/ScoreInput' } }
+      responses:
+        '200':
+          description: Saved scores
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Score' } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /competition-scores/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      operationId: deleteCompetitionScore
+      tags: [competitions]
+      description: manage_competitions.
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /competitions/{id}/standings:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getCompetitionStandings
+      tags: [competitions]
+      description: Non-draft only. Active entries with hidden names blanked, plus the categories.
+      responses:
+        '200':
+          description: Standings input
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, categories]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Standing' } }
+                  categories: { type: array, items: { $ref: '#/components/schemas/Category' } }
+        '404': { $ref: '#/components/responses/Error' }
+  /competitions/{id}/results:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getCompetitionResults
+      tags: [competitions]
+      description: >
+        Input for buildStandings. visibility follows resultsVisibility (managers get live until published); hidden
+        and frozen return empty lists. Managers get real names of hidden entries.
+      responses:
+        '200':
+          description: Results input
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [visibility, competition, categories, entries, routes, scores]
+                properties:
+                  visibility: { type: string, enum: [final, live, frozen, hidden] }
+                  competition: { $ref: '#/components/schemas/Competition' }
+                  categories: { type: array, items: { $ref: '#/components/schemas/Category' } }
+                  entries: { type: array, items: { $ref: '#/components/schemas/Standing' } }
+                  routes: { type: array, items: { $ref: '#/components/schemas/CompRoute' } }
+                  scores: { type: array, items: { $ref: '#/components/schemas/Score' } }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Gym:
+      name: gym
+      in: path
+      required: true
+      description: gym id or slug
+      schema: { type: string }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    IncludeLocation:
+      name: include
+      in: query
+      description: '`location` adds expand.location {id, name, gym}'
+      schema: { type: string, enum: [location] }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Competition:
+      description: Competition
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Competition' }
+    Category:
+      description: Category
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Category' }
+    CompRoute:
+      description: Competition route
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/CompRoute' }
+    Entry:
+      description: Entry
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Entry' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    CompetitionStatus: { type: string, enum: [draft, open, closed, published] }
+    EntryStatus: { type: string, enum: [registered, checked_in, disqualified, withdrawn] }
+    Scoring:
+      type: [object, 'null']
+      description: ScoringSettings of shared/utils/competitionScoring.ts without format; unknown keys are rejected
+      additionalProperties: false
+      properties:
+        topPool: { type: number, minimum: 1 }
+        zonePool: { type: number, minimum: 0 }
+        attemptFactors: { type: array, items: { type: number, minimum: 0, maximum: 1 } }
+        bestOf: { type: [integer, 'null'], minimum: 1 }
+        flashBonus: { type: number, minimum: 0, maximum: 100 }
+        topropeFactor: { type: number, minimum: 0, maximum: 1 }
+    CompetitionInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+        location: { type: string }
+        status: { $ref: '#/components/schemas/CompetitionStatus' }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        discipline: { type: string, enum: [boulder, rope] }
+        scoring_format:
+          type: string
+          enum: [dynamic, fixed, ifsc, tops, route_points, lead_height]
+          description: 'boulder: dynamic, fixed, ifsc, tops; rope: route_points, lead_height, dynamic'
+        scoring: { $ref: '#/components/schemas/Scoring' }
+        live_ranking: { type: boolean }
+        freeze_minutes: { type: integer, minimum: 0, maximum: 600 }
+        registration_url: { type: string, format: uri, maxLength: 500 }
+        requires_payment: { type: boolean }
+    Competition:
+      allOf:
+        - $ref: '#/components/schemas/CompetitionInput'
+        - type: object
+          required: [id, created, updated, gym, name, location, status, starts_at, ends_at, discipline, scoring_format]
+          properties:
+            id: { type: string }
+            created: { type: string, format: date-time }
+            updated: { type: string, format: date-time }
+            gym: { type: string }
+            freeze_at: { type: [string, 'null'], format: date-time }
+            expand: { type: object }
+    CategoryInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100 }
+        gender: { type: string, enum: ['', female, male] }
+        min_birth_year: { type: integer }
+        max_birth_year: { type: integer }
+        sort: { type: integer }
+    Category:
+      allOf:
+        - $ref: '#/components/schemas/CategoryInput'
+        - type: object
+          required: [id, created, updated, competition, name]
+          properties:
+            id: { type: string }
+            created: { type: string, format: date-time }
+            updated: { type: string, format: date-time }
+            competition: { type: string }
+    CompRouteInput:
+      type: object
+      properties:
+        route: { type: string }
+        number: { type: integer, minimum: 1 }
+        points: { type: number, minimum: 0 }
+        zone: { type: boolean }
+        voided: { type: boolean }
+        hold_count: { type: integer, minimum: 0, maximum: 200 }
+    CompRoute:
+      allOf:
+        - $ref: '#/components/schemas/CompRouteInput'
+        - type: object
+          required: [id, created, updated, competition, route, number]
+          properties:
+            id: { type: string }
+            created: { type: string, format: date-time }
+            updated: { type: string, format: date-time }
+            competition: { type: string }
+            expand: { type: object, description: 'route: route summary with expand.wall' }
+    EntryInput:
+      type: object
+      properties:
+        user: { type: string, description: managers only }
+        category: { type: string }
+        bib: { type: integer, minimum: 0, description: 'managers only; 0 = next free' }
+        display_name: { type: string, maxLength: 60 }
+        birth_year: { type: integer }
+        hidden: { type: boolean }
+        guardian_consent: { type: boolean }
+        status: { $ref: '#/components/schemas/EntryStatus' }
+        paid: { type: boolean, description: managers only }
+    Entry:
+      allOf:
+        - $ref: '#/components/schemas/EntryInput'
+        - type: object
+          required: [id, created, updated, competition, user, category, bib, display_name, status]
+          properties:
+            id: { type: string }
+            created: { type: string, format: date-time }
+            updated: { type: string, format: date-time }
+            competition: { type: string }
+            expand: { type: object, description: 'category: Category' }
+    ScoreInput:
+      type: object
+      required: [entry, comp_route]
+      properties:
+        entry: { type: string }
+        comp_route: { type: string }
+        attempts: { type: integer, minimum: 0, maximum: 999 }
+        zone_attempt: { type: integer, minimum: 0, maximum: 999 }
+        top_attempt: { type: integer, minimum: 0, maximum: 999 }
+        style: { type: string, enum: ['', lead, toprope] }
+        height: { type: integer, minimum: 0, maximum: 999 }
+        height_plus: { type: boolean }
+    Score:
+      allOf:
+        - $ref: '#/components/schemas/ScoreInput'
+        - type: object
+          required: [id, created, updated, competition]
+          properties:
+            id: { type: string }
+            created: { type: string, format: date-time }
+            updated: { type: string, format: date-time }
+            competition: { type: string }
+    Standing:
+      type: object
+      required: [id, competition, category, bib, display_name]
+      properties:
+        id: { type: string }
+        competition: { type: string }
+        category: { type: string }
+        bib: { type: integer }
+        display_name: { type: string, description: empty for hidden entries }

@@ -10,7 +10,7 @@ test('an anonymous notice cannot relay its own text to any mailbox', async ({
     const spamName = `${testPrefix}-WIN-A-PRIZE`
     const spamText = `${testPrefix}-cheap-pills-at-spam.example`
 
-    const created = await request.post('/api/collections/reports/records', {
+    const created = await request.post('/api/reports', {
         data: {
             content_type: 'route',
             content_id: route.id,

@@ -9,7 +9,7 @@ test('shows the invalid-link state for a bogus verification token', async ({
 })
 
 test('confirms a verification token and offers sign-in', async ({ page }) => {
-    await page.route('**/api/collections/users/confirm-verification', (route) =>
+    await page.route('**/api/auth/verification/confirm', (route) =>
         route.fulfill({ status: 204, body: '' }),
     )
 

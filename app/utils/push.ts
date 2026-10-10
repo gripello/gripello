@@ -60,8 +60,12 @@ export function urlBase64ToUint8Array(base64: string) {
 }
 
 export function subscriptionKeys(subscription: PushSubscription) {
-    const { endpoint, keys } = subscription.toJSON()
-    return { endpoint, p256dh: keys?.p256dh ?? '', auth: keys?.auth ?? '' }
+    const { keys } = subscription.toJSON()
+    return {
+        endpoint: subscription.endpoint,
+        p256dh: keys?.p256dh ?? '',
+        auth: keys?.auth ?? '',
+    }
 }
 
 export const PUSH_DECLINED_KEY = 'gripello-push-declined'

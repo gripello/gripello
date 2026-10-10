@@ -1,7 +1,14 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { signInAs } from '../../support/auth'
-import { e2eGymId, gradeOf } from '../../support/seed'
+import { gradeOf } from '../../support/seed'
+import {
+    apiAs,
+    createSeason,
+    createTick,
+    getMe,
+    updateMe,
+} from '../../support/api'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const daysAgo = (days: number) =>
@@ -9,7 +16,7 @@ const daysAgo = (days: number) =>
 
 test('a season ranks the best sends and leaves out hidden climbers', async ({
     page,
-    root,
+    adminApi,
     createUser,
     createRoute,
     testPrefix,
@@ -17,15 +24,9 @@ test('a season ranks the best sends and leaves out hidden climbers', async ({
     const leader = await createUser('user', 'leader')
     const second = await createUser('user', 'second')
     const hidden = await createUser('user', 'hidden')
-    await root
-        .collection('users')
-        .update(leader.id, { firstname: 'Lea', name: 'Leader' })
-    await root
-        .collection('users')
-        .update(second.id, { firstname: 'Sam', name: 'Second' })
-    await root
-        .collection('users')
-        .update(hidden.id, { leaderboard_hidden: true })
+    await updateMe(await apiAs(leader), { firstname: 'Lea', name: 'Leader' })
+    await updateMe(await apiAs(second), { firstname: 'Sam', name: 'Second' })
+    await updateMe(await apiAs(hidden), { leaderboard_hidden: true })
 
     const hard = await createRoute({
         type: 'Boulder',
@@ -35,24 +36,22 @@ test('a season ranks the best sends and leaves out hidden climbers', async ({
         type: 'Boulder',
         ...gradeOf('font', '6A'),
     })
-    const tick = (user: string, route: string, type: string) =>
-        root.collection('ticks').create({
-            user,
+    const tick = async (user: typeof leader, route: string, type: string) =>
+        createTick(await apiAs(user), {
             route,
             type,
             attempts: 1,
-            date: `${today()} 12:00:00.000Z`,
+            date: `${today()}T12:00:00Z`,
         })
-    await tick(leader.id, hard.id, 'flash')
-    await tick(leader.id, easy.id, 'top')
-    await tick(second.id, easy.id, 'top')
-    await tick(hidden.id, hard.id, 'top')
+    await tick(leader, hard.id, 'flash')
+    await tick(leader, easy.id, 'top')
+    await tick(second, easy.id, 'top')
+    await tick(hidden, hard.id, 'top')
 
-    const season = await root.collection('seasons').create({
-        gym: await e2eGymId(root),
+    const season = await createSeason(adminApi, {
         name: `${testPrefix} season`,
-        starts_at: `${daysAgo(3)} 00:00:00.000Z`,
-        ends_at: `${daysAgo(-3)} 00:00:00.000Z`,
+        starts_at: `${daysAgo(3)}T00:00:00Z`,
+        ends_at: `${daysAgo(-3)}T00:00:00Z`,
     })
 
     await signInAs(page, leader.email, leader.password)
@@ -87,13 +86,11 @@ test('a season ranks the best sends and leaves out hidden climbers', async ({
 
 test('hidden climbers are told how to show up again', async ({
     page,
-    root,
     createUser,
 }) => {
     const climber = await createUser('user', 'shy')
-    await root
-        .collection('users')
-        .update(climber.id, { leaderboard_hidden: true })
+    const climberApi = await apiAs(climber)
+    await updateMe(climberApi, { leaderboard_hidden: true })
     await signInAs(page, climber.email, climber.password)
     await gotoSettled(page, '/e2e/leaderboard')
     await expect(page.getByTestId('leaderboard-hidden')).toBeVisible()
@@ -101,11 +98,7 @@ test('hidden climbers are told how to show up again', async ({
     await gotoSettled(page, '/account/settings?tab=privacy')
     await page.getByTestId('privacy-leaderboard').click()
     await expect
-        .poll(
-            async () =>
-                (await root.collection('users').getOne(climber.id))
-                    .leaderboard_hidden,
-        )
+        .poll(async () => (await getMe(climberApi)).leaderboard_hidden)
         .toBe(false)
 })
 

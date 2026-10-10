@@ -7,10 +7,8 @@ import {
     type ScoreAction,
     type ScoreState,
 } from '~/utils/scorecard'
-import type {
-    CompetitionRouteRecord,
-    CompetitionScoreRecord,
-} from '~/types/models'
+import { listScores, putScores } from '~/api/competitions'
+import type { CompetitionRouteRecord } from '~/types/models'
 
 type QueueStore = Record<string, Record<string, ScoreState>>
 
@@ -31,13 +29,11 @@ function writeStore(store: QueueStore) {
 const isNetworkError = (error: unknown) =>
     (error as { status?: number })?.status === 0
 
-export function useScorecard(entryId: Ref<string>) {
-    const pb = usePocketbase()
+export function useScorecard(competitionId: Ref<string>, entryId: Ref<string>) {
     const { t } = useI18n()
     const { error: notifyError } = useNotification()
 
     const scores = ref<Record<string, ScoreState>>({})
-    const recordIds = new Map<string, string>()
     const pending = ref<Record<string, ScoreState>>({})
     const offline = ref(false)
     let flushing = false
@@ -53,15 +49,11 @@ export function useScorecard(entryId: Ref<string>) {
     }
 
     async function fetchSaved() {
-        const records = await pb
-            .collection('competition_scores')
-            .getFullList<CompetitionScoreRecord>({
-                filter: pb.filter('entry = {:entry}', { entry: entryId.value }),
-                requestKey: null,
-            })
+        const records = await listScores(competitionId.value, {
+            entry: entryId.value,
+        })
         const loaded: Record<string, ScoreState> = {}
         for (const record of records) {
-            recordIds.set(record.comp_route, record.id)
             loaded[record.comp_route] = scoreFromRecord(record)
         }
         scores.value = { ...loaded, ...pending.value }
@@ -75,41 +67,13 @@ export function useScorecard(entryId: Ref<string>) {
     }
 
     async function save(compRoute: string, score: ScoreState) {
-        const collection = pb.collection('competition_scores')
-        const existingId = recordIds.get(compRoute)
-        if (existingId) {
-            await collection.update(existingId, scoreBody(score), {
-                requestKey: null,
-            })
-            return
-        }
-        try {
-            const created = await collection.create<CompetitionScoreRecord>(
-                {
-                    entry: entryId.value,
-                    comp_route: compRoute,
-                    ...scoreBody(score),
-                },
-                { requestKey: null },
-            )
-            recordIds.set(compRoute, created.id)
-        } catch (error) {
-            if (isNetworkError(error)) throw error
-            const existing = await collection
-                .getFirstListItem<CompetitionScoreRecord>(
-                    pb.filter('entry = {:entry} && comp_route = {:route}', {
-                        entry: entryId.value,
-                        route: compRoute,
-                    }),
-                    { requestKey: null },
-                )
-                .catch(() => null)
-            if (!existing) throw error
-            recordIds.set(compRoute, existing.id)
-            await collection.update(existing.id, scoreBody(score), {
-                requestKey: null,
-            })
-        }
+        await putScores(competitionId.value, [
+            {
+                entry: entryId.value,
+                comp_route: compRoute,
+                ...scoreBody(score),
+            },
+        ])
     }
 
     async function flush() {

@@ -1,4 +1,9 @@
-import type { RecordModel } from 'pocketbase'
+import {
+    passkeyLogin,
+    passkeyLoginOptions,
+    type AuthResult,
+    type PickedPasskey,
+} from '~/api/auth'
 import {
     getPasskey,
     isPasskeyCancel,
@@ -6,10 +11,7 @@ import {
     passkeysSupported,
 } from '~/utils/webauthn'
 
-export type AuthResult = { token: string; record: RecordModel }
-
 export function usePasskeyLogin() {
-    const pb = usePocketbase()
     const supported = ref(false)
     const autofillActive = ref(false)
     let autofillAbort: AbortController | undefined
@@ -18,26 +20,13 @@ export function usePasskeyLogin() {
     onBeforeUnmount(() => autofillAbort?.abort())
 
     async function pickPasskey(autofill?: AbortController) {
-        const ceremony = await pb.send<{ ceremony: string; options: unknown }>(
-            '/api/auth/passkey/options',
-            { method: 'POST' },
-        )
+        const ceremony = await passkeyLoginOptions()
         const credential = await getPasskey(ceremony.options, autofill)
         return { ceremony: ceremony.ceremony, credential }
     }
 
-    function verify(
-        picked: { ceremony: string; credential: unknown },
-        mfaId?: string,
-    ) {
-        return pb.send<AuthResult>('/api/auth/passkey', {
-            method: 'POST',
-            body: { ...picked, ...(mfaId && { mfaId }) },
-        })
-    }
-
     async function signIn(options: { mfaId?: string } = {}) {
-        return verify(await pickPasskey(), options.mfaId)
+        return passkeyLogin(await pickPasskey(), options.mfaId)
     }
 
     async function autofill(): Promise<AuthResult | undefined> {
@@ -46,7 +35,7 @@ export function usePasskeyLogin() {
         const abort = new AbortController()
         autofillAbort = abort
         autofillActive.value = true
-        let picked: Awaited<ReturnType<typeof pickPasskey>>
+        let picked: PickedPasskey
         try {
             picked = await pickPasskey(abort)
         } catch (err) {
@@ -55,7 +44,7 @@ export function usePasskeyLogin() {
                 ? autofill()
                 : undefined
         }
-        return verify(picked)
+        return passkeyLogin(picked)
     }
 
     function stopAutofill() {

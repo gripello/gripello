@@ -1,0 +1,386 @@
+openapi: 3.1.0
+info:
+  title: Gripello trust and safety (reports and moderation cases)
+  version: 1.0.0
+paths:
+  /reports:
+    post:
+      operationId: createReport
+      tags: [moderation]
+      description: >
+        Anyone, guests included; needs the Cap token header (scope `report`) when CAP_SECRET is set. The gym, content
+        snapshot (max 5000 chars) and content_url are derived from the content; status and decision fields are server-owned.
+        Notifies the gym's manage_reports holders (`report_filed`) and, unless the reason is `other`, the platform admins
+        (`report_filed_platform`); mails the receipt to the notifier and the alert to the report handlers. Reporting
+        hidden content closes the report at once with that decision.
+      parameters:
+        - { name: X-Cap-Token, in: header, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportInput' }
+      responses:
+        '201':
+          description: Report filed
+          content:
+            application/json:
+              schema: { type: object, required: [id], properties: { id: { type: string } } }
+        '400': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/reports:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listGymReports
+      tags: [moderation]
+      description: manage_reports (or platform admin). Newest first. Reports are decided only through moderation decisions.
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ReportStatus' } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/ReportPage' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/reports:
+    get:
+      operationId: listPlatformReports
+      tags: [moderation]
+      description: Platform admins. All reports, including those on profiles (no gym).
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ReportStatus' } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/ReportPage' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /moderation/summary:
+    get:
+      operationId: moderationSummary
+      tags: [moderation]
+      description: >
+        Counts for nav badges. With `gym`: manage_comments or manage_reports there (or platform admin) →
+        {decide, waiting, hidden}. Without: platform admins → {decide, legal_reports, profiles, suspended, gyms}.
+      parameters:
+        - { name: gym, in: query, description: gym id or slug, schema: { type: string } }
+      responses:
+        '200':
+          description: Counts
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [decide, waiting, hidden]
+                    properties:
+                      decide: { type: integer }
+                      waiting: { type: integer }
+                      hidden: { type: integer }
+                  - type: object
+                    required: [decide, legal_reports, profiles, suspended, gyms]
+                    properties:
+                      decide: { type: integer }
+                      legal_reports: { type: integer }
+                      profiles: { type: integer }
+                      suspended: { type: integer }
+                      gyms:
+                        type: array
+                        items:
+                          type: object
+                          required: [gym, open, oldest]
+                          properties:
+                            gym: { type: string }
+                            open: { type: integer }
+                            oldest: { type: string }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /moderation/cases:
+    get:
+      operationId: listModerationCases
+      tags: [moderation]
+      description: >
+        The inbox. `gym` is required unless the caller is a platform admin; gym access needs manage_comments or
+        manage_reports. Items carry `context`. Default order: most reports first, then oldest.
+      parameters:
+        - { name: gym, in: query, description: gym id or slug, schema: { type: string } }
+        - name: state
+          in: query
+          description: repeatable (`state` or `state[]`); matches any
+          schema: { type: array, items: { $ref: '#/components/schemas/ModerationState' } }
+          style: form
+          explode: true
+        - { name: content_type, in: query, schema: { $ref: '#/components/schemas/ModerationContentType' } }
+        - name: author
+          in: query
+          description: platform admins only (403 otherwise), so gym staff can't unmask anonymous reviewers
+          schema: { type: string }
+        - { name: q, in: query, description: case-insensitive substring of the snapshot, schema: { type: string } }
+        - name: queue
+          in: query
+          description: '`platform` = the platform queue: reported content and gym-less profiles'
+          schema: { type: string, enum: [platform] }
+        - name: sort
+          in: query
+          description: 'default most reports first, then oldest; `reviewed` = last decided first; `newest` = newest first'
+          schema: { type: string, enum: [reviewed, newest] }
+        - { name: total, in: query, description: '`true` adds `total`', schema: { type: boolean } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of cases
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, limit]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ModerationItem' } }
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer, description: only with total=true }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: openModerationCase
+      tags: [moderation]
+      description: Opens (or returns) the case of content from before the inbox existed. manage_comments in the content's gym or platform admin, else 404.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content_type, content_id]
+              properties:
+                content_type: { $ref: '#/components/schemas/ModerationContentType' }
+                content_id: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Decision' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /moderation/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getModerationCase
+      tags: [moderation]
+      description: Platform admins, or manage_comments/manage_reports in the case's gym. With `context`.
+      responses:
+        '200':
+          description: Case
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModerationItem' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: decideModerationCase
+      tags: [moderation]
+      description: >
+        manage_comments in the case's gym or platform admin (else 404). approve: unreviewed, or pending for gym staff
+        (publishes the held upload). reject: pending, gym staff. hide: unreviewed/approved, pending only for the platform;
+        quarantines the content (reviews/betas are deleted with their files moved into the case, routes archived,
+        profiles/entries/tasks cleared) and sets hidden_by gym|platform. restore: hidden; only the platform restores
+        hidden_by=platform; recreates the same id. hide and reject need a reason. Closes every open report of the content
+        (DSA decision mails) and notifies the author. Emits `content.hidden`/`content.restored` on topic `moderation`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [approve, reject, hide, restore] }
+                reason: { type: string, maxLength: 2000 }
+      responses:
+        '200': { $ref: '#/components/responses/Decision' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /moderation/authors/{id}/hide:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: hideAuthorContent
+      tags: [moderation]
+      description: Platform admins. Hides every review and beta of the user (profile excluded); one notice and one statement of reasons.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Number of hidden items
+          content:
+            application/json:
+              schema: { type: object, required: [hidden], properties: { hidden: { type: integer } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Gym:
+      name: gym
+      in: path
+      required: true
+      description: gym id or slug
+      schema: { type: string }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 30 }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Decision:
+      description: Case state after the call
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id, state]
+            properties:
+              id: { type: string }
+              state: { $ref: '#/components/schemas/ModerationState' }
+              hidden_by: { type: string, enum: ['', gym, platform] }
+    ReportPage:
+      description: One page of reports
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items, page, limit]
+            properties:
+              items: { type: array, items: { $ref: '#/components/schemas/Report' } }
+              page: { type: integer }
+              limit: { type: integer }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    ReportStatus: { type: string, enum: [open, actioned, rejected] }
+    ReportReason:
+      type: string
+      enum: [hate_speech, harassment, violence_threat, sexual_content, personal_data, ip_infringement, spam_fraud, other]
+    ModerationState: { type: string, enum: [unreviewed, approved, pending, hidden] }
+    ModerationContentType: { type: string, enum: [rating, beta_video, profile, competition_entry, task, route] }
+    ReportInput:
+      type: object
+      required: [content_type, content_id, reason, explanation, notifier_name, notifier_email, good_faith]
+      properties:
+        content_type: { type: string, enum: [rating, route, beta_video, profile] }
+        content_id: { type: string }
+        reason: { $ref: '#/components/schemas/ReportReason' }
+        explanation: { type: string, maxLength: 2000 }
+        notifier_name: { type: string, maxLength: 100 }
+        notifier_email: { type: string, format: email }
+        good_faith: { type: boolean, const: true }
+        language: { type: string, enum: ['', en, de, nl, fr, es] }
+    Report:
+      type: object
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        gym: { type: string, description: empty for profiles }
+        content_type: { type: string }
+        content_id: { type: string }
+        content_url: { type: string }
+        content_snapshot: { type: string }
+        reason: { $ref: '#/components/schemas/ReportReason' }
+        explanation: { type: string }
+        notifier_name: { type: string }
+        notifier_email: { type: string }
+        good_faith: { type: boolean }
+        status: { $ref: '#/components/schemas/ReportStatus' }
+        decision: { type: string, enum: ['', content_removed, content_kept] }
+        decision_reason: { type: string }
+        decided_at: { type: [string, 'null'], format: date-time }
+        decided_by: { type: string }
+        receipt_sent: { type: boolean }
+        notified_at: { type: [string, 'null'], format: date-time }
+        language: { type: string }
+    ModerationItem:
+      type: object
+      description: >
+        Realtime: topic `moderation:<gym>` (manage_comments; author left out) and `moderation:platform` (platform admins)
+        carry {action: create|update|delete, record}. `author` and `snapshot.user` are blank when the viewer may not know the author.
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        gym: { type: string }
+        content_type: { $ref: '#/components/schemas/ModerationContentType' }
+        content_id: { type: string }
+        author: { type: string }
+        snapshot: { type: [object, 'null'], description: 'moderated fields; `_files` maps file fields to quarantined names, `_pending` marks a hidden held upload' }
+        files: { type: array, items: { type: string }, description: 'protected; served from /files/moderation_items/{id}/{name} with a file token' }
+        state: { $ref: '#/components/schemas/ModerationState' }
+        hidden_by: { type: string, enum: ['', gym, platform] }
+        reports_count: { type: integer }
+        reason: { type: string }
+        reviewed_by: { type: string }
+        reviewed_at: { type: [string, 'null'], format: date-time }
+        context: { $ref: '#/components/schemas/ModerationContext' }
+    ModerationContext:
+      type: object
+      required: [reports]
+      properties:
+        author:
+          type: object
+          properties: { id: { type: string }, name: { type: string }, avatar: { type: string } }
+        history:
+          type: object
+          properties: { items: { type: integer }, hidden: { type: integer } }
+        route:
+          type: object
+          properties: { id: { type: string }, name: { type: string }, grade: { type: string }, color: { type: string } }
+        competition: { type: string }
+        gym_name: { type: string }
+        reports:
+          type: array
+          description: newest 20; explanation and notifier_name only for manage_reports holders and platform admins
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              reason: { $ref: '#/components/schemas/ReportReason' }
+              explanation: { type: string }
+              notifier_name: { type: string }
+              status: { $ref: '#/components/schemas/ReportStatus' }
+              created: { type: string }

@@ -1,0 +1,340 @@
+openapi: 3.1.0
+info:
+  title: Gripello ratings (reviews) and beta videos
+  version: 1.0.0
+paths:
+  /routes/{id}/ratings:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listRouteRatings
+      tags: [ratings]
+      description: Public, newest first. Signed-in viewers get `mine` and `author` (left out when the author reviews anonymously).
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/RatingPage' }
+    post:
+      operationId: createRating
+      tags: [ratings]
+      description: Guests or signed-in climbers. The author is the caller (none for guests); the gym is copied from the route.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RatingInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Rating' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /ratings/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      operationId: updateRating
+      tags: [ratings]
+      description: manage_comments in the rating's gym. The author never changes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RatingInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Rating' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteRating
+      tags: [ratings]
+      description: The author or manage_comments in the rating's gym.
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/ratings:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listGymRatings
+      tags: [ratings]
+      description: manage_comments. Reviews management list; `expand.route_id` carries `{id, name, expand.location.name}`, and `author` is filled even for anonymous reviewers.
+      parameters:
+        - { name: route, in: query, description: comma-separated route ids, schema: { type: string } }
+        - { name: ids, in: query, description: comma-separated rating ids, schema: { type: string } }
+        - { name: total, in: query, description: '`true` adds `total`', schema: { type: string, enum: ['true'] } }
+        - { name: location, in: query, schema: { type: string } }
+        - { name: grade_system, in: query, schema: { type: string } }
+        - { name: grade, in: query, schema: { type: string } }
+        - { name: rating, in: query, schema: { type: integer, minimum: 0, maximum: 5 } }
+        - { name: min_rating, in: query, schema: { type: integer, minimum: 0, maximum: 5 } }
+        - { name: max_rating, in: query, schema: { type: integer, minimum: 0, maximum: 5 } }
+        - { name: since, in: query, description: 'RFC 3339 or `2006-01-02 15:04:05.000Z`', schema: { type: string } }
+        - { name: q, in: query, description: case-insensitive substring of comment or route name, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string, enum: [newest, oldest, highest, lowest], default: newest } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/RatingPage' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/ratings/stats:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: getRatingStats
+      tags: [ratings]
+      description: Public. From the ratings_stats view; zeros when the gym has no reviews.
+      responses:
+        '200':
+          description: Stats
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total_reviews, avg_rating, low_rated, this_week]
+                properties:
+                  total_reviews: { type: integer }
+                  avg_rating: { type: [number, 'null'], description: mean of non-zero ratings, one decimal }
+                  low_rated: { type: integer, description: ratings 1–2 }
+                  this_week: { type: integer }
+  /gyms/{gym}/ratings/import:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    post:
+      operationId: importRatings
+      tags: [ratings]
+      description: manage_routes. At most 500 per call; never sets an author; a past `created` is kept, otherwise now. Rows whose route is not in the gym or that fail validation count as failed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ratings]
+              properties:
+                ratings:
+                  type: array
+                  maxItems: 500
+                  items:
+                    allOf:
+                      - $ref: '#/components/schemas/RatingInput'
+                      - type: object
+                        required: [route_id]
+                        properties:
+                          route_id: { type: string }
+                          created: { type: string }
+      responses:
+        '200':
+          description: Import result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [failed]
+                properties:
+                  failed: { type: integer }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/betas:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listGymBetas
+      tags: [betas]
+      description: Public, newest first. Signed-in viewers get `author`; `include=route` fills `expand.route` with the route row.
+      parameters:
+        - { name: include, in: query, schema: { type: string, enum: [route] } }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of beta videos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, limit]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/BetaVideo' } }
+                  page: { type: integer }
+                  limit: { type: integer }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /routes/{id}/betas:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listBetas
+      tags: [betas]
+      description: Public, newest first. Signed-in viewers get `author`.
+      responses:
+        '200':
+          description: Beta videos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/BetaVideo' } }
+    post:
+      operationId: createBeta
+      tags: [betas]
+      description: Signed in; the gym needs the `beta_videos` feature flag; archived routes take none. Exactly one of a link (YouTube Shorts, Instagram, TikTok) or a video file (mp4/webm/quicktime, ≤ 30 MB). When the gym premoderates betas and the caller lacks manage_comments, the submission is held for moderation and answers 202.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string }
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: Beta video
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BetaVideo' }
+        '202':
+          description: Held for approval
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [pending]
+                properties:
+                  pending: { type: boolean, const: true }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+  /betas/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      operationId: deleteBeta
+      tags: [betas]
+      description: The uploader or manage_comments in the video's gym; removes the file.
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Gym:
+      name: gym
+      in: path
+      required: true
+      description: gym id or slug
+      schema: { type: string }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 500, default: 50 }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Rating:
+      description: Rating
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Rating' }
+    RatingPage:
+      description: One page of ratings
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items, page, limit]
+            properties:
+              items: { type: array, items: { $ref: '#/components/schemas/Rating' } }
+              page: { type: integer }
+              limit: { type: integer }
+              total: { type: integer }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    Climber:
+      type: object
+      required: [id, name, avatar]
+      properties:
+        id: { type: string }
+        name: { type: string, description: '"First L."' }
+        avatar: { type: string, description: file URL with a 100x100 thumb, or empty }
+    RatingInput:
+      type: object
+      properties:
+        rating: { type: integer, minimum: 0, maximum: 5 }
+        comment: { type: string, maxLength: 5000 }
+        grade: { type: string }
+        grade_system: { type: string }
+        grade_index: { type: number, minimum: 0, maximum: 40 }
+    Rating:
+      type: object
+      description: The author's user id is never returned; `mine` and `author` only for signed-in viewers.
+      required: [id, created, updated, gym, route_id, rating, comment, grade, grade_system, grade_index]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        gym: { type: string }
+        route_id: { type: string }
+        rating: { type: integer }
+        comment: { type: string }
+        grade: { type: string }
+        grade_system: { type: string }
+        grade_index: { type: number }
+        mine: { type: boolean }
+        author: { $ref: '#/components/schemas/Climber' }
+        expand: { type: object }
+    BetaVideo:
+      type: object
+      required: [id, created, updated, gym, route, user, url, file]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        gym: { type: string }
+        route: { type: string }
+        user: { type: string }
+        url: { type: string }
+        file: { type: string, description: 'served at /api/files/beta_videos/{id}/{file}' }
+        author: { $ref: '#/components/schemas/Climber' }
+        expand: { type: object }

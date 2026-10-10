@@ -1,4 +1,5 @@
 import type { AnalyticsQuery, AnalyticsResponse } from '#shared/utils/analytics'
+import { gymChangesTopic, type GymChange } from '~/utils/realtimeCache'
 
 const QUERY_KEYS = [
     'range',
@@ -13,7 +14,7 @@ const LIVE_DEBOUNCE_MS = 2000
 export function useClimbingAnalytics() {
     const route = useRoute()
     const router = useRouter()
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     const requestFetch = useRequestFetch()
     const gymId = useCurrentGymId()
 
@@ -40,8 +41,8 @@ export function useClimbingAnalytics() {
         () =>
             requestFetch<AnalyticsResponse>('/api/manage/analytics', {
                 query: { ...query.value, gym: gymId.value },
-                headers: pb.authStore.token
-                    ? { Authorization: pb.authStore.token }
+                headers: authStore.token
+                    ? { Authorization: authStore.token }
                     : undefined,
             }),
         { watch: [query, gymId], enabled: () => !!gymId.value },
@@ -51,7 +52,6 @@ export function useClimbingAnalytics() {
         () => status.value === 'pending' && !data.value,
     )
 
-    const { subscribe } = usePbSubscription()
     let refreshTimer: ReturnType<typeof setTimeout> | undefined
     let staleWhileHidden = false
 
@@ -73,13 +73,20 @@ export function useClimbingAnalytics() {
         void refresh()
     }
 
-    onMounted(async () => {
-        document.addEventListener('visibilitychange', refreshIfStale)
-        await Promise.all([
-            subscribe('routes', scheduleRefresh),
-            subscribe('ratings', scheduleRefresh),
-        ]).catch(() => {})
-    })
+    useRealtime(
+        () => gymId.value && gymChangesTopic(gymId.value),
+        (change: GymChange) => {
+            if (
+                change.collection === 'routes' ||
+                change.collection === 'ratings'
+            )
+                scheduleRefresh()
+        },
+    )
+
+    onMounted(() =>
+        document.addEventListener('visibilitychange', refreshIfStale),
+    )
 
     onBeforeUnmount(() => {
         clearTimeout(refreshTimer)

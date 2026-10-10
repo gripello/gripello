@@ -1,4 +1,5 @@
 import { test, expect } from '../../support/fixtures'
+import { updateRoute } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
 
 test('puts route details beside the reviews under a full-width hero', async ({
@@ -18,10 +19,10 @@ test('puts route details beside the reviews under a full-width hero', async ({
 
 test('keeps the grade badge and a long name clear of the stats card', async ({
     page,
-    root,
+    adminApi,
     route,
 }) => {
-    await root.collection('routes').update(route.id, {
+    await updateRoute(adminApi, route.id, {
         name: 'Eckenflitzer mit sehr langem Routennamen am Überhang',
     })
     await page.setViewportSize({ width: 1024, height: 800 })

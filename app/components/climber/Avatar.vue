@@ -18,6 +18,7 @@
 </template>
 
 <script setup lang="ts">
+import { fileUrl } from '~/api/client'
 import { avatarColor, nameInitials } from '~/utils/avatar'
 
 const props = withDefaults(
@@ -44,12 +45,8 @@ const url = computed(
     () =>
         props.src ||
         (props.id &&
-            usePbFileUrl(
-                { id: props.id, collectionId: '_pb_users_auth_' },
-                props.avatar,
-                {
-                    thumb: LARGE_SIZES.has(props.size) ? '320x320' : '100x100',
-                },
-            )),
+            fileUrl('users', { id: props.id }, props.avatar, {
+                thumb: LARGE_SIZES.has(props.size) ? '320x320' : '100x100',
+            })),
 )
 </script>

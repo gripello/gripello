@@ -121,7 +121,7 @@ test('never queries admin data without permission', async ({
     const forbidden: string[] = []
     page.on('request', (request) => {
         if (
-            /\/api\/collections\/(users|roles|ratings|reports)\/records(\?|$)/.test(
+            /\/api\/(gyms\/[^/]+\/(roles|ratings|members)|moderation\/cases|platform\/users)(\?|$)/.test(
                 request.url(),
             )
         )

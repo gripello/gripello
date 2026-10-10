@@ -1,18 +1,16 @@
 import type { Locator, Page } from '@playwright/test'
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser, uiaa } from '../../support/seed'
+import { uiaa } from '../../support/seed'
+import { createRoute, getRoute } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
-import { PB_URL, seedMap, type SeededMap } from '../../support/map'
+import { seedMap, type SeededMap } from '../../support/map'
 
 let seeded: SeededMap
 let looseRouteId: string
 
-test.beforeEach(async ({ testPrefix }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    seeded = await seedMap(root, testPrefix, { routes: 3 })
-    const loose = await root.collection('routes').create({
+test.beforeEach(async ({ testPrefix, adminApi }) => {
+    seeded = await seedMap(adminApi, testPrefix, { routes: 3 })
+    const loose = await createRoute(adminApi, {
         name: `${testPrefix}-loose`,
         ...uiaa('6'),
         location: seeded.locationId,
@@ -61,7 +59,7 @@ test('setters place an unplaced route by clicking it and then a wall', async ({
         'Route positions saved',
     )
 
-    const saved = await seeded.root.collection('routes').getOne(looseRouteId)
+    const saved = await getRoute(seeded.api, looseRouteId)
     expect(saved.wall).toBe(seeded.islandWallId)
     expect(saved.wall_position).toBeGreaterThan(0)
 })
@@ -97,7 +95,7 @@ test('dragging a route from the list into a wall places it on that wall', async 
     await expect(page.getByTestId('global-snackbar').last()).toContainText(
         'Route positions saved',
     )
-    const saved = await seeded.root.collection('routes').getOne(looseRouteId)
+    const saved = await getRoute(seeded.api, looseRouteId)
     expect(saved.wall).toBe(seeded.islandWallId)
 })
 
@@ -128,7 +126,7 @@ test('dragging a dot onto another wall moves the route there', async ({
     await expect(page.getByTestId('global-snackbar').last()).toContainText(
         'Route positions saved',
     )
-    const saved = await seeded.root.collection('routes').getOne(islandRoute)
+    const saved = await getRoute(seeded.api, islandRoute)
     expect(saved.wall).toBe(seeded.northWallId)
 })
 
@@ -183,7 +181,7 @@ test('a placed dot can be dragged along its wall', async ({
     await expect(page.getByTestId('global-snackbar').last()).toContainText(
         'Route positions saved',
     )
-    const saved = await seeded.root.collection('routes').getOne(routeId)
+    const saved = await getRoute(seeded.api, routeId)
     expect(saved.wall).toBe(seeded.northWallId)
     expect(saved.wall_position).toBeGreaterThan(0.8)
 })
@@ -208,9 +206,7 @@ test('routes on a wall can be spread evenly and the change undone', async ({
         'Route positions saved',
     )
     const [first, second] = await Promise.all(
-        seeded.routeIds
-            .slice(0, 2)
-            .map((id) => seeded.root.collection('routes').getOne(id)),
+        seeded.routeIds.slice(0, 2).map((id) => getRoute(seeded.api, id)),
     )
     expect(first!.wall_position).toBe(0.25)
     expect(second!.wall_position).toBe(0.75)
@@ -222,9 +218,9 @@ test('the route form offers the walls of the chosen location', async ({
 }) => {
     await gotoSettled(page, '/manage/routes')
     await page.getByTestId('filter-search').fill(`${testPrefix}-loose`)
-    await expect(page.getByTestId('routes-table')).toContainText(
+    await expect(page.getByTestId('routes-row-name')).toHaveText([
         `${testPrefix}-loose`,
-    )
+    ])
     await page.getByTestId('routes-row-edit').first().click()
     await page.getByTestId('route-form-wall').click()
     await page
@@ -233,7 +229,7 @@ test('the route form offers the walls of the chosen location', async ({
     await page.getByTestId('route-form-submit').click()
     await expect(page.getByTestId('route-form-dialog')).toBeHidden()
 
-    const saved = await seeded.root.collection('routes').getOne(looseRouteId)
+    const saved = await getRoute(seeded.api, looseRouteId)
     expect(saved.wall).toBe(seeded.northWallId)
     expect(saved.wall_position).toBe(0.75)
 })

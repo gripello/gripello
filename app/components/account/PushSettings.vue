@@ -185,7 +185,7 @@
                             {{ wall.name }}
                         </p>
                         <p class="truncate text-xs text-muted">
-                            {{ wall.expand?.location?.name }}
+                            {{ wall.location_name }}
                         </p>
                     </div>
                     <UButton
@@ -203,6 +203,11 @@
 </template>
 
 <script setup lang="ts">
+import {
+    getNotificationPrefs,
+    updateNotificationPrefs,
+} from '~/api/notifications'
+import { listWallsByIds } from '~/api/routes'
 import { formatDate } from '#shared/utils/formatting'
 import {
     isTopicEnabled,
@@ -211,14 +216,9 @@ import {
     type NotificationPrefs,
 } from '~/utils/notificationPrefs'
 import { isMobileDevice } from '~/utils/push'
-import type {
-    LocationRecord,
-    PushSubscriptionRecord,
-    UserRecord,
-    WallRecord,
-} from '~/types/models'
+import type { PushSubscriptionRecord, WallRecord } from '~/types/models'
 
-type FollowedWall = WallRecord & { expand?: { location?: LocationRecord } }
+type FollowedWall = WallRecord & { location_name: string }
 
 const LIST = 'p-0 sm:p-0 gap-y-0 divide-y divide-default'
 const TOPIC_ICONS: Record<string, string> = {
@@ -236,7 +236,6 @@ const TOPIC_ICONS: Record<string, string> = {
 }
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 const push = usePushSubscription()
 const { memberships, isPlatformAdmin } = usePermissions()
 const { followed, setFollowing } = useFollowedWalls()
@@ -261,9 +260,10 @@ const topics = computed(() =>
         icon: TOPIC_ICONS[topic.key] ?? 'i-lucide-bell',
     })),
 )
-const prefs = ref<NotificationPrefs>(
-    (pb.authStore.record as UserRecord | null)?.notification_prefs ?? {},
-)
+const prefs = ref<NotificationPrefs>({})
+onMounted(async () => {
+    prefs.value = await getNotificationPrefs()
+})
 
 async function addThisDevice() {
     try {
@@ -290,12 +290,7 @@ async function removeDevice(device: PushSubscriptionRecord) {
 async function setTopic(topic: string, on: boolean) {
     prefs.value = withTopic(prefs.value, 'push', topic, on)
     try {
-        const updated = await pb
-            .collection('users')
-            .update(pb.authStore.record!.id, {
-                notification_prefs: prefs.value,
-            })
-        pb.authStore.save(pb.authStore.token, updated)
+        await updateNotificationPrefs(prefs.value)
     } catch {
         prefs.value = withTopic(prefs.value, 'push', topic, !on)
         notifyError(t('notifications.error.edit'))
@@ -305,18 +300,9 @@ async function setTopic(topic: string, on: boolean) {
 const followedWalls = ref<FollowedWall[]>([])
 
 async function loadFollowedWalls(ids: string[]) {
-    followedWalls.value = ids.length
-        ? await pb
-              .collection('walls')
-              .getFullList<FollowedWall>({
-                  filter: ids
-                      .map((id) => pb.filter('id = {:id}', { id }))
-                      .join(' || '),
-                  expand: 'location',
-                  sort: 'name',
-              })
-              .catch(() => [])
-        : []
+    followedWalls.value = await listWallsByIds<FollowedWall>(ids).catch(
+        () => [],
+    )
 }
 
 watch(followed, loadFollowedWalls)

@@ -15,7 +15,7 @@ test('captcha failures show a translated message instead of the server text', as
     page,
 }, testInfo) => {
     const language = projectLanguage(testInfo)
-    await page.route('**/api/collections/users/auth-with-password', (route) =>
+    await page.route('**/api/auth/login', (route) =>
         route.fulfill({
             status: 400,
             contentType: 'application/json',
@@ -42,7 +42,7 @@ test('a wrong password on email change shows a translated message', async ({
     page,
 }, testInfo) => {
     const language = projectLanguage(testInfo)
-    await page.route('**/api/collections/users/confirm-email-change', (route) =>
+    await page.route('**/api/auth/email-change/confirm', (route) =>
         route.fulfill({
             status: 400,
             contentType: 'application/json',

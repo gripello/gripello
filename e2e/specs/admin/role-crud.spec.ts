@@ -1,6 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, reloadSettled } from '../../support/nav'
-import { e2eRole } from '../../support/seed'
+import { deleteRole, findRole } from '../../support/api'
 
 test('creates a role with a color, toggles a permission, then deletes it', async ({
     adminPage: page,
@@ -34,8 +34,8 @@ test('creates a role with a color, toggles a permission, then deletes it', async
     await expect(toggle).not.toBeChecked()
     const saved = page.waitForResponse(
         (res) =>
-            res.request().method() === 'PATCH' &&
-            res.url().includes('/api/collections/roles/records/'),
+            res.request().method() === 'PUT' &&
+            /\/api\/roles\/[^/]+\/permissions$/.test(res.url()),
     )
     await toggle.click()
     expect((await saved).ok()).toBe(true)
@@ -58,7 +58,7 @@ test('creates a role with a color, toggles a permission, then deletes it', async
 
 test('moves the holders of a deleted role to the role picked in the dialog', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
     createUser,
 }) => {
@@ -74,7 +74,7 @@ test('moves the holders of a deleted role to the role picked in the dialog', asy
         page.getByTestId(`role-permissions-row-${roleName}`),
     ).toBeVisible()
 
-    const doomed = await e2eRole(root, roleName)
+    const doomed = await findRole(adminApi, roleName)
     const holder = await createUser(doomed.id, 'reassign')
 
     await page.getByTestId(`role-delete-${roleName}`).click()
@@ -161,7 +161,7 @@ test('add role button looks like the add member button', async ({
 
 test('duplicates a role with its colour and permissions', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
     await gotoSettled(page, '/admin/users#roles')
@@ -196,10 +196,9 @@ test('duplicates a role with its colour and permissions', async ({
         'rgb(38, 166, 154)',
     )
 
-    const source = await e2eRole(root, name)
-    const duplicate = await e2eRole(root, copy)
+    const source = await findRole(adminApi, name)
+    const duplicate = await findRole(adminApi, copy)
     expect(duplicate.permissions).toEqual(source.permissions)
 
-    for (const role of [duplicate, source])
-        await root.collection('roles').delete(role.id)
+    for (const role of [duplicate, source]) await deleteRole(adminApi, role.id)
 })

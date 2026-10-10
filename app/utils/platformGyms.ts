@@ -4,7 +4,7 @@ export type PlatformGym = GymRecord & { members: number; routes: number }
 
 export function withGymStats(
     gyms: GymRecord[],
-    stats: GymStatsRecord[],
+    stats: Pick<GymStatsRecord, 'id' | 'members' | 'routes'>[],
 ): PlatformGym[] {
     const byId = new Map(stats.map((entry) => [entry.id, entry]))
     return gyms.map((gym) => ({

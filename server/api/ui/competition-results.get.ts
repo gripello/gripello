@@ -1,9 +1,5 @@
 import { createError, eventHandler, getHeader, getQuery } from 'h3'
-import {
-    createPocketBase,
-    getAuthenticatedPb,
-    requirePermission,
-} from '../../utils/pb-server'
+import { apiFetch, requirePermission } from '../../utils/api-server'
 import {
     cachedResultsUsable,
     loadResults,
@@ -19,13 +15,17 @@ const publicCache = new Map<
 async function staffClient(event: Parameters<typeof getHeader>[0], id: string) {
     if (!getHeader(event, 'authorization')) return null
     try {
-        const { gym } = await getAuthenticatedPb(event)
-            .collection('competitions')
-            .getOne<CompetitionRecord>(id, { fields: 'gym', requestKey: null })
+        const { gym } = await apiFetch(event)<CompetitionRecord>(
+            `/competitions/${id}`,
+        )
         return await requirePermission(event, 'manage_competitions', gym ?? '')
     } catch {
         return null
     }
+}
+
+function notFound(): never {
+    throw createError({ statusCode: 404, statusMessage: 'Not found.' })
 }
 
 export default eventHandler(async (event) => {
@@ -36,27 +36,15 @@ export default eventHandler(async (event) => {
         throw createError({ statusCode: 400, statusMessage: 'Missing id.' })
     }
 
-    const staffPb = await staffClient(event, id)
+    const staffApi = await staffClient(event, id)
+    if (staffApi) return loadResults(staffApi, id).catch(notFound)
+
     const cached = publicCache.get(id)
-    if (
-        !staffPb &&
-        cached &&
-        cachedResultsUsable(cached.at, Date.now(), changedAt)
-    ) {
+    if (cached && cachedResultsUsable(cached.at, Date.now(), changedAt)) {
         return cached.results
     }
-    const pb = staffPb ?? createPocketBase()
-    const competition = await pb
-        .collection('competitions')
-        .getOne<CompetitionRecord>(id, { requestKey: null })
-        .catch(() => {
-            throw createError({ statusCode: 404, statusMessage: 'Not found.' })
-        })
-
-    if (staffPb) return loadResults(staffPb, competition, true)
-
-    const results = loadResults(pb, competition, false)
+    const results = loadResults(apiFetch(), id)
     publicCache.set(id, { at: Date.now(), results })
     results.catch(() => publicCache.delete(id))
-    return results
+    return results.catch(notFound)
 })

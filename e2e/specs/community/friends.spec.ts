@@ -1,11 +1,11 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { signInAs } from '../../support/auth'
+import { apiAs, createTick, updateMe } from '../../support/api'
 
 test('climbers follow each other and see sends in the feed', async ({
     page,
     pageAs,
-    root,
     createUser,
     route,
     testPrefix,
@@ -13,9 +13,8 @@ test('climbers follow each other and see sends in the feed', async ({
     const anna = await createUser('user', 'anna')
     const ben = await createUser('user', 'ben')
     const benName = `Ben${testPrefix.replace(/\D/g, '')}`
-    await root
-        .collection('users')
-        .update(ben.id, { firstname: benName, name: 'Boulder' })
+    const benApi = await apiAs(ben)
+    await updateMe(benApi, { firstname: benName, name: 'Boulder' })
 
     const benPage = await pageAs(ben)
     await gotoSettled(benPage, '/friends')
@@ -38,12 +37,11 @@ test('climbers follow each other and see sends in the feed', async ({
     )
 
     const day = new Date().toISOString().slice(0, 10)
-    await root.collection('ticks').create({
-        user: ben.id,
+    await createTick(benApi, {
         route: route.id,
         type: 'top',
         attempts: 3,
-        date: `${day} 12:00:00.000Z`,
+        date: `${day}T12:00:00Z`,
         note: `${testPrefix} private note`,
     })
 
@@ -73,7 +71,7 @@ test('climbers follow each other and see sends in the feed', async ({
     await expect(page).toHaveURL(`/climber?id=${anna.id}`)
     await expect(page.getByTestId('climber-edit')).toBeVisible()
 
-    await root.collection('users').update(ben.id, { ticks_private: true })
+    await updateMe(benApi, { ticks_private: true })
     await gotoSettled(page, `/climber?id=${ben.id}`)
     await expect(page.getByTestId('climber-locked')).toContainText('private')
     await gotoSettled(page, '/friends')
@@ -82,14 +80,13 @@ test('climbers follow each other and see sends in the feed', async ({
 
 test('a closed logbook can not be found or followed', async ({
     page,
-    root,
     createUser,
     testPrefix,
 }) => {
     const seeker = await createUser('user', 'seeker')
     const loner = await createUser('user', 'loner')
     const lonerName = `Lone${testPrefix.replace(/\D/g, '')}`
-    await root.collection('users').update(loner.id, {
+    await updateMe(await apiAs(loner), {
         firstname: lonerName,
         follow_policy: 'closed',
     })

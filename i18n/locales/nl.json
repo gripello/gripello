@@ -478,6 +478,7 @@
             "mfa_expired": "Het inloggen duurde te lang. Log opnieuw in."
         },
         "deleteItem": "Dit item verwijderen? Dit kan niet ongedaan worden gemaakt.",
+        "deleteRouteWithHistory": "Deze route heeft beoordelingen, beta-video’s of wedstrijdresultaten. Verwijderen wist die ook. Archiveer de route om ze te bewaren.",
         "deleteMoreItems": "De geselecteerde items verwijderen? Dit kan niet ongedaan worden gemaakt.",
         "archiveMoreItems": "De geselecteerde routes archiveren?",
         "updateAvailable": "Update beschikbaar",
@@ -521,6 +522,7 @@
                 "task_wish_done": "Je routewens voor {location} is geschroefd — veel plezier!",
                 "wall_new_routes": "Nieuwe routes aan {wall}: {count}",
                 "competition_published": "De uitslag van ‘{competition}’ staat online",
+                "competition_entry_added": "Je bent ingeschreven voor ‘{competition}’",
                 "follow_requested": "{name} wil je volgen",
                 "follow_accepted": "{name} heeft je volgverzoek geaccepteerd",
                 "new_follower": "{name} volgt je nu",
@@ -2145,6 +2147,17 @@
         "accountSuspended": {
             "subject": "Je account is geschorst",
             "body": "Je account is geschorst. Je kunt niet inloggen tot de onderstaande datum."
+        },
+        "accountExists": {
+            "subject": "Je hebt al een account",
+            "body": "Iemand probeerde zich met dit e-mailadres aan te melden bij {app} of een ander account ernaar over te zetten. Het hoort al bij jouw account, dus er is niets gewijzigd.",
+            "action": "Inloggen",
+            "note": "Wachtwoord vergeten? Stel het opnieuw in op de inlogpagina. Was jij dit niet? Dan kun je deze e-mail negeren."
+        },
+        "emailChangedByAdmin": {
+            "subject": "Je e-mailadres is gewijzigd",
+            "body": "Het platformteam heeft het e-mailadres van je {app}-account gewijzigd in {email}. Je bent op alle apparaten afgemeld.",
+            "note": "Heb je hier niet om gevraagd? Beantwoord deze e-mail dan meteen."
         }
     },
     "leaderboard": {

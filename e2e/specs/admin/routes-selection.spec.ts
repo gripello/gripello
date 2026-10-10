@@ -55,8 +55,8 @@ test('repeated select-all reuses the loaded id list', async ({
     page.on('request', (request) => {
         const url = new URL(request.url())
         if (
-            url.pathname === '/api/collections/routes/records' &&
-            url.searchParams.get('fields') === 'id'
+            /^\/api\/gyms\/[^/]+\/routes$/.test(url.pathname) &&
+            url.searchParams.get('limit') === '1000'
         ) {
             idListRequests++
         }

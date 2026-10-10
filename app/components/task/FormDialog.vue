@@ -318,6 +318,14 @@
 </template>
 
 <script setup lang="ts">
+import { listWalls } from '~/api/routes'
+import {
+    createTask,
+    listTaskAssignees,
+    updateTask,
+    type TaskInput,
+} from '~/api/tasks'
+import { fileUrl } from '~/api/client'
 import { maxLength, nonBlank, validateRules } from '~/utils/validation'
 import {
     DEFECT_CATEGORIES,
@@ -365,14 +373,13 @@ const PRIORITY_ICONS = {
 const props = defineProps<{
     task?: TaskRecord | null
     routeId?: string | null
-    fileToken?: string
 }>()
 
 const emit = defineEmits<{ saved: [task: TaskRecord] }>()
 
 const open = defineModel<boolean>({ default: false })
 
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const gymId = useCurrentGymId()
 const { t, locale } = useI18n()
 const { warning } = useNotification()
@@ -443,8 +450,8 @@ const selectedAssigneeAvatar = computed(
             ?.avatar,
 )
 const myAssigneeId = computed(() =>
-    assignees.value.some((item) => item.user === pb.authStore.record?.id)
-        ? pb.authStore.record?.id
+    assignees.value.some((item) => item.user === authStore.record?.id)
+        ? authStore.record?.id
         : undefined,
 )
 
@@ -473,14 +480,17 @@ const headerSubtitle = computed(() =>
         : t('tasks.newSubtitle'),
 )
 
+const fileToken = useFileToken(() =>
+    props.task?.photo ? { table: 'tasks', id: props.task.id } : null,
+)
 const fileQuery = computed(() =>
-    props.fileToken ? { token: props.fileToken } : undefined,
+    fileToken.value ? { token: fileToken.value } : undefined,
 )
 const existingPhotoUrl = computed(() =>
-    usePbFileUrl(props.task, props.task?.photo, fileQuery.value),
+    fileUrl('tasks', props.task, props.task?.photo, fileQuery.value),
 )
 const existingThumbUrl = computed(() =>
-    usePbFileUrl(props.task, props.task?.photo, {
+    fileUrl('tasks', props.task, props.task?.photo, {
         ...fileQuery.value,
         thumb: '400x0',
     }),
@@ -512,52 +522,34 @@ watch(open, async (isOpen) => {
     })
     photo.value = null
     const [loadedAssignees, loadedWalls] = await Promise.all([
-        pb
-            .collection('task_assignees')
-            .getFullList<TaskAssigneeRecord>({
-                filter: pb.filter('gym = {:gym}', { gym: gymId.value }),
-                sort: 'name',
-                requestKey: null,
-            })
-            .catch(() => []),
+        listTaskAssignees(gymId.value).catch(() => []),
         walls.value.length || targetRouteId.value
             ? walls.value
-            : pb
-                  .collection('walls')
-                  .getFullList<WallRecord>({
-                      filter: gymFilter(pb, gymId.value),
-                      sort: 'sort,name',
-                      requestKey: null,
-                  })
-                  .catch(() => []),
+            : listWalls(gymId.value, {}, { requestKey: null }).catch(() => []),
     ])
     assignees.value = loadedAssignees
     walls.value = loadedWalls
 })
 
-function buildBody() {
-    const body = new FormData()
-    if (!props.task) {
-        body.append('kind', form.kind)
-        body.append('gym', gymId.value)
+function buildInput(): TaskInput {
+    return {
+        ...(isDefect.value
+            ? { category: form.category }
+            : { title: form.title.trim() }),
+        priority: form.priority,
+        ...(targetRouteId.value
+            ? { route: targetRouteId.value }
+            : { location: form.location, wall: form.wall ?? '' }),
+        assignee: form.assignee ?? '',
+        due_date: form.dueDate,
+        description: form.description.trim(),
+        ...(props.task
+            ? {
+                  status: form.status,
+                  resolution_note: form.resolutionNote.trim(),
+              }
+            : {}),
     }
-    if (isDefect.value) body.append('category', form.category)
-    else body.append('title', form.title.trim())
-    body.append('priority', String(form.priority))
-    if (targetRouteId.value) body.append('route', targetRouteId.value)
-    else {
-        body.append('location', form.location)
-        body.append('wall', form.wall ?? '')
-    }
-    body.append('assignee', form.assignee ?? '')
-    body.append('due_date', form.dueDate)
-    body.append('description', form.description.trim())
-    if (props.task) {
-        body.append('status', form.status)
-        body.append('resolution_note', form.resolutionNote.trim())
-    }
-    if (photo.value) body.append('photo', photo.value)
-    return body
 }
 
 async function save() {
@@ -568,15 +560,13 @@ async function save() {
     }
     await run(
         async () => {
-            const tasks = pb.collection('tasks')
-            const options = { expand: 'route,wall' }
             const saved = props.task
-                ? await tasks.update<TaskRecord>(
-                      props.task.id,
-                      buildBody(),
-                      options,
+                ? await updateTask(props.task.id, buildInput(), photo.value)
+                : await createTask(
+                      gymId.value,
+                      { kind: form.kind, ...buildInput() },
+                      photo.value,
                   )
-                : await tasks.create<TaskRecord>(buildBody(), options)
             emit('saved', saved)
             open.value = false
         },

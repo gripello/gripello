@@ -161,6 +161,7 @@
 </template>
 
 <script setup lang="ts">
+import { listCompetitionRoutes } from '~/api/competitions'
 import { EMPTY_SCORE, isFlash } from '~/utils/scorecard'
 import type { ClimbStyle } from '#shared/utils/competitionScoring'
 import type {
@@ -177,27 +178,20 @@ const props = defineProps<{
     entry: CompetitionEntryRecord
 }>()
 
-const pb = usePocketbase()
 const { t } = useI18n()
 
 const filter = ref<'open' | 'all' | 'topped'>('all')
 const entryId = computed(() => props.entry.id)
-const { scores, pendingCount, offline, load, act } = useScorecard(entryId)
+const { scores, pendingCount, offline, load, act } = useScorecard(
+    computed(() => props.competition.id),
+    entryId,
+)
 
 const isRope = computed(() => props.competition.discipline === 'rope')
 
 const { data: compRoutes } = useAsyncData(
     () => `scorecard-routes:${props.competition.id}`,
-    () =>
-        pb
-            .collection('competition_routes')
-            .getFullList<CompetitionRouteRecord>({
-                filter: pb.filter('competition = {:id} && voided = false', {
-                    id: props.competition.id,
-                }),
-                sort: 'number',
-                expand: 'route',
-            }),
+    () => listCompetitionRoutes(props.competition.id, { voided: false }),
     { default: () => [] },
 )
 

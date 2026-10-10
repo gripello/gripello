@@ -90,13 +90,3 @@ export function keepSelectableSeason(
         ? selected
         : defaultSeason(seasons, today)
 }
-
-export function leaderboardPath(
-    gymId: string,
-    kind: LogbookKind,
-    season: string,
-): string {
-    const query = new URLSearchParams({ kind })
-    if (season !== ROLLING_SEASON) query.set('season', season)
-    return `/api/gyms/${encodeURIComponent(gymId)}/leaderboard?${query}`
-}

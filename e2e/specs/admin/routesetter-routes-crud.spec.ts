@@ -1,6 +1,7 @@
 import { test, expect } from '../../support/fixtures'
 import { uiaa } from '../../support/seed'
-import { gotoSettled, authHeader } from '../../support/nav'
+import { apiOf, gotoSettled } from '../../support/nav'
+import { createRoute } from '../../support/api'
 
 test('routesetter can create and delete a route (manage_routes permission)', async ({
     setterPage: page,
@@ -48,13 +49,10 @@ test('a user without manage_routes cannot reach or write to /manage/routes', asy
     await gotoSettled(page, '/manage/routes')
     await page.waitForURL((url) => !url.pathname.endsWith('/manage/routes'))
 
-    const headers = await authHeader(page)
-    const res = await page.request.post('/api/collections/routes/records', {
-        headers,
-        data: {
+    await expect(
+        createRoute(await apiOf(page), {
             name: 'should-not-be-created-by-user',
             ...uiaa('1'),
-        },
-    })
-    expect(res.status()).toBeGreaterThanOrEqual(400)
+        }),
+    ).rejects.toMatchObject({ status: expect.any(Number) })
 })

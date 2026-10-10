@@ -19,5 +19,6 @@ fi
 
 docker volume inspect gripello-e2e-yarn-cache >/dev/null 2>&1 || docker volume create gripello-e2e-yarn-cache >/dev/null
 
+docker compose -p "$COMPOSE_PROJECT_NAME" -f e2e/docker-compose.e2e.yml down -v --remove-orphans >/dev/null 2>&1 || true
 docker compose -p "$COMPOSE_PROJECT_NAME" -f e2e/docker-compose.e2e.yml up \
     --abort-on-container-exit --exit-code-from e2e

@@ -1,11 +1,11 @@
 import { test, expect } from '../../support/fixtures'
 import { authHeader, gotoSettled } from '../../support/nav'
-import { e2eGymId, uiaa } from '../../support/seed'
+import { uiaa } from '../../support/seed'
+import { e2eGymId } from '../../support/api'
 
 test('pdf labels embed a unicode font for cyrillic and turkish text', async ({
     adminPage: page,
     createRoute,
-    root,
     testPrefix,
 }) => {
     const route = await createRoute({
@@ -22,7 +22,7 @@ test('pdf labels embed a unicode font for cyrillic and turkish text', async ({
         headers,
         data: {
             ids: [route.id],
-            gym: await e2eGymId(root),
+            gym: await e2eGymId(),
             labels: { anchor: 'Станция' },
         },
     })

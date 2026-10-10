@@ -1,19 +1,13 @@
-import type { BlockRecord } from '~/types/models'
+import { createBlock, deleteBlock, listBlocks } from '~/api/social'
 import { cacheKeys } from '~/utils/realtimeCache'
 import { serverDedupe } from '~/utils/asyncData'
 
 export function useBlocks() {
-    const pb = usePocketbase()
     const authRecord = useAuthRecord()
     const myId = computed(() => authRecord.value?.id ?? '')
     const request = useAsyncData(
         cacheKeys.blocks,
-        () =>
-            myId.value
-                ? pb
-                      .collection('blocks')
-                      .getFullList<BlockRecord>({ requestKey: null })
-                : Promise.resolve([]),
+        () => (myId.value ? listBlocks() : Promise.resolve([])),
         { ...serverDedupe, default: () => [], watch: [myId] },
     )
     const blockedIds = computed(
@@ -21,9 +15,7 @@ export function useBlocks() {
     )
 
     async function block(userId: string) {
-        await pb
-            .collection('blocks')
-            .create({ blocker: myId.value, blocked: userId })
+        await createBlock(userId)
         await Promise.all([
             request.refresh(),
             refreshNuxtData(cacheKeys.follows),
@@ -34,7 +26,7 @@ export function useBlocks() {
         const existing = request.data.value.find(
             (entry) => entry.blocked === userId,
         )
-        if (existing) await pb.collection('blocks').delete(existing.id)
+        if (existing) await deleteBlock(existing.id)
         await request.refresh()
     }
 

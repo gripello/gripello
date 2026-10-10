@@ -1,7 +1,8 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, gotoSubscribed } from '../../support/nav'
 import { signInAs } from '../../support/auth'
-import { ensureUser, getRoleIds, uiaa } from '../../support/seed'
+import { uiaa } from '../../support/seed'
+import { apiAs, archiveRoute, createTick } from '../../support/api'
 
 test('the logbook sends guests to sign in and back', async ({ page }) => {
     await page.goto('/logbook')
@@ -14,19 +15,16 @@ test('the logbook sends guests to sign in and back', async ({ page }) => {
 
 test('a climber logs, edits and deletes an ascent', async ({
     page,
-    root,
+    adminApi,
     testPrefix,
-    workerLocation,
+    createUser,
+    createRoute,
 }) => {
-    const roleIds = await getRoleIds(root)
-    const climber = await ensureUser(root, roleIds.user, 'user', testPrefix)
-    const route = await root.collection('routes').create({
+    const climber = await createUser()
+    const route = await createRoute({
         name: `${testPrefix}-tick-route`,
         ...uiaa('6+'),
-        location: workerLocation.id,
-        type: 'Route',
         color: '#2196F3',
-        creator: ['E2E'],
         screw_date: '2026-09-01',
     })
 
@@ -66,7 +64,7 @@ test('a climber logs, edits and deletes an ascent', async ({
     await expect(tick.getByTestId('logbook-tick-type')).toHaveText('Flash')
     await expect(tick.getByTestId('logbook-tick-attempts')).toHaveCount(0)
 
-    await root.collection('routes').update(route.id, { archived: true })
+    await archiveRoute(adminApi, route.id)
     await gotoSettled(page, '/logbook')
     await expect(tick.getByTestId('logbook-tick-route')).toContainText(
         route.name,
@@ -80,37 +78,28 @@ test('a climber logs, edits and deletes an ascent', async ({
 
 test('the dashboard sums up sends and turns a project into a send', async ({
     page,
-    root,
     testPrefix,
-    workerLocation,
+    createUser,
+    createRoute,
 }) => {
-    const roleIds = await getRoleIds(root)
-    const climber = await ensureUser(
-        root,
-        roleIds.user,
-        'user',
-        `${testPrefix}-dash`,
-    )
-    const createRoute = (name: string, grade: string) =>
-        root.collection('routes').create({
+    const climber = await createUser('user', 'dash')
+    const routeOf = (name: string, grade: string) =>
+        createRoute({
             name: `${testPrefix}-${name}`,
             ...uiaa(grade),
-            location: workerLocation.id,
-            type: 'Route',
-            creator: ['E2E'],
             screw_date: '2026-09-01',
         })
-    const easy = await createRoute('easy', '6+')
-    const hard = await createRoute('hard', '7-')
-    const project = await createRoute('project', '8')
-    const today = `${new Date().toISOString().slice(0, 10)} 12:00:00.000Z`
+    const easy = await routeOf('easy', '6+')
+    const hard = await routeOf('hard', '7-')
+    const project = await routeOf('project', '8')
+    const today = `${new Date().toISOString().slice(0, 10)}T12:00:00Z`
+    const climberApi = await apiAs(climber)
     for (const [route, type] of [
         [easy, 'flash'],
         [hard, 'top'],
         [project, 'attempt'],
     ] as const) {
-        await root.collection('ticks').create({
-            user: climber.id,
+        await createTick(climberApi, {
             route: route.id,
             type,
             attempts: type === 'flash' ? 1 : 3,
@@ -156,19 +145,15 @@ test('the dashboard sums up sends and turns a project into a send', async ({
 
 test('an ascent logged on another device appears in the open logbook', async ({
     page,
-    root,
     testPrefix,
-    workerLocation,
+    createUser,
+    createRoute,
 }) => {
-    const roleIds = await getRoleIds(root)
-    const climber = await ensureUser(root, roleIds.user, 'user', testPrefix)
-    const route = await root.collection('routes').create({
+    const climber = await createUser()
+    const route = await createRoute({
         name: `${testPrefix}-live-tick-route`,
         ...uiaa('6+'),
-        location: workerLocation.id,
-        type: 'Route',
         color: '#2196F3',
-        creator: ['E2E'],
         screw_date: '2026-09-01',
     })
 
@@ -176,12 +161,11 @@ test('an ascent logged on another device appears in the open logbook', async ({
     await gotoSubscribed(page, '/logbook', 'own_ticks')
     await expect(page.getByTestId('logbook-empty')).toBeVisible()
 
-    await root.collection('ticks').create({
-        user: climber.id,
+    await createTick(await apiAs(climber), {
         route: route.id,
         type: 'flash',
         attempts: 1,
-        date: `${new Date().toISOString().slice(0, 10)} 12:00:00.000Z`,
+        date: `${new Date().toISOString().slice(0, 10)}T12:00:00Z`,
     })
 
     await expect(

@@ -1,17 +1,15 @@
 import type { Ref } from 'vue'
+import { fileUrl } from '~/api/client'
 import type { Climber } from '~/utils/friends'
+import { listClimbersByIds } from '~/api/social'
 
 export function useClimbers(ids: Ref<string[]>) {
-    const pb = usePocketbase()
     const key = computed(() => [...new Set(ids.value)].sort().join(','))
     const request = useAsyncData(
         () => `climbers:${key.value}`,
         () =>
             key.value
-                ? pb.send<Climber[]>('/api/climbers', {
-                      query: { ids: key.value },
-                      requestKey: null,
-                  })
+                ? listClimbersByIds(key.value.split(','))
                 : Promise.resolve([]),
     )
     const previous = shallowRef<Climber[]>([])
@@ -39,7 +37,5 @@ export function climberFileUrl(
     file: string | null | undefined,
     thumb: string,
 ) {
-    return file
-        ? usePbFileUrl({ id, collectionId: '_pb_users_auth_' }, file, { thumb })
-        : null
+    return file ? fileUrl('users', { id }, file, { thumb }) : null
 }

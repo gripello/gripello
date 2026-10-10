@@ -1,18 +1,21 @@
-import { createHash } from 'node:crypto'
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled, authHeader } from '../../support/nav'
-import { uiaa } from '../../support/seed'
+import { apiOf, gotoSettled } from '../../support/nav'
+import { E2E_GYM_SLUG, uiaa } from '../../support/seed'
 import {
     AUDIT_ACTOR_GUESTS,
     AUDIT_ACTOR_PLATFORM,
-    buildAuditFilter,
 } from '../../../app/utils/audit'
 import { createComment, deleteComment } from '../../support/comments'
+import { fetchAuditRows, waitForAuditRow } from '../../support/audit'
 import {
-    fetchAuditRows,
-    fetchAuditRowsAnonymously,
-    waitForAuditRow,
-} from '../../support/audit'
+    createRoute,
+    getPlatformUser,
+    guestApi,
+    listAudit,
+    listRouteRatings,
+    routeInput,
+    updateRating,
+} from '../../support/api'
 
 test('a create, an update and a delete each leave an entry', async ({
     adminPage: page,
@@ -26,26 +29,24 @@ test('a create, an update and a delete each leave an entry', async ({
         route.id,
         `${testPrefix}-audited`,
     )
-    const created = await waitForAuditRow(
-        page,
-        `record_id = "${commentId}" && action = "create"`,
-    )
+    const created = await waitForAuditRow(page, {
+        q: commentId,
+        action: 'create',
+    })
     expect(created).toHaveLength(1)
     expect(created[0].collection_name).toBe('ratings')
     expect(created[0].actor_label).toBeTruthy()
 
     await deleteComment(page, commentId)
-    const deleted = await waitForAuditRow(
-        page,
-        `record_id = "${commentId}" && action = "delete"`,
-    )
+    const deleted = await waitForAuditRow(page, {
+        q: commentId,
+        action: 'delete',
+    })
     expect(deleted).toHaveLength(1)
 
-    const gone = await page.request.get(
-        `/api/collections/ratings/records/${commentId}`,
-    )
-    expect(gone.status()).toBe(404)
-    const still = await fetchAuditRows(page, `record_id = "${commentId}"`)
+    const ratings = await listRouteRatings(await apiOf(page), route.id)
+    expect(ratings.map((rating) => rating.id)).not.toContain(commentId)
+    const still = await fetchAuditRows(page, { q: commentId })
     expect(still.length).toBeGreaterThanOrEqual(2)
 })
 
@@ -62,19 +63,12 @@ test('an update records the changed field names and none of the values', async (
         `${testPrefix}-before`,
     )
     const secret = `${testPrefix}-SECRET-VALUE`
-    const res = await page.request.patch(
-        `/api/collections/ratings/records/${commentId}`,
-        {
-            headers: await authHeader(page),
-            data: { comment: secret },
-        },
-    )
-    expect(res.ok()).toBeTruthy()
+    await updateRating(await apiOf(page), commentId, { comment: secret })
 
-    const rows = await waitForAuditRow(
-        page,
-        `record_id = "${commentId}" && action = "update"`,
-    )
+    const rows = await waitForAuditRow(page, {
+        q: commentId,
+        action: 'update',
+    })
     expect(rows).toHaveLength(1)
     expect(rows[0].changed_fields).toContain('comment')
 
@@ -87,18 +81,18 @@ test('a failed sign-in is recorded without the attempted password', async ({
 }) => {
     await gotoSettled(page, '/platform')
 
-    const identity = `ghost-${testPrefix}@example.test`
+    const identity = `ghost@${testPrefix}.example.test`
     const badPassword = `wrong-${testPrefix}`
-    const res = await page.request.post(
-        '/api/collections/users/auth-with-password',
-        { data: { identity, password: badPassword } },
-    )
+    const res = await page.request.post('/api/auth/login', {
+        data: { identity, password: badPassword },
+    })
     expect(res.ok()).toBeFalsy()
 
-    const maskedIdentity = `unknown:${createHash('sha256').update(identity).digest('hex').slice(0, 8)}`
+    const maskedIdentity = `g***@${testPrefix}.example.test`
     const rows = await waitForAuditRow(
         page,
-        `action = "login_failed" && actor_label = "${maskedIdentity}"`,
+        { action: 'login_failed', q: maskedIdentity },
+        'platform',
     )
     expect(rows).toHaveLength(1)
     expect(JSON.stringify(rows[0])).not.toContain(badPassword)
@@ -110,26 +104,21 @@ test('nobody can forge or erase an entry through the API', async ({
     testPrefix,
 }) => {
     await gotoSettled(page, '/manage/routes', /\/manage\/routes/)
-    const headers = await authHeader(page)
+    const auditPath = `/api/gyms/${E2E_GYM_SLUG}/audit`
 
-    const forged = await page.request.post(
-        '/api/collections/audit_logs/records',
-        {
-            headers,
-            data: { action: 'create', actor_label: `${testPrefix}-forged` },
-        },
-    )
-    expect(forged.status()).toBe(403)
+    const forged = await page.request.post(auditPath, {
+        data: { action: 'create', actor_label: `${testPrefix}-forged` },
+    })
+    expect(forged.ok()).toBe(false)
 
-    const existing = await fetchAuditRows(page, 'action = "create"')
+    const existing = await fetchAuditRows(page, { action: 'create' })
     expect(existing.length).toBeGreaterThan(0)
-    const removed = await page.request.delete(
-        `/api/collections/audit_logs/records/${existing[0].id}`,
-        { headers },
-    )
-    expect(removed.status()).toBe(403)
+    const removed = await page.request.delete(`${auditPath}/${existing[0]!.id}`)
+    expect(removed.ok()).toBe(false)
 
-    const stillThere = await fetchAuditRows(page, `id = "${existing[0].id}"`)
+    const stillThere = (
+        await fetchAuditRows(page, { action: 'create' })
+    ).filter((row) => row.id === existing[0]!.id)
     expect(stillThere).toHaveLength(1)
 })
 
@@ -139,40 +128,28 @@ test('a bulk archive leaves one entry per route', async ({
     workerLocation,
 }) => {
     await gotoSettled(page, '/manage/routes', /\/manage\/routes/)
-    const headers = await authHeader(page)
+    const pageApi = await apiOf(page)
 
     const ids: string[] = []
     for (let i = 0; i < 2; i++) {
-        const res = await page.request.post('/api/collections/routes/records', {
-            headers,
-            data: {
-                name: `${testPrefix}-bulk-${i}`,
+        const route = await createRoute(
+            pageApi,
+            routeInput(`${testPrefix}-bulk-${i}`, workerLocation.id, {
                 ...uiaa('5'),
-                location: workerLocation.id,
                 type: 'Boulder',
                 creator: [testPrefix],
-            },
-        })
-        ids.push((await res.json()).id as string)
+            }),
+        )
+        ids.push(route.id)
     }
 
-    const batch = await page.request.post('/api/batch', {
-        headers,
-        data: {
-            requests: ids.map((id) => ({
-                method: 'PATCH',
-                url: `/api/collections/routes/records/${id}`,
-                body: { archived: true },
-            })),
-        },
+    await pageApi.post(`/gyms/${E2E_GYM_SLUG}/routes/archive`, {
+        ids,
+        archived: true,
     })
-    expect(batch.ok()).toBeTruthy()
 
     for (const id of ids) {
-        const rows = await waitForAuditRow(
-            page,
-            `record_id = "${id}" && action = "update"`,
-        )
+        const rows = await waitForAuditRow(page, { q: id, action: 'update' })
         expect(rows).toHaveLength(1)
         expect(rows[0].changed_fields).toContain('archived')
     }
@@ -183,14 +160,15 @@ test('an anonymous caller cannot read the audit log', async ({
 }) => {
     await gotoSettled(page, '/manage/routes', /\/manage\/routes/)
 
-    const body = await fetchAuditRowsAnonymously(page)
-    expect(body.totalItems ?? 0).toBe(0)
+    await expect(
+        guestApi().get(`/gyms/${E2E_GYM_SLUG}/audit`),
+    ).rejects.toMatchObject({ status: 401 })
 })
 
 test('admins narrow the audit log down to one member', async ({
     adminPage: page,
     setterPage,
-    root,
+    api,
     testPrefix,
     route,
 }) => {
@@ -201,13 +179,11 @@ test('admins narrow the audit log down to one member', async ({
         route.id,
         `${testPrefix}-by-setter`,
     )
-    const [row] = await waitForAuditRow(
-        page,
-        `record_id = "${commentId}" && action = "create"`,
-    )
-    const setter = await root.collection('users').getOne(row!.actor, {
-        requestKey: null,
+    const [row] = await waitForAuditRow(page, {
+        q: commentId,
+        action: 'create',
     })
+    const setter = await getPlatformUser(api, row!.actor!)
 
     await gotoSettled(page, '/account/activity')
     await page.getByTestId('audit-filter-actor').click()
@@ -236,10 +212,11 @@ test('admins narrow the audit log down to one member', async ({
 test('every actor filter parses on the server', async ({ adminPage: page }) => {
     await gotoSettled(page, '/manage/routes', /\/manage\/routes/)
     for (const actor of [AUDIT_ACTOR_GUESTS, AUDIT_ACTOR_PLATFORM]) {
-        const res = await page.request.get(
-            `/api/collections/audit_logs/records?perPage=1&filter=${encodeURIComponent(buildAuditFilter({ actor }))}`,
-            { headers: await authHeader(page) },
+        const rows = await listAudit(
+            await apiOf(page),
+            { gym: E2E_GYM_SLUG },
+            { actor },
         )
-        expect(res.status(), actor).toBe(200)
+        expect(Array.isArray(rows), actor).toBe(true)
     }
 })

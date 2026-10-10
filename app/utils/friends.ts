@@ -16,6 +16,8 @@ export interface ClimberProfile extends Climber {
     private: boolean
     followers: number
     following: number
+    follow: { id: string; status: FollowRecord['status'] } | null
+    sends_visible: boolean
 }
 
 export type FollowState =

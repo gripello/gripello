@@ -249,11 +249,14 @@
 </template>
 
 <script setup lang="ts">
-import type {
-    LocationRecord,
-    RouteScoreRecord,
-    WallRecord,
-} from '~/types/models'
+import { fileUrl } from '~/api/client'
+import {
+    deleteMapTrace,
+    listRoutes,
+    saveFloorPlan,
+    uploadMapTrace,
+} from '~/api/routes'
+import type { LocationRecord, WallRecord } from '~/types/models'
 import {
     DEFAULT_MAP_HEIGHT,
     DEFAULT_MAP_WIDTH,
@@ -278,7 +281,7 @@ definePageMeta({
 })
 
 const { t } = useI18n()
-const pb = usePocketbase()
+const gymId = useCurrentGymId()
 const editor = useMapEditor()
 
 useSeoMeta({ title: () => t('page.title.mapEditor') })
@@ -300,14 +303,15 @@ const { data: locationRoutes } = useAsyncData(
     cacheKeys.mapEditorRoutes,
     () =>
         locationId.value
-            ? pb.collection('averageRating').getFullList<RouteScoreRecord>({
-                  filter: pb.filter(
-                      'archived = false && location = {:id} && wall != ""',
-                      { id: locationId.value },
-                  ),
-                  fields: 'id,name,color,wall,wall_position,type,grade,grade_system',
-                  requestKey: 'mapEditorRoutes',
-              })
+            ? listRoutes(
+                  gymId.value,
+                  { location: locationId.value, wall: 'any' },
+                  {
+                      rated: true,
+                      fields: 'id,name,color,wall,wall_position,type,grade,grade_system',
+                      requestKey: 'mapEditorRoutes',
+                  },
+              ).then((list) => list.items)
             : Promise.resolve([]),
     { watch: [locationId], default: () => [], server: false },
 )
@@ -510,7 +514,7 @@ const wallsWithRoutes = computed(
 const { pending: traceBusy, run: runTrace } = useAsyncAction()
 const traceUrl = computed(() =>
     location.value?.map_trace
-        ? usePbFileUrl(location.value, location.value.map_trace)
+        ? fileUrl('locations', location.value, location.value.map_trace)
         : null,
 )
 
@@ -518,9 +522,7 @@ async function uploadTrace(file: File) {
     if (!location.value) return
     const locationRecordId = location.value.id
     await runTrace(async () => {
-        await pb
-            .collection('locations')
-            .update(locationRecordId, { map_trace: file })
+        await uploadMapTrace(locationRecordId, file)
         await refreshLocations()
         const map = editor.state.value.map
         if (!map.trace)
@@ -538,9 +540,7 @@ async function removeTrace() {
     if (!location.value) return
     const locationRecordId = location.value.id
     await runTrace(async () => {
-        await pb
-            .collection('locations')
-            .update(locationRecordId, { map_trace: null })
+        await deleteMapTrace(locationRecordId)
         await refreshLocations()
         const { trace: _removed, ...map } = editor.state.value.map
         editor.commit({ ...editor.state.value, map })
@@ -573,20 +573,24 @@ async function save() {
     }
 
     const changes = wallChanges(editor.saved.value.walls, state.walls)
-    const batch = pb.createBatch()
-    batch.collection('locations').update(location.value.id, { map: state.map })
-    for (const wall of changes.create)
-        batch.collection('walls').create(wallPayload(wall))
-    for (const wall of changes.update)
-        batch.collection('walls').update(wall.id!, wallPayload(wall))
-    for (const id of changes.remove) batch.collection('walls').delete(id)
+    const locationRecordId = location.value.id
 
     await runSave(
         async () => {
-            const results = await batch.send()
-            const createdIds = results
-                .slice(1, 1 + changes.create.length)
-                .map((result) => (result.body as { id: string }).id)
+            const saved = await saveFloorPlan(locationRecordId, {
+                map: state.map,
+                walls: [
+                    ...changes.create.map(wallPayload),
+                    ...changes.update.map((wall) => ({
+                        ...wallPayload(wall),
+                        id: wall.id!,
+                    })),
+                ],
+                removed: changes.remove,
+            })
+            const createdIds = saved.walls
+                .slice(0, changes.create.length)
+                .map((wall) => wall.id)
             const idByKey = new Map(
                 changes.create.map((wall, index) => [
                     wall.key,

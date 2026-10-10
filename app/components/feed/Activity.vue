@@ -36,7 +36,7 @@
                         <ClimberAvatar
                             :id="tick.user"
                             :name="nameOf(tick.user)"
-                            :avatar="climbers?.get(tick.user)?.avatar"
+                            :src="climbers?.get(tick.user)?.avatar"
                         />
                     </NuxtLink>
                     <div class="min-w-0 flex-1">

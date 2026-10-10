@@ -1,9 +1,13 @@
 import type { Page } from '@playwright/test'
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser, e2eGymId } from '../../support/seed'
+import {
+    createLocation,
+    deleteLocation,
+    deleteWall,
+    listWalls,
+} from '../../support/api'
 import { gotoSettled } from '../../support/nav'
-import { PB_URL, seedMap } from '../../support/map'
+import { seedMap } from '../../support/map'
 
 async function clickCanvas(page: Page, points: [number, number][]) {
     const canvas = page.getByTestId('map-editor-canvas')
@@ -16,13 +20,9 @@ async function clickCanvas(page: Page, points: [number, number][]) {
 test('admins draw a floor plan with a wall and it survives a reload', async ({
     adminPage: page,
     testPrefix,
+    adminApi,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const location = await root.collection('locations').create({
-        name: `${testPrefix} Editor Hall`,
-        gym: await e2eGymId(root),
-    })
+    const location = await createLocation(adminApi, `${testPrefix} Editor Hall`)
     const wallName = `${testPrefix} Cave`
     try {
         await gotoSettled(page, `/admin/map?location=${location.id}`)
@@ -63,31 +63,26 @@ test('admins draw a floor plan with a wall and it survives a reload', async ({
                 `[data-testid="map-editor-wall"][data-name="${wallName}"]`,
             ),
         ).toHaveCount(1)
-        const walls = await root.collection('walls').getFullList({
-            filter: `location = "${location.id}"`,
-        })
+        const walls = await listWalls(adminApi, location.id)
         expect(walls).toHaveLength(1)
         expect(walls[0]!.outline).toHaveLength(4)
         expect(walls[0]!.edge).toHaveLength(2)
     } finally {
-        const walls = await root.collection('walls').getFullList({
-            filter: `location = "${location.id}"`,
-        })
-        for (const wall of walls) await root.collection('walls').delete(wall.id)
-        await root.collection('locations').delete(location.id)
+        for (const wall of await listWalls(adminApi, location.id))
+            await deleteWall(adminApi, wall.id)
+        await deleteLocation(adminApi, location.id)
     }
 })
 
 test('creating a floor plan with the default size opens the editor', async ({
     adminPage: page,
     testPrefix,
+    adminApi,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const location = await root.collection('locations').create({
-        name: `${testPrefix} Default Hall`,
-        gym: await e2eGymId(root),
-    })
+    const location = await createLocation(
+        adminApi,
+        `${testPrefix} Default Hall`,
+    )
     try {
         await gotoSettled(page, `/admin/map?location=${location.id}`)
         await page.getByTestId('map-editor-create').click()
@@ -95,17 +90,16 @@ test('creating a floor plan with the default size opens the editor', async ({
         await expect(page.getByTestId('map-editor-shape-item')).toHaveCount(1)
         await expect(page.getByTestId('map-editor-save')).toBeEnabled()
     } finally {
-        await root.collection('locations').delete(location.id)
+        await deleteLocation(adminApi, location.id)
     }
 })
 
 test('a wall without a climbing edge blocks saving and says what is missing', async ({
     adminPage: page,
     testPrefix,
+    adminApi,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const seeded = await seedMap(root, testPrefix, { routes: 1 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     const wallName = `${testPrefix} Slab`
     try {
         await gotoSettled(page, `/admin/map?location=${seeded.locationId}`)
@@ -142,10 +136,9 @@ test('a wall without a climbing edge blocks saving and says what is missing', as
 test('drawing a mat can be undone and redone', async ({
     adminPage: page,
     testPrefix,
+    adminApi,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const seeded = await seedMap(root, testPrefix, { routes: 1 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     try {
         await gotoSettled(page, `/admin/map?location=${seeded.locationId}`)
         const shapes = page.getByTestId('map-editor-shape-item')
@@ -173,10 +166,9 @@ test('drawing a mat can be undone and redone', async ({
 test('a wall that still has routes cannot be deleted in the editor', async ({
     adminPage: page,
     testPrefix,
+    adminApi,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const seeded = await seedMap(root, testPrefix, { routes: 1 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     const wallItem = (name: string) =>
         page.locator(
             `[data-testid="map-editor-wall-item"][data-name="${testPrefix} ${name}"]`,
@@ -202,10 +194,9 @@ test('a wall that still has routes cannot be deleted in the editor', async ({
 test('the name of a selected wall can be dragged', async ({
     adminPage: page,
     testPrefix,
+    adminApi,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const seeded = await seedMap(root, testPrefix, { routes: 1 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     try {
         await gotoSettled(page, `/admin/map?location=${seeded.locationId}`)
         await page
@@ -241,10 +232,9 @@ test('the name of a selected wall can be dragged', async ({
 test('a wall stores the anchor range used for auto-placement', async ({
     adminPage: page,
     testPrefix,
+    adminApi,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const seeded = await seedMap(root, testPrefix, { routes: 1 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     try {
         await gotoSettled(page, `/admin/map?location=${seeded.locationId}`)
         await page
@@ -261,9 +251,9 @@ test('a wall stores the anchor range used for auto-placement', async ({
         await page.getByTestId('map-editor-save').click()
         await expect
             .poll(async () => {
-                const wall = await root
-                    .collection('walls')
-                    .getOne(seeded.islandWallId)
+                const wall = (
+                    await listWalls(adminApi, seeded.locationId)
+                ).find((wall) => wall.id === seeded.islandWallId)!
                 return [wall.anchor_from, wall.anchor_to]
             })
             .toEqual([10, 20])
@@ -275,10 +265,9 @@ test('a wall stores the anchor range used for auto-placement', async ({
 test('the preview shows the climber view of unsaved changes', async ({
     adminPage: page,
     testPrefix,
+    adminApi,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const seeded = await seedMap(root, testPrefix, { routes: 2 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 2 })
     try {
         await gotoSettled(page, `/admin/map?location=${seeded.locationId}`)
         await page.getByTestId('map-editor-preview').click()

@@ -13,10 +13,8 @@
                 data-testid="climber-header"
             >
                 <ClimberBanner
-                    :banner="bannerUrl"
-                    :avatar="
-                        climberFileUrl(climberId, profile.avatar, '100x100')
-                    "
+                    :banner="profile.banner"
+                    :avatar="profile.avatar"
                     :name="profile.name"
                     :id="profile.id"
                     class="aspect-[4/1] max-h-60 w-full"
@@ -27,7 +25,7 @@
                     <ClimberAvatar
                         :id="profile.id"
                         :name="profile.name"
-                        :avatar="profile.avatar"
+                        :src="profile.avatar"
                         size="xl"
                         class="-mt-14 ring-4 ring-(--ui-bg) sm:-mt-16"
                     />
@@ -225,14 +223,16 @@
 </template>
 
 <script setup lang="ts">
-import type { TickRecord, RouteRecord } from '~/types/models'
+import { getClimber } from '~/api/social'
+import { listClimberTicks, listOwnTicks } from '~/api/ticks'
+import type { RouteRecord } from '~/types/models'
 import {
     compareLogbooks,
     preferredKind,
     type LogbookKind,
     type LogbookRange,
 } from '#shared/utils/logbook'
-import type { ClimberProfile, FeedTick } from '~/utils/friends'
+import type { FeedTick } from '~/utils/friends'
 import { reportContentUrl } from '~/utils/reports'
 
 definePageMeta({
@@ -244,23 +244,15 @@ const LOGBOOK_RANGES: LogbookRange[] = ['30d', '12m', 'all']
 const RECENT_LIMIT = 12
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const route = useRoute()
 const { error: notifyError } = useNotification()
 const climberId = String(route.query.id ?? '')
-const myId = pb.authStore.record?.id ?? ''
+const myId = useAuthRecord().value?.id ?? ''
 const isSelf = climberId === myId
-const bannerUrl = computed(() =>
-    climberFileUrl(climberId, profile.value?.banner, '1600x400'),
-)
 
 const { data: profile, error: profileError } = await useAsyncData(
     `climber:${climberId}`,
-    () =>
-        pb.send<ClimberProfile>(
-            `/api/climbers/${encodeURIComponent(climberId)}`,
-            { requestKey: null },
-        ),
+    () => getClimber(climberId),
 )
 if (!profile.value && !profileError.value)
     throw createError({ statusCode: 404, fatal: true })
@@ -296,14 +288,7 @@ const {
     `climber-ticks:${climberId}`,
     () =>
         canSee.value
-            ? pb
-                  .collection(isSelf ? 'ticks' : 'friend_ticks')
-                  .getFullList<RoutedTick>({
-                      filter: pb.filter('user = {:user}', { user: climberId }),
-                      sort: '-date',
-                      expand: 'route',
-                      requestKey: null,
-                  })
+            ? listClimberTicks<RoutedTick>(climberId)
             : Promise.resolve([]),
     { default: () => [] },
 )
@@ -312,10 +297,13 @@ const { data: myTicks, error: myTicksError } = await useAsyncData(
     () =>
         isSelf
             ? Promise.resolve([])
-            : pb.collection('ticks').getFullList<TickRecord>({
-                  fields: 'id,route,type,attempts,date,grade,grade_system,grade_index',
-                  requestKey: null,
-              }),
+            : listOwnTicks(
+                  {},
+                  {
+                      fields: 'id,route,type,attempts,date,grade,grade_system,grade_index',
+                      requestKey: null,
+                  },
+              ).then((list) => list.items),
     { default: () => [] },
 )
 

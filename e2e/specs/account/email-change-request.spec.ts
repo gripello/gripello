@@ -19,12 +19,12 @@ test('requests an email change instead of writing the address', async ({
     await page.getByTestId('profile-email').fill(newEmail)
 
     const changeRequest = page.waitForRequest((req) =>
-        req.url().includes('/api/collections/users/request-email-change'),
+        req.url().includes('/api/auth/email-change/request'),
     )
     const patch = page.waitForRequest(
         (req) =>
             req.method() === 'PATCH' &&
-            req.url().includes('/api/collections/users/records/'),
+            new URL(req.url()).pathname === '/api/me',
     )
 
     await page.getByTestId('profile-save').click()
@@ -40,7 +40,7 @@ test('reports a failed confirmation mail without claiming the change', async ({
     userPage: page,
     testPrefix,
 }) => {
-    await page.route('**/api/collections/users/request-email-change', (route) =>
+    await page.route('**/api/auth/email-change/request', (route) =>
         route.abort('failed'),
     )
 

@@ -1,13 +1,14 @@
 import { test, expect } from '../../support/fixtures'
-import { authHeader, gotoSettled, gymPath } from '../../support/nav'
+import { apiOf, gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { openCase } from '../../support/moderation'
 import { fillLogin } from '../../support/auth'
+import { getMe, getPlatformUser, suspendUser } from '../../support/api'
 
 test('a platform admin suspends a person for good and lifts it again', async ({
     platformPage,
     page,
-    root,
+    api,
     createUser,
 }) => {
     const person = await createUser('user', 'suspended')
@@ -22,9 +23,9 @@ test('a platform admin suspends a person for good and lifts it again', async ({
         .fill('Repeated spam.')
     await platformPage.getByTestId('platform-suspend-confirm').click()
     await expect(row.getByTestId('platform-user-suspended-badge')).toBeVisible()
-    expect(
-        (await root.collection('users').getOne(person.id)).suspended_until,
-    ).toMatch(/^9999-/)
+    expect((await getPlatformUser(api, person.id)).suspended_until).toMatch(
+        /^9999-/,
+    )
 
     await gotoSettled(page, '/auth/login')
     await fillLogin(page, person.email, person.password)
@@ -52,37 +53,21 @@ test('an open session stops working the moment the person is suspended', async (
     const person = await createUser('user', 'kicked')
     const personPage = await pageAs(person)
     await gotoSettled(personPage, '/logbook')
-    const headers = await authHeader(personPage)
-    const before = await personPage.request.get(
-        `/api/collections/users/records/${person.id}`,
-        { headers },
-    )
-    expect(before.status()).toBe(200)
+    const personApi = await apiOf(personPage)
+    expect((await getMe(personApi)).id).toBe(person.id)
 
-    const res = await platformPage.request.post(
-        `/api/platform/users/${person.id}/suspension`,
-        {
-            headers: await authHeader(platformPage),
-            data: { permanent: true, reason: 'Abuse.' },
-        },
-    )
-    expect(res.status()).toBe(204)
+    await suspendUser(await apiOf(platformPage), person.id, {
+        permanent: true,
+        reason: 'Abuse.',
+    })
 
-    const after = await personPage.request.get(
-        `/api/collections/users/records/${person.id}`,
-        { headers },
-    )
-    expect(after.status()).toBe(404)
-    const refresh = await personPage.request.post(
-        '/api/collections/users/auth-refresh',
-        { headers },
-    )
-    expect(refresh.ok()).toBe(false)
+    await expect(getMe(personApi)).rejects.toMatchObject({ status: 401 })
+    await expect(personApi.post('/auth/refresh')).rejects.toBeTruthy()
 })
 
 test('the 7-day preset suspends for a week and needs a reason', async ({
     platformPage,
-    root,
+    api,
     createUser,
 }) => {
     const person = await createUser('user', 'week')
@@ -100,9 +85,10 @@ test('the 7-day preset suspends for a week and needs a reason', async ({
 
     await expect(row.getByTestId('platform-user-suspended-badge')).toBeVisible()
     const until = new Date(
-        String(
-            (await root.collection('users').getOne(person.id)).suspended_until,
-        ).replace(' ', 'T'),
+        String((await getPlatformUser(api, person.id)).suspended_until).replace(
+            ' ',
+            'T',
+        ),
     ).getTime()
     const week = Date.now() + 7 * 86_400_000
     expect(Math.abs(until - week)).toBeLessThan(3_600_000)

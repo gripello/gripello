@@ -1,24 +1,24 @@
 import { coalesce } from '~/utils/realtimeCache'
+import { subscribeRealtime } from '~/composables/useRealtime'
 
 export default defineNuxtPlugin(() => {
-    const pb = usePocketbase()
     const { scope, refresh } = useModerationSummary()
     const refreshSoon = coalesce(refresh)
-    let unsubscribe: (() => Promise<void>) | null = null
+    let unsubscribe: (() => void) | undefined
 
     // Counts only exist client-side, so they load after hydration to match the server render.
     onNuxtReady(() =>
         watch(
             scope,
             async (next) => {
-                await unsubscribe?.().catch(() => {})
-                unsubscribe = null
+                unsubscribe?.()
+                unsubscribe = undefined
                 await refresh()
                 if (next)
-                    unsubscribe = await pb
-                        .collection('moderation_items')
-                        .subscribe('*', refreshSoon)
-                        .catch(() => null)
+                    unsubscribe = subscribeRealtime(
+                        `moderation:${next}`,
+                        refreshSoon,
+                    )
             },
             { immediate: true },
         ),

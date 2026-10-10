@@ -14,8 +14,8 @@ fail_permissions() {
     exit 1
 }
 
-write_probe="/pb/pb_data/.write-test-$$"
-touch "$write_probe" 2>/dev/null && rm -f "$write_probe" || fail_permissions /pb/pb_data writable ./pb_data
+write_probe="/data/storage/.write-test-$$"
+touch "$write_probe" 2>/dev/null && rm -f "$write_probe" || fail_permissions /data/storage writable ./storage
 
 if [ -f /etc/nginx/ssl/cert.pem ] && [ -f /etc/nginx/ssl/key.pem ]; then
     [ -r /etc/nginx/ssl/cert.pem ] && [ -r /etc/nginx/ssl/key.pem ] || fail_permissions /etc/nginx/ssl readable ./ssl
@@ -28,6 +28,10 @@ TRUSTED_PROXIES="${TRUSTED_PROXIES:-127.0.0.1 ::1}"
 for proxy in ${TRUSTED_PROXIES//,/ }; do
     echo "set_real_ip_from ${proxy//[^0-9A-Fa-f.:\/]/};"
 done > /etc/nginx/real-ip.conf
+
+RATE_LIMIT_KEY='$binary_remote_addr'
+[ "${RATE_LIMITS:-on}" = "off" ] && RATE_LIMIT_KEY='""'
+echo "map \$remote_addr \$rl_key { default $RATE_LIMIT_KEY; }" > /etc/nginx/rate-limit.conf
 
 # Generate a self-signed TLS certificate if none is present.
 # Mount real certs at /etc/nginx/ssl/cert.pem and /etc/nginx/ssl/key.pem to override.
@@ -65,20 +69,11 @@ echo "  HTTPS  →  https://0.0.0.0:443"
 echo "========================================"
 echo ""
 
-# Run pocketbase migrations
-echo "[pocketbase] running migrations..."
-/pb/pocketbase migrate
+echo "[api] running migrations..."
+gripello migrate
 
-# Create/update the default superuser if credentials are provided via env.
-# Set PB_SUPERUSER_EMAIL and PB_SUPERUSER_PASSWORD in your docker-compose.yml.
-if [ -n "$PB_SUPERUSER_EMAIL" ] && [ -n "$PB_SUPERUSER_PASSWORD" ]; then
-    echo "[pocketbase] upserting superuser ${PB_SUPERUSER_EMAIL}..."
-    /pb/pocketbase superuser upsert "$PB_SUPERUSER_EMAIL" "$PB_SUPERUSER_PASSWORD"
-fi
-
-# Start PocketBase
-echo "[pocketbase] starting..."
-/pb/pocketbase serve --http=0.0.0.0:8080 &
+echo "[api] starting..."
+gripello serve --http=:8080 &
 
 # Start Nuxt.js UI
 CPUS="$(nproc)"

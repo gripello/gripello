@@ -1,4 +1,5 @@
 services:
+    # The API is stateless: to scale out, run more gripello containers behind a load balancer sharing postgres and ./storage.
     gripello:
         container_name: gripello
         image: ghcr.io/gripello/gripello:rolling
@@ -6,32 +7,68 @@ services:
             - '80:80'
             - '443:443'
         environment:
-            # Change before first launch, or remove after initial setup.
-            PB_SUPERUSER_EMAIL: admin@example.com
-            PB_SUPERUSER_PASSWORD: changeme123
+            DATABASE_URL: postgres://gripello:${POSTGRES_PASSWORD:-change-me}@postgres:5432/gripello?sslmode=disable
+            NUXT_API_BASE: http://127.0.0.1:8080
             # Cache server-rendered public pages for guests this many seconds (0 = off).
             #SSR_CACHE_SECONDS: 5
             # Server-rendering worker processes (default: half the CPUs or CPU quota, 1 to 8).
             #NITRO_CLUSTER_WORKERS: 4
-            # Mail (SMTP). Uncomment and fill in to enable.
-            #PB_SMTP_HOST: smtp.example.com
-            #PB_SMTP_PORT: 587
-            #PB_SMTP_USERNAME: apikey
-            #PB_SMTP_PASSWORD: change-me
-            #PB_SMTP_TLS: "true"
-            #PB_APP_URL: https://climbing.example.com
-            #PB_APP_NAME: Gripello
-            #PB_SENDER_ADDRESS: no-reply@example.com
-            #PB_SENDER_NAME: Gripello
+            # Per-IP rate limits in nginx; "off" disables them.
+            #RATE_LIMITS: 'on'
+            # Mail (SMTP). Uncomment and fill in to enable. The old PB_ names still work.
+            #SMTP_HOST: smtp.example.com
+            #SMTP_PORT: 587
+            #SMTP_USERNAME: apikey
+            #SMTP_PASSWORD: change-me
+            #SMTP_TLS: "true"
+            #APP_URL: https://climbing.example.com
+            #APP_NAME: Gripello
+            #SENDER_ADDRESS: no-reply@example.com
+            #SENDER_NAME: Gripello
             # Proof-of-work captcha (Cap). Unset = off.
             #CAP_SECRET: change-me-to-a-long-random-string
             # Web Push, keys from `npx web-push generate-vapid-keys`. Unset = off.
-            #PB_VAPID_PUBLIC_KEY: change-me
-            #PB_VAPID_PRIVATE_KEY: change-me
+            #VAPID_PUBLIC_KEY: change-me
+            #VAPID_PRIVATE_KEY: change-me
             # Reverse proxies in front of this container whose X-Forwarded-For is trusted.
             #TRUSTED_PROXIES: 172.18.0.0/16
+        depends_on:
+            postgres:
+                condition: service_healthy
         volumes:
-            - ./pb_data:/pb/pb_data
+            - ./storage:/data/storage
             # Custom TLS certificates, replacing the auto-generated self-signed ones:
 #      - ./ssl/cert.pem:/etc/nginx/ssl/cert.pem:ro
 #      - ./ssl/key.pem:/etc/nginx/ssl/key.pem:ro
+
+    postgres:
+        container_name: gripello-postgres
+        image: postgres:18-alpine
+        environment:
+            POSTGRES_USER: gripello
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+            POSTGRES_DB: gripello
+        volumes:
+            - postgres:/var/lib/postgresql
+        healthcheck:
+            test: ['CMD', 'pg_isready', '-U', 'gripello', '-d', 'gripello']
+            interval: 5s
+            timeout: 5s
+            retries: 20
+
+    # One-shot move from PocketBase: stop gripello, then `docker compose --profile import run --rm import`.
+    import:
+        image: ghcr.io/gripello/gripello:rolling
+        profiles: [import]
+        entrypoint: ['/app/bin/gripello', 'import-pocketbase', '--pb-data', '/pb_data']
+        environment:
+            DATABASE_URL: postgres://gripello:${POSTGRES_PASSWORD:-change-me}@postgres:5432/gripello?sslmode=disable
+        depends_on:
+            postgres:
+                condition: service_healthy
+        volumes:
+            - ./pb_data:/pb_data
+            - ./storage:/data/storage
+
+volumes:
+    postgres:

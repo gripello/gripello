@@ -116,7 +116,6 @@
                 :actions="actionsOf(selected)"
                 :platform="platform"
                 :busy="busy"
-                :file-token="fileToken"
                 class="min-w-0 flex-1 lg:sticky lg:top-20"
                 @act="(action) => start(selected!, action)"
                 @show-author="filterByAuthor(selected!)"
@@ -148,7 +147,6 @@
                 :actions="actionsOf(selected)"
                 :platform="platform"
                 :busy="busy"
-                :file-token="fileToken"
                 class="border-0"
                 @act="(action) => start(selected!, action)"
                 @show-author="filterByAuthor(selected!)"
@@ -201,8 +199,16 @@
 </template>
 
 <script setup lang="ts">
+import { listGyms } from '~/api/gyms'
+import {
+    decideCase,
+    getCase,
+    hideAuthor as hideAuthorContent,
+    listCases,
+} from '~/api/moderation'
+import { getPlatformUser } from '~/api/platform'
+import { useAuthState } from '~/api/auth'
 import type {
-    GymRecord,
     ModerationAction,
     ModerationContentType,
     ModerationItemRecord,
@@ -217,7 +223,7 @@ import {
     isNewSince,
     viewOfState,
     moderationActions,
-    moderationFilter,
+    moderationViewQuery,
     moderationText,
     openReportCount,
     type ModerationView,
@@ -228,7 +234,6 @@ import { coalesce } from '~/utils/realtimeCache'
 const props = defineProps<{ gymId?: string; platform?: boolean }>()
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const { can } = usePermissions()
 const { lgAndUp } = useDisplay()
 const {
@@ -266,14 +271,7 @@ const typeItems = computed(() =>
 
 const { data: gyms } = useAsyncData(
     'moderation-gyms',
-    () =>
-        props.platform
-            ? pb.collection('gyms').getFullList<GymRecord>({
-                  fields: 'id,name',
-                  sort: 'name',
-                  requestKey: null,
-              })
-            : Promise.resolve([]),
+    () => (props.platform ? listGyms({ all: true }) : Promise.resolve([])),
     { default: () => [], server: false },
 )
 const gymItems = computed(() =>
@@ -287,11 +285,6 @@ function viewCount(value: ModerationView) {
     return 0
 }
 
-const scopeFilter = computed(() => {
-    const gym = props.gymId ?? gymFilter.value
-    return gym ? pb.filter('gym = {:gym}', { gym }) : ''
-})
-
 const {
     items,
     loading,
@@ -301,36 +294,25 @@ const {
     refresh,
     reloadLoaded,
     loadMore,
-} = usePbList<ModerationItemRecord>('moderation_items', {
-    perPage: 30,
-    requestKey: 'moderationInbox',
-    query: () => ({
-        sort:
-            view.value === 'decide' ||
-            view.value === 'all' ||
-            view.value === 'approval'
-                ? '-reports_count,created'
-                : '-reviewed_at',
-        filter: moderationFilter(view.value, {
-            platform: props.platform,
-            gymFilter: scopeFilter.value,
-            contentType: contentType.value,
-            authorFilter: authorFilter.value
-                ? pb.filter('author = {:author}', {
-                      author: authorFilter.value.id,
-                  })
-                : '',
-            searchFilter: search.value.trim()
-                ? pb.filter('snapshot ~ {:term}', {
-                      term: search.value.trim(),
-                  })
-                : '',
-        }),
-    }),
-})
+} = usePbList<ModerationItemRecord>(
+    (page, limit) =>
+        listCases(
+            {
+                ...moderationViewQuery(view.value, props.platform),
+                gym: props.gymId ?? gymFilter.value,
+                content_type: contentType.value,
+                author: authorFilter.value?.id,
+                q: search.value.trim(),
+                page,
+                limit,
+                total: true,
+            },
+            { requestKey: 'moderationInbox' },
+        ),
+    { perPage: 30, requestKey: 'moderationInbox' },
+)
 
 const loaded = ref(false)
-const fileToken = ref('')
 const selectedId = ref<string | null>(null)
 const sheetOpen = ref(false)
 // A case opened by link may sit beyond the loaded page; keep showing it.
@@ -356,16 +338,9 @@ function select(item: ModerationItemRecord) {
     if (!lgAndUp.value) sheetOpen.value = true
 }
 
-async function refreshFileToken() {
-    fileToken.value = await pb.files.getToken().catch(() => '')
-}
-
 async function openRequestedCase(id: unknown) {
     if (typeof id !== 'string' || !id) return
-    const item = await pb
-        .collection('moderation_items')
-        .getOne<ModerationItemRecord>(id, { requestKey: null })
-        .catch(() => null)
+    const item = await getCase(id).catch(() => null)
     if (!item) return
     view.value = viewOfState(item.state, !!props.platform)
     requestedItem.value = item
@@ -374,25 +349,14 @@ async function openRequestedCase(id: unknown) {
 }
 
 async function load() {
-    await Promise.all([refreshFileToken(), openRequestedCase(route.query.case)])
+    await openRequestedCase(route.query.case)
     await refresh()
     loaded.value = true
 }
 
 function reloadAll() {
-    return Promise.all([reloadLoaded(), refreshSummary(), refreshFileToken()])
+    return Promise.all([reloadLoaded(), refreshSummary()])
 }
-
-// File tokens expire after a few minutes; protected media would stop loading.
-const FILE_TOKEN_REFRESH_MS = 120_000
-let tokenTimer: ReturnType<typeof setInterval> | undefined
-onMounted(() => {
-    tokenTimer = setInterval(
-        () => void refreshFileToken(),
-        FILE_TOKEN_REFRESH_MS,
-    )
-})
-onBeforeUnmount(() => clearInterval(tokenTimer))
 
 watch([view, contentType, gymFilter, authorFilter], () => void refresh())
 // Nuxt keeps this page when only the query changes (search hit, notification link).
@@ -446,12 +410,18 @@ function markSeen() {
 }
 
 const reloadSoon = coalesce(reloadLoaded)
-const { subscribe } = usePbSubscription(reloadSoon)
+useRealtime(
+    () =>
+        props.platform
+            ? 'moderation:platform'
+            : props.gymId && `moderation:${props.gymId}`,
+    reloadSoon,
+    { onReactivate: reloadSoon },
+)
 onMounted(() => {
     seenBefore.value = readSeen()[seenScope.value]
     markSeen()
     void load()
-    void subscribe('moderation_items', reloadSoon)
 })
 
 function gymStaffOf(item: ModerationItemRecord) {
@@ -507,15 +477,11 @@ const suspendUser = ref<UserRecord | null>(null)
 async function openSuspend(item: ModerationItemRecord) {
     const authorId = item.context?.author?.id
     if (!authorId) return
-    const user = await pb
-        .collection('users')
-        .getOne<UserRecord>(authorId, {
-            fields: 'id,username,firstname,name,platform_admin,suspended_until,suspension_reason',
-            requestKey: null,
-        })
-        .catch(() => null)
+    const user = await getPlatformUser(authorId, {
+        fields: 'id,username,firstname,name,platform_admin,suspended_until,suspension_reason',
+    }).catch(() => null)
     if (!user) return notifyError(t('notifications.error.generic'))
-    if (user.platform_admin || user.id === pb.authStore.record?.id)
+    if (user.platform_admin || user.id === useAuthState().currentUserId())
         return notifyError(t('moderation.author.cannotSuspend'))
     suspendUser.value = user
 }
@@ -532,10 +498,7 @@ async function send(
     action: ModerationAction,
     reason: string,
 ) {
-    await pb.send(`/api/moderation/${item.id}`, {
-        method: 'POST',
-        body: { action, reason },
-    })
+    await decideCase(item.id, { action, reason })
 }
 
 async function act(
@@ -590,10 +553,7 @@ async function hideAuthor(reason: string) {
     if (!author) return
     busy.value = true
     try {
-        const result = await pb.send<{ hidden: number }>(
-            `/api/moderation/authors/${author.id}/hide`,
-            { method: 'POST', body: { reason } },
-        )
+        const result = await hideAuthorContent(author.id, reason)
         authorTarget.value = null
         notifySuccess(t('moderation.done.hideAll', result.hidden))
         await reloadAll()

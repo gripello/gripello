@@ -205,7 +205,15 @@
 
 <script setup lang="ts">
 import type { Form } from '@nuxt/ui'
+import {
+    changeMembershipRole,
+    createMembership,
+    deleteMembership,
+} from '~/api/members'
 import type { GymRecord, RoleRecord, UserRecord } from '~/types/models'
+import { updatePlatformUser } from '~/api/platform'
+import { fileUrl } from '~/api/client'
+import { requestPasswordReset, useAuthState } from '~/api/auth'
 import { gymTitle } from '~/utils/gymNames'
 import {
     joinableGyms,
@@ -230,12 +238,11 @@ const props = defineProps<{
 const emit = defineEmits<{ changed: []; delete: [id: string] }>()
 
 const { t } = useI18n()
-const pb = usePocketbase()
 
 const locked = computed(
     () =>
         !!props.user?.platform_admin &&
-        props.user.id !== pb.authStore.record?.id,
+        props.user.id !== useAuthState().currentUserId(),
 )
 
 function formFrom(user: UserRecord | null) {
@@ -264,7 +271,7 @@ const avatarRemoved = ref(false)
 const avatarPreview = computed(() => {
     if (avatarFile.value) return URL.createObjectURL(avatarFile.value)
     if (avatarRemoved.value || !props.user?.avatar) return null
-    return usePbFileUrl(props.user, props.user.avatar, { thumb: '100x100' })
+    return fileUrl('users', props.user, props.user.avatar, { thumb: '100x100' })
 })
 
 function selectAvatar(file: File) {
@@ -319,19 +326,24 @@ async function saveUser() {
     if (!user) return
     const saved = await runSave(
         async () => {
-            await pb.collection('users').update(user.id, {
-                ...(form.username.trim() !== user.username && {
-                    username: form.username.trim(),
-                }),
-                ...(avatarFile.value && { avatar: avatarFile.value }),
-                ...(avatarRemoved.value && { avatar: null }),
-                firstname: form.firstname.trim(),
-                name: form.name.trim(),
-                verified: form.verified,
-                ...(form.email.trim() !== user.email && {
-                    email: form.email.trim(),
-                }),
-            })
+            await updatePlatformUser(
+                user.id,
+                {
+                    ...(form.username.trim() !== user.username && {
+                        username: form.username.trim(),
+                    }),
+                    firstname: form.firstname.trim(),
+                    name: form.name.trim(),
+                    verified: form.verified,
+                    ...(form.email.trim() !== user.email && {
+                        email: form.email.trim(),
+                    }),
+                },
+                {
+                    ...(avatarFile.value && { avatar: avatarFile.value }),
+                    ...(avatarRemoved.value && { avatar: null }),
+                },
+            )
             return true
         },
         {
@@ -349,16 +361,10 @@ const { pending: sendingReset, run: runReset } = useAsyncAction()
 async function sendPasswordReset() {
     const email = props.user?.email
     if (!email) return
-    await runReset(
-        () =>
-            pb
-                .collection('users')
-                .requestPasswordReset(email, { requestKey: null }),
-        {
-            success: t('platform.users.passwordResetSent'),
-            error: t('notifications.error.resetPassword'),
-        },
-    )
+    await runReset(() => requestPasswordReset(email), {
+        success: t('platform.users.passwordResetSent'),
+        error: t('notifications.error.resetPassword'),
+    })
 }
 
 const { pending: membershipBusy, run: runMembership } = useAsyncAction()
@@ -388,13 +394,11 @@ async function updateMemberships(
 
 function changeRole(chip: MembershipChip, role: string) {
     if (role === chip.role) return
-    return updateMemberships(() =>
-        pb.collection('memberships').update(chip.id, { role }),
-    )
+    return updateMemberships(() => changeMembershipRole(chip.id, role))
 }
 
 function removeMembership(chip: MembershipChip) {
-    return updateMemberships(() => pb.collection('memberships').delete(chip.id))
+    return updateMemberships(() => deleteMembership(chip.id))
 }
 
 async function addMembership() {
@@ -402,7 +406,7 @@ async function addMembership() {
     if (!user) return
     await updateMemberships(
         () =>
-            pb.collection('memberships').create({
+            createMembership({
                 user: user.id,
                 gym: newMembership.gym,
                 role: newMembership.role,

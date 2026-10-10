@@ -51,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import { listRoutes } from '~/api/routes'
 import type { RouteRecord } from '~/types/models'
 import type { LogbookKind } from '#shared/utils/logbook'
 import { locationName } from '#shared/utils/formatting'
@@ -64,28 +65,29 @@ const props = defineProps<{
     targetIndex: number | null
 }>()
 
-const pb = usePocketbase()
 const { tickedRouteIds } = useTickedRoutes()
 
+const gymId = useCurrentGymId()
+
 const { data: candidates } = useAsyncData(
-    () => `logbook-suggestions-${props.kind ?? 'any'}`,
+    () => `logbook-suggestions-${gymId.value}-${props.kind ?? 'any'}`,
     () =>
-        pb
-            .collection('routes')
-            .getList<RouteRecord>(1, CANDIDATE_COUNT, {
-                filter: props.kind
-                    ? pb.filter('archived = false && type = {:type}', {
-                          type: props.kind === 'boulder' ? 'Boulder' : 'Route',
-                      })
-                    : 'archived = false',
+        listRoutes<RouteRecord>(
+            gymId.value,
+            {
+                ...(props.kind
+                    ? { type: props.kind === 'boulder' ? 'Boulder' : 'Route' }
+                    : {}),
                 sort: '-created',
-                expand: 'location',
-                skipTotal: true,
-                requestKey: null,
-            })
+                include: ['location'],
+                page: 1,
+                limit: CANDIDATE_COUNT,
+            },
+            { requestKey: null },
+        )
             .then((page) => page.items)
             .catch(() => []),
-    { default: () => [] },
+    { default: () => [], enabled: () => !!gymId.value },
 )
 
 const newSince = Date.now() - NEW_ROUTE_DAYS * 86_400_000

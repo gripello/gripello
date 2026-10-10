@@ -1,19 +1,17 @@
 import type { Page } from '@playwright/test'
-import type { RecordModel } from 'pocketbase'
+import type { RouteRecord } from '../../../types/models'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { uiaa } from '../../support/seed'
+import { createRating } from '../../support/api'
 
-test.beforeEach(async ({ root, route, testPrefix }) => {
-    await root.collection('ratings').create({
-        route_id: route.id,
+test.beforeEach(async ({ adminApi, route, testPrefix }) => {
+    await createRating(adminApi, route.id, {
         rating: 4,
-        ...uiaa('5'),
         comment: `${testPrefix}-review`,
     })
 })
 
-async function openReviewsFor(page: Page, route: RecordModel) {
+async function openReviewsFor(page: Page, route: RouteRecord) {
     await gotoSettled(page, '/routes')
 
     await page.getByTestId('filter-search').first().fill(route.name)

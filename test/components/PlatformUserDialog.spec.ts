@@ -27,8 +27,7 @@ describe('PlatformUserDialog', () => {
             pending: ref(false),
             run: vi.fn(),
         }))
-        vi.stubGlobal('usePbFileUrl', () => null)
-        globalThis.__POCKETBASE_CLIENT__ = { authStore: { record: null } }
+        globalThis.__AUTH_STORE__ = { record: null }
     })
 
     it('keeps typed changes when the list reloads the same user', async () => {

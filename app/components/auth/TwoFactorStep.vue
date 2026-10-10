@@ -150,11 +150,14 @@
 </template>
 
 <script setup lang="ts">
-import type { AuthResult } from '~/composables/usePasskeyLogin'
+import {
+    loginWithRecoveryCode,
+    loginWithTOTP,
+    type AuthResult,
+    type SecondFactorMethod,
+} from '~/api/auth'
 import { OTP_LENGTH, formatRecoveryCode, otpCode, otpDigits } from '~/utils/otp'
 import { isPasskeyCancel, passkeysSupported } from '~/utils/webauthn'
-
-export type SecondFactorMethod = 'totp' | 'passkey' | 'recovery'
 
 const METHOD_ICONS: Record<SecondFactorMethod, string> = {
     totp: 'i-lucide-smartphone',
@@ -175,7 +178,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const passkey = usePasskeyLogin()
 const root = useTemplateRef<HTMLElement>('root')
 
@@ -236,13 +238,9 @@ async function verify() {
     try {
         emit(
             'authenticated',
-            await pb.send<AuthResult>(`/api/auth/${method.value}`, {
-                method: 'POST',
-                body: {
-                    mfaId: props.mfaId,
-                    code: method.value === 'totp' ? code.value : recovery.value,
-                },
-            }),
+            method.value === 'totp'
+                ? await loginWithTOTP(props.mfaId, code.value)
+                : await loginWithRecoveryCode(props.mfaId, recovery.value),
         )
     } catch (err) {
         if (endsStep(err)) emit('failed', err)

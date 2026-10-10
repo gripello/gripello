@@ -266,14 +266,25 @@
     <ConfirmDialog
         v-model="deleteDialog"
         :title="$t('actions.confirm')"
-        :message="$t('notifications.deleteItem')"
+        :message="
+            forceDelete
+                ? $t('notifications.deleteRouteWithHistory')
+                : $t('notifications.deleteItem')
+        "
         :loading="deleting"
         @confirm="deleteRoute"
     />
 </template>
 
 <script setup lang="ts">
-import type PocketBase from 'pocketbase'
+import {
+    createRoute,
+    deleteRoute as deleteRouteRecord,
+    listRouteColors,
+    listRoutes,
+    listWalls,
+    updateRoute,
+} from '~/api/routes'
 import type { Form } from '@nuxt/ui'
 import type { RouteRecord, WallRecord } from '~/types/models'
 import {
@@ -302,7 +313,6 @@ import {
 
 const { t } = useI18n()
 const { error: notifyError } = useNotification()
-const pb = usePocketbase() as PocketBase
 const gymId = useCurrentGymId()
 
 const fallbackColors = [
@@ -370,13 +380,7 @@ const isCustomColor = computed(
 
 async function fetchUsedColors() {
     try {
-        const records = await pb
-            .collection('usedColors')
-            .getFullList<{ color: string }>({
-                fields: 'color',
-                filter: pb.filter('gym = {:gym}', { gym: gymId.value }),
-            })
-        usedColorsList.value = records.map((r) => r.color).filter(Boolean)
+        usedColorsList.value = await listRouteColors(gymId.value)
     } catch {
         usedColorsList.value = []
     }
@@ -395,6 +399,10 @@ const dialogOpen = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
 const deleteDialog = ref(false)
+const forceDelete = ref(false)
+watch(deleteDialog, (open) => {
+    if (!open) forceDelete.value = false
+})
 const formRef = ref<Form<typeof form> | null>(null)
 const setterItems = ref<string[]>([])
 const editRouteId = ref<string | null>(null)
@@ -444,14 +452,11 @@ const wallItems = computed(() =>
 
 async function loadWalls(locationId: string) {
     locationWalls.value = locationId
-        ? await pb
-              .collection('walls')
-              .getFullList<WallRecord>({
-                  filter: pb.filter('location = {:locationId}', { locationId }),
-                  sort: 'sort,name',
-                  requestKey: 'routeFormWalls',
-              })
-              .catch(() => [])
+        ? await listWalls(
+              gymId.value,
+              { location: locationId },
+              { requestKey: 'routeFormWalls' },
+          ).catch(() => [])
         : []
 }
 
@@ -474,13 +479,11 @@ watch([savedAnchorPoint, locationWalls], ([anchor, walls]) => {
 async function wallPosition(wallId: string | null) {
     if (!wallId) return null
     if (wallId === originalWall.value.wall) return originalWall.value.position
-    const neighbours = await pb.collection('routes').getFullList<RouteRecord>({
-        filter: pb.filter('wall = {:wallId} && archived = false', {
-            wallId,
-        }),
-        fields: 'id,anchor_point,wall_position',
-        requestKey: null,
-    })
+    const { items: neighbours } = await listRoutes<RouteRecord>(
+        gymId.value,
+        { wall: wallId },
+        { fields: 'id,anchor_point,wall_position', requestKey: null },
+    )
     const anchor = Number(savedAnchorPoint.value)
     if (!(anchor > 0))
         return freePosition(
@@ -611,14 +614,16 @@ const loadFromRoute = (route: RouteRecord) => {
 const getSetters = async () => {
     if (!gymId.value) return
     try {
-        const recent = await pb
-            .collection('routes')
-            .getList<RouteRecord>(1, SETTER_SUGGESTION_ROUTES, {
-                filter: gymFilter(pb, gymId.value),
-                fields: 'creator',
+        const recent = await listRoutes<RouteRecord>(
+            gymId.value,
+            {
+                archived: 'all',
                 sort: '-created',
-                skipTotal: true,
-            })
+                page: 1,
+                limit: SETTER_SUGGESTION_ROUTES,
+            },
+            { fields: 'creator' },
+        )
         setterItems.value = setterNames(recent.items)
     } catch (error) {
         console.error('Failed to fetch route setters:', error)
@@ -688,9 +693,9 @@ async function submit() {
         }
 
         if (isEditMode.value && editRouteId.value) {
-            await pb.collection('routes').update(editRouteId.value, payload)
+            await updateRoute(editRouteId.value, payload)
         } else {
-            await pb.collection('routes').create(payload)
+            await createRoute(gymId.value, payload)
         }
 
         const savedId = isEditMode.value ? editRouteId.value : undefined
@@ -708,12 +713,16 @@ async function deleteRoute() {
     if (!editRouteId.value) return
     deleting.value = true
     try {
-        await pb.collection('routes').delete(editRouteId.value)
+        await deleteRouteRecord(editRouteId.value, forceDelete.value)
         const id = editRouteId.value
         deleteDialog.value = false
         close()
         emit('deleted', id)
     } catch (error) {
+        if ((error as { status?: number })?.status === 409) {
+            forceDelete.value = true
+            return
+        }
         console.error('Failed to delete route:', error)
         notifyError(t('notifications.error.generic'))
     } finally {

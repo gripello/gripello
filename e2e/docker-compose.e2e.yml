@@ -7,27 +7,44 @@ services:
                 aliases:
                     - vg.test
         environment:
-            PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:-e2e-super@gripello.test}
-            PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:-e2e-superuser-pw-123}
+            DATABASE_URL: postgres://postgres:e2e@postgres:5432/gripello?sslmode=disable
+            NUXT_API_BASE: http://127.0.0.1:8080
+            RATE_LIMITS: 'off'
             SSL_DNS_NAMES: vg.test
-            PB_SMTP_HOST: mailpit
-            PB_SMTP_PORT: 1025
-            PB_SMTP_TLS: 'false'
-            PB_APP_URL: https://vg.test
-            PB_SENDER_ADDRESS: no-reply@gripello.test
-            PB_SENDER_NAME: Gripello E2E
-            PB_APP_NAME: Gripello
+            SMTP_HOST: mailpit
+            SMTP_PORT: 1025
+            SMTP_TLS: 'false'
+            APP_URL: https://vg.test
+            SENDER_ADDRESS: no-reply@gripello.test
+            SENDER_NAME: Gripello E2E
+            APP_NAME: Gripello
         depends_on:
+            postgres:
+                condition: service_healthy
             mailpit:
                 condition: service_started
         volumes:
             - e2e-ssl:/etc/nginx/ssl
+            - gripello-bin:/app/bin
         healthcheck:
             test: ['CMD', 'sh', '-c', 'node /app/healthcheck.mjs']
             interval: 5s
             timeout: 5s
             retries: 20
             start_period: 10s
+
+    postgres:
+        image: postgres:18-alpine
+        environment:
+            POSTGRES_PASSWORD: e2e
+            POSTGRES_DB: gripello
+        tmpfs:
+            - /var/lib/postgresql
+        healthcheck:
+            test: ['CMD', 'pg_isready', '-U', 'postgres', '-d', 'gripello']
+            interval: 2s
+            timeout: 5s
+            retries: 30
 
     mailpit:
         image: axllent/mailpit:v1.31.2@sha256:74d609a42ec279aa63c6b4622a6fa9b5408d1ad5b1d76a1c4be40a265ce0863d
@@ -46,13 +63,14 @@ services:
         volumes:
             - ..:/work:Z
             - e2e-ssl:/ssl:ro
+            - gripello-bin:/opt/gripello:ro
             - yarn-cache:/root/.yarn/berry/cache
         environment:
             E2E_BASE_URL: https://vg.test
             E2E_PB_URL: https://vg.test
+            E2E_GRIPELLO: /opt/gripello/gripello
+            DATABASE_URL: postgres://postgres:e2e@postgres:5432/gripello?sslmode=disable
             MAILPIT_URL: http://mailpit:8025
-            PB_SUPERUSER_EMAIL: ${PB_SUPERUSER_EMAIL:-e2e-super@gripello.test}
-            PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:-e2e-superuser-pw-123}
             CI: 'true'
             NODE_TLS_REJECT_UNAUTHORIZED: '0'
         depends_on:
@@ -67,6 +85,7 @@ services:
 
 volumes:
     e2e-ssl:
+    gripello-bin:
     yarn-cache:
         name: gripello-e2e-yarn-cache
         external: true

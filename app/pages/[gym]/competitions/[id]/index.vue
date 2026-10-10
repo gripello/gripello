@@ -152,12 +152,12 @@ import {
     formatCompetitionWindow,
 } from '~/utils/competitions'
 import { JUDGE_ONLY_FORMATS } from '#shared/utils/competitionScoring'
-import type { CompetitionEntryRecord, CompetitionRecord } from '~/types/models'
+import { getCompetition, listEntries } from '~/api/competitions'
 
 const gymPath = useGymPath()
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const route = useRoute()
 const { can } = usePermissions()
 
@@ -170,10 +170,7 @@ const {
     refresh,
 } = await useAsyncData(
     () => `public-competition:${competitionId.value}`,
-    () =>
-        pb
-            .collection('competitions')
-            .getOne<CompetitionRecord>(competitionId.value),
+    () => getCompetition(competitionId.value),
     { enabled: () => !!competitionId.value },
 )
 
@@ -187,21 +184,12 @@ const phase = computed(() =>
         : 'draft',
 )
 
-const userId = pb.authStore.record?.id ?? ''
+const userId = authStore.record?.id ?? ''
 
 const { data: myEntry, refresh: refreshMyEntry } = await useAsyncData(
     () => `competition-my-entry:${competitionId.value}`,
     async () =>
-        (
-            await pb
-                .collection('competition_entries')
-                .getList<CompetitionEntryRecord>(1, 1, {
-                    filter: pb.filter('competition = {:id} && user = {:user}', {
-                        id: competitionId.value,
-                        user: userId,
-                    }),
-                })
-        ).items[0] ?? null,
+        (await listEntries(competitionId.value, { user: userId }))[0] ?? null,
     { default: () => null, enabled: () => !!userId && !!competitionId.value },
 )
 

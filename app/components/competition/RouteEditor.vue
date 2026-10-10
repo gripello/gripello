@@ -120,6 +120,13 @@
 </template>
 
 <script setup lang="ts">
+import {
+    createCompetitionRoute,
+    deleteCompetitionRoute,
+    listCompetitionRoutes,
+    updateCompetitionRoute,
+} from '~/api/competitions'
+import { listRoutes } from '~/api/routes'
 import { nextRouteNumber } from '~/utils/competitions'
 import type {
     CompetitionRecord,
@@ -133,7 +140,6 @@ const props = defineProps<{ competition: CompetitionRecord }>()
 
 const emit = defineEmits<{ changed: [] }>()
 
-const pb = usePocketbase()
 const { t } = useI18n()
 const { pending, run } = useAsyncAction()
 
@@ -152,16 +158,7 @@ const usesPoints = computed(() =>
 
 const { data: compRoutes, refresh } = useAsyncData(
     () => `competition-routes:${props.competition.id}`,
-    () =>
-        pb
-            .collection('competition_routes')
-            .getFullList<CompetitionRouteRecord>({
-                filter: pb.filter('competition = {:id}', {
-                    id: props.competition.id,
-                }),
-                sort: 'number',
-                expand: 'route',
-            }),
+    () => listCompetitionRoutes(props.competition.id),
     { deep: true },
 )
 
@@ -169,18 +166,11 @@ const { data: routes } = useAsyncData(
     () =>
         `competition-candidates:${props.competition.location}:${props.competition.discipline}`,
     () =>
-        pb.collection('routes').getFullList<RouteRecord>({
-            filter: pb.filter(
-                'location = {:location} && archived = false && type = {:type}',
-                {
-                    location: props.competition.location,
-                    type: ROUTE_TYPE_BY_DISCIPLINE[
-                        props.competition.discipline
-                    ],
-                },
-            ),
+        listRoutes<RouteRecord>(props.competition.gym ?? '', {
+            location: props.competition.location,
+            type: ROUTE_TYPE_BY_DISCIPLINE[props.competition.discipline],
             sort: 'grade_index,name',
-        }),
+        }).then((list) => list.items),
     { default: () => [] },
 )
 
@@ -205,10 +195,8 @@ async function addSelected() {
     const firstNumber = nextRouteNumber(compRoutes.value ?? [])
     await run(
         async () => {
-            const collection = pb.collection('competition_routes')
             for (const [offset, route] of selectedRouteIds.value.entries()) {
-                await collection.create({
-                    competition: props.competition.id,
+                await createCompetitionRoute(props.competition.id, {
                     route,
                     number: firstNumber + offset,
                     zone:
@@ -229,15 +217,13 @@ async function patch(
     changes: Partial<CompetitionRouteRecord>,
 ) {
     Object.assign(compRoute, changes)
-    await run(() =>
-        pb.collection('competition_routes').update(compRoute.id, changes),
-    )
+    await run(() => updateCompetitionRoute(compRoute.id, changes))
     emit('changed')
 }
 
 async function remove(compRoute: CompetitionRouteRecord) {
     await run(async () => {
-        await pb.collection('competition_routes').delete(compRoute.id)
+        await deleteCompetitionRoute(compRoute.id)
         await refresh()
         emit('changed')
     })

@@ -134,16 +134,15 @@
 </template>
 
 <script setup lang="ts">
+import { updateSettings } from '~/api/gyms'
 import type { Form } from '@nuxt/ui'
 import type { SettingsRecord } from '~/types/models'
-import { PLATFORM_SETTINGS_ID } from '#shared/utils/platform'
 import { SETTINGS_CARD_UI, SETTINGS_FIELD_UI } from '~/utils/settingsUi'
 import { integerBetween, validEmail, validateRules } from '~/utils/validation'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
 const { t } = useI18n()
-const pb = usePocketbase()
 
 useHead({ title: () => t('platform.settings.title') })
 
@@ -202,15 +201,13 @@ const { pending: saving, run: runSave } = useAsyncAction()
 async function saveSettings() {
     await runSave(
         async () => {
-            settings.value = await pb
-                .collection('settings')
-                .update<SettingsRecord>(PLATFORM_SETTINGS_ID, {
-                    ...form,
-                    contact_email: form.contact_email.trim(),
-                    imprint_url: form.imprint_url.trim(),
-                    privacy_url: form.privacy_url.trim(),
-                    ...legalPayload(form),
-                })
+            settings.value = await updateSettings({
+                ...form,
+                contact_email: form.contact_email.trim(),
+                imprint_url: form.imprint_url.trim(),
+                privacy_url: form.privacy_url.trim(),
+                ...legalPayload(form),
+            })
             resetForm()
         },
         {

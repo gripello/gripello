@@ -478,6 +478,7 @@
             "mfa_expired": "La connexion a pris trop de temps. Reconnecte-toi."
         },
         "deleteItem": "Supprimer cet élément ? Cette action est irréversible.",
+        "deleteRouteWithHistory": "Cette voie a des avis, des vidéos bêta ou des résultats de compétition. La supprimer les efface aussi. Archivez-la pour les conserver.",
         "deleteMoreItems": "Supprimer les éléments sélectionnés ? Cette action est irréversible.",
         "archiveMoreItems": "Archiver les voies sélectionnées ?",
         "updateAvailable": "Mise à jour disponible",
@@ -521,6 +522,7 @@
                 "task_wish_done": "Votre souhait de voie pour {location} a été ouvert — amusez-vous bien !",
                 "wall_new_routes": "Nouvelles voies sur {wall} : {count}",
                 "competition_published": "Les résultats de « {competition} » sont en ligne",
+                "competition_entry_added": "Vous avez été inscrit·e à « {competition} »",
                 "follow_requested": "{name} souhaite vous suivre",
                 "follow_accepted": "{name} a accepté votre demande de suivi",
                 "new_follower": "{name} vous suit désormais",
@@ -2145,6 +2147,17 @@
         "accountSuspended": {
             "subject": "Ton compte a été suspendu",
             "body": "Ton compte a été suspendu. Tu ne peux pas te connecter avant la date ci-dessous."
+        },
+        "accountExists": {
+            "subject": "Vous avez déjà un compte",
+            "body": "Quelqu’un a essayé de s’inscrire sur {app} avec cette adresse e-mail ou d’y transférer un autre compte. Elle appartient déjà à votre compte, rien n’a donc été modifié.",
+            "action": "Se connecter",
+            "note": "Mot de passe oublié ? Réinitialisez-le sur la page de connexion. Si ce n’était pas vous, vous pouvez ignorer cet e-mail."
+        },
+        "emailChangedByAdmin": {
+            "subject": "Ton adresse e-mail a été modifiée",
+            "body": "L'équipe de la plateforme a remplacé l'adresse e-mail de ton compte {app} par {email}. Tu as été déconnecté·e sur tous les appareils.",
+            "note": "Si tu n'as rien demandé, réponds immédiatement à cet e-mail."
         }
     },
     "leaderboard": {

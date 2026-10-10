@@ -48,22 +48,23 @@
 </template>
 
 <script setup lang="ts">
-import { signOut } from '~/utils/session'
+import { fileUrl } from '~/api/client'
+import { logout as signOut, useAuthState } from '~/api/auth'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { avatarColor, nameInitials } from '~/utils/avatar'
 
 defineProps<{ collapsed?: boolean }>()
 
 const router = useRouter()
-const pb = usePocketbase()
+const { currentUser } = useAuthState()
 const { t } = useI18n()
 
 // ── Auth state ────────────────────────────────────────────────────────────────
 
-const user = computed(() => pb.authStore.record)
+const user = computed(() => currentUser())
 
 const image = computed(() =>
-    usePbFileUrl(user.value, user.value?.avatar, { thumb: '100x100' }),
+    fileUrl('users', user.value, user.value?.avatar, { thumb: '100x100' }),
 )
 
 const displayName = computed(
@@ -124,7 +125,7 @@ async function logout() {
     if (isLoggingOut.value) return
     try {
         isLoggingOut.value = true
-        signOut(pb)
+        signOut()
         await router.push('/auth/login')
     } finally {
         isLoggingOut.value = false

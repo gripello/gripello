@@ -1,18 +1,19 @@
 import { test, expect } from '../../support/fixtures'
-import {
-    authHeader,
-    gotoSettled,
-    gymPath,
-    reloadSettled,
-} from '../../support/nav'
+import { apiOf, gotoSettled, gymPath, reloadSettled } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { decide, openCase } from '../../support/moderation'
+import {
+    decideModerationCase,
+    findReport,
+    listModerationCases,
+    type Api,
+} from '../../support/api'
 
-async function caseFor(root: import('pocketbase').default, text: string) {
-    return root
-        .collection('moderation_items')
-        .getFirstListItem(root.filter('snapshot ~ {:text}', { text }))
+async function caseFor(api: Api, text: string) {
+    const [item] = await listModerationCases(api, { q: text })
+    if (!item) throw new Error(`no moderation case for ${text}`)
+    return item
 }
 
 test('hiding needs a real reason', async ({
@@ -39,7 +40,7 @@ test('hiding needs a real reason', async ({
 
 test('the server refuses a blank reason even without the dialog', async ({
     adminPage,
-    root,
+    api,
     route,
     createUser,
     pageAs,
@@ -49,19 +50,17 @@ test('the server refuses a blank reason even without the dialog', async ({
     await gotoSettled(author, gymPath('/'))
     const text = `${testPrefix}-blank`
     await createComment(author, route.id, text)
-    const item = await caseFor(root, text)
+    const item = await caseFor(api, text)
 
-    const res = await adminPage.request.post(`/api/moderation/${item.id}`, {
-        headers: await authHeader(adminPage),
-        data: { action: 'hide', reason: '   ' },
-    })
-    expect(res.status()).toBe(400)
-    expect((await caseFor(root, text)).state).toBe('unreviewed')
+    await expect(
+        decideModerationCase(await apiOf(adminPage), item.id, 'hide', '   '),
+    ).rejects.toMatchObject({ status: 400 })
+    expect((await caseFor(api, text)).state).toBe('unreviewed')
 })
 
 test('cancelling a decision leaves the case untouched', async ({
     adminPage,
-    root,
+    api,
     route,
     createUser,
     pageAs,
@@ -82,7 +81,7 @@ test('cancelling a decision leaves the case untouched', async ({
     await expect(
         adminPage.getByTestId('moderation-decision-dialog'),
     ).toBeHidden()
-    expect((await caseFor(root, text)).state).toBe('unreviewed')
+    expect((await caseFor(api, text)).state).toBe('unreviewed')
 })
 
 test('a broken case link still opens the inbox', async ({ adminPage }) => {
@@ -97,7 +96,7 @@ test('a broken case link still opens the inbox', async ({ adminPage }) => {
 
 test('going back or reloading after a decision does not decide again', async ({
     adminPage,
-    root,
+    api,
     route,
     createUser,
     pageAs,
@@ -107,7 +106,7 @@ test('going back or reloading after a decision does not decide again', async ({
     await gotoSettled(author, gymPath('/'))
     const text = `${testPrefix}-once`
     const id = await createComment(author, route.id, text)
-    const reportId = await createReport(adminPage, {
+    const reportId = await createReport({
         contentId: id,
         explanation: `${testPrefix}-r`,
     })
@@ -116,22 +115,16 @@ test('going back or reloading after a decision does not decide again', async ({
     await openCase(adminPage, text)
     await decide(adminPage, 'approve')
     await expect
-        .poll(
-            async () =>
-                (await root.collection('reports').getOne(reportId)).status,
-        )
+        .poll(async () => (await findReport(api, reportId))?.status)
         .toBe('rejected')
-    const decidedAt = (await root.collection('reports').getOne(reportId))
-        .decided_at
+    const decidedAt = (await findReport(api, reportId))?.decided_at
 
     await adminPage.goBack()
     await reloadSettled(adminPage)
     await adminPage.goForward()
     await reloadSettled(adminPage)
-    expect((await root.collection('reports').getOne(reportId)).decided_at).toBe(
-        decidedAt,
-    )
-    expect((await caseFor(root, text)).state).toBe('approved')
+    expect((await findReport(api, reportId))?.decided_at).toBe(decidedAt)
+    expect((await caseFor(api, text)).state).toBe('approved')
 })
 
 test('a long reason is kept in full', async ({

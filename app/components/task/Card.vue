@@ -186,6 +186,7 @@
 </template>
 
 <script setup lang="ts">
+import { fileUrl } from '~/api/client'
 import {
     DEFECT_CATEGORY_ICONS,
     isTaskActive,
@@ -212,7 +213,6 @@ const gymPath = useGymPath()
 const props = defineProps<{
     task: TaskRecord
     assigneeName?: string
-    fileToken?: string
 }>()
 
 const emit = defineEmits<{
@@ -344,14 +344,17 @@ const moveItems = computed(() => [
     ],
 ])
 
+const fileToken = useFileToken(() =>
+    props.task.photo ? { table: 'tasks', id: props.task.id } : null,
+)
 const fileQuery = computed(() =>
-    props.fileToken ? { token: props.fileToken } : undefined,
+    fileToken.value ? { token: fileToken.value } : undefined,
 )
 const photoUrl = computed(() =>
-    usePbFileUrl(props.task, props.task.photo, fileQuery.value),
+    fileUrl('tasks', props.task, props.task.photo, fileQuery.value),
 )
 const thumbUrl = computed(() =>
-    usePbFileUrl(props.task, props.task.photo, {
+    fileUrl('tasks', props.task, props.task.photo, {
         ...fileQuery.value,
         thumb: '400x0',
     }),

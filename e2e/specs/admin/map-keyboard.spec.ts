@@ -1,15 +1,13 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser, uiaa } from '../../support/seed'
+import { uiaa } from '../../support/seed'
+import { createRoute, getRoute, updateRoute } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
-import { PB_URL, seedMap, type SeededMap } from '../../support/map'
+import { seedMap, type SeededMap } from '../../support/map'
 
 let seeded: SeededMap
 
-test.beforeEach(async ({ testPrefix }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    seeded = await seedMap(root, testPrefix, { routes: 2 })
+test.beforeEach(async ({ testPrefix, adminApi }) => {
+    seeded = await seedMap(adminApi, testPrefix, { routes: 2 })
 })
 
 test.afterEach(async () => {
@@ -69,9 +67,7 @@ test('placement walls and dots can be used with the keyboard', async ({
 })
 
 test('map dot names skip a missing colour', async ({ page, testPrefix }) => {
-    await seeded.root
-        .collection('routes')
-        .update(seeded.routeIds[0]!, { color: '' })
+    await updateRoute(seeded.api, seeded.routeIds[0]!, { color: '' })
     await gotoSettled(page, `/map?location=${seeded.locationId}`)
     await expect(
         page.locator(
@@ -84,7 +80,7 @@ test('pressing Enter on a dot while a route is armed places it there', async ({
     setterPage: page,
     testPrefix,
 }) => {
-    const loose = await seeded.root.collection('routes').create({
+    const loose = await createRoute(seeded.api, {
         name: `${testPrefix}-loose`,
         ...uiaa('6'),
         location: seeded.locationId,
@@ -114,7 +110,7 @@ test('pressing Enter on a dot while a route is armed places it there', async ({
     await expect(page.getByTestId('global-snackbar').last()).toContainText(
         'Route positions saved',
     )
-    const saved = await seeded.root.collection('routes').getOne(loose.id)
+    const saved = await getRoute(seeded.api, loose.id)
     expect(saved.wall).toBe(seeded.northWallId)
 })
 

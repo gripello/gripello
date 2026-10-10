@@ -478,6 +478,7 @@
             "mfa_expired": "El inicio de sesión tardó demasiado. Vuelve a iniciar sesión."
         },
         "deleteItem": "¿Eliminar este elemento? No se puede deshacer.",
+        "deleteRouteWithHistory": "Esta vía tiene reseñas, vídeos beta o resultados de competición. Al eliminarla también se borran. Archívala para conservarlos.",
         "deleteMoreItems": "¿Eliminar los elementos seleccionados? No se puede deshacer.",
         "archiveMoreItems": "¿Archivar las vías seleccionadas?",
         "updateAvailable": "Actualización disponible",
@@ -521,6 +522,7 @@
                 "task_wish_done": "Tu deseo de vía para {location} ya está equipado. ¡Disfrútalo!",
                 "wall_new_routes": "Nuevas vías en {wall}: {count}",
                 "competition_published": "Los resultados de «{competition}» ya están publicados",
+                "competition_entry_added": "Te han inscrito en «{competition}»",
                 "follow_requested": "{name} quiere seguirte",
                 "follow_accepted": "{name} aceptó tu solicitud",
                 "new_follower": "{name} ahora te sigue",
@@ -2145,6 +2147,17 @@
         "accountSuspended": {
             "subject": "Tu cuenta ha sido suspendida",
             "body": "Tu cuenta ha sido suspendida. No puedes iniciar sesión hasta la fecha indicada abajo."
+        },
+        "accountExists": {
+            "subject": "Ya tienes una cuenta",
+            "body": "Alguien intentó registrarse en {app} con esta dirección de correo o trasladar otra cuenta a ella. Ya pertenece a tu cuenta, así que no se ha cambiado nada.",
+            "action": "Iniciar sesión",
+            "note": "¿Has olvidado tu contraseña? Restablécela en la página de inicio de sesión. Si no fuiste tú, puedes ignorar este correo."
+        },
+        "emailChangedByAdmin": {
+            "subject": "Tu dirección de correo ha cambiado",
+            "body": "El equipo de la plataforma cambió la dirección de correo de tu cuenta de {app} a {email}. Se ha cerrado tu sesión en todos los dispositivos.",
+            "note": "Si no lo pediste, responde a este correo de inmediato."
         }
     },
     "leaderboard": {

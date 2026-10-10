@@ -159,11 +159,8 @@
 </template>
 
 <script setup lang="ts">
-import type {
-    RouteListItem,
-    RouteScoreRecord,
-    WallRecord,
-} from '~/types/models'
+import { listRoutes, listWalls } from '~/api/routes'
+import type { RouteListItem } from '~/types/models'
 import { gradeLabels } from '#shared/utils/grades'
 import {
     gradeSpread,
@@ -184,12 +181,12 @@ const POPULAR_LIMIT = 6
 definePageMeta({ keepalive: true })
 
 const { t } = useI18n()
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const gymId = useCurrentGymId()
 const { orgName } = useOrgSettings()
 const { tickedRouteIds } = useTickedRoutes()
 const { routeGradeSystem, boulderGradeSystem } = useGradeSystems()
-const isLoggedIn = computed(() => pb.authStore.isValid)
+const isLoggedIn = computed(() => authStore.isValid)
 const { gym } = useGym()
 const { status: openNow, label: openLabel } = useOpenStatus(
     () => gym.value?.opening_hours,
@@ -210,22 +207,28 @@ const [
     useAsyncData(
         cacheKeys.overviewRoutes,
         () =>
-            pb.collection('averageRating').getFullList<RouteScoreRecord>({
-                filter: gymFilter(pb, gymId.value, 'archived = false'),
-                fields: OVERVIEW_FIELDS,
-                requestKey: 'overviewRoutes',
-            }),
+            listRoutes(
+                gymId.value,
+                {},
+                {
+                    rated: true,
+                    fields: OVERVIEW_FIELDS,
+                    requestKey: 'overviewRoutes',
+                },
+            ).then((list) => list.items),
         { default: () => [] },
     ),
     useAsyncData(
         cacheKeys.overviewWalls,
         () =>
-            pb.collection('walls').getFullList<WallRecord>({
-                filter: gymFilter(pb, gymId.value),
-                fields: 'id,name,location,sort',
-                sort: 'sort,name',
-                requestKey: 'overviewWalls',
-            }),
+            listWalls(
+                gymId.value,
+                {},
+                {
+                    fields: 'id,name,location,sort',
+                    requestKey: 'overviewWalls',
+                },
+            ),
         { default: () => [] },
     ),
 ])

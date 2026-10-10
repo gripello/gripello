@@ -17,7 +17,7 @@
                 <ClimberAvatar
                     :id="video.author.id"
                     :name="video.author.name"
-                    :avatar="video.author.avatar"
+                    :src="video.author.avatar"
                 />
             </NuxtLink>
             <span class="min-w-0 flex-1 leading-tight">
@@ -58,7 +58,7 @@
         <div class="w-full" :style="{ aspectRatio: ratio }">
             <RouteBetaPlayer
                 v-if="video.file"
-                :src="usePbFileUrl(video, video.file)"
+                :src="fileUrl('beta_videos', video, video.file)"
                 @ratio="uploadRatio = $event"
             />
             <a
@@ -99,6 +99,7 @@ import {
     betaVideoPlatform,
 } from '#shared/utils/betaVideos'
 import { timeAgo as sharedTimeAgo } from '#shared/utils/formatting'
+import { fileUrl } from '~/api/client'
 
 const props = defineProps<{
     video: BetaVideoRecord

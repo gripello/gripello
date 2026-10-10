@@ -19,11 +19,9 @@
 !types
 !test
 !vitest.config.ts
-!pocketbase/go.mod
-!pocketbase/go.sum
-!pocketbase/main.go
-!pocketbase/migrations_test.go
-!pocketbase/hooks
-!pocketbase/pb_migrations
-!pocketbase/testdata
+!backend/go.mod
+!backend/go.sum
+!backend/cmd
+!backend/internal
+!backend/testdata
 **/node_modules

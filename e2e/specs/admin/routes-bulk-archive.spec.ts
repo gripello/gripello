@@ -42,7 +42,9 @@ test('shows an error and keeps routes when archiving fails', async ({
     await page.getByTestId('filter-search').fill(testPrefix)
     await expect(page.getByTestId('routes-row-name')).toHaveCount(2)
 
-    await page.route('**/api/batch', (route) => route.abort('failed'))
+    await page.route('**/api/gyms/*/routes/archive', (route) =>
+        route.abort('failed'),
+    )
 
     await page.getByTestId('routes-select-all').click()
     await page.getByTestId('routes-archive-selected').click()

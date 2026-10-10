@@ -37,13 +37,6 @@ export function useGradeSystems() {
         ),
     )
 
-    function gradeFilterClause(value: string) {
-        const separator = value.indexOf(':')
-        const system = value.slice(0, separator)
-        const grade = value.slice(separator + 1)
-        return `(grade_system = ${JSON.stringify(system)} && grade = ${JSON.stringify(grade)})`
-    }
-
     const gradeColumnTitle = computed(
         () =>
             `${t('climbing.difficulty')} (${t(`gradeSystemsShort.${routeGradeSystem.value}`)} · ${t(`gradeSystemsShort.${boulderGradeSystem.value}`)})`,
@@ -66,6 +59,5 @@ export function useGradeSystems() {
         boulderGradeSystem,
         gradeSystemFor,
         gradeFilterItems,
-        gradeFilterClause,
     }
 }

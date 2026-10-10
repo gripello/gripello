@@ -1,6 +1,6 @@
 import { Workbook } from '@cj-tech-master/excelts'
 import { test, expect } from '../../support/fixtures'
-import { e2eGym } from '../../support/seed'
+import { e2eGymId } from '../../support/api'
 import { authHeader, gotoSettled } from '../../support/nav'
 
 test('adding an existing member shows a readable message', async ({
@@ -47,7 +47,7 @@ test('xlsx worksheet is named from the sent label without invalid characters', a
     const response = await page.request.post('/api/ui/xlsx', {
         headers,
         data: {
-            gym: await e2eGym(),
+            gym: await e2eGymId(),
             ids: [route.id],
             columns: ['name'],
             labels: {

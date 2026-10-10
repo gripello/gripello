@@ -1,6 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, gymPath } from '../../support/nav'
-import { e2eGymId } from '../../support/seed'
+import { e2eGymId, getGym, updateGym } from '../../support/api'
 
 test('privacy page is server-rendered and public', async ({ page }) => {
     const response = await page.goto('/privacy')
@@ -68,13 +68,13 @@ test('every cookie and localStorage key the app sets is disclosed', async ({
 
 test('the gym imprint names the gym and links to the platform imprint', async ({
     page,
-    root,
+    adminApi,
 }) => {
-    const gymId = await e2eGymId(root)
-    const before = await root.collection('gyms').getOne(gymId)
-    await root
-        .collection('gyms')
-        .update(gymId, { legal_address: 'Climbing Street 1\n12345 Rocktown' })
+    const gymId = await e2eGymId()
+    const before = await getGym(adminApi, gymId)
+    await updateGym(adminApi, gymId, {
+        legal_address: 'Climbing Street 1\n12345 Rocktown',
+    })
     try {
         await gotoSettled(page, gymPath('/imprint'))
         await expect(page.getByTestId('gym-imprint-page')).toBeVisible()
@@ -91,9 +91,9 @@ test('the gym imprint names the gym and links to the platform imprint', async ({
         await page.waitForURL((url) => url.pathname === '/imprint')
         await expect(page.getByTestId('imprint-page')).toBeVisible()
     } finally {
-        await root
-            .collection('gyms')
-            .update(gymId, { legal_address: before.legal_address })
+        await updateGym(adminApi, gymId, {
+            legal_address: before.legal_address,
+        })
     }
 })
 

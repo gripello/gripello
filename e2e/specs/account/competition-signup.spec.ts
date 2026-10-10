@@ -1,28 +1,28 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
+import { createCompetition, createCompetitionCategory } from '../../support/api'
+import type { CompetitionEntryRecord } from '../../../types/models'
 
 test('a climber signs up and the desk checks them in', async ({
     userPage,
     setterPage,
-    root,
+    adminApi,
     workerLocation,
     testPrefix,
 }) => {
-    const competition = await root.collection('competitions').create({
+    const competition = await createCompetition(adminApi, {
         name: `${testPrefix} Night Session`,
         location: workerLocation.id,
         status: 'open',
         discipline: 'boulder',
         scoring_format: 'dynamic',
-        starts_at: '2030-10-10 17:00:00.000Z',
-        ends_at: '2030-10-10 21:00:00.000Z',
+        starts_at: '2030-10-10T17:00:00Z',
+        ends_at: '2030-10-10T21:00:00Z',
         registration_url: 'https://example.com/shop',
         requires_payment: true,
         live_ranking: true,
     })
-    await root
-        .collection('competition_categories')
-        .create({ competition: competition.id, name: 'Open' })
+    await createCompetitionCategory(adminApi, competition.id, { name: 'Open' })
     const displayName = `${testPrefix} Climber`
 
     await gotoSettled(userPage, '/competitions', /\/competitions/)
@@ -60,12 +60,10 @@ test('a climber signs up and the desk checks them in', async ({
     await row.getByTestId('competition-entry-paid-1').click()
     await expect
         .poll(async () => {
-            const entry = await root
-                .collection('competition_entries')
-                .getFirstListItem(
-                    root.filter('competition = {:id}', { id: competition.id }),
-                )
-            return [entry.status, entry.paid]
+            const { items } = await adminApi.get<{
+                items: CompetitionEntryRecord[]
+            }>(`/competitions/${competition.id}/entries`)
+            return [items[0]?.status, items[0]?.paid]
         })
         .toEqual(['checked_in', true])
 

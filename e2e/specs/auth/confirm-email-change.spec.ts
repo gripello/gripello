@@ -23,7 +23,7 @@ test('shows the invalid-link state for a bogus email-change token', async ({
 test('confirms an email change and sends the user back to sign in', async ({
     page,
 }) => {
-    await page.route('**/api/collections/users/confirm-email-change', (route) =>
+    await page.route('**/api/auth/email-change/confirm', (route) =>
         route.fulfill({ status: 204, body: '' }),
     )
 

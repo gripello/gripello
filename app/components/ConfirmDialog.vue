@@ -29,6 +29,7 @@ const emit = defineEmits<{ confirm: [] }>()
         data-testid="confirm-dialog"
     >
         <div class="text-sm text-muted">{{ message }}</div>
+        <slot />
         <template #actions>
             <UButton
                 color="neutral"

@@ -1,0 +1,503 @@
+openapi: 3.1.0
+info:
+  title: Gripello members
+  version: 1.0.0
+paths:
+  /gyms/{gym}/members:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listMembers
+      tags: [members]
+      parameters:
+        - { name: q, in: query, description: Matches username, first name, name and visible e-mails, schema: { type: string } }
+        - { name: role, in: query, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string, enum: [name, -name, created, -created], default: name } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, description: Omitted lists every member, schema: { type: integer, minimum: 1, maximum: 500 } }
+        - { name: total, in: query, schema: { type: boolean } }
+      responses:
+        '200':
+          description: Members of the gym (manage_users or platform admin)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberPage' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: inviteMember
+      tags: [members]
+      description: Sends (or resends with a new token, valid 7 days) an invitation. Answers 202 whether or not the e-mail has an account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InviteRequest' }
+      responses:
+        '202': { description: Invitation stored and mailed }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/memberships:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    post:
+      operationId: addMembership
+      tags: [members]
+      description: Adds an existing user directly (platform admins only; gym staff invite by e-mail).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user, role]
+              properties:
+                user: { type: string }
+                role: { type: string }
+      responses:
+        '200':
+          description: Created membership
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Membership' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /platform/roles:
+    get:
+      operationId: listAllRoles
+      tags: [members]
+      description: Roles of every gym (platform admins only).
+      parameters:
+        - $ref: '#/components/parameters/RoleSearch'
+        - $ref: '#/components/parameters/RoleLimit'
+      responses:
+        '200':
+          description: Roles with gym slug and name
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ListedRole' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /me/memberships:
+    get:
+      operationId: listOwnMemberships
+      tags: [members]
+      responses:
+        '200':
+          description: The caller's memberships with gym and role permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/OwnMembership' }
+        '401': { $ref: '#/components/responses/Error' }
+  /memberships/{id}/role:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: changeMembershipRole
+      tags: [members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { type: string }
+      responses:
+        '200':
+          description: Updated membership
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Membership' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /memberships/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      operationId: deleteMembership
+      tags: [members]
+      description: Removes a member, or leaves the gym when it is the caller's own membership.
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/roles:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listRoles
+      tags: [members]
+      parameters:
+        - $ref: '#/components/parameters/RoleSearch'
+        - $ref: '#/components/parameters/RoleLimit'
+      responses:
+        '200':
+          description: Roles of the gym (members and platform admins)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ListedRole' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createRole
+      tags: [members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoleCreate' }
+      responses:
+        '200':
+          description: Created role
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /roles/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      operationId: updateRole
+      tags: [members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoleUpdate' }
+      responses:
+        '200':
+          description: Updated role
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteRole
+      tags: [members]
+      parameters:
+        - name: reassign_to
+          in: query
+          description: Moves every holder to this role of the same gym before deleting (caller must be allowed to assign both roles)
+          schema: { type: string }
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409':
+          description: The role is still assigned to members
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /roles/{id}/permissions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      operationId: setRolePermissions
+      tags: [members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissions]
+              properties:
+                permissions:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Updated role
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/invites:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listInvites
+      tags: [members]
+      responses:
+        '200':
+          description: Pending invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Invite' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /invites/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        description: The invite id for DELETE, the invitation token for GET (one path item because OpenAPI treats both templates as the same path)
+        schema: { type: string }
+    delete:
+      operationId: revokeInvite
+      tags: [members]
+      responses:
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    get:
+      operationId: showInvite
+      tags: [members]
+      security: []
+      responses:
+        '200':
+          description: Public view of a valid invitation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitePreview' }
+        '404': { $ref: '#/components/responses/Error' }
+  /invites/{token}/accept:
+    parameters:
+      - $ref: '#/components/parameters/Token'
+    post:
+      operationId: acceptInvite
+      tags: [members]
+      description: Signed in, the account e-mail must match the invitation. Signed out, creates a verified account for an e-mail without one.
+      security: [{}, { bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AcceptInviteRequest' }
+      responses:
+        '200':
+          description: Joined; token and record are present when an account was created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AcceptInviteResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Gym:
+      name: gym
+      in: path
+      required: true
+      schema: { type: string }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    RoleSearch:
+      name: q
+      in: query
+      description: Case-insensitive match on the role name
+      schema: { type: string }
+    RoleLimit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1 }
+    Token:
+      name: token
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    Role:
+      type: object
+      required: [id, gym, name, description, permissions, color, created, updated]
+      properties:
+        id: { type: string }
+        gym: { type: string }
+        name: { type: string }
+        description: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+        color: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+    ListedRole:
+      allOf:
+        - $ref: '#/components/schemas/Role'
+        - type: object
+          required: [members]
+          properties:
+            members: { type: integer, description: Number of memberships holding the role }
+            gym_slug: { type: string, description: Only on /platform/roles }
+            gym_name: { type: string, description: Only on /platform/roles }
+    MemberPage:
+      type: object
+      required: [items, page, limit]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Member' }
+        page: { type: integer }
+        limit: { type: integer, description: 0 when every member was returned }
+        total: { type: integer, description: Only with total=true }
+    RoleCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        color: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+    RoleUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        color: { type: string }
+    Membership:
+      type: object
+      required: [id, user, gym, role]
+      properties:
+        id: { type: string }
+        user: { type: string }
+        gym: { type: string }
+        role: { type: string }
+    MemberUser:
+      type: object
+      required: [id, username, firstname, name, avatar]
+      properties:
+        id: { type: string }
+        username: { type: string }
+        firstname: { type: string }
+        name: { type: string }
+        avatar: { type: string }
+        email: { type: string, description: Only when the user made it visible }
+    Member:
+      type: object
+      required: [id, gym, user, role, created, updated]
+      properties:
+        id: { type: string }
+        gym: { type: string }
+        user: { $ref: '#/components/schemas/MemberUser' }
+        role: { $ref: '#/components/schemas/Role' }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+    OwnMembership:
+      type: object
+      required: [id, gym, role, created]
+      properties:
+        id: { type: string }
+        gym:
+          type: object
+          required: [id, slug, name, active]
+          properties:
+            id: { type: string }
+            slug: { type: string }
+            name: { type: string }
+            active: { type: boolean }
+        role: { $ref: '#/components/schemas/Role' }
+        created: { type: string, format: date-time }
+    InviteRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: email }
+        role: { type: string }
+        firstname: { type: string, maxLength: 100 }
+        name: { type: string, maxLength: 100 }
+    Invite:
+      type: object
+      required: [id, gym, role, role_name, email, firstname, name, expires_at, created]
+      properties:
+        id: { type: string }
+        gym: { type: string }
+        role: { type: string }
+        role_name: { type: string }
+        email: { type: string }
+        firstname: { type: string }
+        name: { type: string }
+        expires_at: { type: string, format: date-time }
+        created: { type: string, format: date-time }
+    InvitePreview:
+      type: object
+      required: [email, firstname, name, gym, role, hasAccount]
+      properties:
+        email: { type: string }
+        firstname: { type: string }
+        name: { type: string }
+        gym:
+          type: object
+          required: [name, slug]
+          properties:
+            name: { type: string }
+            slug: { type: string }
+        role: { type: string }
+        hasAccount: { type: boolean }
+    AcceptInviteRequest:
+      type: object
+      properties:
+        password: { type: string, minLength: 8, maxLength: 71 }
+        passwordConfirm: { type: string }
+        firstname: { type: string }
+        name: { type: string }
+    AcceptInviteResponse:
+      type: object
+      required: [gym]
+      properties:
+        gym: { type: string, description: Gym slug }
+        token: { type: string }
+        record:
+          type: object
+          required: [id, email, username, firstname, name, verified]
+          properties:
+            id: { type: string }
+            email: { type: string }
+            username: { type: string }
+            firstname: { type: string }
+            name: { type: string }
+            verified: { type: boolean }

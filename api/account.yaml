@@ -1,0 +1,256 @@
+openapi: 3.1.0
+info:
+  title: Gripello account
+  version: 1.0.0
+paths:
+  /me:
+    get:
+      operationId: getMe
+      tags: [account]
+      parameters:
+        - name: include
+          in: query
+          description: memberships adds the caller's memberships (gym and role with permissions)
+          schema: { type: string, enum: [memberships] }
+      responses:
+        '200':
+          description: Own user record
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/User'
+                  - type: object
+                    properties:
+                      memberships: { type: array, items: { $ref: '#/components/schemas/OwnMembership' } }
+        '401': { $ref: '#/components/responses/Error' }
+    patch:
+      operationId: updateMe
+      tags: [account]
+      description: >-
+        Own profile fields only. platform_admin, verified, email, suspended_until, suspension_reason and password are
+        refused with 403 (email and password have their own flows in authn). Publishes user.updated {record, changed} on user:<id>.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileInput' }
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                '@jsonPayload': { type: string, description: ProfileInput as JSON }
+                avatar: { type: string, format: binary, description: 'jpeg, png, svg, gif, webp; max 5 MB; thumbs 100x100, 320x320' }
+                banner: { type: string, format: binary, description: 'jpeg, png, webp; max 5 MB; thumb 1600x400' }
+      responses:
+        '200':
+          description: Updated record
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteMe
+      tags: [account]
+      description: Deletes the account and its files after checking the current password (400 `validation_invalid_password`); refused while the user is the only admin of a gym.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/avatar:
+    delete:
+      operationId: deleteAvatar
+      tags: [account]
+      responses:
+        '200':
+          description: Updated record
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/banner:
+    delete:
+      operationId: deleteBanner
+      tags: [account]
+      responses:
+        '200':
+          description: Updated record
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/followed-walls/{wall}:
+    parameters:
+      - { name: wall, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: followWall
+      tags: [account]
+      description: Adds the wall to followed_walls (idempotent); publishes user.updated with changed [followed_walls].
+      responses:
+        '200':
+          description: Updated record
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: unfollowWall
+      tags: [account]
+      description: Removes the wall from followed_walls; publishes user.updated with changed [followed_walls].
+      responses:
+        '200':
+          description: Updated record
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/export:
+    get:
+      operationId: exportMyData
+      tags: [account]
+      description: Zip of everything tied to the caller (JSON files, logbook.csv, own uploads). 3 per hour per user; streamed, 413 above 2 GiB.
+      responses:
+        '200':
+          description: gripello-data-<date>.zip
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '500': { $ref: '#/components/responses/Error' }
+  /me/contributions:
+    get:
+      operationId: listContributions
+      tags: [account]
+      description: Own reviews and beta videos, newest first, 200 each.
+      responses:
+        '200':
+          description: Contributions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reviews, betas]
+                properties:
+                  reviews: { type: array, items: { $ref: '#/components/schemas/Contribution' } }
+                  betas: { type: array, items: { $ref: '#/components/schemas/Contribution' } }
+        '401': { $ref: '#/components/responses/Error' }
+components:
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    User:
+      type: object
+      description: Own user record (no password hash or token key)
+      required: [id, email, username, verified, platform_admin]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        email: { type: string }
+        email_visibility: { type: boolean }
+        verified: { type: boolean }
+        username: { type: string }
+        firstname: { type: string }
+        name: { type: string }
+        avatar: { type: string }
+        banner: { type: string }
+        language: { type: string, enum: ['', en, de, nl, fr, es] }
+        platform_admin: { type: boolean }
+        notification_prefs: { type: [object, 'null'] }
+        followed_walls: { type: array, items: { type: string } }
+        leaderboard_hidden: { type: boolean }
+        follow_policy: { type: string, enum: ['', approve, open, closed] }
+        reviews_anonymous: { type: boolean }
+        ticks_private: { type: boolean }
+        suspended_until: { type: [string, 'null'], format: date-time }
+        suspension_reason: { type: string }
+    OwnMembership:
+      type: object
+      required: [id, gym, role]
+      properties:
+        id: { type: string }
+        gym:
+          type: object
+          required: [id, slug, name, active]
+          properties:
+            id: { type: string }
+            slug: { type: string }
+            name: { type: string }
+            active: { type: boolean }
+        role:
+          type: object
+          required: [id, name, permissions]
+          properties:
+            id: { type: string }
+            name: { type: string }
+            permissions: { type: array, items: { type: string } }
+    ProfileInput:
+      type: object
+      properties:
+        username: { type: string, minLength: 3, maxLength: 150, pattern: '^[\w][\w.\-]*$' }
+        firstname: { type: string, maxLength: 5000 }
+        name: { type: string, maxLength: 5000 }
+        email_visibility: { type: boolean }
+        language: { type: string, enum: ['', en, de, nl, fr, es] }
+        notification_prefs:
+          type: [object, 'null']
+          description: '{channel: {topic: false}}, max 4000 bytes; unset means on'
+          additionalProperties: { type: object, additionalProperties: { type: boolean } }
+        followed_walls: { type: array, maxItems: 999, items: { type: string } }
+        leaderboard_hidden: { type: boolean }
+        follow_policy: { type: string, enum: ['', approve, open, closed] }
+        reviews_anonymous: { type: boolean }
+        ticks_private: { type: boolean }
+        avatar: { type: ['null', string], enum: [null, ''], description: null clears }
+        banner: { type: ['null', string], enum: [null, ''], description: null clears }
+    Contribution:
+      type: object
+      required: [id, created, route]
+      properties:
+        id: { type: string }
+        created: { type: string }
+        rating: { type: number }
+        comment: { type: string }
+        url: { type: string }
+        file: { type: string }
+        route:
+          type: [object, 'null']
+          properties:
+            id: { type: string }
+            name: { type: string }
+            color: { type: string }
+            grade: { type: string }
+            gym: { type: string }

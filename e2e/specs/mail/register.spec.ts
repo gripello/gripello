@@ -3,38 +3,40 @@ import { test, expect } from '../../support/fixtures'
 import { fillLogin } from '../../support/auth'
 import { gotoSettled } from '../../support/nav'
 import { waitForMail, linkPath, mailbox, mailCount } from '../../support/mail'
-import PocketBase from 'pocketbase'
-import { PLATFORM_SETTINGS_ID } from '../../../shared/utils/platform'
+import {
+    guestApi,
+    setUserFlags,
+    updateSettings,
+    type Api,
+    type PlatformUser,
+} from '../../support/api'
 
-const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
 const PASSWORD = 'E2eSignup!123'
 const VERIFY_LINK = /https?:\/\/[^"'\s]*\/auth\/confirm-verification\/[^"'\s]+/
 
-async function registrationAllowed(root: PocketBase) {
-    const settings = await root
-        .collection('settings')
-        .getOne(PLATFORM_SETTINGS_ID, { requestKey: null })
-    return settings.allow_registration
+async function setRegistration(api: Api, allowed: boolean) {
+    await updateSettings(api, { allow_registration: allowed })
 }
 
-async function setRegistration(root: PocketBase, allowed: boolean) {
-    await root
-        .collection('settings')
-        .update(PLATFORM_SETTINGS_ID, { allow_registration: allowed })
-}
-
-function signup(email: string, username: string, extra = {}) {
-    return new PocketBase(PB_URL).collection('users').create({
+function signup(email: string, username: string) {
+    return guestApi().post('/auth/register', {
         email,
         username,
         password: PASSWORD,
         passwordConfirm: PASSWORD,
-        ...extra,
     })
 }
 
-async function signIn(page: Page, email: string) {
-    await fillLogin(page, email, PASSWORD)
+async function platformUser(api: Api, email: string) {
+    const { items } = await api.get<{ items: PlatformUser[] }>(
+        '/platform/users',
+        { q: email },
+    )
+    return items.find((user) => user.email === email)
+}
+
+async function signIn(page: Page, email: string, password = PASSWORD) {
+    await fillLogin(page, email, password)
     await page.getByTestId('login-submit').click()
 }
 
@@ -46,10 +48,10 @@ async function expectRejected(request: Promise<unknown>) {
 
 test('closed registration hides the link and rejects sign-ups', async ({
     page,
-    root,
+    api,
     testPrefix,
 }) => {
-    await setRegistration(root, false)
+    await setRegistration(api, false)
 
     await gotoSettled(page, '/auth/login')
     await expect(page.getByTestId('login-form')).toBeVisible()
@@ -65,10 +67,10 @@ test('closed registration hides the link and rejects sign-ups', async ({
 
 test('a climber signs up, verifies the email and signs in', async ({
     page,
-    root,
+    api,
     testPrefix,
 }) => {
-    await setRegistration(root, true)
+    await setRegistration(api, true)
     const email = mailbox(testPrefix, 'signup')
     const username = `${testPrefix}signup`.replace(/-/g, '')
 
@@ -80,26 +82,16 @@ test('a climber signs up, verifies the email and signs in', async ({
     await page.getByTestId('password-confirm').fill(PASSWORD)
     const signup = page.waitForResponse(
         (response) =>
-            response.url().includes('/api/collections/users/records') &&
+            response.url().includes('/api/auth/register') &&
             response.request().method() === 'POST',
-    )
-    const verification = page.waitForResponse((response) =>
-        response.url().includes('/request-verification'),
     )
     await page.getByTestId('register-submit').click()
     expect((await signup).ok()).toBe(true)
-    expect((await verification).ok()).toBe(true)
     await expect(page.getByTestId('login-form')).toBeVisible()
 
-    const created = await root
-        .collection('users')
-        .getFirstListItem(`email = "${email}"`, { requestKey: null })
-    expect(created.verified).toBe(false)
-    const staff = await root.collection('memberships').getList(1, 1, {
-        filter: root.filter('user = {:id}', { id: created.id }),
-        requestKey: null,
-    })
-    expect(staff.totalItems).toBe(0)
+    const created = await platformUser(api, email)
+    expect(created?.verified).toBe(false)
+    expect(created?.memberships).toHaveLength(0)
 
     const mail = await waitForMail(page, email, { subject: /verify/i })
     await gotoSettled(page, linkPath(mail, VERIFY_LINK))
@@ -112,20 +104,14 @@ test('a climber signs up, verifies the email and signs in', async ({
 
 test('an unverified climber resends the verification mail from the sign-in page', async ({
     page,
-    root,
-    testPrefix,
+    createUser,
 }) => {
-    const email = mailbox(testPrefix, 'resend')
-    await root.collection('users').create({
-        email,
-        username: `${testPrefix}resend`.replace(/-/g, ''),
-        password: PASSWORD,
-        passwordConfirm: PASSWORD,
-    })
+    const { id, email, password } = await createUser('user', 'resend')
+    setUserFlags(id, { verified: false })
     expect(await mailCount(page, email)).toBe(0)
 
     await gotoSettled(page, '/auth/login')
-    await signIn(page, email)
+    await signIn(page, email, password)
     await expect(page.getByTestId('login-unverified')).toBeVisible()
     await page.getByTestId('login-resend-verification').click()
     await expect(page.getByTestId('reset-email')).toHaveValue(email)

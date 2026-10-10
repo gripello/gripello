@@ -8,7 +8,7 @@ export type CompetitionExportFormat = 'pdf' | 'xlsx'
 const ENTRY_STATUSES = ['registered', 'checked_in', 'disqualified', 'withdrawn']
 
 export function useCompetitionExport() {
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     const { t, locale, loadLocaleMessages } = useI18n()
     const { pending, run } = useAsyncAction()
 
@@ -61,8 +61,8 @@ export function useCompetitionExport() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(pb.authStore.token
-                        ? { Authorization: pb.authStore.token }
+                    ...(authStore.token
+                        ? { Authorization: authStore.token }
                         : {}),
                 },
                 body: JSON.stringify({

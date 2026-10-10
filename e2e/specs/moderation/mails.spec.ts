@@ -1,5 +1,6 @@
 import { test, expect } from '../../support/fixtures'
-import { authHeader, gotoSettled, gymPath } from '../../support/nav'
+import { apiOf, gotoSettled, gymPath } from '../../support/nav'
+import { suspendUser, updateMe } from '../../support/api'
 import { createComment } from '../../support/comments'
 import { createReport, reportAs } from '../../support/reports'
 import { mailCount, mailbox, waitForMail } from '../../support/mail'
@@ -79,7 +80,7 @@ test('every reporter gets a receipt and exactly one decision', async ({
     const first = mailbox(testPrefix, 'first')
     const second = mailbox(testPrefix, 'second')
     for (const to of [first, second]) {
-        await createReport(adminPage, {
+        await createReport({
             contentId: id,
             explanation: `${testPrefix}-by-${to}`,
             notifierEmail: to,
@@ -107,14 +108,10 @@ test('a lifetime suspension is announced as permanent', async ({
     testPrefix,
 }) => {
     const person = await createUser('user', 'banned')
-    const res = await platformPage.request.post(
-        `/api/platform/users/${person.id}/suspension`,
-        {
-            headers: await authHeader(platformPage),
-            data: { permanent: true, reason: `${testPrefix}-why` },
-        },
-    )
-    expect(res.status()).toBe(204)
+    await suspendUser(await apiOf(platformPage), person.id, {
+        permanent: true,
+        reason: `${testPrefix}-why`,
+    })
 
     const mail = await waitForMail(platformPage, person.email, {
         subject: /suspended/i,
@@ -125,14 +122,14 @@ test('a lifetime suspension is announced as permanent', async ({
 
 test('authors get the statement in their own language', async ({
     adminPage,
-    root,
+    apiAs,
     route,
     createUser,
     pageAs,
     testPrefix,
 }) => {
     const author = await createUser('user', 'german')
-    await root.collection('users').update(author.id, { language: 'de' })
+    await updateMe(await apiAs(author), { language: 'de' })
     const authorPage = await pageAs(author)
     await gotoSettled(authorPage, gymPath('/'))
     const text = `${testPrefix}-deutsch`
