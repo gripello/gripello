@@ -73,11 +73,11 @@
 
             <p class="text-xs text-muted mt-2 mb-1">
                 {{ $t('reports.contactNote') }}
-                <a
-                    :href="privacyUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >{{ $t('legal.privacy') }}</a
+                <NuxtLink
+                    v-bind="
+                        legalLinkProps(gym?.privacy_url, gymPath('/privacy'))
+                    "
+                    >{{ $t('legal.privacy') }}</NuxtLink
                 >
             </p>
 
@@ -121,6 +121,7 @@ import {
     validateRules,
 } from '~/utils/validation'
 import { REPORT_REASONS } from '~/utils/reports'
+import { legalLinkProps } from '~/utils/legal'
 import type { ReportContentType } from '~/types/models'
 
 const props = defineProps<{
@@ -173,7 +174,6 @@ const reasonItems = computed(() =>
 
 const { gym } = useGym()
 const gymPath = useGymPath()
-const privacyUrl = computed(() => gym.value?.privacy_url || gymPath('/privacy'))
 
 const rules = {
     required: required(t),

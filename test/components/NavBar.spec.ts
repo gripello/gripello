@@ -19,7 +19,7 @@ const UHeader = defineComponent({
     props: { ui: { type: Object, default: () => ({}) } },
     setup(props, { slots }) {
         return () =>
-            h('header', [
+            h('header', { class: props.ui.root }, [
                 h('div', { class: props.ui.left }, slots.left?.()),
                 h('div', { class: props.ui.right }, slots.right?.()),
                 slots.bottom?.(),
@@ -51,6 +51,12 @@ function mountNavBar(loggedIn: boolean) {
 }
 
 describe('NavBar', () => {
+    it('pads its content below the standalone status bar', () => {
+        expect(mountNavBar(true).find('header').classes()).toContain(
+            'pt-[var(--app-top-inset,0px)]',
+        )
+    })
+
     it('lets the gym switcher shrink while the actions keep their width', () => {
         const wrapper = mountNavBar(false)
         const [left, right] = wrapper.findAll('header > div')

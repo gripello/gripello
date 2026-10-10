@@ -608,10 +608,6 @@
             --app-top-inset: env(safe-area-inset-top, 0px);
         }
 
-        .nav-bar {
-            top: var(--app-top-inset);
-        }
-
         .app-root::before {
             content: '';
             position: fixed;

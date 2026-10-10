@@ -270,12 +270,11 @@
             </template>
 
             <UFormField :label="$t('tasks.photo')">
-                <a
+                <LayoutImageViewer
                     v-if="existingPhotoUrl && !photo"
-                    :href="existingPhotoUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="block overflow-hidden rounded-lg ring ring-default"
+                    :src="existingPhotoUrl"
+                    :alt="$t('tasks.photo')"
+                    class="block w-full overflow-hidden rounded-lg ring ring-default"
                 >
                     <img
                         :src="existingThumbUrl"
@@ -283,7 +282,7 @@
                         class="max-h-56 w-full object-cover"
                         data-testid="task-form-photo-preview"
                     />
-                </a>
+                </LayoutImageViewer>
                 <UFileUpload
                     v-else
                     v-model="photo"
