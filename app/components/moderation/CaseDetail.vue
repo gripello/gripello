@@ -31,7 +31,6 @@
             <UButton
                 v-if="contextLink"
                 :to="contextLink"
-                target="_blank"
                 color="neutral"
                 variant="ghost"
                 icon="i-lucide-external-link"

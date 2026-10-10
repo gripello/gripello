@@ -114,6 +114,7 @@
                                 color="neutral"
                                 variant="ghost"
                                 size="sm"
+                                class="max-md:hidden"
                                 data-testid="competition-tv-link"
                             >
                                 {{ t('competitions.standings.tv') }}

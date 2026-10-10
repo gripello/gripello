@@ -4,7 +4,7 @@
         class="nav-bar"
         :toggle="false"
         :ui="{
-            root: 'h-auto bg-default lg:bg-(--app-bg)/80 lg:backdrop-blur-md',
+            root: 'h-auto pt-[var(--app-top-inset,0px)] bg-default lg:bg-(--app-bg)/80 lg:backdrop-blur-md',
             container: 'h-[calc(var(--ui-header-height)-1px)] max-w-none',
             left: 'min-w-0 flex-1',
             right: 'shrink-0',

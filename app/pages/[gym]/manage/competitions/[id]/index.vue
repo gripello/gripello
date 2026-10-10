@@ -108,6 +108,7 @@
                                 icon="i-lucide-tv"
                                 color="neutral"
                                 variant="outline"
+                                class="max-md:hidden"
                                 data-testid="competition-manage-tv"
                             >
                                 {{ t('competitions.standings.tv') }}

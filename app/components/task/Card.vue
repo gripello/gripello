@@ -51,13 +51,11 @@
                 </div>
             </div>
 
-            <a
+            <LayoutImageViewer
                 v-if="photoUrl"
-                :href="photoUrl"
-                target="_blank"
-                rel="noopener noreferrer"
+                :src="photoUrl"
+                :alt="t('tasks.photo')"
                 class="shrink-0"
-                :aria-label="t('tasks.photo')"
             >
                 <img
                     :src="thumbUrl"
@@ -66,7 +64,7 @@
                     loading="lazy"
                     data-testid="task-card-photo"
                 />
-            </a>
+            </LayoutImageViewer>
         </div>
 
         <p
