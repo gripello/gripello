@@ -123,7 +123,7 @@
                 </template>
                 <template #name-cell="{ row }">
                     <div
-                        class="flex items-center"
+                        class="flex max-w-[200px] items-center"
                         :data-testid="`index-row-${row.original.id}`"
                     >
                         <span
@@ -134,11 +134,11 @@
                         >
                         <TaskDefectMarker
                             :severity="defectsByRoute.get(row.original.id)"
-                            class="ml-2"
+                            class="ml-2 shrink-0"
                         />
                         <RouteRatedMarker
                             v-if="row.original.has_ratings"
-                            class="ml-2"
+                            class="ml-2 shrink-0"
                         />
                     </div>
                 </template>
@@ -560,7 +560,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .route-name {
-    max-width: 224px;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

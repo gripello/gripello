@@ -11,13 +11,25 @@ COPY backend/cmd ./cmd
 COPY backend/internal ./internal
 
 FROM go-deps AS go-test
-RUN apt-get update && apt-get install -y --no-install-recommends libvips-tools && rm -rf /var/lib/apt/lists/*
+# DB-backed tests skip without a reachable database, so the stage runs its own PostgreSQL 18 (PGDG, like the runtime image).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libvips-tools postgresql-common \
+ && sed -i 's/^#\?create_main_cluster.*/create_main_cluster = false/' /etc/postgresql-common/createcluster.conf \
+ && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+ && apt-get install -y --no-install-recommends postgresql-18 \
+ && rm -rf /var/lib/apt/lists/*
 COPY backend/testdata ./testdata
 COPY i18n/locales/*.json /src/i18n/locales/
 COPY shared /src/shared
+ENV GRIPELLO_TEST_DSN=postgres://postgres@127.0.0.1:5432/postgres?sslmode=disable
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    mkdir /out && { go run gotest.tools/gotestsum@v1.13.0 --junitfile /out/junit.xml -- -timeout 30m ./...; echo $? > /out/exit-code; }
+    --mount=type=tmpfs,target=/var/lib/postgresql/test \
+    chown postgres /var/lib/postgresql/test \
+ && su postgres -c '/usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/test -U postgres -A trust >/dev/null' \
+ && su postgres -c "/usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/test -w -l /tmp/postgres.log \
+      -o '-c listen_addresses=127.0.0.1 -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300' start" \
+ && mkdir /out && { go run gotest.tools/gotestsum@v1.13.0 --junitfile /out/junit.xml -- -timeout 30m ./...; echo $? > /out/exit-code; }
 
 FROM scratch AS go-results
 COPY --from=go-test /out /

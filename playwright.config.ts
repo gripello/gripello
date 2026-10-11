@@ -11,13 +11,35 @@ const SETTINGS_WRITERS = [
     '**/mail/register.spec.ts',
 ]
 
+const BROWSER_SMOKE = [
+    '**/auth/login.spec.ts',
+    '**/auth/logout.spec.ts',
+    '**/auth/remember-me.spec.ts',
+    '**/public/index-list.spec.ts',
+]
+
+const MOBILE_AUTH = [
+    '**/auth/login.spec.ts',
+    '**/auth/logout.spec.ts',
+    '**/auth/login-brand-contrast.spec.ts',
+]
+
+const workers = process.env.E2E_WORKERS
+const record = process.env.CI ? 'on-first-retry' : 'retain-on-failure'
+
 export default defineConfig({
     testDir: './e2e/specs',
     outputDir: './e2e/results/artifacts',
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 1 : 0,
-    workers: process.env.CI ? 4 : undefined,
+    workers: workers
+        ? workers.endsWith('%')
+            ? workers
+            : Number(workers)
+        : process.env.CI
+          ? 4
+          : undefined,
     reporter: process.env.CI
         ? [
               ['list'],
@@ -32,8 +54,8 @@ export default defineConfig({
         ignoreHTTPSErrors: true,
         serviceWorkers: 'block',
         actionTimeout: 15_000,
-        trace: 'retain-on-failure',
-        video: 'retain-on-failure',
+        trace: record,
+        video: record,
         screenshot: 'only-on-failure',
     },
     projects: [
@@ -59,8 +81,8 @@ export default defineConfig({
                 locale: 'en-US',
             },
             dependencies: ['setup'],
-            testMatch: ['**/mobile/**', '**/auth/**'],
-            testIgnore: ['**/auth/guards.spec.ts', ...SETTINGS_WRITERS],
+            testMatch: ['**/mobile/**', ...MOBILE_AUTH],
+            testIgnore: SETTINGS_WRITERS,
         },
         {
             name: 'i18n-de',
@@ -90,15 +112,13 @@ export default defineConfig({
             name: 'firefox-smoke',
             use: { ...devices['Desktop Firefox'], locale: 'en-US' },
             dependencies: ['setup'],
-            testMatch: ['**/auth/**', '**/public/index-list.spec.ts'],
-            testIgnore: ['**/auth/guards.spec.ts', ...SETTINGS_WRITERS],
+            testMatch: BROWSER_SMOKE,
         },
         {
             name: 'webkit-smoke',
             use: { ...devices['Desktop Safari'], locale: 'en-US' },
             dependencies: ['setup'],
-            testMatch: ['**/auth/**', '**/public/index-list.spec.ts'],
-            testIgnore: ['**/auth/guards.spec.ts', ...SETTINGS_WRITERS],
+            testMatch: BROWSER_SMOKE,
         },
         {
             name: 'settings-serial',

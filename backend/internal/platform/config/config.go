@@ -23,6 +23,7 @@ type Config struct {
 	LocalesDir        string
 	TokenSecret       string
 	AuthTokenDuration time.Duration
+	UrgentAlertWindow time.Duration
 	Role              string
 	BlobDriver        string
 	BlobAccelPrefix   string
@@ -48,6 +49,7 @@ func Load() (Config, error) {
 		LocalesDir:        env("LOCALES_DIR", env("PB_LOCALES_DIR", "../i18n/locales")),
 		TokenSecret:       env("TOKEN_SECRET", ""),
 		AuthTokenDuration: seconds("AUTH_TOKEN_SECONDS", 1209600),
+		UrgentAlertWindow: seconds("URGENT_ALERT_SECONDS", 60),
 		Role:              env("ROLE", "all"),
 		BlobDriver:        env("BLOB_DRIVER", "fs"),
 		BlobAccelPrefix:   env("BLOB_ACCEL_PREFIX", ""),

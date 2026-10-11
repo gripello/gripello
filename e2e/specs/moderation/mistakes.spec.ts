@@ -11,9 +11,18 @@ import {
 } from '../../support/api'
 
 async function caseFor(api: Api, text: string) {
-    const [item] = await listModerationCases(api, { q: text })
-    if (!item) throw new Error(`no moderation case for ${text}`)
-    return item
+    let item:
+        Awaited<ReturnType<typeof listModerationCases>>[number] | undefined
+    await expect
+        .poll(
+            async () => {
+                ;[item] = await listModerationCases(api, { q: text })
+                return item
+            },
+            { message: `no moderation case for ${text}` },
+        )
+        .toBeTruthy()
+    return item!
 }
 
 test('hiding needs a real reason', async ({

@@ -28,7 +28,6 @@ const (
 	maxPhotoBytes      = 5 << 20
 	permManageTasks    = "manage_tasks"
 	urgentAlertJob     = "tasks.urgentAlert"
-	urgentAlertWindow  = time.Minute
 )
 
 var (
@@ -503,7 +502,7 @@ func (m *module) dropPhoto(ctx context.Context, id, name string) {
 	}
 }
 
-// queueUrgentAlert mails a gym's managers right away, then at most once per urgentAlertWindow with everything filed since.
+// queueUrgentAlert mails a gym's managers right away, then at most once per Cfg.UrgentAlertWindow with everything filed since.
 func (m *module) queueUrgentAlert(ctx context.Context, gym string) error {
 	var last *time.Time
 	if err := m.app.DB.QueryRow(ctx, `SELECT max(urgent_alerted_at) FROM tasks WHERE gym = $1`, gym).Scan(&last); err != nil {
@@ -511,7 +510,7 @@ func (m *module) queueUrgentAlert(ctx context.Context, gym string) error {
 	}
 	var delay time.Duration
 	if last != nil {
-		delay = max(0, time.Until(last.Add(urgentAlertWindow)))
+		delay = max(0, time.Until(last.Add(m.app.Cfg.UrgentAlertWindow)))
 	}
 	return jobs.Enqueue(ctx, m.app.DB, urgentAlertJob, gym, nil, delay)
 }

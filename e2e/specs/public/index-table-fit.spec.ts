@@ -9,10 +9,13 @@ test('the route table fits without sideways scrolling', async ({ page }) => {
     const table = container.getByRole('table')
     await expect(table).toBeVisible()
 
-    const containerWidth = (await container.boundingBox())!.width
     await expect
-        .poll(async () => (await table.boundingBox())!.width)
-        .toBeLessThanOrEqual(containerWidth + 1)
+        .poll(
+            async () =>
+                (await table.boundingBox())!.width -
+                (await container.boundingBox())!.width,
+        )
+        .toBeLessThanOrEqual(1)
 })
 
 test('setter names keep clear of the row dividers', async ({
