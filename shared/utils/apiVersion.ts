@@ -8,7 +8,7 @@ export type ApiVersionStatus = 'ok' | 'outdated' | 'unsupported'
 
 export const API_VERSION_HEADER = 'X-Gripello-Api-Version'
 
-const NUXT_API_PREFIXES = ['/api/ui', '/api/manage', '/api/version', '/api/cap']
+const NUXT_API_PREFIXES = ['/api/ui', '/api/version', '/api/cap']
 
 export function parseSemver(value: string | null | undefined): Semver | null {
     const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(value ?? '')

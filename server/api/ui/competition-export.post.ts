@@ -5,7 +5,6 @@ import {
     requirePermission,
     type Api,
 } from '../../utils/api-server'
-import { loadResults } from '../../utils/competitionResults'
 import { attachmentHeader } from '../../utils/export'
 import {
     standingsTable,
@@ -13,6 +12,7 @@ import {
     type ExportLabels,
     type ExportTable,
 } from '#shared/utils/competitionExport'
+import type { CompetitionResults } from '#shared/utils/competitionResults'
 import type {
     CompetitionCategoryRecord,
     CompetitionEntryRecord,
@@ -70,7 +70,7 @@ export default eventHandler(async (event) => {
         competition.gym ?? '',
     )
     const [results, gym] = await Promise.all([
-        loadResults(api, id),
+        api<CompetitionResults>(`/competitions/${id}/standings`),
         api<GymRecord>(`/gyms/${competition.gym}`).catch(() => null),
     ])
     setResponseHeaders(event, {

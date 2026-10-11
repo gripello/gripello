@@ -45,7 +45,7 @@ async function analyticsListsSetter(
     response: { url(): string; json(): Promise<unknown> },
     setter: string,
 ) {
-    if (!response.url().includes('/api/manage/analytics')) return false
+    if (!/\/api\/gyms\/[^/]+\/analytics/.test(response.url())) return false
     const body = (await response.json().catch(() => null)) as {
         setters?: { setter: string }[]
     } | null
@@ -94,12 +94,13 @@ test('analytics api rejects users without the view_analytics permission', async 
     request,
 }) => {
     await gotoSettled(page, gymPath('/'))
-    const forbidden = await page.request.get('/api/manage/analytics', {
+    const path = `/api/gyms/${await e2eGymId()}/analytics`
+    const forbidden = await page.request.get(path, {
         headers: await authHeader(page),
     })
     expect(forbidden.status()).toBe(403)
 
-    const anonymous = await request.get('/api/manage/analytics')
+    const anonymous = await request.get(path)
     expect(anonymous.status()).toBe(401)
 })
 
@@ -355,7 +356,7 @@ test('reports routes whose grade votes are harder than the set grade', async ({
     ).toBeVisible()
 
     const response = await page.request.get(
-        `/api/manage/analytics?range=all&gym=${await e2eGymId()}`,
+        `/api/gyms/${await e2eGymId()}/analytics?range=all`,
         {
             headers: await authHeader(page),
         },
@@ -420,7 +421,7 @@ test('archived routes are left out like on the routes page unless included', asy
     await gotoSettled(page, '/manage/analytics')
     const settersFor = async (query: string) => {
         const response = await page.request.get(
-            `/api/manage/analytics?range=all&gym=${await e2eGymId()}${query}`,
+            `/api/gyms/${await e2eGymId()}/analytics?range=all${query}`,
             { headers: await authHeader(page) },
         )
         const body = (await response.json()) as {
@@ -452,7 +453,7 @@ test('shows an error notification when the analytics fetch fails', async ({
     adminPage: page,
 }) => {
     await gotoSettled(page, '/manage/analytics')
-    await page.route('**/api/manage/analytics*', (route) =>
+    await page.route('**/api/gyms/*/analytics*', (route) =>
         route.fulfill({ status: 500, body: 'boom' }),
     )
     await page.getByTestId('analytics-range-30d').click()

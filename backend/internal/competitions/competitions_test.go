@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -204,6 +205,7 @@ func TestResultsVisibility(t *testing.T) {
 type fixture struct {
 	t        *testing.T
 	app      *platform.App
+	m        *module
 	handler  http.Handler
 	gymA     string
 	gymB     string
@@ -220,8 +222,7 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	app := testapp.App(t)
-	Register(app)
-	f := &fixture{t: t, app: app, handler: testapp.Handler(app), users: map[string]string{}, tokens: map[string]string{}}
+	f := &fixture{t: t, app: app, m: register(app), handler: testapp.Handler(app), users: map[string]string{}, tokens: map[string]string{}}
 	f.gymA = f.exec(`INSERT INTO gyms (id, slug, name, active) VALUES ($1, 'alpha', 'Alpha', true) RETURNING id`, ids.New())
 	f.gymB = f.exec(`INSERT INTO gyms (id, slug, name, active) VALUES ($1, 'beta', 'Beta', true) RETURNING id`, ids.New())
 	f.user("manager", f.gymA, permManage)
@@ -469,10 +470,33 @@ func TestEntryVisibility(t *testing.T) {
 		got[0].(map[string]any)["expand"].(map[string]any)["category"].(map[string]any)["name"] != "Open" {
 		t.Errorf("judge sees %v", got)
 	}
-	standings := f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusOK)
-	if len(items(standings)) != 2 || items(standings)[0].(map[string]any)["display_name"] != "" {
-		t.Errorf("standings = %v", standings)
+	f.call("manager", "PATCH", "/competitions/"+id, `{"live_ranking":true}`, http.StatusOK)
+	if names := standingNames(f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusOK)); !slices.Equal(names, []string{"", "other"}) {
+		t.Errorf("guest standings names = %v", names)
 	}
+	if names := standingNames(f.call("manager", "GET", "/competitions/"+id+"/standings", "", http.StatusOK)); !slices.Equal(names, []string{"climber", "other"}) {
+		t.Errorf("manager standings names = %v", names)
+	}
+}
+
+func standingRows(standings map[string]any) []map[string]any {
+	var rows []map[string]any
+	categories, _ := standings["categories"].([]any)
+	for _, category := range categories {
+		for _, row := range category.(map[string]any)["rows"].([]any) {
+			rows = append(rows, row.(map[string]any))
+		}
+	}
+	return rows
+}
+
+func standingNames(standings map[string]any) []string {
+	var names []string
+	for _, row := range standingRows(standings) {
+		names = append(names, row["name"].(string))
+	}
+	slices.Sort(names)
+	return names
 }
 
 func TestScoring(t *testing.T) {
@@ -568,22 +592,129 @@ func TestPublishCopiesTopsToTheLogbook(t *testing.T) {
 		t.Errorf("republishing duplicated ticks: %d", count)
 	}
 
-	results := f.call("", "GET", "/competitions/"+id+"/results", "", http.StatusOK)
-	if results["visibility"] != "final" || len(results["scores"].([]any)) != 2 || len(results["entries"].([]any)) != 1 {
-		t.Errorf("results = %v", results)
+	standings := f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusOK)
+	if rows := standingRows(standings); standings["visibility"] != "final" || len(rows) != 1 || rows[0]["entry"] != mine || rows[0]["tops"] != 1.0 {
+		t.Errorf("standings = %v", standings)
 	}
 }
 
-func TestResultsAreHiddenWithoutLiveRanking(t *testing.T) {
+func TestStandingsVisibility(t *testing.T) {
 	f := newFixture(t)
 	id, category, route1, _ := f.competition("")
 	entry := f.register("climber", id, category, "")
 	f.call("judge", "PUT", "/competitions/"+id+"/scores", `{"scores":[{"entry":"`+entry+`","comp_route":"`+route1+`","top_attempt":1}]}`, http.StatusOK)
-	if got := f.call("", "GET", "/competitions/"+id+"/results", "", http.StatusOK); got["visibility"] != "hidden" || len(got["scores"].([]any)) != 0 {
-		t.Errorf("guest results = %v", got)
+	expect := func(user, visibility string, rows int) {
+		t.Helper()
+		got := f.call(user, "GET", "/competitions/"+id+"/standings", "", http.StatusOK)
+		if got["visibility"] != visibility || len(standingRows(got)) != rows || got["format"] != "dynamic" {
+			t.Errorf("%q sees %v, want %s with %d rows", user, got, visibility, rows)
+		}
 	}
-	if got := f.call("manager", "GET", "/competitions/"+id+"/results", "", http.StatusOK); got["visibility"] != "live" || len(got["scores"].([]any)) != 1 {
-		t.Errorf("manager results = %v", got)
+	expect("", "hidden", 0)
+	expect("climber", "hidden", 0)
+	expect("manager", "live", 1)
+
+	f.call("manager", "PATCH", "/competitions/"+id, `{"live_ranking":true}`, http.StatusOK)
+	f.eventually(func() bool {
+		return f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusOK)["visibility"] == "live"
+	})
+	expect("", "live", 1)
+	expect("climber", "live", 1)
+
+	f.call("manager", "PATCH", "/competitions/"+id, `{"freeze_minutes":600}`, http.StatusOK)
+	f.eventually(func() bool {
+		return f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusOK)["visibility"] == "frozen"
+	})
+	expect("climber", "frozen", 0)
+	expect("manager", "live", 1)
+
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"draft"}`, http.StatusOK)
+	f.eventually(func() bool {
+		return f.status("", "GET", "/competitions/"+id+"/standings") == http.StatusNotFound
+	})
+	f.call("climber", "GET", "/competitions/"+id+"/standings", "", http.StatusNotFound)
+	expect("manager", "live", 1)
+}
+
+func TestStandingsCacheFollowsScoreChanges(t *testing.T) {
+	f := newFixture(t)
+	id, category, route1, _ := f.competition(`,"live_ranking":true`)
+	entry := f.register("climber", id, category, "")
+	points := func(user string, query ...string) any {
+		return standingRows(f.call(user, "GET", "/competitions/"+id+"/standings"+strings.Join(query, ""), "", http.StatusOK))[0]["points"]
+	}
+	f.call("judge", "PUT", "/competitions/"+id+"/scores", `{"scores":[{"entry":"`+entry+`","comp_route":"`+route1+`","top_attempt":1}]}`, http.StatusOK)
+	f.eventually(func() bool {
+		var published int
+		f.app.DB.QueryRow(context.Background(), `SELECT COUNT(*) FROM events WHERE topic = $1`, "competition_changes:"+id).Scan(&published)
+		f.m.standingsCache.mu.Lock()
+		defer f.m.standingsCache.mu.Unlock()
+		return f.m.standingsCache.generations[id] == published
+	})
+	if got := points(""); got != 1000.0 {
+		t.Fatalf("points = %v", got)
+	}
+
+	f.exec(`UPDATE competition_scores SET top_attempt = 0 WHERE entry = $1 RETURNING id`, entry)
+	if got := points(""); got != 1000.0 {
+		t.Errorf("guests should get the cached standings until a change event, got %v", got)
+	}
+	if got := points("manager"); got != 0.0 {
+		t.Errorf("managers bypass the cache, got %v", got)
+	}
+	if got := points("manager", "?view=public"); got != 1000.0 {
+		t.Errorf("the public view serves managers from the cache, got %v", got)
+	}
+
+	err := pgx.BeginFunc(context.Background(), f.app.DB, func(tx pgx.Tx) error {
+		return events.Publish(context.Background(), tx, "competition_changes:"+id, KindChanged, Change{Competition: id}, events.Audience{})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.eventually(func() bool { return points("") == 0.0 })
+}
+
+func (f *fixture) eventually(condition func() bool) {
+	f.t.Helper()
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+		if condition() {
+			return
+		}
+	}
+	f.t.Fatal("condition not met within 5 s")
+}
+
+func (f *fixture) status(user, method, path string) int {
+	request := httptest.NewRequest(method, "/api"+path, nil)
+	if user != "" {
+		request.Header.Set("Authorization", f.tokens[user])
+	}
+	recorder := httptest.NewRecorder()
+	f.handler.ServeHTTP(recorder, request)
+	return recorder.Code
+}
+
+func TestStandingsCacheDropsBuildsOlderThanAChange(t *testing.T) {
+	cache := newStandingsCache()
+	freezeAt := time.Now().Add(10 * time.Second)
+	comp := Competition{Gym: "g", FreezeAt: &freezeAt}
+	cache.store("c", 0, comp, Standings{Visibility: "live"})
+	if got := cache.entries["c"].expires; !got.Equal(freezeAt) {
+		t.Errorf("live standings should expire at the freeze, got %s", got)
+	}
+	cache.store("f", 0, comp, Standings{Visibility: "frozen"})
+	if got := cache.entries["f"].expires; !got.After(freezeAt) {
+		t.Errorf("frozen standings should keep the regular ttl, got %s", got)
+	}
+	cache.forget("c")
+	cache.store("c", 0, comp, Standings{Visibility: "live"})
+	if _, ok := cache.entries["c"]; ok {
+		t.Error("a build that started before the change must not be cached")
+	}
+	cache.store("c", 1, comp, Standings{Visibility: "live"})
+	if _, ok := cache.entries["c"]; !ok {
+		t.Error("a build after the change should be cached")
 	}
 }
 

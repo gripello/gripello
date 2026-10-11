@@ -124,9 +124,11 @@ func connect(ctx context.Context) (config.Config, *platform.App, error) {
 		Workers:       map[string]jobs.Worker{},
 		Realtime:      realtime.NewHub(bus, tenancy.New(pool)),
 		Tokens:        auth.Issuer{Secret: cfg.TokenSecret, Duration: cfg.AuthTokenDuration},
+		Verified:      auth.NewVerifiedTokens(),
 		Logs:          logs,
 		Metrics:       metrics.New(pool),
 	}
+	app.Verified.Listen(bus)
 	app.Handle("GET /files/{table}/{id}/{name}", store.ServeFile(cfg.TokenSecret))
 	app.Handle("POST /files/token", store.IssueToken(cfg.TokenSecret))
 	return cfg, app, nil

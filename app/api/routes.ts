@@ -5,6 +5,10 @@ import type {
     WallRecord,
 } from '../../types/models'
 import type { GymMap } from '../../shared/utils/mapGeometry'
+import type {
+    AnalyticsPayload,
+    AnalyticsQuery,
+} from '../../shared/utils/analytics'
 import { useApi } from './client'
 import type { PbReadOptions, RouteList } from './client'
 
@@ -197,6 +201,13 @@ export async function listRouteColors(gym: string) {
         `/gyms/${encodeURIComponent(gym)}/routes/colors`,
     )
     return items.filter(Boolean)
+}
+
+export function getAnalytics(gym: string, query: AnalyticsQuery = {}) {
+    return useApi()<AnalyticsPayload>(
+        `/gyms/${encodeURIComponent(gym)}/analytics`,
+        { query },
+    )
 }
 
 export async function listLocations(gym: string, _options: PbReadOptions = {}) {

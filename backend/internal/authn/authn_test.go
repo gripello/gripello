@@ -354,11 +354,21 @@ func TestSessionsTrackAndRevokeLogins(t *testing.T) {
 	if status, _ := f.send(http.MethodPost, "/auth/refresh", first, nil); status != http.StatusUnauthorized {
 		t.Errorf("revoked token refresh = %d", status)
 	}
-	f.loginToken("session@example.com")
+	third := f.loginToken("session@example.com")
 	legacy := f.legacyToken(id)
+	for _, token := range []string{third, legacy} {
+		if status, _ := f.send(http.MethodGet, "/me/sessions", token, nil); status != http.StatusOK {
+			t.Fatalf("token before signing out the others = %d", status)
+		}
+	}
 	status, kept := f.send(http.MethodPost, "/me/sessions/sign-out-others", second, nil)
 	if status != http.StatusOK || sidOf(kept["token"].(string)) != sidOf(second) {
 		t.Fatalf("sign out others = %d %v", status, kept)
+	}
+	for name, token := range map[string]string{"other session": third, "replaced token of this session": second} {
+		if status, _ := f.send(http.MethodGet, "/me/sessions", token, nil); status != http.StatusUnauthorized {
+			t.Errorf("%s survived signing out the others: %d", name, status)
+		}
 	}
 	second = kept["token"].(string)
 	if n := f.count(`SELECT count(*) FROM sessions WHERE "user" = $1`, id); n != 1 {
@@ -369,6 +379,9 @@ func TestSessionsTrackAndRevokeLogins(t *testing.T) {
 	}
 	if status, _ := f.send(http.MethodPost, "/auth/logout", second, nil); status != http.StatusNoContent {
 		t.Errorf("logout = %d", status)
+	}
+	if status, _ := f.send(http.MethodGet, "/me/sessions", second, nil); status != http.StatusUnauthorized {
+		t.Errorf("token after logout = %d", status)
 	}
 	if n := f.count(`SELECT count(*) FROM sessions WHERE "user" = $1`, id); n != 0 {
 		t.Errorf("%d sessions after logout", n)
@@ -412,6 +425,9 @@ func TestPasswordChangeEndsEverySession(t *testing.T) {
 	f := newFixture(t)
 	id := f.user("change@example.com")
 	old, other := f.loginToken("change@example.com"), f.loginToken("change@example.com")
+	if status, _ := f.send(http.MethodGet, "/me/sessions", other, nil); status != http.StatusOK {
+		t.Fatalf("other session before the change = %d", status)
+	}
 
 	status, body := f.send(http.MethodPost, "/me/password", old, map[string]string{"oldPassword": "wrong", "password": "another-pass-1", "passwordConfirm": "another-pass-1"})
 	if status != http.StatusBadRequest || !strings.Contains(mustJSON(body), "validation_invalid_old_password") {
@@ -421,8 +437,10 @@ func TestPasswordChangeEndsEverySession(t *testing.T) {
 	if status != http.StatusOK || body["token"] == "" {
 		t.Fatalf("change = %d %v", status, body)
 	}
-	if status, _ := f.send(http.MethodGet, "/me/sessions", other, nil); status != http.StatusUnauthorized {
-		t.Errorf("old session still valid = %d", status)
+	for _, token := range []string{old, other} {
+		if status, _ := f.send(http.MethodGet, "/me/sessions", token, nil); status != http.StatusUnauthorized {
+			t.Errorf("old session still valid = %d", status)
+		}
 	}
 	if n := f.count(`SELECT count(*) FROM sessions WHERE "user" = $1`, id); n != 1 {
 		t.Errorf("%d sessions after the change", n)
@@ -757,6 +775,9 @@ func TestVerificationFlow(t *testing.T) {
 	if status, _ := f.login("verify@example.com", testPassword); status != http.StatusOK {
 		t.Errorf("login after verification = %d", status)
 	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = $1 AND kind = 'user.updated' AND payload->'changed' = '["verified"]'`, "user:"+id); n != 1 {
+		t.Errorf("%d verified events, cached principals would keep verified = false", n)
+	}
 	f.send(http.MethodPost, "/auth/verification/request", "", map[string]string{"email": "verify@example.com"})
 	if len(testapp.Mails(f.app)) != 1 {
 		t.Error("verified account got another verification mail")
@@ -1003,6 +1024,9 @@ func TestAdminSetsPasswordRevokesSessionsAndUnlocks(t *testing.T) {
 	if status, _ := f.send(http.MethodPost, base+"/password", admin, map[string]string{"password": "short", "passwordConfirm": "short"}); status != http.StatusBadRequest {
 		t.Errorf("short password = %d", status)
 	}
+	if status, _ := f.send(http.MethodGet, "/me/sessions", climberToken, nil); status != http.StatusOK {
+		t.Fatalf("token before the reset = %d", status)
+	}
 	f.exec(`INSERT INTO login_lockouts (id, key, failures, window_start, locked_until) VALUES ($1, $2, 10, now(), now() + interval '15 minutes')`, ids.New(), climber)
 	if status, _ := f.send(http.MethodPost, base+"/password", admin, map[string]string{"password": "brand-new-pass", "passwordConfirm": "brand-new-pass"}); status != http.StatusNoContent {
 		t.Fatalf("set password = %d", status)
@@ -1017,16 +1041,24 @@ func TestAdminSetsPasswordRevokesSessionsAndUnlocks(t *testing.T) {
 		t.Errorf("notice = %+v", mails[len(mails)-1])
 	}
 
-	f.login("climber@example.com", "brand-new-pass")
+	_, login := f.login("climber@example.com", "brand-new-pass")
+	fresh, _ := login["token"].(string)
 	legacy := f.legacyToken(climber)
+	for _, token := range []string{fresh, legacy} {
+		if status, _ := f.send(http.MethodGet, "/me/sessions", token, nil); status != http.StatusOK {
+			t.Fatalf("token before the revocation = %d", status)
+		}
+	}
 	if status, _ := f.send(http.MethodDelete, base+"/sessions", admin, nil); status != http.StatusNoContent {
 		t.Fatalf("revoke sessions = %d", status)
 	}
 	if n := f.count(`SELECT count(*) FROM sessions WHERE "user" = $1`, climber); n != 0 {
 		t.Errorf("%d sessions left", n)
 	}
-	if status, _ := f.send(http.MethodGet, "/me/sessions", legacy, nil); status != http.StatusUnauthorized {
-		t.Errorf("token without a session survived the revocation: %d", status)
+	for _, token := range []string{fresh, legacy} {
+		if status, _ := f.send(http.MethodGet, "/me/sessions", token, nil); status != http.StatusUnauthorized {
+			t.Errorf("token survived the revocation: %d", status)
+		}
 	}
 	f.exec(`INSERT INTO login_lockouts (id, key, failures, window_start, locked_until) VALUES ($1, $2, 10, now(), now() + interval '15 minutes')`, ids.New(), climber)
 	if status, _ := f.send(http.MethodDelete, base+"/lockout", admin, nil); status != http.StatusNoContent {

@@ -100,6 +100,29 @@ paths:
                 properties:
                   items: { type: array, items: { type: string } }
         '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/analytics:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: getAnalytics
+      tags: [routes]
+      description: view_analytics. Route and review statistics of the gym for a period, compared with the period before it. Grade buckets are unsorted and feedback rows carry `gradeSystem` + numeric `votedGrade`; the client sorts and labels them.
+      parameters:
+        - { name: range, in: query, description: unknown values mean `90d`, schema: { type: string, enum: ['30d', '90d', '12m', all, custom], default: '90d' } }
+        - { name: from, in: query, description: '`custom` only, start of this UTC day', schema: { type: string, format: date } }
+        - { name: to, in: query, description: '`custom` only, end of this UTC day (default now); a reversed range is swapped', schema: { type: string, format: date } }
+        - { name: location, in: query, description: comma-separated location ids, schema: { type: string } }
+        - { name: type, in: query, description: comma-separated route types, schema: { type: string } }
+        - { name: archived, in: query, description: '`true` includes archived routes and their reviews', schema: { type: string, enum: ['true'] } }
+      responses:
+        '200':
+          description: Analytics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Analytics' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /gyms/{gym}/routes/archive:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -652,3 +675,144 @@ components:
         sort: { type: integer }
         anchor_from: { type: integer }
         anchor_to: { type: integer }
+    Trend:
+      type: object
+      required: [value, previous]
+      properties:
+        value: { type: number }
+        previous: { type: [number, 'null'], description: null for `all` }
+    Timeline:
+      type: array
+      items:
+        type: object
+        required: [period, count]
+        properties:
+          period: { type: string, description: 'YYYY-MM-DD (day, week = its Monday) or YYYY-MM (month)' }
+          count: { type: integer }
+    AnalyticsRoute:
+      type: object
+      required: [id, name, grade, type, location, creators, screwDate]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        grade: { type: string, description: 'label, `?` when empty, `<grade> · <system>` when the gym mixes systems' }
+        type: { type: string }
+        location: { type: [string, 'null'] }
+        creators: { type: array, items: { type: string } }
+        screwDate: { type: string, format: date-time, description: screw date, else created }
+    RatedRoute:
+      allOf:
+        - $ref: '#/components/schemas/AnalyticsRoute'
+        - type: object
+          required: [averageRating, ratings]
+          properties:
+            averageRating: { type: number }
+            ratings: { type: integer }
+    GradeAnalytics:
+      type: object
+      required: [gradeDistribution, locationGrades, gradeFeedback]
+      properties:
+        gradeDistribution:
+          type: array
+          items:
+            type: object
+            required: [grade, total, expected]
+            properties:
+              grade: { type: string }
+              total: { type: integer }
+              expected: { type: number, description: share among all matching routes incl. archived, scaled to the current count }
+        locationGrades:
+          type: array
+          items:
+            type: object
+            required: [location, grade, count]
+            properties:
+              location: { type: string, description: '`?` without a location' }
+              grade: { type: string }
+              count: { type: integer }
+        gradeFeedback:
+          type: array
+          maxItems: 300
+          description: routes with at least 3 grade votes, largest deviation first
+          items:
+            allOf:
+              - $ref: '#/components/schemas/AnalyticsRoute'
+              - type: object
+                required: [gradeSystem, setGrade, votedGrade, deviation, votes]
+                properties:
+                  gradeSystem: { type: string }
+                  setGrade: { type: number }
+                  votedGrade: { type: number, description: mean grade index of the votes }
+                  deviation: { type: number }
+                  votes: { type: integer }
+    Analytics:
+      type: object
+      required: [generatedAt, period, bucket, summary, grades, routeTimeline, ratingTimeline, commentTimeline, dailyRouteActivity, ratingDistribution, setters, ratingBaseline, topRated, lowestRated, oldestActive, latestComments]
+      properties:
+        generatedAt: { type: string, format: date-time }
+        period:
+          type: object
+          required: [from, to]
+          properties:
+            from: { type: [string, 'null'], format: date-time }
+            to: { type: string, format: date-time }
+        bucket: { type: string, enum: [day, week, month] }
+        summary:
+          type: object
+          required: [activeRoutes, routesSet, ratings, averageRating, comments, averageLifespanDays, unratedRoutes]
+          properties:
+            activeRoutes: { type: integer }
+            routesSet: { $ref: '#/components/schemas/Trend' }
+            ratings: { $ref: '#/components/schemas/Trend' }
+            averageRating: { $ref: '#/components/schemas/Trend' }
+            comments: { $ref: '#/components/schemas/Trend' }
+            averageLifespanDays: { type: [integer, 'null'] }
+            unratedRoutes: { type: integer }
+        grades:
+          type: object
+          required: [Boulder, Route]
+          properties:
+            Boulder: { $ref: '#/components/schemas/GradeAnalytics' }
+            Route: { $ref: '#/components/schemas/GradeAnalytics' }
+        routeTimeline: { $ref: '#/components/schemas/Timeline' }
+        ratingTimeline: { $ref: '#/components/schemas/Timeline' }
+        commentTimeline: { $ref: '#/components/schemas/Timeline' }
+        dailyRouteActivity: { $ref: '#/components/schemas/Timeline' }
+        ratingDistribution: { type: array, minItems: 5, maxItems: 5, items: { type: integer }, description: reviews per star 1–5 }
+        setters:
+          type: array
+          items:
+            type: object
+            required: [setter, routes, routesInPeriod, averageRating, averageDeviation]
+            properties:
+              setter: { type: string }
+              routes: { type: integer }
+              routesInPeriod: { type: integer }
+              averageRating: { type: [number, 'null'] }
+              averageDeviation: { type: [number, 'null'] }
+        ratingBaseline: { type: [number, 'null'] }
+        topRated: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/RatedRoute' } }
+        lowestRated: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/RatedRoute' } }
+        oldestActive:
+          type: array
+          maxItems: 10
+          items:
+            allOf:
+              - $ref: '#/components/schemas/AnalyticsRoute'
+              - type: object
+                required: [ageDays]
+                properties:
+                  ageDays: { type: integer }
+        latestComments:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            required: [id, routeId, routeName, rating, comment, created]
+            properties:
+              id: { type: string }
+              routeId: { type: string }
+              routeName: { type: string }
+              rating: { type: integer }
+              comment: { type: string }
+              created: { type: string, format: date-time }

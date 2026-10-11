@@ -7,10 +7,7 @@ import type {
     CompetitionScoreRecord,
     CompetitionStatus,
 } from '../../types/models'
-import type {
-    CompetitionResults,
-    ResultsInput,
-} from '../../shared/utils/competitionResults'
+import type { CompetitionResults } from '../../shared/utils/competitionResults'
 import { useApi } from './client'
 
 type Writable<T> = Omit<
@@ -55,13 +52,6 @@ export interface CompetitionEntryQuery {
 
 export interface CompetitionScoreQuery {
     entry?: string
-}
-
-export type Standing = ResultsInput['entries'][number]
-
-export interface CompetitionResultsInput extends ResultsInput {
-    visibility: CompetitionResults['visibility']
-    competition: CompetitionRecord
 }
 
 interface Items<T> {
@@ -260,15 +250,12 @@ export function deleteScore(id: string) {
     return remove(`/competition-scores/${id}`)
 }
 
-export function getStandings(competitionId: string) {
-    return useApi()<{
-        items: Standing[]
-        categories: CompetitionCategoryRecord[]
-    }>(`/competitions/${competitionId}/standings`)
-}
-
-export function getResults(competitionId: string) {
-    return useApi()<CompetitionResultsInput>(
-        `/competitions/${competitionId}/results`,
+export function getCompetitionStandings(
+    competitionId: string,
+    query: { view?: 'public' } = {},
+) {
+    return useApi()<CompetitionResults>(
+        `/competitions/${competitionId}/standings`,
+        { query },
     )
 }

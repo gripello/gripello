@@ -96,6 +96,9 @@ func rotateTokenKeyExcept(ctx context.Context, tx pgx.Tx, userID, keptSession st
 	if _, err := tx.Exec(ctx, `UPDATE users SET token_key = $2 WHERE id = $1`, userID, newTokenKey()); err != nil {
 		return err
 	}
+	if err := publishTokenRotated(ctx, tx, userID); err != nil {
+		return err
+	}
 	return deleteSessions(ctx, tx, userID, `"user" = $1 AND id <> $2`, keptSession)
 }
 

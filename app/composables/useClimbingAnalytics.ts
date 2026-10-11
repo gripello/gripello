@@ -1,4 +1,5 @@
-import type { AnalyticsQuery, AnalyticsResponse } from '#shared/utils/analytics'
+import { labelAnalytics, type AnalyticsQuery } from '#shared/utils/analytics'
+import { getAnalytics } from '~/api/routes'
 import { gymChangesTopic, type GymChange } from '~/utils/realtimeCache'
 
 const QUERY_KEYS = [
@@ -14,8 +15,6 @@ const LIVE_DEBOUNCE_MS = 2000
 export function useClimbingAnalytics() {
     const route = useRoute()
     const router = useRouter()
-    const authStore = useAuthStore()
-    const requestFetch = useRequestFetch()
     const gymId = useCurrentGymId()
 
     const query = computed<AnalyticsQuery>(() =>
@@ -38,13 +37,8 @@ export function useClimbingAnalytics() {
 
     const { data, status, error, refresh } = useAsyncData(
         'climbing-analytics',
-        () =>
-            requestFetch<AnalyticsResponse>('/api/manage/analytics', {
-                query: { ...query.value, gym: gymId.value },
-                headers: authStore.token
-                    ? { Authorization: authStore.token }
-                    : undefined,
-            }),
+        async () =>
+            labelAnalytics(await getAnalytics(gymId.value, query.value)),
         { watch: [query, gymId], enabled: () => !!gymId.value },
     )
 

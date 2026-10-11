@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strconv"
@@ -23,14 +24,15 @@ const (
 	absoluteTimeout = 30 * time.Minute
 	replayLimit     = 500
 	permCacheTTL    = 5 * time.Second
+	permLookupLimit = 2 * time.Second
 	// Server-only (empty audience): a subscription change on its way to the replica holding the stream.
 	subscriptionTopic = "realtime.subscriptions"
 )
 
-// Permissions answers audience questions the hub can't decide from the principal alone.
+// Permissions answers audience questions the hub can't decide from the principal alone, as one set per event.
 type Permissions interface {
-	Can(ctx context.Context, userID, gym, permission string) bool
-	Follows(ctx context.Context, followerID, followeeID string) bool
+	UsersWith(ctx context.Context, gym, permission string) ([]string, error)
+	Followers(ctx context.Context, followeeID string) ([]string, error)
 }
 
 type client struct {
@@ -49,13 +51,13 @@ type Hub struct {
 	mu        sync.RWMutex
 	clients   map[string]*client
 	cacheMu   sync.Mutex
-	cache     map[string]cachedAnswer
+	cache     map[string]cachedUsers
 	closing   chan struct{}
 	closeOnce sync.Once
 }
 
-type cachedAnswer struct {
-	ok      bool
+type cachedUsers struct {
+	users   map[string]bool
 	expires time.Time
 }
 
@@ -86,22 +88,32 @@ func invalidatesPermissions(topic string) bool {
 	return false
 }
 
-// cached answers audience questions for permCacheTTL, so an event fanned out to many clients costs one query per distinct question.
-func (h *Hub) cached(key string, ask func() bool) bool {
+// usersFor keeps each audience's user set for permCacheTTL, so an event fanned out to many clients costs at most one query.
+func (h *Hub) usersFor(key string, load func(context.Context) ([]string, error)) map[string]bool {
 	h.cacheMu.Lock()
-	answer, hit := h.cache[key]
+	cached, hit := h.cache[key]
 	h.cacheMu.Unlock()
-	if hit && time.Now().Before(answer.expires) {
-		return answer.ok
+	if hit && time.Now().Before(cached.expires) {
+		return cached.users
 	}
-	ok := ask()
+	ctx, cancel := context.WithTimeout(context.Background(), permLookupLimit)
+	defer cancel()
+	ids, err := load(ctx)
+	if err != nil {
+		slog.Warn("realtime: audience lookup failed", "audience", key, "error", err)
+		return map[string]bool{} // empty, not cached: the rest of this fan-out must not ask again
+	}
+	users := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		users[id] = true
+	}
 	h.cacheMu.Lock()
-	if h.cache == nil || len(h.cache) > 100_000 {
-		h.cache = map[string]cachedAnswer{}
+	if h.cache == nil || len(h.cache) > 10_000 {
+		h.cache = map[string]cachedUsers{}
 	}
-	h.cache[key] = cachedAnswer{ok, time.Now().Add(permCacheTTL)}
+	h.cache[key] = cachedUsers{users, time.Now().Add(permCacheTTL)}
 	h.cacheMu.Unlock()
-	return ok
+	return users
 }
 
 func (h *Hub) deliver(e events.Event) {
@@ -120,14 +132,13 @@ func (h *Hub) deliver(e events.Event) {
 		h.cache = nil
 		h.cacheMu.Unlock()
 	}
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for _, c := range h.clients {
+	accepts := h.audience(e.Audience)
+	for _, c := range h.snapshot() {
 		c.mu.Lock()
 		subscribed := slices.Contains(c.topics, e.Topic)
 		p := c.principal
 		c.mu.Unlock()
-		if !subscribed || !h.accepts(e.Audience, p) {
+		if !subscribed || !accepts(p) {
 			continue
 		}
 		select {
@@ -135,6 +146,17 @@ func (h *Hub) deliver(e events.Event) {
 		default: // slow client: drop; it catches up through Last-Event-ID on reconnect
 		}
 	}
+}
+
+// snapshot copies the client list, so a fan-out never holds the lock that Connect needs to register a stream.
+func (h *Hub) snapshot() []*client {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	clients := make([]*client, 0, len(h.clients))
+	for _, c := range h.clients {
+		clients = append(clients, c)
+	}
+	return clients
 }
 
 func (h *Hub) dropSession(e events.Event) {
@@ -177,29 +199,46 @@ func (h *Hub) refreshPlatformAdmin(e events.Event) {
 	}
 }
 
-// accepts ORs every criterion set on the audience; NotUsers always excludes.
-func (h *Hub) accepts(a events.Audience, p *auth.Principal) bool {
-	if a.Public {
-		return true
+// audience ORs every criterion set on a; NotUsers always excludes. Permission and follower sets load once, on the first client that needs them.
+func (h *Hub) audience(a events.Audience) func(*auth.Principal) bool {
+	var gymPermUsers, followers map[string]bool
+	gym, perm, hasGymPerm := cut(a.GymPerm)
+	return func(p *auth.Principal) bool {
+		if a.Public {
+			return true
+		}
+		if a.GuestsOnly {
+			return p == nil
+		}
+		if p == nil || slices.Contains(a.NotUsers, p.UserID) {
+			return false
+		}
+		if a.SignedIn || slices.Contains(a.Users, p.UserID) {
+			return true
+		}
+		if hasGymPerm {
+			if p.PlatformAdmin {
+				return true
+			}
+			if gymPermUsers == nil {
+				gymPermUsers = h.usersFor("can\x00"+gym+"\x00"+perm, func(ctx context.Context) ([]string, error) {
+					return h.perms.UsersWith(ctx, gym, perm)
+				})
+			}
+			if gymPermUsers[p.UserID] {
+				return true
+			}
+		}
+		if a.FollowersOf == "" {
+			return false
+		}
+		if followers == nil {
+			followers = h.usersFor("follows\x00"+a.FollowersOf, func(ctx context.Context) ([]string, error) {
+				return h.perms.Followers(ctx, a.FollowersOf)
+			})
+		}
+		return followers[p.UserID]
 	}
-	if a.GuestsOnly {
-		return p == nil
-	}
-	if p == nil || slices.Contains(a.NotUsers, p.UserID) {
-		return false
-	}
-	if a.SignedIn || slices.Contains(a.Users, p.UserID) {
-		return true
-	}
-	ctx := context.Background()
-	if gym, perm, ok := cut(a.GymPerm); ok && (p.PlatformAdmin || h.cached("can\x00"+p.UserID+"\x00"+gym+"\x00"+perm, func() bool {
-		return h.perms.Can(ctx, p.UserID, gym, perm)
-	})) {
-		return true
-	}
-	return a.FollowersOf != "" && h.cached("follows\x00"+p.UserID+"\x00"+a.FollowersOf, func() bool {
-		return h.perms.Follows(ctx, p.UserID, a.FollowersOf)
-	})
 }
 
 func cut(s string) (string, string, bool) {
@@ -313,11 +352,12 @@ func (h *Hub) applySubscription(e events.Event) {
 	}
 	missed, _ := h.bus.Since(context.Background(), replayFrom, replayLimit)
 	for _, missedEvent := range missed {
+		accepts := h.audience(missedEvent.Audience)
 		// Events after this one still pass through deliver; replaying them too would send them twice.
 		if missedEvent.ID >= e.ID {
 			break
 		}
-		if slices.Contains(change.Topics, missedEvent.Topic) && h.accepts(missedEvent.Audience, change.Principal) {
+		if slices.Contains(change.Topics, missedEvent.Topic) && accepts(change.Principal) {
 			select {
 			case c.send <- missedEvent:
 			default:

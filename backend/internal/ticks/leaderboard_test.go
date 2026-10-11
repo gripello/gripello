@@ -3,7 +3,11 @@ package ticks
 import (
 	"context"
 	"encoding/json"
+	"math/rand/v2"
 	"net/http"
+	"reflect"
+	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -154,75 +158,218 @@ func TestLeaderboardKeepsTheGradeOfTheBestRepeat(t *testing.T) {
 	f.exec(`UPDATE routes SET grade = '6A', grade_index = 15.7 WHERE id = $1 RETURNING id`, route)
 	f.tick("climber", route, "flash", now)
 
-	from, to := rollingLeaderboardWindow(now)
-	board, err := f.module.buildLeaderboard(context.Background(), f.gymA, "boulder", from, to)
+	for name, board := range map[string]leaderboardBoard{"fresh": f.freshBoard("boulder"), "live": f.liveBoard("boulder")} {
+		if sends := board.sends[f.users["climber"]]; len(sends) != 1 || sends[0].Grade != "7A" || sends[0].GradeIndex != 18.5 || !sends[0].Flash {
+			t.Fatalf("%s regraded repeat = %+v", name, sends)
+		}
+	}
+}
+
+func (f *fixture) freshBoard(kind string) leaderboardBoard {
+	f.t.Helper()
+	from, to := rollingLeaderboardWindow(time.Now())
+	sends, err := f.module.loadPairs(context.Background(), f.gymA, kind, from, to)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	board, err := f.module.boardFromSends(context.Background(), sends, nil)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	return board
+}
+
+func (f *fixture) liveBoard(kind string) leaderboardBoard {
+	f.t.Helper()
+	from, to := rollingLeaderboardWindow(time.Now())
+	board, err := f.module.cachedBoard(context.Background(), f.gymA, kind, "", from, to)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	return board
+}
+
+func (f *fixture) live(kind string) *liveBoard {
+	from, to := rollingLeaderboardWindow(time.Now())
+	f.module.boards.mu.Lock()
+	defer f.module.boards.mu.Unlock()
+	return f.module.boards.boards[leaderboardKey(f.gymA, kind, "", from, to)]
+}
+
+func (f *fixture) loadedAt(kind string) time.Time {
+	b := f.live(kind)
+	f.module.boards.mu.Lock()
+	defer f.module.boards.mu.Unlock()
+	return b.loadedAt
+}
+
+func rowOf(board leaderboardBoard, user string) *leaderboardRow {
+	if index := slices.IndexFunc(board.rows, func(row leaderboardRow) bool { return row.User == user }); index >= 0 {
+		return &board.rows[index]
+	}
+	return nil
+}
+
+func (f *fixture) waitForRow(kind, user string, matches func(*leaderboardRow) bool) {
+	f.t.Helper()
+	testapp.WaitFor(f.t, func() bool { return matches(rowOf(f.liveBoard(kind), f.users[user])) })
+}
+
+func TestASendShowsWithoutReloadingTheBoard(t *testing.T) {
+	f := newFixture(t)
+	route := f.boulder(f.hallA, "7A", 18.5)
+	f.tick("setterA", route, "top", time.Now())
+	f.liveBoard("boulder")
+	loaded := f.loadedAt("boulder")
+
+	f.tick("climber", route, "flash", time.Now())
+	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Score == 1850+leaderboardFlashBonus })
+	if !f.loadedAt("boulder").Equal(loaded) {
+		t.Fatal("the send reloaded the whole board")
+	}
+}
+
+func TestUpdatingOrDeletingATickRefreshesItsPair(t *testing.T) {
+	f := newFixture(t)
+	route := f.boulder(f.hallA, "7A", 18.5)
+	hard := f.tick("climber", route, "top", time.Now().AddDate(0, 0, -1))
+	f.exec(`UPDATE routes SET grade = '6A', grade_index = 15.7 WHERE id = $1 RETURNING id`, route)
+	easy := f.tick("climber", route, "top", time.Now())
+	f.liveBoard("boulder")
+
+	f.call("climber", "PATCH", "/ticks/"+easy.ID, `{"type":"flash"}`, http.StatusOK)
+	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Score == 1850+leaderboardFlashBonus })
+	f.call("climber", "DELETE", "/ticks/"+hard.ID, "", http.StatusNoContent)
+	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool {
+		return row != nil && row.Score == 1570+leaderboardFlashBonus && row.Hardest == "6A"
+	})
+	f.call("climber", "PATCH", "/ticks/"+easy.ID, `{"date":"`+time.Now().AddDate(0, 0, -90).UTC().Format(time.RFC3339)+`"}`, http.StatusOK)
+	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row == nil })
+}
+
+func TestChangesDuringALoadAreReplayed(t *testing.T) {
+	f := newFixture(t)
+	route := f.boulder(f.hallA, "7A", 18.5)
+	f.liveBoard("boulder")
+	b := f.live("boulder")
+	boards := f.module.boards
+	boards.mu.Lock()
+	b.loading = true
+	boards.mu.Unlock()
+
+	f.tick("climber", route, "top", time.Now())
+	testapp.WaitFor(t, func() bool {
+		boards.mu.Lock()
+		defer boards.mu.Unlock()
+		return len(b.pending) == 1
+	})
+	failing, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := f.module.loadBoard(failing, b); err == nil {
+		t.Fatal("want the cancelled load to fail")
+	}
+	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Score == 1850 })
+}
+
+func TestOptOutsAndDeletedClimbersLeaveLiveBoards(t *testing.T) {
+	f := newFixture(t)
+	route := f.boulder(f.hallA, "7A", 18.5)
+	f.tick("climber", route, "top", time.Now())
+	f.liveBoard("boulder")
+	climber := f.users["climber"]
+	present := func(row *leaderboardRow) bool { return row != nil }
+	absent := func(row *leaderboardRow) bool { return row == nil }
+
+	for _, field := range []string{"leaderboard_hidden", "ticks_private"} {
+		f.exec(`UPDATE users SET `+field+` = true WHERE id = $1 RETURNING id`, climber)
+		publishUserUpdate(t, f, climber, []string{field})
+		f.waitForRow("boulder", "climber", absent)
+		f.exec(`UPDATE users SET `+field+` = false WHERE id = $1 RETURNING id`, climber)
+		publishUserUpdate(t, f, climber, []string{field})
+		f.waitForRow("boulder", "climber", present)
+	}
+	f.exec(`UPDATE users SET firstname = 'Cleo', name = 'Climber' WHERE id = $1 RETURNING id`, climber)
+	publishUserUpdate(t, f, climber, []string{"firstname", "name"})
+	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Name == "Cleo C." })
+
+	f.exec(`DELETE FROM users WHERE id = $1 RETURNING id`, climber)
+	err := pgx.BeginFunc(context.Background(), f.app.DB, func(tx pgx.Tx) error {
+		return events.Publish(context.Background(), tx, "user:"+climber, "user.deleted", map[string]string{"id": climber}, events.Audience{Users: []string{climber}})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sends := board.sends[f.users["climber"]]; len(sends) != 1 || sends[0].Grade != "7A" || sends[0].GradeIndex != 18.5 || !sends[0].Flash {
-		t.Fatalf("regraded repeat = %+v", sends)
+	f.waitForRow("boulder", "climber", absent)
+}
+
+type comparableBoard struct {
+	Rows      []leaderboardRow
+	Stats     leaderboardStats
+	Grades    []leaderboardGrade
+	TopRoutes []leaderboardRoute
+	Sends     map[string][]leaderboardSend
+}
+
+func comparable(board leaderboardBoard) comparableBoard {
+	sends := map[string][]leaderboardSend{}
+	for user, userSends := range board.sends {
+		sorted := slices.Clone(userSends)
+		slices.SortFunc(sorted, func(a, b leaderboardSend) int { return strings.Compare(a.Route, b.Route) })
+		sends[user] = sorted
+	}
+	return comparableBoard{board.rows, board.stats, board.grades, board.topRoutes, sends}
+}
+
+func TestLiveBoardsMatchAFreshBuildAfterRandomChanges(t *testing.T) {
+	f := newFixture(t)
+	random := rand.New(rand.NewPCG(1, 2))
+	routes := []string{
+		f.boulder(f.hallA, "5", 14.2), f.boulder(f.hallA, "6A", 15.7), f.boulder(f.hallA, "7A", 18.5), f.boulder(f.hallB, "8A", 23),
+		f.exec(`INSERT INTO routes (id, gym, name, grade, grade_system, grade_index, type, location)
+			VALUES ($1, $2, 'Rope', '7a', 'french', 17, 'Route', $3) RETURNING id`, ids.New(), f.gymA, f.hallA),
+	}
+	climbers := []string{"climber", "friend", "stranger", "setterA"}
+	types := []string{"top", "flash", "attempt"}
+	randomDate := func() time.Time { return time.Now().Add(-time.Duration(random.IntN(70*24)) * time.Hour) }
+	var ticks []Tick
+	create := func() {
+		ticks = append(ticks, f.tick(climbers[random.IntN(len(climbers))], routes[random.IntN(len(routes))], types[random.IntN(len(types))], randomDate()))
+	}
+	for range 30 {
+		create()
+	}
+	f.liveBoard("boulder")
+	f.liveBoard("route")
+
+	for range 40 {
+		switch op := random.IntN(4); {
+		case op == 0 || len(ticks) == 0:
+			create()
+		case op == 1:
+			tick := ticks[random.IntN(len(ticks))]
+			f.call(f.nameOf(tick.User), "PATCH", "/ticks/"+tick.ID, `{"type":"`+types[random.IntN(len(types))]+`"}`, http.StatusOK)
+		case op == 2:
+			tick := ticks[random.IntN(len(ticks))]
+			f.call(f.nameOf(tick.User), "PATCH", "/ticks/"+tick.ID, `{"date":"`+randomDate().UTC().Format(time.RFC3339)+`"}`, http.StatusOK)
+		default:
+			index := random.IntN(len(ticks))
+			f.call(f.nameOf(ticks[index].User), "DELETE", "/ticks/"+ticks[index].ID, "", http.StatusNoContent)
+			ticks = slices.Delete(ticks, index, index+1)
+		}
+	}
+	for _, kind := range []string{"boulder", "route"} {
+		testapp.WaitFor(t, func() bool { return reflect.DeepEqual(comparable(f.liveBoard(kind)), comparable(f.freshBoard(kind))) })
 	}
 }
 
-func cappedOrMissing(c *boardCache, key string) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	cached, ok := c.entries[key]
-	return !ok || !cached.expires.After(time.Now().Add(tickStalenessLimit))
-}
-
-func TestTickChangesForgetBoardsCoveringTheirDay(t *testing.T) {
-	c := newBoardCache()
-	september := func(day int) time.Time { return time.Date(2026, 9, day, 0, 0, 0, 0, time.UTC) }
-	c.store("finished", "a", leaderboardBoard{}, september(1), september(10), time.Now())
-	c.store("later", "a", leaderboardBoard{}, september(11), september(20), time.Now())
-	c.store("other gym", "b", leaderboardBoard{}, september(1), september(10), time.Now())
-	c.forgetCovering("a", september(10), time.Time{})
-	if !cappedOrMissing(c, "finished") || cappedOrMissing(c, "later") || cappedOrMissing(c, "other gym") {
-		t.Fatal("want only the board covering the tick's day of its gym capped")
+func (f *fixture) nameOf(user string) string {
+	for name, id := range f.users {
+		if id == user {
+			return name
+		}
 	}
-}
-
-func TestTicksOfDeletedRoutesCapEveryGym(t *testing.T) {
-	c := newBoardCache()
-	day := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
-	c.store("a", "a", leaderboardBoard{}, day, day.AddDate(0, 0, 10), time.Now())
-	c.store("b", "b", leaderboardBoard{}, day, day.AddDate(0, 0, 10), time.Now())
-	c.forgetCovering("", day)
-	if !cappedOrMissing(c, "a") || !cappedOrMissing(c, "b") {
-		t.Fatal("a tick without a gym caps all boards covering its day")
-	}
-}
-
-func TestTicksExpireOldBoardsAtOnce(t *testing.T) {
-	c := newBoardCache()
-	day := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
-	c.store("old", "a", leaderboardBoard{}, day, day.AddDate(0, 0, 60), time.Now())
-	c.mu.Lock()
-	old := c.entries["old"]
-	old.built = time.Now().Add(-tickStalenessLimit)
-	c.entries["old"] = old
-	c.mu.Unlock()
-	c.forgetCovering("a", day)
-	c.mu.Lock()
-	expired := time.Now().After(c.entries["old"].expires)
-	c.mu.Unlock()
-	if !expired {
-		t.Fatal("a board older than the staleness limit survived a tick")
-	}
-}
-
-func TestBoardsBuiltDuringATickAreCapped(t *testing.T) {
-	c := newBoardCache()
-	day := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
-	started := time.Now()
-	c.forgetCovering("a", day.AddDate(0, 0, 1))
-	c.store("racing", "a", leaderboardBoard{}, day, day.AddDate(0, 0, 60), started)
-	c.store("other gym", "b", leaderboardBoard{}, day, day.AddDate(0, 0, 60), started)
-	c.store("other days", "a", leaderboardBoard{}, day.AddDate(0, 0, 10), day.AddDate(0, 0, 60), started)
-	if !cappedOrMissing(c, "racing") || cappedOrMissing(c, "other gym") || cappedOrMissing(c, "other days") {
-		t.Fatal("want only the racing board capped")
-	}
+	f.t.Fatalf("unknown user %s", user)
+	return ""
 }
 
 func TestConcurrentLeaderboardMissesShareOneBoard(t *testing.T) {
@@ -249,29 +396,6 @@ func TestConcurrentLeaderboardMissesShareOneBoard(t *testing.T) {
 	}
 }
 
-func TestRedatingATickCapsBoardsOfBothDays(t *testing.T) {
-	f := newFixture(t)
-	route := f.boulder(f.hallA, "7A", 18.5)
-	now := time.Now()
-	f.module.boards.store("probe", f.gymA, leaderboardBoard{}, now.AddDate(0, 0, -1), now.AddDate(0, 0, 1), time.Now())
-	tick := f.tick("climber", route, "top", now)
-	testapp.WaitFor(t, func() bool { return cappedOrMissing(f.module.boards, "probe") })
-	time.Sleep(10 * time.Millisecond)
-	past := now.AddDate(0, 0, -30)
-	f.module.boards.store("now", f.gymA, leaderboardBoard{}, now.AddDate(0, 0, -1), now.AddDate(0, 0, 1), time.Now())
-	f.module.boards.store("past", f.gymA, leaderboardBoard{}, past.AddDate(0, 0, -1), past.AddDate(0, 0, 1), time.Now())
-	f.module.boards.store("other gym", f.gymB, leaderboardBoard{}, now.AddDate(0, 0, -1), now.AddDate(0, 0, 1), time.Now())
-
-	f.call("climber", "PATCH", "/ticks/"+tick.ID, `{"date":"`+past.UTC().Format(time.RFC3339)+`"}`, http.StatusOK)
-
-	testapp.WaitFor(t, func() bool {
-		return cappedOrMissing(f.module.boards, "now") && cappedOrMissing(f.module.boards, "past")
-	})
-	if cappedOrMissing(f.module.boards, "other gym") {
-		t.Fatal("another gym's board was capped")
-	}
-}
-
 func publishUserUpdate(t *testing.T, f *fixture, user string, changed []string) {
 	t.Helper()
 	err := pgx.BeginFunc(context.Background(), f.app.DB, func(tx pgx.Tx) error {
@@ -281,40 +405,6 @@ func publishUserUpdate(t *testing.T, f *fixture, user string, changed []string) 
 	if err != nil {
 		t.Fatal(err)
 	}
-}
-
-func TestLeavingTheLeaderboardForgetsCachedBoards(t *testing.T) {
-	f := newFixture(t)
-	boards := f.module.boards
-	boards.store("cached", f.gymA, leaderboardBoard{}, time.Now().AddDate(0, 0, -10), time.Now().AddDate(0, 0, -1), time.Now())
-	publishUserUpdate(t, f, f.users["climber"], []string{"followed_walls"})
-	probe := "probe"
-	boards.store(probe, f.gymB, leaderboardBoard{}, time.Now().AddDate(0, 0, -1), time.Now().AddDate(0, 0, 1), time.Now())
-	f.tick("climber", f.boulder(f.hallB, "6A", 15.7), "top", time.Now())
-	testapp.WaitFor(t, func() bool { return cappedOrMissing(boards, probe) })
-	if cappedOrMissing(boards, "cached") {
-		t.Fatal("an unrelated profile change forgot the boards")
-	}
-	publishUserUpdate(t, f, f.users["climber"], []string{"leaderboard_hidden"})
-	testapp.WaitFor(t, func() bool { return cappedOrMissing(boards, "cached") })
-	boards.store("in-flight", f.gymA, leaderboardBoard{}, time.Now().AddDate(0, 0, -10), time.Now().AddDate(0, 0, -1), time.Now().Add(-time.Minute))
-	if !cappedOrMissing(boards, "in-flight") {
-		t.Fatal("a board built before the change was cached as fresh")
-	}
-}
-
-func TestDeletedClimbersLeaveCachedBoards(t *testing.T) {
-	f := newFixture(t)
-	boards := f.module.boards
-	boards.store("cached", f.gymA, leaderboardBoard{}, time.Now().AddDate(0, 0, -10), time.Now().AddDate(0, 0, -1), time.Now())
-	climber := f.users["climber"]
-	err := pgx.BeginFunc(context.Background(), f.app.DB, func(tx pgx.Tx) error {
-		return events.Publish(context.Background(), tx, "user:"+climber, "user.deleted", map[string]string{"id": climber}, events.Audience{Users: []string{climber}})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	testapp.WaitFor(t, func() bool { return cappedOrMissing(boards, "cached") })
 }
 
 func TestProfileChangesWithoutAFieldListForgetBoards(t *testing.T) {

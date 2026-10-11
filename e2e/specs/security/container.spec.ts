@@ -1,6 +1,5 @@
 import { test, expect } from '../../support/fixtures'
 import { e2eGymId } from '../../support/api'
-import { authHeader, gotoSettled, gymPath } from '../../support/nav'
 
 test('nginx still binds the privileged http port and redirects to https', async ({
     request,
@@ -31,14 +30,10 @@ test('nginx proxies to the backend over loopback', async ({ request }) => {
 })
 
 test('nuxt server routes reach the backend over loopback', async ({
-    adminPage: page,
+    request,
 }) => {
-    await gotoSettled(page, gymPath('/'))
-    const response = await page.request.get(
-        `/api/manage/analytics?gym=${await e2eGymId()}`,
-        {
-            headers: await authHeader(page),
-        },
+    const response = await request.get(
+        `/api/ui/grade-scale?gym=${await e2eGymId()}`,
     )
     expect(response.status()).toBe(200)
 })

@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -261,5 +262,114 @@ func TestOnceHandlerGetsEventSkippedBehindAGap(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("event committed after its gap closed never reached the once handler")
+	}
+}
+
+func TestSweepReadsOnlyIdsPastTheCursorUntilAFullPass(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool := testkit.Pool(t)
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	sweepOften(t)
+	bus := NewBus(pool)
+	once := make(chan string, 4)
+	bus.SubscribeOnce("audit", "audit.write", func(e Event) { once <- e.Kind })
+	expect := func(want string) {
+		t.Helper()
+		select {
+		case kind := <-once:
+			if kind != want {
+				t.Fatalf("got %q, want %q", kind, want)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatalf("%s not delivered", want)
+		}
+	}
+	publish := func(kind string) {
+		tx, _ := pool.Begin(ctx)
+		Publish(ctx, tx, "audit", kind, nil, Audience{})
+		tx.Commit(ctx)
+	}
+	var lateID int64
+	pool.QueryRow(ctx, `SELECT nextval('events_id_seq')`).Scan(&lateID)
+	publish("first")
+	cursors := map[chan Event]int64{}
+	bus.sweepOnces(ctx, cursors)
+	expect("first")
+
+	pool.Exec(ctx, `INSERT INTO events (id, topic, kind, payload) VALUES ($1, 'audit', 'late', 'null')`, lateID)
+	publish("second")
+	bus.sweepOnces(ctx, cursors)
+	expect("second")
+	select {
+	case kind := <-once:
+		t.Fatalf("steady-state sweep read %q below its cursor", kind)
+	case <-time.After(300 * time.Millisecond):
+	}
+
+	bus.sweepOnces(ctx, map[chan Event]int64{})
+	expect("late")
+}
+
+func TestFullPassDeliversAnEventWhoseRetriesAllFailed(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool := testkit.Pool(t)
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	sweepOften(t)
+	retryDelay, fullEvery := onceRetryDelay, onceFullSweepEvery
+	onceRetryDelay, onceFullSweepEvery = time.Millisecond, 500*time.Millisecond
+	t.Cleanup(func() { onceRetryDelay, onceFullSweepEvery = retryDelay, fullEvery })
+	bus := NewBus(pool)
+	var failing atomic.Bool
+	failing.Store(true)
+	attempts := make(chan struct{}, 8)
+	delivered := make(chan struct{}, 1)
+	bus.SubscribeOnce("audit", "audit.write", func(Event) {
+		if failing.Load() {
+			attempts <- struct{}{}
+			panic("handler keeps failing")
+		}
+		delivered <- struct{}{}
+	})
+	go bus.Run(ctx)
+	time.Sleep(200 * time.Millisecond)
+	tx, _ := pool.Begin(ctx)
+	Publish(ctx, tx, "audit", "x", nil, Audience{})
+	tx.Commit(ctx)
+	for range 3 {
+		select {
+		case <-attempts:
+		case <-time.After(3 * time.Second):
+			t.Fatal("handler not attempted three times")
+		}
+	}
+	failing.Store(false)
+	select {
+	case <-delivered:
+	case <-time.After(3 * time.Second):
+		t.Fatal("event whose retries failed never redelivered")
+	}
+}
+
+func TestTopicPrefixRangeMatchesStartsWith(t *testing.T) {
+	ctx := context.Background()
+	pool := testkit.Pool(t)
+	topics := []string{"", "a", "audit", "audit_x", "auditx", "audiu", "gym_changes:g1", "gym:g1", "gymXchanges:g1",
+		"gym%changes", "user:ü", "user:" + "\U0010FFFE", "tasks", "tasks:1", "z", "~"}
+	for _, prefix := range []string{"", "audit", "gym_changes:", "gym%", "user:", "tasks", "~", "ü"} {
+		var mismatches []string
+		err := pool.QueryRow(ctx, `SELECT coalesce(array_agg(topic), '{}') FROM unnest($2::text[]) AS topic
+			WHERE (`+topicHasPrefix+`) IS DISTINCT FROM starts_with(topic, $1)`, prefix, topics).Scan(&mismatches)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(mismatches) > 0 {
+			t.Errorf("prefix %q: range and starts_with disagree on %q", prefix, mismatches)
+		}
 	}
 }

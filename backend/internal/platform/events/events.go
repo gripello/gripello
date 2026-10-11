@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"math/rand/v2"
 	"strings"
 	"sync"
 	"time"
@@ -57,8 +58,23 @@ func PublishAs(ctx context.Context, tx pgx.Tx, actor, topic, kind string, payloa
 	if _, err := tx.Exec(ctx, `INSERT INTO events (topic, kind, payload, audience, actor) VALUES ($1, $2, $3, $4, $5)`, topic, kind, body, aud, actor); err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, `SELECT pg_notify($1, '')`, channel)
-	return err
+	if _, err = tx.Exec(ctx, `SELECT pg_notify($1, '')`, channel); err != nil {
+		return err
+	}
+	publishObservers.Range(func(_, observer any) bool {
+		observer.(Handler)(Event{Topic: topic, Kind: kind, Payload: body, Audience: audience, Actor: actor})
+		return true
+	})
+	return nil
+}
+
+var publishObservers sync.Map
+
+// ObservePublish runs h synchronously inside every publish of this process, before the commit; only for dropping per-replica cache entries, since the transaction may still roll back.
+func ObservePublish(h Handler) (stop func()) {
+	key := new(byte)
+	publishObservers.Store(key, h)
+	return func() { publishObservers.Delete(key) }
 }
 
 // PublishNow writes a server-only event in its own transaction, for changes that touch no other row.
@@ -244,40 +260,71 @@ var (
 	onceRetryDelay = time.Second
 	onceSweepEvery = 30 * time.Second
 	// Younger events are still on their way through live dispatch.
-	onceSweepMinAge = 10 * time.Second
+	onceSweepMinAge    = 10 * time.Second
+	onceFullSweepEvery = 15 * time.Minute
 )
 
 // sweepUnclaimed hands every SubscribeOnce handler the outbox events it never claimed: ones committed while no
 // bus ran, ones still queued at shutdown, ones live dispatch skipped behind a gap, and ones whose retries all failed.
+// Each sweep reads only ids past the handler's cursor; the first sweep and one every onceFullSweepEvery read the
+// whole outbox, catching retries that failed after the cursor passed and ids that committed below it.
 // Events pruned from the outbox (see Prune) are gone for good.
 func (b *Bus) sweepUnclaimed(ctx context.Context) {
+	cursors := map[chan Event]int64{}
+	nextFullSweep := time.Now().Add(onceFullSweepEvery)
 	for {
-		b.mu.RLock()
-		onces := b.onces
-		b.mu.RUnlock()
-		for _, once := range onces {
-			missed, err := b.query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events e
-				WHERE starts_with(topic, $1) AND created < now() - $3::interval
-				  AND NOT EXISTS (SELECT 1 FROM event_claims c WHERE c.event_id = e.id AND c.handler = $2)
-				ORDER BY id`, once.prefix, once.handler, onceSweepMinAge.String())
-			if err != nil && ctx.Err() == nil {
-				slog.Error("events: sweeping unclaimed events failed", "handler", once.handler, "error", err)
-			}
-			for _, e := range missed {
-				select {
-				case once.queue <- e:
-				case <-ctx.Done():
-					return
-				}
-			}
+		if time.Now().After(nextFullSweep) {
+			clear(cursors)
+			nextFullSweep = time.Now().Add(onceFullSweepEvery)
 		}
+		b.sweepOnces(ctx, cursors)
 		select {
-		case <-time.After(onceSweepEvery):
+		case <-time.After(onceSweepEvery/2 + rand.N(onceSweepEvery)):
 		case <-ctx.Done():
 			return
 		}
 	}
 }
+
+func (b *Bus) sweepOnces(ctx context.Context, cursors map[chan Event]int64) {
+	var upTo int64
+	if err := b.pool.QueryRow(ctx, `SELECT COALESCE(MAX(id), 0) FROM events WHERE created < now() - $1::interval`,
+		onceSweepMinAge.String()).Scan(&upTo); err != nil {
+		if ctx.Err() == nil {
+			slog.Error("events: sweeping unclaimed events failed", "error", err)
+		}
+		return
+	}
+	b.mu.RLock()
+	onces := b.onces
+	b.mu.RUnlock()
+	for _, once := range onces {
+		if cursors[once.queue] >= upTo {
+			continue
+		}
+		missed, err := b.query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events e
+			WHERE `+topicHasPrefix+` AND id > $3 AND id <= $4
+			  AND NOT EXISTS (SELECT 1 FROM event_claims c WHERE c.event_id = e.id AND c.handler = $2)
+			ORDER BY id`, once.prefix, once.handler, cursors[once.queue], upTo)
+		if err != nil {
+			if ctx.Err() == nil {
+				slog.Error("events: sweeping unclaimed events failed", "handler", once.handler, "error", err)
+			}
+			continue
+		}
+		cursors[once.queue] = upTo
+		for _, e := range missed {
+			select {
+			case once.queue <- e:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}
+}
+
+// starts_with(topic, $1) as a range events_topic_id_idx can serve; U+10FFFF is a noncharacter no topic contains.
+const topicHasPrefix = `topic COLLATE "C" >= $1 AND topic COLLATE "C" < $1 || chr(1114111)`
 
 // SubscribeOnce runs h on exactly one replica per event: the replica that inserts the claim row runs it.
 // A handler that panics gives the claim back and is retried, so a failure doesn't lose the event.

@@ -46,6 +46,7 @@ services:
     postgres:
         container_name: gripello-postgres
         image: postgres:18-alpine
+        shm_size: 256mb
         environment:
             POSTGRES_USER: gripello
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}

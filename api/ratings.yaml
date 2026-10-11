@@ -60,7 +60,7 @@ paths:
     get:
       operationId: listGymRatings
       tags: [ratings]
-      description: manage_comments, view_analytics or manage_routes. Reviews management list; `expand.route_id` carries `{id, name, expand.location.name}`, and `author` is filled even for anonymous reviewers only for manage_comments.
+      description: manage_comments or manage_routes. Reviews management list; `expand.route_id` carries `{id, name, expand.location.name}`, and `author` is filled even for anonymous reviewers only for manage_comments.
       parameters:
         - { name: route, in: query, description: comma-separated route ids, schema: { type: string } }
         - { name: ids, in: query, description: comma-separated rating ids, schema: { type: string } }

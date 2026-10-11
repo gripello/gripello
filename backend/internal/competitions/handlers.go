@@ -6,9 +6,15 @@ import (
 	"errors"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"golang.org/x/sync/singleflight"
+
+	"gripello/internal/platform/auth"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 )
 
@@ -378,31 +384,6 @@ func (m *module) standings(ctx context.Context, competition string, staff bool) 
 		WHERE competition = $1 ORDER BY bib, id`, competition)
 }
 
-func (m *module) getStandings(w http.ResponseWriter, r *http.Request) error {
-	c, err := findCompetition(r.Context(), m.app.DB, r.PathValue("id"))
-	if err != nil {
-		return err
-	}
-	if c.Status == "draft" {
-		return httpx.ErrNotFound
-	}
-	items, err := m.standings(r.Context(), c.ID, false)
-	if err != nil {
-		return err
-	}
-	categories, err := m.categories(r.Context(), c.ID)
-	return respond(w, http.StatusOK, map[string]any{"items": items, "categories": categories}, err)
-}
-
-type Results struct {
-	Visibility  string      `json:"visibility"`
-	Competition Competition `json:"competition"`
-	Categories  []Category  `json:"categories"`
-	Entries     []Standing  `json:"entries"`
-	Routes      []CompRoute `json:"routes"`
-	Scores      []Score     `json:"scores"`
-}
-
 func resultsVisibility(c Competition, now time.Time) string {
 	switch {
 	case c.Status == "published":
@@ -415,32 +396,150 @@ func resultsVisibility(c Competition, now time.Time) string {
 	return "live"
 }
 
-// getResults bundles what buildStandings needs; managers always get live data, others only what resultsVisibility allows.
-func (m *module) getResults(w http.ResponseWriter, r *http.Request) error {
-	c, v, err := m.loadVisible(r.Context(), r.PathValue("id"))
-	if err != nil {
-		return err
+type Standings struct {
+	Visibility string             `json:"visibility"`
+	Format     string             `json:"format"`
+	Updated    time.Time          `json:"updated"`
+	Categories []CategoryStanding `json:"categories"`
+}
+
+// getStandings: managers get live data with real names unless they ask for the public view (?view=public), everyone
+// else the cached view resultsVisibility allows.
+func (m *module) getStandings(w http.ResponseWriter, r *http.Request) error {
+	ctx, id := r.Context(), r.PathValue("id")
+	if p, ok := auth.From(ctx); ok && r.URL.Query().Get("view") != "public" {
+		gym, err := m.competitionGym(ctx, id)
+		if err != nil {
+			return err
+		}
+		if m.perms.Can(ctx, p.UserID, gym, permManage) {
+			c, err := findCompetition(ctx, m.app.DB, id)
+			if err != nil {
+				return err
+			}
+			standings, err := m.computeStandings(ctx, c, true)
+			return respond(w, http.StatusOK, standings, err)
+		}
 	}
-	out := Results{Visibility: resultsVisibility(c, time.Now()), Competition: c,
-		Categories: []Category{}, Entries: []Standing{}, Routes: []CompRoute{}, Scores: []Score{}}
-	if v.manager && out.Visibility != "final" {
+	standings, err := m.publicStandings(ctx, id)
+	return respond(w, http.StatusOK, standings, err)
+}
+
+func (m *module) computeStandings(ctx context.Context, c Competition, manager bool) (Standings, error) {
+	out := Standings{Visibility: resultsVisibility(c, time.Now()), Format: c.ScoringFormat, Updated: time.Now().UTC(),
+		Categories: []CategoryStanding{}}
+	if manager && out.Visibility != "final" {
 		out.Visibility = "live"
 	}
 	if out.Visibility == "hidden" || out.Visibility == "frozen" {
-		return respond(w, http.StatusOK, out, nil)
+		return out, nil
 	}
-	ctx := r.Context()
-	if out.Categories, err = m.categories(ctx, c.ID); err != nil {
-		return err
+	categories, err := m.categories(ctx, c.ID)
+	if err != nil {
+		return out, err
 	}
-	if out.Entries, err = m.standings(ctx, c.ID, v.manager); err != nil {
-		return err
+	entries, err := m.standings(ctx, c.ID, manager)
+	if err != nil {
+		return out, err
 	}
-	if out.Routes, err = list[CompRoute](ctx, m.app.DB, `SELECT `+routeColumns+` FROM competition_routes
-		WHERE competition = $1 ORDER BY number, id`, c.ID); err != nil {
-		return err
+	routes, err := list[CompRoute](ctx, m.app.DB, `SELECT `+routeColumns+` FROM competition_routes
+		WHERE competition = $1 ORDER BY number, id`, c.ID)
+	if err != nil {
+		return out, err
 	}
-	out.Scores, err = list[Score](ctx, m.app.DB, `SELECT `+scoreColumns+` FROM competition_scores
+	scores, err := list[Score](ctx, m.app.DB, `SELECT `+scoreColumns+` FROM competition_scores
 		WHERE competition = $1 ORDER BY created, id`, c.ID)
-	return respond(w, http.StatusOK, out, err)
+	if err != nil {
+		return out, err
+	}
+	out.Categories = buildStandings(c, categories, entries, routes, scores)
+	return out, nil
+}
+
+// Safety net for changes that reach the standings without a competition_changes event (e.g. a gym deletion).
+const standingsCacheTTL = time.Minute
+
+type cachedStandings struct {
+	gym       string
+	standings Standings
+	expires   time.Time
+}
+
+// ponytail: per-replica cache; every replica's bus sees competition_changes and drops its own copy
+type standingsCache struct {
+	mu          sync.Mutex
+	entries     map[string]cachedStandings
+	generations map[string]int
+	builds      singleflight.Group
+}
+
+func newStandingsCache() *standingsCache {
+	return &standingsCache{entries: map[string]cachedStandings{}, generations: map[string]int{}}
+}
+
+func (c *standingsCache) forget(id string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.entries, id)
+	c.generations[id]++
+}
+
+// store skips results whose build started before the latest change, so they can't outlive it.
+func (c *standingsCache) store(id string, generation int, comp Competition, standings Standings) {
+	expires := time.Now().Add(standingsCacheTTL)
+	if standings.Visibility == "live" && comp.FreezeAt != nil && comp.FreezeAt.Before(expires) {
+		expires = *comp.FreezeAt
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for stale, cached := range c.entries {
+		if time.Now().After(cached.expires) {
+			delete(c.entries, stale)
+		}
+	}
+	if c.generations[id] == generation {
+		c.entries[id] = cachedStandings{gym: comp.Gym, standings: standings, expires: expires}
+	}
+}
+
+func (m *module) onCompetitionChange(e events.Event) {
+	m.standingsCache.forget(strings.TrimPrefix(e.Topic, "competition_changes:"))
+}
+
+func (m *module) competitionGym(ctx context.Context, id string) (string, error) {
+	m.standingsCache.mu.Lock()
+	cached, ok := m.standingsCache.entries[id]
+	m.standingsCache.mu.Unlock()
+	if ok {
+		return cached.gym, nil
+	}
+	c, err := findCompetition(ctx, m.app.DB, id)
+	return c.Gym, err
+}
+
+func (m *module) publicStandings(ctx context.Context, id string) (Standings, error) {
+	cache := m.standingsCache
+	cache.mu.Lock()
+	cached, ok := cache.entries[id]
+	generation := cache.generations[id]
+	cache.mu.Unlock()
+	if ok && time.Now().Before(cached.expires) {
+		return cached.standings, nil
+	}
+	standings, err, _ := cache.builds.Do(id+":"+strconv.Itoa(generation), func() (any, error) {
+		ctx := context.WithoutCancel(ctx)
+		c, err := findCompetition(ctx, m.app.DB, id)
+		if err != nil {
+			return Standings{}, err
+		}
+		if c.Status == "draft" {
+			return Standings{}, httpx.ErrNotFound
+		}
+		standings, err := m.computeStandings(ctx, c, false)
+		if err == nil {
+			cache.store(id, generation, c, standings)
+		}
+		return standings, err
+	})
+	return standings.(Standings), err
 }

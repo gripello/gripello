@@ -1,7 +1,9 @@
-import type { CompetitionResults } from '#shared/utils/competitionResults'
-import { resultsChangedAt } from '~/utils/competitions'
+import { getCompetitionStandings } from '~/api/competitions'
 
 const RESULT_KINDS = ['competition', 'routes', 'entries', 'scores', 'resync']
+// Later than nginx's shared 1 s standings cache can live (up to 2 s), so a refetch never gets the pre-change copy.
+const LIVE_REFRESH_DELAY_MS = 2_000
+const LIVE_REFRESH_JITTER_MS = 2_000
 
 export function useCompetitionResults(
     competitionId: Ref<string>,
@@ -10,32 +12,27 @@ export function useCompetitionResults(
         pollMs = 60_000,
     }: { staff?: boolean; pollMs?: number } = {},
 ) {
-    const authStore = useAuthStore()
-    const requestFetch = useRequestFetch()
-    const changedAt = ref(0)
-
     const result = useAsyncData(
         () =>
             `competition-results:${staff ? 'staff' : 'public'}:${competitionId.value}`,
         () =>
-            requestFetch<CompetitionResults>('/api/ui/competition-results', {
-                query: {
-                    id: competitionId.value,
-                    since: changedAt.value || undefined,
-                },
-                headers:
-                    staff && authStore.token
-                        ? { Authorization: authStore.token }
-                        : undefined,
-            }),
+            getCompetitionStandings(
+                competitionId.value,
+                staff ? {} : { view: 'public' },
+            ),
         { enabled: () => !!competitionId.value },
     )
 
-    const refreshSoon = coalesce(() => result.refresh(), 1_000)
+    let liveRefresh: ReturnType<typeof setTimeout> | undefined
     useCompetitionLive(competitionId, (change) => {
-        if (!RESULT_KINDS.includes(change.kind)) return
-        changedAt.value = resultsChangedAt(changedAt.value, change)
-        refreshSoon()
+        if (!RESULT_KINDS.includes(change.kind) || liveRefresh) return
+        liveRefresh = setTimeout(
+            () => {
+                liveRefresh = undefined
+                void result.refresh()
+            },
+            LIVE_REFRESH_DELAY_MS + Math.random() * LIVE_REFRESH_JITTER_MS,
+        )
     })
 
     let timer: ReturnType<typeof setInterval> | undefined
@@ -48,6 +45,7 @@ export function useCompetitionResults(
     })
     onBeforeUnmount(() => {
         clearInterval(timer)
+        clearTimeout(liveRefresh)
         document.removeEventListener('visibilitychange', poll)
     })
 
