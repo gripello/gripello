@@ -10,6 +10,7 @@ services:
             DATABASE_URL: postgres://postgres:e2e@postgres:5432/gripello?sslmode=disable
             NUXT_API_BASE: http://127.0.0.1:8080
             RATE_LIMITS: 'off'
+            SSR_CACHE_SECONDS: '0'
             SSL_DNS_NAMES: vg.test
             SMTP_HOST: mailpit
             SMTP_PORT: 1025

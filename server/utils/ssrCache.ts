@@ -16,7 +16,9 @@ export interface SsrCacheEntry {
 }
 
 export function ssrCacheTtlMs(env = process.env) {
-    return Math.max(0, Number(env.SSR_CACHE_SECONDS || 0)) * 1000
+    const fallback = env.NODE_ENV === 'production' ? 5 : 0
+    const seconds = Number(env.SSR_CACHE_SECONDS ?? fallback)
+    return Number.isFinite(seconds) ? Math.max(0, seconds) * 1000 : 0
 }
 
 export function isSsrCacheable(request: {
