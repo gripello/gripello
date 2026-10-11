@@ -62,6 +62,8 @@ test('inventory archive recovers when a missing route was deleted meanwhile', as
     await page.addInitScript(() =>
         localStorage.setItem('inventory-instructions-seen', '1'),
     )
+    // Without the live stream the page learns about the deletion only from the rejected archive, the path under test.
+    await page.route('**/api/realtime**', (route) => route.abort())
     const site = await seedSite(adminApi, testPrefix, 3)
     const [deletedId, keptId, foundId] = site.routeIds as [
         string,
