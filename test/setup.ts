@@ -12,6 +12,7 @@ import {
 } from 'vue'
 import { config } from '@vue/test-utils'
 import { useVersionCheck } from '~/composables/useVersionCheck'
+import { useAuthStore } from '~/composables/authStore'
 import LayoutDialogShell from '~/components/layout/DialogShell.vue'
 import LayoutPageHeader from '~/components/layout/PageHeader.vue'
 import LayoutEmptyState from '~/components/layout/EmptyState.vue'
@@ -26,11 +27,10 @@ declare global {
             server?: boolean
         }
     }
-    var __POCKETBASE_CLIENT__: unknown | undefined
+    var __AUTH_STORE__: unknown | undefined
     var __NUXT_RUNTIME_CONFIG__: Record<string, unknown> | undefined
     var $fetch: VitestMock
     var useRuntimeConfig: () => RuntimeConfig
-    var usePocketbase: () => unknown
     var useI18n: () => {
         t: (key: string) => string
         locale: { value: string }
@@ -70,12 +70,7 @@ const defaultRuntimeConfig = {
 const runtimeConfigGetter = () =>
     (globalThis.__NUXT_RUNTIME_CONFIG__ as RuntimeConfig) ??
     defaultRuntimeConfig
-const pocketbaseGetter = () => {
-    if (!globalThis.__POCKETBASE_CLIENT__) {
-        throw new Error('PocketBase mock not configured')
-    }
-    return globalThis.__POCKETBASE_CLIENT__
-}
+const authStoreGetter = () => globalThis.__AUTH_STORE__ ?? useAuthStore()
 const i18nGetter = () => ({
     t: (key: string) => key,
     locale: vueRef('en'),
@@ -123,7 +118,7 @@ const useStateGetter = <T>(key: string, init?: () => T) => {
 }
 
 vi.stubGlobal('useRuntimeConfig', runtimeConfigGetter)
-vi.stubGlobal('usePocketbase', pocketbaseGetter)
+vi.stubGlobal('useAuthStore', authStoreGetter)
 vi.stubGlobal('useI18n', i18nGetter)
 vi.stubGlobal('useNuxtApp', nuxtAppGetter)
 vi.stubGlobal('useState', useStateGetter)
@@ -172,8 +167,12 @@ if (!('watch' in globalThis)) {
 
 beforeEach(() => {
     process.server = false
-    delete (globalThis as Record<string, unknown>)._pb
-    globalThis.__POCKETBASE_CLIENT__ = undefined
+    delete (globalThis as Record<string, unknown>)._authStore
+    globalThis.__AUTH_STORE__ = undefined
+    if (typeof document !== 'undefined') {
+        document.cookie = 'pb_auth=; Path=/; Max-Age=0'
+        document.cookie = 'pb_auth_session=; Path=/; Max-Age=0'
+    }
     globalThis.__NUXT_RUNTIME_CONFIG__ = undefined
     for (const key of Object.keys(useStateMocks)) {
         delete useStateMocks[key]

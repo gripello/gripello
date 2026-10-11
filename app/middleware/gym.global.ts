@@ -1,8 +1,8 @@
+import { getGym } from '~/api/gyms'
 import { isValidGymSlug } from '#shared/utils/gymSlug'
 import { legacyGymRedirect } from '#shared/utils/legacyGymPaths'
 
 export default defineNuxtRouteMiddleware(async (to) => {
-    const pb = usePocketbase()
     const { gym } = useGym()
     const cookie = useGymCookie()
     const legacyTarget = legacyGymRedirect(
@@ -21,7 +21,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
             window.location.assign(to.fullPath)
             return abortNavigation()
         }
-        const found = await findGym(pb, routeSlug)
+        const found = await getGym(routeSlug)
         if (!found)
             return abortNavigation(
                 createError({
@@ -36,7 +36,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
                 redirectCode: 301,
             })
     } else if (!routeSlug && !gym.value && cookie.value) {
-        gym.value = await findGym(pb, cookie.value)
+        gym.value = await getGym(cookie.value)
         const currentSlug = gym.value?.slug ?? null
         if (cookie.value !== currentSlug) cookie.value = currentSlug
     }

@@ -1,6 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { uiaa } from '../../support/seed'
+import { createRating } from '../../support/api'
 
 test('switching to another route via the command palette shows that route', async ({
     page,
@@ -37,15 +37,13 @@ test.describe('german locale', () => {
 
     test('formats the average rating with a decimal comma', async ({
         page,
-        root,
+        adminApi,
         route,
         testPrefix,
     }) => {
         for (const rating of [4, 5]) {
-            await root.collection('ratings').create({
-                route_id: route.id,
+            await createRating(adminApi, route.id, {
                 rating,
-                ...uiaa('5'),
                 comment: `${testPrefix}-rated`,
             })
         }

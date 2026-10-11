@@ -1,18 +1,12 @@
-import { createPocketBase } from './pb-server'
+import type { GymRecord } from '../../types/models'
+import { apiFetch } from './api-server'
 
 const SOLE_GYM_CACHE_MS = 60_000
 
 let soleGym: { slug: string; expires: number } | null = null
 
 async function activeGymSlugs() {
-    const { items } = await createPocketBase()
-        .collection('gyms')
-        .getList<{ slug: string }>(1, 2, {
-            filter: 'active = true',
-            fields: 'slug',
-            skipTotal: true,
-            requestKey: null,
-        })
+    const { items } = await apiFetch()<{ items: GymRecord[] }>('/gyms')
     return items.map((gym) => gym.slug)
 }
 

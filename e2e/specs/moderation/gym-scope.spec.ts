@@ -1,5 +1,11 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled, gymPath } from '../../support/nav'
+import { apiOf, gotoSettled, gymPath } from '../../support/nav'
+import {
+    deleteGym,
+    getModerationCase,
+    listModerationCases,
+    updateMe,
+} from '../../support/api'
 import { createComment } from '../../support/comments'
 import { reportAs } from '../../support/reports'
 import { createModerationGym, openCase } from '../../support/moderation'
@@ -35,7 +41,7 @@ test('only report handlers see who reported and why', async ({
 })
 
 test('staff of another gym never see this gym’s cases', async ({
-    root,
+    api,
     route,
     createUser,
     pageAs,
@@ -45,16 +51,15 @@ test('staff of another gym never see this gym’s cases', async ({
     await gotoSettled(author, gymPath('/'))
     const text = `${testPrefix}-foreign`
     await createComment(author, route.id, text)
-    const item = await root
-        .collection('moderation_items')
-        .getFirstListItem(root.filter('snapshot ~ {:text}', { text }))
+    const [item] = await listModerationCases(api, { q: text })
+    expect(item).toBeTruthy()
 
-    const gym = await createModerationGym(root, testPrefix)
+    const gym = await createModerationGym(testPrefix)
     try {
         const outsider = await pageAs(gym.staff)
         await gotoSettled(
             outsider,
-            `/${gym.slug}/manage/moderation?case=${item.id}`,
+            `/${gym.slug}/manage/moderation?case=${item!.id}`,
         )
         await expect(
             outsider.getByTestId('moderation-list').getByText(text),
@@ -62,26 +67,23 @@ test('staff of another gym never see this gym’s cases', async ({
         await expect(
             outsider.locator('article[data-testid^="moderation-detail-"]'),
         ).toHaveCount(0)
-        const direct = await outsider.request.get(
-            `/api/collections/moderation_items/records/${item.id}`,
-        )
-        expect(direct.status()).toBe(404)
+        await expect(
+            getModerationCase(await apiOf(outsider), item!.id),
+        ).rejects.toMatchObject({ status: 404 })
     } finally {
-        await root.collection('gyms').delete(gym.id)
+        await deleteGym(api, gym.id)
     }
 })
 
 test('profile cases stay with the platform', async ({
     adminPage,
     platformPage,
-    root,
+    apiAs,
     createUser,
     testPrefix,
 }) => {
     const person = await createUser('user', 'profile')
-    await root
-        .collection('users')
-        .update(person.id, { firstname: `${testPrefix}-Rude` })
+    await updateMe(await apiAs(person), { firstname: `${testPrefix}-Rude` })
 
     await gotoSettled(adminPage, `/manage/moderation?search=${testPrefix}-Rude`)
     await expect(adminPage.getByTestId('moderation-empty')).toBeVisible()

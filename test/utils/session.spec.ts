@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
-import { currentSessionId, sessionNeedsRefresh, signOut } from '~/utils/session'
+import { describe, expect, it } from 'vitest'
+import { currentSessionId, sessionNeedsRefresh } from '~/utils/session'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const tokenExpiringAt = (ms: number) =>
@@ -22,26 +22,11 @@ describe('sessionNeedsRefresh', () => {
     })
 })
 
-describe('signOut', () => {
+describe('currentSessionId', () => {
     const token = `x.${btoa(JSON.stringify({ sid: 's1' }))}.y`
 
     it('reads the session id from the token', () => {
         expect(currentSessionId(token)).toBe('s1')
         expect(currentSessionId('')).toBe('')
-    })
-
-    it('signs out locally without waiting for the server', () => {
-        const remove = vi.fn(() => new Promise(() => {}))
-        const clear = vi.fn()
-        const pb = {
-            authStore: { token, clear },
-            collection: () => ({ delete: remove }),
-        } as unknown as Parameters<typeof signOut>[0]
-        signOut(pb)
-        expect(clear).toHaveBeenCalled()
-        expect(remove).toHaveBeenCalledWith('s1', {
-            headers: { Authorization: token },
-            requestKey: null,
-        })
     })
 })

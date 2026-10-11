@@ -53,6 +53,7 @@
 </template>
 
 <script setup lang="ts">
+import { fileUrl } from '~/api/client'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { bottomNavLinks, navContext } from '~/utils/navigation'
 import { avatarColor, nameInitials } from '~/utils/avatar'
@@ -70,7 +71,7 @@ const youTab = computed(() =>
               label: t('nav.you'),
               avatar: {
                   src:
-                      usePbFileUrl(user.value, user.value.avatar, {
+                      fileUrl('users', user.value, user.value.avatar, {
                           thumb: '100x100',
                       }) || undefined,
                   alt: '',

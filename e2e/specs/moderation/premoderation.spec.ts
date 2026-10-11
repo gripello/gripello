@@ -1,6 +1,12 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { createModerationGym, decide, openCase } from '../../support/moderation'
+import {
+    deleteGym,
+    getGym,
+    listBetas,
+    listModerationCases,
+} from '../../support/api'
 
 async function shareBeta(
     page: import('@playwright/test').Page,
@@ -14,12 +20,12 @@ async function shareBeta(
 }
 
 test('a gym holds beta uploads until staff publish or decline them', async ({
-    root,
+    api,
     createUser,
     pageAs,
     testPrefix,
 }) => {
-    const gym = await createModerationGym(root, testPrefix)
+    const gym = await createModerationGym(testPrefix)
     try {
         const staff = await pageAs(gym.staff)
         await gotoSettled(
@@ -29,11 +35,7 @@ test('a gym holds beta uploads until staff publish or decline them', async ({
         await staff.getByTestId('settings-premoderate-betas').click()
         await staff.getByTestId('settings-save').click()
         await expect
-            .poll(
-                async () =>
-                    (await root.collection('gyms').getOne(gym.id))
-                        .premoderate_betas,
-            )
+            .poll(async () => (await getGym(api, gym.id)).premoderate_betas)
             .toBe(true)
 
         const climber = await pageAs(await createUser('user', 'uploader'))
@@ -53,16 +55,7 @@ test('a gym holds beta uploads until staff publish or decline them', async ({
         await openCase(staff, 'shorts/e2e-wait', inbox, 'approval')
         await decide(staff, 'approve')
         await expect
-            .poll(
-                async () =>
-                    (
-                        await root.collection('beta_videos').getFullList({
-                            filter: root.filter('route = {:route}', {
-                                route: gym.routeId,
-                            }),
-                        })
-                    ).length,
-            )
+            .poll(async () => (await listBetas(api, gym.routeId)).length)
             .toBe(1)
 
         await shareBeta(
@@ -72,10 +65,9 @@ test('a gym holds beta uploads until staff publish or decline them', async ({
         )
         await openCase(staff, 'shorts/e2e-no', inbox, 'approval')
         await decide(staff, 'reject', 'Not a beta for this route.')
-        const waiting = await root.collection('moderation_items').getFullList({
-            filter: root.filter('gym = {:gym} && state = "pending"', {
-                gym: gym.id,
-            }),
+        const waiting = await listModerationCases(api, {
+            gym: gym.id,
+            state: ['pending'],
         })
         expect(waiting).toHaveLength(0)
         await gotoSettled(climber, `/route?id=${gym.routeId}`)
@@ -83,6 +75,6 @@ test('a gym holds beta uploads until staff publish or decline them', async ({
             climber.getByTestId('beta-list').getByTestId('beta-video-link'),
         ).toHaveCount(1)
     } finally {
-        await root.collection('gyms').delete(gym.id)
+        await deleteGym(api, gym.id)
     }
 })

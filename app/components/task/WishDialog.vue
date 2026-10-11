@@ -87,6 +87,7 @@
 
 <script setup lang="ts">
 import { ROUTE_TYPES } from '~/utils/routes'
+import { createTask } from '~/api/tasks'
 import { gradeLabels } from '#shared/utils/grades'
 
 const props = defineProps<{
@@ -98,7 +99,7 @@ const props = defineProps<{
 
 const open = defineModel<boolean>({ default: false })
 
-const pb = usePocketbase()
+const gymId = useCurrentGymId()
 const { t } = useI18n()
 const { capHeaders } = useCapToken()
 const { pending, run } = useAsyncAction()
@@ -138,7 +139,8 @@ watch(open, (isOpen) => {
 async function submit() {
     await run(
         async () => {
-            await pb.collection('tasks').create(
+            await createTask(
+                gymId.value,
                 {
                     kind: 'wish',
                     location: location.value,
@@ -150,6 +152,7 @@ async function submit() {
                     grade: grade.value ?? '',
                     description: description.value.trim(),
                 },
+                null,
                 { headers: await capHeaders('task') },
             )
             open.value = false

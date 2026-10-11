@@ -118,15 +118,15 @@
 </template>
 
 <script setup lang="ts">
-import type { AuthRecord } from 'pocketbase'
-import type { InviteDetails } from '~/types/models'
+import { acceptInvite, showInvite } from '~/api/members'
+import { useAuthState } from '~/api/auth'
 import { inviteStep } from '~/utils/invites'
 
 defineOptions({ name: 'InvitePage' })
 definePageMeta({ layout: 'blank' })
 
 const { t } = useI18n()
-const pb = usePocketbase()
+const auth = useAuthState()
 const route = useRoute()
 const token = String(route.params.token ?? '')
 
@@ -138,17 +138,12 @@ const {
     refresh,
 } = await useAsyncData(
     `invite-${token}`,
-    () =>
-        pb
-            .send<InviteDetails>(`/api/invites/${encodeURIComponent(token)}`, {
-                requestKey: null,
-            })
-            .catch(() => null),
+    () => showInvite(token).catch(() => null),
     { server: false },
 )
 
 const currentEmail = ref(
-    pb.authStore.isValid ? (pb.authStore.record?.email ?? '') : '',
+    auth.isSignedIn() ? (auth.currentUser()?.email ?? '') : '',
 )
 const step = computed(() =>
     status.value === 'success'
@@ -186,28 +181,15 @@ const accepting = ref(false)
 const { error: notifyError } = useNotification()
 
 function signOut() {
-    pb.authStore.clear()
+    auth.clearAuth()
     currentEmail.value = ''
 }
 
 async function accept(body: Record<string, string> = {}) {
     accepting.value = true
     try {
-        const result = await pb.send<{
-            gym?: string
-            token?: string
-            record?: AuthRecord
-            meta?: { gym?: string }
-        }>(`/api/invites/${encodeURIComponent(token)}/accept`, {
-            method: 'POST',
-            body,
-            requestKey: null,
-        })
-        if (result.token && result.record) {
-            pb.authStore.save(result.token, result.record)
-        }
-        const slug = result.gym ?? result.meta?.gym
-        await navigateTo(slug ? `/${slug}` : '/', { external: true })
+        const { gym } = await acceptInvite(token, body)
+        await navigateTo(gym ? `/${gym}` : '/', { external: true })
     } catch (error) {
         const code = (error as { status?: number })?.status
         if (code === 409 && currentEmail.value) signOut()

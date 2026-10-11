@@ -1,7 +1,5 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser } from '../../support/seed'
-import { PB_URL, seedMap } from '../../support/map'
+import { seedMap } from '../../support/map'
 
 test.use({
     launchOptions: { args: ['--ignore-certificate-errors'] },
@@ -10,12 +8,11 @@ test.use({
 
 test('the map opens from cache when the network is gone', async ({
     page,
+    adminApi,
     context,
     testPrefix,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const seeded = await seedMap(root, testPrefix, { routes: 3 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 3 })
     try {
         await page.goto(`/map?location=${seeded.locationId}`)
         await page.waitForFunction(

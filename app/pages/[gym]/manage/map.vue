@@ -456,6 +456,7 @@
 </template>
 
 <script setup lang="ts">
+import { archiveRoutes, listRoutes, placeRoutes } from '~/api/routes'
 import type { RouteRecord } from '~/types/models'
 import type { SheetSnap } from '~/components/map/Sheet.vue'
 import { formatAnchorPoint, formatDate } from '#shared/utils/formatting'
@@ -468,14 +469,13 @@ definePageMeta({
     requiredPermission: 'manage_routes',
 })
 
-const BATCH_SIZE = 150
 const PLACEMENT_FIELDS =
     'id,name,color,grade,grade_system,grade_index,anchor_point,type,wall,wall_position,screw_date,permanent'
 const DRAG_THRESHOLD_PX = 6
 const LONG_PRESS_MS = 400
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
+const gymId = useCurrentGymId()
 const route = useRoute()
 const { mdAndUp } = useDisplay()
 const { can } = usePermissions()
@@ -500,14 +500,11 @@ const { data: routes, refresh: refreshRoutes } = await useAsyncData(
     cacheKeys.placementRoutes,
     () =>
         locationId.value
-            ? pb.collection('routes').getFullList<RouteRecord>({
-                  filter: pb.filter('archived = false && location = {:id}', {
-                      id: locationId.value,
-                  }),
-                  fields: PLACEMENT_FIELDS,
-                  sort: 'anchor_point,name',
-                  requestKey: 'placementRoutes',
-              })
+            ? listRoutes<RouteRecord>(
+                  gymId.value,
+                  { location: locationId.value, sort: 'anchor_point,name' },
+                  { fields: PLACEMENT_FIELDS, requestKey: 'placementRoutes' },
+              ).then((list) => list.items)
             : Promise.resolve([]),
     { watch: [locationId], default: () => [] },
 )
@@ -555,18 +552,17 @@ const { data: lastReset, refresh: refreshLastReset } = useAsyncData(
     'placement-wall-reset',
     () =>
         placement.selectedWallId.value
-            ? pb
-                  .collection('routes')
-                  .getList<RouteRecord>(1, 1, {
-                      filter: pb.filter('archived = true && wall = {:wall}', {
-                          wall: placement.selectedWallId.value,
-                      }),
+            ? listRoutes<RouteRecord>(
+                  gymId.value,
+                  {
+                      archived: true,
+                      wall: placement.selectedWallId.value,
                       sort: '-archived_at',
-                      fields: 'archived_at',
-                      skipTotal: true,
-                      requestKey: 'placementWallReset',
-                  })
-                  .then((result) => result.items[0]?.archived_at ?? null)
+                      page: 1,
+                      limit: 1,
+                  },
+                  { fields: 'archived_at', requestKey: 'placementWallReset' },
+              ).then((result) => result.items[0]?.archived_at ?? null)
             : Promise.resolve(null),
     {
         watch: [placement.selectedWallId],
@@ -718,15 +714,14 @@ async function save() {
     if (saving.value || !changes.length) return
     const saved = await runSave(
         async () => {
-            for (let start = 0; start < changes.length; start += BATCH_SIZE) {
-                const batch = pb.createBatch()
-                for (const change of changes.slice(start, start + BATCH_SIZE))
-                    batch.collection('routes').update(change.id, {
-                        wall: change.wall,
-                        wall_position: change.wall_position,
-                    })
-                await batch.send()
-            }
+            await placeRoutes(
+                gymId.value,
+                changes.map((change) => ({
+                    route: change.id,
+                    wall: change.wall,
+                    wall_position: change.wall_position,
+                })),
+            )
             await refreshRoutes()
             placement.reset()
             return true
@@ -743,20 +738,13 @@ async function resetWall() {
     const wallId = placement.selectedWallId.value
     if (resetting.value || !wallId) return
     const archived = await runReset(async () => {
-        const current = await pb.collection('routes').getFullList<RouteRecord>({
-            filter: pb.filter('archived = false && wall = {:wall}', {
-                wall: wallId,
-            }),
-            fields: 'id',
-            requestKey: null,
-        })
-        const ids = current.map((item) => item.id)
-        for (let start = 0; start < ids.length; start += BATCH_SIZE) {
-            const batch = pb.createBatch()
-            for (const id of ids.slice(start, start + BATCH_SIZE))
-                batch.collection('routes').update(id, { archived: true })
-            await batch.send()
-        }
+        const { items } = await listRoutes<RouteRecord>(
+            gymId.value,
+            { wall: wallId },
+            { fields: 'id', requestKey: null },
+        )
+        const ids = items.map((item) => item.id)
+        await archiveRoutes(gymId.value, ids)
         await Promise.all([refreshRoutes(), refreshLastReset()])
         return ids.length
     })

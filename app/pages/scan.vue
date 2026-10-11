@@ -96,6 +96,7 @@
 </template>
 
 <script setup lang="ts">
+import { getRoute } from '~/api/routes'
 import { extractRouteId } from '~/utils/inventory'
 import { centeredCode, type ScannedCode, type Size } from '~/utils/qr'
 import { formatGrade } from '#shared/utils/grades'
@@ -110,7 +111,6 @@ const REJECT_MESSAGE_MS = 2500
 const LOOKUP_RETRY_MS = 2000
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const themeColors = useThemeColors()
 
 useSeoMeta({ title: () => t('page.title.scan') })
@@ -158,11 +158,10 @@ function lookup(routeId: string) {
     if (Date.now() - (failedLookupAt.get(routeId) ?? 0) < LOOKUP_RETRY_MS)
         return
     routes.set(routeId, null)
-    pb.collection('routes')
-        .getOne<RouteRecord>(routeId, {
-            fields: 'id,name,grade,grade_system',
-            requestKey: null,
-        })
+    getRoute(routeId, [], {
+        fields: 'id,name,grade,grade_system',
+        requestKey: null,
+    })
         .then((route) => routes.set(routeId, route))
         .catch((error: { status?: number }) => {
             if (error?.status === 404)

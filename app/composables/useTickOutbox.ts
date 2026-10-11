@@ -1,4 +1,9 @@
 import type { TickRecord } from '~/types/models'
+import {
+    createTick as postTick,
+    deleteTick as removeTick,
+    updateTick as patchTick,
+} from '~/api/ticks'
 import { newRecordId } from '~/utils/realtimeCache'
 import {
     enqueueTickOp,
@@ -60,7 +65,7 @@ function replaceAll<T extends { id: string }>(name: StoreName, rows: T[]) {
 }
 
 export function useTickOutbox() {
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     const queue = useState<TickOutboxOp[]>('tick-outbox', () => [])
     const loaded = useState('tick-outbox-loaded', () => false)
     const available = import.meta.client && 'indexedDB' in globalThis
@@ -91,7 +96,7 @@ export function useTickOutbox() {
         }
         try {
             return {
-                tick: await pb.collection('ticks').create<TickRecord>(record),
+                tick: await postTick(record),
                 queued: false,
             }
         } catch (error) {
@@ -130,9 +135,7 @@ export function useTickOutbox() {
             return queued()
         try {
             return {
-                tick: await pb
-                    .collection('ticks')
-                    .update<TickRecord>(tick.id, fields),
+                tick: await patchTick(tick.id, fields),
                 queued: false,
             }
         } catch (error) {
@@ -147,14 +150,14 @@ export function useTickOutbox() {
             return { queued: false }
         }
         try {
-            await pb.collection('ticks').delete(id)
+            await removeTick(id)
             return { queued: false }
         } catch (error) {
             if (!available || !isOfflineError(error)) throw error
             enqueue({
                 op: 'delete',
                 id,
-                user: pb.authStore.record?.id,
+                user: authStore.record?.id,
                 queued: new Date().toISOString(),
             })
             return { queued: true }
@@ -163,21 +166,17 @@ export function useTickOutbox() {
 
     async function flush() {
         await load()
-        if (!pb.authStore.isValid) return
-        const replayable = opsOfUser(
-            queue.value,
-            pb.authStore.record?.id,
-        ).filter((op) => !op.failed)
+        if (!authStore.isValid) return
+        const replayable = opsOfUser(queue.value, authStore.record?.id).filter(
+            (op) => !op.failed,
+        )
         if (!replayable.length) return
         for (const op of replayable) {
             try {
-                if (op.op === 'create')
-                    await pb.collection('ticks').create(op.record)
+                if (op.op === 'create') await postTick(op.record!)
                 else if (op.op === 'update')
-                    await pb
-                        .collection('ticks')
-                        .update(op.id, updatableFields(op.record))
-                else await pb.collection('ticks').delete(op.id)
+                    await patchTick(op.id, updatableFields(op.record))
+                else await removeTick(op.id)
             } catch (error) {
                 if (isOfflineError(error)) break
                 if (op.op !== 'delete' && !isAlreadyApplied(op, error)) {

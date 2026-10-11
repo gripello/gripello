@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { PLATFORM_SETTINGS_ID } from '../../../shared/utils/platform'
+import { getSettings, updateSettings } from '../../support/api'
 
 async function setRegistration(page: Page, allowed: boolean) {
     const toggle = page.getByTestId('platform-settings-allow-registration')
@@ -14,25 +14,15 @@ async function setRegistration(page: Page, allowed: boolean) {
 test('platform admin opens and closes registration', async ({
     platformPage: adminPage,
     page,
-    root,
+    api,
 }) => {
-    const settings = root.collection('settings')
-    const original = await settings.getOne(PLATFORM_SETTINGS_ID, {
-        requestKey: null,
-    })
-    await settings.update(PLATFORM_SETTINGS_ID, { allow_registration: false })
+    const original = await getSettings(api)
+    await updateSettings(api, { allow_registration: false })
     try {
         await gotoSettled(adminPage, '/platform/settings')
         await setRegistration(adminPage, true)
         await expect
-            .poll(
-                async () =>
-                    (
-                        await settings.getOne(PLATFORM_SETTINGS_ID, {
-                            requestKey: null,
-                        })
-                    ).allow_registration,
-            )
+            .poll(async () => (await getSettings(api)).allow_registration)
             .toBe(true)
         await gotoSettled(page, '/auth/login')
         await expect(page.getByTestId('login-goto-register')).toBeVisible()
@@ -41,7 +31,7 @@ test('platform admin opens and closes registration', async ({
         await gotoSettled(page, '/auth/login')
         await expect(page.getByTestId('login-goto-register')).toHaveCount(0)
     } finally {
-        await settings.update(PLATFORM_SETTINGS_ID, {
+        await updateSettings(api, {
             allow_registration: original.allow_registration,
         })
     }

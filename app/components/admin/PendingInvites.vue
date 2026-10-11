@@ -13,7 +13,7 @@
                         {{ invite.email }}
                     </p>
                     <p class="truncate text-xs text-muted">
-                        {{ invite.expand?.role?.name }} ·
+                        {{ invite.role_name }} ·
                         {{
                             t('invites.expires', {
                                 date: formatDate(invite.expires_at, {
@@ -53,25 +53,20 @@
 </template>
 
 <script setup lang="ts">
+import type { GymEvent } from '~/composables/useRealtime'
 import { formatDate } from '#shared/utils/formatting'
 import type { InviteRecord } from '~/types/models'
+import { inviteMember, listInvites, revokeInvite } from '~/api/members'
 
 const props = defineProps<{ gymId: string }>()
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 const { run } = useAsyncAction()
 const busy = ref<string | null>(null)
 
 const { data: invites, refresh } = useAsyncData(
     `admin-invites-${props.gymId}`,
-    () =>
-        pb.collection('invites').getFullList<InviteRecord>({
-            filter: pb.filter('gym = {:gym}', { gym: props.gymId }),
-            sort: 'email',
-            expand: 'role',
-            requestKey: null,
-        }),
+    () => listInvites(props.gymId),
 )
 
 async function withBusy(
@@ -94,32 +89,24 @@ const resend = (invite: InviteRecord) =>
     withBusy(
         invite,
         () =>
-            pb.send(`/api/gyms/${props.gymId}/members`, {
-                method: 'POST',
-                body: {
-                    email: invite.email,
-                    role: invite.role,
-                    firstname: invite.firstname,
-                    name: invite.name,
-                },
-                requestKey: null,
+            inviteMember(props.gymId, {
+                email: invite.email,
+                role: invite.role,
+                firstname: invite.firstname,
+                name: invite.name,
             }),
         t('members.invited'),
     )
 
 const revoke = (invite: InviteRecord) =>
-    withBusy(
-        invite,
-        () => pb.collection('invites').delete(invite.id),
-        t('invites.revoked'),
-    )
+    withBusy(invite, () => revokeInvite(invite.id), t('invites.revoked'))
 
 defineExpose({ refresh })
 
-const { subscribe } = usePbSubscription()
-onMounted(() => {
-    void subscribe('invites', (e) => {
-        if (e.record.gym === props.gymId) void refresh()
-    })
-})
+useRealtime(
+    () => `gym:${props.gymId}`,
+    (event: GymEvent) => {
+        if (event.kind === 'invite.changed') void refresh()
+    },
+)
 </script>

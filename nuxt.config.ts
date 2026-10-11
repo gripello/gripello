@@ -1,5 +1,10 @@
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './app/utils/locales.ts'
 
+const apiBase =
+    process.env.NODE_ENV === 'production'
+        ? 'http://127.0.0.1:8080'
+        : 'http://localhost:8099'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2026-09-26',
@@ -13,6 +18,7 @@ export default defineNuxtConfig({
         },
     },
     runtimeConfig: {
+        apiBase,
         github: {
             owner: process.env.GITHUB_OWNER || 'gripello',
             repo: process.env.GITHUB_REPO || 'gripello',
@@ -100,7 +106,6 @@ export default defineNuxtConfig({
         },
         optimizeDeps: {
             include: [
-                'pocketbase',
                 'echarts/core',
                 'echarts/charts',
                 'echarts/components',

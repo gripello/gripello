@@ -35,14 +35,11 @@ test('a failed route lookup is retried instead of marking the sign unknown', asy
             audioWarnings.push(message.text())
     })
     let failedOnce = false
-    await page.route(
-        new RegExp(`/api/collections/routes/records/${routeId}`),
-        (route) => {
-            if (failedOnce) return route.continue()
-            failedOnce = true
-            return route.fulfill({ status: 500, json: { message: 'boom' } })
-        },
-    )
+    await page.route(new RegExp(`/api/routes/${routeId}(\\?|$)`), (route) => {
+        if (failedOnce) return route.continue()
+        failedOnce = true
+        return route.fulfill({ status: 500, json: { message: 'boom' } })
+    })
     try {
         await gotoSettled(page, '/scan')
         await page.waitForURL(new RegExp(`/route\\?id=${routeId}`), {

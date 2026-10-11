@@ -1,4 +1,3 @@
-import type { RecordModel } from 'pocketbase'
 import type { MembershipRecord, UserRecord } from '~/types/models'
 import {
     activeMemberships,
@@ -6,6 +5,8 @@ import {
     permissionsIn,
 } from '#shared/utils/memberships'
 import { PLATFORM_ADMIN, PLATFORM_ADMIN_GRANTS } from '~/utils/navigation'
+import { getMe, type Me } from '~/api/account'
+import { useAuthState } from '~/api/auth'
 
 interface MembershipFetch {
     userId: string
@@ -14,11 +15,8 @@ interface MembershipFetch {
 
 const membershipFetches = new WeakMap<object, MembershipFetch>()
 
-export const MEMBERSHIPS_EXPAND =
-    'memberships_via_user.gym,memberships_via_user.role.permissions'
-
 export function usePermissions() {
-    const pb = usePocketbase()
+    const auth = useAuthState()
     const memberships = useState<MembershipRecord[]>(
         'user-memberships',
         () => [],
@@ -27,10 +25,7 @@ export function usePermissions() {
     const loaded = useState<boolean>('user-permissions-loaded', () => false)
     const loadedForUser = useState<string>('user-permissions-user', () => '')
     const platformAdmin = useState<boolean>('user-platform-admin', () => false)
-    const verifiedUser = useState<(UserRecord & RecordModel) | null>(
-        'user-verified-record',
-        () => null,
-    )
+    const verifiedUser = useState<Me | null>('user-verified-record', () => null)
     const authRejected = useState<boolean>('user-auth-rejected', () => false)
     const loadFailed = useState<boolean>('user-permissions-failed', () => false)
     const currentGymId = useCurrentGymId()
@@ -43,17 +38,12 @@ export function usePermissions() {
     }
 
     function currentUserId(): string {
-        return (pb.authStore.isValid && pb.authStore.record?.id) || ''
+        return (auth.isSignedIn() && auth.currentUserId()) || ''
     }
 
     async function fetchMemberships(userId: string) {
         try {
-            const user = await pb
-                .collection('users')
-                .getOne<UserRecord & RecordModel>(userId, {
-                    expand: MEMBERSHIPS_EXPAND,
-                    requestKey: 'userPermissions',
-                })
+            const user = await getMe({ include: ['memberships'] })
             if (currentUserId() !== userId) return
             verifiedUser.value = { ...user, expand: undefined }
             authRejected.value = false
@@ -101,7 +91,6 @@ export function usePermissions() {
     async function refreshPermissions() {
         const userId = currentUserId()
         if (!userId) {
-            pb.cancelRequest('userPermissions')
             membershipFetches.delete(nuxtApp)
             memberships.value = []
             platformAdmin.value = false

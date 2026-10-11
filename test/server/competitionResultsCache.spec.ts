@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
     cachedResultsUsable,
+    loadResults,
     MIN_RECOMPUTE_MS,
     PUBLIC_RESULTS_CACHE_MS,
 } from '../../server/utils/competitionResults'
@@ -26,5 +27,35 @@ describe('cachedResultsUsable', () => {
 
     it('ignores change times from the future', () => {
         expect(cachedResultsUsable(1_000, 2_500, 99_000)).toBe(true)
+    })
+})
+
+describe('loadResults', () => {
+    const input = {
+        competition: { scoring_format: 'tops_zones' },
+        categories: [],
+        entries: [],
+        routes: [],
+        scores: [],
+    }
+
+    it('reads the results input of the Go API and builds the standings', async () => {
+        const api = vi.fn().mockResolvedValue({ ...input, visibility: 'live' })
+        const results = await loadResults(api as never, 'c1')
+        expect(api).toHaveBeenCalledWith('/competitions/c1/results')
+        expect(results).toMatchObject({
+            visibility: 'live',
+            format: 'tops_zones',
+            categories: [],
+        })
+    })
+
+    it('returns no categories while results are hidden', async () => {
+        const api = vi.fn().mockResolvedValue({
+            ...input,
+            categories: [{ id: 'x', name: 'X' }],
+            visibility: 'hidden',
+        })
+        expect((await loadResults(api as never, 'c1')).categories).toEqual([])
     })
 })

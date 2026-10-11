@@ -14,17 +14,7 @@
             }}</span>
         </template>
 
-        <div v-if="!hasAnyAuth" class="text-center py-10">
-            <UIcon
-                name="i-lucide-circle-alert"
-                class="mb-3 size-[48px] text-warning"
-            />
-            <p class="text-sm text-muted">
-                {{ $t('notifications.error.no_auth_methods_available') }}
-            </p>
-        </div>
-
-        <div v-else class="relative">
+        <div class="relative">
             <Transition name="form-swap" mode="out-in">
                 <UForm
                     v-if="view === 'login'"
@@ -72,7 +62,6 @@
                     </UFormField>
 
                     <UserPasswordField
-                        v-if="authMethods.password?.enabled"
                         v-model="password"
                         :label="$t('account.password')"
                         icon="i-lucide-lock"
@@ -187,31 +176,6 @@
                     >
                         {{ $t('actions.back_to_home') }}
                     </UButton>
-
-                    <template v-if="authMethods.oauth2?.enabled">
-                        <div class="flex items-center gap-3 my-4">
-                            <USeparator class="flex-1" />
-                            <span class="text-xs text-muted whitespace-nowrap">
-                                {{ $t('account.or_login_with') }}
-                            </span>
-                            <USeparator class="flex-1" />
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <UButton
-                                v-for="p in authMethods.oauth2.providers"
-                                :key="p.name"
-                                :disabled="loading"
-                                color="neutral"
-                                variant="outline"
-                                block
-                                :icon="providerIcon(p.name)"
-                                @click="loginWithOAuth(p.name)"
-                            >
-                                {{ p.displayName }}
-                            </UButton>
-                        </div>
-                    </template>
                 </UForm>
 
                 <UForm
@@ -393,12 +357,22 @@ import {
 } from '~/utils/validation'
 import { safeRedirect, staffLandingPath } from '~/utils/nav'
 import { isPasskeyCancel } from '~/utils/webauthn'
-import type { SecondFactorMethod } from '~/components/auth/TwoFactorStep.vue'
-import type { AuthResult } from '~/composables/usePasskeyLogin'
+import { isInvalidCredentials } from '~/utils/authErrors'
+import {
+    login,
+    mfaRequired,
+    refreshAuth,
+    register,
+    requestPasswordReset,
+    requestVerification,
+    useAuthState,
+    type AuthResult,
+    type SecondFactorMethod,
+} from '~/api/auth'
 defineOptions({ name: 'LoginPage' })
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
+const auth = useAuthState()
 const { capHeaders } = useCapToken()
 const route = useRoute()
 const requestedRedirect = safeRedirect(route.query.redirect)
@@ -416,24 +390,17 @@ useHead({
     title: t('page.title.login'),
 })
 
-if (pb.authStore.isValid) {
+if (auth.isSignedIn()) {
     try {
-        await pb.collection('users').authRefresh()
+        await refreshAuth()
         await navigateTo(await afterLoginPath(), { replace: true })
     } catch {
-        pb.authStore.clear()
+        auth.clearAuth()
     }
 }
 
-const authMethods = await pb.collection('users').listAuthMethods()
-const hasAnyAuth = !!(
-    authMethods?.password?.enabled || authMethods?.oauth2?.enabled
-)
-
 const { allowRegistration } = useOrgSettings()
-const canRegister = computed(
-    () => allowRegistration.value && !!authMethods?.password?.enabled,
-)
+const canRegister = allowRegistration
 
 // ── State ──────────────────────────────────────────────────────────
 const { notify, error: notifyError } = useNotification()
@@ -462,7 +429,7 @@ const resetForm = useTemplateRef<AnyForm>('resetForm')
 const registerForm = useTemplateRef<AnyForm>('registerForm')
 
 // ── Identity config ────────────────────────────────────────────────
-const idFields = authMethods?.password?.identityFields ?? []
+const idFields = ['email', 'username']
 const supportsEmail = idFields.includes('email')
 const supportsUser = idFields.includes('username')
 
@@ -542,31 +509,12 @@ const resetState = computed(() => ({ email: resetEmail.value }))
 const validateLogin = (state: Record<string, unknown>) =>
     validateRules(state, {
         identity: identityRules.value,
-        ...(authMethods.password?.enabled && { password: passwordRules }),
+        password: passwordRules,
     })
 const validateRegister = (state: Record<string, unknown>) =>
     validateRules(state, { username: usernameRules, email: emailRules })
 const validateReset = (state: Record<string, unknown>) =>
     validateRules(state, { email: emailRules })
-
-// ── OAuth icons ────────────────────────────────────────────────────
-const PROVIDER_ICONS: Record<string, string> = {
-    apple: 'i-simple-icons-apple',
-    google: 'i-simple-icons-google',
-    microsoft: 'i-simple-icons-microsoft',
-    facebook: 'i-simple-icons-facebook',
-    github: 'i-simple-icons-github',
-    gitlab: 'i-simple-icons-gitlab',
-    discord: 'i-simple-icons-discord',
-    twitter: 'i-simple-icons-x',
-    spotify: 'i-simple-icons-spotify',
-    twitch: 'i-simple-icons-twitch',
-    bitbucket: 'i-simple-icons-bitbucket',
-    oidc: 'i-lucide-lock',
-    oidc2: 'i-lucide-lock',
-    oidc3: 'i-lucide-lock',
-}
-const providerIcon = (name: string) => PROVIDER_ICONS[name] ?? 'i-lucide-log-in'
 
 // ── Helpers ────────────────────────────────────────────────────────
 async function validate(form: Readonly<Ref<AnyForm | null>>) {
@@ -617,7 +565,7 @@ function isUnverifiedError(err: unknown) {
 function resolveAuthError(err: unknown) {
     const msg = authErrorMessage(err)
     if (isSuspendedError(err)) return t('notifications.error.account_suspended')
-    if (/invalid.+credentials/i.test(msg))
+    if (isInvalidCredentials(msg))
         return t('notifications.error.invalid_credentials')
     if (isUnverifiedError(err))
         return t('notifications.error.email_not_verified')
@@ -634,24 +582,14 @@ async function submitLogin() {
     loading.value = true
     setAuthPersistent(rememberMe.value)
     try {
-        await pb
-            .collection('users')
-            .authWithPassword(identity.value, password.value, {
-                headers: await capHeaders('login'),
-            })
+        await login(identity.value, password.value, await capHeaders('login'))
         await navigateTo(await afterLoginPath(), { replace: true })
     } catch (err) {
-        const pendingMfa = (
-            err as {
-                response?: { mfaId?: string; methods?: SecondFactorMethod[] }
-            }
-        )?.response
-        if (pendingMfa?.mfaId) {
+        const pendingMfa = mfaRequired(err)
+        if (pendingMfa) {
             passkey.stopAutofill()
             mfaId.value = pendingMfa.mfaId
-            secondFactorMethods.value = pendingMfa.methods?.length
-                ? pendingMfa.methods
-                : ['totp', 'recovery']
+            secondFactorMethods.value = pendingMfa.methods
             secondFactorMethod.value = secondFactorMethods.value[0]!
             view.value = 'twoFactor'
             return
@@ -665,7 +603,7 @@ async function submitLogin() {
 
 async function finishLogin(result: AuthResult) {
     loading.value = true
-    pb.authStore.save(result.token, result.record)
+    auth.saveAuth(result)
     await navigateTo(await afterLoginPath(), { replace: true })
 }
 
@@ -728,7 +666,10 @@ async function submitResendVerification() {
     if (!(await validate(resetForm))) return
     loading.value = true
     try {
-        await pb.collection('users').requestVerification(resetEmail.value)
+        await requestVerification(
+            resetEmail.value,
+            await capHeaders('verification'),
+        )
         notify(t('notifications.success.verificationSent'))
         unverified.value = false
         view.value = 'login'
@@ -744,9 +685,10 @@ async function submitReset() {
     if (!(await validate(resetForm))) return
     loading.value = true
     try {
-        await pb.collection('users').requestPasswordReset(resetEmail.value, {
-            headers: await capHeaders('password-reset'),
-        })
+        await requestPasswordReset(
+            resetEmail.value,
+            await capHeaders('password-reset'),
+        )
         notify(t('notifications.success.resetPassword'))
         view.value = 'login'
         resetEmail.value = ''
@@ -771,7 +713,7 @@ async function submitRegister() {
     if (!(await validate(registerForm)) || !registerPasswordValid.value) return
     loading.value = true
     try {
-        await pb.collection('users').create(
+        const { verificationSent } = await register(
             {
                 username: registerUsername.value,
                 email: registerEmail.value,
@@ -779,15 +721,8 @@ async function submitRegister() {
                 passwordConfirm: registerPasswordConfirm.value,
                 language: locale.value,
             },
-            { headers: await capHeaders('register') },
+            await capHeaders('register'),
         )
-        const verificationSent = await pb
-            .collection('users')
-            .requestVerification(registerEmail.value)
-            .then(
-                () => true,
-                () => false,
-            )
         if (verificationSent) notify(t('notifications.success.registered'))
         else notifyError(t('notifications.error.verificationMail'))
         identity.value = registerUsername.value
@@ -795,19 +730,6 @@ async function submitRegister() {
         view.value = 'login'
     } catch (err) {
         notifyError(resolveRegisterError(err))
-    } finally {
-        loading.value = false
-    }
-}
-
-async function loginWithOAuth(provider: string) {
-    loading.value = true
-    setAuthPersistent(rememberMe.value)
-    try {
-        await pb.collection('users').authWithOAuth2({ provider })
-        await navigateTo(await afterLoginPath(), { replace: true })
-    } catch (err) {
-        notifyError(resolveAuthError(err))
     } finally {
         loading.value = false
     }

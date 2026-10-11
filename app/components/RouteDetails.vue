@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import type PocketBase from 'pocketbase'
+import { listRouteRatings } from '~/api/ratings'
 import type { RatingRecord } from '~/types/models'
 import type { CommentCardItem } from '~/components/comments/Card.vue'
 import { formatGrade } from '#shared/utils/grades'
@@ -88,7 +88,6 @@ const props = defineProps<{
     compact?: boolean
 }>()
 
-const pb = usePocketbase() as PocketBase
 const { error: notifyError } = useNotification()
 
 const isSheetOpen = ref(false)
@@ -101,11 +100,7 @@ const {
     cacheKeys.ratingsSheet(props.route_id),
     async () => {
         try {
-            return await pb.collection('ratings').getFullList<RatingRecord>({
-                filter: pb.filter('route_id = {:id}', { id: props.route_id }),
-                sort: '-created',
-                requestKey: null,
-            })
+            return (await listRouteRatings(props.route_id)).items
         } catch (error) {
             console.error('Error fetching ratings:', error)
             notifyError(t('ratings.loadError'))
@@ -135,23 +130,15 @@ function openSheet() {
     if (props.route_id && status.value !== 'success') void loadRatings()
 }
 
-function mapReview(
-    r: RatingRecord & { expand?: Record<string, unknown> },
-): CommentCardItem {
-    const user = r.expand?.user as
-        { name?: string; username?: string; avatar?: string } | undefined
-
+function mapReview(r: RatingRecord): CommentCardItem {
     return {
         id: r.id,
         rating: typeof r.rating === 'number' ? r.rating : null,
         difficultyLabel: formatGrade(r),
         comment: r.comment ?? null,
         created: r.created ?? '',
-        userName: user?.name || user?.username || t('comments.anonymous'),
-        userAvatar: r.expand?.user
-            ? usePbFileUrl(r.expand.user, user?.avatar, { thumb: '80x80' }) ||
-              null
-            : null,
+        userName: r.author?.name || t('comments.anonymous'),
+        userAvatar: r.author?.avatar || null,
     }
 }
 </script>

@@ -1,20 +1,20 @@
 import type { FollowRecord } from '~/types/models'
 import { followState } from '~/utils/friends'
+import {
+    acceptFollow,
+    createFollow,
+    deleteFollow,
+    listFollows,
+} from '~/api/social'
 import { cacheKeys } from '~/utils/realtimeCache'
 import { serverDedupe } from '~/utils/asyncData'
 
 export function useFollows() {
-    const pb = usePocketbase()
     const authRecord = useAuthRecord()
     const myId = computed(() => authRecord.value?.id ?? '')
     const request = useAsyncData(
         cacheKeys.follows,
-        () =>
-            myId.value
-                ? pb
-                      .collection('follows')
-                      .getFullList<FollowRecord>({ requestKey: null })
-                : Promise.resolve([]),
+        () => (myId.value ? listFollows() : Promise.resolve([])),
         { ...serverDedupe, default: () => [], watch: [myId] },
     )
     const follows = request.data
@@ -34,19 +34,17 @@ export function useFollows() {
         )
 
     async function follow(userId: string) {
-        await pb
-            .collection('follows')
-            .create({ follower: myId.value, followee: userId })
+        await createFollow(userId)
         await request.refresh()
     }
 
     async function remove(followId: string) {
-        await pb.collection('follows').delete(followId)
+        await deleteFollow(followId)
         await request.refresh()
     }
 
     async function accept(followId: string) {
-        await pb.collection('follows').update(followId, { status: 'accepted' })
+        await acceptFollow(followId)
         await request.refresh()
     }
 

@@ -1,0 +1,654 @@
+openapi: 3.1.0
+info:
+  title: Gripello routes, walls and locations
+  version: 1.0.0
+paths:
+  /gyms/{gym}/routes:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listRoutes
+      tags: [routes]
+      description: Public. Rows come from the average_rating view.
+      parameters:
+        - { name: archived, in: query, schema: { type: string, enum: ['false', 'true', all], default: 'false' } }
+        - { name: location, in: query, schema: { type: string } }
+        - name: wall
+          in: query
+          description: wall id, `none` (unplaced) or `any` (placed)
+          schema: { type: string }
+        - { name: type, in: query, schema: { $ref: '#/components/schemas/RouteType' } }
+        - { name: color, in: query, schema: { type: string } }
+        - { name: grade_system, in: query, schema: { type: string } }
+        - name: grade
+          in: query
+          description: repeatable; matches any of the grades
+          schema: { type: array, items: { type: string } }
+          style: form
+          explode: true
+        - name: q
+          in: query
+          description: case-insensitive substring of name or creators
+          schema: { type: string }
+        - name: since
+          in: query
+          description: created at or after
+          schema: { type: string }
+        - name: ids
+          in: query
+          description: comma-separated route ids
+          schema: { type: string }
+        - $ref: '#/components/parameters/Include'
+        - name: sort
+          in: query
+          description: 'comma-separated keys, `-` prefix = descending; keys: name, created, updated, screw_date, average_rating, ratings_count, grade_index, type, anchor_point, comment, creator, color, archived_at, wall_position, location (by name). Default -created.'
+          schema: { type: string }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 50 } }
+        - name: total
+          in: query
+          description: 'true adds `total`'
+          schema: { type: string, enum: ['true'] }
+      responses:
+        '200':
+          description: One page of routes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, limit]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Route' } }
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createRoute
+      tags: [routes]
+      description: manage_routes. The location must belong to the gym; a wall must hang in the route's location.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/RouteInput'
+                - required: [name, grade]
+      responses:
+        '201': { $ref: '#/components/responses/Route' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/routes/colors:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listRouteColors
+      tags: [routes]
+      description: Public. Distinct hold colours ever used in the gym (used_colors view).
+      responses:
+        '200':
+          description: Colours
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { type: string } }
+        '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/routes/archive:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    post:
+      operationId: archiveRoutes
+      tags: [routes]
+      description: manage_routes or run_inventory. One transaction; any route outside the gym fails the whole call.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids: { type: array, items: { type: string } }
+                archived: { type: boolean, default: true }
+      responses:
+        '200': { $ref: '#/components/responses/RouteList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/map/placements:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    put:
+      operationId: placeRoutes
+      tags: [routes]
+      description: manage_routes. Sets wall and wall_position (clamped to 0–1) for many routes in one transaction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [placements]
+              properties:
+                placements:
+                  type: array
+                  items:
+                    type: object
+                    required: [route, wall]
+                    properties:
+                      route: { type: string }
+                      wall: { type: string, description: '"" unplaces the route' }
+                      wall_position: { type: number }
+      responses:
+        '200': { $ref: '#/components/responses/RouteList' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /routes:
+    get:
+      operationId: listRoutesById
+      tags: [routes]
+      description: Public, across gyms. Same rows as the gym list, newest first.
+      parameters:
+        - $ref: '#/components/parameters/Ids'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200': { $ref: '#/components/responses/RouteList' }
+        '400': { $ref: '#/components/responses/Error' }
+  /walls:
+    get:
+      operationId: listWallsById
+      tags: [walls]
+      description: Public, across gyms; unknown ids are skipped.
+      parameters:
+        - $ref: '#/components/parameters/Ids'
+      responses:
+        '200':
+          description: Walls with their location name
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Wall'
+                        - type: object
+                          required: [location_name]
+                          properties:
+                            location_name: { type: string }
+        '400': { $ref: '#/components/responses/Error' }
+  /routes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getRoute
+      tags: [routes]
+      description: Public.
+      parameters:
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200': { $ref: '#/components/responses/Route' }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      operationId: updateRoute
+      tags: [routes]
+      description: >-
+        manage_routes. Routes never move to another gym; moving the location with an unchanged wall unplaces the route.
+        403 when name, comment or archived change while moderation keeps the route hidden.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RouteInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Route' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteRoute
+      tags: [routes]
+      description: >-
+        manage_routes. 409 while reviews, beta videos or competition routes reference the route, unless force=true
+        (they are deleted with it, files after the commit).
+      parameters:
+        - { name: force, in: query, schema: { type: boolean } }
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /routes/{id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: archiveRoute
+      tags: [routes]
+      description: manage_routes or run_inventory. Empty body archives.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                archived: { type: boolean, default: true }
+      responses:
+        '200': { $ref: '#/components/responses/Route' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/locations:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listLocations
+      tags: [locations]
+      description: Public, ordered by name.
+      responses:
+        '200':
+          description: Locations
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Location' } }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createLocation
+      tags: [locations]
+      description: manage_settings (platform admins included).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/LocationInput'
+                - required: [name]
+      responses:
+        '201': { $ref: '#/components/responses/Location' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /locations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      operationId: updateLocation
+      tags: [locations]
+      description: manage_settings. A location never moves to another gym.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LocationInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Location' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteLocation
+      tags: [locations]
+      description: manage_settings. 400 while any route (archived too) or wall uses it.
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /locations/{id}/floor-plan:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      operationId: saveFloorPlan
+      tags: [locations]
+      description: manage_settings. One transaction - sets the map, deletes `removed` walls, then creates (no id) or updates walls; `walls` in the response follow the request order.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [map, walls]
+              properties:
+                map: { $ref: '#/components/schemas/GymMap' }
+                walls:
+                  type: array
+                  items:
+                    allOf:
+                      - $ref: '#/components/schemas/WallInput'
+                      - type: object
+                        properties:
+                          id: { type: string, description: 'empty creates a wall' }
+                removed: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Saved floor plan
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [location, walls]
+                properties:
+                  location: { $ref: '#/components/schemas/Location' }
+                  walls: { type: array, items: { $ref: '#/components/schemas/Wall' } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /locations/{id}/map-trace:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      operationId: uploadMapTrace
+      tags: [locations]
+      description: manage_settings. Stored under blob key locations/<id>/<file>; replaces the previous file.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [map_trace]
+              properties:
+                map_trace: { type: string, format: binary, description: 'JPEG, PNG, WebP or SVG, max 10 MB' }
+      responses:
+        '200': { $ref: '#/components/responses/Location' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteMapTrace
+      tags: [locations]
+      description: manage_settings.
+      responses:
+        '200': { $ref: '#/components/responses/Location' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/walls:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listWalls
+      tags: [walls]
+      description: Public, ordered by sort, name.
+      parameters:
+        - { name: location, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Walls
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Wall' } }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createWall
+      tags: [walls]
+      description: manage_settings. The location needs a floor plan; outline is a closed polygon (3+ points), edge an open polyline (2+ points, non-zero length), label a point, all inside the map.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/WallInput'
+                - required: [location, name, outline, edge]
+      responses:
+        '201': { $ref: '#/components/responses/Wall' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /walls/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      operationId: updateWall
+      tags: [walls]
+      description: manage_settings. Same validation as create; never moves to another gym. A new location moves the wall's routes along.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WallInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Wall' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteWall
+      tags: [walls]
+      description: manage_settings. 400 while active routes hang on it; archived routes lose the wall.
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Gym:
+      name: gym
+      in: path
+      required: true
+      description: gym id or slug
+      schema: { type: string }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    Ids:
+      name: ids
+      in: query
+      required: true
+      description: 1 to 200 comma-separated ids
+      schema: { type: string }
+    Include:
+      name: include
+      in: query
+      description: 'comma-separated: location, wall, gym; filled into `expand`'
+      schema: { type: string }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Route:
+      description: Route
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Route' }
+    RouteList:
+      description: Changed routes
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items]
+            properties:
+              items: { type: array, items: { $ref: '#/components/schemas/Route' } }
+    Location:
+      description: Location
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Location' }
+    Wall:
+      description: Wall
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Wall' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    DateTime:
+      type: string
+      format: date-time
+    OptionalDateTime:
+      type: [string, 'null']
+      format: date-time
+    RouteType:
+      type: string
+      enum: ['', Route, Boulder]
+    Point:
+      type: array
+      items: { type: number }
+      minItems: 2
+      maxItems: 2
+    GymMap:
+      type: [object, 'null']
+      required: [width, height, shapes]
+      properties:
+        width: { type: number, minimum: 5, maximum: 500 }
+        height: { type: number, minimum: 5, maximum: 500 }
+        shapes:
+          type: array
+          maxItems: 300
+          items:
+            type: object
+            required: [kind, points]
+            properties:
+              kind: { type: string, enum: [floor, mat, structure] }
+              points: { type: array, minItems: 3, maxItems: 200, items: { $ref: '#/components/schemas/Point' } }
+    RouteInput:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100 }
+        grade: { type: string, maxLength: 20 }
+        grade_system: { type: string, maxLength: 30 }
+        grade_index: { type: number }
+        type: { $ref: '#/components/schemas/RouteType' }
+        comment: { type: string, maxLength: 2000 }
+        creator: { type: array, maxItems: 20, items: { type: string, maxLength: 100 } }
+        archived: { type: boolean }
+        color: { type: string, maxLength: 50 }
+        screw_date: { type: [string, 'null'], description: 'date or date-time; "" or null clears' }
+        anchor_point: { type: integer }
+        location: { type: string }
+        wall: { type: string }
+        wall_position: { type: number }
+        permanent: { type: boolean }
+    Route:
+      type: object
+      required: [id, created, updated, gym, name, anchor_point, type, comment, creator, archived, archived_at, color, screw_date, location, wall, wall_position, grade, grade_system, grade_index, permanent, average_rating, ratings_count]
+      properties:
+        id: { type: string }
+        created: { $ref: '#/components/schemas/DateTime' }
+        updated: { $ref: '#/components/schemas/DateTime' }
+        gym: { type: string }
+        name: { type: string }
+        anchor_point: { type: integer }
+        type: { $ref: '#/components/schemas/RouteType' }
+        comment: { type: string }
+        creator: { type: array, items: { type: string } }
+        archived: { type: boolean }
+        archived_at: { $ref: '#/components/schemas/OptionalDateTime' }
+        color: { type: string }
+        screw_date: { $ref: '#/components/schemas/OptionalDateTime' }
+        location: { type: string, description: '"" when unset' }
+        wall: { type: string, description: '"" when unplaced' }
+        wall_position: { type: number }
+        grade: { type: string }
+        grade_system: { type: string }
+        grade_index: { type: number }
+        permanent: { type: boolean }
+        average_rating: { type: [number, 'null'] }
+        ratings_count: { type: integer }
+        expand:
+          type: object
+          properties:
+            location: { $ref: '#/components/schemas/Location' }
+            wall: { $ref: '#/components/schemas/Wall' }
+            gym:
+              type: object
+              required: [id, slug, name]
+              properties:
+                id: { type: string }
+                slug: { type: string }
+                name: { type: string }
+    LocationInput:
+      type: object
+      properties:
+        name: { type: string }
+        map: { $ref: '#/components/schemas/GymMap' }
+        map_area: {}
+    Location:
+      type: object
+      required: [id, created, updated, gym, name, map_area, map, map_trace]
+      properties:
+        id: { type: string }
+        created: { $ref: '#/components/schemas/DateTime' }
+        updated: { $ref: '#/components/schemas/DateTime' }
+        gym: { type: string }
+        name: { type: string }
+        map_area: {}
+        map: { $ref: '#/components/schemas/GymMap' }
+        map_trace: { type: string, description: 'file name, "" when none' }
+    WallInput:
+      type: object
+      properties:
+        location: { type: string }
+        name: { type: string }
+        outline: { type: array, minItems: 3, maxItems: 200, items: { $ref: '#/components/schemas/Point' } }
+        edge: { type: array, minItems: 2, maxItems: 200, items: { $ref: '#/components/schemas/Point' } }
+        label: { oneOf: [{ $ref: '#/components/schemas/Point' }, { type: 'null' }] }
+        sort: { type: integer }
+        anchor_from: { type: integer }
+        anchor_to: { type: integer }
+    Wall:
+      type: object
+      required: [id, created, updated, gym, location, name, outline, edge, label, sort, anchor_from, anchor_to]
+      properties:
+        id: { type: string }
+        created: { $ref: '#/components/schemas/DateTime' }
+        updated: { $ref: '#/components/schemas/DateTime' }
+        gym: { type: string }
+        location: { type: string }
+        name: { type: string }
+        outline: { type: array, items: { $ref: '#/components/schemas/Point' } }
+        edge: { type: array, items: { $ref: '#/components/schemas/Point' } }
+        label: { oneOf: [{ $ref: '#/components/schemas/Point' }, { type: 'null' }] }
+        sort: { type: integer }
+        anchor_from: { type: integer }
+        anchor_to: { type: integer }

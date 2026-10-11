@@ -12,7 +12,7 @@ export interface GymMapMarker {
 
 type GymLocation = Pick<GymRecord, 'latitude' | 'longitude'>
 
-// PocketBase stores an empty number field as 0.
+// The API stores an empty number field as 0.
 export const hasLocation = (gym: GymLocation | null | undefined) =>
     !!(gym?.latitude || gym?.longitude)
 

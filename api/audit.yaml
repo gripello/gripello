@@ -1,0 +1,171 @@
+openapi: 3.1.0
+info:
+  title: Gripello audit log
+  version: 1.0.0
+paths:
+  /gyms/{gym}/audit:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listGymAudit
+      tags: [audit]
+      description: Rows of the gym. view_audit_log and platform admins see every row, other signed-in users only their own.
+      parameters:
+        - $ref: '#/components/parameters/Action'
+        - $ref: '#/components/parameters/Collection'
+        - $ref: '#/components/parameters/Actor'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/AuditPage' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /me/audit:
+    get:
+      operationId: listOwnAudit
+      tags: [audit]
+      description: The caller's own rows across every gym, including gym-less auth rows.
+      parameters:
+        - $ref: '#/components/parameters/Action'
+        - $ref: '#/components/parameters/Collection'
+        - $ref: '#/components/parameters/Actor'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/AuditPage' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /platform/audit:
+    get:
+      operationId: listPlatformAudit
+      tags: [audit]
+      description: Platform admins only; every row, optionally of one gym.
+      parameters:
+        - name: gym
+          in: query
+          description: gym id or slug
+          schema: { type: string }
+        - $ref: '#/components/parameters/Action'
+        - $ref: '#/components/parameters/Collection'
+        - $ref: '#/components/parameters/Actor'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/AuditPage' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Gym:
+      name: gym
+      in: path
+      required: true
+      description: gym id or slug
+      schema: { type: string }
+    Action:
+      name: action
+      in: query
+      schema: { $ref: '#/components/schemas/AuditAction' }
+    Collection:
+      name: collection
+      in: query
+      schema: { type: string }
+    Actor:
+      name: actor
+      in: query
+      description: a user id, `me`, `guest` (no actor, not a platform admin) or `platform` (platform admins acting without membership)
+      schema: { type: string }
+    From:
+      name: from
+      in: query
+      description: inclusive lower bound on created (RFC 3339, `YYYY-MM-DD HH:MM:SS.sssZ` or `YYYY-MM-DD`)
+      schema: { type: string }
+    To:
+      name: to
+      in: query
+      description: inclusive upper bound on created, same formats as from
+      schema: { type: string }
+    Q:
+      name: q
+      in: query
+      description: case-insensitive substring of actor_label, record_id or collection_name
+      schema: { type: string }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+  responses:
+    AuditPage:
+      description: One page of audit entries, newest first
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items, page, limit, total]
+            properties:
+              items: { type: array, items: { $ref: '#/components/schemas/AuditEntry' } }
+              page: { type: integer }
+              limit: { type: integer }
+              total: { type: integer }
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    AuditAction:
+      type: string
+      enum: [create, update, delete, login, login_failed, password_reset_request, password_reset, email_change_request, email_change]
+    AuditEntry:
+      type: object
+      required: [id, created, actor, actor_label, action, collection_name, record_id, changed_fields, ip, gym]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        actor: { type: string, description: empty for guests and deleted users }
+        actor_label: { type: string, description: 'e-mail/username, or "Platform administrator"' }
+        action: { $ref: '#/components/schemas/AuditAction' }
+        collection_name: { type: string }
+        record_id: { type: string }
+        changed_fields: { type: [array, 'null'], items: { type: string } }
+        ip: { type: string }
+        gym: { type: string }
+        expand:
+          type: object
+          properties:
+            gym:
+              type: object
+              required: [id, slug, name]
+              properties:
+                id: { type: string }
+                slug: { type: string }
+                name: { type: string }

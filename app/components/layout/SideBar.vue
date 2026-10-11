@@ -116,7 +116,7 @@ const { open } = useSidebar()
 const keepOpenControlled = () => {}
 const coarsePointer = useCoarsePointer()
 const { gym, slug } = useGym()
-const pb = usePocketbase()
+const authStore = useAuthStore()
 
 const scroller = useTemplateRef<HTMLElement>('scroller')
 const { style: scrollShadow } = useScrollShadow(scroller)
@@ -134,7 +134,7 @@ const nav = computed(() =>
         route.path,
         t,
         context.value,
-        pb.authStore.record?.id,
+        authStore.record?.id,
         badges.value,
     ),
 )

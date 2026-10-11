@@ -1,46 +1,36 @@
 import { expect, type Page } from '@playwright/test'
-import { authHeader } from './nav'
+import type { AuditLogRecord } from '../../types/models'
+import { listAudit, type AuditQuery } from './api'
+import { apiOf } from './nav'
+import { E2E_GYM_SLUG } from './seed'
 
-export interface AuditRow {
-    id: string
-    actor: string
-    actor_label: string
-    action: string
-    collection_name: string
-    record_id: string
-    changed_fields: string[] | null
-    ip: string
-    created: string
-}
+export type AuditScope = 'platform' | 'own' | { gym: string }
 
 export async function fetchAuditRows(
     page: Page,
-    filter: string,
-): Promise<AuditRow[]> {
-    const res = await page.request.get(
-        `/api/collections/audit_logs/records?perPage=200&sort=-created&filter=${encodeURIComponent(filter)}`,
-        { headers: await authHeader(page) },
-    )
-    const body = await res.json()
-    return (body.items ?? []) as AuditRow[]
+    query: AuditQuery,
+    scope: AuditScope = { gym: E2E_GYM_SLUG },
+) {
+    return listAudit(await apiOf(page), scope, query)
 }
 
 export async function fetchAuditRowsAnonymously(page: Page) {
-    const res = await page.request.get(
-        '/api/collections/audit_logs/records?perPage=200',
-    )
-    return await res.json()
+    const response = await page.request.get(`/api/gyms/${E2E_GYM_SLUG}/audit`)
+    return { status: response.status(), body: await response.json() }
 }
 
 export async function waitForAuditRow(
     page: Page,
-    filter: string,
-): Promise<AuditRow[]> {
-    let rows: AuditRow[] = []
+    query: AuditQuery,
+    scope?: AuditScope,
+) {
+    let rows: AuditLogRecord[] = []
     await expect
-        .poll(async () => (rows = await fetchAuditRows(page, filter)).length, {
-            message: `audit row matching ${filter}`,
-        })
+        .poll(
+            async () =>
+                (rows = await fetchAuditRows(page, query, scope)).length,
+            { message: `audit row matching ${JSON.stringify(query)}` },
+        )
         .toBeGreaterThan(0)
     return rows
 }

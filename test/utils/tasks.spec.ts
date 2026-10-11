@@ -6,10 +6,8 @@ import {
     taskPriorityColor,
     taskPriorityLevel,
     taskPriorityName,
-    statusesFilter,
     taskAge,
     taskStatusColor,
-    tasksFilter,
     taskTitle,
 } from '~/utils/tasks'
 
@@ -91,38 +89,6 @@ describe('task priority levels', () => {
         expect(taskPriorityColor(4)).toBe('error')
         expect(taskPriorityColor(3)).toBe('warning')
         expect(taskPriorityColor(2)).toBe('info')
-    })
-})
-
-describe('tasksFilter', () => {
-    it('ands the selected filters', () => {
-        expect(
-            tasksFilter({ kind: 'defect', assignee: 'u1', urgent: true }),
-        ).toBe('kind = "defect" && assignee = "u1" && priority = 4')
-    })
-
-    it('scopes the board to one gym', () => {
-        expect(tasksFilter({ gym: 'g1', kind: 'defect' })).toBe(
-            'gym = "g1" && kind = "defect"',
-        )
-    })
-
-    it('limits overdue tasks to dated ones before today', () => {
-        expect(tasksFilter({ overdue: true })).toBe(
-            '(due_date != "" && due_date < @todayStart)',
-        )
-    })
-
-    it('returns an empty filter without options', () => {
-        expect(tasksFilter({})).toBe('')
-    })
-})
-
-describe('statusesFilter', () => {
-    it('ors the statuses', () => {
-        expect(statusesFilter(['open', 'waiting'])).toBe(
-            '(status = "open" || status = "waiting")',
-        )
     })
 })
 

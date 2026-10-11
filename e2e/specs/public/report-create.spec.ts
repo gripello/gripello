@@ -1,13 +1,11 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { uiaa } from '../../support/seed'
+import { createRating } from '../../support/api'
 
-test.beforeEach(async ({ root, route, testPrefix }) => {
-    await root.collection('ratings').create({
-        route_id: route.id,
+test.beforeEach(async ({ adminApi, route, testPrefix }) => {
+    await createRating(adminApi, route.id, {
         rating: 2,
-        ...uiaa('5'),
         comment: `${testPrefix}-reportable`,
     })
 })
@@ -89,7 +87,7 @@ test('a failed submit surfaces an error and keeps the dialog open', async ({
     await fillValidReport(page, testPrefix)
     await page.getByTestId('report-form-goodfaith').check()
 
-    const endpoint = '**/api/collections/reports/records'
+    const endpoint = '**/api/reports'
     await page.route(endpoint, (route) => route.abort('failed'))
 
     await page.getByTestId('report-form-submit').click()

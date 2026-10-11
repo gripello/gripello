@@ -1,254 +1,191 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { e2eGymId, e2eRole, setMembership, uiaa } from '../../support/seed'
-import { PB_URL } from '../../support/map'
+import { staffOf } from '../../support/moderation'
+import {
+    ApiError,
+    apiAs,
+    archiveRoute,
+    createRating,
+    decideModerationCase,
+    deleteRoute,
+    e2eGymId,
+    fileReport,
+    findReport,
+    findRole,
+    getMe,
+    getRoute,
+    guestApi,
+    openModerationCase,
+    setRolePermissions,
+    updateRoute,
+} from '../../support/api'
 
-async function clientWithPermission(
-    root: PocketBase,
-    prefix: string,
-    permissionName: string,
-) {
-    const permission = await root
-        .collection('permissions')
-        .getFirstListItem(
-            root.filter('name = {:name}', { name: permissionName }),
-            { requestKey: null },
-        )
-    const role = await root.collection('roles').create({
-        gym: await e2eGymId(root),
-        name: `${prefix}-${permissionName}`,
-        permissions: [permission.id],
-    })
-    const email = `${prefix}-${permissionName}@gripello.test`
-    const password = 'E2ePassw0rd!'
-    const user = await root.collection('users').create({
-        email,
-        password,
-        passwordConfirm: password,
-        verified: true,
-        name: permissionName,
-    })
-    await setMembership(root, user.id, role.id)
-    const client = new PocketBase(PB_URL)
-    await client.collection('users').authWithPassword(email, password)
-    return {
-        client,
-        userId: user.id,
-        cleanup: async () => {
-            await root.collection('users').delete(user.id)
-            await root.collection('roles').delete(role.id)
-        },
-    }
+const statusOf = (request: Promise<unknown>) =>
+    request.then(
+        () => 200,
+        (error: ApiError) => error.status,
+    )
+
+async function apiWithPermission(prefix: string, permission: string) {
+    const user = await staffOf(
+        await e2eGymId(),
+        [permission],
+        `${prefix}-${permission}`,
+    )
+    return { api: await apiAs(user), userId: user.id }
 }
 
 test('climbers and setters only see their own account and membership', async ({
+    apiAs,
     createUser,
 }) => {
     for (const role of ['user', 'routesetter']) {
         const seeded = await createUser(role, `list-${role}`)
-        const client = new PocketBase(PB_URL)
-        await client
-            .collection('users')
-            .authWithPassword(seeded.email, seeded.password)
+        const client = await apiAs(seeded)
 
-        const users = await client.collection('users').getFullList()
-        expect(users.map((user) => user.id)).toEqual([seeded.id])
+        expect((await getMe(client)).id).toBe(seeded.id)
+        await expect(client.get('/platform/users')).rejects.toMatchObject({
+            status: 403,
+        })
+        await expect(
+            client.get(`/gyms/${await e2eGymId()}/members`),
+        ).rejects.toMatchObject({ status: 403 })
 
-        const memberships = await client.collection('memberships').getFullList()
-        expect(memberships.map((membership) => membership.user)).toEqual(
-            role === 'user' ? [] : [seeded.id],
+        const memberships =
+            await client.get<{ gym: { id: string } }[]>('/me/memberships')
+        expect(memberships.map((membership) => membership.gym.id)).toEqual(
+            role === 'user' ? [] : [await e2eGymId()],
         )
     }
 })
 
 test('a user manager cannot rename the admin role or strip its permissions', async ({
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const admin = await e2eRole(root, 'admin')
-    const manager = await clientWithPermission(root, testPrefix, 'manage_users')
-    try {
-        const roles = manager.client.collection('roles')
-        await expect(
-            roles.update(admin.id, { name: `${testPrefix}-owned` }),
-        ).rejects.toMatchObject({ status: 403 })
-        await expect(
-            roles.update(admin.id, { permissions: [] }),
-        ).rejects.toMatchObject({ status: 403 })
-        await expect(
-            roles.update(admin.id, { 'permissions-': admin.permissions[0] }),
-        ).rejects.toMatchObject({ status: 403 })
+    const admin = await findRole(adminApi, 'admin')
+    const manager = await apiWithPermission(testPrefix, 'manage_users')
 
-        const unchanged = await root.collection('roles').getOne(admin.id)
-        expect(unchanged.name).toBe('admin')
-        expect(unchanged.permissions).toEqual(admin.permissions)
-    } finally {
-        await manager.cleanup()
-    }
+    await expect(
+        manager.api.patch(`/roles/${admin.id}`, {
+            name: `${testPrefix}-owned`,
+        }),
+    ).rejects.toMatchObject({ status: 403 })
+    await expect(
+        setRolePermissions(manager.api, admin.id, []),
+    ).rejects.toMatchObject({ status: 403 })
+    await expect(
+        setRolePermissions(manager.api, admin.id, admin.permissions.slice(1)),
+    ).rejects.toMatchObject({ status: 403 })
+
+    const unchanged = await findRole(adminApi, 'admin')
+    expect(unchanged.name).toBe('admin')
+    expect(unchanged.permissions).toEqual(admin.permissions)
 })
 
 test('inventory may archive and restore routes but not edit them', async ({
-    root,
+    adminApi,
+    createRoute,
     testPrefix,
-    workerLocation,
 }) => {
-    const route = await root.collection('routes').create({
+    const route = await createRoute({
         name: `${testPrefix}-inventory`,
-        ...uiaa('5'),
-        location: workerLocation.id,
         type: 'Boulder',
-        creator: ['E2E'],
     })
-    const inventory = await clientWithPermission(
-        root,
-        testPrefix,
-        'run_inventory',
+    const inventory = (await apiWithPermission(testPrefix, 'run_inventory')).api
+
+    const archived = await archiveRoute(inventory, route.id)
+    expect(archived.archived).toBe(true)
+
+    expect([400, 403, 404]).toContain(
+        await statusOf(
+            updateRoute(inventory, route.id, {
+                archived_at: '2000-01-01T00:00:00.000Z',
+            }),
+        ),
     )
-    try {
-        const routes = inventory.client.collection('routes')
-        const archived = await routes.update(route.id, { archived: true })
-        expect(archived.archived).toBe(true)
+    expect((await getRoute(adminApi, route.id)).archived_at).toBe(
+        archived.archived_at,
+    )
+    const adminBackdated = await updateRoute(adminApi, route.id, {
+        archived_at: '2000-01-01T00:00:00.000Z',
+    }).catch(() => getRoute(adminApi, route.id))
+    expect(adminBackdated.archived_at).toBe(archived.archived_at)
 
-        const backdate = await routes
-            .update(route.id, { archived_at: '2000-01-01 00:00:00.000Z' })
-            .then(
-                () => 200,
-                (err: { status: number }) => err.status,
-            )
-        expect([403, 404]).toContain(backdate)
-        expect(
-            (await root.collection('routes').getOne(route.id)).archived_at,
-        ).toBe(archived.archived_at)
-        const superuserBackdated = await root
-            .collection('routes')
-            .update(route.id, { archived_at: '2000-01-01 00:00:00.000Z' })
-        expect(superuserBackdated.archived_at).toBe(archived.archived_at)
+    await expect(
+        updateRoute(inventory, route.id, { archived: false, name: 'renamed' }),
+    ).rejects.toMatchObject({ status: 403 })
 
-        await expect(
-            routes.update(route.id, { archived: false, name: 'renamed' }),
-        ).rejects.toMatchObject({ status: 403 })
-
-        const restored = await routes.update(route.id, { archived: false })
-        expect(restored.archived).toBe(false)
-        expect(restored.name).toBe(`${testPrefix}-inventory`)
-    } finally {
-        await inventory.cleanup()
-        await root.collection('routes').delete(route.id)
-    }
+    const restored = await archiveRoute(inventory, route.id, false)
+    expect(restored.archived).toBe(false)
+    expect(restored.name).toBe(`${testPrefix}-inventory`)
 })
 
 test('a report handler without moderation rights cannot remove reported content', async ({
-    adminPage: page,
-    root,
+    api,
+    adminApi,
+    createRoute,
     testPrefix,
-    workerLocation,
 }) => {
-    const route = await root.collection('routes').create({
+    const route = await createRoute({
         name: `${testPrefix}-reported`,
-        ...uiaa('5'),
-        location: workerLocation.id,
         type: 'Boulder',
-        creator: ['E2E'],
     })
-    const reportResponse = await page.request.post(
-        '/api/collections/reports/records',
-        {
-            data: {
-                content_type: 'route',
-                content_id: route.id,
-                reason: 'other',
-                explanation: `${testPrefix}-removal-guard`,
-                notifier_name: 'E2E Reporter',
-                notifier_email: 'e2e-reporter@example.com',
-                good_faith: true,
-            },
-        },
-    )
-    const reportId = (await reportResponse.json()).id as string
-    const moderator = await clientWithPermission(
-        root,
-        testPrefix,
-        'manage_reports',
-    )
-    const decision = { status: 'actioned', decision: 'content_removed' }
-    try {
-        await expect(
-            moderator.client.collection('routes').delete(route.id),
-        ).rejects.toMatchObject({ status: 404 })
-        await expect(
-            moderator.client.collection('reports').update(reportId, decision),
-        ).rejects.toMatchObject({ status: 403 })
-        expect(
-            (await root.collection('routes').getOne(route.id)).archived,
-        ).toBe(false)
+    const { id: reportId } = await fileReport(guestApi(), {
+        contentType: 'route',
+        contentId: route.id,
+        reason: 'other',
+        explanation: `${testPrefix}-removal-guard`,
+    })
+    const moderator = (await apiWithPermission(testPrefix, 'manage_reports'))
+        .api
+    const item = await openModerationCase(adminApi, 'route', route.id)
 
-        // Deleting the content decides its open reports as removed.
-        await root.collection('routes').delete(route.id)
-        const decided = await root.collection('reports').getOne(reportId)
-        expect(decided.status).toBe('actioned')
-        expect(decided.decision).toBe('content_removed')
-    } finally {
-        await moderator.cleanup()
-        await root.collection('reports').delete(reportId)
-        await root
-            .collection('routes')
-            .delete(route.id)
-            .catch(() => {})
-    }
+    expect([403, 404]).toContain(
+        await statusOf(deleteRoute(moderator, route.id)),
+    )
+    await expect(
+        decideModerationCase(moderator, item.id, 'hide', 'Removed.'),
+    ).rejects.toMatchObject({ status: 404 })
+    expect((await getRoute(adminApi, route.id)).archived).toBe(false)
+
+    // Deleting the content decides its open reports as removed.
+    await deleteRoute(adminApi, route.id)
+    await expect
+        .poll(async () => (await findReport(api, reportId))?.status)
+        .toBe('actioned')
+    expect((await findReport(api, reportId))?.decision).toBe('content_removed')
 })
 
 test('a decided report keeps its decision and server-owned fields', async ({
-    root,
+    api,
+    adminApi,
     route,
     testPrefix,
 }) => {
-    const rating = await root.collection('ratings').create({
-        route_id: route.id,
+    const rating = await createRating(adminApi, route.id, {
         rating: 4,
-        ...uiaa('5'),
         comment: `${testPrefix}-reported-rating`,
     })
-    const { id: reportId } = await root.collection('reports').create({
-        gym: await e2eGymId(root),
-        content_type: 'rating',
-        content_id: rating.id,
+    const { id: reportId } = await fileReport(guestApi(), {
+        contentType: 'rating',
+        contentId: rating.id,
         reason: 'other',
         explanation: `${testPrefix}-decided-once`,
-        notifier_name: 'E2E Reporter',
-        notifier_email: 'e2e-reporter@example.com',
-        good_faith: true,
     })
-    const moderator = await clientWithPermission(
-        root,
-        testPrefix,
-        'manage_reports',
-    )
-    try {
-        const reports = moderator.client.collection('reports')
-        const kept = await reports.update(reportId, {
-            status: 'rejected',
-            decision: 'content_kept',
-            decided_by: '',
-            decided_at: '2000-01-01 00:00:00.000Z',
-            notifier_email: 'someone-else@example.com',
-            content_snapshot: 'rewritten',
-        })
-        expect(kept.decided_by).toBe(moderator.userId)
-        expect(kept.decided_at).not.toContain('2000-01-01')
+    const moderator = await apiWithPermission(testPrefix, 'manage_comments')
+    const item = await openModerationCase(moderator.api, 'rating', rating.id)
 
-        await expect(
-            reports.update(reportId, {
-                status: 'actioned',
-                decision: 'content_removed',
-            }),
-        ).rejects.toMatchObject({ status: 400 })
+    await decideModerationCase(moderator.api, item.id, 'approve')
+    const kept = await findReport(api, reportId)
+    expect(kept?.status).toBe('rejected')
+    expect(kept?.decision).toBe('content_kept')
+    expect(kept?.decided_by).toBe(moderator.userId)
+    expect(kept?.decided_at).toBeTruthy()
 
-        const stored = await root.collection('reports').getOne(reportId)
-        expect(stored.decision).toBe('content_kept')
-        expect(stored.notifier_email).toBe('e2e-reporter@example.com')
-        expect(stored.content_snapshot).not.toBe('rewritten')
-    } finally {
-        await moderator.cleanup()
-        await root.collection('reports').delete(reportId)
-    }
+    await decideModerationCase(moderator.api, item.id, 'hide', 'Changed.')
+
+    const stored = await findReport(api, reportId)
+    expect(stored?.decision).toBe('content_kept')
+    expect(stored?.notifier_email).toBe('e2e-reporter@example.com')
+    expect(stored?.content_snapshot).toContain(`${testPrefix}-reported-rating`)
 })

@@ -5,15 +5,11 @@ import {
     suspensionEnd,
     joinableGyms,
     membershipChips,
-    platformUserFilter,
     rolesOfGym,
     userDisplayName,
     userKeptThroughReload,
     type PlatformUser,
 } from '~/utils/platformUsers'
-
-const filter = (raw: string, params?: Record<string, unknown>) =>
-    raw.replace(/\{:(\w+)\}/g, (_, key) => JSON.stringify(params?.[key]))
 
 const gyms = [
     { id: 'g1', slug: 'zeta', name: 'Zeta' },
@@ -38,32 +34,6 @@ const user = {
         ],
     },
 } as PlatformUser
-
-describe('platformUserFilter', () => {
-    it('combines the search term with the chosen filter', () => {
-        expect(platformUserFilter(filter, '  ', null)).toBe('')
-        expect(platformUserFilter(filter, '', 'platform_admins')).toBe(
-            'platform_admin = true',
-        )
-        const combined = platformUserFilter(filter, ' ada ', 'unverified')
-        expect(combined).toContain('email ~ "ada"')
-        expect(combined).toContain('name ~ "ada"')
-        expect(combined.endsWith(' && verified = false')).toBe(true)
-    })
-
-    it('lists users whose suspension has not ended', () => {
-        expect(platformUserFilter(filter, '', 'suspended')).toBe(
-            'suspended_until > @now',
-        )
-    })
-
-    it('also matches users found by their hidden email', () => {
-        const withIds = platformUserFilter(filter, 'ada@', null, ['u1', 'u2'])
-        expect(withIds).toContain('id = "u1"')
-        expect(withIds).toContain('id = "u2"')
-        expect(withIds.startsWith('(') && withIds.endsWith(')')).toBe(true)
-    })
-})
 
 describe('userDisplayName', () => {
     it('prefers the full name, then username, then email', () => {

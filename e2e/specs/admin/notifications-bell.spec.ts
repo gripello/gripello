@@ -1,27 +1,20 @@
-import type { Page } from '@playwright/test'
-import type PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
 import { decide, openCase } from '../../support/moderation'
-import { authHeader, gotoSettled, gymPath } from '../../support/nav'
+import { apiOf, gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
-import { createRole } from '../../support/seed'
 import { signInAs } from '../../support/auth'
 import { waitForNotification } from '../../support/notifications'
+import { createRole, listNotifications, type Api } from '../../support/api'
 
-const pbTime = () => new Date().toISOString().replace('T', ' ')
-
-function decidedBetween(
-    root: PocketBase,
-    userId: string,
-    from: string,
-    to: string,
-) {
-    return root.collection('notifications').getFullList({
-        filter: root.filter(
-            'user = {:userId} && type ~ "report_decided" && created >= {:from} && created <= {:to}',
-            { userId, from, to },
-        ),
+async function decidedBetween(api: Api, from: number, to: number) {
+    return (await listNotifications(api)).filter((item) => {
+        const created = Date.parse(item.created ?? '')
+        return (
+            item.type.includes('report_decided') &&
+            created >= from &&
+            created <= to
+        )
     })
 }
 
@@ -37,7 +30,7 @@ test('a filed report raises a notification linking to the queue', async ({
         route.id,
         `${testPrefix}-belled`,
     )
-    await createReport(page, {
+    await createReport({
         contentId: commentId,
         explanation: `${testPrefix}-bell`,
     })
@@ -65,7 +58,7 @@ test('opening a notification marks it read and clears the badge', async ({
         route.id,
         `${testPrefix}-readme`,
     )
-    await createReport(page, {
+    await createReport({
         contentId: commentId,
         explanation: `${testPrefix}-read`,
     })
@@ -78,15 +71,14 @@ test('opening a notification marks it read and clears the badge', async ({
 
     await page.waitForURL(/\/manage\/moderation/)
 
-    const headers = await authHeader(page)
+    const pageApi = await apiOf(page)
     await expect
-        .poll(async () => {
-            const after = await page.request.get(
-                `/api/collections/notifications/records/${queued.id}`,
-                { headers },
-            )
-            return (await after.json()).read
-        })
+        .poll(
+            async () =>
+                (await listNotifications(pageApi)).find(
+                    (item) => item.id === queued.id,
+                )?.read,
+        )
         .toBe(true)
 })
 
@@ -102,7 +94,7 @@ test('dismissing a notification removes it from the list', async ({
         route.id,
         `${testPrefix}-dismissme`,
     )
-    await createReport(page, {
+    await createReport({
         contentId: commentId,
         explanation: `${testPrefix}-dismiss`,
     })
@@ -119,27 +111,25 @@ test('dismissing a notification removes it from the list', async ({
     await expect(row).toBeHidden()
     await expect(page.getByTestId('notification-bell')).toBeVisible()
 
-    const headers = await authHeader(page)
+    const pageApi = await apiOf(page)
     await expect
         .poll(async () =>
-            (
-                await page.request.get(
-                    `/api/collections/notifications/records/${queued.id}`,
-                    { headers },
-                )
-            ).status(),
+            (await listNotifications(pageApi)).some(
+                (item) => item.id === queued.id,
+            ),
         )
-        .toBe(404)
+        .toBe(false)
 })
 
 test('deciding a report notifies the other moderators exactly once', async ({
-    root,
+    adminApi,
+    apiAs,
     route,
     testPrefix,
     createUser,
     pageAs,
 }) => {
-    const role = await createRole(root, `${testPrefix}-moderators`, [
+    const role = await createRole(adminApi, `${testPrefix}-moderators`, [
         'manage_reports',
         'manage_comments',
     ])
@@ -149,7 +139,7 @@ test('deciding a report notifies the other moderators exactly once', async ({
 
     await gotoSettled(page, '/manage/moderation')
     const commentId = await createComment(page, route.id, `${testPrefix}-once`)
-    await createReport(page, {
+    await createReport({
         contentId: commentId,
         explanation: `${testPrefix}-once`,
     })
@@ -158,15 +148,20 @@ test('deciding a report notifies the other moderators exactly once', async ({
     const decided = page.waitForResponse(
         (res) =>
             res.request().method() === 'POST' &&
-            res.url().includes('/api/moderation/'),
+            /\/api\/moderation\/[^/]+$/.test(new URL(res.url()).pathname),
     )
-    const from = pbTime()
+    const from = Date.now() - 1_000
     await decide(page, 'approve')
     expect((await decided).ok()).toBe(true)
-    const to = pbTime()
+    const to = Date.now() + 1_000
 
-    expect(await decidedBetween(root, decider.id, from, to)).toHaveLength(0)
-    expect(await decidedBetween(root, other.id, from, to)).toHaveLength(1)
+    expect(await decidedBetween(await apiAs(decider), from, to)).toHaveLength(0)
+    await expect
+        .poll(
+            async () =>
+                (await decidedBetween(await apiAs(other), from, to)).length,
+        )
+        .toBe(1)
 })
 
 test('a plain user with no notifications still gets a bell', async ({

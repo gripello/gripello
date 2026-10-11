@@ -101,6 +101,8 @@
 </template>
 
 <script setup lang="ts">
+import { hideAuthor } from '~/api/moderation'
+import { liftSuspension, suspendUser, type Suspension } from '~/api/platform'
 import type { UserRecord } from '~/types/models'
 import {
     isPermanentlySuspended,
@@ -118,7 +120,6 @@ const props = defineProps<{ user: UserRecord | null }>()
 const emit = defineEmits<{ changed: [] }>()
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const { pending, run } = useAsyncAction()
 
 const tomorrow = localDateYYYYMMDD(new Date(Date.now() + 86_400_000))
@@ -149,19 +150,14 @@ watch(open, (isOpen) => {
     hideContent.value = false
 })
 
-async function send(method: 'POST' | 'DELETE', body?: object) {
+async function send(suspension?: Suspension) {
     const done = await run(
         async () => {
             const id = props.user!.id
-            await pb.send(`/api/platform/users/${id}/suspension`, {
-                method,
-                body,
-            })
-            if (method === 'POST' && hideContent.value)
-                await pb.send(`/api/moderation/authors/${id}/hide`, {
-                    method: 'POST',
-                    body: { reason: reason.value.trim() },
-                })
+            if (suspension) await suspendUser(id, suspension)
+            else await liftSuspension(id)
+            if (suspension && hideContent.value)
+                await hideAuthor(id, reason.value.trim())
             return true
         },
         { success: t('moderation.saved') },
@@ -173,13 +169,13 @@ async function send(method: 'POST' | 'DELETE', body?: object) {
 
 function suspend() {
     const end = suspensionEnd(duration.value, until.value)
-    return send('POST', {
-        ...(end ? { until: end } : { permanent: true }),
-        reason: reason.value.trim(),
-    })
+    const why = reason.value.trim()
+    return send(
+        end ? { until: end, reason: why } : { permanent: true, reason: why },
+    )
 }
 
 function lift() {
-    return send('DELETE')
+    return send()
 }
 </script>

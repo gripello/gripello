@@ -5,22 +5,21 @@ import {
     type BrowserContextOptions,
     type Page,
 } from '@playwright/test'
-import type PocketBase from 'pocketbase'
-import type { RecordModel } from 'pocketbase'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
-import { signInAs } from './auth'
+import type { RouteRecord } from '../../types/models'
 import {
-    adminClient,
-    authAsSuperuser,
-    E2E_GYM_SLUG,
-    e2eGymId,
-    ensureUser,
-    getRoleIds,
-    sweepTestData,
-    uiaa,
-    type SeededUser,
-} from './seed'
+    Api,
+    apiAs,
+    createLocation,
+    createRoute,
+    deleteTestData,
+    gymAdminApi,
+    platformAdminApi,
+    routeInput,
+} from './api'
+import { signInAs } from './auth'
+import { E2E_GYM_SLUG, ensureUser, type SeededUser } from './seed'
 
 const AUTH_DIR = path.join(import.meta.dirname, '..', '.auth')
 
@@ -34,7 +33,9 @@ interface Location {
 }
 
 interface WorkerFixtures {
-    root: PocketBase
+    api: Api
+    adminApi: Api
+    adminToken: string
     workerLocation: Location
 }
 
@@ -45,8 +46,9 @@ interface Fixtures {
     platformPage: Page
     testPrefix: string
     deviceOptions: BrowserContextOptions
-    route: RecordModel
-    createRoute: (data?: Record<string, unknown>) => Promise<RecordModel>
+    route: RouteRecord
+    createRoute: (data?: Record<string, unknown>) => Promise<RouteRecord>
+    apiAs: (user: Pick<SeededUser, 'email' | 'password'>) => Promise<Api>
     createUser: (role?: string, label?: string) => Promise<SeededUser>
     pageAs: (user: Pick<SeededUser, 'email' | 'password'>) => Promise<Page>
 }
@@ -77,22 +79,30 @@ async function useRolePage(
 }
 
 export const test = base.extend<Fixtures, WorkerFixtures>({
-    root: [
+    api: [
         async ({}, use) => {
-            const pb = adminClient()
-            await authAsSuperuser(pb)
-            await use(pb)
+            await use(await platformAdminApi())
+        },
+        { scope: 'worker' },
+    ],
+    adminApi: [
+        async ({}, use) => {
+            await use(await gymAdminApi())
+        },
+        { scope: 'worker' },
+    ],
+    adminToken: [
+        async ({ adminApi }, use) => {
+            await use(adminApi.token)
         },
         { scope: 'worker' },
     ],
     workerLocation: [
-        async ({ root }, use, workerInfo) => {
+        async ({ adminApi }, use, workerInfo) => {
             const name = `e2e-w${workerInfo.workerIndex}-${randomUUID().slice(0, 8)} Hall`
-            const location = await root
-                .collection('locations')
-                .create({ name, gym: await e2eGymId(root) })
+            const location = await createLocation(adminApi, name)
             await use({ id: location.id, name })
-            await sweepTestData(root, name)
+            deleteTestData(name)
         },
         { scope: 'worker' },
     ],
@@ -130,36 +140,35 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
         useRolePage(browser, deviceOptions, 'user', use),
     platformPage: async ({ browser, deviceOptions }, use) =>
         useRolePage(browser, deviceOptions, 'platform', use),
-    testPrefix: async ({ root, workerLocation }, use, testInfo) => {
+    testPrefix: async ({}, use, testInfo) => {
         const prefix = `e2e-w${testInfo.workerIndex}-${Date.now()}`
         await use(prefix)
-        await sweepTestData(root, prefix, workerLocation.id)
+        deleteTestData(prefix)
     },
-    createRoute: async ({ root, workerLocation, testPrefix }, use) => {
+    apiAs: async ({}, use) => {
+        await use(apiAs)
+    },
+    createRoute: async ({ adminApi, workerLocation, testPrefix }, use) => {
         let count = 0
         await use(async (data = {}) =>
-            root.collection('routes').create({
-                name: `${testPrefix}-route-${++count}`,
-                ...uiaa('5'),
-                anchor_point: 1,
-                location: workerLocation.id,
-                type: 'Route',
-                color: '#F44336',
-                creator: ['E2E'],
-                screw_date: new Date().toISOString().slice(0, 10),
-                ...data,
-            }),
+            createRoute(
+                adminApi,
+                routeInput(
+                    `${testPrefix}-route-${++count}`,
+                    workerLocation.id,
+                    data,
+                ),
+            ),
         )
     },
     route: async ({ createRoute }, use) => {
         await use(await createRoute())
     },
-    createUser: async ({ root, testPrefix }, use) => {
-        const roleIds = await getRoleIds(root)
+    createUser: async ({ testPrefix }, use) => {
         await use(async (role = 'user', label = role) =>
             ensureUser(
-                root,
-                role === 'user' ? undefined : (roleIds[role] ?? role),
+                null,
+                role === 'user' ? undefined : role,
                 'user',
                 `${testPrefix}-${label}`,
             ),

@@ -1,4 +1,5 @@
 import { test, expect } from '../../support/fixtures'
+import { createRoute } from '../../support/api'
 import { uiaa } from '../../support/seed'
 import { gotoSettled } from '../../support/nav'
 import {
@@ -12,11 +13,11 @@ import {
 let seeded: SeededMap
 let unplacedIds: string[]
 
-test.beforeEach(async ({ root, testPrefix }) => {
-    seeded = await seedMap(root, testPrefix, { routes: 1 })
+test.beforeEach(async ({ adminApi, testPrefix }) => {
+    seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     unplacedIds = []
     for (const index of [1, 2]) {
-        const route = await root.collection('routes').create({
+        const route = await createRoute(adminApi, {
             name: `${testPrefix}-phone-${index}`,
             ...uiaa('6'),
             location: seeded.locationId,

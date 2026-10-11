@@ -261,7 +261,7 @@
 <script setup lang="ts">
 import { competitionPhase, competitionShareUrl } from '~/utils/competitions'
 import type { StandingRow } from '#shared/utils/competitionResults'
-import type { CompetitionRecord } from '~/types/models'
+import { getCompetition } from '~/api/competitions'
 import { MEDALS, PODIUM_ROWS } from '~/utils/themeColors'
 
 definePageMeta({ layout: false })
@@ -272,7 +272,6 @@ const SCROLL_STEP_MS = 50
 const SCROLL_PAUSE_MS = 3_000
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 const route = useRoute()
 const requestUrl = useRequestURL({
     xForwardedHost: true,
@@ -288,10 +287,7 @@ const page = ref(0)
 
 const { data: competition } = await useAsyncData(
     () => `tv-competition:${competitionId.value}`,
-    () =>
-        pb
-            .collection('competitions')
-            .getOne<CompetitionRecord>(competitionId.value),
+    () => getCompetition(competitionId.value),
     { enabled: () => !!competitionId.value },
 )
 

@@ -1,10 +1,11 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
+import { fileUrl, getMe } from '../../support/api'
 
 test('crops a new avatar before it is saved', async ({
     createUser,
     pageAs,
-    root,
+    apiAs,
 }) => {
     const climber = await createUser()
     const page = await pageAs(climber)
@@ -42,15 +43,15 @@ test('crops a new avatar before it is saved', async ({
     const saved = page.waitForResponse(
         (res) =>
             res.request().method() === 'PATCH' &&
-            res.url().includes('/api/collections/users/records/'),
+            new URL(res.url()).pathname === '/api/me',
     )
     await page.getByTestId('profile-save').click()
     expect((await saved).ok()).toBe(true)
 
-    const record = await root.collection('users').getOne(climber.id)
+    const record = await getMe(await apiAs(climber))
     expect(record.avatar).toMatch(/\.png$/)
     const file = await page.request.get(
-        root.files.getURL(record, record.avatar),
+        fileUrl('users', record.id, record.avatar!),
     )
     const bytes = await file.body()
     expect(bytes.readUInt32BE(16)).toBe(bytes.readUInt32BE(20))

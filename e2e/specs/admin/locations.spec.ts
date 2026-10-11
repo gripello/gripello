@@ -1,7 +1,8 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { authHeader, gotoSettled } from '../../support/nav'
-import { e2eGymId } from '../../support/seed'
+import { E2E_GYM_SLUG } from '../../support/seed'
+import { createLocation, deleteRoute } from '../../support/api'
 
 const locationRow = (page: Page, name: string) =>
     page.locator(`[data-testid="settings-location"][data-name="${name}"]`)
@@ -21,7 +22,7 @@ test('admins add, rename and delete locations used by the route form', async ({
     const renameSaved = page.waitForResponse(
         (response) =>
             response.request().method() === 'PATCH' &&
-            response.url().includes('/api/collections/locations/records/'),
+            /\/api\/locations\/[^/]+$/.test(response.url()),
     )
     await locationRow(page, name)
         .getByTestId('settings-location-name')
@@ -46,14 +47,12 @@ test('admins add, rename and delete locations used by the route form', async ({
 
 test('a location that still has routes cannot be deleted', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
     createRoute,
 }) => {
     const name = `${testPrefix} Busy`
-    const location = await root
-        .collection('locations')
-        .create({ name, gym: await e2eGymId(root) })
+    const location = await createLocation(adminApi, name)
     const route = await createRoute({ location: location.id })
 
     await gotoSettled(page, '/admin/settings?section=locations')
@@ -64,7 +63,7 @@ test('a location that still has routes cannot be deleted', async ({
     )
     await expect(row).toHaveCount(1)
 
-    await root.collection('routes').delete(route.id)
+    await deleteRoute(adminApi, route.id)
     await row.getByTestId('settings-location-delete').click()
     await expect(row).toHaveCount(0)
 })
@@ -74,8 +73,8 @@ test('only settings managers may change locations', async ({
 }) => {
     await gotoSettled(page, '/manage/routes')
     const response = await page.request.post(
-        '/api/collections/locations/records',
+        `/api/gyms/${E2E_GYM_SLUG}/locations`,
         { headers: await authHeader(page), data: { name: 'Setter Hall' } },
     )
-    expect(response.status()).toBe(400)
+    expect(response.status()).toBe(403)
 })

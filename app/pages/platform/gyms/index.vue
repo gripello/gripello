@@ -239,8 +239,10 @@
 </template>
 
 <script setup lang="ts">
+import { createGym as createGymRecord, updateGym } from '~/api/gyms'
+import { findRole, inviteMember } from '~/api/members'
 import type { Form, TableColumn } from '@nuxt/ui'
-import type { GymRecord, RoleRecord } from '~/types/models'
+import type { GymRecord } from '~/types/models'
 import { isValidGymSlug, slugifyGymName } from '#shared/utils/gymSlug'
 import { formatDate } from '#shared/utils/formatting'
 import type { PlatformGym } from '~/utils/platformGyms'
@@ -249,7 +251,6 @@ import { required, validEmail, validateRules } from '~/utils/validation'
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 
 useHead({ title: () => t('platform.gyms.title') })
 
@@ -301,22 +302,16 @@ function syncSlug() {
 }
 
 async function inviteFirstAdmin(gymId: string) {
-    const adminRole = await pb
-        .collection('roles')
-        .getFirstListItem<RoleRecord>(
-            pb.filter('gym = {:gym} && name = "admin"', { gym: gymId }),
-            { requestKey: null },
-        )
-    await pb.send(`/api/gyms/${gymId}/members`, {
-        method: 'POST',
-        body: { email: form.adminEmail.trim(), role: adminRole.id },
-        requestKey: null,
+    const adminRole = await findRole(gymId, 'admin')
+    await inviteMember(gymId, {
+        email: form.adminEmail.trim(),
+        role: adminRole.id,
     })
 }
 
 async function createGym() {
     const gym = await runSave(() =>
-        pb.collection('gyms').create<GymRecord>({
+        createGymRecord({
             name: form.name.trim(),
             slug: form.slug,
             active: true,
@@ -350,7 +345,7 @@ function requestActive(gym: GymRecord, active: boolean) {
 async function setActive(gym: GymRecord, active: boolean) {
     offlineTarget.value = null
     await runToggle(async () => {
-        await pb.collection('gyms').update(gym.id, { active })
+        await updateGym(gym.id, { active })
         gym.active = active
     })
 }

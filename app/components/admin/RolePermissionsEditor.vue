@@ -52,7 +52,7 @@
                             variant="outline"
                             size="sm"
                             icon="i-lucide-users-round"
-                            :label="String(memberCount(role))"
+                            :label="String(role.members)"
                             :aria-label="memberCountLabel(role)"
                             :title="memberCountLabel(role)"
                             :data-testid="`role-members-${role.name}`"
@@ -186,7 +186,7 @@
                                 v-for="perm in group.permissions"
                                 :key="perm.id"
                                 :model-value="
-                                    hasPermission(selectedRole, perm.id)
+                                    hasPermission(selectedRole, perm.name)
                                 "
                                 :disabled="
                                     isProtectedRole(selectedRole) || saving
@@ -273,10 +273,8 @@
                 <div class="flex-1" />
                 <UButton
                     color="error"
-                    :loading="deleting || countingHolders"
-                    :disabled="
-                        countingHolders || (holderCount > 0 && !reassignTo)
-                    "
+                    :loading="deleting"
+                    :disabled="holderCount > 0 && !reassignTo"
                     icon="i-lucide-trash-2"
                     data-testid="role-delete-confirm"
                     @click="deleteRole"
@@ -289,40 +287,48 @@
 </template>
 
 <script setup lang="ts">
+import type { GymEvent } from '~/composables/useRealtime'
+import { listPermissions } from '~/api/gyms'
 import { isAbortError } from '~/utils/errors'
 import {
     groupPermissions,
     isProtectedRole,
     reassignTargets,
     defaultReassignTarget,
-    memberCountsByRole,
     revokesOwnAccess,
 } from '~/utils/roles'
 import { membershipIn } from '#shared/utils/memberships'
 import type { PermissionRecord, RoleRecord } from '~/types/models'
 import { coalesce } from '~/utils/realtimeCache'
+import {
+    deleteRole as deleteRoleRecord,
+    listRoles,
+    setRolePermissions,
+    type ListedRole,
+} from '~/api/members'
 import { withSelectedRole } from '~/utils/adminUsersTab'
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
 const { memberships: ownMemberships, isPlatformAdmin } = usePermissions()
 
-const REASSIGN_BATCH_SIZE = 200
-
 const loading = ref(true)
 const { pending: saving, run: runSave } = useAsyncAction()
-const roles = ref<RoleRecord[]>([])
+const roles = ref<ListedRole[]>([])
 const allPermissions = ref<PermissionRecord[]>([])
-const memberCounts = ref<Record<string, number>>({})
 const { notify, error: notifyError } = useNotification()
 
 const editingRole = ref<Partial<RoleRecord> | null>(null)
 
 const deleteDialog = ref(false)
-const deletingRole = ref<RoleRecord | null>(null)
-const holderCount = ref(0)
-const countingHolders = ref(false)
+const deletingRole = ref<ListedRole | null>(null)
+const holderCount = computed(
+    () =>
+        roles.value.find((role) => role.id === deletingRole.value?.id)
+            ?.members ??
+        deletingRole.value?.members ??
+        0,
+)
 const reassignTo = ref<string>()
 const { pending: deleting, run: runDelete } = useAsyncAction()
 
@@ -339,18 +345,12 @@ function grantedCount(role: RoleRecord) {
     return (role.permissions ?? []).length
 }
 
-function memberCount(role: RoleRecord) {
-    return memberCounts.value[role.id] ?? 0
-}
-
-function memberCountLabel(role: RoleRecord) {
-    const n = memberCount(role)
+function memberCountLabel({ members: n }: ListedRole) {
     return t('permissions.memberCount', { n }, n)
 }
 
-function hasPermission(role: RoleRecord, permId: string) {
-    const perms = role.permissions ?? []
-    return perms.includes(permId)
+function hasPermission(role: RoleRecord, permission: string) {
+    return (role.permissions ?? []).includes(permission)
 }
 
 const route = useRoute()
@@ -374,13 +374,15 @@ function selectRole(role: Pick<RoleRecord, 'id'> | null) {
 const permissionGroups = computed(() => groupPermissions(allPermissions.value))
 
 function groupState(role: RoleRecord, group: PermissionRecord[]) {
-    const granted = group.filter((perm) => hasPermission(role, perm.id)).length
+    const granted = group.filter((perm) =>
+        hasPermission(role, perm.name),
+    ).length
     if (granted === 0) return false
     return granted === group.length ? true : 'indeterminate'
 }
 
 function toggleGroup(role: RoleRecord, group: PermissionRecord[]) {
-    const ids = group.map((perm) => perm.id)
+    const ids = group.map((perm) => perm.name)
     const current = role.permissions ?? []
     const grantAll = groupState(role, group) !== true
     return savePermissions(
@@ -395,9 +397,9 @@ function togglePermission(role: RoleRecord, perm: PermissionRecord) {
     const current = role.permissions ?? []
     return savePermissions(
         role,
-        current.includes(perm.id)
-            ? current.filter((id) => id !== perm.id)
-            : [...current, perm.id],
+        current.includes(perm.name)
+            ? current.filter((name) => name !== perm.name)
+            : [...current, perm.name],
     )
 }
 
@@ -408,7 +410,6 @@ function savePermissions(role: RoleRecord, perms: string[]) {
     const risky = revokesOwnAccess({
         role,
         nextPermissions: perms,
-        permissions: allPermissions.value,
         ownRoleId: membershipIn(ownMemberships.value, gymId.value)?.role,
         platformAdmin: isPlatformAdmin.value,
     })
@@ -429,9 +430,7 @@ async function persistPermissions(role: RoleRecord, currentPerms: string[]) {
     role.permissions = currentPerms
     const saved = await runSave(
         async () => {
-            await pb.collection('roles').update(role.id, {
-                permissions: currentPerms,
-            })
+            await setRolePermissions(role.id, currentPerms)
             return true
         },
         {
@@ -477,28 +476,10 @@ async function refreshRoles() {
     await Promise.all([fetchData({ silent: true }), refreshNuxtData('roles')])
 }
 
-async function confirmDelete(role: RoleRecord) {
+function confirmDelete(role: ListedRole) {
     deletingRole.value = role
-    holderCount.value = 0
-    countingHolders.value = true
     reassignTo.value = defaultReassignTarget(roles.value, role.id) ?? undefined
     deleteDialog.value = true
-
-    try {
-        const held = await pb.collection('memberships').getList(1, 1, {
-            filter: pb.filter('role = {:id}', { id: role.id }),
-            fields: 'id',
-            requestKey: 'roleHolderCount',
-        })
-        holderCount.value = held.totalItems
-    } catch (err) {
-        if (isAbortError(err)) return
-        console.error('Failed to count role holders:', err)
-        notifyError(t('permissions.loadError'))
-        deleteDialog.value = false
-    } finally {
-        countingHolders.value = false
-    }
 }
 
 async function deleteRole() {
@@ -507,24 +488,10 @@ async function deleteRole() {
 
     await runDelete(
         async () => {
-            if (holderCount.value > 0) {
-                const holders = await pb.collection('memberships').getFullList({
-                    filter: pb.filter('role = {:id}', { id: role.id }),
-                    fields: 'id',
-                    requestKey: 'roleHolders',
-                })
-                for (let i = 0; i < holders.length; i += REASSIGN_BATCH_SIZE) {
-                    const batch = pb.createBatch()
-                    for (const u of holders.slice(i, i + REASSIGN_BATCH_SIZE)) {
-                        batch.collection('memberships').update(u.id, {
-                            role: reassignTo.value,
-                        })
-                    }
-                    await batch.send()
-                }
-            }
-
-            await pb.collection('roles').delete(role.id)
+            await deleteRoleRecord(
+                role.id,
+                holderCount.value > 0 ? reassignTo.value : undefined,
+            )
             if (routeRoleId.value === role.id) await selectRole(null)
             deleteDialog.value = false
             deletingRole.value = null
@@ -540,25 +507,12 @@ async function deleteRole() {
 async function fetchData({ silent = false } = {}) {
     if (!silent) loading.value = true
     try {
-        const [rolesData, permsData, membershipsData] = await Promise.all([
-            pb.collection('roles').getFullList<RoleRecord>({
-                filter: pb.filter('gym = {:gym}', { gym: gymId.value }),
-                sort: 'name',
-                requestKey: 'rolePermEditor_roles',
-            }),
-            pb.collection('permissions').getFullList<PermissionRecord>({
-                sort: 'name',
-                requestKey: 'rolePermEditor_perms',
-            }),
-            pb.collection('memberships').getFullList<{ role: string }>({
-                filter: gymFilter(pb, gymId.value),
-                fields: 'role',
-                requestKey: 'rolePermEditor_members',
-            }),
+        const [rolesData, permsData] = await Promise.all([
+            listRoles(gymId.value),
+            listPermissions(),
         ])
         roles.value = rolesData
         allPermissions.value = permsData
-        memberCounts.value = memberCountsByRole(membershipsData)
     } catch (err) {
         if (isAbortError(err)) return
         console.error('Failed to fetch roles/permissions:', err)
@@ -575,7 +529,6 @@ const { data: initial } = useAsyncData(
         return {
             roles: roles.value,
             permissions: allPermissions.value,
-            memberCounts: memberCounts.value,
         }
     },
     { watch: [gymId] },
@@ -584,17 +537,21 @@ const { data: initial } = useAsyncData(
 if (initial.value) {
     roles.value = initial.value.roles
     allPermissions.value = initial.value.permissions
-    memberCounts.value = initial.value.memberCounts
     loading.value = false
 }
 
 defineExpose({ startCreate })
 
 const fetchDataSoon = coalesce(() => fetchData({ silent: true }))
-const { subscribe } = usePbSubscription(fetchDataSoon)
-onMounted(() => {
-    void subscribe('roles', fetchDataSoon)
-    void subscribe('permissions', fetchDataSoon)
-    void subscribe('memberships', fetchDataSoon)
-})
+useRealtime(
+    () => `gym:${gymId.value}`,
+    (event: GymEvent) => {
+        if (
+            event.kind === 'membership.changed' ||
+            event.kind === 'role.changed'
+        )
+            fetchDataSoon()
+    },
+    { onReactivate: fetchDataSoon },
+)
 </script>

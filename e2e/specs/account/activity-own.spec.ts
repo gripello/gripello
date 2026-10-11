@@ -1,6 +1,6 @@
 import { test, expect } from '../../support/fixtures'
-import { authHeader, gotoSettled, gymPath } from '../../support/nav'
-import { uiaa } from '../../support/seed'
+import { apiOf, gotoSettled, gymPath } from '../../support/nav'
+import { createRoute, getMe, routeInput, updateMe } from '../../support/api'
 import { fetchAuditRows } from '../../support/audit'
 
 test('a user sees their own entries and nobody else’s', async ({
@@ -11,19 +11,13 @@ test('a user sees their own entries and nobody else’s', async ({
     const page = await pageAs(await createUser())
     await gotoSettled(page, gymPath('/'), /\//)
 
-    const headers = await authHeader(page)
-    const me = await page.request.post('/api/collections/users/auth-refresh', {
-        headers,
-    })
-    const myId = (await me.json()).record?.id as string
+    const api = await apiOf(page)
+    const myId = (await getMe(api)).id
     expect(myId).toBeTruthy()
 
-    await page.request.patch(`/api/collections/users/records/${myId}`, {
-        headers,
-        data: { firstname: `${testPrefix}-self` },
-    })
+    await updateMe(api, { firstname: `${testPrefix}-self` })
 
-    const rows = await fetchAuditRows(page, '')
+    const rows = await fetchAuditRows(page, {}, 'own')
     expect(rows.length).toBeGreaterThan(0)
     for (const row of rows) {
         expect(row.actor).toBe(myId)
@@ -57,23 +51,20 @@ test('an admin sees entries from other actors too', async ({
 }) => {
     await gotoSettled(page, '/account/activity', /\/account\/activity/)
 
-    const headers = await authHeader(page)
-    const res = await page.request.post('/api/collections/routes/records', {
-        headers,
-        data: {
-            name: `${testPrefix}-admin-visible`,
-            ...uiaa('5'),
-            location: workerLocation.id,
-            type: 'Boulder',
-            creator: [testPrefix],
-        },
-    })
-    const routeId = (await res.json()).id as string
+    const routeId = (
+        await createRoute(
+            await apiOf(page),
+            routeInput(`${testPrefix}-admin-visible`, workerLocation.id, {
+                type: 'Boulder',
+                creator: [testPrefix],
+            }),
+        )
+    ).id
 
-    const rows = await fetchAuditRows(page, `record_id = "${routeId}"`)
+    const rows = await fetchAuditRows(page, { q: routeId })
     expect(rows.length).toBeGreaterThan(0)
 
-    const all = await fetchAuditRows(page, '')
+    const all = await fetchAuditRows(page, {})
     const actors = new Set(all.map((r) => r.actor))
     expect(actors.size).toBeGreaterThan(0)
 })

@@ -1,53 +1,86 @@
 import { describe, expect, it } from 'vitest'
-import { routeSearchFilter } from '~/utils/routeSearch'
+import { routeFilterQuery, routeSearchQuery } from '~/utils/routeSearch'
 
-describe('routeSearchFilter', () => {
-    it('returns an empty filter for blank input', () => {
-        expect(routeSearchFilter('   ')).toBe('')
+describe('routeSearchQuery', () => {
+    it('returns an empty query for blank input', () => {
+        expect(routeSearchQuery('   ')).toEqual({})
     })
 
     it('matches text against name and setter', () => {
-        expect(routeSearchFilter('Funk')).toBe(
-            '(name ~ "Funk" || creator ~ "Funk")',
-        )
+        expect(routeSearchQuery('Funk')).toEqual({ q: 'Funk' })
     })
 
     it('keeps words and plain numbers together as one phrase', () => {
-        expect(routeSearchFilter('Setter  3')).toBe(
-            '(name ~ "Setter 3" || creator ~ "Setter 3")',
-        )
+        expect(routeSearchQuery('Setter  3')).toEqual({ q: 'Setter 3' })
     })
 
     it('treats a lone number as a grade level with its signs', () => {
-        expect(routeSearchFilter('6')).toBe(
-            '(grade = "6-" || grade = "6" || grade = "6+")',
-        )
+        expect(routeSearchQuery('6')).toEqual({ grade: ['6-', '6', '6+'] })
     })
 
     it('searches text for a lone number that is no grade', () => {
-        expect(routeSearchFilter('99')).toBe('(name ~ "99" || creator ~ "99")')
+        expect(routeSearchQuery('99')).toEqual({ q: '99' })
     })
 
     it('treats signed grades as grade filters', () => {
-        expect(routeSearchFilter('Funk 7+')).toBe(
-            '(name ~ "Funk" || creator ~ "Funk") && grade = "7+"',
-        )
-        expect(routeSearchFilter('5-')).toBe('grade = "5-"')
+        expect(routeSearchQuery('Funk 7+')).toEqual({
+            q: 'Funk',
+            grade: ['7+'],
+        })
+        expect(routeSearchQuery('5-')).toEqual({ grade: ['5-'] })
     })
 
     it('recognises grades of every scale, case-insensitively', () => {
-        expect(routeSearchFilter('Funk 5.10a')).toBe(
-            '(name ~ "Funk" || creator ~ "Funk") && grade = "5.10a"',
-        )
-        expect(routeSearchFilter('v5')).toBe('grade = "V5"')
-        expect(routeSearchFilter('6a+')).toBe(
-            '(grade = "6a+" || grade = "6A+")',
-        )
+        expect(routeSearchQuery('Funk 5.10a')).toEqual({
+            q: 'Funk',
+            grade: ['5.10a'],
+        })
+        expect(routeSearchQuery('v5')).toEqual({ grade: ['V5'] })
+        expect(routeSearchQuery('6a+')).toEqual({ grade: ['6a+', '6A+'] })
+    })
+})
+
+describe('routeFilterQuery', () => {
+    const empty = {
+        difficulty: '',
+        location: '',
+        wall: '',
+        type: '',
+        search: '',
+    }
+
+    it('is empty without filters', () => {
+        expect(routeFilterQuery(empty)).toEqual({})
     })
 
-    it('escapes quotes and backslashes', () => {
-        expect(routeSearchFilter('say"hi\\')).toBe(
-            '(name ~ "say\\"hi\\\\" || creator ~ "say\\"hi\\\\")',
-        )
+    it('combines the selected filters with the search', () => {
+        expect(
+            routeFilterQuery({
+                difficulty: 'font:6a',
+                location: 'l1',
+                wall: 'w1',
+                type: 'Boulder',
+                search: 'Funk',
+            }),
+        ).toEqual({
+            q: 'Funk',
+            grade_system: 'font',
+            grade: ['6a'],
+            location: 'l1',
+            wall: 'w1',
+            type: 'Boulder',
+        })
+    })
+
+    it('keeps the selected grade when the search names it too', () => {
+        expect(
+            routeFilterQuery({ ...empty, difficulty: 'font:6a', search: '6a' }),
+        ).toEqual({ grade_system: 'font', grade: ['6a'] })
+    })
+
+    it('matches nothing when the search names another grade', () => {
+        expect(
+            routeFilterQuery({ ...empty, difficulty: 'font:6a', search: '7a' }),
+        ).toEqual({ grade_system: 'font', grade: [] })
     })
 })

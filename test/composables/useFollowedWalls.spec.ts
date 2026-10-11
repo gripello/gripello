@@ -8,24 +8,27 @@ vi.stubGlobal('useState', (key: string, init?: () => unknown) => {
 })
 
 let pbMock: any
-vi.stubGlobal('usePocketbase', () => pbMock)
+vi.stubGlobal('useAuthStore', () => pbMock.authStore)
+
+const follow = vi.fn()
+const unfollow = vi.fn()
+vi.mock('~/api/account', () => ({
+    followWall: (wall: string) => follow(wall),
+    unfollowWall: (wall: string) => unfollow(wall),
+}))
 
 describe('useFollowedWalls', () => {
-    let update: ReturnType<typeof vi.fn>
-
     beforeEach(() => {
         vi.resetModules()
         for (const key of Object.keys(useStateMocks)) delete useStateMocks[key]
-        update = vi
-            .fn()
-            .mockResolvedValue({ id: 'u1', followed_walls: ['w1', 'w2'] })
+        follow.mockReset().mockResolvedValue({ id: 'u1' })
+        unfollow.mockReset().mockResolvedValue({ id: 'u1' })
         pbMock = {
             authStore: {
                 token: 't',
                 record: { id: 'u1', followed_walls: ['w1'] },
                 save: vi.fn(),
             },
-            collection: vi.fn().mockReturnValue({ update }),
         }
     })
 
@@ -34,22 +37,22 @@ describe('useFollowedWalls', () => {
         return mod.useFollowedWalls()
     }
 
-    it('adds a wall with the relation modifier so other devices are not overwritten', async () => {
+    it('adds a single wall so other devices are not overwritten', async () => {
         const walls = await load()
         await walls.setFollowing('w2', true)
-        expect(update).toHaveBeenCalledWith('u1', { 'followed_walls+': 'w2' })
+        expect(follow).toHaveBeenCalledWith('w2')
         expect(walls.isFollowing('w2')).toBe(true)
     })
 
     it('removes a wall', async () => {
         const walls = await load()
         await walls.setFollowing('w1', false)
-        expect(update).toHaveBeenCalledWith('u1', { 'followed_walls-': 'w1' })
+        expect(unfollow).toHaveBeenCalledWith('w1')
         expect(walls.isFollowing('w1')).toBe(false)
     })
 
     it('rolls back when saving fails', async () => {
-        update.mockRejectedValue(new Error('offline'))
+        follow.mockRejectedValue(new Error('offline'))
         const walls = await load()
         await expect(walls.setFollowing('w2', true)).rejects.toThrow()
         expect(walls.followed.value).toEqual(['w1'])

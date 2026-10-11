@@ -16,9 +16,6 @@ vi.stubGlobal('useModerationSummary', () => ({
 }))
 vi.stubGlobal('routeGymSlug', (params: { gym?: string }) => params.gym ?? '')
 vi.stubGlobal('navTestId', (path: string) => path.replace(/\W/g, ''))
-vi.stubGlobal('usePbFileUrl', (_: unknown, file?: string) =>
-    file ? `/files/${file}` : '',
-)
 
 const UNavigationMenu = defineComponent({
     props: { items: { type: Array, default: () => [] } },

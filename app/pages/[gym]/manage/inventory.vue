@@ -489,6 +489,7 @@
 </template>
 
 <script setup lang="ts">
+import { archiveRoute, archiveRoutes, listRoutes } from '~/api/routes'
 import { formatAnchorPoint, locationName } from '#shared/utils/formatting'
 import {
     clearSession,
@@ -503,8 +504,11 @@ import {
     sortByAnchor,
 } from '~/utils/inventory'
 import type { RouteRecord } from '~/types/models'
-import { sendInBatches } from '~/utils/batch'
-import { coalesce } from '~/utils/realtimeCache'
+import {
+    coalesce,
+    gymChangesTopic,
+    type GymChange,
+} from '~/utils/realtimeCache'
 
 definePageMeta({
     middleware: 'auth',
@@ -516,7 +520,6 @@ const ROUTE_FIELDS =
 const SCAN_COOLDOWN_MS = 2000
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
 const { mdAndUp } = useDisplay()
 const { data: locationRecords } = useLocations()
@@ -847,7 +850,7 @@ const addScannedRoute = async (id: string) => {
 
     if (route.archived) {
         try {
-            await pb.collection('routes').update(id, { archived: false })
+            await archiveRoute(id, false)
             allRoutes.value = allRoutes.value.map((entry) =>
                 entry.id === id ? { ...entry, archived: false } : entry,
             )
@@ -906,14 +909,12 @@ const undoScan = (route: RouteRecord) => {
 const loadRoutes = async () => {
     loadingRoutes.value = true
     try {
-        allRoutes.value = await pb
-            .collection('routes')
-            .getFullList<RouteRecord>({
-                filter: gymFilter(pb, gymId.value),
-                fields: ROUTE_FIELDS,
-                expand: 'location',
-                $autoCancel: false,
-            })
+        const { items } = await listRoutes<RouteRecord>(
+            gymId.value,
+            { archived: 'all', include: ['location'] },
+            { fields: ROUTE_FIELDS, requestKey: null },
+        )
+        allRoutes.value = items
         reconcileScannedIds()
     } catch (error) {
         const message = (error as { message?: string })?.message
@@ -974,9 +975,7 @@ const confirmFinish = async () => {
     await runArchive(
         async () => {
             try {
-                await sendInBatches(pb, ids, (batch, id) =>
-                    batch.collection('routes').update(id, { archived: true }),
-                )
+                await archiveRoutes(gymId.value, ids)
             } catch (error) {
                 await loadRoutes()
                 throw error
@@ -1005,10 +1004,15 @@ if (initial.value) {
 }
 
 const loadRoutesSoon = coalesce(loadRoutes)
-const { subscribe } = usePbSubscription(loadRoutesSoon)
+useRealtime(
+    () => gymChangesTopic(gymId.value),
+    (change: GymChange) => {
+        if (change.collection === 'routes') loadRoutesSoon()
+    },
+    { onReactivate: loadRoutesSoon },
+)
 
 onMounted(() => {
-    void subscribe('routes', loadRoutesSoon)
     restoreSession()
     reconcileScannedIds()
     if (!hasSeenInstructions()) instructionsDialog.value = true

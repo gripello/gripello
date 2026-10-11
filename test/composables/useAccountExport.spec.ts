@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAccountExport } from '~/composables/useAccountExport'
 import { useAsyncAction } from '~/composables/useAsyncAction'
+import { useAuthState } from '~/api/auth'
+import { mockApi } from '../api/apiMock'
 
 const saveBlob = vi.fn()
 vi.mock('~/utils/download', () => ({
@@ -12,20 +14,18 @@ vi.stubGlobal('useNotification', () => ({
     success: vi.fn(),
     error: notifyError,
 }))
-vi.stubGlobal('usePocketbase', () => ({
-    buildURL: (path: string) => `http://pb${path}`,
-    authStore: { token: 'token-1' },
-}))
 
 vi.stubGlobal('useAsyncAction', useAsyncAction)
 
-const fetchMock = vi.fn()
-vi.stubGlobal('fetch', fetchMock)
+let fetchMock: ReturnType<typeof mockApi>['fetchMock']
+let api: ReturnType<typeof mockApi>
 
 beforeEach(() => {
     saveBlob.mockReset()
     notifyError.mockReset()
-    fetchMock.mockReset()
+    api = mockApi()
+    fetchMock = api.fetchMock
+    useAuthState().saveAuth({ token: 'token-1', record: { id: 'u1' } as never })
     vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
@@ -33,9 +33,10 @@ describe('useAccountExport', () => {
     it('downloads the zip with the auth token', async () => {
         fetchMock.mockResolvedValue(new Response('zip'))
         expect(await useAccountExport().download()).toBe(true)
-        expect(fetchMock).toHaveBeenCalledWith('http://pb/api/account/export', {
-            headers: { Authorization: 'token-1' },
-        })
+        expect(api.request().url).toBe('/api/me/export')
+        expect(api.request().headers.get('Authorization')).toBe(
+            'Bearer token-1',
+        )
         expect(saveBlob).toHaveBeenCalledWith(
             expect.any(Blob),
             expect.stringMatching(/^gripello-data-\d{4}-\d{2}-\d{2}\.zip$/),

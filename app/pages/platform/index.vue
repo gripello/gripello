@@ -204,7 +204,7 @@
 </template>
 
 <script setup lang="ts">
-import type { UserRecord } from '~/types/models'
+import { listPlatformUsers } from '~/api/platform'
 import { platformTotals, type PlatformGym } from '~/utils/platformGyms'
 import { userDisplayName } from '~/utils/platformUsers'
 import { parseDate } from '#shared/utils/formatting'
@@ -212,7 +212,6 @@ import { parseDate } from '#shared/utils/formatting'
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
 const { t } = useI18n()
-const pb = usePocketbase()
 
 useHead({ title: () => t('platform.overview.title') })
 
@@ -226,12 +225,13 @@ const [
     useAsyncData(
         'platform-admins',
         () =>
-            pb.collection('users').getFullList<UserRecord>({
-                filter: 'platform_admin = true',
-                fields: 'id,collectionId,email,username,firstname,name,avatar',
-                sort: 'email',
-                requestKey: null,
-            }),
+            listPlatformUsers(
+                { filter: 'platform_admins' },
+                {
+                    fields: 'id,collectionId,email,username,firstname,name,avatar',
+                    requestKey: null,
+                },
+            ).then(({ items }) => items),
         { default: () => [] },
     ),
 ])

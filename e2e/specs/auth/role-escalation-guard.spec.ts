@@ -1,227 +1,183 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { e2eGymId, ensureUser, getRoleIds } from '../../support/seed'
-
-async function membershipOf(root: PocketBase, user: string) {
-    return root
-        .collection('memberships')
-        .getFirstListItem(
-            root.filter('user = {:user} && gym = {:gym}', {
-                user,
-                gym: await e2eGymId(root),
-            }),
-            { requestKey: null },
-        )
-        .catch(() => null)
-}
-
-const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
-
-async function throwaway(
-    admin: PocketBase,
-    role: 'user' | 'admin',
-    prefix: string,
-) {
-    const roleIds = await getRoleIds(admin)
-    const seeded = await ensureUser(admin, roleIds[role], role, prefix)
-
-    const pb = new PocketBase(PB_URL)
-    await pb.collection('users').authWithPassword(seeded.email, seeded.password)
-
-    return { pb, id: seeded.id, roleId: roleIds[role] }
-}
+import {
+    addMembership,
+    changeMembershipRole,
+    createRole,
+    findRole,
+    inviteMember,
+    membershipOf,
+    setRolePermissions,
+    updateMe,
+    type Api,
+} from '../../support/api'
+import type { SeededUser } from '../../support/seed'
 
 test.describe('role escalation guard', () => {
     test('a plain member cannot give themselves the admin role', async ({
-        root,
-        testPrefix,
+        adminApi,
+        apiAs,
+        createUser,
     }) => {
-        const { pb, id } = await throwaway(root, 'user', testPrefix)
-        const adminRole = (await getRoleIds(root)).admin
+        const user = await createUser()
+        const adminRole = await findRole(adminApi, 'admin')
 
         await expect(
-            pb.collection('memberships').create({
-                user: id,
-                gym: await e2eGymId(root),
-                role: adminRole,
-            }),
-        ).rejects.toMatchObject({ status: 400 })
+            addMembership(await apiAs(user), user.id, adminRole.id),
+        ).rejects.toMatchObject({ status: 403 })
 
-        expect(await membershipOf(root, id)).toBeNull()
+        expect(await membershipOf(adminApi, user.id)).toBeNull()
     })
 
     test('a plain member can still edit their own profile', async ({
-        root,
-        testPrefix,
+        apiAs,
+        createUser,
     }) => {
-        const { pb, id } = await throwaway(root, 'user', testPrefix)
+        const user = await createUser()
 
-        const updated = await pb
-            .collection('users')
-            .update(id, { firstname: 'Guarded' })
+        const updated = await updateMe(await apiAs(user), {
+            firstname: 'Guarded',
+        })
 
         expect(updated.firstname).toBe('Guarded')
     })
 
-    test('manage_users can still assign a role', async ({
-        root,
-        testPrefix,
+    test('manage_users cannot attach a user without an invite', async ({
+        adminApi,
+        apiAs,
+        createUser,
     }) => {
-        const manager = await throwaway(root, 'admin', `${testPrefix}-mgr`)
-        const target = await throwaway(root, 'user', `${testPrefix}-tgt`)
+        const manager = await createUser('admin', 'mgr')
+        const target = await createUser('user', 'tgt')
+        const setterRole = await findRole(adminApi, 'routesetter')
 
-        const setterRole = (await getRoleIds(root)).routesetter
-        expect(target.roleId).not.toBe(setterRole)
+        await expect(
+            addMembership(await apiAs(manager), target.id, setterRole.id),
+        ).rejects.toMatchObject({ status: 403 })
 
-        const moved = await manager.pb.collection('memberships').create({
-            user: target.id,
-            gym: await e2eGymId(root),
-            role: setterRole,
-        })
-
-        expect(moved.role).toBe(setterRole)
+        expect(await membershipOf(adminApi, target.id)).toBeNull()
     })
 })
 
 test.describe('user manager without admin role', () => {
-    let root: PocketBase
+    async function managerSetup({
+        api,
+        adminApi,
+        apiAs,
+        createUser,
+        testPrefix: prefix,
+    }: {
+        api: Api
+        adminApi: Api
+        apiAs: (user: SeededUser) => Promise<Api>
+        createUser: (role?: string, label?: string) => Promise<SeededUser>
+        testPrefix: string
+    }) {
+        const managerRole = await createRole(adminApi, `${prefix}-mgr-role`, [
+            'manage_users',
+        ])
+        const narrowRole = await createRole(
+            adminApi,
+            `${prefix}-narrow-role`,
+            [],
+        )
+        const manager = await createUser('user', 'mgr')
+        const target = await createUser('user', 'tgt')
+        await addMembership(api, manager.id, managerRole.id)
+        await addMembership(api, target.id, narrowRole.id)
+        return {
+            managerApi: await apiAs(manager),
+            managerRole,
+            narrowRole,
+            manager,
+            target,
+        }
+    }
 
-    test.beforeAll(async ({ root: workerRoot }) => {
-        root = workerRoot
+    test('cannot give the admin role to anyone', async ({
+        api,
+        adminApi,
+        apiAs,
+        createUser,
+        testPrefix,
+    }) => {
+        const setup = await managerSetup({
+            api,
+            adminApi,
+            apiAs,
+            createUser,
+            testPrefix,
+        })
+        const adminRole = await findRole(adminApi, 'admin')
+        const own = await membershipOf(adminApi, setup.manager.id)
+        const target = await membershipOf(adminApi, setup.target.id)
+
+        await expect(
+            changeMembershipRole(setup.managerApi, own!.id, adminRole.id),
+        ).rejects.toMatchObject({ status: 403 })
+        await expect(
+            changeMembershipRole(setup.managerApi, target!.id, adminRole.id),
+        ).rejects.toMatchObject({ status: 403 })
+
+        const outsider = await createUser('user', 'out')
+        await expect(
+            inviteMember(setup.managerApi, {
+                email: outsider.email,
+                role: adminRole.id,
+            }),
+        ).rejects.toMatchObject({ status: 403 })
+        expect(await membershipOf(adminApi, outsider.id)).toBeNull()
+
+        const after = await membershipOf(adminApi, setup.target.id)
+        expect(after?.role.id).toBe(setup.narrowRole.id)
     })
 
-    async function permissionIds(names: string[]) {
-        const records = await root
-            .collection('permissions')
-            .getFullList({ requestKey: null })
-        return records
-            .filter((record) => names.includes(record.name))
-            .map((record) => record.id)
-    }
-
-    async function managerSetup(prefix: string) {
-        const managerRole = await root.collection('roles').create({
-            gym: await e2eGymId(root),
-            name: `${prefix}-mgr-role`,
-            permissions: await permissionIds(['manage_users']),
+    test('cannot add a permission it does not hold to its own role', async ({
+        api,
+        adminApi,
+        apiAs,
+        createUser,
+        testPrefix,
+    }) => {
+        const setup = await managerSetup({
+            api,
+            adminApi,
+            apiAs,
+            createUser,
+            testPrefix,
         })
-        const narrowRole = await root.collection('roles').create({
-            gym: await e2eGymId(root),
-            name: `${prefix}-narrow-role`,
-            permissions: [],
-        })
-        const manager = await ensureUser(
-            root,
-            managerRole.id,
-            'user',
-            `${prefix}-mgr`,
-        )
-        const target = await ensureUser(
-            root,
-            narrowRole.id,
-            'user',
-            `${prefix}-tgt`,
-        )
-        const pb = new PocketBase(PB_URL)
-        await pb
-            .collection('users')
-            .authWithPassword(manager.email, manager.password)
-        return { pb, managerRole, narrowRole, manager, target }
-    }
 
-    async function teardown(setup: Awaited<ReturnType<typeof managerSetup>>) {
-        for (const id of [setup.manager.id, setup.target.id]) {
-            await root
-                .collection('users')
-                .delete(id, { requestKey: null })
-                .catch(() => {})
-        }
-        for (const id of [setup.managerRole.id, setup.narrowRole.id]) {
-            await root
-                .collection('roles')
-                .delete(id, { requestKey: null })
-                .catch(() => {})
-        }
-    }
-
-    test('cannot give the admin role to anyone', async ({}, info) => {
-        const setup = await managerSetup(
-            `guard-noadm-w${info.workerIndex}-${Date.now()}`,
-        )
-        try {
-            const adminRole = (await getRoleIds(root)).admin
-            const memberships = setup.pb.collection('memberships')
-            const own = await membershipOf(root, setup.manager.id)
-            const target = await membershipOf(root, setup.target.id)
-
-            await expect(
-                memberships.update(own!.id, { role: adminRole }),
-            ).rejects.toMatchObject({ status: 403 })
-            await expect(
-                memberships.update(target!.id, { role: adminRole }),
-            ).rejects.toMatchObject({ status: 403 })
-            const outsider = await ensureUser(
-                root,
-                undefined,
-                'user',
-                `${setup.managerRole.name}-out`,
-            )
-            try {
-                await expect(
-                    setup.pb.send(`/api/gyms/${await e2eGymId(root)}/members`, {
-                        method: 'POST',
-                        body: { email: outsider.email, role: adminRole },
-                    }),
-                ).rejects.toMatchObject({ status: 403 })
-                expect(await membershipOf(root, outsider.id)).toBeNull()
-            } finally {
-                await root.collection('users').delete(outsider.id)
-            }
-
-            const after = await membershipOf(root, setup.target.id)
-            expect(after?.role).toBe(setup.narrowRole.id)
-        } finally {
-            await teardown(setup)
-        }
-    })
-
-    test('cannot add a permission it does not hold to its own role', async ({}, info) => {
-        const setup = await managerSetup(
-            `guard-perm-w${info.workerIndex}-${Date.now()}`,
-        )
-        try {
-            const [settingsPermission] = await permissionIds([
+        await expect(
+            setRolePermissions(setup.managerApi, setup.managerRole.id, [
+                'manage_users',
                 'manage_settings',
-            ])
+            ]),
+        ).rejects.toMatchObject({ status: 403 })
 
-            await expect(
-                setup.pb.collection('roles').update(setup.managerRole.id, {
-                    'permissions+': settingsPermission,
-                }),
-            ).rejects.toMatchObject({ status: 403 })
-
-            const role = await root
-                .collection('roles')
-                .getOne(setup.managerRole.id)
-            expect(role.permissions).not.toContain(settingsPermission)
-        } finally {
-            await teardown(setup)
-        }
+        const role = await findRole(adminApi, setup.managerRole.name)
+        expect(role.permissions).not.toContain('manage_settings')
     })
 
-    test('can assign a role within its own permissions', async ({}, info) => {
-        const setup = await managerSetup(
-            `guard-sub-w${info.workerIndex}-${Date.now()}`,
+    test('can assign a role within its own permissions', async ({
+        api,
+        adminApi,
+        apiAs,
+        createUser,
+        testPrefix,
+    }) => {
+        const setup = await managerSetup({
+            api,
+            adminApi,
+            apiAs,
+            createUser,
+            testPrefix,
+        })
+        const target = await membershipOf(adminApi, setup.target.id)
+        const moved = await changeMembershipRole(
+            setup.managerApi,
+            target!.id,
+            setup.managerRole.id,
         )
-        try {
-            const target = await membershipOf(root, setup.target.id)
-            const moved = await setup.pb
-                .collection('memberships')
-                .update(target!.id, { role: setup.managerRole.id })
 
-            expect(moved.role).toBe(setup.managerRole.id)
-        } finally {
-            await teardown(setup)
-        }
+        expect(moved.role).toBe(setup.managerRole.id)
     })
 })

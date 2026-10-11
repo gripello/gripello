@@ -1,21 +1,16 @@
 import type { FullConfig } from '@playwright/test'
-import PocketBase from 'pocketbase'
 import fs from 'node:fs'
 import path from 'node:path'
+import { authCookieValue, login, type AuthResult } from './auth'
 import {
-    authAsSuperuser,
     E2E_GYM_SLUG,
     ensureGym,
     ensureUser,
-    getRoleIds,
     seedRatings,
     seedRoutes,
-    sweepTestData,
 } from './seed'
-import { takeSnapshot } from './state-snapshot'
 
 const AUTH_DIR = path.join(import.meta.dirname, '..', '.auth')
-const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
 const PREFIX = 'e2e'
 
 async function withRetry<T>(action: () => Promise<T>, attempts = 6) {
@@ -27,13 +22,6 @@ async function withRetry<T>(action: () => Promise<T>, attempts = 6) {
             await new Promise((resolve) => setTimeout(resolve, attempt * 500))
         }
     }
-}
-
-async function authCookieValue(email: string, password: string) {
-    const pb = new PocketBase(PB_URL)
-    await pb.collection('users').authWithPassword(email, password)
-    const cookie = pb.authStore.exportToCookie({}, 'pb_auth')
-    return cookie.slice('pb_auth='.length, cookie.indexOf(';'))
 }
 
 function saveStorageState(baseURL: string, cookieValue: string, file: string) {
@@ -81,40 +69,29 @@ async function warmUpPages(baseURL: string, adminCookie: string) {
     }
 }
 
-async function relaxRateLimits(pb: PocketBase) {
-    await pb.settings.update({ rateLimits: { enabled: false } })
-}
-
 export default async function globalSetup(config: FullConfig) {
-    const pb = new PocketBase(PB_URL)
-    pb.autoCancellation(false)
-    await withRetry(() => authAsSuperuser(pb))
-    await ensureGym(pb)
-    await takeSnapshot(pb)
-    await relaxRateLimits(pb)
-    await sweepTestData(pb, 'e2e-w')
-
-    const roleIds = await getRoleIds(pb)
+    ensureGym()
     const seededUsers = {
-        admin: await ensureUser(pb, roleIds.admin, 'admin', PREFIX),
+        admin: await ensureUser(null, 'admin', 'admin', PREFIX),
         routesetter: await ensureUser(
-            pb,
-            roleIds.routesetter,
+            null,
+            'routesetter',
             'routesetter',
             PREFIX,
         ),
-        user: await ensureUser(pb, undefined, 'user', PREFIX),
-        platform: await ensureUser(pb, undefined, 'platform', PREFIX),
+        user: await ensureUser(null, undefined, 'user', PREFIX),
+        platform: await ensureUser(null, undefined, 'platform', PREFIX, true),
     }
-    await pb
-        .collection('users')
-        .update(seededUsers.admin.id, { platform_admin: false })
-    await pb
-        .collection('users')
-        .update(seededUsers.platform.id, { platform_admin: true })
 
-    const routes = await seedRoutes(pb, PREFIX)
-    await seedRatings(pb, PREFIX, routes)
+    const sessions: Record<string, AuthResult> = {}
+    for (const [role, seeded] of Object.entries(seededUsers)) {
+        sessions[role] = await withRetry(() =>
+            login(seeded.email, seeded.password),
+        )
+    }
+
+    const { routes, created } = await seedRoutes(sessions.admin!.token, PREFIX)
+    if (created) await seedRatings(PREFIX, routes)
 
     fs.mkdirSync(AUTH_DIR, { recursive: true })
 
@@ -123,17 +100,13 @@ export default async function globalSetup(config: FullConfig) {
         process.env.E2E_BASE_URL ||
         'https://localhost'
 
-    const cookies: Record<string, string> = {}
-    for (const [role, seeded] of Object.entries(seededUsers)) {
-        cookies[role] = await withRetry(() =>
-            authCookieValue(seeded.email, seeded.password),
-        )
+    for (const [role, session] of Object.entries(sessions)) {
         saveStorageState(
             baseURL,
-            cookies[role]!,
+            authCookieValue(session),
             path.join(AUTH_DIR, `${role}.json`),
         )
     }
 
-    await warmUpPages(baseURL, cookies.admin!)
+    await warmUpPages(baseURL, authCookieValue(sessions.admin!))
 }

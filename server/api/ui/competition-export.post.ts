@@ -1,5 +1,10 @@
 import { createError, eventHandler, readBody, setResponseHeaders } from 'h3'
-import { getAuthenticatedPb, requirePermission } from '../../utils/pb-server'
+import {
+    apiFetch,
+    fetchFile,
+    requirePermission,
+    type Api,
+} from '../../utils/api-server'
 import { loadResults } from '../../utils/competitionResults'
 import { attachmentHeader } from '../../utils/export'
 import {
@@ -54,23 +59,19 @@ export default eventHandler(async (event) => {
         throw createError({ statusCode: 400, statusMessage: 'Bad request.' })
     }
     const locale = safeLocale(body.locale)
-    const competition = await getAuthenticatedPb(event)
-        .collection('competitions')
-        .getOne<CompetitionRecord>(id, { requestKey: null })
-        .catch(() => {
-            throw createError({ statusCode: 404, statusMessage: 'Not found.' })
-        })
-    const pb = await requirePermission(
+    const competition = await apiFetch(event)<CompetitionRecord>(
+        `/competitions/${id}`,
+    ).catch(() => {
+        throw createError({ statusCode: 404, statusMessage: 'Not found.' })
+    })
+    const api = await requirePermission(
         event,
         'manage_competitions',
         competition.gym ?? '',
     )
     const [results, gym] = await Promise.all([
-        loadResults(pb, competition, true),
-        pb
-            .collection('gyms')
-            .getOne<GymRecord>(competition.gym ?? '', { requestKey: null })
-            .catch(() => null),
+        loadResults(api, id),
+        api<GymRecord>(`/gyms/${competition.gym}`).catch(() => null),
     ])
     setResponseHeaders(event, {
         'Content-Type': MIME[format],
@@ -85,7 +86,7 @@ export default eventHandler(async (event) => {
 
     if (kind === 'certificates') {
         const logo = gym?.sign_image
-            ? await fetchImage(pb.files.getURL(gym, gym.sign_image))
+            ? await fetchFile(api, 'gyms', gym, gym.sign_image)
             : null
         const rows = results.categories.flatMap((category) =>
             category.rows.map((row) => ({ category: category.name, row })),
@@ -115,7 +116,7 @@ export default eventHandler(async (event) => {
         kind === 'results'
             ? standingsTable(results.categories, results.format, labels)
             : await loadStartList(
-                  pb,
+                  api,
                   id,
                   labels,
                   !!competition.requires_payment,
@@ -129,25 +130,18 @@ export default eventHandler(async (event) => {
 })
 
 async function loadStartList(
-    pb: Awaited<ReturnType<typeof requirePermission>>,
+    api: Api,
     id: string,
     labels: ExportLabels,
     withPaid: boolean,
 ) {
-    const filter = pb.filter('competition = {:id}', { id })
     const [entries, categories] = await Promise.all([
-        pb
-            .collection('competition_entries')
-            .getFullList<CompetitionEntryRecord>({ filter, requestKey: null }),
-        pb
-            .collection('competition_categories')
-            .getFullList<CompetitionCategoryRecord>({
-                filter,
-                sort: 'sort,name',
-                requestKey: null,
-            }),
+        api<{ items: CompetitionEntryRecord[] }>(`/competitions/${id}/entries`),
+        api<{ items: CompetitionCategoryRecord[] }>(
+            `/competitions/${id}/categories`,
+        ),
     ])
-    return startListTable(entries, categories, labels, withPaid)
+    return startListTable(entries.items, categories.items, labels, withPaid)
 }
 
 async function renderXlsx(table: ExportTable, title: string) {
@@ -412,14 +406,5 @@ function safeLocale(locale: string | undefined) {
         )
     } catch {
         return 'en'
-    }
-}
-
-async function fetchImage(url: string) {
-    try {
-        const response = await fetch(url)
-        return response.ok ? Buffer.from(await response.arrayBuffer()) : null
-    } catch {
-        return null
     }
 }

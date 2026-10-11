@@ -4,10 +4,10 @@ import { seedMap } from '../../support/map'
 
 test('a mat can be drawn on a phone and finished with the button', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 1 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     try {
         await gotoSettled(page, `/admin/map?location=${seeded.locationId}`)
         const shapes = page.getByTestId('map-editor-shape-item')

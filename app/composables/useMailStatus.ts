@@ -1,12 +1,12 @@
-export function useMailStatus() {
-    const pb = usePocketbase()
+import { useApi } from '~/api/client'
 
+export function useMailStatus() {
     return useAsyncData<{ configured: boolean }>(
         'mail-status',
         async () => {
             try {
-                return await pb.send('/api/mail-status', { method: 'GET' })
-            } catch (err) {
+                return await useApi()<{ configured: boolean }>('/mail-status')
+            } catch {
                 return { configured: true }
             }
         },

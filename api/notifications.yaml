@@ -1,0 +1,234 @@
+openapi: 3.1.0
+info:
+  title: Gripello notifications and Web Push
+  version: 1.0.0
+paths:
+  /me/notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      description: The caller's bell, newest first. Live changes arrive on realtime topic `own_notifications` as {action, record}.
+      parameters:
+        - { name: unread, in: query, description: 'true = only unread', schema: { type: boolean } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: One page of notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, limit, total]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/notifications/read:
+    post:
+      operationId: markNotificationsRead
+      tags: [notifications]
+      description: Marks the given own notifications (or all) read; foreign ids are ignored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids: { type: array, items: { type: string } }
+                all: { type: boolean }
+      responses:
+        '204': { description: Marked }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/notifications/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      operationId: deleteNotification
+      tags: [notifications]
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /notifications/settings:
+    get:
+      operationId: getNotificationSettings
+      tags: [notifications]
+      description: Public. VAPID key and the mutable topics; `permission` limits who is offered a topic (`platform_admin` = platform admins).
+      responses:
+        '200':
+          description: Push settings
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled, publicKey, topics]
+                properties:
+                  enabled: { type: boolean }
+                  publicKey: { type: string }
+                  topics:
+                    type: array
+                    items:
+                      type: object
+                      required: [key]
+                      properties:
+                        key: { type: string }
+                        permission: { type: string }
+  /me/notification-prefs:
+    get:
+      operationId: getNotificationPrefs
+      tags: [notifications]
+      responses:
+        '200': { $ref: '#/components/responses/NotificationPrefs' }
+        '401': { $ref: '#/components/responses/Error' }
+    put:
+      operationId: putNotificationPrefs
+      tags: [notifications]
+      description: Replaces the opt-outs. Only channel `push` and known topic keys are accepted; unset means on.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationPrefs' }
+      responses:
+        '200': { $ref: '#/components/responses/NotificationPrefs' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/push-subscriptions:
+    get:
+      operationId: listPushSubscriptions
+      tags: [notifications]
+      responses:
+        '200':
+          description: The caller's devices
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/PushSubscription' } }
+        '401': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createPushSubscription
+      tags: [notifications]
+      description: >
+        The endpoint must be https on a known push service (FCM, Apple, Mozilla, WNS). An existing endpoint of the caller
+        is updated; one of another user moves to the caller (same id) only when p256dh and auth match, else 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, p256dh, auth]
+              properties:
+                endpoint: { type: string }
+                p256dh: { type: string, maxLength: 200 }
+                auth: { type: string, maxLength: 100 }
+                device: { type: string, maxLength: 200 }
+      responses:
+        '201':
+          description: Subscribed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PushSubscription' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /me/push-subscriptions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      operationId: deletePushSubscription
+      tags: [notifications]
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /me/push/test:
+    post:
+      operationId: sendTestPush
+      tags: [notifications]
+      description: Sends a test push to one of the caller's own devices. 3 per minute per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint]
+              properties:
+                endpoint: { type: string }
+      responses:
+        '204': { description: Sent }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotificationPrefs:
+      description: Opt-outs
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/NotificationPrefs' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    Notification:
+      type: object
+      required: [id, created, updated, user, type, params, url, read]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        user: { type: string }
+        type: { type: string, description: 'bell text key notifications.center.types.<type>' }
+        params: { type: object, additionalProperties: true }
+        url: { type: string }
+        read: { type: boolean }
+    NotificationPrefs:
+      type: object
+      description: '{channel: {topic: false}}'
+      additionalProperties:
+        type: object
+        additionalProperties: { type: boolean }
+    PushSubscription:
+      type: object
+      required: [id, created, updated, user, endpoint, device]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        user: { type: string }
+        endpoint: { type: string }
+        device: { type: string }

@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type PocketBase from 'pocketbase'
-import {
-    findGym,
-    loadGym,
-    routeGymSlug,
-    routeParam,
-} from '~/composables/useGym'
+import { loadGym, routeGymSlug, routeParam } from '~/composables/useGym'
+import { getGym } from '~/api/gyms'
+import { routeApi } from '../api/apiMock'
 
 vi.stubGlobal(
     'createError',
@@ -25,69 +21,55 @@ const gyms = [
     { id: 'g3', slug: 'closed', name: 'Closed', active: false },
 ]
 
-const getFirstListItem = vi.fn()
-const pb = {
-    filter: (raw: string, params: { slug: string }) =>
-        raw.replace('{:slug}', JSON.stringify(params.slug)),
-    collection: () => ({ getFirstListItem }),
-} as unknown as PocketBase
+const getGymRequest = vi.fn()
 
 describe('loadGym', () => {
     beforeEach(() => {
-        getFirstListItem.mockReset().mockImplementation(async (filter) => {
+        getGymRequest.mockReset().mockImplementation(async (path: string) => {
+            const slug = decodeURIComponent(path.replace('/gyms/', ''))
             const gym = gyms.find(
                 (g) =>
                     g.active &&
-                    (filter === `slug = "${g.slug}" && active = true` ||
-                        g.previous_slugs?.some(
-                            (previous) =>
-                                filter ===
-                                `previous_slugs ~ ${JSON.stringify(JSON.stringify(previous))} && active = true`,
-                        )),
+                    (g.slug === slug || g.previous_slugs?.includes(slug)),
             )
             if (!gym) throw Object.assign(new Error('missing'), { status: 404 })
-            return gym
+            return gym.slug === slug ? gym : { ...gym, redirect_to: gym.slug }
         })
+        routeApi(getGymRequest)
     })
 
     it('prefers the gym named in the route over the cookie', async () => {
-        expect(await loadGym(pb, 'second', 'first')).toMatchObject({ id: 'g2' })
+        expect(await loadGym('second', 'first')).toMatchObject({ id: 'g2' })
     })
 
     it('rejects an unknown or inactive route slug with 404', async () => {
-        await expect(loadGym(pb, 'nope', '')).rejects.toMatchObject({
+        await expect(loadGym('nope', '')).rejects.toMatchObject({
             statusCode: 404,
         })
-        await expect(loadGym(pb, 'closed', '')).rejects.toMatchObject({
+        await expect(loadGym('closed', '')).rejects.toMatchObject({
             statusCode: 404,
         })
     })
 
     it('uses the cookie when the route has no gym', async () => {
-        expect(await loadGym(pb, '', 'second')).toMatchObject({ id: 'g2' })
+        expect(await loadGym('', 'second')).toMatchObject({ id: 'g2' })
     })
 
     it('returns null without route slug and cookie or for a stale cookie', async () => {
-        expect(await loadGym(pb, '', '')).toBeNull()
-        expect(await loadGym(pb, '', 'gone')).toBeNull()
-        expect(getFirstListItem).toHaveBeenCalledTimes(2)
+        expect(await loadGym('', '')).toBeNull()
+        expect(await loadGym('', 'gone')).toBeNull()
+        expect(getGymRequest).toHaveBeenCalledTimes(1)
     })
 
-    it('falls back to a previous slug of the gym', async () => {
-        expect(await findGym(pb, 'erste')).toMatchObject({
-            id: 'g1',
-            slug: 'first',
-        })
-    })
-
-    it('skips the previous slug lookup for invalid slugs', async () => {
-        expect(await findGym(pb, '%')).toBeNull()
-        expect(getFirstListItem).toHaveBeenCalledTimes(1)
+    it('resolves a previous slug to the current gym without redirect_to', async () => {
+        const gym = await getGym('erste')
+        expect(gym).toMatchObject({ id: 'g1', slug: 'first' })
+        expect(gym).not.toHaveProperty('redirect_to')
     })
 
     it('finds nothing for an empty slug without asking the server', async () => {
-        expect(await findGym(pb, '')).toBeNull()
-        expect(getFirstListItem).not.toHaveBeenCalled()
+        expect(await getGym('')).toBeNull()
+        expect(getGymRequest).not.toHaveBeenCalled()
     })
 })
 

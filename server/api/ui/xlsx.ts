@@ -1,11 +1,11 @@
 import { eventHandler, createError } from 'h3'
-import { requirePermission } from '../../utils/pb-server'
+import { requirePermission } from '../../utils/api-server'
 import {
     resolveRouteIds,
     resolveExportColumns,
     resolveApplicationUrl,
     resolveExportGymId,
-    fetchRecordsByIds,
+    fetchRoutesByIds,
 } from '../../utils/export'
 import { normalizeHexColor } from '#shared/utils/color'
 
@@ -20,7 +20,7 @@ export default eventHandler(async (event) => {
     const { Workbook } = await import('@cj-tech-master/excelts')
 
     const gymId = await resolveExportGymId(event)
-    const pb = await requirePermission(event, 'manage_routes', gymId)
+    const api = await requirePermission(event, 'manage_routes', gymId)
     const res = event.node.res
 
     const ids = await resolveRouteIds(event)
@@ -41,14 +41,10 @@ export default eventHandler(async (event) => {
 
     try {
         const uniqueIds = Array.from(new Set(ids))
-        const records = await fetchRecordsByIds(pb, {
-            collection: 'routes',
-            ids: uniqueIds,
-            field: 'id',
-            expand: 'location,wall',
-            requestKey: 'export-xlsx-routes',
-            gym: gymId,
-        })
+        const records = await fetchRoutesByIds(api, gymId, uniqueIds, [
+            'location',
+            'wall',
+        ])
 
         const recordById = new Map(records.map((record) => [record.id, record]))
         const climbingRoutes = uniqueIds

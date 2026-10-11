@@ -205,15 +205,16 @@
 </template>
 
 <script setup lang="ts">
-import type { GymRecord, RoleRecord } from '~/types/models'
+import { listGyms } from '~/api/gyms'
+import { listRoles } from '~/api/members'
+import { deletePlatformUser, listPlatformUsers } from '~/api/platform'
+import { fileUrl } from '~/api/client'
 import { nameInitials } from '~/utils/avatar'
 import { formatDate } from '#shared/utils/formatting'
 import {
-    PLATFORM_USER_FIELDS,
     isPermanentlySuspended,
     isSuspended,
     membershipChips,
-    platformUserFilter,
     userDisplayName,
     userKeptThroughReload,
     type PlatformUser,
@@ -223,7 +224,6 @@ import {
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 
 useHead({ title: () => t('platform.users.title') })
 
@@ -235,16 +235,8 @@ const {
     'platform-user-lookups',
     async () => {
         const [gyms, roles] = await Promise.all([
-            pb.collection('gyms').getFullList<GymRecord>({
-                fields: 'id,slug,name,unit_name,active',
-                sort: 'name',
-                requestKey: null,
-            }),
-            pb.collection('roles').getFullList<RoleRecord>({
-                fields: 'id,gym,name,color',
-                sort: 'name',
-                requestKey: null,
-            }),
+            listGyms({ all: true }),
+            listRoles(null),
         ])
         return { gyms, roles }
     },
@@ -254,7 +246,6 @@ const gyms = computed(() => lookups.value.gyms)
 const roles = computed(() => lookups.value.roles)
 
 const search = ref('')
-const emailMatchIds = ref<string[]>([])
 const kind = ref<PlatformUserFilter | null>(
     (['platform_admins', 'unverified', 'suspended'] as const).find(
         (value) => value === useRoute().query.show,
@@ -276,21 +267,20 @@ const {
     reloadLoaded,
     loadMore,
     prefetch,
-} = usePbList<PlatformUser>('users', {
-    perPage: 48,
-    requestKey: 'platformUsers',
-    query: () => ({
-        sort: 'email',
-        filter: platformUserFilter(
-            (raw, params) => pb.filter(raw, params),
-            search.value,
-            kind.value,
-            emailMatchIds.value,
+} = usePbList<PlatformUser>(
+    (page, limit) =>
+        listPlatformUsers(
+            {
+                q: search.value,
+                filter: kind.value,
+                page,
+                limit,
+                total: true,
+            },
+            { requestKey: 'platformUsers' },
         ),
-        expand: 'memberships_via_user',
-        fields: PLATFORM_USER_FIELDS,
-    }),
-})
+    { perPage: 48, requestKey: 'platformUsers' },
+)
 
 await prefetch('platform-users')
 
@@ -306,7 +296,7 @@ const rows = computed(() =>
                 email: user.email ?? '',
                 initials: nameInitials(displayName),
                 avatarUrl:
-                    usePbFileUrl(user, user.avatar, { thumb: '100x100' }) ||
+                    fileUrl('users', user, user.avatar, { thumb: '100x100' }) ||
                     null,
             },
         }
@@ -316,18 +306,7 @@ const rows = computed(() =>
 let searchDebounce: ReturnType<typeof setTimeout> | undefined
 watch(search, () => {
     clearTimeout(searchDebounce)
-    searchDebounce = setTimeout(async () => {
-        const term = search.value.trim()
-        emailMatchIds.value = term
-            ? (
-                  await pb.send<{ ids: string[] }>(
-                      '/api/platform/users/email-matches',
-                      { query: { q: term }, requestKey: null },
-                  )
-              ).ids
-            : []
-        await reloadUsers()
-    }, 300)
+    searchDebounce = setTimeout(() => void reloadUsers(), 300)
 })
 watch(kind, () => reloadUsers())
 
@@ -374,7 +353,7 @@ async function deleteUser() {
     if (!id) return
     await runRemove(
         async () => {
-            await pb.collection('users').delete(id)
+            await deletePlatformUser(id)
             users.value = users.value.filter((user) => user.id !== id)
             deleteOpen.value = false
             editOpen.value = false

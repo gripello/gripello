@@ -1,11 +1,14 @@
 import { test, expect } from '../../support/fixtures'
+import { createGym, deleteGym } from '../../support/api'
 import { assertSettledUrl, gotoSettled, gymPath } from '../../support/nav'
 
-test('climbers switch gyms from the header', async ({ page, root }) => {
+test('climbers switch gyms from the header', async ({ page, api }) => {
     const slug = `e2e-switch-${Date.now()}`
-    const other = await root
-        .collection('gyms')
-        .create({ slug, name: 'E2E Switch Gym', active: true })
+    const other = await createGym(api, {
+        slug,
+        name: 'E2E Switch Gym',
+        active: true,
+    })
     try {
         await gotoSettled(page, `/${slug}/routes`)
         await gotoSettled(page, gymPath('/map'))
@@ -26,7 +29,7 @@ test('climbers switch gyms from the header', async ({ page, root }) => {
         await page.waitForURL((url) => url.pathname === '/')
         await expect(page.getByTestId('landing')).toBeVisible()
     } finally {
-        await root.collection('gyms').delete(other.id)
+        await deleteGym(api, other.id)
     }
 })
 

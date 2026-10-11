@@ -1,5 +1,6 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
+import { uploadMyImage } from '../../support/api'
 
 test('the profile avatar upload opens with the keyboard', async ({
     userPage: page,
@@ -22,18 +23,16 @@ const ONE_PIXEL_PNG = Buffer.from(
 )
 
 test('an uploaded avatar is shown in the user menu', async ({
-    root,
+    apiAs,
     createUser,
     pageAs,
 }) => {
     const user = await createUser('user')
-    const form = new FormData()
-    form.append(
-        'avatar',
-        new Blob([ONE_PIXEL_PNG], { type: 'image/png' }),
-        'a.png',
-    )
-    await root.collection('users').update(user.id, form)
+    await uploadMyImage(await apiAs(user), 'avatar', {
+        name: 'a.png',
+        mimeType: 'image/png',
+        buffer: ONE_PIXEL_PNG,
+    })
     const page = await pageAs(user)
 
     await gotoSettled(page, '/account')

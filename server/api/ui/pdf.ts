@@ -1,5 +1,5 @@
 import { eventHandler, createError, setResponseHeaders } from 'h3'
-import { requirePermission } from '../../utils/pb-server'
+import { fetchFile, requirePermission } from '../../utils/api-server'
 import {
     resolveRouteIds,
     requireRouteIds,
@@ -7,12 +7,11 @@ import {
     MAX_TAG_ROUTES,
     resolveApplicationUrl,
     resolveExportGymId,
-    fetchRecordsByIds,
+    fetchRoutesByIds,
     resolveExportLocale,
     resolveExportLabel,
     resolveExportShow,
     TAG_QR_ERROR_CORRECTION,
-    fetchLogo,
 } from '../../utils/export'
 import { drawRouteTag } from '../../utils/routeTag'
 import { gymBandsFrom } from '#shared/utils/gradeReference'
@@ -22,17 +21,16 @@ export default eventHandler(async (event) => {
     const { default: QRCode } = await import('qrcode')
     const { default: PDFDocument } = await import('pdfkit')
     const gymId = await resolveExportGymId(event)
-    const pb = await requirePermission(event, 'manage_routes', gymId)
+    const api = await requirePermission(event, 'manage_routes', gymId)
     const ids = requireRouteIds(await resolveRouteIds(event), MAX_TAG_ROUTES)
 
     try {
-        const gym = await pb.collection('gyms').getOne<GymRecord>(gymId)
+        const gym = await api<GymRecord>(`/gyms/${gymId}`)
 
         const show = await resolveExportShow(event)
         let logo: Buffer | null = null
         if (gym.sign_image && show.logo) {
-            const logoUrl = pb.files.getURL(gym, gym.sign_image)
-            logo = await fetchLogo(logoUrl)
+            logo = await fetchFile(api, 'gyms', gym, gym.sign_image)
         }
 
         const applicationUrl = resolveApplicationUrl(event)
@@ -48,13 +46,7 @@ export default eventHandler(async (event) => {
 
         const QR_PX = 330
 
-        const records = await fetchRecordsByIds(pb, {
-            collection: 'routes',
-            ids,
-            field: 'id',
-            requestKey: 'pdfExport',
-            gym: gymId,
-        })
+        const records = await fetchRoutesByIds(api, gymId, ids)
         const byId = new Map(records.map((record) => [record.id, record]))
         const routes = ids
             .map((id) => byId.get(id))

@@ -82,7 +82,13 @@
 </template>
 
 <script setup lang="ts">
-import type { CompetitionCategoryRecord } from '~/types/models'
+import {
+    createCategory,
+    deleteCategory,
+    listCategories,
+    updateCategory,
+    type CategoryInput,
+} from '~/api/competitions'
 
 const ANY_GENDER = 'any'
 
@@ -98,7 +104,6 @@ const props = defineProps<{ competitionId: string }>()
 
 const emit = defineEmits<{ changed: [] }>()
 
-const pb = usePocketbase()
 const { t } = useI18n()
 const { run } = useAsyncAction()
 
@@ -114,15 +119,7 @@ const genderItems = computed(() => [
 
 const { data: categories, refresh } = useAsyncData(
     () => `competition-categories:${props.competitionId}`,
-    () =>
-        pb
-            .collection('competition_categories')
-            .getFullList<CompetitionCategoryRecord>({
-                filter: pb.filter('competition = {:id}', {
-                    id: props.competitionId,
-                }),
-                sort: 'sort,name',
-            }),
+    () => listCategories(props.competitionId),
 )
 
 watch(
@@ -147,9 +144,10 @@ async function save(index: number) {
     const row = rows.value[index]
     if (!row) return
     const body = {
-        competition: props.competitionId,
         name: row.name.trim(),
-        gender: row.gender === ANY_GENDER ? '' : row.gender,
+        gender: (row.gender === ANY_GENDER
+            ? ''
+            : row.gender) as CategoryInput['gender'],
         min_birth_year: row.min_birth_year ?? 0,
         max_birth_year: row.max_birth_year ?? 0,
         sort: index + 1,
@@ -157,9 +155,8 @@ async function save(index: number) {
     savingIndex.value = index
     await run(
         async () => {
-            const collection = pb.collection('competition_categories')
-            if (row.id) await collection.update(row.id, body)
-            else await collection.create(body)
+            if (row.id) await updateCategory(row.id, body)
+            else await createCategory(props.competitionId, body)
             await refresh()
             emit('changed')
         },
@@ -176,7 +173,7 @@ async function remove(index: number) {
     }
     await run(
         async () => {
-            await pb.collection('competition_categories').delete(row.id!)
+            await deleteCategory(row.id!)
             await refresh()
             emit('changed')
         },

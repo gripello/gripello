@@ -68,7 +68,7 @@ import {
     auditTargetUrl,
     compressIp,
     isRecordAction,
-    isSuperuserEntry,
+    isPlatformAdminEntry,
 } from '~/utils/audit'
 import { formatDate, timeAgo } from '#shared/utils/formatting'
 import type { AuditLogRecord } from '~/types/models'
@@ -78,7 +78,7 @@ const props = defineProps<{ entry: AuditLogRecord }>()
 const { t, te, locale } = useI18n()
 
 const actorName = computed(() => {
-    if (isSuperuserEntry(props.entry)) return t('audit.superuser')
+    if (isPlatformAdminEntry(props.entry)) return t('audit.superuser')
     return props.entry.actor_label || t('audit.anonymous')
 })
 

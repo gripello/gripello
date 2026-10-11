@@ -3,10 +3,17 @@ import { gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { openCase } from '../../support/moderation'
+import {
+    getPlatformUser,
+    listRouteRatings,
+    notificationsOfType,
+} from '../../support/api'
 
 test('the platform hides everything a spammer posted and suspends them', async ({
     platformPage,
-    root,
+    api,
+    adminApi,
+    apiAs,
     route,
     createUser,
     pageAs,
@@ -25,7 +32,7 @@ test('the platform hides everything a spammer posted and suspends them', async (
         route.id,
         `${testPrefix}-buy-two`,
     )
-    await createReport(spamPage, {
+    await createReport({
         contentId: first,
         explanation: `${testPrefix}-ads`,
     })
@@ -44,27 +51,20 @@ test('the platform hides everything a spammer posted and suspends them', async (
     for (const id of [first, second]) {
         await expect
             .poll(async () =>
-                root
-                    .collection('ratings')
-                    .getOne(id)
-                    .then(
-                        () => 'visible',
-                        () => 'gone',
-                    ),
+                (await listRouteRatings(adminApi, route.id)).some(
+                    (rating) => rating.id === id,
+                )
+                    ? 'visible'
+                    : 'gone',
             )
             .toBe('gone')
     }
+    const spammerApi = await apiAs(spammer)
     await expect
         .poll(
             async () =>
-                (
-                    await root.collection('notifications').getFullList({
-                        filter: root.filter(
-                            'user = {:user} && type = "content_hidden"',
-                            { user: spammer.id },
-                        ),
-                    })
-                ).length,
+                (await notificationsOfType(spammerApi, 'content_hidden'))
+                    .length,
         )
         .toBe(1)
 
@@ -85,8 +85,7 @@ test('the platform hides everything a spammer posted and suspends them', async (
     await expect
         .poll(
             async () =>
-                (await root.collection('users').getOne(spammer.id))
-                    .suspended_until,
+                (await getPlatformUser(api, spammer.id)).suspended_until,
         )
         .toMatch(/^9999-/)
 })

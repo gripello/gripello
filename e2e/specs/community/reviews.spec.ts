@@ -1,11 +1,17 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { signInAs } from '../../support/auth'
+import {
+    apiAs,
+    createRating,
+    listRouteRatings,
+    updateMe,
+} from '../../support/api'
 
 test('signed-in climbers see review authors, who can delete their own', async ({
     page,
     pageAs,
-    root,
+    adminApi,
     createUser,
     route,
     testPrefix,
@@ -13,14 +19,11 @@ test('signed-in climbers see review authors, who can delete their own', async ({
     const author = await createUser('user', 'author')
     const reader = await createUser('user', 'reader')
     const authorName = `Rae${testPrefix.replace(/\D/g, '')}`
-    await root
-        .collection('users')
-        .update(author.id, { firstname: authorName, name: 'Review' })
-    const review = await root.collection('ratings').create({
-        route_id: route.id,
+    const authorApi = await apiAs(author)
+    await updateMe(authorApi, { firstname: authorName, name: 'Review' })
+    const review = await createRating(authorApi, route.id, {
         rating: 4,
         comment: `${testPrefix} nice moves`,
-        user: author.id,
     })
     const card = (target: typeof page) =>
         target.getByTestId(`comment-card-${review.id}`)
@@ -35,9 +38,7 @@ test('signed-in climbers see review authors, who can delete their own', async ({
         card(readerPage).getByTestId('comment-card-delete'),
     ).toHaveCount(0)
 
-    await root
-        .collection('users')
-        .update(author.id, { reviews_anonymous: true })
+    await updateMe(authorApi, { reviews_anonymous: true })
     await gotoSettled(readerPage, `/route?id=${route.id}`)
     await expect(card(readerPage)).toContainText('Anonymous')
 
@@ -46,5 +47,7 @@ test('signed-in climbers see review authors, who can delete their own', async ({
     await card(page).getByTestId('comment-card-delete').click()
     await page.getByTestId('confirm-dialog-confirm').click()
     await expect(card(page)).toHaveCount(0)
-    await expect(root.collection('ratings').getOne(review.id)).rejects.toThrow()
+    expect(
+        (await listRouteRatings(adminApi, route.id)).map((rating) => rating.id),
+    ).not.toContain(review.id)
 })

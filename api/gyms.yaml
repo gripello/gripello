@@ -1,0 +1,292 @@
+openapi: 3.1.0
+info:
+  title: Gripello gyms
+  version: 1.0.0
+  description: 'Realtime topic gym:<id> sends gym.created / gym.updated as {record: Gym} and gym.deleted as {id, slug}.'
+paths:
+  /gyms:
+    get:
+      operationId: listGyms
+      tags: [gyms]
+      parameters:
+        - name: all
+          in: query
+          description: '1 includes inactive gyms (platform admins only, ignored otherwise)'
+          schema: { type: string, enum: ['1'] }
+      responses:
+        '200':
+          description: Active gyms ordered by name
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Gym' }
+    post:
+      operationId: createGym
+      tags: [gyms]
+      description: Platform admins only. Seeds the roles admin (every permission) and routesetter.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/GymInput'
+                - required: [slug, name]
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/GymMultipart' }
+      responses:
+        '201':
+          description: Created gym
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Gym' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}:
+    parameters:
+      - name: gym
+        in: path
+        required: true
+        description: 'GET: slug, previous slug or id. PATCH/DELETE: id.'
+        schema: { type: string }
+    get:
+      operationId: getGym
+      tags: [gyms]
+      description: Inactive gyms are only found by their managers (manage_settings) and platform admins.
+      responses:
+        '200':
+          description: The gym; `redirect_to` is set when it was found by a previous slug
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Gym'
+                  - type: object
+                    properties:
+                      redirect_to: { type: string, description: Current slug }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      operationId: updateGym
+      tags: [gyms]
+      description: manage_settings members or platform admins; slug, previous_slugs, features and active only by platform admins.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GymInput' }
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/GymMultipart' }
+      responses:
+        '200':
+          description: Updated gym
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Gym' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteGym
+      tags: [gyms]
+      description: Platform admins only. Deletes the gym's content, then retires its slug and previous slugs.
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [gyms]
+      responses:
+        '200':
+          description: Platform settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settings' }
+    patch:
+      operationId: updateSettings
+      tags: [gyms]
+      description: Platform admins only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SettingsInput' }
+      responses:
+        '200':
+          description: Updated settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settings' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /permissions:
+    get:
+      operationId: listPermissions
+      tags: [gyms]
+      responses:
+        '200':
+          description: Every permission, ordered by name
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Permission' }
+        '401': { $ref: '#/components/responses/Error' }
+components:
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    OpeningHours:
+      type: [object, 'null']
+      description: '{mon…sun, holiday: [["07:00","23:00"]]}; closes < opens runs past midnight'
+      propertyNames:
+        enum: [mon, tue, wed, thu, fri, sat, sun, holiday]
+      additionalProperties:
+        type: [array, 'null']
+        items:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+    Amenity:
+      type: string
+      enum: [toilets, showers, changing_rooms, lockers, cafe, shop, rental, parking, bike_parking, public_transport, kids_area, training_area, outdoor_area, yoga, sauna, wheelchair, wifi]
+    Language:
+      type: string
+      enum: ['', en, de, nl, fr, es]
+    GymFields:
+      type: object
+      properties:
+        slug: { type: string, pattern: '^[a-z0-9-]{3,40}$' }
+        name: { type: string, maxLength: 100 }
+        unit_name: { type: string, maxLength: 100 }
+        active: { type: boolean }
+        contact_email: { type: string, format: email }
+        route_grade_system: { type: string, maxLength: 50 }
+        boulder_grade_system: { type: string, maxLength: 50 }
+        boulder_bands: {}
+        legal_address: { type: string, maxLength: 1000 }
+        legal_phone: { type: string, maxLength: 100 }
+        legal_register: { type: string, maxLength: 500 }
+        legal_vat_id: { type: string, maxLength: 100 }
+        legal_editorial: { type: string, maxLength: 500 }
+        legal_representatives: {}
+        imprint_url: { type: string, format: uri }
+        privacy_url: { type: string, format: uri }
+        privacy_extra: { type: string, maxLength: 10000 }
+        previous_slugs: { type: array, items: { type: string } }
+        language: { $ref: '#/components/schemas/Language' }
+        features:
+          type: object
+          additionalProperties: { type: boolean }
+        premoderate_betas: { type: boolean }
+        description: { type: string, maxLength: 2000 }
+        address: { type: string, maxLength: 300 }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        website_url: { type: string, format: uri }
+        opening_hours: { $ref: '#/components/schemas/OpeningHours' }
+        hours_note: { type: string, maxLength: 300 }
+        amenities:
+          type: array
+          items: { $ref: '#/components/schemas/Amenity' }
+    GymInput:
+      description: Any subset of the fields; file fields only accept null or "" (clear), uploads go through multipart.
+      allOf:
+        - $ref: '#/components/schemas/GymFields'
+        - type: object
+          properties:
+            page_logo: { type: ['null', string], enum: [null, ''] }
+            page_icon: { type: ['null', string], enum: [null, ''] }
+            sign_image: { type: ['null', string], enum: [null, ''] }
+            cover_image: { type: ['null', string], enum: [null, ''] }
+    GymMultipart:
+      type: object
+      properties:
+        '@jsonPayload':
+          type: string
+          description: GymInput as JSON
+        page_logo: { type: string, format: binary, description: 'jpeg, png, svg, webp; max 5 MB' }
+        page_icon: { type: string, format: binary, description: 'x-icon; max 5 MB' }
+        sign_image: { type: string, format: binary, description: 'jpeg, png, svg, webp; max 5 MB' }
+        cover_image: { type: string, format: binary, description: 'jpeg, png, webp; max 5 MB' }
+    Gym:
+      allOf:
+        - $ref: '#/components/schemas/GymFields'
+        - type: object
+          required: [id, created, updated, slug, name, active, features, previous_slugs, amenities]
+          properties:
+            id: { type: string }
+            created: { type: string, format: date-time }
+            updated: { type: string, format: date-time }
+            page_logo: { type: string, description: 'File name under /files/gyms/{id}/' }
+            page_icon: { type: string }
+            sign_image: { type: string }
+            cover_image: { type: string }
+    SettingsFields:
+      type: object
+      properties:
+        imprint_url: { type: string, format: uri }
+        privacy_url: { type: string, format: uri }
+        contact_email: { type: string, format: email }
+        audit_retention_days: { type: integer, description: '0 = unset, else 1–3650' }
+        legal_address: { type: string, maxLength: 1000 }
+        legal_phone: { type: string, maxLength: 100 }
+        legal_register: { type: string, maxLength: 500 }
+        legal_vat_id: { type: string, maxLength: 100 }
+        legal_editorial: { type: string, maxLength: 500 }
+        legal_representatives: {}
+        allow_registration: { type: boolean }
+    SettingsInput:
+      $ref: '#/components/schemas/SettingsFields'
+    Settings:
+      allOf:
+        - $ref: '#/components/schemas/SettingsFields'
+        - type: object
+          required: [id, created, updated]
+          properties:
+            id: { type: string }
+            created: { type: string, format: date-time }
+            updated: { type: string, format: date-time }
+            floor_plan: { type: string }
+    Permission:
+      type: object
+      required: [id, name, label]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        label: { type: string }

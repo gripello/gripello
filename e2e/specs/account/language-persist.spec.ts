@@ -1,10 +1,11 @@
 import { test, expect } from '../../support/fixtures'
 import { fillLogin } from '../../support/auth'
 import { gotoSettled, gymPath } from '../../support/nav'
+import { getPlatformUser } from '../../support/api'
 
 test('the chosen language is saved on the user and restored on the next login', async ({
     page: secondSession,
-    root,
+    api,
     createUser,
     pageAs,
 }) => {
@@ -20,10 +21,7 @@ test('the chosen language is saved on the user and restored on the next login', 
     await expect(firstSession.getByTestId('profile-unsaved')).toHaveCount(0)
     await expect(firstSession.locator('html')).toHaveAttribute('lang', 'de')
     await expect
-        .poll(
-            async () =>
-                (await root.collection('users').getOne(user.id)).language,
-        )
+        .poll(async () => (await getPlatformUser(api, user.id)).language)
         .toBe('de')
 
     await gotoSettled(secondSession, '/auth/login')

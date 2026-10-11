@@ -8,21 +8,19 @@ vi.stubGlobal('useNotification', () => ({ error: notifyError }))
 const getList = vi.fn()
 
 function pageOf(ids: string[], totalItems: number) {
-    return { items: ids.map((id) => ({ id })), totalItems }
+    return { items: ids.map((id) => ({ id })), total: totalItems }
 }
 
 beforeEach(() => {
     getList.mockReset()
     notifyError.mockReset()
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    globalThis.__POCKETBASE_CLIENT__ = { collection: () => ({ getList }) }
 })
 
-function createList(filter = 'a = 1') {
-    const list = usePbList<{ id: string }>('things', {
+function createList() {
+    const list = usePbList<{ id: string }>(getList, {
         perPage: 2,
         requestKey: 'thingsList',
-        query: () => ({ filter, sort: '-created' }),
     })
     return {
         ...list,
@@ -35,11 +33,7 @@ describe('usePbList', () => {
         getList.mockResolvedValue(pageOf(['a', 'b'], 3))
         const list = createList()
         await list.refresh()
-        expect(getList).toHaveBeenCalledWith(1, 2, {
-            filter: 'a = 1',
-            sort: '-created',
-            requestKey: 'thingsList',
-        })
+        expect(getList).toHaveBeenCalledWith(1, 2)
         expect(list.ids.value).toEqual(['a', 'b'])
         expect(list.totalItems.value).toBe(3)
         expect(list.hasMore.value).toBe(true)
@@ -60,7 +54,7 @@ describe('usePbList', () => {
         expect(list.loading.value).toBe(false)
         await reloading
 
-        expect(getList).toHaveBeenLastCalledWith(1, 4, expect.anything())
+        expect(getList).toHaveBeenLastCalledWith(1, 4)
         expect(list.ids.value).toEqual(['new', 'a', 'b', 'c'])
         expect(list.totalItems.value).toBe(6)
     })
@@ -72,7 +66,7 @@ describe('usePbList', () => {
         const list = createList()
         await list.refresh()
         await list.loadMore()
-        expect(getList).toHaveBeenLastCalledWith(2, 2, expect.anything())
+        expect(getList).toHaveBeenLastCalledWith(2, 2)
         expect(list.ids.value).toEqual(['a', 'b', 'c'])
         expect(list.hasMore.value).toBe(false)
 
@@ -103,7 +97,7 @@ describe('usePbList', () => {
         list.items.value = list.items.value.filter((item) => item.id !== 'a')
         list.totalItems.value--
         await list.loadMore()
-        expect(getList).toHaveBeenLastCalledWith(2, 2, expect.anything())
+        expect(getList).toHaveBeenLastCalledWith(2, 2)
         expect(list.ids.value).toEqual(['b', 'c', 'd'])
     })
 
@@ -128,7 +122,7 @@ describe('usePbList', () => {
         await list.refresh()
         await list.loadMore()
         await list.refresh()
-        expect(getList).toHaveBeenLastCalledWith(1, 2, expect.anything())
+        expect(getList).toHaveBeenLastCalledWith(1, 2)
         expect(list.ids.value).toEqual(['x'])
         expect(list.totalItems.value).toBe(1)
     })

@@ -1,5 +1,12 @@
 import type { PushSubscriptionRecord } from '~/types/models'
+import type { RecordChange } from '~/composables/useRealtime'
 import type { NotificationTopic } from '~/utils/notificationPrefs'
+import {
+    deletePushSubscription,
+    getNotificationSettings,
+    listPushSubscriptions,
+    sendTestPush,
+} from '~/api/notifications'
 import {
     applyDeviceEvent,
     browserPushSupport,
@@ -8,7 +15,7 @@ import {
 } from '~/utils/push'
 
 export function usePushSubscription() {
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     const support = ref<PushSupport>('unsupported')
     const publicKey = ref('')
     const topics = ref<NotificationTopic[]>([])
@@ -36,18 +43,13 @@ export function usePushSubscription() {
         support.value = browserPushSupport()
         try {
             const [settings, list, subscription] = await Promise.all([
-                pb.send<{ pushKey: string; topics: NotificationTopic[] }>(
-                    '/api/notifications/settings',
-                    { requestKey: null },
-                ),
-                pb
-                    .collection('push_subscriptions')
-                    .getFullList<PushSubscriptionRecord>({ sort: '-created' }),
+                getNotificationSettings(),
+                listPushSubscriptions(),
                 support.value === 'ok' ? browserSubscription() : null,
             ])
             topics.value = settings.topics
-            publicKey.value = settings.pushKey
-            devices.value = list
+            publicKey.value = settings.publicKey
+            devices.value = list.items
             currentEndpoint.value = subscription?.endpoint ?? ''
         } catch (err) {
             console.error('Failed to load notification settings:', err)
@@ -58,7 +60,10 @@ export function usePushSubscription() {
     async function addThisDevice() {
         busy.value = true
         try {
-            const added = await subscribeThisDevice(pb, publicKey.value)
+            const added = await subscribeThisDevice(
+                authStore.record?.id,
+                publicKey.value,
+            )
             if (!added) return false
             const { device, subscription } = added
             currentEndpoint.value = subscription.endpoint
@@ -75,14 +80,14 @@ export function usePushSubscription() {
     async function removeDevice(device: PushSubscriptionRecord) {
         busy.value = true
         try {
-            await pb.collection('push_subscriptions').delete(device.id)
+            await deletePushSubscription(device.id)
             devices.value = devices.value.filter(
                 (entry) => entry.id !== device.id,
             )
             if (device.endpoint === currentEndpoint.value) {
                 await (await browserSubscription())?.unsubscribe()
                 currentEndpoint.value = ''
-                setPushDeclined(pb.authStore.record?.id, true)
+                setPushDeclined(authStore.record?.id, true)
             }
         } finally {
             busy.value = false
@@ -90,21 +95,18 @@ export function usePushSubscription() {
     }
 
     function sendTest() {
-        return pb.send('/api/notifications/test', {
-            method: 'POST',
-            body: { endpoint: currentEndpoint.value },
-            requestKey: null,
-        })
+        return sendTestPush(currentEndpoint.value)
     }
 
-    const { subscribe } = usePbSubscription(refresh)
-
-    onMounted(() => {
-        void refresh()
-        void subscribe('push_subscriptions', (event) => {
+    useRealtime(
+        'push_subscriptions',
+        (event: RecordChange<PushSubscriptionRecord>) => {
             devices.value = applyDeviceEvent(devices.value, event)
-        })
-    })
+        },
+        { onReactivate: refresh },
+    )
+
+    onMounted(() => void refresh())
 
     return {
         support,

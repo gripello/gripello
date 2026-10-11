@@ -51,12 +51,13 @@
 <script setup lang="ts">
 import type { Form } from '@nuxt/ui'
 import { required, validateRules } from '~/utils/validation'
+import { confirmEmailChange as confirmChange, useAuthState } from '~/api/auth'
 
 defineOptions({ name: 'ConfirmEmailChangePage' })
 definePageMeta({ layout: 'blank', auth: false })
 
 const { t } = useI18n()
-const pb = usePocketbase()
+const { clearAuth } = useAuthState()
 
 useHead({ title: t('page.title.emailChange') })
 
@@ -72,8 +73,8 @@ async function validateAndSubmit(submit: () => Promise<void>) {
 }
 
 async function confirmEmailChange(token: string) {
-    await pb.collection('users').confirmEmailChange(token, password.value)
-    pb.authStore.clear()
+    await confirmChange(token, password.value)
+    clearAuth()
 }
 
 const isInvalidToken = (error: unknown) =>

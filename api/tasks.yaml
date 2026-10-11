@@ -1,0 +1,389 @@
+openapi: 3.1.0
+info:
+  title: Gripello tasks and route defects
+  version: 1.0.0
+paths:
+  /gyms/{gym}/tasks:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      description: >
+        manage_tasks. Items carry expand.route (summary), expand.wall and expand.reporter/assignee/done_by (climbers).
+        Live: realtime topic `tasks:<gym>` (manage_tasks holders) delivers `{action: create|update|delete, record}`
+        (kinds task.created/updated/deleted, record without expand) for every create, update, assign, status change and delete.
+      parameters:
+        - name: status
+          in: query
+          description: repeatable (`status` or `status[]`); matches any
+          schema: { type: array, items: { $ref: '#/components/schemas/TaskStatus' } }
+          style: form
+          explode: true
+        - { name: kind, in: query, schema: { $ref: '#/components/schemas/TaskKind' } }
+        - name: assignee
+          in: query
+          description: user id or `none`
+          schema: { type: string }
+        - { name: route, in: query, schema: { type: string } }
+        - { name: location, in: query, schema: { type: string } }
+        - { name: wall, in: query, schema: { type: string } }
+        - name: q
+          in: query
+          description: case-insensitive substring of title, description, route name or wall name
+          schema: { type: string }
+        - name: urgent
+          in: query
+          description: '`true` = priority 4 only'
+          schema: { type: string, enum: ['true'] }
+        - name: overdue
+          in: query
+          description: '`true` = due before today and still open (open, in_progress, waiting)'
+          schema: { type: string, enum: ['true'] }
+        - name: sort
+          in: query
+          description: 'comma-separated keys, `-` prefix = descending; keys: priority, due_date, created, updated, done_at, status, kind. Default -priority,due_date,-created.'
+          schema: { type: string }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 50 } }
+      responses:
+        '200':
+          description: One page of tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, limit, total]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Task' } }
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createTask
+      tags: [tasks]
+      description: >
+        Anyone, guests included. Without manage_tasks the task becomes a defect (or stays a wish) with title, assignee
+        and due date cleared and the default priority. Status, reporter, done stamps and resolution note are server-owned.
+        Location and wall derive from the route (or the wall); they must belong to the gym. Urgent defects mail every
+        manage_tasks holder except the reporter, right away and then at most once per 15 minutes per gym with every
+        urgent defect filed since.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TaskInput'
+                - type: object
+                  properties:
+                    kind: { $ref: '#/components/schemas/TaskKind' }
+                    photo: { type: string, format: binary, description: 'JPEG, PNG or WebP up to 5 MB' }
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TaskInput'
+                - type: object
+                  properties:
+                    kind: { $ref: '#/components/schemas/TaskKind' }
+      responses:
+        '201':
+          description: The task for manage_tasks holders, only its id for everyone else
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Task'
+                  - type: object
+                    required: [id]
+                    properties:
+                      id: { type: string }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '413': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/tasks/assignees:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listTaskAssignees
+      tags: [tasks]
+      description: manage_tasks. Members of the gym holding manage_tasks (task_assignees view), sorted by name.
+      responses:
+        '200':
+          description: Assignees
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/TaskAssignee' } }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/defects/open:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listOpenDefects
+      tags: [tasks]
+      description: Public. Open (open, in_progress, waiting) defects of the gym's routes.
+      parameters:
+        - { name: route, in: query, schema: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/OpenDefects' }
+        '404': { $ref: '#/components/responses/Error' }
+  /routes/{id}/defects:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listRouteDefects
+      tags: [tasks]
+      description: Public. Open defects of one route.
+      responses:
+        '200': { $ref: '#/components/responses/OpenDefects' }
+        '404': { $ref: '#/components/responses/Error' }
+  /tasks/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getTask
+      tags: [tasks]
+      description: manage_tasks in the task's gym.
+      responses:
+        '200': { $ref: '#/components/responses/Task' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      description: >-
+        manage_tasks. Kind, reporter and done stamps are ignored; closing stamps done_at/done_by, reopening clears them.
+        403 for description/photo changes while moderation keeps the report hidden.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TaskInput'
+                - type: object
+                  properties:
+                    status: { $ref: '#/components/schemas/TaskStatus' }
+                    resolution_note: { type: string, maxLength: 1000 }
+                    photo: { type: string, format: binary }
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/TaskInput'
+                - type: object
+                  properties:
+                    status: { $ref: '#/components/schemas/TaskStatus' }
+                    resolution_note: { type: string, maxLength: 1000 }
+      responses:
+        '200': { $ref: '#/components/responses/Task' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      description: manage_tasks.
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /tasks/{id}/assign:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: assignTask
+      tags: [tasks]
+      description: manage_tasks. The assignee must hold manage_tasks in the task's gym; null unassigns.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assignee]
+              properties:
+                assignee: { type: [string, 'null'] }
+      responses:
+        '200': { $ref: '#/components/responses/Task' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /tasks/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: setTaskStatus
+      tags: [tasks]
+      description: manage_tasks. Marking a task done notifies its reporter.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/TaskStatus' }
+                resolution_note: { type: string, maxLength: 1000 }
+      responses:
+        '200': { $ref: '#/components/responses/Task' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Gym:
+      name: gym
+      in: path
+      required: true
+      description: gym id or slug
+      schema: { type: string }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Task:
+      description: Task
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Task' }
+    OpenDefects:
+      description: Open defects
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items]
+            properties:
+              items: { type: array, items: { $ref: '#/components/schemas/OpenDefect' } }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    TaskKind:
+      type: string
+      enum: [defect, reset, maintenance, other, wish]
+    TaskStatus:
+      type: string
+      enum: [open, in_progress, done, dismissed, waiting]
+    DefectCategory:
+      type: string
+      enum: ['', loose_bolt, loose_hold, spinning_hold, broken_hold, damaged_volume, sharp_edge, missing_hold, label_tag, other]
+    TaskInput:
+      type: object
+      properties:
+        title: { type: string, maxLength: 200 }
+        category: { $ref: '#/components/schemas/DefectCategory' }
+        priority: { type: integer, minimum: 1, maximum: 4, description: '0/absent = default (4 for urgent defect categories, else 2)' }
+        route: { type: string }
+        wall: { type: string }
+        location: { type: string }
+        description: { type: string, maxLength: 2000 }
+        assignee: { type: [string, 'null'] }
+        due_date: { type: [string, 'null'] }
+        route_type: { type: string, enum: ['', Route, Boulder] }
+        grade: { type: string, maxLength: 10 }
+    Task:
+      type: object
+      required: [id, created, updated, gym, kind, title, category, priority, status, route, wall, location, description, photo,
+        reporter, assignee, due_date, resolution_note, done_at, done_by, route_type, grade]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        updated: { type: string, format: date-time }
+        gym: { type: string }
+        kind: { $ref: '#/components/schemas/TaskKind' }
+        title: { type: string }
+        category: { $ref: '#/components/schemas/DefectCategory' }
+        priority: { type: integer }
+        status: { $ref: '#/components/schemas/TaskStatus' }
+        route: { type: string }
+        wall: { type: string }
+        location: { type: string }
+        description: { type: string }
+        photo: { type: string, description: 'protected file: /files/tasks/{id}/{photo}?token=' }
+        reporter: { type: string }
+        assignee: { type: string }
+        due_date: { type: [string, 'null'], format: date-time }
+        resolution_note: { type: string }
+        done_at: { type: [string, 'null'], format: date-time }
+        done_by: { type: string }
+        route_type: { type: string }
+        grade: { type: string }
+        expand:
+          type: object
+          properties:
+            route:
+              type: object
+              properties:
+                id: { type: string }
+                name: { type: string }
+                grade: { type: string }
+                grade_system: { type: string }
+                color: { type: string }
+                type: { type: string }
+                location: { type: string }
+                wall: { type: string }
+                archived: { type: boolean }
+            wall:
+              type: object
+              properties:
+                id: { type: string }
+                name: { type: string }
+                location: { type: string }
+            reporter: { $ref: '#/components/schemas/Climber' }
+            assignee: { $ref: '#/components/schemas/Climber' }
+            done_by: { $ref: '#/components/schemas/Climber' }
+    Climber:
+      type: object
+      required: [id, name, avatar]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        avatar: { type: string }
+    TaskAssignee:
+      type: object
+      required: [id, user, gym, name]
+      properties:
+        id: { type: string, description: membership id }
+        user: { type: string }
+        gym: { type: string }
+        name: { type: string }
+    OpenDefect:
+      type: object
+      required: [id, route, category, created]
+      properties:
+        id: { type: string }
+        route: { type: string }
+        category: { $ref: '#/components/schemas/DefectCategory' }
+        created: { type: string, format: date-time }

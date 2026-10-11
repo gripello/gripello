@@ -1,8 +1,7 @@
 import { createError, eventHandler, getQuery, setResponseHeaders } from 'h3'
-import { createPocketBase } from '../../utils/pb-server'
+import { apiFetch, fetchFile } from '../../utils/api-server'
 import {
     attachmentHeader,
-    fetchLogo,
     pdfBuffer,
     resolveApplicationUrl,
 } from '../../utils/export'
@@ -15,12 +14,9 @@ export default eventHandler(async (event) => {
     const query = getQuery(event)
     const gymId = typeof query.gym === 'string' ? query.gym : ''
 
-    const pb = createPocketBase()
+    const api = apiFetch()
     const gym = gymId
-        ? await pb
-              .collection('gyms')
-              .getOne<GymRecord>(gymId, { requestKey: null })
-              .catch(() => null)
+        ? await api<GymRecord>(`/gyms/${gymId}`).catch(() => null)
         : null
     if (!gym) throw createError({ statusCode: 404, statusMessage: 'No gym.' })
 
@@ -49,7 +45,7 @@ export default eventHandler(async (event) => {
         const title = t('gradeConversion.boulders')
         const logoFile = gym.sign_image || gym.page_logo
         const logo = logoFile
-            ? await fetchLogo(pb.files.getURL(gym, logoFile))
+            ? await fetchFile(api, 'gyms', gym, logoFile)
             : null
         const footer = `${resolveApplicationUrl(event).replace(/^https?:\/\//, '')}/${gym.slug}`
         const pdf = await pdfBuffer(doc, () =>

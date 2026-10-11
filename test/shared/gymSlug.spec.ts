@@ -1,6 +1,6 @@
 import { readdirSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import fixtures from '../../pocketbase/testdata/gymSlug.json'
+import fixtures from '../../backend/testdata/gymSlug.json'
 import {
     RESERVED_GYM_SLUGS,
     isValidGymSlug,

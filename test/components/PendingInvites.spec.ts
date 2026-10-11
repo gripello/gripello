@@ -10,12 +10,17 @@ const invite = {
     firstname: 'New',
     name: 'Setter',
     expires_at: '2026-10-11 12:00:00.000Z',
-    expand: { role: { name: 'routesetter' } },
+    role_name: 'routesetter',
 }
 
 const getFullList = vi.fn()
 const remove = vi.fn()
 const send = vi.fn()
+vi.mock('~/api/members', () => ({
+    listInvites: (gym: string) => getFullList(gym),
+    revokeInvite: (id: string) => remove(id),
+    inviteMember: (gym: string, body: unknown) => send(gym, body),
+}))
 
 function mountInvites() {
     return mount(PendingInvites, {
@@ -38,16 +43,11 @@ describe('AdminPendingInvites', () => {
         getFullList.mockReset().mockResolvedValue([invite])
         remove.mockReset().mockResolvedValue(true)
         send.mockReset().mockResolvedValue(null)
-        globalThis.__POCKETBASE_CLIENT__ = {
-            filter: (query: string) => query,
-            collection: () => ({ getFullList, delete: remove }),
-            send,
-        }
         vi.stubGlobal('useAsyncAction', () => ({
             pending: ref(false),
             run: async (action: () => Promise<unknown>) => action(),
         }))
-        vi.stubGlobal('usePbSubscription', () => ({ subscribe: vi.fn() }))
+        vi.stubGlobal('useRealtime', vi.fn())
     })
 
     it('lists pending invites with role', async () => {
@@ -76,15 +76,11 @@ describe('AdminPendingInvites', () => {
             .find('[data-testid="pending-invite-resend"]')
             .trigger('click')
         await flushPromises()
-        expect(send).toHaveBeenCalledWith('/api/gyms/gym-a/members', {
-            method: 'POST',
-            body: {
-                email: 'new@example.com',
-                role: 'setter',
-                firstname: 'New',
-                name: 'Setter',
-            },
-            requestKey: null,
+        expect(send).toHaveBeenCalledWith('gym-a', {
+            email: 'new@example.com',
+            role: 'setter',
+            firstname: 'New',
+            name: 'Setter',
         })
     })
 

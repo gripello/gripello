@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import fixtures from '../../pocketbase/testdata/openingHours.json'
+import fixtures from '../../backend/testdata/openingHours.json'
 import {
     hasOpeningHours,
     isValidOpeningHours,

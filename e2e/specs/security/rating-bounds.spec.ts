@@ -1,4 +1,5 @@
 import { test, expect } from '../../support/fixtures'
+import { ApiError, guestApi } from '../../support/api'
 
 for (const [field, value] of [
     ['rating', -1000000],
@@ -6,13 +7,13 @@ for (const [field, value] of [
     ['grade_index', 1e300],
 ] as const) {
     test(`an anonymous rating cannot store ${field} = ${value}`, async ({
-        request,
         route,
     }) => {
-        const created = await request.post('/api/collections/ratings/records', {
-            data: { route_id: route.id, rating: 3, [field]: value },
-        })
-        expect(created.status()).toBe(400)
-        expect((await created.json()).data).toHaveProperty(field)
+        const error = await guestApi()
+            .post(`/routes/${route.id}/ratings`, { rating: 3, [field]: value })
+            .catch((error: unknown) => error)
+        expect(error).toBeInstanceOf(ApiError)
+        expect((error as ApiError).status).toBe(400)
+        expect((error as ApiError).response).toHaveProperty(['data', field])
     })
 }

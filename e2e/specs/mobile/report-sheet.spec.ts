@@ -1,17 +1,15 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { uiaa } from '../../support/seed'
+import { createRating } from '../../support/api'
 
 test('report form opens as a bottom sheet on mobile', async ({
     page,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
-    await root.collection('ratings').create({
-        route_id: route.id,
+    await createRating(adminApi, route.id, {
         rating: 4,
-        ...uiaa('5'),
         comment: `${testPrefix}-report-me`,
     })
 

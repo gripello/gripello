@@ -1,9 +1,10 @@
 import { test, expect } from '../../support/fixtures'
+import { listLocations, listTasks } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
 
 test('a visitor wishes for a boulder in a location', async ({
     page,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
@@ -13,7 +14,9 @@ test('a visitor wishes for a boulder in a location', async ({
     await expect(dialog).toBeVisible()
     await expect(page.getByTestId('task-wish-submit')).toBeDisabled()
 
-    const location = await root.collection('locations').getOne(route.location)
+    const location = (await listLocations(adminApi)).find(
+        (location) => location.id === route.location,
+    )!
     await page.getByTestId('task-wish-location').click()
     await page.getByRole('option', { name: location.name }).click()
     await page.getByTestId('task-wish-type-boulder').click()
@@ -23,11 +26,9 @@ test('a visitor wishes for a boulder in a location', async ({
     await page.getByTestId('task-wish-submit').click()
     await expect(dialog).toBeHidden()
 
-    const task = await root
-        .collection('tasks')
-        .getFirstListItem(
-            root.filter('description ~ {:prefix}', { prefix: testPrefix }),
-        )
+    const task = (
+        await listTasks(adminApi, { kind: 'wish', q: testPrefix })
+    ).find((task) => task.description?.includes(testPrefix))
     expect(task).toMatchObject({
         kind: 'wish',
         route_type: 'Boulder',

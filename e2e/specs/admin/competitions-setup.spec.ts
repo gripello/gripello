@@ -1,9 +1,29 @@
 import { test, expect } from '../../support/fixtures'
+import type { Api } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
+import {
+    createCompetition,
+    createCompetitionCategory,
+    listCompetitionCategories,
+} from '../../support/api'
+import type {
+    CompetitionRecord,
+    CompetitionRouteRecord,
+} from '../../../types/models'
+
+const competitionRoutes = async (
+    api: Api,
+    competition: string,
+): Promise<CompetitionRouteRecord[]> =>
+    (
+        await api.get<{ items: CompetitionRouteRecord[] }>(
+            `/competitions/${competition}/routes`,
+        )
+    ).items
 
 test('a setter creates a competition with default categories', async ({
     setterPage,
-    root,
+    adminApi,
     testPrefix,
 }) => {
     const name = `${testPrefix} Autumn Jam`
@@ -33,15 +53,13 @@ test('a setter creates a competition with default categories', async ({
         setterPage.getByTestId('competition-action-open'),
     ).toBeDisabled()
 
-    const competition = await root
-        .collection('competitions')
-        .getFirstListItem(root.filter('name = {:name}', { name }))
+    const { items } = await adminApi.get<{ items: CompetitionRecord[] }>(
+        '/gyms/e2e/competitions',
+        { status: 'draft' },
+    )
+    const competition = items.find((item) => item.name === name)!
     expect(competition.scoring_format).toBe('ifsc')
-    const categories = await root
-        .collection('competition_categories')
-        .getFullList({
-            filter: root.filter('competition = {:id}', { id: competition.id }),
-        })
+    const categories = await listCompetitionCategories(adminApi, competition.id)
     expect(categories.map((category) => category.gender).sort()).toEqual([
         'female',
         'male',
@@ -50,7 +68,7 @@ test('a setter creates a competition with default categories', async ({
 
 test('a setter adds boulders, opens the competition and copies it', async ({
     setterPage,
-    root,
+    adminApi,
     workerLocation,
     createRoute,
     testPrefix,
@@ -59,19 +77,17 @@ test('a setter adds boulders, opens the competition and copies it', async ({
         type: 'Boulder',
         name: `${testPrefix} Pinch`,
     })
-    const competition = await root.collection('competitions').create({
+    const competition = await createCompetition(adminApi, {
         name: `${testPrefix} League 1`,
         location: workerLocation.id,
         status: 'draft',
-        starts_at: '2030-10-10 10:00:00.000Z',
-        ends_at: '2030-10-10 14:00:00.000Z',
+        starts_at: '2030-10-10T10:00:00Z',
+        ends_at: '2030-10-10T14:00:00Z',
         discipline: 'boulder',
         scoring_format: 'dynamic',
         live_ranking: true,
     })
-    await root
-        .collection('competition_categories')
-        .create({ competition: competition.id, name: 'Open' })
+    await createCompetitionCategory(adminApi, competition.id, { name: 'Open' })
 
     await gotoSettled(
         setterPage,
@@ -101,13 +117,7 @@ test('a setter adds boulders, opens the competition and copies it', async ({
     await row.getByTestId('competition-route-voided-1').click()
     await expect
         .poll(async () => {
-            const [saved] = await root
-                .collection('competition_routes')
-                .getFullList({
-                    filter: root.filter('competition = {:id}', {
-                        id: competition.id,
-                    }),
-                })
+            const [saved] = await competitionRoutes(adminApi, competition.id)
             return saved?.voided
         })
         .toBe(true)
@@ -125,19 +135,19 @@ test('a setter adds boulders, opens the competition and copies it', async ({
 
 test('a setter sets up a rope competition with hold counts', async ({
     setterPage,
-    root,
+    adminApi,
     workerLocation,
     createRoute,
     testPrefix,
 }) => {
     const rope = await createRoute({ name: `${testPrefix} Arete` })
     await createRoute({ type: 'Boulder', name: `${testPrefix} Crimp` })
-    const competition = await root.collection('competitions').create({
+    const competition = await createCompetition(adminApi, {
         name: `${testPrefix} Hallencup`,
         location: workerLocation.id,
         status: 'draft',
-        starts_at: '2030-11-10 10:00:00.000Z',
-        ends_at: '2030-11-10 14:00:00.000Z',
+        starts_at: '2030-11-10T10:00:00Z',
+        ends_at: '2030-11-10T14:00:00Z',
         discipline: 'rope',
         scoring_format: 'lead_height',
         live_ranking: true,
@@ -167,13 +177,7 @@ test('a setter sets up a rope competition with hold counts', async ({
     await row.getByTestId('competition-route-holds-1').blur()
     await expect
         .poll(async () => {
-            const [saved] = await root
-                .collection('competition_routes')
-                .getFullList({
-                    filter: root.filter('competition = {:id}', {
-                        id: competition.id,
-                    }),
-                })
+            const [saved] = await competitionRoutes(adminApi, competition.id)
             return saved?.hold_count
         })
         .toBe(42)

@@ -514,6 +514,8 @@
 </template>
 
 <script setup lang="ts">
+import { fileUrl } from '~/api/client'
+import { updateGym, type GymFiles, type GymInput } from '~/api/gyms'
 import { hasFeature } from '#shared/utils/featureFlags'
 import { GYM_AMENITY_KEYS, type GymAmenity } from '#shared/utils/gymAmenities'
 import {
@@ -558,7 +560,6 @@ const props = withDefaults(
 )
 const emit = defineEmits<{ saved: [gym: GymRecord] }>()
 
-const pb = usePocketbase()
 const { t } = useI18n()
 const settings = computed(() => props.gym)
 
@@ -754,7 +755,7 @@ function pbFileUrl(
     rec: Partial<GymRecord> | null | undefined,
     filename: string | null | undefined,
 ) {
-    return usePbFileUrl(rec, filename) || null
+    return fileUrl('gyms', rec, filename) || null
 }
 
 function onFileChange(event: Event, onSelect: (file: File | null) => void) {
@@ -952,15 +953,17 @@ async function saveSettings() {
     if (!hasChanges.value || saving.value) return
     await runSave(
         async () => {
-            const payload = changedFieldsPayload()
+            const files: GymFiles = {}
             for (const asset of assets) {
-                if (asset.file.value) payload[asset.field] = asset.file.value
-                else if (asset.clear.value) payload[asset.field] = null
+                if (asset.file.value) files[asset.field] = asset.file.value
+                else if (asset.clear.value) files[asset.field] = null
             }
 
-            const updated = await pb
-                .collection('gyms')
-                .update<GymRecord>(settings.value!.id, payload)
+            const updated = await updateGym(
+                settings.value!.id,
+                changedFieldsPayload() as GymInput,
+                files,
+            )
 
             for (const asset of assets) asset.reset(updated)
 

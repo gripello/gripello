@@ -1,20 +1,33 @@
-export function useAppStatus() {
-    const pb = usePocketbase()
+import { useApi } from '~/api/client'
+import { useAuthState } from '~/api/auth'
 
-    const { data: health } = useAsyncData(
+export function useAppStatus() {
+    const api = useApi()
+    const auth = useAuthState()
+
+    const { data: healthy } = useAsyncData(
         'footer:health',
-        () => pb.health.check(),
-        { default: () => null, lazy: true, server: false },
+        () =>
+            api('/health').then(
+                () => true,
+                () => false,
+            ),
+        { default: () => false, lazy: true, server: false },
     )
 
     const { data: online } = useAsyncData(
         'footer:online',
-        () => pb.send('/api/online', { method: 'GET' }),
-        { default: () => ({ clients: 0 }), lazy: true, server: false },
+        () => api<{ clients: number }>('/online'),
+        {
+            default: () => ({ clients: 0 }),
+            lazy: true,
+            server: false,
+            enabled: () => auth.isSignedIn(),
+        },
     )
 
     return {
-        isHealthy: computed(() => health.value?.code === 200),
+        isHealthy: computed(() => healthy.value === true),
         onlineCount: computed(() => (online.value?.clients ?? 0) + 1),
     }
 }

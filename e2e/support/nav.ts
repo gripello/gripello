@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import { Api } from './api'
 import { E2E_GYM_SLUG } from './seed'
 
 export function gymPath(path: string) {
@@ -27,8 +28,8 @@ export async function reloadSettled(page: Page) {
 export async function gotoSubscribed(page: Page, path: string, topic: string) {
     const subscribed = page.waitForResponse(
         (response) =>
-            response.url().includes('/api/realtime') &&
-            response.request().method() === 'POST' &&
+            /\/api\/realtime\/[^/]+\/subscriptions/.test(response.url()) &&
+            response.request().method() === 'PUT' &&
             !!response.request().postData()?.includes(topic),
     )
     await gotoSettled(page, path)
@@ -63,15 +64,22 @@ export async function authHeader(
             return ''
         }
     })
-    return { Authorization: token }
+    return { Authorization: `Bearer ${token}` }
+}
+
+export async function apiOf(page: Page) {
+    const { Authorization } = await authHeader(page)
+    return new Api(Authorization.replace(/^Bearer /, ''))
 }
 
 export async function searchRoutes(page: Page, text: string) {
-    const filtered = page.waitForResponse(
-        (response) =>
-            response.url().includes('/api/collections/averageRating/records') &&
-            decodeURIComponent(response.url()).includes(`name ~ "${text}"`),
-    )
+    const filtered = page.waitForResponse((response) => {
+        const url = new URL(response.url())
+        return (
+            /\/api\/gyms\/[^/]+\/routes$/.test(url.pathname) &&
+            url.searchParams.get('q') === text
+        )
+    })
     await page.getByTestId('filter-search').fill(text)
     await filtered
 }

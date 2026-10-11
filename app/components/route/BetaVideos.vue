@@ -171,6 +171,7 @@
 </template>
 
 <script setup lang="ts">
+import { createBeta, deleteBeta, listBetas } from '~/api/ratings'
 import type { BetaVideoRecord } from '~/types/models'
 import {
     BETA_VIDEO_MAX_BYTES,
@@ -185,7 +186,7 @@ const props = defineProps<{ routeId: string }>()
 defineExpose({ openAdd })
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const currentRoute = useRoute()
 const { pending: saving, run } = useAsyncAction()
 const { pending: deleting, run: runDelete } = useAsyncAction()
@@ -197,12 +198,7 @@ const { success: notifySuccess } = useNotification()
 
 const { data: videos, refresh } = useAsyncData(
     `beta-videos:${props.routeId}`,
-    () =>
-        pb.collection('beta_videos').getFullList<BetaVideoRecord>({
-            filter: pb.filter('route = {:route}', { route: props.routeId }),
-            sort: '-created',
-            requestKey: null,
-        }),
+    () => listBetas(props.routeId),
     { default: () => [] },
 )
 
@@ -272,7 +268,7 @@ const canSubmit = computed(() =>
 )
 
 function openAdd() {
-    if (!pb.authStore.isValid) {
+    if (!authStore.isValid) {
         void navigateTo({
             path: '/auth/login',
             query: { redirect: currentRoute.fullPath },
@@ -286,15 +282,13 @@ function openAdd() {
 }
 
 async function submit() {
-    const data = new FormData()
-    data.append('route', props.routeId)
-    data.append('user', pb.authStore.record!.id)
-    if (source.value === 'link') data.append('url', link.value.trim())
-    else data.append('file', file.value!)
     const created = await run(() =>
-        pb
-            .collection('beta_videos')
-            .create<BetaVideoRecord | { pending: true }>(data),
+        createBeta(
+            props.routeId,
+            source.value === 'link'
+                ? { url: link.value.trim() }
+                : { file: file.value! },
+        ),
     )
     if (!created) return
     notifySuccess(
@@ -305,7 +299,7 @@ async function submit() {
 }
 
 function canDelete(video: BetaVideoRecord) {
-    return video.user === pb.authStore.record?.id
+    return video.user === authStore.record?.id
 }
 
 const reportTarget = ref<string | null>(null)
@@ -314,7 +308,7 @@ const deleteTarget = ref<BetaVideoRecord | null>(null)
 async function confirmDelete() {
     const video = deleteTarget.value
     if (!video) return
-    await runDelete(() => pb.collection('beta_videos').delete(video.id), {
+    await runDelete(() => deleteBeta(video.id), {
         success: t('beta.deleted'),
     })
     deleteTarget.value = null

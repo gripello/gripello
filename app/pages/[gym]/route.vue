@@ -448,14 +448,11 @@
 </template>
 
 <script setup lang="ts">
+import { deleteRating, listRouteRatings } from '~/api/ratings'
+import { getRoute } from '~/api/routes'
+import { listRouteDefects } from '~/api/tasks'
 import { isAbortError } from '~/utils/errors'
-import type PocketBase from 'pocketbase'
-import type {
-    OpenRouteDefectRecord,
-    RatingRecord,
-    RouteListItem,
-    RouteRecord,
-} from '~/types/models'
+import type { RatingRecord, RouteListItem } from '~/types/models'
 import {
     formatDate,
     locationName,
@@ -479,7 +476,7 @@ const gymId = useCurrentGymId()
 definePageMeta({ key: (route) => String(route.query.id ?? '') })
 
 const { t, locale } = useI18n()
-const pb = usePocketbase() as PocketBase
+const authStore = useAuthStore()
 const { can } = usePermissions()
 const { data: locationRecords } = useLocations()
 const canPlaceOnMap = computed(
@@ -506,11 +503,7 @@ const routeDetail = useAsyncData(
     async (): Promise<RouteListItem | null> => {
         if (!route_id.value) return null
         try {
-            const record = await pb
-                .collection('routes')
-                .getOne<RouteRecord>(route_id.value, {
-                    expand: 'location,wall',
-                })
+            const record = await getRoute(route_id.value, ['location', 'wall'])
             return { ...record, creator: normalizeCreators(record.creator) }
         } catch (err: unknown) {
             const status = (err as { status?: number }).status ?? 0
@@ -525,11 +518,7 @@ const routeRatings = useAsyncData(
     async () => {
         if (!route_id.value) return []
         try {
-            return await pb.collection('ratings').getFullList<RatingRecord>({
-                filter: pb.filter('route_id = {:id}', { id: route_id.value }),
-                sort: '-created',
-                requestKey: null,
-            })
+            return (await listRouteRatings(route_id.value)).items
         } catch (err: unknown) {
             if (!isAbortError(err)) {
                 console.error('Error fetching ratings:', err)
@@ -545,15 +534,7 @@ const routeDefects = useAsyncData(
     cacheKeys.routeDefects(route_id.value ?? ''),
     () =>
         route_id.value
-            ? pb
-                  .collection('open_route_defects')
-                  .getFullList<OpenRouteDefectRecord>({
-                      filter: pb.filter('route = {:id}', {
-                          id: route_id.value,
-                      }),
-                      requestKey: null,
-                  })
-                  .catch(() => [])
+            ? listRouteDefects(route_id.value).catch(() => [])
             : Promise.resolve([]),
     { default: () => [] },
 )
@@ -600,7 +581,7 @@ async function deleteOwnReview() {
     deleteTarget.value = null
     if (!id) return
     try {
-        await pb.collection('ratings').delete(id)
+        await deleteRating(id)
         routeRatings.data.value = routeRatings.data.value.filter(
             (rating) => rating.id !== id,
         )
@@ -610,7 +591,7 @@ async function deleteOwnReview() {
     }
 }
 
-const isLoggedIn = pb.authStore.isValid
+const isLoggedIn = authStore.isValid
 const betaVideos = useTemplateRef<{ openAdd: () => void }>('betaVideos')
 const tickDialog = ref(false)
 const reviewDialog = ref(false)
@@ -719,13 +700,7 @@ const avgPerceivedDifficulty = computed(() => {
 
 function mapReview(r: RatingRecord): ReviewDisplay {
     const userName = r.author?.name || t('comments.anonymous')
-    const userAvatar = r.author
-        ? usePbFileUrl(
-              { collectionId: '_pb_users_auth_', id: r.author.id },
-              r.author.avatar,
-              { thumb: '80x80' },
-          ) || null
-        : null
+    const userAvatar = r.author?.avatar || null
 
     return {
         id: r.id,

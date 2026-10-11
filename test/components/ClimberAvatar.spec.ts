@@ -2,14 +2,6 @@ import { mount } from '@vue/test-utils'
 import ClimberAvatar from '~/components/climber/Avatar.vue'
 
 describe('ClimberAvatar', () => {
-    beforeEach(() => {
-        vi.stubGlobal(
-            'usePbFileUrl',
-            (_record: unknown, file: string | null) =>
-                file ? `/files/${file}` : '',
-        )
-    })
-
     it('prefers a resolved src', () => {
         const wrapper = mount(ClimberAvatar, {
             props: { name: 'Ada Lovelace', src: 'blob:abc', size: 'xs' },
@@ -24,7 +16,9 @@ describe('ClimberAvatar', () => {
             props: { id: 'u1', name: 'Ada', avatar: 'a.png' },
         })
 
-        expect(wrapper.find('img').attributes('src')).toBe('/files/a.png')
+        expect(wrapper.find('img').attributes('src')).toBe(
+            '/api/files/users/u1/a.png?thumb=100x100',
+        )
     })
 
     it('falls back to initials', () => {

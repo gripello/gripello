@@ -236,7 +236,17 @@
             :confirm-text="t('actions.delete')"
             :loading="deleting"
             @confirm="deleteAccount"
-        />
+        >
+            <UFormField :label="t('account.oldPassword')" class="mt-4">
+                <UInput
+                    v-model="deletePassword"
+                    type="password"
+                    autocomplete="current-password"
+                    class="w-full"
+                    data-testid="profile-delete-password"
+                />
+            </UFormField>
+        </ConfirmDialog>
 
         <ConfirmDialog
             v-model="discardDialogOpen"
@@ -250,11 +260,13 @@
 
 <script setup lang="ts">
 import { required, validEmail, validateRules } from '~/utils/validation'
-import type { ClientResponseError } from 'pocketbase'
+import { fileUrl, type ApiError } from '~/api/client'
 import type { Form } from '@nuxt/ui'
 import { SUPPORTED_LOCALES, isLocaleCode } from '~/utils/locales'
 import type { ThemeMode } from '~/composables/useThemeMode'
 import type { UserRecord } from '~/types/models'
+import { requestEmailChange, useAuthState } from '~/api/auth'
+import { changePassword, deleteMe, updateMe } from '~/api/account'
 
 type EditableSelf = UserRecord & {
     language: string
@@ -284,9 +296,9 @@ const activeTab = computed<Section>(
     () => SECTIONS.find((section) => section === route.query.tab) ?? 'profile',
 )
 
-const pb = usePocketbase()
+const auth = useAuthState()
 const { pending: exportPending, download: downloadExport } = useAccountExport()
-const authRecord = pb.authStore.record as UserRecord | null
+const authRecord = auth.currentUser<UserRecord>()
 
 const user = reactive<EditableSelf>({
     ...(authRecord ?? {
@@ -329,7 +341,9 @@ const avatarFile = ref<File | null>(null)
 const avatarPreview = ref<string | null>(null)
 
 const savedAvatarUrl = () =>
-    user.avatar ? usePbFileUrl(user, user.avatar, { thumb: '100x100' }) : null
+    user.avatar
+        ? fileUrl('users', user, user.avatar, { thumb: '100x100' })
+        : null
 
 onMounted(() => {
     avatarPreview.value = savedAvatarUrl()
@@ -340,7 +354,9 @@ const bannerRemoved = ref(false)
 const bannerPreview = ref<string | null>(null)
 
 const savedBannerUrl = () =>
-    user.banner ? usePbFileUrl(user, user.banner, { thumb: '1600x400' }) : null
+    user.banner
+        ? fileUrl('users', user, user.banner, { thumb: '1600x400' })
+        : null
 
 onMounted(() => {
     bannerPreview.value = savedBannerUrl()
@@ -504,7 +520,6 @@ const { discardDialogOpen, confirmDiscard, settleDiscard } = useDiscardConfirm(
 onBeforeRouteLeave(() => confirmDiscard())
 
 const { notify, error: notifyError } = useNotification()
-const { capHeaders } = useCapToken()
 
 const saving = ref(false)
 
@@ -548,16 +563,18 @@ async function saveUser(section: Section) {
         else if (bannerRemoved.value) formData.append('banner', '')
     } else if (section === 'preferences') {
         formData.append('language', user.language)
-    } else {
-        formData.append('oldPassword', user.oldPassword)
-        formData.append('password', user.password)
-        formData.append('passwordConfirm', user.passwordConfirm)
     }
 
     try {
-        const updated = await pb.collection('users').update(user.id, formData)
+        const updated =
+            section === 'security'
+                ? await changePassword({
+                      oldPassword: user.oldPassword,
+                      password: user.password,
+                      passwordConfirm: user.passwordConfirm,
+                  })
+                : await updateMe(formData)
 
-        const newPassword = section === 'security' ? user.password : ''
         if (section === 'profile') {
             user.firstname = updated.firstname
             user.name = updated.name
@@ -569,43 +586,17 @@ async function saveUser(section: Section) {
             original.firstname = updated.firstname
             original.name = updated.name
         } else if (section === 'preferences') {
-            user.language = updated.language
-            original.language = updated.language
+            user.language = updated.language ?? ''
+            original.language = updated.language ?? ''
             if (isLocaleCode(updated.language))
                 await setLocale(updated.language)
         } else {
             resetSection('security')
         }
 
-        if (newPassword) {
-            const reauthenticated = await capHeaders('login')
-                .then((headers) =>
-                    pb
-                        .collection('users')
-                        .authWithPassword(
-                            updated.email || original.email,
-                            newPassword,
-                            { headers },
-                        ),
-                )
-                .then(
-                    () => true,
-                    () => false,
-                )
-            if (!reauthenticated) {
-                pb.authStore.clear()
-                notifyError(t('account.passwordChangedSignInAgain'))
-                resetAll()
-                await navigateTo('/auth/login')
-                return
-            }
-        } else {
-            pb.authStore.save(pb.authStore.token, updated)
-        }
-
         if (wantsEmailChange) {
             try {
-                await pb.collection('users').requestEmailChange(requestedEmail)
+                await requestEmailChange(requestedEmail)
                 notify(t('account.emailChangeSent'))
             } catch (mailError) {
                 console.error('Error requesting email change:', mailError)
@@ -616,8 +607,7 @@ async function saveUser(section: Section) {
             notify(t('notifications.success.edit'))
         }
     } catch (err) {
-        const code = (err as ClientResponseError)?.response?.data?.oldPassword
-            ?.code
+        const code = (err as ApiError)?.response?.data?.oldPassword?.code
         if (code === 'validation_invalid_old_password') {
             notifyError(t('account.wrongOldPassword'))
         } else {
@@ -630,18 +620,28 @@ async function saveUser(section: Section) {
 
 const deleteDialog = ref(false)
 const deleting = ref(false)
+const deletePassword = ref('')
+
+watch(deleteDialog, () => {
+    deletePassword.value = ''
+})
 
 async function deleteAccount() {
     deleting.value = true
     try {
-        await pb.collection('users').delete(user.id)
-        pb.authStore.clear()
+        await deleteMe(deletePassword.value)
+        auth.clearAuth()
         deleteDialog.value = false
         resetAll()
         await navigateTo('/auth/login')
     } catch (err) {
-        console.error('Error deleting account:', err)
-        notifyError(t('notifications.error.delete'))
+        const code = (err as ApiError)?.response?.data?.password?.code
+        if (code === 'validation_invalid_password') {
+            notifyError(t('account.wrongOldPassword'))
+        } else {
+            console.error('Error deleting account:', err)
+            notifyError(t('notifications.error.delete'))
+        }
     } finally {
         deleting.value = false
     }

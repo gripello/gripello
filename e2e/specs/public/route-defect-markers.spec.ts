@@ -1,24 +1,22 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { authAsSuperuser } from '../../support/seed'
-import { PB_URL, seedMap } from '../../support/map'
+import { createTask } from '../../support/api'
+import { seedMap } from '../../support/map'
 
 test('routes with open defects are marked on the map and in its list', async ({
     page,
+    adminApi,
     testPrefix,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const seeded = await seedMap(root, testPrefix, { routes: 3 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 3 })
     const [urgentRoute, minorRoute, cleanRoute] = seeded.routeIds
     try {
-        await root.collection('tasks').create({
+        await createTask(adminApi, {
             kind: 'defect',
             route: urgentRoute,
             category: 'broken_hold',
         })
-        await root.collection('tasks').create({
+        await createTask(adminApi, {
             kind: 'defect',
             route: minorRoute,
             category: 'label_tag',
@@ -44,10 +42,10 @@ test('routes with open defects are marked on the map and in its list', async ({
 
 test('a route with an open defect is marked in the route list', async ({
     page,
-    root,
+    adminApi,
     route,
 }) => {
-    await root.collection('tasks').create({
+    await createTask(adminApi, {
         kind: 'defect',
         route: route.id,
         category: 'sharp_edge',

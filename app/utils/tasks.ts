@@ -167,29 +167,6 @@ export function taskTitle(
     return t(`tasks.kinds.${task.kind}`)
 }
 
-export function statusesFilter(statuses: readonly string[]): string {
-    return `(${statuses.map((status) => `status = "${status}"`).join(' || ')})`
-}
-
-export function tasksFilter(options: {
-    gym?: string | null
-    kind?: string | null
-    assignee?: string | null
-    location?: string | null
-    urgent?: boolean
-    overdue?: boolean
-}): string {
-    const parts: string[] = []
-    if (options.gym) parts.push(`gym = "${options.gym}"`)
-    if (options.kind) parts.push(`kind = "${options.kind}"`)
-    if (options.assignee) parts.push(`assignee = "${options.assignee}"`)
-    if (options.location) parts.push(`location = "${options.location}"`)
-    if (options.urgent) parts.push(`priority = ${URGENT_TASK_PRIORITY}`)
-    if (options.overdue)
-        parts.push('(due_date != "" && due_date < @todayStart)')
-    return parts.join(' && ')
-}
-
 export type DefectSeverity = 'urgent' | 'minor'
 
 export function defectSeverityByRoute(

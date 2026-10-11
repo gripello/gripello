@@ -1,33 +1,21 @@
 import { test, expect } from '../../support/fixtures'
 import { gymPath } from '../../support/nav'
-import PocketBase from 'pocketbase'
-import { ensureUser, getRoleIds } from '../../support/seed'
-
-const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
+import { authCookieValue, login } from '../../support/auth'
+import { deletePlatformUser } from '../../support/api'
 
 test('a leftover session of a deleted account still renders the site', async ({
     page,
     baseURL,
-    root,
-    testPrefix,
+    api,
+    createUser,
 }) => {
-    const roleIds = await getRoleIds(root)
-    const ghost = await ensureUser(root, roleIds.user, 'user', testPrefix)
+    const ghost = await createUser('user', 'ghost')
+    const cookie = authCookieValue(await login(ghost.email, ghost.password))
+    await deletePlatformUser(api, ghost.id)
 
-    const client = new PocketBase(PB_URL)
-    await client
-        .collection('users')
-        .authWithPassword(ghost.email, ghost.password)
-    const cookie = client.authStore.exportToCookie({}, 'pb_auth')
-    await root.collection('users').delete(ghost.id)
-
-    await page.context().addCookies([
-        {
-            name: 'pb_auth',
-            value: cookie.split(';')[0]!.split('=').slice(1).join('='),
-            url: baseURL!,
-        },
-    ])
+    await page
+        .context()
+        .addCookies([{ name: 'pb_auth', value: cookie, url: baseURL! }])
 
     const response = await page.goto(gymPath('/'))
     expect(response?.status()).toBe(200)

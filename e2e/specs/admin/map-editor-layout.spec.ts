@@ -1,8 +1,6 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser } from '../../support/seed'
 import { gotoSettled } from '../../support/nav'
-import { PB_URL, seedMap } from '../../support/map'
+import { seedMap } from '../../support/map'
 
 test.describe('narrow editor', () => {
     test.use({ viewport: { width: 700, height: 1000 } })
@@ -10,10 +8,9 @@ test.describe('narrow editor', () => {
     test('keeps the canvas full width and opens the panel as a sheet', async ({
         adminPage: page,
         testPrefix,
+        adminApi,
     }) => {
-        const root = new PocketBase(PB_URL)
-        await authAsSuperuser(root)
-        const seeded = await seedMap(root, testPrefix, { routes: 1 })
+        const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
         try {
             await gotoSettled(page, `/admin/map?location=${seeded.locationId}`)
             const canvas = page.getByTestId('map-editor-canvas')
@@ -40,10 +37,9 @@ test.describe('narrow editor', () => {
 test('leaving with unsaved changes asks in a dialog', async ({
     adminPage: page,
     testPrefix,
+    adminApi,
 }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const seeded = await seedMap(root, testPrefix, { routes: 1 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     try {
         await gotoSettled(page, `/admin/map?location=${seeded.locationId}`)
         await page

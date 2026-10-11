@@ -1,6 +1,8 @@
 import { test, expect } from '../../support/fixtures'
-import { authHeader, gotoSettled, gymPath } from '../../support/nav'
-import { uiaa } from '../../support/seed'
+import { apiOf, gotoSettled, gymPath } from '../../support/nav'
+import { E2E_GYM_SLUG, uiaa } from '../../support/seed'
+import type { Api } from '../../support/api'
+import type { RatingRecord } from '../../../types/models'
 import fs from 'node:fs'
 
 test('imports routes from a JSON file', async ({
@@ -79,6 +81,12 @@ test('imports routes from a CSV file with a manual column mapping', async ({
     await expect(page.getByTestId('routes-table')).toContainText('CSV Setter')
 })
 
+const ratingsMatching = (api: Api, q: string, query = {}) =>
+    api.get<{ items: RatingRecord[]; total?: number }>(
+        `/gyms/${E2E_GYM_SLUG}/ratings`,
+        { q, ...query },
+    )
+
 async function chooseImportFile(
     page: Parameters<typeof gotoSettled>[0],
     file: string,
@@ -92,7 +100,7 @@ async function chooseImportFile(
 
 test('imports reviews of an older system onto the routes imported before', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
     workerLocation,
 }, testInfo) => {
@@ -122,20 +130,24 @@ test('imports reviews of an older system onto the routes imported before', async
         /without a route/i,
     )
 
-    const ratings = await root.collection('ratings').getFullList({
-        filter: root.filter('route_id.name = {:name}', { name }),
-        sort: 'created',
+    const { items: ratings } = await ratingsMatching(adminApi, name, {
+        sort: 'oldest',
     })
-    expect(ratings.map((rating) => [rating.comment, rating.created])).toEqual([
-        [`${name} first`, '2021-03-04 09:30:00.000Z'],
-        [`${name} second`, '2022-05-06 10:00:00.000Z'],
+    expect(
+        ratings.map((rating) => [
+            rating.comment,
+            new Date(rating.created!).toISOString(),
+        ]),
+    ).toEqual([
+        [`${name} first`, '2021-03-04T09:30:00.000Z'],
+        [`${name} second`, '2022-05-06T10:00:00.000Z'],
     ])
-    expect(ratings.every((rating) => !rating.user)).toBe(true)
+    expect(ratings.every((rating) => !rating.author)).toBe(true)
 })
 
 test('keeps review dates of a Gripello JSON export', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
     workerLocation,
 }, testInfo) => {
@@ -167,13 +179,11 @@ test('keeps review dates of a Gripello JSON export', async ({
 
     await expect
         .poll(async () =>
-            (
-                await root.collection('ratings').getFullList({
-                    filter: root.filter('comment = {:name}', { name }),
-                })
-            ).map((rating) => rating.created),
+            (await ratingsMatching(adminApi, name)).items
+                .filter((rating) => rating.comment === name)
+                .map((rating) => new Date(rating.created!).toISOString()),
         )
-        .toEqual(['2020-02-03 04:05:06.000Z'])
+        .toEqual(['2020-02-03T04:05:06.000Z'])
 })
 
 test('reports import issues when route creation fails server-side', async ({
@@ -199,8 +209,10 @@ test('reports import issues when route creation fails server-side', async ({
     )
 
     await gotoSettled(page, '/manage/routes')
-    await page.route('**/api/collections/routes/records', (route) =>
-        route.fulfill({ status: 500, body: 'boom' }),
+    await page.route(/\/api\/gyms\/[^/]+\/routes$/, (route) =>
+        route.request().method() === 'POST'
+            ? route.fulfill({ status: 500, body: 'boom' })
+            : route.continue(),
     )
 
     const fileChooserPromise = page.waitForEvent('filechooser')
@@ -231,7 +243,7 @@ test('rejects a malformed JSON file', async ({ adminPage: page }, testInfo) => {
 
 test('imports more ratings than the per-user rating rate limit', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
     workerLocation,
 }, testInfo) => {
@@ -262,7 +274,7 @@ test('imports more ratings than the per-user rating rate limit', async ({
     await page.getByTestId('routes-import-open').click()
     const chooser = await fileChooserPromise
     await chooser.setFiles(file)
-    const bulkImport = page.waitForResponse('**/api/import/ratings')
+    const bulkImport = page.waitForResponse('**/api/gyms/*/ratings/import')
     await page.getByTestId('import-route-confirm').click()
     expect((await bulkImport).ok()).toBe(true)
     await expect(page.getByTestId('global-snackbar').last()).toBeVisible()
@@ -270,19 +282,20 @@ test('imports more ratings than the per-user rating rate limit', async ({
         /issues/i,
     )
 
-    const ratings = await root.collection('ratings').getList(1, 1, {
-        filter: root.filter('route_id.name = {:name}', { name }),
+    const ratings = await ratingsMatching(adminApi, name, {
+        limit: 1,
+        total: 'true',
     })
-    expect(ratings.totalItems).toBe(ratingCount)
+    expect(ratings.total).toBe(ratingCount)
 })
 
 test('only route managers may bulk import ratings', async ({
     userPage: page,
 }) => {
     await gotoSettled(page, gymPath('/'))
-    const response = await page.request.post('/api/import/ratings', {
-        headers: await authHeader(page),
-        data: { ratings: [] },
-    })
-    expect(response.status()).toBe(403)
+    await expect(
+        (await apiOf(page)).post(`/gyms/${E2E_GYM_SLUG}/ratings/import`, {
+            ratings: [],
+        }),
+    ).rejects.toMatchObject({ status: 403 })
 })

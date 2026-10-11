@@ -1,13 +1,11 @@
-import type {
-    RatingRecord,
-    ModerationItemRecord,
-    RoleRecord,
-    RouteRecord,
-    UserRecord,
-} from '~/types/models'
+import { listGymRatings } from '~/api/ratings'
+import { listRoutes } from '~/api/routes'
+import { listMembers, listRoles } from '~/api/members'
+import { listCases } from '~/api/moderation'
+import type { RouteRecord } from '~/types/models'
 import { normalizeCreators } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
-import { routeSearchFilter } from '~/utils/routeSearch'
+import { routeSearchQuery } from '~/utils/routeSearch'
 import { moderationText } from '~/utils/moderation'
 
 export interface SearchResult {
@@ -56,9 +54,6 @@ const SETTINGS_SECTIONS = [
     { section: 'legal', labels: ['settings.legalTitle'] },
 ]
 
-const quote = (value: string) =>
-    `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
-
 const shorten = (text: string | null | undefined, length = 80) => {
     const clean = (text ?? '').replace(/\s+/g, ' ').trim()
     return clean.length > length ? `${clean.slice(0, length)}…` : clean
@@ -66,20 +61,18 @@ const shorten = (text: string | null | undefined, length = 80) => {
 
 export function useGlobalSearch() {
     const { t } = useI18n()
-    const pb = usePocketbase()
     const gymId = useCurrentGymId()
     const gymPath = useGymPath()
     const { can } = usePermissions()
 
     const searchRoutes = async (query: string): Promise<SearchResult[]> => {
-        const filter = routeSearchFilter(query)
-        if (!filter) return []
-        const res = await pb.collection('routes').getList<RouteRecord>(1, 8, {
-            filter: gymFilter(pb, gymId.value, `archived = false && ${filter}`),
-            sort: 'name',
-            skipTotal: true,
-            requestKey: null,
-        })
+        const search = routeSearchQuery(query)
+        if (!search.q && !search.grade) return []
+        const res = await listRoutes<RouteRecord>(
+            gymId.value,
+            { ...search, sort: 'name', page: 1, limit: 8 },
+            { requestKey: null },
+        )
         return res.items.map((route) => ({
             key: `route-${route.id}`,
             to: gymPath(`/route?id=${route.id}`),
@@ -96,15 +89,12 @@ export function useGlobalSearch() {
     }
 
     const searchUsers = async (query: string): Promise<SearchResult[]> => {
-        const term = quote(query)
-        const res = await pb
-            .collection('users')
-            .getList<UserRecord>(1, RESULTS_PER_GROUP, {
-                filter: `(username ~ ${term} || email ~ ${term} || name ~ ${term} || firstname ~ ${term})`,
-                skipTotal: true,
-                requestKey: null,
-            })
-        return res.items.map((user) => ({
+        const res = await listMembers(gymId.value, {
+            q: query,
+            page: 1,
+            limit: RESULTS_PER_GROUP,
+        })
+        return res.items.map(({ user }) => ({
             key: `user-${user.id}`,
             to: gymPath(
                 `/admin/users?search=${encodeURIComponent(user.email ?? user.username ?? '')}`,
@@ -120,14 +110,11 @@ export function useGlobalSearch() {
     }
 
     const searchRoles = async (query: string): Promise<SearchResult[]> => {
-        const res = await pb
-            .collection('roles')
-            .getList<RoleRecord>(1, RESULTS_PER_GROUP, {
-                filter: `name ~ ${quote(query)} && ${pb.filter('gym = {:gym}', { gym: gymId.value })}`,
-                skipTotal: true,
-                requestKey: null,
-            })
-        return res.items.map((role) => ({
+        const roles = await listRoles(gymId.value, {
+            q: query,
+            limit: RESULTS_PER_GROUP,
+        })
+        return roles.map((role) => ({
             key: `role-${role.id}`,
             to: gymPath('/admin/users#roles'),
             icon: 'i-lucide-shield-user',
@@ -137,20 +124,12 @@ export function useGlobalSearch() {
     }
 
     const searchReviews = async (query: string): Promise<SearchResult[]> => {
-        const term = quote(query)
-        const res = await pb
-            .collection('ratings')
-            .getList<RatingRecord>(1, RESULTS_PER_GROUP, {
-                filter: gymFilter(
-                    pb,
-                    gymId.value,
-                    `(comment ~ ${term} || route_id.name ~ ${term})`,
-                ),
-                expand: 'route_id',
-                sort: '-created',
-                skipTotal: true,
-                requestKey: null,
-            })
+        const res = await listGymRatings(gymId.value, {
+            q: query,
+            sort: 'newest',
+            page: 1,
+            limit: RESULTS_PER_GROUP,
+        })
         return res.items.map((rating) => ({
             key: `review-${rating.id}`,
             to: gymPath(`/manage/comments?search=${encodeURIComponent(query)}`),
@@ -162,18 +141,16 @@ export function useGlobalSearch() {
     }
 
     const searchModeration = async (query: string): Promise<SearchResult[]> => {
-        const res = await pb
-            .collection('moderation_items')
-            .getList<ModerationItemRecord>(1, RESULTS_PER_GROUP, {
-                filter: gymFilter(
-                    pb,
-                    gymId.value,
-                    `snapshot ~ ${quote(query)}`,
-                ),
-                sort: '-created',
-                skipTotal: true,
-                requestKey: null,
-            })
+        const res = await listCases(
+            {
+                gym: gymId.value,
+                q: query,
+                sort: 'newest',
+                page: 1,
+                limit: RESULTS_PER_GROUP,
+            },
+            { requestKey: null },
+        )
         return res.items.map((item) => ({
             key: `moderation-${item.id}`,
             to: gymPath(`/manage/moderation?case=${item.id}`),

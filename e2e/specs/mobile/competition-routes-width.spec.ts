@@ -1,25 +1,25 @@
 import { test, expect } from '../../support/fixtures'
+import { createCompetition, createCompetitionRoute } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
 
 test('competition route rows and tabs keep their labels readable on a phone', async ({
     setterPage,
-    root,
+    adminApi,
     workerLocation,
     createRoute,
     testPrefix,
 }) => {
-    const competition = await root.collection('competitions').create({
+    const competition = await createCompetition(adminApi, {
         name: `${testPrefix} Phone Cup`,
         location: workerLocation.id,
         status: 'draft',
-        starts_at: '2030-12-10 10:00:00.000Z',
-        ends_at: '2030-12-10 14:00:00.000Z',
+        starts_at: '2030-12-10T10:00:00Z',
+        ends_at: '2030-12-10T14:00:00Z',
         discipline: 'rope',
         scoring_format: 'route_points',
     })
     const rope = await createRoute({ name: `${testPrefix} Nordwand` })
-    await root.collection('competition_routes').create({
-        competition: competition.id,
+    await createCompetitionRoute(adminApi, competition.id, {
         route: rope.id,
         number: 1,
         points: 1,

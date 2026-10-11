@@ -1,0 +1,18 @@
+services:
+    postgres:
+        image: postgres:18-alpine
+        ports:
+            - '5433:5432'
+        environment:
+            POSTGRES_PASSWORD: dev
+            POSTGRES_DB: gripello
+        volumes:
+            - postgres-dev:/var/lib/postgresql
+        healthcheck:
+            test: ['CMD', 'pg_isready', '-U', 'postgres', '-d', 'gripello']
+            interval: 2s
+            timeout: 5s
+            retries: 30
+
+volumes:
+    postgres-dev:

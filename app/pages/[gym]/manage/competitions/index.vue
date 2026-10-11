@@ -51,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import { listCompetitions } from '~/api/competitions'
 import type { CompetitionRecord } from '~/types/models'
 
 const gymPath = useGymPath()
@@ -61,7 +62,6 @@ definePageMeta({
 })
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
 
 const formOpen = ref(false)
@@ -72,10 +72,7 @@ const {
     error,
     refresh,
 } = await useAsyncData('manage-competitions', () =>
-    pb.collection('competitions').getFullList<CompetitionRecord>({
-        filter: gymFilter(pb, gymId.value),
-        sort: '-starts_at',
-    }),
+    listCompetitions(gymId.value, { sort: '-starts_at' }),
 )
 
 useHead({ title: t('page.title.competitions') })

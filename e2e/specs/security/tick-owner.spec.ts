@@ -1,39 +1,34 @@
 import { test, expect } from '../../support/fixtures'
-import PocketBase from 'pocketbase'
-import { ensureUser, getRoleIds, uiaa } from '../../support/seed'
+import {
+    createTick,
+    deleteTick,
+    guestApi,
+    listOwnTicks,
+    updateRoute,
+    updateTick,
+} from '../../support/api'
+import { uiaa } from '../../support/seed'
+import type { TickRecord } from '../../../types/models'
 
-const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
-const DAY = '2026-09-26 12:00:00.000Z'
-
-async function signIn(email: string, password: string) {
-    const client = new PocketBase(PB_URL)
-    await client.collection('users').authWithPassword(email, password)
-    return client
-}
+const DAY = '2026-09-26T12:00:00.000Z'
 
 test('ticks stay private to their owner and keep the grade they were logged at', async ({
-    root,
-    testPrefix,
-    workerLocation,
+    adminApi,
+    apiAs,
+    createUser,
+    createRoute,
 }) => {
-    const roleIds = await getRoleIds(root)
-    const prefix = testPrefix
-    const owner = await ensureUser(root, roleIds.user, 'user', `${prefix}-a`)
-    const other = await ensureUser(root, roleIds.user, 'user', `${prefix}-b`)
-    const route = await root.collection('routes').create({
-        name: `${prefix}-route`,
+    const owner = await createUser('user', 'a')
+    const other = await createUser('user', 'b')
+    const route = await createRoute({
         ...uiaa('7-'),
-        location: workerLocation.id,
-        type: 'Route',
-        creator: ['E2E'],
         screw_date: '2026-09-01',
     })
 
-    const ownerClient = await signIn(owner.email, owner.password)
-    const otherClient = await signIn(other.email, other.password)
+    const ownerApi = await apiAs(owner)
+    const otherApi = await apiAs(other)
 
-    const tick = await ownerClient.collection('ticks').create({
-        user: owner.id,
+    const tick = await ownerApi.post<TickRecord>('/me/ticks', {
         route: route.id,
         type: 'flash',
         attempts: 7,
@@ -45,55 +40,45 @@ test('ticks stay private to their owner and keep the grade they were logged at',
     expect(tick.attempts).toBe(1)
 
     await expect(
-        ownerClient.collection('ticks').create({
-            user: owner.id,
+        createTick(ownerApi, {
             route: route.id,
             type: 'top',
-            attempts: 1,
-            date: '2099-01-01 12:00:00.000Z',
+            date: '2099-01-01T12:00:00.000Z',
         }),
     ).rejects.toMatchObject({ status: 400 })
 
-    const ownSends = await ownerClient.collection('tick_sends').getFullList()
-    expect(ownSends.map((send) => send.route)).toContain(route.id)
-    expect(
-        (await otherClient.collection('tick_sends').getFullList()).map(
-            (send) => send.route,
-        ),
-    ).not.toContain(route.id)
-
-    await root.collection('routes').update(route.id, uiaa('7'))
-    expect((await ownerClient.collection('ticks').getOne(tick.id)).grade).toBe(
-        '7-',
+    expect(await ownerApi.get<string[]>('/me/ticks/sends')).toContain(route.id)
+    expect(await otherApi.get<string[]>('/me/ticks/sends')).not.toContain(
+        route.id,
     )
 
+    await updateRoute(adminApi, route.id, uiaa('7'))
+    expect(
+        (await listOwnTicks(ownerApi)).find((item) => item.id === tick.id)
+            ?.grade,
+    ).toBe('7-')
+
     await expect(
-        otherClient.collection('ticks').create({
+        otherApi.post('/me/ticks', {
             user: owner.id,
             route: route.id,
             type: 'top',
             attempts: 1,
             date: DAY,
         }),
-    ).rejects.toMatchObject({ status: 400 })
+    ).rejects.toMatchObject({ status: 403 })
     await expect(
-        otherClient.collection('ticks').getOne(tick.id),
+        updateTick(otherApi, tick.id, { note: 'mine now' }),
     ).rejects.toMatchObject({ status: 404 })
-    await expect(
-        otherClient.collection('ticks').update(tick.id, { note: 'mine now' }),
-    ).rejects.toMatchObject({ status: 404 })
-    await expect(
-        otherClient.collection('ticks').delete(tick.id),
-    ).rejects.toMatchObject({ status: 404 })
-    expect(
-        (await otherClient.collection('ticks').getList(1, 50)).items.map(
-            (item) => item.id,
-        ),
-    ).not.toContain(tick.id)
-    expect(
-        (await new PocketBase(PB_URL).collection('ticks').getList(1, 50))
-            .totalItems,
-    ).toBe(0)
+    await expect(deleteTick(otherApi, tick.id)).rejects.toMatchObject({
+        status: 404,
+    })
+    expect((await listOwnTicks(otherApi)).map((item) => item.id)).not.toContain(
+        tick.id,
+    )
+    await expect(listOwnTicks(guestApi())).rejects.toMatchObject({
+        status: 401,
+    })
 
     for (const change of [
         { user: other.id },
@@ -101,15 +86,7 @@ test('ticks stay private to their owner and keep the grade they were logged at',
         { route: 'another-route' },
     ]) {
         await expect(
-            ownerClient.collection('ticks').update(tick.id, change),
-        ).rejects.toMatchObject({ status: 404 })
+            updateTick(ownerApi, tick.id, change),
+        ).rejects.toMatchObject({ status: 400 })
     }
-
-    await root.collection('users').delete(owner.id)
-    await expect(
-        root.collection('ticks').getOne(tick.id),
-    ).rejects.toMatchObject({ status: 404 })
-
-    await root.collection('users').delete(other.id)
-    await root.collection('routes').delete(route.id)
 })

@@ -96,6 +96,7 @@
 
 <script setup lang="ts">
 import { DEFECT_CATEGORIES, DEFECT_CATEGORY_ICONS } from '~/utils/tasks'
+import { createTask } from '~/api/tasks'
 import type { DefectCategory, OpenRouteDefectRecord } from '~/types/models'
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024
@@ -109,7 +110,7 @@ const emit = defineEmits<{ submitted: [] }>()
 
 const open = defineModel<boolean>({ default: false })
 
-const pb = usePocketbase()
+const gymId = useCurrentGymId()
 const { t } = useI18n()
 const { capHeaders } = useCapToken()
 const { warning } = useNotification()
@@ -141,18 +142,19 @@ async function submit() {
         warning(t('tasks.photoTooLarge'))
         return
     }
-    const body = new FormData()
-    body.append('kind', 'defect')
-    body.append('route', props.routeId)
-    body.append('category', selectedCategory.value ?? '')
-    body.append('description', description.value.trim())
-    if (photo.value) body.append('photo', photo.value)
-
     await run(
         async () => {
-            await pb
-                .collection('tasks')
-                .create(body, { headers: await capHeaders('task') })
+            await createTask(
+                gymId.value,
+                {
+                    kind: 'defect',
+                    route: props.routeId,
+                    category: selectedCategory.value ?? '',
+                    description: description.value.trim(),
+                },
+                photo.value,
+                { headers: await capHeaders('task') },
+            )
             emit('submitted')
             open.value = false
         },

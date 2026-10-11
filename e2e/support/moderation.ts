@@ -1,7 +1,16 @@
 import { expect, type Page } from '@playwright/test'
-import type PocketBase from 'pocketbase'
 import { gotoSettled } from './nav'
-import { ensureUser, uiaa, type SeededUser } from './seed'
+import {
+    apiAs,
+    createGym,
+    createLocation,
+    createRole,
+    createRoute,
+    platformAdminApi,
+    routeInput,
+    setGymFeatures,
+} from './api'
+import { ensureUser, gripelloAdmin, type SeededUser } from './seed'
 
 export async function openCase(
     page: Page,
@@ -46,38 +55,33 @@ export interface ModerationGym {
 
 // Gym-wide switches (upload approval) get their own gym so parallel specs on the shared one stay unaffected.
 export async function createModerationGym(
-    root: PocketBase,
     prefix: string,
 ): Promise<ModerationGym> {
     const slug = `${prefix}-gym`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
-    const gym = await root.collection('gyms').create({
+    const platform = await platformAdminApi()
+    const gym = await createGym(platform, {
         slug,
         name: `${prefix} Gym`,
         active: true,
-        features: { beta_videos: true },
     })
-    const location = await root
-        .collection('locations')
-        .create({ name: `${prefix} Hall`, gym: gym.id })
-    const route = await root.collection('routes').create({
-        name: `${prefix} Route`,
-        ...uiaa('5'),
-        anchor_point: 1,
-        type: 'Route',
-        color: '#F44336',
-        creator: ['E2E'],
-        screw_date: new Date().toISOString().slice(0, 10),
-        location: location.id,
-    })
-    const staff = await ensureUser(root, undefined, 'user', `${prefix}-staff`)
-    const admin = await root
-        .collection('roles')
-        .getFirstListItem(
-            root.filter('gym = {:gym} && name = "admin"', { gym: gym.id }),
-        )
-    await root
-        .collection('memberships')
-        .create({ user: staff.id, gym: gym.id, role: admin.id })
+    await setGymFeatures(platform, gym.id, { beta_videos: true })
+    const staff = await ensureUser(null, undefined, 'user', `${prefix}-staff`)
+    gripelloAdmin(
+        'add-membership',
+        '--user',
+        staff.id,
+        '--gym',
+        gym.id,
+        '--role',
+        'admin',
+    )
+    const api = await apiAs(staff)
+    const location = await createLocation(api, `${prefix} Hall`, gym.id)
+    const route = await createRoute(
+        api,
+        routeInput(`${prefix} Route`, location.id),
+        gym.id,
+    )
     return { id: gym.id, slug, routeId: route.id, staff }
 }
 
@@ -93,24 +97,20 @@ export async function inboxCount(page: Page): Promise<number> {
 
 // A member of `gymId` holding exactly `permissions`, for permission-scoped checks.
 export async function staffOf(
-    root: PocketBase,
     gymId: string,
     permissions: string[],
     label: string,
 ): Promise<SeededUser> {
-    const granted = await root.collection('permissions').getFullList({
-        filter: permissions
-            .map((name) => root.filter('name = {:name}', { name }))
-            .join(' || '),
-    })
-    const role = await root.collection('roles').create({
-        gym: gymId,
-        name: label,
-        permissions: granted.map((permission) => permission.id),
-    })
-    const user = await ensureUser(root, undefined, 'user', label)
-    await root
-        .collection('memberships')
-        .create({ user: user.id, gym: gymId, role: role.id })
+    await createRole(await platformAdminApi(), label, permissions, gymId)
+    const user = await ensureUser(null, undefined, 'user', label)
+    gripelloAdmin(
+        'add-membership',
+        '--user',
+        user.id,
+        '--gym',
+        gymId,
+        '--role',
+        label,
+    )
     return user
 }

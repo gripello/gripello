@@ -291,6 +291,15 @@
 </template>
 
 <script setup lang="ts">
+import {
+    getCompetition,
+    listCategories,
+    listCompetitionRoutes,
+    listEntries,
+    listScores,
+    putScores,
+    type ScoreInput,
+} from '~/api/competitions'
 import { translatedColorName } from '~/utils/colorName'
 import {
     applyScoreAction,
@@ -302,11 +311,8 @@ import {
     type ScoreAction,
 } from '~/utils/scorecard'
 import type {
-    CompetitionCategoryRecord,
     CompetitionEntryRecord,
-    CompetitionRecord,
     CompetitionRouteRecord,
-    CompetitionScoreRecord,
     RouteRecord,
     WallRecord,
 } from '~/types/models'
@@ -317,7 +323,6 @@ definePageMeta({
 })
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const route = useRoute()
 const { can } = usePermissions()
 const { run } = useAsyncAction()
@@ -354,53 +359,31 @@ const saving = reactive(new Set<string>())
 
 const { data: competition } = await useAsyncData(
     () => `judge-competition:${competitionId.value}`,
-    () =>
-        pb
-            .collection('competitions')
-            .getOne<CompetitionRecord>(competitionId.value),
+    () => getCompetition(competitionId.value),
     { enabled: () => !!competitionId.value },
 )
 
 if (competition.value && competition.value.gym !== useCurrentGymId().value)
     throw createError({ status: 404, fatal: true })
 
-const competitionFilter = computed(() =>
-    pb.filter('competition = {:id}', { id: competitionId.value }),
-)
-
 const { data: compRoutes, refresh: refreshRoutes } = useAsyncData(
     () => `judge-routes:${competitionId.value}`,
-    () =>
-        pb
-            .collection('competition_routes')
-            .getFullList<CompetitionRouteRecord>({
-                filter: `${competitionFilter.value} && voided = false`,
-                sort: 'number',
-                expand: 'route.wall',
-            }),
+    () => listCompetitionRoutes(competitionId.value, { voided: false }),
     { default: () => [], enabled: () => !!competitionId.value },
 )
 
 const { data: entries, refresh: refreshEntries } = useAsyncData(
     () => `judge-entries:${competitionId.value}`,
     () =>
-        pb
-            .collection('competition_entries')
-            .getFullList<CompetitionEntryRecord>({
-                filter: `${competitionFilter.value} && (status = "registered" || status = "checked_in")`,
-                sort: 'bib',
-            }),
+        listEntries(competitionId.value, {
+            status: ['registered', 'checked_in'],
+        }),
     { default: () => [], enabled: () => !!competitionId.value },
 )
 
 const { data: scores, refresh: refreshScores } = useAsyncData(
     () => `judge-scores:${competitionId.value}`,
-    () =>
-        pb
-            .collection('competition_scores')
-            .getFullList<CompetitionScoreRecord>({
-                filter: competitionFilter.value,
-            }),
+    () => listScores(competitionId.value),
     { default: () => [], deep: true, enabled: () => !!competitionId.value },
 )
 
@@ -415,12 +398,7 @@ useCompetitionLive(competitionId, ({ kind }) => {
 
 const { data: categories } = useAsyncData(
     () => `judge-categories:${competitionId.value}`,
-    () =>
-        pb
-            .collection('competition_categories')
-            .getFullList<CompetitionCategoryRecord>({
-                filter: competitionFilter.value,
-            }),
+    () => listCategories(competitionId.value),
     { default: () => [], enabled: () => !!competitionId.value },
 )
 const categoryNames = computed(
@@ -537,21 +515,19 @@ function enqueue(
 async function upsert(
     entry: CompetitionEntryRecord,
     compRouteId: string,
-    body: Partial<CompetitionScoreRecord>,
+    body: Omit<ScoreInput, 'entry' | 'comp_route'>,
 ) {
-    const existing = scoreFor(entry, compRouteId)
-    const collection = pb.collection('competition_scores')
     saving.add(entry.id)
-    const saved = await run(() =>
-        existing
-            ? collection.update<CompetitionScoreRecord>(existing.id, body, {
-                  requestKey: null,
-              })
-            : collection.create<CompetitionScoreRecord>(
-                  { entry: entry.id, comp_route: compRouteId, ...body },
-                  { requestKey: null },
-              ),
-    )
+    const saved = await run(async () => {
+        const [score] = await putScores(competitionId.value, [
+            {
+                ...body,
+                entry: entry.id,
+                comp_route: compRouteId,
+            },
+        ])
+        return score
+    })
     saving.delete(entry.id)
     if (!saved) return
     scores.value = [

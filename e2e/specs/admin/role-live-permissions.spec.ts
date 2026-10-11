@@ -1,34 +1,21 @@
+import { createRole, e2eGymId, setRolePermissions } from '../../support/api'
 import { test, expect } from '../../support/fixtures'
 import { signInAs } from '../../support/auth'
 import { gotoSubscribed, gymPath } from '../../support/nav'
-import { e2eGymId, ensureUser } from '../../support/seed'
+import { ensureUser } from '../../support/seed'
 
 test('a permission added to the own role shows up without a reload', async ({
     page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const role = await root.collection('roles').create({
-        gym: await e2eGymId(root),
-        name: `${testPrefix}-live`,
-        permissions: [],
-    })
-    const user = await ensureUser(root, role.id, 'user', testPrefix)
-    try {
-        await signInAs(page, user.email, user.password)
-        await gotoSubscribed(page, gymPath('/routes'), 'roles')
-        await expect(page.getByTestId('nav-staff-tools')).toHaveCount(0)
+    const role = await createRole(adminApi, `${testPrefix}-live`)
+    const user = await ensureUser(null, role.id, 'user', testPrefix)
+    await signInAs(page, user.email, user.password)
+    await gotoSubscribed(page, gymPath('/routes'), `gym:${await e2eGymId()}`)
+    await expect(page.getByTestId('nav-staff-tools')).toHaveCount(0)
 
-        const manageComments = await root
-            .collection('permissions')
-            .getFirstListItem('name = "manage_comments"')
-        await root
-            .collection('roles')
-            .update(role.id, { permissions: [manageComments.id] })
+    await setRolePermissions(adminApi, role.id, ['manage_comments'])
 
-        await expect(page.getByTestId('nav-staff-tools')).toBeVisible()
-    } finally {
-        await root.collection('users').delete(user.id)
-        await root.collection('roles').delete(role.id)
-    }
+    await expect(page.getByTestId('nav-staff-tools')).toBeVisible()
 })

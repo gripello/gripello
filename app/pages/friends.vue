@@ -72,20 +72,8 @@
                     data-testid="friends-me"
                 >
                     <ClimberBanner
-                        :banner="
-                            climberFileUrl(
-                                myId,
-                                byId.get(myId)?.banner,
-                                '1600x400',
-                            )
-                        "
-                        :avatar="
-                            climberFileUrl(
-                                myId,
-                                byId.get(myId)?.avatar,
-                                '100x100',
-                            )
-                        "
+                        :banner="byId.get(myId)?.banner"
+                        :avatar="byId.get(myId)?.avatar"
                         :name="nameOf(myId)"
                         class="h-20"
                     />
@@ -95,7 +83,7 @@
                         <ClimberAvatar
                             :id="myId"
                             :name="nameOf(myId)"
-                            :avatar="byId.get(myId)?.avatar"
+                            :src="byId.get(myId)?.avatar"
                             size="lg"
                             class="ring-4 ring-(--ui-bg)"
                         />
@@ -147,7 +135,7 @@
                         size="lg"
                         data-testid="friends-search"
                     />
-                    <template v-if="searchTerm.length >= 2">
+                    <template v-if="searchTerm.length >= 3">
                         <LayoutEmptyState
                             v-if="!searching && !results.length"
                             icon="i-lucide-user-search"
@@ -275,8 +263,10 @@
 </template>
 
 <script setup lang="ts">
+import { searchClimbers } from '~/api/social'
+import { listFeed } from '~/api/ticks'
 import type { FollowRecord } from '~/types/models'
-import type { Climber, FeedTick } from '~/utils/friends'
+import type { FeedTick } from '~/utils/friends'
 import { cacheKeys } from '~/utils/realtimeCache'
 
 const PEOPLE_LISTS = ['following', 'followers'] as const
@@ -285,9 +275,8 @@ const PEOPLE_PREVIEW = 8
 definePageMeta({ middleware: ['auth'] })
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const { error: notifyError } = useNotification()
-const myId = pb.authStore.record?.id ?? ''
+const myId = useAuthRecord().value?.id ?? ''
 
 useHead({ title: t('page.title.friends') })
 
@@ -316,11 +305,11 @@ const {
     refresh: refreshFeed,
     reloadLoaded: reloadFeed,
     loadMore: loadMoreFeed,
-} = usePbList<FeedTick>('friend_ticks', {
-    perPage: 60,
-    requestKey: 'friendsFeed',
-    query: () => ({ sort: '-date,-created', expand: 'route' }),
-})
+} = usePbList<FeedTick>(
+    (page, limit) =>
+        listFeed({ page, limit, total: true }, { requestKey: 'friendsFeed' }),
+    { perPage: 60, requestKey: 'friendsFeed' },
+)
 const { data: feedPage } = await useAsyncData(
     cacheKeys.friendsFeed,
     async () => {
@@ -368,11 +357,8 @@ watch(search, (value) => {
 const { data: searchResults, status: searchStatus } = useAsyncData(
     'friends-search',
     () =>
-        searchTerm.value.length >= 2
-            ? pb.send<Climber[]>('/api/climbers', {
-                  query: { q: searchTerm.value },
-                  requestKey: null,
-              })
+        searchTerm.value.length >= 3
+            ? searchClimbers(searchTerm.value)
             : Promise.resolve([]),
     { server: false, watch: [searchTerm], default: () => [] },
 )

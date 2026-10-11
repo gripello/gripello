@@ -1,21 +1,21 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, reloadSettled } from '../../support/nav'
-import { createRole } from '../../support/seed'
+import { createRole } from '../../support/api'
 
 const roleSaved = (page: Page) =>
     page.waitForResponse(
         (res) =>
-            res.request().method() === 'PATCH' &&
-            res.url().includes('/api/collections/roles/records/'),
+            res.request().method() === 'PUT' &&
+            /\/api\/roles\/[^/]+\/permissions$/.test(res.url()),
     )
 
 test('toggles a permission for a role', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const role = await createRole(root, `${testPrefix}-role`)
+    const role = await createRole(adminApi, `${testPrefix}-role`)
     await gotoSettled(page, '/admin/users#roles')
     await page.getByTestId(`role-permissions-row-${role.name}`).click()
 
@@ -41,10 +41,10 @@ test('toggles a permission for a role', async ({
 
 test('shows an error and does not persist the change when the update fails', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const role = await createRole(root, `${testPrefix}-role`)
+    const role = await createRole(adminApi, `${testPrefix}-role`)
     await gotoSettled(page, '/admin/users#roles')
     await page.getByTestId(`role-permissions-row-${role.name}`).click()
 
@@ -53,7 +53,7 @@ test('shows an error and does not persist the change when the update fails', asy
     )
     await expect(checkbox).not.toBeChecked()
 
-    await page.route('**/api/collections/roles/records/**', (route) =>
+    await page.route('**/api/roles/*/permissions', (route) =>
         route.abort('failed'),
     )
 
@@ -61,17 +61,17 @@ test('shows an error and does not persist the change when the update fails', asy
     await expect(page.getByTestId('global-snackbar').last()).toBeVisible()
     await expect(checkbox).not.toBeChecked()
 
-    await page.unroute('**/api/collections/roles/records/**')
+    await page.unroute('**/api/roles/*/permissions')
     await reloadSettled(page)
     await expect(checkbox).not.toBeChecked()
 })
 
 test('grants and revokes a whole permission group at once', async ({
     adminPage: page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const role = await createRole(root, `${testPrefix}-role`)
+    const role = await createRole(adminApi, `${testPrefix}-role`)
     await gotoSettled(page, '/admin/users#roles')
     await page.getByTestId(`role-permissions-row-${role.name}`).click()
 

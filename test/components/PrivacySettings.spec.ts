@@ -3,6 +3,9 @@ import { computed, reactive, ref } from 'vue'
 import PrivacySettings from '~/components/account/PrivacySettings.vue'
 
 const update = vi.fn()
+vi.mock('~/api/account', () => ({
+    updateMe: (...args: unknown[]) => update(...args),
+}))
 const notifyError = vi.fn()
 const unblock = vi.fn()
 const blocks = ref<{ id: string; blocker: string; blocked: string }[]>([])
@@ -13,9 +16,10 @@ const switchStub = {
 }
 
 function mountSettings(user: Record<string, unknown>) {
-    globalThis.__POCKETBASE_CLIENT__ = {
-        authStore: { record: { id: 'me', ...user }, token: 't', save: vi.fn() },
-        collection: () => ({ update }),
+    globalThis.__AUTH_STORE__ = {
+        record: { id: 'me', ...user },
+        token: 't',
+        save: vi.fn(),
     }
     return mount(PrivacySettings, {
         global: {
@@ -79,18 +83,8 @@ describe('PrivacySettings', () => {
         await wrapper.get('[data-testid="privacy-shareSends"]').trigger('click')
         await wrapper.get('[data-testid="privacy-reviewName"]').trigger('click')
         await flushPromises()
-        expect(update).toHaveBeenNthCalledWith(
-            1,
-            'me',
-            { ticks_private: true },
-            { requestKey: null },
-        )
-        expect(update).toHaveBeenNthCalledWith(
-            2,
-            'me',
-            { reviews_anonymous: true },
-            { requestKey: null },
-        )
+        expect(update).toHaveBeenNthCalledWith(1, { ticks_private: true })
+        expect(update).toHaveBeenNthCalledWith(2, { reviews_anonymous: true })
     })
 
     it('rolls a toggle back when saving fails', async () => {

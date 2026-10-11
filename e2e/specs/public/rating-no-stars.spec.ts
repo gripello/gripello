@@ -1,51 +1,46 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { PB_URL } from '../../support/map'
-import { authAsSuperuser, ensureLocations, uiaa } from '../../support/seed'
+import {
+    createRating,
+    createRoute,
+    deleteRoute,
+    ensureLocations,
+    routeInput,
+    type Api,
+} from '../../support/api'
+import { uiaa } from '../../support/seed'
+import type { RouteScoreRecord } from '../../../types/models'
 
-async function seedRoute(prefix: string, stars: number[]) {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const locations = await ensureLocations(root)
-    const route = await root.collection('routes').create({
-        name: `${prefix}-stars`,
-        ...uiaa('6'),
-        anchor_point: 1,
-        location: locations['Hall A'],
-        type: 'Route',
-        creator: ['E2E'],
-        color: '#F44336',
-        screw_date: new Date().toISOString().slice(0, 10),
-    })
+async function seedRoute(api: Api, prefix: string, stars: number[]) {
+    const locations = await ensureLocations(api)
+    const route = await createRoute(
+        api,
+        routeInput(`${prefix}-stars`, locations['Hall A']!, uiaa('6')),
+    )
     for (const rating of stars) {
-        await root.collection('ratings').create({
-            route_id: route.id,
+        await createRating(api, route.id, {
             rating,
             ...uiaa('6'),
             comment: `${prefix} ${rating} stars`,
         })
     }
     return {
-        root,
+        api,
         routeId: route.id,
-        cleanup: () =>
-            root
-                .collection('routes')
-                .delete(route.id)
-                .catch(() => {}),
+        cleanup: () => deleteRoute(api, route.id).catch(() => {}),
     }
 }
 
 test('a comment-only review does not pull down the average', async ({
     page,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedRoute(testPrefix, [4, 0])
+    const seeded = await seedRoute(adminApi, testPrefix, [4, 0])
     try {
-        const score = await seeded.root
-            .collection('averageRating')
-            .getOne(seeded.routeId)
+        const score = await seeded.api.get<RouteScoreRecord>(
+            `/routes/${seeded.routeId}`,
+        )
         expect(score.average_rating).toBe(4)
         expect(score.ratings_count).toBe(1)
 
@@ -61,9 +56,10 @@ test('a comment-only review does not pull down the average', async ({
 
 test('a new review cannot be submitted without stars', async ({
     page,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedRoute(testPrefix, [])
+    const seeded = await seedRoute(adminApi, testPrefix, [])
     try {
         await gotoSettled(page, `/route?id=${seeded.routeId}`)
         await page.getByTestId('review-open-cta').click()

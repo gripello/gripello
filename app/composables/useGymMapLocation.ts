@@ -1,4 +1,4 @@
-import type { WallRecord } from '~/types/models'
+import { listWalls } from '~/api/routes'
 import { sanitizeGymMap } from '#shared/utils/mapGeometry'
 import { toMapWalls } from '~/utils/gymMap'
 import { cacheKeys } from '~/utils/realtimeCache'
@@ -12,7 +12,8 @@ export function useGymMapLocation(
     key: string,
     { includeUnmapped = false, confirmLeave }: GymMapLocationOptions = {},
 ) {
-    const pb = usePocketbase()
+    const nuxtApp = useNuxtApp()
+    const gymId = useCurrentGymId()
     const route = useRoute()
     const router = useRouter()
     const locationsRequest = useLocations()
@@ -52,13 +53,9 @@ export function useGymMapLocation(
         async () => {
             await locationsRequest
             return locationId.value
-                ? pb.collection('walls').getFullList<WallRecord>({
-                      filter: pb.filter('location = {:id}', {
-                          id: locationId.value,
-                      }),
-                      sort: 'sort,name',
-                      requestKey: `${key}Walls`,
-                  })
+                ? nuxtApp.runWithContext(() =>
+                      listWalls(gymId.value, { location: locationId.value }),
+                  )
                 : []
         },
         { watch: [locationId], default: () => [] },

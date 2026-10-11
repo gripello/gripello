@@ -1,0 +1,17 @@
+{{if .Greeting}}{{.Greeting}}
+
+{{end}}{{range .Paragraphs}}{{.}}
+
+{{end}}{{if .Code}}{{.Code}}
+
+{{end}}{{range .Details}}{{.Label}}: {{.Value}}{{if and .Link (ne .Link .Value)}} {{.Link}}{{end}}
+{{end}}{{if .Details}}
+{{end}}{{if .ActionURL}}{{.ActionLabel}}: {{.ActionURL}}
+
+{{end}}{{range .Outro}}{{.}}
+
+{{end}}{{if .Note}}{{.Note}}
+
+{{end}}-- 
+{{.Brand}}{{range .FooterLinks}}
+{{.Label}}: {{.URL}}{{end}}

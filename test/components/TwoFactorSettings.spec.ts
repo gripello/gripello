@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import TwoFactorSettings from '~/components/account/TwoFactorSettings.vue'
+import { routeApi } from '../api/apiMock'
 
 const send = vi.fn()
 const factor = (id: string, kind: 'totp' | 'passkey', name = '') => ({
@@ -60,10 +61,8 @@ function mountSettings() {
 describe('TwoFactorSettings', () => {
     beforeEach(() => {
         send.mockReset()
-        globalThis.__POCKETBASE_CLIENT__ = {
-            send,
-            authStore: { record: { email: 'me@example.com' } },
-        }
+        globalThis.__AUTH_STORE__ = { record: { email: 'me@example.com' } }
+        routeApi(send)
         vi.stubGlobal('useNotification', () => ({
             success: vi.fn(),
             error: vi.fn(),
@@ -133,7 +132,7 @@ describe('TwoFactorSettings', () => {
         send.mockResolvedValueOnce(null)
         await wrapper.get('form').trigger('submit')
         await flushPromises()
-        expect(send).toHaveBeenLastCalledWith('/api/account/mfa/t', {
+        expect(send).toHaveBeenLastCalledWith('/me/mfa/t', {
             method: 'DELETE',
             body: { password: 'secret' },
         })
@@ -165,7 +164,7 @@ describe('TwoFactorSettings', () => {
 
         send.mockResolvedValueOnce(factor('p', 'passkey', 'YubiKey'))
         await settings.saveNames()
-        expect(send).toHaveBeenLastCalledWith('/api/account/mfa/p', {
+        expect(send).toHaveBeenLastCalledWith('/me/mfa/p', {
             method: 'PATCH',
             body: { name: 'YubiKey' },
         })
@@ -194,7 +193,7 @@ describe('TwoFactorSettings', () => {
             .get('[data-testid="two-factor-password"]')
             .setValue('secret')
         await wrapper.get('form').trigger('submit')
-        expect(send).toHaveBeenLastCalledWith('/api/account/totp/setup', {
+        expect(send).toHaveBeenLastCalledWith('/me/totp/setup', {
             method: 'POST',
             body: { password: 'secret' },
         })
@@ -204,9 +203,6 @@ describe('TwoFactorSettings', () => {
             ).toBe(true),
         )
         await flushPromises()
-        expect(send).not.toHaveBeenCalledWith(
-            '/api/account/totp',
-            expect.anything(),
-        )
+        expect(send).not.toHaveBeenCalledWith('/me/totp', expect.anything())
     })
 })

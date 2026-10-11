@@ -5,6 +5,11 @@ const token = `x.${btoa(JSON.stringify({ sid: 'here' }))}.y`
 const getFullList = vi.fn()
 const remove = vi.fn()
 const send = vi.fn()
+vi.mock('~/api/account', () => ({
+    listSessions: () => getFullList(),
+    revokeSession: (id: string) => remove(id),
+    signOutOtherSessions: () => send(),
+}))
 const session = (id: string, userAgent: string, lastSeen: string) => ({
     id,
     user: 'me',
@@ -58,11 +63,7 @@ describe('SessionList', () => {
             ])
         remove.mockReset().mockResolvedValue(true)
         send.mockReset().mockResolvedValue(null)
-        globalThis.__POCKETBASE_CLIENT__ = {
-            authStore: { token },
-            collection: () => ({ getFullList, delete: remove }),
-            send,
-        }
+        globalThis.__AUTH_STORE__ = { token }
         vi.stubGlobal('useNotification', () => ({ error: vi.fn() }))
         vi.stubGlobal('useAsyncAction', () => ({
             pending: ref(false),
@@ -96,10 +97,7 @@ describe('SessionList', () => {
         await flushPromises()
         await wrapper.get('[data-testid="confirm"]').trigger('click')
         await flushPromises()
-        expect(send).toHaveBeenCalledWith(
-            '/api/account/sessions/sign-out-others',
-            { method: 'POST' },
-        )
+        expect(send).toHaveBeenCalled()
         expect(wrapper.findAll('[data-testid="session-row"]')).toHaveLength(1)
     })
 })

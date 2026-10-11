@@ -1,15 +1,21 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
+import {
+    createCompetition,
+    createCompetitionCategory,
+    createCompetitionRoute,
+    listCompetitionScores,
+} from '../../support/api'
 
 test('a climber scores boulders, also without signal', async ({
     userPage,
-    root,
+    adminApi,
     workerLocation,
     createRoute,
     testPrefix,
 }) => {
     const hour = 60 * 60 * 1000
-    const competition = await root.collection('competitions').create({
+    const competition = await createCompetition(adminApi, {
         name: `${testPrefix} Live Jam`,
         location: workerLocation.id,
         status: 'open',
@@ -19,28 +25,25 @@ test('a climber scores boulders, also without signal', async ({
         ends_at: new Date(Date.now() + hour).toISOString(),
         live_ranking: true,
     })
-    await root
-        .collection('competition_categories')
-        .create({ competition: competition.id, name: 'Open' })
+    await createCompetitionCategory(adminApi, competition.id, { name: 'Open' })
+    const compRouteIds: Record<number, string> = {}
     for (const number of [1, 2, 3]) {
         const boulder = await createRoute({
             type: 'Boulder',
             name: `${testPrefix} Problem ${number}`,
         })
-        await root.collection('competition_routes').create({
-            competition: competition.id,
-            route: boulder.id,
-            number,
-            zone: true,
-        })
+        compRouteIds[number] = (
+            await createCompetitionRoute(adminApi, competition.id, {
+                route: boulder.id,
+                number,
+                zone: true,
+            })
+        ).id
     }
     const savedScore = async (number: number) => {
-        const scores = await root.collection('competition_scores').getFullList({
-            filter: root.filter(
-                'competition = {:id} && comp_route.number = {:number}',
-                { id: competition.id, number },
-            ),
-        })
+        const scores = (
+            await listCompetitionScores(adminApi, competition.id)
+        ).filter((score) => score.comp_route === compRouteIds[number])
         return scores[0]
             ? [
                   scores[0].attempts,

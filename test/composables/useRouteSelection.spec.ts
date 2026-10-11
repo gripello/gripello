@@ -1,19 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
 import { useRouteSelection } from '~/composables/useRouteSelection'
+import type { RouteQuery } from '~/api/routes'
+import { routeApi } from '../api/apiMock'
 
-const getFullList = vi.fn()
+const listRoutes = vi.fn()
+const gym = ref('g1')
 
 beforeEach(() => {
-    getFullList.mockReset()
-    globalThis.__POCKETBASE_CLIENT__ = {
-        collection: () => ({ getFullList }),
-    }
+    listRoutes.mockReset()
+    globalThis.__AUTH_STORE__ = {}
+    routeApi(listRoutes)
 })
 
 describe('useRouteSelection', () => {
     it('toggles single ids and removes a batch', () => {
-        const selection = useRouteSelection(ref(''), ref(3))
+        const selection = useRouteSelection(gym, ref<RouteQuery>({}), ref(3))
         selection.update('a', true)
         selection.update('b', true)
         selection.update('a', false)
@@ -24,9 +26,9 @@ describe('useRouteSelection', () => {
     })
 
     it('selects all ids and reuses the cache for the same filter', async () => {
-        getFullList.mockResolvedValue([{ id: 'a' }, { id: 'b' }])
-        const filter = ref('archived = false')
-        const selection = useRouteSelection(filter, ref(2))
+        listRoutes.mockResolvedValue({ items: [{ id: 'a' }, { id: 'b' }] })
+        const filter = ref<RouteQuery>({})
+        const selection = useRouteSelection(gym, filter, ref(2))
 
         await selection.toggleAll()
         expect(selection.areAllSelected.value).toBe(true)
@@ -35,36 +37,36 @@ describe('useRouteSelection', () => {
         expect(selection.hasSelection.value).toBe(false)
 
         await selection.toggleAll()
-        expect(getFullList).toHaveBeenCalledTimes(1)
+        expect(listRoutes).toHaveBeenCalledTimes(1)
 
         selection.clear()
-        filter.value = 'archived = true'
+        filter.value = { archived: true }
         await selection.toggleAll()
-        expect(getFullList).toHaveBeenCalledTimes(2)
-        expect(getFullList).toHaveBeenLastCalledWith(
-            expect.objectContaining({ filter: 'archived = true' }),
-        )
+        expect(listRoutes).toHaveBeenCalledTimes(2)
+        expect(listRoutes).toHaveBeenLastCalledWith('/gyms/g1/routes', {
+            query: expect.objectContaining({ archived: 'true', limit: 1000 }),
+        })
     })
 
     it('refetches after invalidate', async () => {
-        getFullList.mockResolvedValue([{ id: 'a' }])
-        const selection = useRouteSelection(ref(''), ref(1))
+        listRoutes.mockResolvedValue({ items: [{ id: 'a' }] })
+        const selection = useRouteSelection(gym, ref<RouteQuery>({}), ref(1))
         await selection.toggleAll()
         selection.clear()
         selection.invalidate()
         await selection.toggleAll()
-        expect(getFullList).toHaveBeenCalledTimes(2)
+        expect(listRoutes).toHaveBeenCalledTimes(2)
     })
 
     it('clears the selection when the filter changes', async () => {
-        getFullList.mockResolvedValue([{ id: 'a' }, { id: 'b' }])
-        const filter = ref('archived = false')
+        listRoutes.mockResolvedValue({ items: [{ id: 'a' }, { id: 'b' }] })
+        const filter = ref<RouteQuery>({})
         const totalItems = ref(2)
-        const selection = useRouteSelection(filter, totalItems)
+        const selection = useRouteSelection(gym, filter, totalItems)
         await selection.toggleAll()
         expect(selection.areAllSelected.value).toBe(true)
 
-        filter.value = 'archived = true'
+        filter.value = { archived: true }
         totalItems.value = 1
         await nextTick()
         expect(selection.hasSelection.value).toBe(false)
@@ -73,13 +75,15 @@ describe('useRouteSelection', () => {
 
     it('drops a select-all result that resolves after the filter changed', async () => {
         let resolveIds: (ids: { id: string }[]) => void = () => {}
-        getFullList.mockReturnValue(
-            new Promise((resolve) => (resolveIds = resolve)),
+        listRoutes.mockReturnValue(
+            new Promise(
+                (resolve) => (resolveIds = (items) => resolve({ items })),
+            ),
         )
-        const filter = ref('')
-        const selection = useRouteSelection(filter, ref(2))
+        const filter = ref<RouteQuery>({})
+        const selection = useRouteSelection(gym, filter, ref(2))
         const pending = selection.toggleAll()
-        filter.value = 'archived = true'
+        filter.value = { archived: true }
         resolveIds([{ id: 'a' }, { id: 'b' }])
         await pending
         expect(selection.hasSelection.value).toBe(false)

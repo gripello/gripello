@@ -1,33 +1,31 @@
+import { listWalls } from '~/api/routes'
 import { cacheKeys } from '~/utils/realtimeCache'
 import { ROUTE_TYPES } from '~/utils/routes'
-import { routeSearchFilter } from '~/utils/routeSearch'
+import { routeFilterQuery } from '~/utils/routeSearch'
 import type { WallRecord } from '~/types/models'
 
 export function useRouteFilters() {
     const { t } = useI18n()
     const { data: locationRecords } = useLocations()
-    const { gradeFilterItems, gradeFilterClause } = useGradeSystems()
+    const { gradeFilterItems } = useGradeSystems()
+    const gymId = useCurrentGymId()
 
     const searchRouteName = ref('')
     const selectedDifficulty = ref('')
     const selectedType = ref('')
     const selectedLocation = ref('')
     const selectedWall = ref('')
-    const pb = usePocketbase()
 
     const { data: wallRecords } = useAsyncData(
         cacheKeys.routeFilterWalls,
         () =>
             selectedLocation.value
-                ? pb.collection('walls').getFullList<WallRecord>({
-                      filter: pb.filter('location = {:id}', {
-                          id: selectedLocation.value,
-                      }),
-                      sort: 'sort,name',
-                      fields: 'id,name',
-                      requestKey: null,
-                  })
-                : Promise.resolve([]),
+                ? listWalls(
+                      gymId.value,
+                      { location: selectedLocation.value },
+                      { fields: 'id,name', requestKey: null },
+                  )
+                : Promise.resolve([] as WallRecord[]),
         { default: () => [], server: false, watch: [selectedLocation] },
     )
     useLiveLocation([cacheKeys.routeFilterWalls], selectedLocation)
@@ -75,18 +73,15 @@ export function useRouteFilters() {
             ].filter(Boolean).length,
     )
 
-    const pbFilter = computed(() => {
-        const parts: string[] = []
-        if (selectedDifficulty.value)
-            parts.push(gradeFilterClause(selectedDifficulty.value))
-        if (selectedLocation.value)
-            parts.push(`location = "${selectedLocation.value}"`)
-        if (selectedWall.value) parts.push(`wall = "${selectedWall.value}"`)
-        if (selectedType.value) parts.push(`type = "${selectedType.value}"`)
-        const search = routeSearchFilter(searchRouteName.value)
-        if (search) parts.push(search)
-        return parts.join(' && ')
-    })
+    const routeQuery = computed(() =>
+        routeFilterQuery({
+            difficulty: selectedDifficulty.value,
+            location: selectedLocation.value,
+            wall: selectedWall.value,
+            type: selectedType.value,
+            search: searchRouteName.value,
+        }),
+    )
 
     function clearFilters() {
         searchRouteName.value = ''
@@ -107,7 +102,7 @@ export function useRouteFilters() {
         locations,
         walls,
         activeFilterCount,
-        pbFilter,
+        routeQuery,
         clearFilters,
     }
 }

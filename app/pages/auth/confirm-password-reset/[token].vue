@@ -38,11 +38,12 @@
 </template>
 
 <script setup lang="ts">
+import { confirmPasswordReset } from '~/api/auth'
+
 defineOptions({ name: 'ResetPasswordPage' })
 definePageMeta({ layout: 'blank', auth: false })
 
 const { t } = useI18n()
-const pb = usePocketbase()
 
 useHead({ title: t('page.title.resetPassword') })
 
@@ -51,9 +52,7 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 
 const resetPassword = (token: string) =>
-    pb
-        .collection('users')
-        .confirmPasswordReset(token, newPassword.value, confirmPassword.value)
+    confirmPasswordReset(token, newPassword.value, confirmPassword.value)
 
 const isInvalidToken = (error: unknown) =>
     (error as { data?: { data?: { token?: { code?: string } } } })?.data?.data

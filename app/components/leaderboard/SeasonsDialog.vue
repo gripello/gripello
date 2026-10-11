@@ -124,6 +124,7 @@
 </template>
 
 <script setup lang="ts">
+import { createSeason, deleteSeason, updateSeason } from '~/api/ticks'
 import type { Form } from '@nuxt/ui'
 import type { SeasonRecord } from '~/types/models'
 import { formatDate } from '#shared/utils/formatting'
@@ -134,7 +135,6 @@ const emit = defineEmits<{ changed: [] }>()
 const open = defineModel<boolean>({ default: false })
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
 const { pending, run } = useAsyncAction()
 
@@ -183,10 +183,8 @@ async function save() {
     const saved = await run(
         () =>
             editingId.value
-                ? pb.collection('seasons').update(editingId.value, data)
-                : pb
-                      .collection('seasons')
-                      .create({ ...data, gym: gymId.value }),
+                ? updateSeason(editingId.value, data)
+                : createSeason(gymId.value, data),
         { success: t('notifications.success.edit') },
     )
     if (!saved) return
@@ -197,10 +195,9 @@ async function save() {
 async function remove() {
     const season = deleteTarget.value
     if (!season) return
-    const deleted = await run(
-        () => pb.collection('seasons').delete(season.id),
-        { success: t('notifications.success.delete') },
-    )
+    const deleted = await run(() => deleteSeason(season.id), {
+        success: t('notifications.success.delete'),
+    })
     if (!deleted) return
     deleteTarget.value = null
     if (editingId.value === season.id) reset()

@@ -15,7 +15,7 @@ test.describe('self-service profile', () => {
         const saved = page.waitForResponse(
             (res) =>
                 res.request().method() === 'PATCH' &&
-                res.url().includes('/api/collections/users/records/'),
+                new URL(res.url()).pathname === '/api/me',
         )
         await page.getByTestId('profile-save').click()
         expect((await saved).ok()).toBe(true)
@@ -53,9 +53,7 @@ test.describe('self-service profile', () => {
     }) => {
         await gotoSettled(page, '/account/settings')
 
-        await page.route('**/api/collections/users/records/**', (route) =>
-            route.abort('failed'),
-        )
+        await page.route('**/api/me', (route) => route.abort('failed'))
 
         await page.getByTestId('profile-lastname').fill(`${testPrefix}-fail`)
         await page.getByTestId('profile-save').click()

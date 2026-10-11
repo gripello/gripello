@@ -115,11 +115,17 @@ import { timeAgo } from '#shared/utils/formatting'
 import { deviceLabel, isMobileDevice } from '~/utils/push'
 import { currentSessionId } from '~/utils/session'
 import type { SessionRecord } from '~/types/models'
+import {
+    listSessions,
+    revokeSession,
+    signOutOtherSessions,
+} from '~/api/account'
+import { useAuthState } from '~/api/auth'
 
 const LIST = 'min-w-0 p-0 sm:p-0 gap-y-0 divide-y divide-default'
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
+const { token } = useAuthState()
 const { error: notifyError } = useNotification()
 const signOutOthers = useAsyncAction()
 
@@ -128,7 +134,7 @@ const loadError = ref(false)
 const loaded = ref(false)
 const revoking = ref('')
 const confirmOthers = ref(false)
-const currentId = computed(() => currentSessionId(pb.authStore.token))
+const currentId = computed(() => currentSessionId(token()))
 
 function label(session: SessionRecord) {
     return (
@@ -139,9 +145,7 @@ function label(session: SessionRecord) {
 
 async function load() {
     try {
-        const list = await pb
-            .collection('sessions')
-            .getFullList<SessionRecord>({ sort: '-last_seen' })
+        const list = await listSessions()
         sessions.value = list.sort(
             (a, b) =>
                 Number(b.id === currentId.value) -
@@ -160,7 +164,7 @@ onMounted(load)
 async function revoke(session: SessionRecord) {
     revoking.value = session.id
     try {
-        await pb.collection('sessions').delete(session.id)
+        await revokeSession(session.id)
         sessions.value = sessions.value.filter((s) => s.id !== session.id)
     } catch {
         notifyError(t('notifications.error.delete'))
@@ -171,9 +175,7 @@ async function revoke(session: SessionRecord) {
 
 function revokeOthers() {
     return signOutOthers.run(async () => {
-        await pb.send('/api/account/sessions/sign-out-others', {
-            method: 'POST',
-        })
+        await signOutOtherSessions()
         sessions.value = sessions.value.filter((s) => s.id === currentId.value)
         confirmOthers.value = false
     })

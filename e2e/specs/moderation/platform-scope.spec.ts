@@ -1,8 +1,14 @@
 import { test, expect } from '../../support/fixtures'
-import { authHeader, gotoSettled, gymPath } from '../../support/nav'
+import { apiOf, gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { reportAs } from '../../support/reports'
 import { createModerationGym, decide, openCase } from '../../support/moderation'
+import {
+    createBetaLink,
+    deleteGym,
+    listModerationCases,
+    updateGym,
+} from '../../support/api'
 
 test('the platform queue holds reported cases, all gyms holds the rest', async ({
     platformPage,
@@ -39,30 +45,22 @@ test('the platform queue holds reported cases, all gyms holds the rest', async (
 
 test('the platform can take down a waiting upload but never publish it', async ({
     platformPage,
-    root,
+    api,
     createUser,
     pageAs,
     testPrefix,
 }) => {
-    const gym = await createModerationGym(root, testPrefix)
+    const gym = await createModerationGym(testPrefix)
     try {
-        await root
-            .collection('gyms')
-            .update(gym.id, { premoderate_betas: true })
-        const uploaderUser = await createUser('user', 'uploader')
-        const uploader = await pageAs(uploaderUser)
-        const upload = await uploader.request.post(
-            '/api/collections/beta_videos/records',
-            {
-                headers: await authHeader(uploader),
-                data: {
-                    route: gym.routeId,
-                    user: uploaderUser.id,
-                    url: `https://youtube.com/shorts/${testPrefix}`,
-                },
-            },
-        )
-        expect(upload.status()).toBe(202)
+        await updateGym(api, gym.id, { premoderate_betas: true })
+        const uploader = await pageAs(await createUser('user', 'uploader'))
+        expect(
+            await createBetaLink(
+                await apiOf(uploader),
+                gym.routeId,
+                `https://youtube.com/shorts/${testPrefix}`,
+            ),
+        ).toMatchObject({ pending: true })
 
         await openCase(
             platformPage,
@@ -75,17 +73,18 @@ test('the platform can take down a waiting upload but never publish it', async (
         ).toHaveCount(0)
         await decide(platformPage, 'hide', 'Illegal content.')
 
-        const caseOfUpload = () =>
-            root.collection('moderation_items').getFirstListItem(
-                root.filter('content_type = "beta_video" && snapshot ~ {:p}', {
-                    p: `shorts/${testPrefix}`,
-                }),
-            )
+        const caseOfUpload = async () =>
+            (
+                await listModerationCases(api, {
+                    content_type: 'beta_video',
+                    q: `shorts/${testPrefix}`,
+                })
+            )[0]
         await expect
-            .poll(async () => (await caseOfUpload()).state)
+            .poll(async () => (await caseOfUpload())?.state)
             .toBe('hidden')
-        expect((await caseOfUpload()).hidden_by).toBe('platform')
+        expect((await caseOfUpload())?.hidden_by).toBe('platform')
     } finally {
-        await root.collection('gyms').delete(gym.id)
+        await deleteGym(api, gym.id)
     }
 })

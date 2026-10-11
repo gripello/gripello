@@ -1,18 +1,16 @@
-import PocketBase from 'pocketbase'
 import type { Locator } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser, uiaa } from '../../support/seed'
+import { createRoute } from '../../support/api'
+import { uiaa } from '../../support/seed'
 import { gotoSettled, gymPath } from '../../support/nav'
-import { PB_URL, seedMap, type SeededMap } from '../../support/map'
+import { seedMap, type SeededMap } from '../../support/map'
 
 let seeded: SeededMap
 let routeId: string
 
-test.beforeEach(async ({ testPrefix }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    seeded = await seedMap(root, testPrefix, { routes: 1 })
-    const route = await root.collection('routes').create({
+test.beforeEach(async ({ adminApi, testPrefix }) => {
+    seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
+    const route = await createRoute(adminApi, {
         name: `${testPrefix}-summary`,
         ...uiaa('7'),
         location: seeded.locationId,

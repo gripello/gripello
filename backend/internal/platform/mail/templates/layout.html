@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="{{.Language}}">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="color-scheme" content="light dark" />
+        <title>{{.Subject}}</title>
+    </head>
+    <body
+        style="
+            margin: 0;
+            padding: 0;
+            background: #f4f5f7;
+            font-family:
+                -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                Helvetica, Arial, sans-serif;
+            color: #1f2933;
+        "
+    >
+        <table
+            role="presentation"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            style="background: #f4f5f7"
+        >
+            <tr>
+                <td align="center" style="padding: 24px 12px">
+                    <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                        style="
+                            max-width: 560px;
+                            background: #ffffff;
+                            border-radius: 12px;
+                        "
+                    >
+                        <tr>
+                            <td style="padding: 24px 28px 8px">
+                                <strong style="font-size: 18px"
+                                    >{{.Brand}}</strong
+                                >
+                            </td>
+                        </tr>
+                        <tr>
+                            <td
+                                style="
+                                    padding: 8px 28px 24px;
+                                    font-size: 15px;
+                                    line-height: 1.55;
+                                "
+                            >
+                                {{- if .Greeting}}
+                                <p style="margin: 16px 0">{{.Greeting}}</p>
+                                {{end}} {{- range .Paragraphs}}
+                                <p
+                                    style="
+                                        margin: 16px 0;
+                                        white-space: pre-line;
+                                    "
+                                >
+                                    {{.}}
+                                </p>
+                                {{end}} {{- if .Code}}
+                                <p
+                                    style="
+                                        margin: 24px 0;
+                                        font-size: 28px;
+                                        font-weight: 700;
+                                        letter-spacing: 6px;
+                                        text-align: center;
+                                    "
+                                >
+                                    {{.Code}}
+                                </p>
+                                {{end}} {{- if .Details}}
+                                <table
+                                    role="presentation"
+                                    width="100%"
+                                    cellpadding="0"
+                                    cellspacing="0"
+                                    style="
+                                        margin: 16px 0;
+                                        border-top: 1px solid #e4e7eb;
+                                    "
+                                >
+                                    {{- range .Details}}
+                                    <tr>
+                                        <td
+                                            style="
+                                                padding: 10px 0;
+                                                border-bottom: 1px solid #e4e7eb;
+                                            "
+                                        >
+                                            <div
+                                                style="
+                                                    font-size: 12px;
+                                                    color: #616e7c;
+                                                    text-transform: uppercase;
+                                                    letter-spacing: 0.04em;
+                                                "
+                                            >
+                                                {{.Label}}
+                                            </div>
+                                            <div style="white-space: pre-line">
+                                                {{if .Link}}<a
+                                                    href="{{.Link}}"
+                                                    style="color: #1f6feb"
+                                                    >{{.Value}}</a
+                                                >{{else}}{{.Value}}{{end}}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {{- end}}
+                                </table>
+                                {{- end}} {{- if .ActionURL}}
+                                <table
+                                    role="presentation"
+                                    cellpadding="0"
+                                    cellspacing="0"
+                                    style="margin: 24px 0"
+                                >
+                                    <tr>
+                                        <td
+                                            style="
+                                                border-radius: 8px;
+                                                background: #1f6feb;
+                                            "
+                                        >
+                                            <a
+                                                href="{{.ActionURL}}"
+                                                style="
+                                                    display: inline-block;
+                                                    padding: 12px 22px;
+                                                    color: #ffffff;
+                                                    font-weight: 600;
+                                                    text-decoration: none;
+                                                    border-radius: 8px;
+                                                "
+                                                >{{.ActionLabel}}</a
+                                            >
+                                        </td>
+                                    </tr>
+                                </table>
+                                <p
+                                    style="
+                                        margin: 16px 0;
+                                        font-size: 13px;
+                                        color: #616e7c;
+                                    "
+                                >
+                                    {{.LinkHint}}<br /><a
+                                        href="{{.ActionURL}}"
+                                        style="
+                                            color: #1f6feb;
+                                            word-break: break-all;
+                                        "
+                                        >{{.ActionURL}}</a
+                                    >
+                                </p>
+                                {{- end}} {{- range .Outro}}
+                                <p
+                                    style="
+                                        margin: 16px 0;
+                                        white-space: pre-line;
+                                    "
+                                >
+                                    {{.}}
+                                </p>
+                                {{end}} {{- if .Note}}
+                                <p
+                                    style="
+                                        margin: 16px 0;
+                                        font-size: 13px;
+                                        color: #616e7c;
+                                    "
+                                >
+                                    {{.Note}}
+                                </p>
+                                {{end}}
+                            </td>
+                        </tr>
+                    </table>
+                    <p
+                        style="
+                            margin: 16px 0 0;
+                            font-size: 12px;
+                            color: #7b8794;
+                        "
+                    >
+                        {{.Brand}} {{- range .FooterLinks}} ·
+                        <a href="{{.URL}}" style="color: #7b8794">{{.Label}}</a
+                        >{{end}}
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

@@ -175,6 +175,7 @@
 </template>
 
 <script setup lang="ts">
+import { createEntry, listCategories, updateEntry } from '~/api/competitions'
 import {
     required,
     validateRules,
@@ -189,7 +190,6 @@ import {
     needsGuardianConsent,
 } from '~/utils/competitions'
 import type {
-    CompetitionCategoryRecord,
     CompetitionEntryRecord,
     CompetitionEntryStatus,
     CompetitionRecord,
@@ -205,18 +205,18 @@ const props = defineProps<{
 
 const emit = defineEmits<{ changed: [] }>()
 
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const { t } = useI18n()
 const { pending, run } = useAsyncAction()
 
 const now = useNow()
 const currentYear = now.value.getFullYear()
-const userId = pb.authStore.record?.id ?? ''
+const userId = authStore.record?.id ?? ''
 const withdrawOpen = ref(false)
 
 const form = reactive({
     displayName: defaultDisplayName(
-        pb.authStore.record as Partial<UserRecord> | null,
+        authStore.record as Partial<UserRecord> | null,
     ),
     birthYear: undefined as number | undefined,
     category: undefined as string | undefined,
@@ -242,15 +242,7 @@ const formRules = computed(() => ({
 
 const { data: categories } = useAsyncData(
     () => `competition-public-categories:${props.competition.id}`,
-    () =>
-        pb
-            .collection('competition_categories')
-            .getFullList<CompetitionCategoryRecord>({
-                filter: pb.filter('competition = {:id}', {
-                    id: props.competition.id,
-                }),
-                sort: 'sort,name',
-            }),
+    () => listCategories(props.competition.id),
     { default: () => [] },
 )
 
@@ -280,8 +272,7 @@ watch(categoryItems, (items) => {
 async function register() {
     await run(
         async () => {
-            await pb.collection('competition_entries').create({
-                competition: props.competition.id,
+            await createEntry(props.competition.id, {
                 user: userId,
                 category: form.category,
                 display_name: form.displayName.trim(),
@@ -299,9 +290,7 @@ async function setStatus(status: CompetitionEntryStatus) {
     const current = props.entry
     if (!current) return
     await run(async () => {
-        await pb
-            .collection('competition_entries')
-            .update(current.id, { status })
+        await updateEntry(current.id, { status })
         emit('changed')
     })
 }

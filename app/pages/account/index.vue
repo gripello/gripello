@@ -211,13 +211,14 @@
 </template>
 
 <script setup lang="ts">
-import { signOut } from '~/utils/session'
+import { fileUrl } from '~/api/client'
+import { logout as signOut } from '~/api/auth'
+import { deleteMembership } from '~/api/members'
 import type { MembershipRecord, SettingsRecord } from '~/types/models'
 import { gymTitle } from '~/utils/gymNames'
 import { staffSections } from '~/utils/navigation'
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const router = useRouter()
 const {
     can,
@@ -240,7 +241,7 @@ const displayName = computed(
         t('account.unknownUser'),
 )
 const avatar = computed(() =>
-    usePbFileUrl(user.value, user.value?.avatar, { thumb: '100x100' }),
+    fileUrl('users', user.value, user.value?.avatar, { thumb: '100x100' }),
 )
 
 const { gym, slug } = useGym()
@@ -264,7 +265,7 @@ async function leaveGym() {
     if (!membership) return
     await runLeave(
         async () => {
-            await pb.collection('memberships').delete(membership.id)
+            await deleteMembership(membership.id)
             leaving.value = null
             await refreshPermissions()
         },
@@ -281,7 +282,7 @@ async function leaveGym() {
 async function logout() {
     loggingOut.value = true
     try {
-        signOut(pb)
+        signOut()
         await router.push('/auth/login')
     } finally {
         loggingOut.value = false

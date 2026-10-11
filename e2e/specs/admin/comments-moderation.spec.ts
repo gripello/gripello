@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled, authHeader } from '../../support/nav'
+import { gotoSettled } from '../../support/nav'
 import { createComment } from '../../support/comments'
 
 test('shows seeded review stats and sends a comment to moderation', async ({
@@ -57,10 +57,6 @@ test('a user without manage_comments is redirected away from /manage/comments', 
     await gotoSettled(page, '/manage/comments')
     await page.waitForURL((url) => !url.pathname.endsWith('/manage/comments'))
 
-    const headers = await authHeader(page)
-    const res = await page.request.delete(
-        '/api/collections/ratings/records/nonexistent',
-        { headers },
-    )
+    const res = await page.request.delete('/api/ratings/nonexistent')
     expect(res.status()).toBeGreaterThanOrEqual(400)
 })

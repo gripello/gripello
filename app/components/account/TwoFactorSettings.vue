@@ -339,15 +339,19 @@ import {
     isPasskeyCancel,
     passkeysSupported,
 } from '~/utils/webauthn'
+import {
+    deleteMFAFactor,
+    listMFAFactors,
+    passkeyRegister,
+    passkeyRegistrationOptions,
+    regenerateRecoveryCodes,
+    renameMFAFactor,
+    totpEnable,
+    totpSetup,
+    type Factor,
+} from '~/api/account'
+import { useAuthState } from '~/api/auth'
 
-type Factor = {
-    id: string
-    kind: 'totp' | 'passkey'
-    name: string
-    created: string
-    last_used: string
-}
-type FactorResult = { factor: Factor; recoveryCodes?: string[] }
 type PendingAction =
     | { kind: 'remove'; factor: Factor }
     | { kind: 'codes' }
@@ -357,7 +361,7 @@ type PendingAction =
 const LIST = 'min-w-0 p-0 sm:p-0 gap-y-0 divide-y divide-default'
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
+const { currentUser } = useAuthState()
 const { success, error: notifyError } = useNotification()
 const setup = useAsyncAction()
 const confirmSetup = useAsyncAction()
@@ -376,10 +380,7 @@ const canAddPasskey = ref(false)
 
 async function load() {
     try {
-        const result = await pb.send<{
-            factors: Factor[]
-            recoveryCodesLeft: number
-        }>('/api/account/mfa', {})
+        const result = await listMFAFactors()
         factors.value = result.factors
         codesLeft.value = result.recoveryCodesLeft
         loadError.value = false
@@ -435,10 +436,7 @@ watch(setupOpen, (open) => {
 })
 
 async function startTotpSetup(confirmedPassword: string) {
-    const result = await pb.send<{ secret: string; uri: string }>(
-        '/api/account/totp/setup',
-        { method: 'POST', body: { password: confirmedPassword } },
-    )
+    const result = await totpSetup(confirmedPassword)
     pending.value = undefined
     setupPassword.value = confirmedPassword
     await setup.run(async () => {
@@ -458,13 +456,10 @@ function confirmTotp() {
         return
     return confirmSetup.run(
         async () => {
-            const result = await pb.send<FactorResult>('/api/account/totp', {
-                method: 'POST',
-                body: {
-                    secret: secret.value,
-                    code: setupCode.value.trim(),
-                    password: setupPassword.value,
-                },
+            const result = await totpEnable({
+                secret: secret.value,
+                code: setupCode.value.trim(),
+                password: setupPassword.value,
             })
             factors.value = [...factors.value, result.factor]
             setupOpen.value = false
@@ -479,13 +474,8 @@ function confirmTotp() {
 }
 
 async function registerPasskey(confirmedPassword: string) {
-    const { ceremony, options } = await pb.send<{
-        ceremony: string
-        options: unknown
-    }>('/api/account/passkeys/options', {
-        method: 'POST',
-        body: { password: confirmedPassword },
-    })
+    const { ceremony, options } =
+        await passkeyRegistrationOptions(confirmedPassword)
     pending.value = undefined
     await addPasskey.run(
         async () => {
@@ -496,17 +486,11 @@ async function registerPasskey(confirmedPassword: string) {
                 if (isPasskeyCancel(err)) return
                 throw err
             }
-            const result = await pb.send<FactorResult>(
-                '/api/account/passkeys',
-                {
-                    method: 'POST',
-                    body: {
-                        ceremony,
-                        credential,
-                        name: deviceLabel(navigator.userAgent),
-                    },
-                },
-            )
+            const result = await passkeyRegister({
+                ceremony,
+                credential,
+                name: deviceLabel(navigator.userAgent),
+            })
             factors.value = [...factors.value, result.factor]
             success(t('account.twoFactor.passkeyAdded'))
             showRecoveryCodes(result.recoveryCodes)
@@ -518,7 +502,7 @@ async function registerPasskey(confirmedPassword: string) {
 const password = ref('')
 const pending = ref<PendingAction>()
 const accountName = computed(
-    () => pb.authStore.record?.email || pb.authStore.record?.username || '',
+    () => currentUser()?.email || currentUser()?.username || '',
 )
 const passwordTitle = computed(() => {
     const action = pending.value
@@ -562,18 +546,12 @@ function submitPassword() {
             if (action.kind === 'passkey')
                 return registerPasskey(password.value)
             if (action.kind === 'codes') {
-                const result = await pb.send<{ recoveryCodes: string[] }>(
-                    '/api/account/recovery-codes',
-                    { method: 'POST', body: { password: password.value } },
-                )
+                const result = await regenerateRecoveryCodes(password.value)
                 pending.value = undefined
                 showRecoveryCodes(result.recoveryCodes)
                 return
             }
-            await pb.send(`/api/account/mfa/${action.factor.id}`, {
-                method: 'DELETE',
-                body: { password: password.value },
-            })
+            await deleteMFAFactor(action.factor.id, password.value)
             factors.value = factors.value.filter(
                 (f) => f.id !== action.factor.id,
             )
@@ -604,10 +582,7 @@ async function saveNames() {
     const changed = factors.value.filter(nameChanged)
     const updated = await Promise.all(
         changed.map((factor) =>
-            pb.send<Factor>(`/api/account/mfa/${factor.id}`, {
-                method: 'PATCH',
-                body: { name: drafts.value[factor.id] },
-            }),
+            renameMFAFactor(factor.id, drafts.value[factor.id]!),
         ),
     )
     const byId = new Map(updated.map((factor) => [factor.id, factor]))

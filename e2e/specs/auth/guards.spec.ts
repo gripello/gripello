@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { uiaa } from '../../support/seed'
+import { E2E_GYM_SLUG, uiaa } from '../../support/seed'
 import { authHeader, gotoSettled, gymPath } from '../../support/nav'
 
 const ADMIN_PATHS = [
@@ -28,9 +28,12 @@ test.describe('anonymous guard', () => {
     test('the routes API refuses a create with no session', async ({
         page,
     }) => {
-        const res = await page.request.post('/api/collections/routes/records', {
-            data: { name: 'should-not-be-created', ...uiaa('1') },
-        })
+        const res = await page.request.post(
+            `/api/gyms/${E2E_GYM_SLUG}/routes`,
+            {
+                data: { name: 'should-not-be-created', ...uiaa('1') },
+            },
+        )
         expect(res.status()).toBeGreaterThanOrEqual(400)
     })
 })
@@ -52,18 +55,20 @@ test.describe('routesetter guard', () => {
         )
     })
 
-    test('the users API refuses a create from a routesetter session', async ({
+    test('the members API refuses an invite from a routesetter session', async ({
         setterPage: page,
     }) => {
         await gotoSettled(page, '/manage/routes', '**/manage/routes')
-        const res = await page.request.post('/api/collections/users/records', {
-            headers: await authHeader(page),
-            data: {
-                email: 'should-not-be-created@gripello.test',
-                password: 'Whatever123!',
-                passwordConfirm: 'Whatever123!',
+        const res = await page.request.post(
+            `/api/gyms/${E2E_GYM_SLUG}/members`,
+            {
+                headers: await authHeader(page),
+                data: {
+                    email: 'should-not-be-created@gripello.test',
+                    role: 'admin',
+                },
             },
-        })
+        )
         expect(res.status()).toBeGreaterThanOrEqual(400)
     })
 

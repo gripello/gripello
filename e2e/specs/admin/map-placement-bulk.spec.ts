@@ -1,20 +1,23 @@
 import type { Page } from '@playwright/test'
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser, uiaa } from '../../support/seed'
+import { uiaa } from '../../support/seed'
+import {
+    archiveRoute,
+    createRoute,
+    getRoute,
+    updateWall,
+} from '../../support/api'
 import { gotoSettled } from '../../support/nav'
-import { PB_URL, seedMap, type SeededMap } from '../../support/map'
+import { seedMap, type SeededMap } from '../../support/map'
 
 let seeded: SeededMap
 let unplacedIds: string[]
 
-test.beforeEach(async ({ testPrefix }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    seeded = await seedMap(root, testPrefix, { routes: 3 })
+test.beforeEach(async ({ testPrefix, adminApi }) => {
+    seeded = await seedMap(adminApi, testPrefix, { routes: 3 })
     unplacedIds = []
     for (const [index, color] of ['#00ACC1', '#FB8C00'].entries()) {
-        const route = await root.collection('routes').create({
+        const route = await createRoute(adminApi, {
             name: `${testPrefix}-unplaced-${index + 1}`,
             ...uiaa('6'),
             location: seeded.locationId,
@@ -46,17 +49,16 @@ async function saveAndReload(page: Page) {
     await expect(page.getByTestId('global-snackbar').last()).toContainText(
         'Route positions saved',
     )
-    return Promise.all(
-        unplacedIds.map((id) => seeded.root.collection('routes').getOne(id)),
-    )
+    return Promise.all(unplacedIds.map((id) => getRoute(seeded.api, id)))
 }
 
 test('auto-place puts routes on the wall that covers their anchor', async ({
     setterPage: page,
 }) => {
-    await seeded.root
-        .collection('walls')
-        .update(seeded.islandWallId, { anchor_from: 10, anchor_to: 20 })
+    await updateWall(seeded.api, seeded.islandWallId, {
+        anchor_from: 10,
+        anchor_to: 20,
+    })
     await gotoSettled(page, `/manage/map?location=${seeded.locationId}`)
     const auto = page.getByTestId('placement-auto')
     await expect(auto).toContainText('2')
@@ -66,7 +68,7 @@ test('auto-place puts routes on the wall that covers their anchor', async ({
     const [first, second] = await saveAndReload(page)
     expect(first!.wall).toBe(seeded.islandWallId)
     expect(second!.wall).toBe(seeded.islandWallId)
-    expect(first!.wall_position).toBeLessThan(second!.wall_position)
+    expect(first!.wall_position).toBeLessThan(second!.wall_position!)
 })
 
 test('ticked routes are placed together with one tap on a wall', async ({
@@ -116,7 +118,7 @@ test('nudge buttons move the selected dot along its wall', async ({
     await expect(page.getByTestId('global-snackbar').last()).toContainText(
         'Route positions saved',
     )
-    const saved = await seeded.root.collection('routes').getOne(routeId)
+    const saved = await getRoute(seeded.api, routeId)
     expect(saved.wall_position).toBe(0.27)
 })
 
@@ -151,9 +153,7 @@ test('resetting a wall archives its routes', async ({
         '2 routes archived',
     )
     const [first, second] = await Promise.all(
-        seeded.routeIds
-            .slice(0, 2)
-            .map((id) => seeded.root.collection('routes').getOne(id)),
+        seeded.routeIds.slice(0, 2).map((id) => getRoute(seeded.api, id)),
     )
     expect(first!.archived).toBe(true)
     expect(second!.archived).toBe(true)
@@ -187,9 +187,10 @@ test('the route form picks the wall from the anchor number', async ({
     adminPage: page,
     testPrefix,
 }) => {
-    await seeded.root
-        .collection('walls')
-        .update(seeded.islandWallId, { anchor_from: 30, anchor_to: 40 })
+    await updateWall(seeded.api, seeded.islandWallId, {
+        anchor_from: 30,
+        anchor_to: 40,
+    })
     await gotoSettled(page, '/manage/routes')
     await page.getByTestId('routes-create-open').click()
     await page.getByTestId('route-form-location').click()
@@ -230,9 +231,7 @@ test('tapping an existing dot places the armed route next to it', async ({
 test('archived routes offer no placement from the route page', async ({
     setterPage: page,
 }) => {
-    await seeded.root
-        .collection('routes')
-        .update(unplacedIds[1]!, { archived: true })
+    await archiveRoute(seeded.api, unplacedIds[1]!)
     await gotoSettled(page, `/route?id=${unplacedIds[1]}`)
     await expect(page.getByTestId('route-page-name')).toBeVisible()
     await expect(page.getByTestId('route-place-on-map')).toHaveCount(0)

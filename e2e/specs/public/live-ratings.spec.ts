@@ -1,14 +1,15 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { gotoSubscribed, gymPath, searchRoutes } from '../../support/nav'
-import { uiaa } from '../../support/seed'
+import { createRating, updateRoute } from '../../support/api'
 
 // Other workers share the gym and trigger list refreshes, so refetches hang instead of being counted.
 function stallRefetches(page: Page) {
     return page.route(
         (url) =>
-            url.pathname.includes('/api/collections/averageRating/') ||
-            url.pathname.includes('/api/collections/ratings/records'),
+            /\/api\/(gyms\/[^/]+\/(routes|ratings)|routes\/[^/]+(\/ratings)?)$/.test(
+                url.pathname,
+            ),
         (route) => {
             if (route.request().method() !== 'GET') return route.fallback()
         },
@@ -17,7 +18,7 @@ function stallRefetches(page: Page) {
 
 test('a rating from another visitor updates the open route page in place', async ({
     page,
-    root,
+    adminApi,
     route,
     testPrefix,
 }) => {
@@ -25,12 +26,7 @@ test('a rating from another visitor updates the open route page in place', async
     await stallRefetches(page)
 
     const comment = `${testPrefix} live review`
-    await root.collection('ratings').create({
-        route_id: route.id,
-        rating: 4,
-        ...uiaa('5'),
-        comment,
-    })
+    await createRating(adminApi, route.id, { rating: 4, comment })
 
     await expect(page.getByText(comment)).toBeVisible()
     await expect(page.getByTestId('route-avg-rating')).toContainText('4')
@@ -38,12 +34,10 @@ test('a rating from another visitor updates the open route page in place', async
 
 test('a rating from another visitor updates the open overview in place', async ({
     page,
-    root,
+    adminApi,
     route,
 }) => {
-    await root
-        .collection('ratings')
-        .create({ route_id: route.id, rating: 5, ...uiaa('5') })
+    await createRating(adminApi, route.id, { rating: 5 })
 
     await gotoSubscribed(page, gymPath('/'), 'gym_changes:')
     const popularRow = page.locator(
@@ -52,16 +46,14 @@ test('a rating from another visitor updates the open overview in place', async (
     await expect(popularRow).toHaveCount(0)
     await stallRefetches(page)
 
-    await root
-        .collection('ratings')
-        .create({ route_id: route.id, rating: 5, ...uiaa('5') })
+    await createRating(adminApi, route.id, { rating: 5 })
 
     await expect(popularRow).toBeVisible()
 })
 
 test('an edited route updates the open route list in place', async ({
     page,
-    root,
+    adminApi,
     route,
 }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
@@ -70,7 +62,7 @@ test('an edited route updates the open route list in place', async ({
     await stallRefetches(page)
 
     const renamed = `${route.name} renamed`
-    await root.collection('routes').update(route.id, { name: renamed })
+    await updateRoute(adminApi, route.id, { name: renamed })
 
     await expect(
         page.getByTestId(`index-row-${route.id}`).getByTestId('index-row-name'),

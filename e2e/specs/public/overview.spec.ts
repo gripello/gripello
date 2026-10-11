@@ -1,17 +1,15 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser, uiaa } from '../../support/seed'
+import { createRoute } from '../../support/api'
+import { uiaa } from '../../support/seed'
 import { gotoSettled, gymPath } from '../../support/nav'
-import { PB_URL, seedMap, type SeededMap } from '../../support/map'
+import { seedMap, type SeededMap } from '../../support/map'
 
 let seeded: SeededMap
 let freshRouteId: string
 
-test.beforeEach(async ({ testPrefix }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    seeded = await seedMap(root, testPrefix, { routes: 2 })
-    const fresh = await root.collection('routes').create({
+test.beforeEach(async ({ adminApi, testPrefix }) => {
+    seeded = await seedMap(adminApi, testPrefix, { routes: 2 })
+    const fresh = await createRoute(adminApi, {
         name: `${testPrefix}-fresh`,
         ...uiaa('6'),
         location: seeded.locationId,
@@ -107,14 +105,13 @@ test('guests get the public nav and an all-routes link', async ({ page }) => {
 
 test('new routes appear on the overview without a reload', async ({
     page,
+    adminApi,
     testPrefix,
 }) => {
     await gotoSettled(page, gymPath('/'))
     await expect(page.getByTestId('overview-stats')).toBeVisible()
 
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const live = await root.collection('routes').create({
+    const live = await createRoute(adminApi, {
         name: `${testPrefix}-live`,
         ...uiaa('5'),
         location: seeded.locationId,

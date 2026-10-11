@@ -16,14 +16,14 @@
 </template>
 
 <script setup lang="ts">
+import { confirmVerification } from '~/api/auth'
+
 defineOptions({ name: 'ConfirmVerificationPage' })
 definePageMeta({ layout: 'blank', auth: false })
 
 const { t } = useI18n()
-const pb = usePocketbase()
 
 useHead({ title: t('page.title.verifyEmail') })
 
-const verify = (token: string) =>
-    pb.collection('users').confirmVerification(token)
+const verify = (token: string) => confirmVerification(token)
 </script>

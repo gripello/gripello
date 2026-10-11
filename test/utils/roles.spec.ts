@@ -5,7 +5,6 @@ import {
     reassignTargets,
     defaultReassignTarget,
     groupPermissions,
-    memberCountsByRole,
     revokesOwnAccess,
 } from '~/utils/roles'
 import type { RoleRecord } from '~/types/models'
@@ -100,33 +99,13 @@ describe('groupPermissions', () => {
     })
 })
 
-describe('memberCountsByRole', () => {
-    it('counts memberships per role and skips empty roles', () => {
-        expect(
-            memberCountsByRole([
-                { role: 'a' },
-                { role: 'b' },
-                { role: 'a' },
-                { role: '' },
-                { role: null },
-            ]),
-        ).toEqual({ a: 2, b: 1 })
-    })
-})
-
 describe('revokesOwnAccess', () => {
-    const permissions = [
-        { id: 'p_users', name: 'manage_users' },
-        { id: 'p_settings', name: 'manage_settings' },
-        { id: 'p_routes', name: 'manage_routes' },
-    ]
     const own = {
         id: 'r_own',
-        permissions: ['p_users', 'p_settings', 'p_routes'],
+        permissions: ['manage_users', 'manage_settings', 'manage_routes'],
     }
     const base = {
         role: own,
-        permissions,
         ownRoleId: 'r_own',
         platformAdmin: false,
     }
@@ -135,13 +114,13 @@ describe('revokesOwnAccess', () => {
         expect(
             revokesOwnAccess({
                 ...base,
-                nextPermissions: ['p_settings', 'p_routes'],
+                nextPermissions: ['manage_settings', 'manage_routes'],
             }),
         ).toBe(true)
         expect(
             revokesOwnAccess({
                 ...base,
-                nextPermissions: ['p_users', 'p_routes'],
+                nextPermissions: ['manage_users', 'manage_routes'],
             }),
         ).toBe(true)
         expect(revokesOwnAccess({ ...base, nextPermissions: [] })).toBe(true)
@@ -151,13 +130,13 @@ describe('revokesOwnAccess', () => {
         expect(
             revokesOwnAccess({
                 ...base,
-                nextPermissions: ['p_users', 'p_settings'],
+                nextPermissions: ['manage_users', 'manage_settings'],
             }),
         ).toBe(false)
         expect(
             revokesOwnAccess({
                 ...base,
-                role: { id: 'r_own', permissions: ['p_routes'] },
+                role: { id: 'r_own', permissions: ['manage_routes'] },
                 nextPermissions: [],
             }),
         ).toBe(false)

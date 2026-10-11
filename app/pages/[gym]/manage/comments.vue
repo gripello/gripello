@@ -148,13 +148,21 @@
 </template>
 
 <script setup lang="ts">
+import {
+    getRatingStats,
+    listGymRatings,
+    type RatingQuery,
+    type RatingSort,
+} from '~/api/ratings'
 import { isAbortError } from '~/utils/errors'
+import { openCase } from '~/api/moderation'
 import { pbDateString } from '~/utils/audit'
 import { realtimeCommentPlacement } from '~/utils/comments'
+import { gymChangesTopic, type GymChange } from '~/utils/realtimeCache'
 import { formatNumber } from '#shared/utils/number'
 import { locationName } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
-import type { RatingRecord, RouteRecord, UserRecord } from '~/types/models'
+import type { RatingRecord, RouteRecord } from '~/types/models'
 
 type ManagedComment = RatingRecord & {
     created: string
@@ -167,7 +175,6 @@ type ManagedComment = RatingRecord & {
 }
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 const gymPath = useGymPath()
 const gymId = useCurrentGymId()
 
@@ -192,17 +199,16 @@ const {
     refresh: fetchList,
     loadMore: loadNextPage,
     prefetch,
-} = usePbList<RatingRecord, ManagedComment>('ratings', {
-    perPage: 48,
-    requestKey: 'commentsList',
-    query: () => ({
-        sort: buildSort(),
-        filter: buildFilter(search.value.trim()),
-        expand: 'route_id.location,user',
-        fields: LIST_FIELDS,
-    }),
-    map: mapComment,
-})
+} = usePbList<RatingRecord, ManagedComment>(
+    (page, limit) =>
+        listGymRatings(gymId.value, {
+            ...buildQuery(),
+            page,
+            limit,
+            total: true,
+        }),
+    { perPage: 48, requestKey: 'commentsList', map: mapComment },
+)
 
 const stats = ref({ totalReviews: 0, avgRating: '—', thisWeek: 0, lowRated: 0 })
 const statTiles = computed(() => [
@@ -269,7 +275,7 @@ function clearFilters() {
 
 // ── Static options ─────────────────────────────────────────────────────────
 
-const { gradeFilterItems, gradeFilterClause } = useGradeSystems()
+const { gradeFilterItems } = useGradeSystems()
 
 const difficulties = gradeFilterItems
 
@@ -317,58 +323,29 @@ const sortOptions = computed(() => [
 
 // ── Query builders ─────────────────────────────────────────────────────────
 
-function buildFilter(searchTerm: string) {
-    const parts = [gymFilter(pb, gymId.value)]
-    if (selectedRating.value !== 0)
-        parts.push(`rating = ${selectedRating.value}`)
-    if (selectedLocation.value)
-        parts.push(`route_id.location = "${selectedLocation.value}"`)
-    if (selectedDifficulty.value !== null)
-        parts.push(gradeFilterClause(selectedDifficulty.value))
+function buildQuery(): RatingQuery {
+    const difficulty = selectedDifficulty.value ?? ''
+    const separator = difficulty.indexOf(':')
     const days = ({ week: 7, month: 30 } as Record<string, number>)[
         dateFilter.value
     ]
-    if (days) {
-        const cutoff = pbDateString(new Date(Date.now() - days * 86_400_000))
-        parts.push(`created >= "${cutoff}"`)
-    }
-    if (searchTerm) {
-        const s = searchTerm.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-        parts.push(`(comment ~ "${s}" || route_id.name ~ "${s}")`)
-    }
-    return parts.join(' && ')
-}
-
-function buildSort() {
-    switch (sortOrder.value) {
-        case 'oldest':
-            return '+created'
-        case 'highest':
-            return '-rating'
-        case 'lowest':
-            return '+rating'
-        default:
-            return '-created'
+    return {
+        q: search.value.trim() || undefined,
+        rating: selectedRating.value || undefined,
+        location: selectedLocation.value || undefined,
+        grade_system: difficulty.slice(0, Math.max(separator, 0)) || undefined,
+        grade: difficulty.slice(separator + 1) || undefined,
+        since: days
+            ? pbDateString(new Date(Date.now() - days * 86_400_000))
+            : undefined,
+        sort: sortOrder.value as RatingSort,
     }
 }
 
 // ── Data fetching ──────────────────────────────────────────────────────────
 
-const LIST_FIELDS = [
-    '*',
-    'expand.route_id.id',
-    'expand.route_id.name',
-    'expand.route_id.expand.location.name',
-    'expand.user.id',
-    'expand.user.collectionId',
-    'expand.user.name',
-    'expand.user.username',
-    'expand.user.avatar',
-].join(',')
-
 function mapComment(rating: RatingRecord): ManagedComment {
     const route = rating.expand?.route_id as RouteRecord | undefined
-    const user = rating.expand?.user as UserRecord | undefined
     return {
         ...rating,
         created: rating.created ?? '',
@@ -376,29 +353,22 @@ function mapComment(rating: RatingRecord): ManagedComment {
         routeName: route?.name ?? 'N/A',
         location: locationName(route) || null,
         difficultyLabel: formatGrade(rating) || null,
-        userName: user?.name || user?.username || t('comments.anonymous'),
-        userAvatar:
-            usePbFileUrl(user, user?.avatar, { thumb: '100x100' }) || null,
+        userName: rating.author?.name || t('comments.anonymous'),
+        userAvatar: rating.author?.avatar || null,
     }
 }
 
 const fetchStats = async () => {
     try {
-        const result = await pb.collection('ratingsStats').getList(1, 1, {
-            filter: pb.filter('gym = {:gym}', { gym: gymId.value }),
-            skipTotal: true,
-            requestKey: 'commentsStats',
-        })
-        const rec = result.items[0]
-        if (!rec) return
+        const rec = await getRatingStats(gymId.value)
         stats.value = {
-            totalReviews: Number(rec.totalReviews) || 0,
+            totalReviews: rec.total_reviews,
             avgRating:
-                rec.avgRating != null
-                    ? formatNumber(Number(rec.avgRating), locale.value)
+                rec.avg_rating != null
+                    ? formatNumber(rec.avg_rating, locale.value)
                     : '—',
-            thisWeek: Number(rec.thisWeek) || 0,
-            lowRated: Number(rec.lowRated) || 0,
+            thisWeek: rec.this_week,
+            lowRated: rec.low_rated,
         }
     } catch (err) {
         if (isAbortError(err)) return
@@ -487,10 +457,7 @@ const { run: runModerate } = useAsyncAction()
 
 async function moderate(comment: ManagedComment) {
     const opened = await runModerate(() =>
-        pb.send<{ id: string }>('/api/moderation/cases', {
-            method: 'POST',
-            body: { content_type: 'rating', content_id: comment.id },
-        }),
+        openCase({ content_type: 'rating', content_id: comment.id }),
     )
     if (opened)
         await navigateTo(gymPath(`/manage/moderation?case=${opened.id}`))
@@ -504,21 +471,16 @@ function removeComments(ids: string[]) {
 }
 
 async function fetchCommentIfVisible(id: string) {
-    const filter = buildFilter(search.value.trim())
-    const idClause = pb.filter('id = {:id}', { id })
-    const result = await pb.collection('ratings').getList<RatingRecord>(1, 1, {
-        filter: `${idClause} && (${filter})`,
-        expand: 'route_id.location,user',
-        fields: LIST_FIELDS,
-        skipTotal: true,
-        requestKey: null,
+    const result = await listGymRatings(gymId.value, {
+        ...buildQuery(),
+        ids: [id],
+        page: 1,
+        limit: 1,
     })
     return result.items[0] ?? null
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────────────────
-
-const { subscribe } = usePbSubscription()
 
 const [, { data: initialStats }] = await Promise.all([
     prefetch('admin-comments'),
@@ -529,8 +491,10 @@ const [, { data: initialStats }] = await Promise.all([
 ])
 if (initialStats.value) stats.value = initialStats.value
 
-onMounted(async () => {
-    await subscribe('ratings', async (e) => {
+useRealtime(
+    () => gymChangesTopic(gymId.value),
+    async (e: GymChange<RatingRecord>) => {
+        if (e.collection !== 'ratings') return
         if (e.action === 'delete') {
             removeComments([e.record.id])
             scheduleStatsRefresh()
@@ -557,20 +521,20 @@ onMounted(async () => {
         } else if (e.action === 'update') {
             if (!comments.value.some((c) => c.id === e.record.id)) return
             try {
-                const rec = await pb
-                    .collection('ratings')
-                    .getOne<RatingRecord>(e.record.id, {
-                        expand: 'route_id.location,user',
-                        fields: LIST_FIELDS,
-                        requestKey: null,
+                const [rec] = (
+                    await listGymRatings(gymId.value, {
+                        ids: [e.record.id],
+                        page: 1,
+                        limit: 1,
                     })
-                const idx = comments.value.findIndex((c) => c.id === rec.id)
-                if (idx !== -1) comments.value[idx] = mapComment(rec)
+                ).items
+                const idx = comments.value.findIndex((c) => c.id === rec?.id)
+                if (rec && idx !== -1) comments.value[idx] = mapComment(rec)
             } catch {}
             scheduleStatsRefresh()
         }
-    })
-})
+    },
+)
 
 onBeforeUnmount(() => {
     clearTimeout(searchDebounce)

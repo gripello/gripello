@@ -1,12 +1,9 @@
 import { createHmac } from 'node:crypto'
-import PocketBase from 'pocketbase'
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { fillLogin, signInAs } from '../../support/auth'
-import { authAsSuperuser, ensureUser, getRoleIds } from '../../support/seed'
 
-const PB_URL = process.env.E2E_PB_URL || 'https://localhost'
 const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
 
 function totp(secret: string, offset = 0) {
@@ -37,21 +34,10 @@ async function confirmPassword(page: Page, password: string) {
 }
 
 test.describe('account security', () => {
-    let root: PocketBase
     let user: { id: string; email: string; password: string }
 
-    test.beforeEach(async ({ testPrefix }) => {
-        root = new PocketBase(PB_URL)
-        await authAsSuperuser(root)
-        const roleIds = await getRoleIds(root)
-        user = await ensureUser(root, roleIds.user, 'user', `${testPrefix}-2fa`)
-    })
-
-    test.afterEach(async () => {
-        await root
-            .collection('users')
-            .delete(user.id)
-            .catch(() => {})
+    test.beforeEach(async ({ createUser }) => {
+        user = await createUser('user', '2fa')
     })
 
     test('asks for the authenticator code after the password', async ({

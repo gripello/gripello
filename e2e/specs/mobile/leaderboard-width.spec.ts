@@ -1,11 +1,12 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { signInAs } from '../../support/auth'
+import { createTick } from '../../support/api'
 import { gradeOf } from '../../support/seed'
 
 test('a long send name keeps the leaderboard within the phone width', async ({
     page,
-    root,
+    apiAs,
     createUser,
     createRoute,
     testPrefix,
@@ -16,12 +17,10 @@ test('a long send name keeps the leaderboard within the phone width', async ({
         name: `${testPrefix} Schwarzwälder Kirschtorte mit extra viel Sahne`,
         ...gradeOf('font', '6B'),
     })
-    await root.collection('ticks').create({
-        user: climber.id,
+    await createTick(await apiAs(climber), {
         route: route.id,
         type: 'top',
         attempts: 2,
-        date: `${new Date().toISOString().slice(0, 10)} 12:00:00.000Z`,
     })
 
     await page.setViewportSize({ width: 360, height: 740 })

@@ -10,7 +10,7 @@ export function useCompetitionResults(
         pollMs = 60_000,
     }: { staff?: boolean; pollMs?: number } = {},
 ) {
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     const requestFetch = useRequestFetch()
     const changedAt = ref(0)
 
@@ -24,8 +24,8 @@ export function useCompetitionResults(
                     since: changedAt.value || undefined,
                 },
                 headers:
-                    staff && pb.authStore.token
-                        ? { Authorization: pb.authStore.token }
+                    staff && authStore.token
+                        ? { Authorization: authStore.token }
                         : undefined,
             }),
         { enabled: () => !!competitionId.value },

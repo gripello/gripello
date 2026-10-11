@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { nextTick, ref, watch } from 'vue'
+import { mockApi, routeApi } from '../api/apiMock'
 
 const authRecord = ref<{ id: string } | null>(null)
 vi.stubGlobal('useAuthRecord', () => authRecord)
@@ -19,22 +20,21 @@ vi.stubGlobal(
         return { data, error: ref(null), refresh }
     },
 )
-const getFullList = vi
+const api = vi
     .fn()
     .mockResolvedValue([
         { id: 'f1', follower: 'u2', followee: 'u1', status: 'pending' },
     ])
-vi.stubGlobal('usePocketbase', () => ({
-    collection: () => ({ getFullList }),
-}))
 
 describe('useFollows', () => {
     it('loads the follow requests once the climber signs in', async () => {
+        mockApi()
+        routeApi(api)
         const { useFollows } = await import('~/composables/useFollows')
         const { requests } = useFollows()
         await nextTick()
         expect(requests.value).toEqual([])
-        expect(getFullList).not.toHaveBeenCalled()
+        expect(api).not.toHaveBeenCalled()
 
         authRecord.value = { id: 'u1' }
         await vi.waitFor(() => expect(requests.value).toHaveLength(1))

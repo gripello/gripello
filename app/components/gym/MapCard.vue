@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { fileUrl } from '~/api/client'
 import type { GymRecord } from '~/types/models'
 import { hasLocation } from '~/utils/gymInfo'
 import { gymSubtitle, gymTitle } from '~/utils/gymNames'
@@ -8,7 +9,7 @@ defineEmits<{ close: [] }>()
 
 const logoUrl = computed(() =>
     props.gym.page_logo
-        ? usePbFileUrl(props.gym, props.gym.page_logo, { thumb: '0x200' })
+        ? fileUrl('gyms', props.gym, props.gym.page_logo, { thumb: '0x200' })
         : '',
 )
 const { status, label } = useOpenStatus(() => props.gym.opening_hours)

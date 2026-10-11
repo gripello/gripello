@@ -1,0 +1,297 @@
+openapi: 3.1.0
+info:
+  title: Gripello platform administration
+  version: 1.0.0
+description: Every operation needs a platform admin (401 for guests, 403 otherwise).
+paths:
+  /platform/users:
+    get:
+      operationId: listPlatformUsers
+      tags: [platform]
+      parameters:
+        - name: q
+          in: query
+          description: case-insensitive substring of email, username, firstname or name
+          schema: { type: string }
+        - name: filter
+          in: query
+          schema: { type: string, enum: [platform_admins, unverified, suspended] }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - name: limit
+          in: query
+          description: 0 returns every match unpaged (page 1, limit 0)
+          schema: { type: integer, minimum: 0, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: One page of users, ordered by email
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, limit, total]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/PlatformUser' } }
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getPlatformUser
+      tags: [platform]
+      responses:
+        '200': { $ref: '#/components/responses/User' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      operationId: updatePlatformUser
+      tags: [platform]
+      description: >
+        Profile fields only. Another platform admin can't be edited. The user's own settings (notification_prefs, followed_walls,
+        leaderboard_hidden, follow_policy, reviews_anonymous, ticks_private), platform_admin, suspension and credentials answer 403.
+        Sends user.updated {record, changed, actor} on `user:<id>`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlatformUserInput' }
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar: { type: string, format: binary }
+                banner: { type: string, format: binary }
+                '@jsonPayload': { type: string, description: PlatformUserInput as JSON }
+      responses:
+        '200': { $ref: '#/components/responses/User' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: deletePlatformUser
+      tags: [platform]
+      description: Not another platform admin, not the only admin of a gym (400). Revokes every session and sends user.deleted {id, actor}.
+      responses:
+        '204': { description: Deleted }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/users/{id}/suspension:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      operationId: suspendUser
+      tags: [platform]
+      description: Not yourself, not another platform admin. Rotates the token key, deletes every session (session.revoked each) and mails the user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                until: { type: string, description: future date (RFC 3339 or `YYYY-MM-DD HH:MM:SS.sssZ`) }
+                permanent: { type: boolean, description: stores 9999-12-31 }
+                reason: { type: string, maxLength: 2000 }
+      responses:
+        '204': { description: Suspended }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      operationId: liftSuspension
+      tags: [platform]
+      responses:
+        '204': { description: Lifted }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/stats:
+    get:
+      operationId: platformStats
+      tags: [platform]
+      responses:
+        '200':
+          description: Members and active routes per gym plus totals
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [gyms, totals]
+                properties:
+                  gyms:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, slug, name, active, members, routes]
+                      properties:
+                        id: { type: string }
+                        slug: { type: string }
+                        name: { type: string }
+                        active: { type: boolean }
+                        members: { type: integer }
+                        routes: { type: integer }
+                  totals:
+                    type: object
+                    required: [gyms, active_gyms, members, routes, users]
+                    properties:
+                      gyms: { type: integer }
+                      active_gyms: { type: integer }
+                      members: { type: integer }
+                      routes: { type: integer }
+                      users: { type: integer }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/features:
+    get:
+      operationId: listFeatureFlags
+      tags: [platform]
+      responses:
+        '200':
+          description: The feature flag registry
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [flags]
+                properties:
+                  flags: { type: array, items: { type: string } }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/gyms/{id}/features:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      operationId: setGymFeatures
+      tags: [platform]
+      description: Replaces the gym's flags; unknown flags and non-booleans answer 400. Sends gym.updated (the gym record) on `gym:<id>`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: { type: boolean }
+      responses:
+        '200':
+          description: The updated gym record
+          content:
+            application/json:
+              schema: { type: object }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/admins:
+    post:
+      operationId: grantPlatformAdmin
+      tags: [platform]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user]
+              properties:
+                user: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/User' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/admins/{user}:
+    parameters:
+      - name: user
+        in: path
+        required: true
+        schema: { type: string }
+    delete:
+      operationId: revokePlatformAdmin
+      tags: [platform]
+      description: Removing your own rights answers 400; another platform admin's rights only change through `gripello admin` (403).
+      responses:
+        '204': { description: Revoked }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    User:
+      description: The user
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PlatformUser' }
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    PlatformUserInput:
+      type: object
+      properties:
+        username: { type: string, minLength: 3, maxLength: 150 }
+        firstname: { type: string, maxLength: 5000 }
+        name: { type: string, maxLength: 5000 }
+        email: { type: string, format: email }
+        verified: { type: boolean }
+        email_visibility: { type: boolean }
+        language: { type: string, enum: ['', en, de, nl, fr, es] }
+        avatar: { type: ['null', string], description: null or "" clears }
+        banner: { type: ['null', string], description: null or "" clears }
+    PlatformUser:
+      type: object
+      description: The users row without password_hash and token_key, plus memberships.
+      required: [id, email, username, platform_admin, verified, memberships]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        username: { type: string }
+        firstname: { type: string }
+        name: { type: string }
+        avatar: { type: string }
+        verified: { type: boolean }
+        platform_admin: { type: boolean }
+        suspended_until: { type: ['null', string], format: date-time }
+        suspension_reason: { type: string }
+        created: { type: string, format: date-time }
+        memberships:
+          type: array
+          items:
+            type: object
+            required: [id, gym, role]
+            properties:
+              id: { type: string }
+              gym: { type: string }
+              role: { type: string }
+      additionalProperties: true

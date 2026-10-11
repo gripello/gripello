@@ -1,6 +1,8 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { signInAs } from '../../support/auth'
+import { apiAs, createBetaLink } from '../../support/api'
+import type { BetaVideoRecord } from '../../../types/models'
 
 test('a climber shares and removes a beta link', async ({
     page,
@@ -40,16 +42,15 @@ test('a climber shares and removes a beta link', async ({
 test('only the uploader deletes a beta, everyone else reports it', async ({
     page,
     adminPage,
-    root,
     createUser,
     route,
 }) => {
     const owner = await createUser('user', 'owner')
-    const video = await root.collection('beta_videos').create({
-        user: owner.id,
-        route: route.id,
-        url: 'https://youtube.com/shorts/123',
-    })
+    const video = (await createBetaLink(
+        await apiAs(owner),
+        route.id,
+        'https://youtube.com/shorts/123',
+    )) as BetaVideoRecord
 
     await gotoSettled(adminPage, `/route?id=${route.id}#beta-${video.id}`)
     const foreign = adminPage.getByTestId(`beta-video-${video.id}`)

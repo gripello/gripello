@@ -94,6 +94,8 @@
 </template>
 
 <script setup lang="ts">
+import { fileUrl } from '~/api/client'
+import { listGyms } from '~/api/gyms'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { gymTitle } from '~/utils/gymNames'
@@ -105,7 +107,6 @@ type GymItem = DropdownMenuItem & { role?: string }
 defineProps<{ collapsed?: boolean }>()
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const route = useRoute()
 const { gym } = useGym()
 const { gymMemberships, isPlatformAdmin } = usePermissions()
@@ -120,7 +121,7 @@ const title = computed(() =>
     currentGym.value ? gymTitle(currentGym.value) : 'Gripello',
 )
 const logoUrl = computed(() =>
-    usePbFileUrl(currentGym.value, currentGym.value?.page_logo, {
+    fileUrl('gyms', currentGym.value, currentGym.value?.page_logo, {
         thumb: '0x200',
     }),
 )
@@ -128,13 +129,7 @@ const logoUrl = computed(() =>
 const recentSlugs = ref<string[]>([])
 const { data: activeGyms, execute: fetchGyms } = useAsyncData(
     'gym-switcher-gyms',
-    () =>
-        pb.collection('gyms').getFullList<GymRecord>({
-            filter: 'active = true',
-            fields: 'id,collectionId,slug,name,unit_name,page_logo',
-            sort: 'name',
-            requestKey: null,
-        }),
+    () => listGyms(),
     { default: () => [], immediate: false, server: false },
 )
 
@@ -156,7 +151,7 @@ function switchTo(slug: string) {
 }
 
 function gymItem(target: Partial<GymRecord>, role?: string): GymItem {
-    const logo = usePbFileUrl(target, target.page_logo, { thumb: '100x100' })
+    const logo = fileUrl('gyms', target, target.page_logo, { thumb: '100x100' })
     return {
         label: gymTitle(target),
         ...(logo

@@ -3,7 +3,6 @@ import { useClimbers } from '~/composables/useClimbers'
 
 describe('useClimbers', () => {
     it('stays empty while the lookup has no data yet', () => {
-        globalThis.__POCKETBASE_CLIENT__ = {}
         vi.stubGlobal('computed', computed)
         vi.stubGlobal('shallowRef', shallowRef)
         vi.stubGlobal('watch', watch)
@@ -13,7 +12,6 @@ describe('useClimbers', () => {
     })
 
     it('keeps the known names while a new lookup loads', async () => {
-        globalThis.__POCKETBASE_CLIENT__ = {}
         vi.stubGlobal('computed', computed)
         vi.stubGlobal('shallowRef', shallowRef)
         vi.stubGlobal('watch', watch)

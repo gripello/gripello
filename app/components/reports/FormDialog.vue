@@ -113,6 +113,7 @@
 </template>
 
 <script setup lang="ts">
+import { createReport } from '~/api/moderation'
 import {
     required,
     nonBlank,
@@ -122,7 +123,7 @@ import {
 } from '~/utils/validation'
 import { REPORT_REASONS } from '~/utils/reports'
 import { legalLinkProps } from '~/utils/legal'
-import type { ReportContentType } from '~/types/models'
+import type { ReportContentType, ReportReason } from '~/types/models'
 
 const props = defineProps<{
     contentType: ReportContentType
@@ -136,7 +137,7 @@ const emit = defineEmits<{
     submitted: []
 }>()
 
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const { t, locale } = useI18n()
 const { notify, error: notifyError } = useNotification()
 const { capHeaders } = useCapToken()
@@ -158,7 +159,7 @@ const sheetOpen = computed({
 const saving = ref(false)
 
 const form = reactive({
-    reason: undefined as string | undefined,
+    reason: undefined as ReportReason | undefined,
     explanation: '',
     notifierName: '',
     notifierEmail: '',
@@ -167,7 +168,7 @@ const form = reactive({
 
 const reasonItems = computed(() =>
     REPORT_REASONS.map((value) => ({
-        value: value as string,
+        value,
         label: t(`reports.reasons.${value}`),
     })),
 )
@@ -198,7 +199,7 @@ function resetForm() {
     form.reason = undefined
     form.explanation = ''
     form.goodFaith = false
-    const account = pb.authStore.record
+    const account = authStore.record
     form.notifierName = (account?.name as string) || ''
     form.notifierEmail = (account?.email as string) || ''
 }
@@ -214,19 +215,18 @@ function close() {
 async function submit() {
     saving.value = true
     try {
-        await pb.collection('reports').create(
+        await createReport(
             {
                 content_type: props.contentType,
                 content_id: props.contentId,
-                content_url: props.contentUrl,
-                reason: form.reason,
+                reason: form.reason!,
                 explanation: form.explanation.trim(),
                 notifier_name: form.notifierName.trim(),
                 notifier_email: form.notifierEmail.trim(),
                 language: locale.value,
                 good_faith: form.goodFaith,
             },
-            { headers: await capHeaders('report') },
+            await capHeaders('report'),
         )
 
         notify(t('reports.submitted'))

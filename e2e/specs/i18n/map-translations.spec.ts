@@ -1,9 +1,9 @@
-import PocketBase from 'pocketbase'
 import { test, expect } from '../../support/fixtures'
-import { authAsSuperuser, uiaa } from '../../support/seed'
+import { uiaa } from '../../support/seed'
+import { createRoute } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
 import { projectLanguage, translate } from '../../support/i18n'
-import { PB_URL, seedMap, type SeededMap } from '../../support/map'
+import { seedMap, type SeededMap } from '../../support/map'
 
 function checkedText(language: string, n: number) {
     const forms = translate(language, 'mapPlacement.checked', { n }).split(
@@ -15,13 +15,11 @@ function checkedText(language: string, n: number) {
 let seeded: SeededMap
 let unplacedIds: string[]
 
-test.beforeEach(async ({ testPrefix }) => {
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    seeded = await seedMap(root, testPrefix, { routes: 1 })
+test.beforeEach(async ({ adminApi, testPrefix }) => {
+    seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     unplacedIds = []
     for (const index of [1, 2]) {
-        const route = await root.collection('routes').create({
+        const route = await createRoute(adminApi, {
             name: `${testPrefix}-unplaced-${index}`,
             ...uiaa('6'),
             location: seeded.locationId,

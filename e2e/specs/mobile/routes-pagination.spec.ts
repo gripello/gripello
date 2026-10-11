@@ -15,7 +15,7 @@ test('paginates the mobile route card list', async ({
 
     await page.getByTestId('routes-mobile-page-size').click()
     const routesResponse = page.waitForResponse((res) =>
-        res.url().includes('/api/collections/averageRating/records'),
+        /\/api\/gyms\/[^/]+\/routes$/.test(new URL(res.url()).pathname),
     )
     await page.getByRole('option', { name: '10', exact: true }).click()
     await routesResponse

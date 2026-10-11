@@ -57,12 +57,12 @@
 
 <script setup lang="ts">
 import { competitionPhase } from '~/utils/competitions'
+import { listCompetitions } from '~/api/competitions'
 import type { CompetitionRecord } from '~/types/models'
 
 const gymPath = useGymPath()
 
 const { t } = useI18n()
-const pb = usePocketbase()
 const gymId = useCurrentGymId()
 
 const {
@@ -71,10 +71,7 @@ const {
     error,
     refresh,
 } = await useAsyncData('public-competitions', () =>
-    pb.collection('competitions').getFullList<CompetitionRecord>({
-        filter: gymFilter(pb, gymId.value, '(status != "draft")'),
-        sort: 'starts_at',
-    }),
+    listCompetitions(gymId.value, { status: ['open', 'closed', 'published'] }),
 )
 
 const isPast = (competition: CompetitionRecord) =>

@@ -214,6 +214,7 @@
 </template>
 
 <script setup lang="ts">
+import { fileUrl as apiFileUrl } from '~/api/client'
 import type { ModerationAction, ModerationItemRecord } from '~/types/models'
 import {
     CONTENT_ICONS,
@@ -230,7 +231,6 @@ const props = defineProps<{
     actions: ModerationAction[]
     platform?: boolean
     busy?: boolean
-    fileToken: string
 }>()
 const emit = defineEmits<{
     act: [action: ModerationAction]
@@ -249,11 +249,14 @@ const ACTION_ICONS: Record<ModerationAction, string> = {
 }
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
 
 const context = computed(() => props.item.context ?? { reports: [] as never[] })
 const text = computed(() => moderationText(props.item))
 const files = computed(() => moderationFiles(props.item))
+const fileToken = useFileToken(() => {
+    const [file] = files.value
+    return file ? { table: file.collectionName, id: file.id } : null
+})
 const openReports = computed(() => openReportCount(context.value.reports))
 const authorAvatar = computed(() =>
     context.value.author
@@ -312,6 +315,8 @@ const consequence = computed(() => {
 })
 
 function fileUrl(file: ModerationFile) {
-    return pb.files.getURL(file, file.name, { token: props.fileToken })
+    return apiFileUrl(file.collectionName, file, file.name, {
+        token: fileToken.value,
+    })
 }
 </script>

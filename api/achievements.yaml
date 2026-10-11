@@ -1,0 +1,67 @@
+openapi: 3.1.0
+info:
+  title: Gripello achievements
+  version: 1.0.0
+paths:
+  /climbers/{id}/achievements:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listClimberAchievements
+      tags: [achievements]
+      description: >-
+        Signed in. Progress is computed live; `earned` holds the stored day per reached tier ('' until the queued evaluation stores it).
+        Grade-based families only for the climber themself. Others need a connection (viewer follows them accepted, or they follow
+        the viewer) and get 404 without one, when the climber's sends are private, or when the climber blocked the viewer; for them
+        `current` is 0 and `earned` holds only '' per reached tier, and results may be up to 60 s old. 60 requests per minute per user.
+      responses:
+        '200':
+          description: Every family in definition order
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Achievement' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [status, message, data]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    Achievement:
+      type: object
+      required: [key, category, icon, tiers, value, current, tier, earned]
+      properties:
+        key: { type: string }
+        category: { type: string, enum: [volume, style, progress, rhythm, exploration, fresh, community, competition] }
+        icon: { type: string }
+        tiers: { type: array, items: { type: integer } }
+        value: { type: integer }
+        current: { type: integer, description: Running streak (active_weeks), else 0 }
+        tier: { type: integer, description: Reached tiers, 0 = none }
+        earned: { type: array, items: { type: string, description: 'YYYY-MM-DD or empty' } }

@@ -1,14 +1,14 @@
 import { test } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { createRole } from '../../support/seed'
+import { createRole } from '../../support/api'
 
 test('a role with report rights only does not get the moderation inbox', async ({
-    root,
+    adminApi,
     testPrefix,
     createUser,
     pageAs,
 }) => {
-    const role = await createRole(root, `${testPrefix}-reports-only`, [
+    const role = await createRole(adminApi, `${testPrefix}-reports-only`, [
         'manage_reports',
     ])
     const page = await pageAs(await createUser(role.id, 'moderator'))

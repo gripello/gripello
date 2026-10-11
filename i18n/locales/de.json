@@ -478,6 +478,7 @@
             "mfa_expired": "Die Anmeldung hat zu lange gedauert. Bitte melde dich erneut an."
         },
         "deleteItem": "Diesen Eintrag löschen? Das kann nicht rückgängig gemacht werden.",
+        "deleteRouteWithHistory": "Diese Route hat Bewertungen, Beta-Videos oder Wettkampfergebnisse. Beim Löschen werden sie mit entfernt. Archiviere sie stattdessen, um sie zu behalten.",
         "deleteMoreItems": "Die ausgewählten Einträge löschen? Das kann nicht rückgängig gemacht werden.",
         "archiveMoreItems": "Die ausgewählten Routen archivieren?",
         "updateAvailable": "Update verfügbar",
@@ -521,6 +522,7 @@
                 "task_wish_done": "Dein Routenwunsch für {location} wurde geschraubt – viel Spaß!",
                 "wall_new_routes": "Neue Routen an {wall}: {count}",
                 "competition_published": "Ergebnisse von „{competition}“ sind online",
+                "competition_entry_added": "Du wurdest für „{competition}“ angemeldet",
                 "follow_requested": "{name} möchte dir folgen",
                 "follow_accepted": "{name} hat deine Folgeanfrage angenommen",
                 "new_follower": "{name} folgt dir jetzt",
@@ -2145,6 +2147,17 @@
         "accountSuspended": {
             "subject": "Dein Konto wurde gesperrt",
             "body": "Dein Konto wurde gesperrt. Du kannst dich bis zum unten genannten Datum nicht anmelden."
+        },
+        "accountExists": {
+            "subject": "Du hast bereits ein Konto",
+            "body": "Jemand wollte sich mit dieser E-Mail-Adresse bei {app} registrieren oder ein anderes Konto darauf umstellen. Sie gehört bereits zu deinem Konto, daher wurde nichts geändert.",
+            "action": "Anmelden",
+            "note": "Passwort vergessen? Setze es auf der Anmeldeseite zurück. Falls du das nicht warst, kannst du diese E-Mail ignorieren."
+        },
+        "emailChangedByAdmin": {
+            "subject": "Deine E-Mail-Adresse wurde geändert",
+            "body": "Das Plattform-Team hat die E-Mail-Adresse deines {app}-Kontos auf {email} geändert. Du wurdest auf allen Geräten abgemeldet.",
+            "note": "Wenn du das nicht veranlasst hast, antworte bitte sofort auf diese E-Mail."
         }
     },
     "leaderboard": {

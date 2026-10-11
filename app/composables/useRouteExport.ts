@@ -24,7 +24,7 @@ async function responseToBlob(response: Response, format: ExportFormat) {
 }
 
 export function useRouteExport() {
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     const gymId = useCurrentGymId()
     const { t, locale } = useI18n()
     const { error: notifyError } = useNotification()
@@ -43,7 +43,7 @@ export function useRouteExport() {
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
             }
-            if (pb.authStore.token) headers.Authorization = pb.authStore.token
+            if (authStore.token) headers.Authorization = authStore.token
 
             const response = await fetch(`/api/ui/${format}`, {
                 method: 'POST',

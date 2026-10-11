@@ -104,6 +104,7 @@
 </template>
 
 <script setup lang="ts">
+import { listEntries, updateEntry } from '~/api/competitions'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type {
     CompetitionCategoryRecord,
@@ -126,7 +127,6 @@ const props = defineProps<{
     requiresPayment?: boolean
 }>()
 
-const pb = usePocketbase()
 const { t } = useI18n()
 const { run } = useAsyncAction()
 
@@ -134,16 +134,7 @@ const search = ref('')
 
 const { data: entries, refresh } = useAsyncData(
     () => `competition-entries:${props.competitionId}`,
-    () =>
-        pb
-            .collection('competition_entries')
-            .getFullList<CompetitionEntryRecord>({
-                filter: pb.filter('competition = {:id}', {
-                    id: props.competitionId,
-                }),
-                sort: 'bib',
-                expand: 'category',
-            }),
+    () => listEntries(props.competitionId),
     { deep: true },
 )
 
@@ -211,9 +202,7 @@ async function patch(
 ) {
     const previous = { ...entry }
     Object.assign(entry, changes)
-    const saved = await run(() =>
-        pb.collection('competition_entries').update(entry.id, changes),
-    )
+    const saved = await run(() => updateEntry(entry.id, changes))
     if (!saved) Object.assign(entry, previous)
 }
 

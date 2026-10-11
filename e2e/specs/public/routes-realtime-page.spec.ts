@@ -17,8 +17,9 @@ test('a route change elsewhere keeps the visitor on their page', async ({
 
     const reload = page.waitForResponse(
         (response) =>
-            response.url().includes('/api/collections/averageRating/records') &&
-            response.request().method() === 'GET',
+            /\/api\/gyms\/[^/]+\/routes$/.test(
+                new URL(response.url()).pathname,
+            ) && response.request().method() === 'GET',
     )
     await createRoute()
     await reload

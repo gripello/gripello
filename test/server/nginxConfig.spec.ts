@@ -1,18 +1,15 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { globSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-const migrationsDir = 'pocketbase/pb_migrations'
-
 describe('docker nginx config', () => {
-    it('accepts request bodies as large as the largest PocketBase file field', () => {
+    it('accepts request bodies as large as the largest upload the api allows', () => {
         const largestMaxSize = Math.max(
-            ...readdirSync(migrationsDir).flatMap((file) =>
+            ...globSync('backend/internal/**/*.go').flatMap((file) =>
                 [
-                    ...readFileSync(
-                        `${migrationsDir}/${file}`,
-                        'utf8',
-                    ).matchAll(/maxSize: (\d+)/g),
-                ].map((match) => Number(match[1])),
+                    ...readFileSync(file, 'utf8').matchAll(
+                        /max\w*(?:Bytes|Size)\s*=\s*(\d+) << 20/g,
+                    ),
+                ].map((match) => Number(match[1]) << 20),
             ),
         )
         const bodyLimitMb = readFileSync('.docker/nginx.conf', 'utf8').match(
@@ -22,6 +19,17 @@ describe('docker nginx config', () => {
         expect(Number(bodyLimitMb) * 1024 * 1024).toBeGreaterThan(
             largestMaxSize,
         )
+    })
+
+    it('lets every worker hold its connections and their upstream sockets', () => {
+        const config = readFileSync('.docker/nginx.conf', 'utf8')
+        const connections = Number(
+            config.match(/worker_connections (\d+);/)?.[1],
+        )
+        const files = Number(config.match(/worker_rlimit_nofile (\d+);/)?.[1])
+
+        expect(connections).toBeGreaterThanOrEqual(8192)
+        expect(files).toBeGreaterThanOrEqual(2 * connections)
     })
 
     it('keeps SSR pages in memory instead of spilling them to temp files', () => {

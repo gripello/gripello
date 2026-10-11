@@ -257,8 +257,8 @@
 </template>
 
 <script setup lang="ts">
+import { listRoutes } from '~/api/routes'
 import { isAbortError } from '~/utils/errors'
-import type PocketBase from 'pocketbase'
 import type { TableColumn } from '@nuxt/ui'
 import type { RouteListItem, RouteScoreRecord } from '~/types/models'
 import {
@@ -272,7 +272,6 @@ import { toPbSort, type SortOption } from '~/utils/sorting'
 import { cacheKeys, unlessQueryChanged } from '~/utils/realtimeCache'
 
 const { t, locale } = useI18n()
-const pb = usePocketbase() as PocketBase
 const gymId = useCurrentGymId()
 const { lgAndUp } = useDisplay()
 
@@ -292,7 +291,7 @@ const {
     locations,
     walls,
     activeFilterCount,
-    pbFilter: baseFilter,
+    routeQuery: baseQuery,
     clearFilters,
 } = useRouteFilters()
 
@@ -394,14 +393,9 @@ const pageInfo = computed(() => {
     return `${start}-${end} / ${totalItems.value}`
 })
 
-const pbFilter = computed(() => {
-    const base = baseFilter.value
-    return gymFilter(
-        pb,
-        gymId.value,
-        base ? `archived = false && ${base}` : 'archived = false',
-    )
-})
+const routeQueryKey = computed(() =>
+    JSON.stringify([gymId.value, baseQuery.value]),
+)
 
 const sortItemsMobile = computed(() => [
     {
@@ -431,25 +425,34 @@ const toPbSortIndex = (sortByArr: SortOption[]) =>
         difficulty: 'type,grade_index',
     })
 
+interface RoutePage {
+    items: RouteScoreRecord[]
+    totalItems: number
+}
+
 function fetchRoutes(
     page: number,
     perPage: number,
     requestKey: string | null = 'routesList',
-) {
-    return pb
-        .collection('averageRating')
-        .getList<RouteScoreRecord>(page, perPage, {
-            filter: pbFilter.value,
+): Promise<RoutePage> {
+    return listRoutes(
+        gymId.value,
+        {
+            ...baseQuery.value,
             sort: toPbSortIndex(tableOptions.sortBy),
-            expand: 'location,wall',
-            requestKey,
-        })
+            include: ['location', 'wall'],
+            page,
+            limit: perPage,
+            total: true,
+        },
+        { rated: true, requestKey },
+    ).then((list) => ({ items: list.items, totalItems: list.total ?? 0 }))
 }
 
-function fetchLoadedRoutes() {
+function fetchLoadedRoutes(): Promise<RoutePage> {
     const { page, itemsPerPage } = tableOptions
     return unlessQueryChanged(
-        () => JSON.stringify([pbFilter.value, tableOptions.sortBy]),
+        () => JSON.stringify([routeQueryKey.value, tableOptions.sortBy]),
         () =>
             isWideLayout.value
                 ? fetchRoutes(page, itemsPerPage, null)
@@ -535,7 +538,7 @@ watch(sentinelRef, (sentinel) => {
 })
 
 let debounceT: ReturnType<typeof setTimeout> | null = null
-watch(pbFilter, () => {
+watch(routeQueryKey, () => {
     if (debounceT) {
         clearTimeout(debounceT)
     }

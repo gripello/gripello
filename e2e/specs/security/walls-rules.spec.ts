@@ -1,7 +1,18 @@
 import { test, expect } from '../../support/fixtures'
-import { e2eGymId, uiaa } from '../../support/seed'
-import { authHeader, gotoSettled } from '../../support/nav'
+import { uiaa } from '../../support/seed'
+import { apiOf, gotoSettled } from '../../support/nav'
 import { seedMap } from '../../support/map'
+import {
+    ApiError,
+    archiveRoute,
+    createLocation,
+    createRoute,
+    createWall,
+    deleteLocation,
+    deleteWall,
+    updateRoute,
+    updateWall,
+} from '../../support/api'
 
 const outline = [
     [1, 1],
@@ -13,50 +24,56 @@ const edge = [
     [4, 1],
 ]
 
+const statusOf = (request: Promise<unknown>) =>
+    request.then(
+        () => 200,
+        (error: ApiError) => error.status,
+    )
+
 test('only settings managers may draw walls', async ({
     setterPage: page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 1 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     try {
         await gotoSettled(page, '/manage/routes')
-        const headers = await authHeader(page)
-        const created = await page.request.post(
-            '/api/collections/walls/records',
-            {
-                headers,
-                data: {
+        const setter = await apiOf(page)
+        expect([400, 403]).toContain(
+            await statusOf(
+                createWall(setter, {
                     location: seeded.locationId,
                     name: `${testPrefix} Setter Wall`,
                     outline,
                     edge,
-                },
-            },
+                }),
+            ),
         )
-        expect(created.status()).toBe(400)
 
-        const updated = await page.request.patch(
-            `/api/collections/walls/records/${seeded.northWallId}`,
-            { headers, data: { name: 'Renamed by setter' } },
+        expect([403, 404]).toContain(
+            await statusOf(
+                updateWall(setter, seeded.northWallId, {
+                    name: 'Renamed by setter',
+                }),
+            ),
         )
-        expect(updated.status()).toBe(404)
     } finally {
         await seeded.cleanup()
     }
 })
 
 test('walls must fit the floor plan and routes must stay in their location', async ({
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 1 })
-    const otherLocation = await root
-        .collection('locations')
-        .create({ name: `${testPrefix} Plain Hall`, gym: await e2eGymId(root) })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
+    const otherLocation = await createLocation(
+        adminApi,
+        `${testPrefix} Plain Hall`,
+    )
     try {
         await expect(
-            root.collection('walls').create({
+            createWall(adminApi, {
                 location: otherLocation.id,
                 name: `${testPrefix} No Plan`,
                 outline,
@@ -65,7 +82,7 @@ test('walls must fit the floor plan and routes must stay in their location', asy
         ).rejects.toMatchObject({ status: 400 })
 
         await expect(
-            root.collection('walls').create({
+            createWall(adminApi, {
                 location: seeded.locationId,
                 name: `${testPrefix} Outside`,
                 outline: [
@@ -78,7 +95,7 @@ test('walls must fit the floor plan and routes must stay in their location', asy
         ).rejects.toMatchObject({ status: 400 })
 
         await expect(
-            root.collection('routes').create({
+            createRoute(adminApi, {
                 name: `${testPrefix}-wrong-wall`,
                 ...uiaa('5'),
                 location: otherLocation.id,
@@ -88,39 +105,28 @@ test('walls must fit the floor plan and routes must stay in their location', asy
             }),
         ).rejects.toMatchObject({ status: 400 })
 
-        const moved = await root
-            .collection('routes')
-            .update(seeded.routeIds[0]!, { location: otherLocation.id })
-        expect(moved.wall).toBe('')
+        const moved = await updateRoute(adminApi, seeded.routeIds[0]!, {
+            location: otherLocation.id,
+        })
+        expect(moved.wall ?? '').toBe('')
     } finally {
         await seeded.cleanup()
-        await root.collection('locations').delete(otherLocation.id)
+        await deleteLocation(adminApi, otherLocation.id)
     }
 })
 
 test('a wall with active routes cannot be deleted', async ({
-    adminPage: page,
-    root,
+    adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedMap(root, testPrefix, { routes: 2 })
+    const seeded = await seedMap(adminApi, testPrefix, { routes: 2 })
     try {
-        await gotoSettled(page, '/admin/settings')
-        const headers = await authHeader(page)
-        const blocked = await page.request.delete(
-            `/api/collections/walls/records/${seeded.northWallId}`,
-            { headers },
-        )
-        expect(blocked.status()).toBe(400)
+        await expect(
+            deleteWall(adminApi, seeded.northWallId),
+        ).rejects.toMatchObject({ status: 400 })
 
-        await root
-            .collection('routes')
-            .update(seeded.routeIds[0]!, { archived: true })
-        const allowed = await page.request.delete(
-            `/api/collections/walls/records/${seeded.northWallId}`,
-            { headers },
-        )
-        expect(allowed.status()).toBe(204)
+        await archiveRoute(adminApi, seeded.routeIds[0]!)
+        await deleteWall(adminApi, seeded.northWallId)
     } finally {
         await seeded.cleanup()
     }

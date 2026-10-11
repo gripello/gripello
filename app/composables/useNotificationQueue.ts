@@ -1,10 +1,14 @@
-import type { RecordSubscription } from 'pocketbase'
+import type { RecordChange } from '~/composables/useRealtime'
 import type { NotificationRecord } from '~/types/models'
-import { sendInBatches } from '~/utils/batch'
+import {
+    deleteNotification,
+    listNotifications,
+    markNotificationsRead,
+} from '~/api/notifications'
 import { removeById, upsertById } from '~/utils/realtimeCache'
 
 export function useNotificationQueue() {
-    const pb = usePocketbase()
+    const authStore = useAuthStore()
     const items = useState<NotificationRecord[]>('notification-queue', () => [])
     const loaded = useState<boolean>('notification-queue-loaded', () => false)
 
@@ -17,19 +21,14 @@ export function useNotificationQueue() {
     }
 
     async function refresh() {
-        if (!pb.authStore.isValid) {
+        if (!authStore.isValid) {
             items.value = []
             loaded.value = true
             return
         }
 
         try {
-            items.value = await pb
-                .collection('notifications')
-                .getFullList<NotificationRecord>({
-                    sort: '-created',
-                    requestKey: 'notificationQueue',
-                })
+            items.value = (await listNotifications()).items
             loaded.value = true
         } catch (err) {
             if (isAutoCancelled(err)) return
@@ -38,10 +37,7 @@ export function useNotificationQueue() {
         }
     }
 
-    function applyEvent({
-        action,
-        record,
-    }: RecordSubscription<NotificationRecord>) {
+    function applyEvent({ action, record }: RecordChange<NotificationRecord>) {
         items.value =
             action === 'delete'
                 ? removeById(items.value, record.id)
@@ -54,7 +50,7 @@ export function useNotificationQueue() {
 
         item.read = true
         try {
-            await pb.collection('notifications').update(id, { read: true })
+            await markNotificationsRead({ ids: [id] })
         } catch (err) {
             item.read = false
             console.error('Failed to mark notification read:', err)
@@ -66,21 +62,10 @@ export function useNotificationQueue() {
         if (!unread.length) return
 
         unread.forEach((item) => (item.read = true))
-        const committed = new Set<NotificationRecord>()
         try {
-            await sendInBatches(
-                pb,
-                unread,
-                (batch, item) =>
-                    batch
-                        .collection('notifications')
-                        .update(item.id, { read: true }),
-                (chunk) => chunk.forEach((item) => committed.add(item)),
-            )
+            await markNotificationsRead({ ids: unread.map((item) => item.id) })
         } catch (err) {
-            unread
-                .filter((item) => !committed.has(item))
-                .forEach((item) => (item.read = false))
+            unread.forEach((item) => (item.read = false))
             console.error('Failed to mark notifications read:', err)
         }
     }
@@ -91,7 +76,7 @@ export function useNotificationQueue() {
 
         const [removed] = items.value.splice(index, 1)
         try {
-            await pb.collection('notifications').delete(id)
+            await deleteNotification(id)
         } catch (err) {
             if (removed) items.value.splice(index, 0, removed)
             console.error('Failed to dismiss notification:', err)

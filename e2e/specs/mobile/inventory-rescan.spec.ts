@@ -1,11 +1,15 @@
 import { test, expect, chromium, devices } from '@playwright/test'
-import PocketBase from 'pocketbase'
 import path from 'node:path'
 import os from 'node:os'
 import { generateRouteQrY4m } from '../../support/qr'
 import { gotoSettled } from '../../support/nav'
-import { PB_URL } from '../../support/map'
-import { authAsSuperuser, e2eGymId, uiaa } from '../../support/seed'
+import {
+    createLocation,
+    createRoute,
+    deleteTestData,
+    gymAdminApi,
+    routeInput,
+} from '../../support/api'
 
 const AUTH_FILE = path.join(
     import.meta.dirname,
@@ -20,18 +24,12 @@ test('a code shown again after undo is scanned again', async ({
 }, testInfo) => {
     test.setTimeout(120_000)
     const prefix = `e2e-w${testInfo.workerIndex}-${Date.now()}`
-    const root = new PocketBase(PB_URL)
-    await authAsSuperuser(root)
-    const location = await root
-        .collection('locations')
-        .create({ name: `${prefix}-rescan`, gym: await e2eGymId(root) })
-    const route = await root.collection('routes').create({
-        name: `${prefix}-rescan`,
-        ...uiaa('5'),
-        location: location.id,
-        type: 'Route',
-        creator: ['E2E'],
-    })
+    const api = await gymAdminApi()
+    const location = await createLocation(api, `${prefix}-rescan`)
+    const route = await createRoute(
+        api,
+        routeInput(`${prefix}-rescan`, location.id),
+    )
 
     const y4mPath = path.join(os.tmpdir(), `${prefix}-rescan.y4m`)
     generateRouteQrY4m(route.id, y4mPath, { codeFrames: 25, blankFrames: 50 })
@@ -72,7 +70,6 @@ test('a code shown again after undo is scanned again', async ({
         await expect(foundCount).toHaveText('1', { timeout: 30_000 })
     } finally {
         await browser.close()
-        await root.collection('routes').delete(route.id)
-        await root.collection('locations').delete(location.id)
+        deleteTestData(prefix)
     }
 })

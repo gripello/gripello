@@ -136,7 +136,7 @@
 </template>
 
 <script setup lang="ts">
-import type { SeasonRecord } from '~/types/models'
+import { getLeaderboard, listSeasons } from '~/api/ticks'
 import { localDay } from '#shared/utils/ticks'
 import { formatDate } from '#shared/utils/formatting'
 import type { LogbookKind } from '#shared/utils/logbook'
@@ -145,30 +145,23 @@ import {
     ROLLING_SEASON,
     defaultSeason,
     keepSelectableSeason,
-    leaderboardPath,
     selectableSeasons,
-    type Leaderboard,
 } from '~/utils/leaderboard'
 
 const { t, locale } = useI18n()
-const pb = usePocketbase()
+const authStore = useAuthStore()
 const gymId = useCurrentGymId()
 const gymPath = useGymPath()
 const { can } = usePermissions()
 const canManage = computed(() => can('manage_competitions'))
-const myId = pb.authStore.record?.id ?? ''
-const hidden = !!pb.authStore.record?.leaderboard_hidden
+const myId = authStore.record?.id ?? ''
+const hidden = !!authStore.record?.leaderboard_hidden
 
 useHead({ title: t('page.title.leaderboard') })
 
 const { data: seasons, refresh: refreshSeasons } = await useAsyncData(
     'leaderboard-seasons',
-    () =>
-        pb.collection('seasons').getFullList<SeasonRecord>({
-            filter: gymFilter(pb, gymId.value),
-            sort: '-starts_at',
-            requestKey: null,
-        }),
+    () => listSeasons(gymId.value),
     { default: () => [] },
 )
 
@@ -202,12 +195,7 @@ const {
 } = await useAsyncData(
     'leaderboard',
     () =>
-        pb.send<Leaderboard>(
-            leaderboardPath(gymId.value, kind.value, season.value),
-            {
-                requestKey: null,
-            },
-        ),
+        getLeaderboard(gymId.value, { kind: kind.value, season: season.value }),
     { watch: [kind, season] },
 )
 

@@ -3,20 +3,18 @@
 </template>
 
 <script setup lang="ts">
+import { getRoute } from '~/api/routes'
 import type { GymRecord, RouteRecord } from '~/types/models'
 
-const pb = usePocketbase()
 const route = useRoute()
 const routeId = String(route.query.id ?? '')
 
 const target = routeId
-    ? await pb
-          .collection('routes')
-          .getOne<RouteRecord & { expand?: { gym?: GymRecord } }>(routeId, {
-              fields: 'expand.gym.slug',
-              expand: 'gym',
-              requestKey: null,
-          })
+    ? await getRoute<RouteRecord & { expand?: { gym?: GymRecord } }>(
+          routeId,
+          ['gym'],
+          { fields: 'expand.gym.slug', requestKey: null },
+      )
           .then((record) => record.expand?.gym?.slug)
           .catch(() => undefined)
     : undefined
