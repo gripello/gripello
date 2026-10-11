@@ -216,11 +216,11 @@ test.describe('browser bars', () => {
         )
     })
 
-    test('the installed app draws its own status bar', async ({ page }) => {
+    test('the installed app leaves the status bar to iOS', async ({ page }) => {
         await gotoSettled(page, gymPath('/'))
         await expect(
             page.locator('meta[name="apple-mobile-web-app-status-bar-style"]'),
-        ).toHaveAttribute('content', 'black-translucent')
+        ).toHaveCount(0)
     })
 
     test('color-scheme follows an explicit light choice on a dark OS', async ({

@@ -21,6 +21,12 @@
             height: max(100%, 44px);
             transform: translate(-50%, -50%);
         }
+
+        /* Dev only: Nuxt DevTools' full-screen inspector overlay keeps iOS Safari from tinting the status bar and
+           toolbar from the page (stale light/dark color, blurred edge in the home screen app). */
+        #vue-tracer-overlay {
+            display: none !important;
+        }
     }
 
     *,
@@ -585,41 +591,15 @@
         outline: none;
     }
 
-    html,
-    body {
-        transition: background-color 0.32s ease;
-    }
-
     .theme-reveal::view-transition-old(root),
     .theme-reveal::view-transition-new(root) {
         animation: none;
         mix-blend-mode: normal;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-        html,
-        body {
-            transition: none;
-        }
-    }
-
     @media (display-mode: standalone) {
         :root {
             --app-top-inset: env(safe-area-inset-top, 0px);
-        }
-
-        .app-root::before {
-            content: '';
-            position: fixed;
-            inset: 0 0 auto;
-            height: var(--app-top-inset);
-            background: var(--ui-bg);
-            z-index: 1010;
-            transition: background-color 0.32s ease;
-        }
-
-        html:not(.dark) .app-root::before {
-            background: var(--ui-primary);
         }
 
         .dialog-fullscreen {
