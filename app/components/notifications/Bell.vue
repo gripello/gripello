@@ -135,7 +135,7 @@ const {
     dismiss,
 } = useNotificationQueue()
 
-const { error: notifyError, notify } = useNotification()
+const { error: notifyError, announce } = useNotification()
 
 const open = ref(false)
 const { offered: pushOffered, turnOn } = usePushOffer()
@@ -166,7 +166,7 @@ useRealtime(
     (event: RecordChange<NotificationRecord>) => {
         applyEvent(event)
         const text = achievementToast(event, t)
-        if (text) notify(text)
+        if (text) announce(text)
     },
 )
 

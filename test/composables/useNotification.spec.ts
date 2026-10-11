@@ -23,6 +23,16 @@ describe('useNotification', () => {
         )
     })
 
+    it('keeps incoming announcements apart from feedback toasts', () => {
+        process.server = false
+        useNotification().announce('Achievement unlocked')
+        const toast = add.mock.calls[0]![0]
+        expect(toast['data-testid']).toBe('announcement-toast')
+        expect(toast.title().props['data-testid']).toBe(
+            'announcement-toast-message',
+        )
+    })
+
     it('skips toasts during server rendering so the payload stays serialisable', () => {
         process.server = true
         useNotification().success('Saved')

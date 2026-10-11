@@ -19,6 +19,7 @@ export function useNotification() {
         text: string,
         color: NotificationColor = 'success',
         action?: NotificationAction,
+        testId = 'global-snackbar',
     ) {
         if (import.meta.server) return
         toast.add({
@@ -26,7 +27,7 @@ export function useNotification() {
                 h(
                     'span',
                     {
-                        'data-testid': 'global-snackbar-message',
+                        'data-testid': `${testId}-message`,
                         'data-color': color,
                     },
                     text,
@@ -45,7 +46,7 @@ export function useNotification() {
                     },
                 ],
             }),
-            'data-testid': 'global-snackbar',
+            'data-testid': testId,
         } as Parameters<typeof toast.add>[0])
     }
 
@@ -54,6 +55,8 @@ export function useNotification() {
     const error = (msg: string) => notify(msg, 'error')
     const warning = (msg: string) => notify(msg, 'warning')
     const info = (msg: string) => notify(msg, 'info')
+    const announce = (msg: string) =>
+        notify(msg, 'success', undefined, 'announcement-toast')
 
-    return { notify, success, error, warning, info }
+    return { notify, success, error, warning, info, announce }
 }
