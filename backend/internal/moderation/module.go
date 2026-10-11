@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -159,6 +160,12 @@ func (m *module) onUser(e events.Event) {
 			return
 		}
 		logFailure("queueing profile", payload.Record.ID, m.inTx(ctx, func(w *work) error {
+			// A restore announces the profile it put back; that is the content the case already decided on.
+			if it, err := itemOf(ctx, w.tx, "profile", payload.Record.ID); err == nil && it.State == "approved" {
+				if c, err := loadContent(ctx, w.tx, "profile", payload.Record.ID); err != nil || reflect.DeepEqual(it.Snapshot, c.Snapshot) {
+					return err
+				}
+			}
 			_, err := m.queue(ctx, w, "profile", payload.Record.ID, false)
 			return err
 		}))

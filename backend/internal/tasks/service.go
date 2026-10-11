@@ -358,46 +358,54 @@ func wishParams(ctx context.Context, q querier, t Task) map[string]any {
 }
 
 func (m *module) updateTask(ctx context.Context, id string, in map[string]string, photo *multipart.FileHeader) (Task, error) {
-	before, err := findTask(ctx, m.app.DB, id)
+	current, err := findTask(ctx, m.app.DB, id)
 	if err != nil {
 		return Task{}, err
 	}
-	if err := m.requireManager(ctx, before.Gym); err != nil {
+	if err := m.requireManager(ctx, current.Gym); err != nil {
 		return Task{}, err
 	}
 	actor := actorOf(ctx)
-	t := before
-	if err := applyInput(&t, in, false); err != nil {
+	uploaded := Task{ID: id}
+	if err := m.storePhoto(ctx, &uploaded, photo); err != nil {
 		return Task{}, err
 	}
-	stampTaskDone(&t, before.Status, actor, time.Now())
-	if err := validateFields(t); err != nil {
-		return Task{}, err
-	}
-	if err := validateTask(t); err != nil {
-		return Task{}, err
-	}
-	if err := attachTarget(ctx, m.app.DB, &t, false); err != nil {
-		return Task{}, err
-	}
-	if t.Assignee != before.Assignee {
-		if err := validateAssignee(ctx, m.app.DB, t); err != nil {
-			return Task{}, err
-		}
-	}
-	if photo != nil || t.Description != before.Description {
-		if err := refuseWhileHidden(ctx, m.app.DB, id); err != nil {
-			return Task{}, err
-		}
-	}
-	if err := m.storePhoto(ctx, &t, photo); err != nil {
-		return Task{}, err
-	}
+	var before, t Task
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		var err error
+		if before, err = lockTask(ctx, tx, id); err != nil {
+			return err
+		}
+		t = before
+		if err := applyInput(&t, in, false); err != nil {
+			return err
+		}
+		if uploaded.Photo != "" {
+			t.Photo = uploaded.Photo
+		}
+		stampTaskDone(&t, before.Status, actor, time.Now())
+		if err := validateFields(t); err != nil {
+			return err
+		}
+		if err := validateTask(t); err != nil {
+			return err
+		}
+		if err := attachTarget(ctx, tx, &t, false); err != nil {
+			return err
+		}
+		if t.Assignee != before.Assignee {
+			if err := validateAssignee(ctx, tx, t); err != nil {
+				return err
+			}
+		}
+		if photo != nil || t.Description != before.Description {
+			if err := refuseWhileHidden(ctx, tx, id); err != nil {
+				return err
+			}
+		}
 		if err := saveTask(ctx, tx, t); err != nil {
 			return err
 		}
-		var err error
 		if t, err = findTask(ctx, tx, id); err != nil {
 			return err
 		}
@@ -418,9 +426,7 @@ func (m *module) updateTask(ctx context.Context, id string, in map[string]string
 		return nil
 	})
 	if err != nil {
-		if t.Photo != before.Photo {
-			m.dropPhoto(ctx, id, t.Photo)
-		}
+		m.dropPhoto(ctx, id, uploaded.Photo)
 		return Task{}, err
 	}
 	m.warmPhoto(t, photo)

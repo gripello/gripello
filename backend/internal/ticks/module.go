@@ -51,6 +51,16 @@ func (m *module) onTickChanged(e events.Event) {
 
 // user.updated carries {record, changed}; without `changed` every profile update forgets the boards.
 func (m *module) onUserEvent(e events.Event) {
+	if e.Kind == "user.deleted" {
+		var deleted struct {
+			ID string `json:"id"`
+		}
+		if json.Unmarshal(e.Payload, &deleted) == nil {
+			m.climbers.Forget(deleted.ID)
+		}
+		m.boards.forgetAll()
+		return
+	}
 	if e.Kind != "user.updated" {
 		return
 	}

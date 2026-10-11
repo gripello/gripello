@@ -156,7 +156,6 @@ import {
 } from '~/api/ratings'
 import { isAbortError } from '~/utils/errors'
 import { openCase } from '~/api/moderation'
-import { pbDateString } from '~/utils/audit'
 import { realtimeCommentPlacement } from '~/utils/comments'
 import { gymChangesTopic, type GymChange } from '~/utils/realtimeCache'
 import { formatNumber } from '#shared/utils/number'
@@ -335,9 +334,7 @@ function buildQuery(): RatingQuery {
         location: selectedLocation.value || undefined,
         grade_system: difficulty.slice(0, Math.max(separator, 0)) || undefined,
         grade: difficulty.slice(separator + 1) || undefined,
-        since: days
-            ? pbDateString(new Date(Date.now() - days * 86_400_000))
-            : undefined,
+        since: days ? new Date(Date.now() - days * 86_400_000) : undefined,
         sort: sortOrder.value as RatingSort,
     }
 }

@@ -20,7 +20,7 @@ describe('useFileToken', () => {
                     token = useFileToken(() => ({
                         table: 'tasks',
                         id: id.value,
-                    }))
+                    })).token
                     return () => h('div')
                 },
             }),
@@ -35,6 +35,39 @@ describe('useFileToken', () => {
         id.value = 't2'
         await flushPromises()
         expect(token.value).toBe('token-t2')
+    })
+
+    it('keeps a token for rendered files and renews it only once it may have expired', async () => {
+        vi.useFakeTimers()
+        let issued = 0
+        routeApi(async () => ({ token: `token-${++issued}` }))
+        let fileToken = {} as ReturnType<typeof useFileToken>
+        mount(
+            defineComponent({
+                setup() {
+                    fileToken = useFileToken(() => ({
+                        table: 'tasks',
+                        id: 't1',
+                    }))
+                    return () => h('div')
+                },
+            }),
+        )
+        expect(fileToken.token.value).toBe('')
+        await flushPromises()
+        expect(fileToken.token.value).toBe('token-1')
+
+        fileToken.renew()
+        await vi.advanceTimersByTimeAsync(300_000)
+        expect(fileToken.token.value).toBe('token-1')
+
+        fileToken.renew()
+        await flushPromises()
+        expect(fileToken.token.value).toBe('token-2')
+        fileToken.renew()
+        await flushPromises()
+        expect(fileToken.token.value).toBe('token-2')
+        vi.useRealTimers()
     })
 
     it('asks for nothing without a record', async () => {

@@ -8,6 +8,7 @@ import {
     rolesOfGym,
     userDisplayName,
     userKeptThroughReload,
+    userSecurityState,
     type PlatformUser,
 } from '~/utils/platformUsers'
 
@@ -142,5 +143,41 @@ describe('userKeptThroughReload', () => {
 
     it('drops a previous record of another user', () => {
         expect(userKeptThroughReload([], 'u2', paula)).toBeNull()
+    })
+})
+
+describe('userSecurityState', () => {
+    const climber = {
+        id: 'u1',
+        mfa_enabled: true,
+        session_count: 2,
+        locked_until: '2026-10-10 12:00:00Z',
+    } as PlatformUser
+
+    it('lets admins act on climbers and reports their state', () => {
+        expect(userSecurityState(climber, 'admin')).toEqual({
+            isSelf: false,
+            canAct: true,
+            mfa: true,
+            sessions: 2,
+            locked: true,
+        })
+    })
+
+    it('keeps admins away from themselves and other admins', () => {
+        expect(userSecurityState(climber, 'u1')).toMatchObject({
+            isSelf: true,
+            canAct: false,
+        })
+        expect(
+            userSecurityState({ ...climber, platform_admin: true }, 'admin')
+                .canAct,
+        ).toBe(false)
+    })
+
+    it('treats missing fields as nothing to do', () => {
+        expect(
+            userSecurityState({ id: 'u2' } as PlatformUser, 'admin'),
+        ).toMatchObject({ mfa: false, sessions: 0, locked: false })
     })
 })

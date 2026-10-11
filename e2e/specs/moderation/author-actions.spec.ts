@@ -81,6 +81,9 @@ test('the platform hides everything a spammer posted and suspends them', async (
     await platformPage
         .getByTestId('platform-suspend-reason')
         .fill('Spam account.')
+    await platformPage
+        .getByTestId('platform-suspend-admin-password')
+        .fill('E2ePassw0rd!')
     await platformPage.getByTestId('platform-suspend-confirm').click()
     await expect
         .poll(

@@ -244,6 +244,112 @@ paths:
               schema: { $ref: '#/components/schemas/AuthResponse' }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
+  /auth/oauth2/{provider}/start:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { type: string, enum: [google, apple, microsoft, oidc] } }
+    post:
+      operationId: startOAuth2
+      tags: [authn]
+      description: Stores state, PKCE verifier and nonce (single use, 10 minutes), sets the HttpOnly gripello_oauth2 flow cookie and returns the provider URL. link=true needs sign-in and links the identity to the caller. redirect must be a same-origin path. 404 for unknown or disabled providers.
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { redirect: { type: string }, link: { type: boolean } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [url], properties: { url: { type: string } } }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
+  /auth/oauth2/{provider}/callback:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: oauth2Callback
+      tags: [authn]
+      description: Provider redirect target (Apple posts the same fields as a form). Verifies the id_token and redirects to /auth/login?oauth2=<ticket>[&redirect=], to /account/settings?tab=security after linking, or to /auth/login?oauth2Error=failed|registration_disabled|account_exists|already_linked|email_unverified. Accounts are linked by email only for provider-verified addresses on verified accounts, never for Microsoft.
+      responses:
+        '302': { description: Redirect back to the app }
+  /auth/oauth2/finish:
+    post:
+      operationId: finishOAuth2
+      tags: [authn]
+      description: Signs in with the ticket from the callback. Only works in the browser holding the flow cookie (login CSRF). Lockout, suspension and second factors apply as for password login (401 {mfaId, methods}).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [ticket], properties: { ticket: { type: string } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/oauth2/link:
+    post:
+      operationId: finishOAuth2Link
+      tags: [authn]
+      description: Links the identity of a link ticket (callback of a link flow) to the signed-in account. Needs the flow cookie of the browser that started the flow and the same account, so a provider URL sent to someone else links nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [ticket], properties: { ticket: { type: string } } }
+      responses:
+        '204': { description: Linked }
+        '401': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /me/identities:
+    get:
+      operationId: listLinkedAccounts
+      tags: [authn]
+      description: The caller's linked sign-in providers and whether the account has a password.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hasPassword: { type: boolean }
+                  items:
+                    type: array
+                    items: { type: object, properties: { id: { type: string }, provider: { type: string }, email: { type: string }, created: { type: string, format: date-time } } }
+  /me/identities/{id}:
+    delete:
+      operationId: unlinkAccount
+      tags: [authn]
+      description: 409 when it is the last way in (no password, passkey or other provider).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Unlinked }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /me/reauthenticate:
+    post:
+      operationId: reauthenticate
+      tags: [authn]
+      description: Confirms the password; sensitive platform actions accept this session for five minutes. Wrong passwords count toward the lockout.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [password], properties: { password: { type: string } } }
+      responses:
+        '204': { description: Confirmed }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
   /me/mfa:
     get:
       operationId: listMFAFactors

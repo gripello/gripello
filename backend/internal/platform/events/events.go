@@ -61,6 +61,13 @@ func PublishAs(ctx context.Context, tx pgx.Tx, actor, topic, kind string, payloa
 	return err
 }
 
+// PublishNow writes a server-only event in its own transaction, for changes that touch no other row.
+func (b *Bus) PublishNow(ctx context.Context, topic, kind string, payload any) error {
+	return pgx.BeginFunc(ctx, b.pool, func(tx pgx.Tx) error {
+		return Publish(ctx, tx, topic, kind, payload, Audience{})
+	})
+}
+
 type Handler func(Event)
 
 // A handler that falls this far behind blocks dispatch for everyone until it catches up.
@@ -71,11 +78,17 @@ type subscription struct {
 	queue  chan Event
 }
 
+type onceSubscription struct {
+	subscription
+	handler string
+}
+
 // Bus listens on one dedicated connection and fans new outbox rows out to in-process handlers.
 type Bus struct {
 	pool     *pgxpool.Pool
 	mu       sync.RWMutex
 	subs     []subscription
+	onces    []onceSubscription
 	lastID   int64
 	gapSince time.Time
 }
@@ -86,15 +99,21 @@ func NewBus(pool *pgxpool.Pool) *Bus {
 
 // Subscribe registers for topics starting with prefix ("" = everything); each handler runs in order on its own goroutine, so a slow one can't stall the others.
 func (b *Bus) Subscribe(prefix string, h Handler) {
+	b.subscribe(prefix, h)
+}
+
+func (b *Bus) subscribe(prefix string, h Handler) subscription {
 	queue := make(chan Event, handlerBacklog)
 	go func() {
 		for e := range queue {
 			runSafely(h, e)
 		}
 	}()
+	sub := subscription{prefix, queue}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.subs = append(b.subs, subscription{prefix, queue})
+	b.subs = append(b.subs, sub)
+	return sub
 }
 
 func runSafely(h Handler, e Event) (ok bool) {
@@ -108,9 +127,11 @@ func runSafely(h Handler, e Event) (ok bool) {
 	return true
 }
 
-// Run blocks until ctx is done; it reconnects on errors and never skips rows (it reads by id, not by notification payload).
+// Run blocks until ctx is done; it reconnects on errors and reads by id, not by notification payload.
+// Plain handlers start at the live head; SubscribeOnce handlers also get the unclaimed events still in the outbox.
 func (b *Bus) Run(ctx context.Context) {
 	b.pool.QueryRow(ctx, `SELECT COALESCE(MAX(id), 0) FROM events`).Scan(&b.lastID)
+	go b.sweepUnclaimed(ctx)
 	for ctx.Err() == nil {
 		if err := b.listen(ctx); err != nil && ctx.Err() == nil {
 			slog.Error("events: listener stopped", "error", err)
@@ -191,7 +212,11 @@ func (b *Bus) dispatch(e Event) {
 
 // Since returns events after id, for SSE Last-Event-ID replay.
 func (b *Bus) Since(ctx context.Context, id int64, limit int) ([]Event, error) {
-	rows, err := b.pool.Query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events WHERE id > $1 ORDER BY id LIMIT $2`, id, limit)
+	return b.query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events WHERE id > $1 ORDER BY id LIMIT $2`, id, limit)
+}
+
+func (b *Bus) query(ctx context.Context, sql string, args ...any) ([]Event, error) {
+	rows, err := b.pool.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -215,13 +240,50 @@ func (b *Bus) Prune(ctx context.Context, olderThan time.Duration) error {
 	return err
 }
 
-var onceRetryDelay = time.Second
+var (
+	onceRetryDelay = time.Second
+	onceSweepEvery = 30 * time.Second
+	// Younger events are still on their way through live dispatch.
+	onceSweepMinAge = 10 * time.Second
+)
+
+// sweepUnclaimed hands every SubscribeOnce handler the outbox events it never claimed: ones committed while no
+// bus ran, ones still queued at shutdown, ones live dispatch skipped behind a gap, and ones whose retries all failed.
+// Events pruned from the outbox (see Prune) are gone for good.
+func (b *Bus) sweepUnclaimed(ctx context.Context) {
+	for {
+		b.mu.RLock()
+		onces := b.onces
+		b.mu.RUnlock()
+		for _, once := range onces {
+			missed, err := b.query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events e
+				WHERE starts_with(topic, $1) AND created < now() - $3::interval
+				  AND NOT EXISTS (SELECT 1 FROM event_claims c WHERE c.event_id = e.id AND c.handler = $2)
+				ORDER BY id`, once.prefix, once.handler, onceSweepMinAge.String())
+			if err != nil && ctx.Err() == nil {
+				slog.Error("events: sweeping unclaimed events failed", "handler", once.handler, "error", err)
+			}
+			for _, e := range missed {
+				select {
+				case once.queue <- e:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+		select {
+		case <-time.After(onceSweepEvery):
+		case <-ctx.Done():
+			return
+		}
+	}
+}
 
 // SubscribeOnce runs h on exactly one replica per event: the replica that inserts the claim row runs it.
 // A handler that panics gives the claim back and is retried, so a failure doesn't lose the event.
 // Use it for side effects (writing rows, sending mail); plain Subscribe is for per-replica state like caches and SSE.
 func (b *Bus) SubscribeOnce(prefix, handler string, h Handler) {
-	b.Subscribe(prefix, func(e Event) {
+	sub := b.subscribe(prefix, func(e Event) {
 		for attempt := 1; attempt <= 3; attempt++ {
 			tag, err := b.pool.Exec(context.Background(),
 				`INSERT INTO event_claims (event_id, handler) VALUES ($1, $2) ON CONFLICT DO NOTHING`, e.ID, handler)
@@ -236,4 +298,7 @@ func (b *Bus) SubscribeOnce(prefix, handler string, h Handler) {
 			time.Sleep(time.Duration(attempt) * onceRetryDelay)
 		}
 	})
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.onces = append(b.onces, onceSubscription{sub, handler})
 }

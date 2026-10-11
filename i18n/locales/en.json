@@ -53,6 +53,7 @@
         "passwordStrength": "Password strength",
         "unsavedChanges": "Unsaved changes",
         "wrongOldPassword": "Current password is incorrect",
+        "passwordRequired": "Your account has no password yet. Set one first via the password reset on the sign-in page.",
         "passwordChangedSignInAgain": "Password changed. Please sign in again with your new password.",
         "unknownUser": "Unknown user",
         "tabs": {
@@ -190,6 +191,15 @@
             "signOut": "Sign out {device}",
             "signOutOthers": "Sign out other devices",
             "signOutOthersConfirm": "Every other device will be signed out."
+        },
+        "linkedAccounts": {
+            "title": "Linked accounts",
+            "link": "Link",
+            "unlink": "Unlink",
+            "unlinkConfirm": "You can no longer sign in with {provider}.",
+            "lastMethod": "This is the only way into your account. Set a password first.",
+            "linked": "Sign-in linked",
+            "linkConfirm": "A linked sign-in opens your account even after a password change. Confirm with your password."
         }
     },
     "routes": {
@@ -932,8 +942,7 @@
         "saveError": "Could not save settings. Please try again.",
         "contactEmail": "Contact email",
         "contactEmailHint": "Published as your point of contact and notified about new content reports.",
-        "mailNotConfigured": "Email is not configured, so password resets and content report notices cannot be delivered. SMTP is configured in PocketBase, not here.",
-        "mailNotConfiguredAction": "Open PocketBase mail settings",
+        "mailNotConfigured": "Email is not configured, so password resets and content report notices cannot be delivered. A platform admin sets it up under Platform settings › Mail.",
         "legalTitle": "Legal notice",
         "legalAddress": "Postal address",
         "legalPhone": "Phone",
@@ -1257,7 +1266,11 @@
             "settings": "Settings",
             "reports": "Reports",
             "tasks": "Tasks",
-            "sessions": "Sessions"
+            "sessions": "Sessions",
+            "platform_config": "Platform settings",
+            "oauth2_providers": "Sign-in providers",
+            "retired_slugs": "Retired URLs",
+            "backups": "Backups"
         },
         "target": {
             "routes": "Route",
@@ -1268,7 +1281,11 @@
             "settings": "Settings",
             "reports": "Report",
             "tasks": "Task",
-            "sessions": "Session"
+            "sessions": "Session",
+            "platform_config": "Platform settings",
+            "oauth2_providers": "Sign-in provider",
+            "retired_slugs": "Retired gym URL",
+            "backups": "Backup"
         },
         "changedLabel": "Changed",
         "filter": {
@@ -2002,7 +2019,71 @@
             "access": "Access",
             "allowRegistration": "Allow registration",
             "auditRetentionDays": "Keep audit log (days)",
-            "links": "Contact & links"
+            "links": "Contact & links",
+            "mail": {
+                "title": "Mail",
+                "host": "SMTP server",
+                "port": "Port",
+                "tls": "Encryption",
+                "username": "Username",
+                "password": "Password",
+                "passwordSet": "Saved",
+                "clearPassword": "Remove password",
+                "senderAddress": "Sender address",
+                "senderName": "Sender name",
+                "sendTest": "Send test email to me",
+                "testSent": "Test email sent to your address",
+                "fromEnvironment": "Set by the server environment",
+                "notConfigured": "Not configured",
+                "confirm": "Mail settings decide where password reset links are sent. Confirm with your password.",
+                "check": "Connection check",
+                "steps": {
+                    "connect": "Connect to the server",
+                    "encrypt": "Encrypt the connection",
+                    "sign_in": "Sign in",
+                    "deliver": "Deliver to you"
+                }
+            },
+            "oauth2": {
+                "title": "Sign-in providers",
+                "enabled": "Offered on the login page",
+                "displayName": "Button name",
+                "issuerUrl": "Issuer URL",
+                "tenant": "Tenant",
+                "clientId": "Client ID",
+                "clientSecret": "Client secret",
+                "teamId": "Team ID",
+                "keyId": "Key ID",
+                "privateKey": "Private key (.p8)",
+                "redirectUri": "Redirect URI",
+                "copy": "Copy",
+                "copied": "Copied",
+                "confirm": "Sign-in providers decide who can get into accounts. Confirm with your password.",
+                "providers": {
+                    "google": "Google",
+                    "apple": "Apple",
+                    "microsoft": "Microsoft",
+                    "oidc": "OpenID Connect"
+                },
+                "status": {
+                    "live": "Live",
+                    "configured": "Configured",
+                    "missing": "Not set up"
+                },
+                "checks": {
+                    "clientId": "Client ID",
+                    "secret": "Secret saved",
+                    "live": "On the login page"
+                }
+            },
+            "status": {
+                "registration": "Registration",
+                "open": "Open",
+                "inviteOnly": "Invite only",
+                "auditDays": "Audit log kept {n} day | Audit log kept {n} days",
+                "configured": "{n} configured",
+                "live": "{n} live"
+            }
         },
         "overview": {
             "title": "Overview",
@@ -2010,12 +2091,61 @@
             "memberships": "Memberships",
             "routes": "Routes",
             "admins": "Platform admins",
-            "dashboard": "PocketBase dashboard",
             "needsYou": "Needs you",
             "legalReports": "Legal reports open",
             "staleGyms": "Gyms falling behind",
             "profiles": "Profiles to check",
-            "suspended": "Suspended users"
+            "suspended": "Suspended users",
+            "traffic": {
+                "title": "Requests",
+                "requests": "Requests",
+                "ok": "Successful",
+                "clientErrors": "Client errors (4xx)",
+                "serverErrors": "Server errors (5xx)",
+                "serverErrorRate": "Server error rate",
+                "peakRps": "Peak requests/s",
+                "p95": "p95 response time",
+                "visitors": "Visitors per day",
+                "endpoints": "Endpoints",
+                "endpoint": "Endpoint",
+                "sortErrors": "Errors",
+                "sortSlowest": "Slowest",
+                "showAll": "Show all {n}",
+                "showLess": "Show less"
+            },
+            "people": {
+                "title": "People",
+                "online": "Online now",
+                "signedIn": "Signed in",
+                "newAccounts": "New accounts",
+                "failedLogins": "Failed sign-ins",
+                "methods": {
+                    "password": "Password",
+                    "passkey": "Passkey",
+                    "totp": "Authenticator code",
+                    "recovery": "Recovery code"
+                }
+            },
+            "servers": {
+                "title": "Servers",
+                "online": "Online",
+                "offline": "Offline",
+                "uptime": "up {time}",
+                "connections": "{n} live connection | {n} live connections",
+                "lastSeen": "Offline · last seen {time}"
+            },
+            "system": {
+                "title": "System",
+                "database": "Database",
+                "connections": "{n} connection | {n} connections",
+                "jobs": "Job queue",
+                "jobsState": "{waiting} waiting · {running} running",
+                "lastBackup": "Last backup",
+                "mail": "Mail",
+                "mailOn": "Configured",
+                "mailOff": "Not configured"
+            },
+            "platform": "Platform"
         },
         "users": {
             "title": "Users",
@@ -2053,13 +2183,130 @@
                 "kept": "Memberships and logbook stay; nothing is deleted.",
                 "lift": "You can lift the suspension any time under Users."
             },
-            "suspendPermanently": "Suspend permanently"
+            "suspendPermanently": "Suspend permanently",
+            "security": "Security",
+            "locked": "Locked out",
+            "unlock": "Unlock",
+            "revokeSessions": "Sign out everywhere",
+            "resetMfa": "Reset two-factor",
+            "setPassword": "Set password",
+            "adminPassword": "Your password",
+            "adminPasswordWrong": "Your password is not correct.",
+            "actions": {
+                "unlock": {
+                    "title": "Unlock",
+                    "confirm": "Unlock",
+                    "done": "Account unlocked"
+                },
+                "revokeSessions": {
+                    "title": "Sign out everywhere",
+                    "message": "{name} is signed out on every device.",
+                    "confirm": "Sign out",
+                    "done": "Signed out everywhere"
+                },
+                "resetMfa": {
+                    "title": "Reset two-factor",
+                    "message": "Removes the authenticator apps, passkeys and recovery codes of {name} and signs them out everywhere. They get an email.",
+                    "confirm": "Reset",
+                    "done": "Two-factor reset"
+                },
+                "setPassword": {
+                    "title": "Set password",
+                    "message": "{name} is signed out everywhere and gets an email.",
+                    "confirm": "Set password",
+                    "done": "Password set"
+                },
+                "grantAdmin": {
+                    "title": "Make platform admin",
+                    "message": "{name} can then manage every gym, every user and the platform settings.",
+                    "confirm": "Make admin",
+                    "done": "Platform admin added"
+                },
+                "revokeAdmin": {
+                    "title": "Remove platform admin",
+                    "message": "{name} keeps the account and gym memberships but loses the platform rights.",
+                    "confirm": "Remove",
+                    "done": "Platform admin removed"
+                }
+            }
         },
         "features": {
             "title": "Feature flags",
             "flags": {
                 "beta_videos": "Beta videos"
             }
+        },
+        "retiredSlugs": {
+            "title": "Retired URLs",
+            "empty": "No retired URLs",
+            "free": "Release URL",
+            "freeConfirm": "Any new gym can then use /{slug}. Old links to the deleted gym will lead there.",
+            "freed": "/{slug} is free again"
+        },
+        "logs": {
+            "title": "Server logs",
+            "refresh": "Refresh",
+            "runtimeLevel": "Log level",
+            "levelChanged": "Log level changed on every server",
+            "empty": "No log lines at this level",
+            "levels": {
+                "debug": "Debug",
+                "info": "Info",
+                "warn": "Warnings",
+                "error": "Errors"
+            },
+            "live": "Live",
+            "paused": "Paused",
+            "now": "now",
+            "search": "Search message or field",
+            "copyJson": "Copy as JSON",
+            "copied": "Copied",
+            "lineCount": "{n} line | {n} lines",
+            "inBuffer": "in the buffer",
+            "perMinute": "Events per minute",
+            "allLines": "All lines",
+            "filterAll": "All",
+            "filterInfo": "Info+",
+            "filterWarn": "Warn+",
+            "verbose": "very verbose",
+            "default": "default",
+            "replicas": "Replicas",
+            "sameModule": "Show same module",
+            "replicaStatus": {
+                "online": "Online",
+                "offline": "Offline",
+                "gone": "Stopped"
+            }
+        },
+        "backups": {
+            "title": "Backups",
+            "runNow": "Back up now",
+            "running": "Backing up…",
+            "disabled": "Backups are off on this server",
+            "archives": "Archives",
+            "empty": "No backups yet",
+            "schedule": "Schedule",
+            "includeStorage": "Include uploaded files",
+            "download": "Download",
+            "delete": "Delete",
+            "settings": "Save schedule",
+            "confirm": "Backups contain every account. Confirm with your password.",
+            "time": "Daily at",
+            "pgDumpMissing": "pg_dump is not installed on this server",
+            "lastFailed": "Last backup failed",
+            "lastRun": "Last backup {date}",
+            "retry": "Retry",
+            "daily": "Daily backups",
+            "keepCount": "Backups to keep",
+            "estimate": "≈ {size} on disk",
+            "restore": "Restore",
+            "copyCommand": "Copy command",
+            "lastBackup": "Last backup",
+            "failed": "Failed",
+            "nextBackup": "Next backup",
+            "off": "Off",
+            "manualOnly": "Manual backups only",
+            "freeSpace": "Free space"
         }
     },
     "mails": {
@@ -2158,6 +2405,31 @@
             "subject": "Your email address was changed",
             "body": "The platform team changed the email address of your {app} account to {email}. You have been signed out on every device.",
             "note": "If you didn't ask for this, reply to this email right away."
+        },
+        "mfaResetByAdmin": {
+            "subject": "Two-factor authentication was turned off",
+            "body": "The platform team removed the authenticator apps, passkeys and recovery codes from your {app} account. You have been signed out on every device and can now sign in with your password alone.",
+            "note": "Set up two-factor authentication again in your account settings. If you didn't ask for this, reply to this email right away."
+        },
+        "passwordSetByAdmin": {
+            "subject": "Your password was changed",
+            "body": "The platform team set a new password for your {app} account. You have been signed out on every device.",
+            "note": "Ask the platform team for the new password and change it in your account settings. If you didn't ask for this, reply to this email right away."
+        },
+        "platformAdminGranted": {
+            "subject": "You are now a platform administrator",
+            "body": "The platform team made you a platform administrator of {app}. You can now manage gyms, users and platform settings.",
+            "note": "If you didn't expect this, reply to this email right away."
+        },
+        "platformAdminRevoked": {
+            "subject": "You are no longer a platform administrator",
+            "body": "The platform team removed your platform administrator rights in {app}. Your account and gym memberships stay as they are.",
+            "note": "If you didn't expect this, reply to this email right away."
+        },
+        "mailTest": {
+            "subject": "Test email from {app}",
+            "body": "Mail delivery works. This message was sent from the platform settings of {app}.",
+            "note": "You can ignore this email."
         }
     },
     "leaderboard": {
@@ -2511,5 +2783,18 @@
         "zoom": "Zoom",
         "rotate": "Rotate",
         "reset": "Reset"
+    },
+    "auth": {
+        "or": "or",
+        "oauth2": {
+            "continueWith": "Continue with {provider}",
+            "errors": {
+                "failed": "Signing in with the provider failed. Please try again.",
+                "registration_disabled": "There is no account for this login and new sign-ups are closed.",
+                "account_exists": "An account with this email already exists. Sign in with your password and link the provider in your account settings.",
+                "already_linked": "This login is already linked to another account.",
+                "email_unverified": "The provider did not confirm an email address, so no account can be created."
+            }
+        }
     }
 }

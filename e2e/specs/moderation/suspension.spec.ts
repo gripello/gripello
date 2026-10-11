@@ -21,6 +21,9 @@ test('a platform admin suspends a person for good and lifts it again', async ({
     await platformPage
         .getByTestId('platform-suspend-reason')
         .fill('Repeated spam.')
+    await platformPage
+        .getByTestId('platform-suspend-admin-password')
+        .fill('E2ePassw0rd!')
     await platformPage.getByTestId('platform-suspend-confirm').click()
     await expect(row.getByTestId('platform-user-suspended-badge')).toBeVisible()
     expect((await getPlatformUser(api, person.id)).suspended_until).toMatch(
@@ -56,7 +59,9 @@ test('an open session stops working the moment the person is suspended', async (
     const personApi = await apiOf(personPage)
     expect((await getMe(personApi)).id).toBe(person.id)
 
-    await suspendUser(await apiOf(platformPage), person.id, {
+    const platformApi = await apiOf(platformPage)
+    await platformApi.post('/me/reauthenticate', { password: 'E2ePassw0rd!' })
+    await suspendUser(platformApi, person.id, {
         permanent: true,
         reason: 'Abuse.',
     })
@@ -81,6 +86,10 @@ test('the 7-day preset suspends for a week and needs a reason', async ({
     await platformPage.getByTestId('platform-suspend-reason').fill('   ')
     await expect(confirm).toBeDisabled()
     await platformPage.getByTestId('platform-suspend-reason').fill('Spam.')
+    await expect(confirm).toBeDisabled()
+    await platformPage
+        .getByTestId('platform-suspend-admin-password')
+        .fill('E2ePassw0rd!')
     await confirm.click()
 
     await expect(row.getByTestId('platform-user-suspended-badge')).toBeVisible()

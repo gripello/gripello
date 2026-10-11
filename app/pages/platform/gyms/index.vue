@@ -150,6 +150,8 @@
             </li>
         </LayoutListGroup>
 
+        <PlatformRetiredSlugs class="mt-6" />
+
         <ConfirmDialog
             :model-value="!!offlineTarget"
             :title="t('platform.gyms.takeOffline')"

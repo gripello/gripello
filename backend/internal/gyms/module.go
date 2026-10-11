@@ -24,4 +24,6 @@ func Register(app *platform.App) {
 	app.Handle("GET /settings", httpx.Handler(m.getSettings))
 	app.Handle("PATCH /settings", httpx.Handler(m.updateSettings))
 	app.Handle("GET /permissions", httpx.Handler(m.listPermissions))
+	app.Handle("GET /platform/retired-slugs", httpx.Handler(m.listRetiredSlugs))
+	app.Handle("DELETE /platform/retired-slugs/{id}", httpx.Handler(m.freeRetiredSlug))
 }

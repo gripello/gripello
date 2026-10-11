@@ -161,9 +161,7 @@ export function subscribeRealtime<T = any>(
     }
 }
 
-export function onConnect(
-    callback: (afterDrop: boolean) => void,
-): () => void {
+export function onConnect(callback: (afterDrop: boolean) => void): () => void {
     const wrapped = (afterDrop: boolean) => callback(afterDrop)
     connectCallbacks.add(wrapped)
     open()

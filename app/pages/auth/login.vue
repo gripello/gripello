@@ -138,6 +138,13 @@
                         <template v-else>{{ $t('account.login') }}</template>
                     </UButton>
 
+                    <USeparator
+                        v-if="passkey.supported.value || oauth2Providers.length"
+                        :label="$t('auth.or')"
+                        :ui="{ label: 'text-xs text-muted' }"
+                        class="my-4"
+                    />
+
                     <UButton
                         v-if="passkey.supported.value"
                         color="neutral"
@@ -150,6 +157,25 @@
                         @click="loginWithPasskey"
                     >
                         {{ $t('account.twoFactor.signInWithPasskey') }}
+                    </UButton>
+
+                    <UButton
+                        v-for="provider in oauth2Providers"
+                        :key="provider.name"
+                        color="neutral"
+                        variant="outline"
+                        block
+                        :icon="oauth2ProviderIcon(provider.name)"
+                        class="mb-3"
+                        :disabled="loading"
+                        :data-testid="`login-oauth2-${provider.name}`"
+                        @click="loginWithOAuth2(provider.name)"
+                    >
+                        {{
+                            $t('auth.oauth2.continueWith', {
+                                provider: oauth2ProviderName(provider),
+                            })
+                        }}
                     </UButton>
 
                     <UButton
@@ -359,8 +385,16 @@ import { safeRedirect, staffLandingPath } from '~/utils/nav'
 import { isPasskeyCancel } from '~/utils/webauthn'
 import { isInvalidCredentials } from '~/utils/authErrors'
 import {
+    oauth2ErrorKey,
+    oauth2ProviderIcon,
+    oauth2ProviderName,
+} from '~/utils/oauth2'
+import {
+    finishOAuth2,
+    listOAuth2Providers,
     login,
     mfaRequired,
+    startOAuth2,
     refreshAuth,
     register,
     requestPasswordReset,
@@ -405,7 +439,8 @@ const canRegister = allowRegistration
 // ── State ──────────────────────────────────────────────────────────
 const { notify, error: notifyError } = useNotification()
 const view = ref(route.query.view === 'register' ? 'register' : 'login')
-const loading = ref(false)
+const oauth2Ticket = route.query.oauth2
+const loading = ref(typeof oauth2Ticket === 'string' && !!oauth2Ticket)
 const identity = ref('')
 const password = ref('')
 const resetEmail = ref('')
@@ -421,7 +456,9 @@ const mfaId = ref('')
 const secondFactorMethods = ref<SecondFactorMethod[]>([])
 const secondFactorMethod = ref<SecondFactorMethod>('totp')
 const passkey = usePasskeyLogin()
-onMounted(offerPasskeyAutofill)
+onMounted(() => {
+    if (!loading.value) offerPasskeyAutofill()
+})
 
 type AnyForm = Form<Record<string, unknown>>
 const loginForm = useTemplateRef<AnyForm>('loginForm')
@@ -600,6 +637,59 @@ async function submitLogin() {
         loading.value = false
     }
 }
+
+const { data: oauth2Providers } = useAsyncData(
+    'oauth2-providers',
+    listOAuth2Providers,
+    { server: false, default: () => [] },
+)
+
+async function loginWithOAuth2(provider: string) {
+    passkey.stopAutofill()
+    loading.value = true
+    setAuthPersistent(rememberMe.value)
+    try {
+        const { url } = await startOAuth2(provider, {
+            redirect: requestedRedirect || undefined,
+            persistent: rememberMe.value,
+        })
+        window.location.assign(url)
+    } catch {
+        loading.value = false
+        notifyError(t(oauth2ErrorKey('failed')))
+    }
+}
+
+// The provider sent the browser back with a one-time ticket or an error code.
+async function completeOAuth2() {
+    const ticket = oauth2Ticket
+    if (route.query.oauth2Error) {
+        notifyError(t(oauth2ErrorKey(route.query.oauth2Error)))
+        return
+    }
+    if (typeof ticket !== 'string' || !ticket) return
+    loading.value = true
+    rememberMe.value = route.query.persistent !== '0'
+    setAuthPersistent(rememberMe.value)
+    try {
+        await finishOAuth2(ticket)
+        await navigateTo(await afterLoginPath(), { replace: true })
+    } catch (err) {
+        loading.value = false
+        const pendingMfa = mfaRequired(err)
+        if (!pendingMfa) offerPasskeyAutofill()
+        if (pendingMfa) {
+            passkey.stopAutofill()
+            mfaId.value = pendingMfa.mfaId
+            secondFactorMethods.value = pendingMfa.methods
+            secondFactorMethod.value = secondFactorMethods.value[0]!
+            view.value = 'twoFactor'
+            return
+        }
+        notifyError(resolveAuthError(err))
+    }
+}
+onMounted(completeOAuth2)
 
 async function finishLogin(result: AuthResult) {
     loading.value = true

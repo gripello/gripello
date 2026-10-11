@@ -145,7 +145,7 @@ paths:
                     properties:
                       route: { type: string }
                       wall: { type: string, description: '"" unplaces the route' }
-                      wall_position: { type: number }
+                      wall_position: { type: [number, 'null'], description: 'null or omitted keeps the current position' }
       responses:
         '200': { $ref: '#/components/responses/RouteList' }
         '400': { $ref: '#/components/responses/Error' }

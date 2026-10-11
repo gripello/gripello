@@ -11,6 +11,7 @@ test('a leftover session of a deleted account still renders the site', async ({
 }) => {
     const ghost = await createUser('user', 'ghost')
     const cookie = authCookieValue(await login(ghost.email, ghost.password))
+    await api.post('/me/reauthenticate', { password: 'E2ePassw0rd!' })
     await deletePlatformUser(api, ghost.id)
 
     await page

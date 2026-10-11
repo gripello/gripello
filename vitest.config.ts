@@ -8,10 +8,11 @@ const importMetaFlags: Record<string, string> = {
     'import.meta.client': '(process.server !== true)',
 }
 
-// vmThreads reuses one happy-dom per worker; these break inside a vm context (cross-realm typed arrays, process.env.TZ)
+// vmThreads reuses one happy-dom per worker; these break inside a vm context (cross-realm typed arrays, process.env.TZ) or run typed-array loops ~40× slower
 const NEEDS_OWN_PROCESS = [
     'test/server/tag-qr.spec.ts',
     'test/shared/formatting.spec.ts',
+    'test/utils/qrTracking.spec.ts',
 ]
 
 const importMetaPolyfill = (): PluginOption => ({

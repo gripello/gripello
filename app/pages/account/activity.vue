@@ -178,16 +178,18 @@ const gymItems = computed(() =>
     auditGyms.value.map((gym) => ({ value: gym.id, title: gymTitle(gym) })),
 )
 
+const memberGymId = computed(() => gymFilter.value ?? cookieGymId.value)
 const { data: auditMembers } = useAsyncData(
     'audit-members',
-    async () => (await listMembers(gymFilter.value ?? cookieGymId.value)).items,
+    async () => (await listMembers(memberGymId.value)).items,
     {
         default: () => [],
         server: false,
         watch: [gymFilter],
         enabled: () =>
             auditGyms.value.length > 0 &&
-            !!(gymFilter.value ?? cookieGymId.value),
+            !!memberGymId.value &&
+            can('manage_users', memberGymId.value),
     },
 )
 
@@ -302,6 +304,7 @@ useHead({
 
 definePageMeta({
     middleware: ['auth'],
+    alias: ['/platform/audit'],
 })
 
 let searchDebounce: ReturnType<typeof setTimeout> | undefined

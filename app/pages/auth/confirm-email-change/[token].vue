@@ -12,7 +12,7 @@
         :invalid-subtitle="$t('notifications.error.emailChange')"
         :action="confirmEmailChange"
         :is-token-error="isInvalidToken"
-        :error-message="$t('account.wrongOldPassword')"
+        :error-message="passwordError"
     >
         <template #default="{ submit, loading }">
             <UForm
@@ -51,6 +51,7 @@
 <script setup lang="ts">
 import type { Form } from '@nuxt/ui'
 import { required, validateRules } from '~/utils/validation'
+import { needsPasswordFirst } from '~/utils/reauth'
 import { confirmEmailChange as confirmChange, useAuthState } from '~/api/auth'
 
 defineOptions({ name: 'ConfirmEmailChangePage' })
@@ -76,6 +77,11 @@ async function confirmEmailChange(token: string) {
     await confirmChange(token, password.value)
     clearAuth()
 }
+
+const passwordError = (error: unknown) =>
+    needsPasswordFirst(error)
+        ? t('account.passwordRequired')
+        : t('account.wrongOldPassword')
 
 const isInvalidToken = (error: unknown) =>
     !!(error as { data?: { data?: { token?: unknown } } })?.data?.data?.token

@@ -200,11 +200,20 @@
             "
             :loading="removing"
             @confirm="deleteUser"
-        />
+        >
+            <UserPasswordField
+                v-model="adminPassword"
+                :label="t('platform.users.adminPassword')"
+                icon="i-lucide-shield-check"
+                class="mt-3"
+                data-testid="platform-delete-admin-password"
+            />
+        </ConfirmDialog>
     </div>
 </template>
 
 <script setup lang="ts">
+import { reauthenticate } from '~/api/account'
 import { listGyms } from '~/api/gyms'
 import { listRoles } from '~/api/members'
 import { deletePlatformUser, listPlatformUsers } from '~/api/platform'
@@ -220,6 +229,7 @@ import {
     type PlatformUser,
     type PlatformUserFilter,
 } from '~/utils/platformUsers'
+import { isWrongPassword } from '~/utils/reauth'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
@@ -341,9 +351,11 @@ const deletingUser = computed(
     () => users.value.find((user) => user.id === deletingId.value) ?? null,
 )
 const deleteOpen = ref(false)
+const adminPassword = ref('')
 
 function openDelete(id: string) {
     deletingId.value = id
+    adminPassword.value = ''
     deleteOpen.value = true
 }
 const { pending: removing, run: runRemove } = useAsyncAction()
@@ -353,6 +365,7 @@ async function deleteUser() {
     if (!id) return
     await runRemove(
         async () => {
+            await reauthenticate(adminPassword.value)
             await deletePlatformUser(id)
             users.value = users.value.filter((user) => user.id !== id)
             deleteOpen.value = false
@@ -360,10 +373,13 @@ async function deleteUser() {
         },
         {
             success: t('users.deleteSuccess'),
-            error: (error) =>
-                (error as { status?: number })?.status === 400
+            error: (error) => {
+                if (isWrongPassword(error))
+                    return t('platform.users.adminPasswordWrong')
+                return (error as { status?: number })?.status === 400
                     ? t('platform.users.lastAdmin')
-                    : t('users.deleteError'),
+                    : t('users.deleteError')
+            },
         },
     )
 }

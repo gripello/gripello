@@ -315,9 +315,9 @@ func (m *module) archiveRoutes(ctx context.Context, gym string, routeIDs []strin
 }
 
 type placement struct {
-	Route        string  `json:"route"`
-	Wall         string  `json:"wall"`
-	WallPosition float64 `json:"wall_position"`
+	Route        string   `json:"route"`
+	Wall         string   `json:"wall"`
+	WallPosition *float64 `json:"wall_position"`
 }
 
 func (m *module) placeRoutes(ctx context.Context, gym string, placements []placement) ([]Route, error) {
@@ -332,7 +332,10 @@ func (m *module) placeRoutes(ctx context.Context, gym string, placements []place
 				return httpx.ErrNotFound
 			}
 			in := inputOf(original)
-			in.Wall, in.WallPosition = placed.Wall, placed.WallPosition
+			in.Wall = placed.Wall
+			if placed.WallPosition != nil {
+				in.WallPosition = *placed.WallPosition
+			}
 			route, err := m.saveRoute(ctx, tx, original, in)
 			if err != nil {
 				return err
@@ -493,6 +496,13 @@ func (m *module) deleteLocation(ctx context.Context, id string) error {
 		}
 		if walls > 0 {
 			return httpx.NewError(400, "Location still has walls.")
+		}
+		competitions, err := count(ctx, tx, `SELECT COUNT(*) FROM competitions WHERE location = $1`, id)
+		if err != nil {
+			return err
+		}
+		if competitions > 0 {
+			return httpx.NewError(400, "Location is still used by competitions.")
 		}
 		if err := deleteRow(ctx, tx, "locations", id); err != nil {
 			return err

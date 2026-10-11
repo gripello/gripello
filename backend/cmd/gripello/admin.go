@@ -1,15 +1,22 @@
 package main
 
 import (
+	"archive/tar"
 	"context"
 	"crypto/rand"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 
@@ -20,7 +27,7 @@ import (
 	"gripello/internal/platform/ids"
 )
 
-const adminUsage = "usage: gripello admin create-user|set-user|delete-user|create-gym|add-membership|create-notification|truncate-prefix [flags]"
+const adminUsage = "usage: gripello admin create-user|set-user|delete-user|create-gym|add-membership|create-notification|truncate-prefix|restore [flags]"
 
 func admin(ctx context.Context, args []string) error {
 	if len(args) == 0 {
@@ -29,6 +36,9 @@ func admin(ctx context.Context, args []string) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
+	}
+	if args[0] == "restore" {
+		return adminRestore(ctx, cfg, args[1:])
 	}
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -276,4 +286,119 @@ func adminTruncatePrefix(ctx context.Context, pool *pgxpool.Pool, args []string)
 		return nil
 	})
 	return fmt.Sprint(deleted), err
+}
+
+// adminRestore loads a backup archive: pg_restore into DATABASE_URL and, with --storage, the files into BLOB_DIR.
+// Stop every other gripello container first; the restore replaces the whole database.
+func adminRestore(ctx context.Context, cfg config.Config, args []string) error {
+	fs := flag.NewFlagSet("restore", flag.ExitOnError)
+	file := fs.String("file", "", "backup archive (gripello-YYYYMMDD-HHMMSS.tar)")
+	storage := fs.Bool("storage", false, "also restore the files into BLOB_DIR")
+	yes := fs.Bool("yes", false, "confirm that the database is replaced")
+	fs.Parse(args)
+	if *file == "" || !*yes {
+		return errors.New("restore needs --file and --yes (it replaces the database; stop other gripello containers first)")
+	}
+	work, err := os.MkdirTemp("", "gripello-restore-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(work)
+	dump := filepath.Join(work, "database.dump")
+	if err := extractBackup(*file, dump, "", false); err != nil {
+		return err
+	}
+	env, err := db.CommandEnv(cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	parsed, err := pgconn.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	// A fresh public schema (not pg_restore --clean): tables of migrations newer than the backup must go too,
+	// or goose fails on them at the next start. psql runs the reset and the dump in one transaction.
+	restore := exec.CommandContext(ctx, "pg_restore", "--no-owner", "--schema=public", "--file=-", dump)
+	apply := exec.CommandContext(ctx, "psql", "-X", "-q", "--single-transaction", "-v", "ON_ERROR_STOP=1", "--dbname="+parsed.Database,
+		"-c", "DROP SCHEMA public CASCADE", "-c", "CREATE SCHEMA public", "-f", "-")
+	restore.Env, apply.Env = append(os.Environ(), env...), append(os.Environ(), env...)
+	sql, err := restore.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	apply.Stdin, apply.Stdout = sql, os.Stdout
+	restore.Stderr, apply.Stderr = os.Stderr, os.Stderr
+	if err := restore.Start(); err != nil {
+		return err
+	}
+	applyErr := apply.Run()
+	if err := restore.Wait(); err != nil {
+		return fmt.Errorf("pg_restore: %w", err)
+	}
+	if applyErr != nil {
+		return fmt.Errorf("psql: %w (the database is unchanged)", applyErr)
+	}
+	if *storage {
+		return extractBackup(*file, "", cfg.BlobDir, true)
+	}
+	return nil
+}
+
+// extractBackup writes database.dump to dump (unless dump is "") and storage/* below blobDir; os.Root keeps entries inside it.
+func extractBackup(archive, dump, blobDir string, withStorage bool) error {
+	f, err := os.Open(archive)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	var root *os.Root
+	if withStorage {
+		if err := os.MkdirAll(blobDir, 0o755); err != nil {
+			return err
+		}
+		if root, err = os.OpenRoot(blobDir); err != nil {
+			return err
+		}
+		defer root.Close()
+	}
+	found := false
+	reader := tar.NewReader(f)
+	for {
+		header, err := reader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if header.Typeflag != tar.TypeReg {
+			continue
+		}
+		var out io.WriteCloser
+		switch rel, isStorage := strings.CutPrefix(header.Name, "storage/"); {
+		case header.Name == "database.dump" && dump != "":
+			found = true
+			out, err = os.Create(dump)
+		case isStorage && root != nil:
+			if err = root.MkdirAll(path.Dir(rel), 0o755); err == nil {
+				out, err = root.Create(rel)
+			}
+		default:
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(out, reader)
+		if closeErr := out.Close(); err == nil {
+			err = closeErr
+		}
+		if err != nil {
+			return err
+		}
+	}
+	if !found && dump != "" {
+		return errors.New("restore: the archive has no database.dump")
+	}
+	return nil
 }

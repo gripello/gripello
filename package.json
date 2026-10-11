@@ -21,7 +21,8 @@
         "test:e2e": "playwright test",
         "test:e2e:ui": "playwright test --ui",
         "e2e:up": "./e2e/scripts/app-up.sh",
-        "loadtest": "docker run --rm -i --network host -e BASE_URL -e VUS -e DURATION -e THINK_S -e SEED_ROUTES -e PB_SUPERUSER_EMAIL -e PB_SUPERUSER_PASSWORD -v \"$PWD/loadtest:/scripts:ro,z\" grafana/k6 run /scripts/public-users.ts",
+        "loadtest": "cd loadtest && go run .",
+        "loadtest:seed": "sh -c '${PSQL:-docker run --rm -i --network host postgres:18-alpine psql ${DATABASE_URL:-postgres://postgres:dev@localhost:5433/gripello}} -q \"$@\" < loadtest/seed.sql' seed",
         "e2e:down": "./e2e/scripts/app-down.sh"
     },
     "devDependencies": {

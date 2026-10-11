@@ -20,6 +20,7 @@ import (
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/lockout"
 	"gripello/internal/platform/testapp"
 )
 
@@ -232,6 +233,22 @@ func TestDeleteAccount(t *testing.T) {
 	f.call(f.admin, http.MethodDelete, "/me", confirmed, http.StatusNoContent)
 }
 
+func TestDeleteMeHonoursLockoutAndNeedsAPassword(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`UPDATE users SET password_hash = '' WHERE id = $1`, f.climber)
+	f.call(f.climber, http.MethodDelete, "/me", `{"password":"anything"}`, http.StatusBadRequest, "password_required")
+
+	hash, _ := bcrypt.GenerateFromPassword([]byte("right-password"), bcrypt.MinCost)
+	f.exec(`UPDATE users SET password_hash = $1`, string(hash))
+	for range lockout.MaxFailures {
+		f.call(f.climber, http.MethodDelete, "/me", `{"password":"wrong"}`, http.StatusBadRequest, "validation_invalid_password")
+	}
+	f.call(f.climber, http.MethodDelete, "/me", `{"password":"right-password"}`, http.StatusTooManyRequests)
+	if f.count(`SELECT count(*) FROM users WHERE id = $1`, f.climber) != 1 {
+		t.Error("a locked account was deleted")
+	}
+}
+
 func TestExportOverTheCapAnswers413(t *testing.T) {
 	f := newFixture(t)
 	f.exec(`UPDATE users SET avatar = 'big.png' WHERE id = $1`, f.climber)
@@ -423,6 +440,7 @@ func TestExportCoversEveryUserLink(t *testing.T) {
 		"moderation_items.files":       true,
 		"moderation_items.reviewed_by": false, // moderator identity
 		"sessions.user":                true,
+		"user_identities.user":         true,
 		"mfa_factors.user":             true,
 		"mfa_recovery_codes.user":      false, // only hashes of one-time secrets
 		"mfa_challenges.user":          false, // sign-in challenges that expire after 10 minutes

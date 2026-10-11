@@ -37,6 +37,8 @@ services:
                 condition: service_healthy
         volumes:
             - ./storage:/data/storage
+            # Backup archives (Platform › Backups); every app container must share it.
+            - ./backups:/data/backups
             # Custom TLS certificates, replacing the auto-generated self-signed ones:
 #      - ./ssl/cert.pem:/etc/nginx/ssl/cert.pem:ro
 #      - ./ssl/key.pem:/etc/nginx/ssl/key.pem:ro

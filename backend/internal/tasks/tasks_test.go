@@ -737,3 +737,43 @@ func TestHiddenReportStaysHidden(t *testing.T) {
 	f.call("setter", "PATCH", "/tasks/"+id, `{"description":"back"}`, http.StatusForbidden)
 	f.call("setter", "POST", "/tasks/"+id+"/status", `{"status":"done"}`, http.StatusOK)
 }
+
+func TestUpdateKeepsAConcurrentHide(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	id := f.call("climber", "POST", "/gyms/"+f.gymA+"/tasks", `{"kind":"defect","route":"`+f.route+`","category":"other","description":"Loose"}`,
+		http.StatusCreated)["id"].(string)
+	hide, err := f.app.DB.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer hide.Rollback(ctx)
+	var hideXact string
+	if err := hide.QueryRow(ctx, `UPDATE tasks SET description = '' WHERE id = $1 RETURNING pg_current_xact_id()::text`, id).Scan(&hideXact); err != nil {
+		t.Fatal(err)
+	}
+	status := make(chan int)
+	go func() {
+		request := httptest.NewRequest("POST", "/api/tasks/"+id+"/status", strings.NewReader(`{"status":"done"}`))
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Authorization", f.tokens["setter"])
+		recorder := httptest.NewRecorder()
+		f.handler.ServeHTTP(recorder, request)
+		status <- recorder.Code
+	}()
+	testapp.WaitFor(t, func() bool {
+		var waiting bool
+		f.app.DB.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'transactionid' AND NOT granted
+			AND transactionid::text = $1)`, hideXact).Scan(&waiting)
+		return waiting
+	})
+	if err := hide.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if code := <-status; code != http.StatusOK {
+		t.Fatalf("status update = %d", code)
+	}
+	if task := f.task(id); task.Description != "" || task.Status != "done" {
+		t.Errorf("task = %+v", task)
+	}
+}

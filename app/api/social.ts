@@ -16,8 +16,19 @@ export function searchClimbers(q: string) {
     return useApi()<Climber[]>('/climbers', { query: { q } })
 }
 
-export function listClimbersByIds(ids: string[]) {
-    return useApi()<Climber[]>('/climbers', { query: { ids: ids.join(',') } })
+const CLIMBER_LOOKUP_LIMIT = 200
+
+export async function listClimbersByIds(ids: string[]): Promise<Climber[]> {
+    const api = useApi()
+    const batches: string[][] = []
+    for (let start = 0; start < ids.length; start += CLIMBER_LOOKUP_LIMIT)
+        batches.push(ids.slice(start, start + CLIMBER_LOOKUP_LIMIT))
+    const results = await Promise.all(
+        batches.map((batch) =>
+            api<Climber[]>('/climbers', { query: { ids: batch.join(',') } }),
+        ),
+    )
+    return results.flat()
 }
 
 export function getClimber(id: string) {

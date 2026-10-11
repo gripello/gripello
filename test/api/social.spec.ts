@@ -47,6 +47,25 @@ describe('climbers', () => {
         ])
     })
 
+    it('looks up more than 200 climbers in batches', async () => {
+        const ids = Array.from({ length: 450 }, (_, i) => `c${i}`)
+        api.respond([{ id: 'c0' }])
+        api.respond([{ id: 'c200' }])
+        api.respond([{ id: 'c400' }])
+        expect(await listClimbersByIds(ids)).toEqual([
+            { id: 'c0' },
+            { id: 'c200' },
+            { id: 'c400' },
+        ])
+        const lookups = calls().map(([, url]) =>
+            new URL(url as string, 'http://x').searchParams
+                .get('ids')!
+                .split(','),
+        )
+        expect(lookups.map((batch) => batch.length)).toEqual([200, 200, 50])
+        expect(lookups.flat()).toEqual(ids)
+    })
+
     it('throws an ApiError for a hidden profile', async () => {
         api.respond({ status: 404, message: 'Not found.', data: {} }, 404)
         const error = await getClimber('x').catch((err) => err)

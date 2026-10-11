@@ -53,6 +53,7 @@
         "passwordStrength": "Robustesse du mot de passe",
         "unsavedChanges": "Modifications non enregistrées",
         "wrongOldPassword": "Le mot de passe actuel est incorrect",
+        "passwordRequired": "Votre compte n’a pas encore de mot de passe. Définissez-en un d’abord via la réinitialisation du mot de passe sur la page de connexion.",
         "passwordChangedSignInAgain": "Mot de passe modifié. Veuillez vous reconnecter avec votre nouveau mot de passe.",
         "unknownUser": "Utilisateur inconnu",
         "tabs": {
@@ -190,6 +191,15 @@
             "signOut": "Déconnecter {device}",
             "signOutOthers": "Déconnecter les autres appareils",
             "signOutOthersConfirm": "Tous les autres appareils seront déconnectés."
+        },
+        "linkedAccounts": {
+            "title": "Comptes liés",
+            "link": "Lier",
+            "unlink": "Délier",
+            "unlinkConfirm": "Tu ne pourras plus te connecter avec {provider}.",
+            "lastMethod": "C’est le seul accès à ton compte. Définis d’abord un mot de passe.",
+            "linked": "Connexion associée",
+            "linkConfirm": "Une connexion associée ouvre votre compte même après un changement de mot de passe. Confirmez avec votre mot de passe."
         }
     },
     "routes": {
@@ -932,8 +942,7 @@
         "saveError": "Impossible d’enregistrer les paramètres. Veuillez réessayer.",
         "contactEmail": "E-mail de contact",
         "contactEmailHint": "Publié comme point de contact et notifié des nouveaux signalements de contenu.",
-        "mailNotConfigured": "L’e-mail n’est pas configuré : les réinitialisations de mot de passe et les avis de signalement ne peuvent pas être envoyés. Le SMTP se configure dans PocketBase, pas ici.",
-        "mailNotConfiguredAction": "Ouvrir les paramètres e-mail de PocketBase",
+        "mailNotConfigured": "L’e-mail n’est pas configuré : les réinitialisations de mot de passe et les avis de signalement ne peuvent pas être envoyés. Un administrateur de la plateforme le configure dans Paramètres de la plateforme › E-mail.",
         "legalTitle": "Mentions légales",
         "legalAddress": "Adresse postale",
         "legalPhone": "Téléphone",
@@ -1257,7 +1266,11 @@
             "settings": "Paramètres",
             "reports": "Signalements",
             "tasks": "Tâches",
-            "sessions": "Sessions"
+            "sessions": "Sessions",
+            "platform_config": "Paramètres de la plateforme",
+            "oauth2_providers": "Fournisseurs de connexion",
+            "retired_slugs": "Adresses retirées",
+            "backups": "Sauvegardes"
         },
         "target": {
             "routes": "Voie",
@@ -1268,7 +1281,11 @@
             "settings": "Paramètres",
             "reports": "Signalement",
             "tasks": "Tâche",
-            "sessions": "Session"
+            "sessions": "Session",
+            "platform_config": "Paramètres de la plateforme",
+            "oauth2_providers": "Fournisseur de connexion",
+            "retired_slugs": "URL de salle retirée",
+            "backups": "Sauvegarde"
         },
         "changedLabel": "Modifié",
         "filter": {
@@ -2002,7 +2019,71 @@
             "access": "Accès",
             "allowRegistration": "Autoriser l’inscription",
             "auditRetentionDays": "Conserver le journal d’audit (jours)",
-            "links": "Contact et liens"
+            "links": "Contact et liens",
+            "mail": {
+                "title": "E-mail",
+                "host": "Serveur SMTP",
+                "port": "Port",
+                "tls": "Chiffrement",
+                "username": "Nom d’utilisateur",
+                "password": "Mot de passe",
+                "passwordSet": "Enregistré",
+                "clearPassword": "Supprimer le mot de passe",
+                "senderAddress": "Adresse d’expédition",
+                "senderName": "Nom de l’expéditeur",
+                "sendTest": "M’envoyer un e-mail de test",
+                "testSent": "E-mail de test envoyé à ton adresse",
+                "fromEnvironment": "Défini par l’environnement du serveur",
+                "notConfigured": "Non configuré",
+                "confirm": "Les paramètres e-mail déterminent où partent les liens de réinitialisation. Confirme avec ton mot de passe.",
+                "check": "Test de connexion",
+                "steps": {
+                    "connect": "Connexion au serveur",
+                    "encrypt": "Chiffrer la connexion",
+                    "sign_in": "Se connecter",
+                    "deliver": "Vous livrer le message"
+                }
+            },
+            "oauth2": {
+                "title": "Fournisseurs de connexion",
+                "enabled": "Proposé sur la page de connexion",
+                "displayName": "Nom du bouton",
+                "issuerUrl": "URL de l’émetteur",
+                "tenant": "Locataire (tenant)",
+                "clientId": "ID client",
+                "clientSecret": "Secret client",
+                "teamId": "ID d’équipe",
+                "keyId": "ID de clé",
+                "privateKey": "Clé privée (.p8)",
+                "redirectUri": "URI de redirection",
+                "copy": "Copier",
+                "copied": "Copié",
+                "confirm": "Les fournisseurs de connexion décident qui accède aux comptes. Confirme avec ton mot de passe.",
+                "providers": {
+                    "google": "Google",
+                    "apple": "Apple",
+                    "microsoft": "Microsoft",
+                    "oidc": "OpenID Connect"
+                },
+                "status": {
+                    "live": "Actif",
+                    "configured": "Configuré",
+                    "missing": "Non configuré"
+                },
+                "checks": {
+                    "clientId": "ID client",
+                    "secret": "Secret enregistré",
+                    "live": "Sur la page de connexion"
+                }
+            },
+            "status": {
+                "registration": "Inscription",
+                "open": "Ouverte",
+                "inviteOnly": "Sur invitation",
+                "auditDays": "Journal d’audit conservé {n} jour | Journal d’audit conservé {n} jours",
+                "configured": "{n} configuré(s)",
+                "live": "{n} actif(s)"
+            }
         },
         "overview": {
             "title": "Vue d’ensemble",
@@ -2010,12 +2091,61 @@
             "memberships": "Adhésions",
             "routes": "Voies",
             "admins": "Admins de la plateforme",
-            "dashboard": "Tableau de bord PocketBase",
             "needsYou": "À traiter",
             "legalReports": "Signalements juridiques ouverts",
             "staleGyms": "Salles en retard",
             "profiles": "Profils à vérifier",
-            "suspended": "Personnes suspendues"
+            "suspended": "Personnes suspendues",
+            "traffic": {
+                "title": "Requêtes",
+                "requests": "Requêtes",
+                "ok": "Réussies",
+                "clientErrors": "Erreurs client (4xx)",
+                "serverErrors": "Erreurs serveur (5xx)",
+                "serverErrorRate": "Taux d’erreurs serveur",
+                "peakRps": "Pic de requêtes/s",
+                "p95": "Temps de réponse p95",
+                "visitors": "Visiteurs par jour",
+                "endpoints": "Points d’accès",
+                "endpoint": "Point d’accès",
+                "sortErrors": "Erreurs",
+                "sortSlowest": "Plus lents",
+                "showAll": "Afficher les {n}",
+                "showLess": "Afficher moins"
+            },
+            "people": {
+                "title": "Personnes",
+                "online": "En ligne",
+                "signedIn": "Connectés",
+                "newAccounts": "Nouveaux comptes",
+                "failedLogins": "Connexions échouées",
+                "methods": {
+                    "password": "Mot de passe",
+                    "passkey": "Clé d’accès",
+                    "totp": "Code d’authentification",
+                    "recovery": "Code de récupération"
+                }
+            },
+            "servers": {
+                "title": "Serveurs",
+                "online": "En ligne",
+                "offline": "Hors ligne",
+                "uptime": "actif depuis {time}",
+                "connections": "{n} connexion en direct | {n} connexions en direct",
+                "lastSeen": "Hors ligne · vu pour la dernière fois {time}"
+            },
+            "system": {
+                "title": "Système",
+                "database": "Base de données",
+                "connections": "{n} connexion | {n} connexions",
+                "jobs": "File de tâches",
+                "jobsState": "{waiting} en attente · {running} en cours",
+                "lastBackup": "Dernière sauvegarde",
+                "mail": "E-mail",
+                "mailOn": "Configuré",
+                "mailOff": "Non configuré"
+            },
+            "platform": "Plateforme"
         },
         "users": {
             "title": "Utilisateurs",
@@ -2053,13 +2183,130 @@
                 "kept": "Adhésions et carnet restent ; rien n’est supprimé.",
                 "lift": "Tu peux lever la suspension à tout moment sous Utilisateurs."
             },
-            "suspendPermanently": "Suspendre définitivement"
+            "suspendPermanently": "Suspendre définitivement",
+            "security": "Sécurité",
+            "locked": "Bloqué",
+            "unlock": "Débloquer",
+            "revokeSessions": "Déconnecter partout",
+            "resetMfa": "Réinitialiser la double authentification",
+            "setPassword": "Définir le mot de passe",
+            "adminPassword": "Ton mot de passe",
+            "adminPasswordWrong": "Ton mot de passe est incorrect.",
+            "actions": {
+                "unlock": {
+                    "title": "Débloquer",
+                    "confirm": "Débloquer",
+                    "done": "Compte débloqué"
+                },
+                "revokeSessions": {
+                    "title": "Déconnecter partout",
+                    "message": "{name} sera déconnecté·e sur tous les appareils.",
+                    "confirm": "Déconnecter",
+                    "done": "Déconnecté·e partout"
+                },
+                "resetMfa": {
+                    "title": "Réinitialiser la double authentification",
+                    "message": "Supprime les applications d’authentification, passkeys et codes de récupération de {name} et le·la déconnecte partout. Un e-mail est envoyé.",
+                    "confirm": "Réinitialiser",
+                    "done": "Double authentification réinitialisée"
+                },
+                "setPassword": {
+                    "title": "Définir le mot de passe",
+                    "message": "{name} sera déconnecté·e partout et recevra un e-mail.",
+                    "confirm": "Définir",
+                    "done": "Mot de passe défini"
+                },
+                "grantAdmin": {
+                    "title": "Nommer administrateur·rice",
+                    "message": "{name} pourra alors gérer toutes les salles, tous les utilisateurs et les paramètres de la plateforme.",
+                    "confirm": "Nommer",
+                    "done": "Administrateur·rice ajouté·e"
+                },
+                "revokeAdmin": {
+                    "title": "Retirer l’administration",
+                    "message": "{name} garde son compte et ses adhésions mais perd les droits de la plateforme.",
+                    "confirm": "Retirer",
+                    "done": "Administrateur·rice retiré·e"
+                }
+            }
         },
         "features": {
             "title": "Fonctionnalités",
             "flags": {
                 "beta_videos": "Vidéos bêta"
             }
+        },
+        "retiredSlugs": {
+            "title": "URL retirées",
+            "empty": "Aucune URL retirée",
+            "free": "Libérer l’URL",
+            "freeConfirm": "Toute nouvelle salle pourra alors utiliser /{slug}. Les anciens liens vers la salle supprimée y mèneront.",
+            "freed": "/{slug} est de nouveau libre"
+        },
+        "logs": {
+            "title": "Journaux du serveur",
+            "refresh": "Actualiser",
+            "runtimeLevel": "Niveau de journalisation",
+            "levelChanged": "Niveau de journalisation modifié sur tous les serveurs",
+            "empty": "Aucune ligne à ce niveau",
+            "levels": {
+                "debug": "Débogage",
+                "info": "Info",
+                "warn": "Avertissements",
+                "error": "Erreurs"
+            },
+            "live": "En direct",
+            "paused": "En pause",
+            "now": "maintenant",
+            "search": "Rechercher un message ou un champ",
+            "copyJson": "Copier en JSON",
+            "copied": "Copié",
+            "lineCount": "{n} ligne | {n} lignes",
+            "inBuffer": "dans le tampon",
+            "perMinute": "Événements par minute",
+            "allLines": "Toutes les lignes",
+            "filterAll": "Tout",
+            "filterInfo": "Info+",
+            "filterWarn": "Warn+",
+            "verbose": "très détaillé",
+            "default": "par défaut",
+            "replicas": "Réplicas",
+            "sameModule": "Même module",
+            "replicaStatus": {
+                "online": "En ligne",
+                "offline": "Hors ligne",
+                "gone": "Arrêté"
+            }
+        },
+        "backups": {
+            "title": "Sauvegardes",
+            "runNow": "Sauvegarder maintenant",
+            "running": "Sauvegarde en cours…",
+            "disabled": "Les sauvegardes sont désactivées sur ce serveur",
+            "archives": "Archives",
+            "empty": "Pas encore de sauvegarde",
+            "schedule": "Planification",
+            "includeStorage": "Inclure les fichiers envoyés",
+            "download": "Télécharger",
+            "delete": "Supprimer",
+            "settings": "Enregistrer la planification",
+            "confirm": "Les sauvegardes contiennent tous les comptes. Confirme avec ton mot de passe.",
+            "time": "Chaque jour à",
+            "pgDumpMissing": "pg_dump n’est pas installé sur ce serveur",
+            "lastFailed": "La dernière sauvegarde a échoué",
+            "lastRun": "Dernière sauvegarde {date}",
+            "retry": "Réessayer",
+            "daily": "Sauvegardes quotidiennes",
+            "keepCount": "Sauvegardes à conserver",
+            "estimate": "≈ {size} sur le disque",
+            "restore": "Restaurer",
+            "copyCommand": "Copier la commande",
+            "lastBackup": "Dernière sauvegarde",
+            "failed": "Échec",
+            "nextBackup": "Prochaine sauvegarde",
+            "off": "Désactivé",
+            "manualOnly": "Sauvegardes manuelles uniquement",
+            "freeSpace": "Espace libre"
         }
     },
     "mails": {
@@ -2158,6 +2405,31 @@
             "subject": "Ton adresse e-mail a été modifiée",
             "body": "L'équipe de la plateforme a remplacé l'adresse e-mail de ton compte {app} par {email}. Tu as été déconnecté·e sur tous les appareils.",
             "note": "Si tu n'as rien demandé, réponds immédiatement à cet e-mail."
+        },
+        "mfaResetByAdmin": {
+            "subject": "L’authentification à deux facteurs a été désactivée",
+            "body": "L’équipe de la plateforme a supprimé les applications d’authentification, les passkeys et les codes de récupération de ton compte {app}. Tu as été déconnecté·e sur tous les appareils et peux maintenant te connecter avec ton seul mot de passe.",
+            "note": "Réactive l’authentification à deux facteurs dans les paramètres de ton compte. Si tu n’as rien demandé, réponds immédiatement à cet e-mail."
+        },
+        "passwordSetByAdmin": {
+            "subject": "Ton mot de passe a été modifié",
+            "body": "L’équipe de la plateforme a défini un nouveau mot de passe pour ton compte {app}. Tu as été déconnecté·e sur tous les appareils.",
+            "note": "Demande le nouveau mot de passe à l’équipe de la plateforme et modifie-le dans les paramètres de ton compte. Si tu n’as rien demandé, réponds immédiatement à cet e-mail."
+        },
+        "platformAdminGranted": {
+            "subject": "Tu es maintenant administrateur·rice de la plateforme",
+            "body": "L’équipe de la plateforme t’a nommé·e administrateur·rice de {app}. Tu peux maintenant gérer les salles, les utilisateurs et les paramètres de la plateforme.",
+            "note": "Si tu ne t’y attendais pas, réponds immédiatement à cet e-mail."
+        },
+        "platformAdminRevoked": {
+            "subject": "Tu n’es plus administrateur·rice de la plateforme",
+            "body": "L’équipe de la plateforme t’a retiré les droits d’administration de {app}. Ton compte et tes adhésions aux salles restent inchangés.",
+            "note": "Si tu ne t’y attendais pas, réponds immédiatement à cet e-mail."
+        },
+        "mailTest": {
+            "subject": "E-mail de test de {app}",
+            "body": "L’envoi d’e-mails fonctionne. Ce message a été envoyé depuis les paramètres de la plateforme {app}.",
+            "note": "Tu peux ignorer cet e-mail."
         }
     },
     "leaderboard": {
@@ -2511,5 +2783,18 @@
         "zoom": "Zoom",
         "rotate": "Pivoter",
         "reset": "Réinitialiser"
+    },
+    "auth": {
+        "or": "ou",
+        "oauth2": {
+            "continueWith": "Continuer avec {provider}",
+            "errors": {
+                "failed": "La connexion via le fournisseur a échoué. Réessaie.",
+                "registration_disabled": "Aucun compte ne correspond à cette connexion et les inscriptions sont fermées.",
+                "account_exists": "Un compte existe déjà avec cet e-mail. Connecte-toi avec ton mot de passe et lie le fournisseur dans les paramètres du compte.",
+                "already_linked": "Cette connexion est déjà liée à un autre compte.",
+                "email_unverified": "Le fournisseur n’a confirmé aucune adresse e-mail, aucun compte ne peut donc être créé."
+            }
+        }
     }
 }

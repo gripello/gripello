@@ -108,7 +108,9 @@ test('a lifetime suspension is announced as permanent', async ({
     testPrefix,
 }) => {
     const person = await createUser('user', 'banned')
-    await suspendUser(await apiOf(platformPage), person.id, {
+    const platformApi = await apiOf(platformPage)
+    await platformApi.post('/me/reauthenticate', { password: 'E2ePassw0rd!' })
+    await suspendUser(platformApi, person.id, {
         permanent: true,
         reason: `${testPrefix}-why`,
     })

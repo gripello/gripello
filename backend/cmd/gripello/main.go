@@ -9,6 +9,7 @@ import (
 	"gripello/internal/achievements"
 	"gripello/internal/audit"
 	"gripello/internal/authn"
+	"gripello/internal/backups"
 	"gripello/internal/competitions"
 	"gripello/internal/gyms"
 	"gripello/internal/members"
@@ -24,6 +25,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -37,11 +39,16 @@ import (
 	"gripello/internal/platform/importer"
 	"gripello/internal/platform/jobs"
 	"gripello/internal/platform/locales"
+	"gripello/internal/platform/logbuf"
 	"gripello/internal/platform/mail"
+	"gripello/internal/platform/metrics"
 	"gripello/internal/platform/push"
 	"gripello/internal/platform/realtime"
+	"gripello/internal/platform/replicas"
 	"gripello/internal/platform/tenancy"
 )
+
+var logs = logbuf.New(os.Stderr)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -50,6 +57,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	slog.SetDefault(slog.New(logs))
 	var err error
 	switch os.Args[1] {
 	case "serve":
@@ -116,6 +124,8 @@ func connect(ctx context.Context) (config.Config, *platform.App, error) {
 		Workers:       map[string]jobs.Worker{},
 		Realtime:      realtime.NewHub(bus, tenancy.New(pool)),
 		Tokens:        auth.Issuer{Secret: cfg.TokenSecret, Duration: cfg.AuthTokenDuration},
+		Logs:          logs,
+		Metrics:       metrics.New(pool),
 	}
 	app.Handle("GET /files/{table}/{id}/{name}", store.ServeFile(cfg.TokenSecret))
 	app.Handle("POST /files/token", store.IssueToken(cfg.TokenSecret))
@@ -160,11 +170,33 @@ func serve(ctx context.Context, args []string) error {
 		httpx.JSON(w, 200, map[string]string{"version": config.Version})
 		return nil
 	}))
+	mailer := app.Mail.(*mail.Client)
+	reloadMail := func() {
+		if err := mailer.Reload(ctx, app.DB, cfg, app.Tokens.Secret); err != nil {
+			slog.Error("mail: loading the platform mail settings failed", "error", err)
+		}
+	}
+	reloadLogLevel := func() {
+		var level slog.Level
+		var name string
+		if err := app.DB.QueryRow(ctx, `SELECT log_level FROM platform_config`).Scan(&name); err == nil && level.UnmarshalText([]byte(name)) == nil {
+			logs.Level.Set(level)
+		}
+	}
+	reloadMail()
+	reloadLogLevel()
+	// Every replica runs Subscribe handlers, so a settings change applies everywhere.
+	app.Bus.Subscribe("platform", func(e events.Event) {
+		if e.Kind == "platform_config.updated" {
+			reloadMail()
+			reloadLogLevel()
+		}
+	})
 	app.Handle("GET /mail-status", httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		if _, err := auth.Require(r.Context()); err != nil {
 			return err
 		}
-		httpx.JSON(w, 200, mail.Status(cfg))
+		httpx.JSON(w, 200, map[string]bool{"configured": mailer.Configured()})
 		return nil
 	}))
 	app.Handle("GET /online", httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
@@ -192,12 +224,31 @@ func serve(ctx context.Context, args []string) error {
 	audit.Register(app)
 	moderation.Register(app)
 	platformadmin.Register(app)
+	backups.Register(app)
 
 	app.Cron.Add("eventsPrune", "*/10 * * * *", func(ctx context.Context) error {
 		return app.Bus.Prune(ctx, time.Hour)
 	})
 
 	go app.Bus.Run(ctx)
+	go app.Metrics.Run(ctx)
+	replica, _ := os.Hostname()
+	// Both write once more after ctx ends (last logs, removing this replica); returning waits for that.
+	var reporting sync.WaitGroup
+	defer reporting.Wait()
+	reporting.Go(func() { app.Logs.Ship(ctx, app.DB, replica) })
+	reporting.Go(func() {
+		replicas.Run(ctx, app.DB, replicas.Replica{Name: replica, Version: config.Version, Role: cfg.Role, Started: time.Now()}, app.Realtime.Clients)
+	})
+	app.Cron.Add("requestStatsPrune", "17 3 * * *", func(ctx context.Context) error {
+		return metrics.Prune(ctx, app.DB)
+	})
+	app.Cron.Add("serverLogsPrune", "41 * * * *", func(ctx context.Context) error {
+		if err := replicas.Prune(ctx, app.DB); err != nil {
+			return err
+		}
+		return logbuf.Prune(ctx, app.DB, 7*24*time.Hour)
+	})
 	if cfg.Role != "api" {
 		app.Cron.Start()
 		defer app.Cron.Stop()
@@ -227,7 +278,7 @@ func importPocketBase(ctx context.Context, args []string) error {
 	if err := db.Migrate(ctx, pool); err != nil {
 		return err
 	}
-	report, err := importer.Run(ctx, *pbData, pool, cfg.BlobDir)
+	report, err := importer.Run(ctx, *pbData, pool, cfg.BlobDir, cfg.TokenSecret)
 	for table, n := range report.Rows {
 		fmt.Printf("%-24s %d\n", table, n)
 	}

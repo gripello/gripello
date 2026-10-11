@@ -5,7 +5,7 @@
                 <slot name="actions" />
             </template>
         </LayoutSectionHeader>
-        <div class="flex flex-col gap-3">
+        <div class="flex flex-1 flex-col gap-3">
             <slot />
         </div>
     </component>

@@ -102,6 +102,9 @@ func (m *module) queue(ctx context.Context, w *work, kindName, contentID string,
 		if kinds[kindName].fields == nil {
 			return it, nil
 		}
+		if shown, err := exposed(ctx, w.tx, kindName, contentID); err != nil || !shown {
+			return it, err
+		}
 		// The author put new content in place of hidden content: that needs a fresh decision.
 		w.drop = append(w.drop, "moderation_items/"+it.ID)
 		it.Files, it.HiddenBy, it.Reason, it.ReviewedBy, it.ReviewedAt = nil, "", "", "", nil
@@ -254,6 +257,9 @@ func (m *module) hideContent(ctx context.Context, w *work, it *Item) error {
 				return err
 			}
 		}
+		if err := publishOwnerChange(ctx, w.tx, *it, it.Snapshot); err != nil {
+			return err
+		}
 	}
 	return publishContentChange(ctx, w.tx, KindContentHidden, *it)
 }
@@ -276,9 +282,15 @@ func (m *module) release(ctx context.Context, w *work, it *Item) error {
 		}
 	}
 	w.drop = append(w.drop, "moderation_items/"+it.ID)
+	var hidden content
 	if k.fields == nil {
+		values["id"] = it.ContentID
 		now := time.Now()
-		values["id"], values["created"], values["updated"] = it.ContentID, now, now
+		for _, stamp := range []string{"created", "updated"} {
+			if values[stamp] == nil {
+				values[stamp] = now
+			}
+		}
 		if it.Author != "" {
 			values[k.author] = it.Author
 		}
@@ -292,6 +304,12 @@ func (m *module) release(ctx context.Context, w *work, it *Item) error {
 			return badRequest("The content could not be restored.")
 		}
 	} else {
+		var err error
+		if hidden, err = loadContent(ctx, w.tx, it.ContentType, it.ContentID); errors.Is(err, httpx.ErrNotFound) {
+			return badRequest("The content no longer exists.")
+		} else if err != nil {
+			return err
+		}
 		sets := make([]string, 0, len(k.fields)+1)
 		for _, f := range k.fields {
 			sets = append(sets, `"`+f+`" = s."`+f+`"`)
@@ -314,10 +332,10 @@ func (m *module) release(ctx context.Context, w *work, it *Item) error {
 		return err
 	}
 	it.Snapshot, it.Files = fresh.Snapshot, nil
-	return m.publishRestored(ctx, w, it, k)
+	return m.publishRestored(ctx, w, it, k, hidden.Snapshot)
 }
 
-func (m *module) publishRestored(ctx context.Context, w *work, it *Item, k kind) error {
+func (m *module) publishRestored(ctx context.Context, w *work, it *Item, k kind, hidden map[string]any) error {
 	switch it.ContentType {
 	case "route":
 		return m.publishGymChange(ctx, w.tx, "route", "update", map[string]any{"id": it.ContentID, "gym": it.Gym})
@@ -328,7 +346,7 @@ func (m *module) publishRestored(ctx context.Context, w *work, it *Item, k kind)
 		}
 		return m.publishGymChange(ctx, w.tx, it.ContentType, "create", record)
 	}
-	return nil
+	return publishOwnerChange(ctx, w.tx, *it, hidden)
 }
 
 // closeReports decides every open report on the content; the reporters get the DSA decision mail.
@@ -522,10 +540,12 @@ func (m *module) dropContent(ctx context.Context, kindName, contentID string) er
 		if _, err := loadContent(ctx, w.tx, kindName, contentID); !errors.Is(err, httpx.ErrNotFound) {
 			return err
 		}
-		if err == nil && !it.quarantined() {
+		// Only whole rows live on in a quarantine; a hidden field-based case has nothing left to restore.
+		if err == nil && (!it.quarantined() || kinds[kindName].fields != nil) {
 			if _, err := w.tx.Exec(ctx, `DELETE FROM moderation_items WHERE id = $1`, it.ID); err != nil {
 				return err
 			}
+			w.drop = append(w.drop, "moderation_items/"+it.ID)
 			if err := publishItem(ctx, w.tx, "delete", it); err != nil {
 				return err
 			}

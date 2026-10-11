@@ -277,4 +277,14 @@ describe('auth middleware', () => {
 
         expect(navigateToMock).not.toHaveBeenCalled()
     })
+
+    it('guards every platform path, also pages without platformAdmin meta', async () => {
+        globalThis.__AUTH_STORE__ = { isValid: true }
+        const { default: middleware } = await import('~/middleware/auth')
+
+        await middleware({ path: '/platform/audit', meta: {} }, {})
+
+        expect(ensureLoadedMock).toHaveBeenCalled()
+        expect(navigateToMock).toHaveBeenCalledWith('/')
+    })
 })

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -119,8 +120,11 @@ func TokenFrom(r *http.Request) string {
 	return ""
 }
 
-// The PocketBase SDK stores JSON {"token":..., "record":...} in the cookie; a bare JWT is also accepted.
+// The client stores encodeURIComponent(JSON {"token":..., "record":...}) in the cookie; a bare JWT is also accepted.
 func cookieToken(value string) string {
+	if unescaped, err := url.PathUnescape(value); err == nil {
+		value = unescaped
+	}
 	if i := strings.Index(value, `"token":"`); i >= 0 {
 		rest := value[i+len(`"token":"`):]
 		if j := strings.IndexByte(rest, '"'); j >= 0 {
@@ -147,4 +151,23 @@ func Require(ctx context.Context) (Principal, error) {
 		return Principal{}, httpx.ErrUnauthorized
 	}
 	return p, nil
+}
+
+// ReauthWindow is how long a password confirmation unlocks sensitive admin actions.
+const ReauthWindow = 5 * time.Minute
+
+var ErrReauthRequired = httpx.NewError(http.StatusForbidden, "Confirm your password first.").Field("password", "reauth_required", "Confirm your password first.")
+
+// RequireRecentReauth passes when the caller's session confirmed its password within ReauthWindow.
+func RequireRecentReauth(ctx context.Context, pool *pgxpool.Pool, p Principal) error {
+	if p.SessionID == "" {
+		return ErrReauthRequired
+	}
+	var fresh bool
+	err := pool.QueryRow(ctx, `SELECT COALESCE(reauthenticated_at > now() - make_interval(secs => $3), false) FROM sessions WHERE id = $1 AND "user" = $2`,
+		p.SessionID, p.UserID, ReauthWindow.Seconds()).Scan(&fresh)
+	if err != nil || !fresh {
+		return ErrReauthRequired
+	}
+	return nil
 }

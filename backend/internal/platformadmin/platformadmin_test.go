@@ -10,9 +10,12 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/metrics"
+	"gripello/internal/platform/replicas"
 	"gripello/internal/platform/testapp"
 )
 
@@ -108,6 +111,16 @@ func (f *fixture) call(method, url, body, caller string, status int) map[string]
 	return f.callToken(method, url, body, token, status)
 }
 
+// lastActor reads the actor from the event envelope; payloads never carry it to clients.
+func (f *fixture) lastActor(kind string) string {
+	f.t.Helper()
+	var actor string
+	if err := f.app.DB.QueryRow(context.Background(), `SELECT actor FROM events WHERE kind = $1 ORDER BY id DESC LIMIT 1`, kind).Scan(&actor); err != nil {
+		f.t.Fatalf("no %s event: %v", kind, err)
+	}
+	return actor
+}
+
 func (f *fixture) lastEvent(kind string) map[string]any {
 	f.t.Helper()
 	var raw []byte
@@ -184,10 +197,12 @@ func TestPlatformAdminsEditProfilesButNotSettingsOrOtherAdmins(t *testing.T) {
 	f.call(http.MethodPatch, "/platform/users/"+f.climber, `{"email": "not-an-email"}`, f.operator, http.StatusBadRequest)
 	f.call(http.MethodPatch, "/platform/users/"+f.climber, `{"email": "op2@example.com"}`, f.operator, http.StatusBadRequest)
 	f.call(http.MethodPatch, "/platform/users/"+f.climber, `{"avatar": "x.png"}`, f.operator, http.StatusBadRequest)
+	f.call(http.MethodPatch, "/platform/users/"+f.climber, `{"email": "kim@example.com"}`, f.operator, http.StatusForbidden)
+	f.call(http.MethodPatch, "/platform/users/"+f.climber, `{"email": "climber@example.com"}`, f.operator, http.StatusOK)
 	oldToken := f.token(f.climber)
 	session := f.session(f.climber)
-	user := f.call(http.MethodPatch, "/platform/users/"+f.climber,
-		`{"username": "renamed", "firstname": " Kim ", "name": "Lee", "verified": true, "email": "Kim@Example.com"}`, f.operator, http.StatusOK)
+	user := f.callToken(http.MethodPatch, "/platform/users/"+f.climber,
+		`{"username": "renamed", "firstname": " Kim ", "name": "Lee", "verified": true, "email": "Kim@Example.com"}`, f.reauthToken(f.operator), http.StatusOK)
 	if user["username"] != "renamed" || user["firstname"] != "Kim" || user["verified"] != true || user["email"] != "kim@example.com" {
 		t.Errorf("user = %v", user)
 	}
@@ -196,7 +211,7 @@ func TestPlatformAdminsEditProfilesButNotSettingsOrOtherAdmins(t *testing.T) {
 	for _, field := range event["changed"].([]any) {
 		changed = append(changed, field.(string))
 	}
-	if event["actor"] != f.operator || !slices.Equal(changed, []string{"email", "firstname", "name", "username", "verified"}) ||
+	if f.lastActor("user.updated") != f.operator || event["actor"] != nil || !slices.Equal(changed, []string{"email", "firstname", "name", "username", "verified"}) ||
 		event["record"].(map[string]any)["token_key"] != nil {
 		t.Errorf("event = %v", event)
 	}
@@ -212,36 +227,67 @@ func TestPlatformAdminsEditProfilesButNotSettingsOrOtherAdmins(t *testing.T) {
 
 func TestDeleteUser(t *testing.T) {
 	f := newFixture(t)
-	f.call(http.MethodDelete, "/platform/users/"+f.otherOp, "", f.operator, http.StatusForbidden)
+	op := f.reauthToken(f.operator)
+	f.callToken(http.MethodDelete, "/platform/users/"+f.otherOp, "", op, http.StatusForbidden)
+	f.callToken(http.MethodDelete, "/platform/users/"+f.operator, "", op, http.StatusForbidden)
+	f.call(http.MethodDelete, "/platform/users/"+f.climber, "", f.operator, http.StatusForbidden)
 	f.adminOf(f.climber)
-	f.call(http.MethodDelete, "/platform/users/"+f.climber, "", f.operator, http.StatusBadRequest)
+	f.callToken(http.MethodDelete, "/platform/users/"+f.climber, "", op, http.StatusBadRequest)
 	f.adminOf(f.operator)
 	session := f.session(f.climber)
-	f.call(http.MethodDelete, "/platform/users/"+f.climber, "", f.operator, http.StatusNoContent)
+	f.callToken(http.MethodDelete, "/platform/users/"+f.climber, "", op, http.StatusNoContent)
 	if n := f.count(`SELECT count(*) FROM users WHERE id = $1`, f.climber); n != 0 {
 		t.Error("user still exists")
 	}
-	if e := f.lastEvent("user.deleted"); e["id"] != f.climber || e["actor"] != f.operator {
+	if e := f.lastEvent("user.deleted"); e["id"] != f.climber || e["actor"] != nil || f.lastActor("user.deleted") != f.operator {
 		t.Errorf("user.deleted = %v", e)
 	}
 	if e := f.lastEvent("session.revoked"); e["session"] != session {
 		t.Errorf("session.revoked = %v", e)
 	}
 	f.assertActors(f.operator)
-	f.call(http.MethodDelete, "/platform/users/"+f.climber, "", f.operator, http.StatusNotFound)
+	f.callToken(http.MethodDelete, "/platform/users/"+f.climber, "", op, http.StatusNotFound)
+}
+
+func TestConcurrentDeletesKeepAGymAdmin(t *testing.T) {
+	f := newFixture(t)
+	second := f.user("second@example.com", false)
+	f.adminOf(f.climber)
+	f.adminOf(second)
+	op := f.reauthToken(f.operator)
+	statuses := make(chan int, 2)
+	for _, user := range []string{f.climber, second} {
+		go func() {
+			request := httptest.NewRequest(http.MethodDelete, "/api/platform/users/"+user, nil)
+			request.Header.Set("Authorization", op)
+			recorder := httptest.NewRecorder()
+			f.handler.ServeHTTP(recorder, request)
+			statuses <- recorder.Code
+		}()
+	}
+	got := []int{<-statuses, <-statuses}
+	slices.Sort(got)
+	if !slices.Equal(got, []int{http.StatusNoContent, http.StatusBadRequest}) {
+		t.Errorf("statuses = %v", got)
+	}
+	if n := f.count(`SELECT count(*) FROM memberships m JOIN roles r ON r.id = m.role WHERE m.gym = $1 AND r.name = 'admin'`, f.gym); n != 1 {
+		t.Errorf("%d admins left", n)
+	}
 }
 
 func TestSuspension(t *testing.T) {
 	f := newFixture(t)
 	f.call(http.MethodPost, "/platform/users/"+f.operator+"/suspension", `{"permanent": true}`, f.operator, http.StatusForbidden)
 	f.call(http.MethodPost, "/platform/users/"+f.otherOp+"/suspension", `{"permanent": true}`, f.operator, http.StatusForbidden)
-	f.call(http.MethodPost, "/platform/users/"+f.climber+"/suspension", `{"until": "2000-01-01 00:00:00.000Z"}`, f.operator, http.StatusBadRequest)
-	f.call(http.MethodPost, "/platform/users/"+f.climber+"/suspension", `{"until": "soon"}`, f.operator, http.StatusBadRequest)
+	f.call(http.MethodPost, "/platform/users/"+f.climber+"/suspension", `{"permanent": true}`, f.operator, http.StatusForbidden)
+	op := f.reauthToken(f.operator)
+	f.callToken(http.MethodPost, "/platform/users/"+f.climber+"/suspension", `{"until": "2000-01-01 00:00:00.000Z"}`, op, http.StatusBadRequest)
+	f.callToken(http.MethodPost, "/platform/users/"+f.climber+"/suspension", `{"until": "soon"}`, op, http.StatusBadRequest)
 
 	oldToken := f.token(f.climber)
 	f.callToken(http.MethodGet, "/platform/users", "", oldToken, http.StatusForbidden)
 	session := f.session(f.climber)
-	f.call(http.MethodPost, "/platform/users/"+f.climber+"/suspension", `{"permanent": true, "reason": " spam "}`, f.operator, http.StatusNoContent)
+	f.callToken(http.MethodPost, "/platform/users/"+f.climber+"/suspension", `{"permanent": true, "reason": " spam "}`, op, http.StatusNoContent)
 	var until, reason string
 	f.app.DB.QueryRow(context.Background(), `SELECT to_char(suspended_until AT TIME ZONE 'UTC', 'YYYY-MM-DD'), suspension_reason FROM users WHERE id = $1`, f.climber).Scan(&until, &reason)
 	if until != "9999-12-31" || reason != "spam" {
@@ -254,7 +300,7 @@ func TestSuspension(t *testing.T) {
 	if e := f.lastEvent("session.revoked"); e["session"] != session || e["user"] != f.climber {
 		t.Errorf("session.revoked = %v", e)
 	}
-	if e := f.lastEvent("user.updated"); e["actor"] != f.operator {
+	if e := f.lastEvent("user.updated"); e["actor"] != nil || f.lastActor("user.updated") != f.operator {
 		t.Errorf("user.updated = %v", e)
 	}
 	f.assertActors(f.operator)
@@ -263,7 +309,7 @@ func TestSuspension(t *testing.T) {
 		t.Errorf("mails = %+v", mails)
 	}
 
-	f.call(http.MethodPost, "/platform/users/"+f.climber+"/suspension", `{"until": "2999-01-01T10:00:00Z"}`, f.operator, http.StatusNoContent)
+	f.callToken(http.MethodPost, "/platform/users/"+f.climber+"/suspension", `{"until": "2999-01-01T10:00:00Z"}`, op, http.StatusNoContent)
 	f.call(http.MethodDelete, "/platform/users/"+f.climber+"/suspension", "", f.operator, http.StatusNoContent)
 	if n := f.count(`SELECT count(*) FROM users WHERE id = $1 AND suspended_until IS NULL AND suspension_reason = ''`, f.climber); n != 1 {
 		t.Error("suspension not lifted")
@@ -318,27 +364,159 @@ func TestSetFeatures(t *testing.T) {
 	f.assertActors(f.operator)
 }
 
+// reauthToken signs a token whose session confirmed the password just now.
+func (f *fixture) reauthToken(user string) string {
+	f.t.Helper()
+	sid := f.session(user)
+	f.exec(`UPDATE sessions SET reauthenticated_at = now() WHERE id = $1`, sid)
+	token, err := f.app.Tokens.Sign(user, f.tokenKeys[user], sid)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	return token
+}
+
 func TestPlatformAdminGrants(t *testing.T) {
 	f := newFixture(t)
-	f.call(http.MethodPost, "/platform/admins", `{"user": "missing"}`, f.operator, http.StatusNotFound)
-	if user := f.call(http.MethodPost, "/platform/admins", `{"user": "`+f.climber+`"}`, f.operator, http.StatusOK); user["platform_admin"] != true {
+	op := f.reauthToken(f.operator)
+	f.call(http.MethodPost, "/platform/admins", `{"user": "`+f.climber+`"}`, f.operator, http.StatusForbidden)
+	f.callToken(http.MethodPost, "/platform/admins", `{"user": "missing"}`, op, http.StatusNotFound)
+	if user := f.callToken(http.MethodPost, "/platform/admins", `{"user": "`+f.climber+`"}`, op, http.StatusOK); user["platform_admin"] != true {
 		t.Errorf("user = %v", user)
 	}
-	if e := f.lastEvent("user.updated"); e["changed"].([]any)[0] != "platform_admin" || e["actor"] != f.operator {
+	if e := f.lastEvent("user.updated"); e["changed"].([]any)[0] != "platform_admin" || f.lastActor("user.updated") != f.operator {
 		t.Errorf("user.updated = %v", e)
 	}
-	f.assertActors(f.operator)
+	if mails := testapp.Mails(f.app); len(mails) != 1 || mails[0].To[0] != "climber@example.com" {
+		t.Errorf("grant notice = %+v", mails)
+	}
 	f.call(http.MethodGet, "/platform/stats", "", f.climber, http.StatusOK)
-	f.call(http.MethodDelete, "/platform/admins/"+f.operator, "", f.operator, http.StatusBadRequest)
-	f.call(http.MethodDelete, "/platform/admins/"+f.climber, "", f.operator, http.StatusForbidden)
+	f.callToken(http.MethodDelete, "/platform/admins/"+f.operator, "", op, http.StatusBadRequest)
 	f.call(http.MethodDelete, "/platform/admins/"+f.otherOp, "", f.operator, http.StatusForbidden)
-	f.call(http.MethodDelete, "/platform/admins/missing", "", f.operator, http.StatusNotFound)
-	f.call(http.MethodGet, "/platform/stats", "", f.otherOp, http.StatusOK)
+	f.callToken(http.MethodDelete, "/platform/admins/missing", "", op, http.StatusNotFound)
+	f.callToken(http.MethodDelete, "/platform/admins/"+f.otherOp, "", op, http.StatusNoContent)
+	f.call(http.MethodGet, "/platform/stats", "", f.otherOp, http.StatusForbidden)
+	f.callToken(http.MethodDelete, "/platform/admins/"+f.otherOp, "", op, http.StatusBadRequest)
+	if mails := testapp.Mails(f.app); len(mails) != 2 || mails[1].To[0] != "op2@example.com" {
+		t.Errorf("revoke notice = %+v", mails)
+	}
+	f.assertActors(f.operator)
+}
+
+func TestARevokedAdminCanNoLongerRevoke(t *testing.T) {
+	f := newFixture(t)
+	other := f.reauthToken(f.otherOp)
+	f.callToken(http.MethodDelete, "/platform/admins/"+f.otherOp, "", f.reauthToken(f.operator), http.StatusNoContent)
+	f.callToken(http.MethodDelete, "/platform/admins/"+f.operator, "", other, http.StatusForbidden)
+	if n := f.count(`SELECT count(*) FROM users WHERE platform_admin`); n != 1 {
+		t.Errorf("%d platform admins left", n)
+	}
 }
 
 func (f *fixture) assertActors(actor string) {
 	f.t.Helper()
 	if n := f.count(`SELECT count(*) FROM events WHERE actor IS DISTINCT FROM $1`, actor); n != 0 {
 		f.t.Errorf("%d events without actor %s", n, actor)
+	}
+}
+
+func TestMailSettingsAreSealedAndNeverReturned(t *testing.T) {
+	f := newFixture(t)
+	op := f.reauthToken(f.operator)
+	if got := f.call(http.MethodGet, "/platform/mail", "", f.operator, http.StatusOK); got["source"] != "none" {
+		t.Errorf("unconfigured = %v", got)
+	}
+	f.call(http.MethodGet, "/platform/mail", "", f.climber, http.StatusForbidden)
+	settings := `{"smtp_host":"smtp.example.com","smtp_port":465,"smtp_username":"mailer","smtp_password":"hunter2","smtp_tls":true,"sender_address":"no-reply@example.com","sender_name":"Hall"}`
+	f.call(http.MethodPut, "/platform/mail", settings, f.operator, http.StatusForbidden)
+	f.callToken(http.MethodPut, "/platform/mail", `{"smtp_host":"smtp.example.com","smtp_port":0,"sender_address":"nope"}`, op, http.StatusBadRequest)
+	got := f.callToken(http.MethodPut, "/platform/mail", settings, op, http.StatusOK)
+	if got["source"] != "database" || got["smtp_password_set"] != true || got["smtp_password"] != nil || got["smtp_port"] != float64(465) {
+		t.Errorf("saved = %v", got)
+	}
+	if n := f.count(`SELECT count(*) FROM platform_config WHERE smtp_password = '' OR smtp_password LIKE '%hunter2%'`); n != 0 {
+		t.Error("SMTP password not sealed")
+	}
+	f.callToken(http.MethodPut, "/platform/mail", strings.Replace(settings, `"smtp_password":"hunter2",`, "", 1), op, http.StatusOK)
+	if got := f.call(http.MethodGet, "/platform/mail", "", f.operator, http.StatusOK); got["smtp_password_set"] != true {
+		t.Errorf("leaving the password out cleared it: %v", got)
+	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = 'platform' AND kind = 'platform_config.updated'`); n != 1 {
+		t.Errorf("%d config events, want 1 (the unchanged save publishes nothing)", n)
+	}
+}
+
+func TestTestMailGoesToTheCallerAndIsLimited(t *testing.T) {
+	f := newFixture(t)
+	for range 5 {
+		f.call(http.MethodPost, "/platform/mail/test", "", f.operator, http.StatusNoContent)
+	}
+	f.call(http.MethodPost, "/platform/mail/test", "", f.operator, http.StatusTooManyRequests)
+	mails := testapp.Mails(f.app)
+	if len(mails) != 5 || mails[0].To[0] != "op@example.com" || !strings.Contains(mails[0].Subject, "Test") {
+		t.Errorf("test mails = %d, first %+v", len(mails), mails[0])
+	}
+}
+
+func TestLogLevelIsStoredAndAnnounced(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`INSERT INTO server_logs (time, replica, severity, level, message) VALUES (now(), 'app-1', 0, 'INFO', 'started'), (now(), 'app-2', 8, 'ERROR', 'boom')`)
+	got := f.call(http.MethodGet, "/platform/logs?level=warn", "", f.operator, http.StatusOK)
+	if items := got["items"].([]any); len(items) != 1 || items[0].(map[string]any)["replica"] != "app-2" || got["replicas"] == nil {
+		t.Errorf("logs = %v", got)
+	}
+	f.call(http.MethodGet, "/platform/logs?level=loud", "", f.operator, http.StatusBadRequest)
+	f.call(http.MethodGet, "/platform/logs", "", f.climber, http.StatusForbidden)
+	f.call(http.MethodPut, "/platform/logs/level", `{"level":"trace"}`, f.operator, http.StatusBadRequest)
+	f.call(http.MethodPut, "/platform/logs/level", `{"level":"debug"}`, f.operator, http.StatusOK)
+	if n := f.count(`SELECT count(*) FROM platform_config WHERE log_level = 'debug'`); n != 1 {
+		t.Error("level not stored")
+	}
+	if e := f.lastEvent("platform_config.updated"); e["changed"].([]any)[0] != "log_level" {
+		t.Errorf("event = %v", e)
+	}
+}
+
+func TestTrafficSumsRequestsPerEndpoint(t *testing.T) {
+	f := newFixture(t)
+	rec := metrics.New(f.app.DB)
+	for i := range 20 {
+		status := http.StatusOK
+		if i == 0 {
+			status = http.StatusBadGateway
+		}
+		rec.Record("GET", "GET /api/gyms/{gym}", status, time.Duration(i+1)*time.Millisecond, "203.0.113.7")
+	}
+	rec.Record("POST", "POST /api/auth/login", http.StatusUnauthorized, 300*time.Millisecond, "198.51.100.1")
+	if err := rec.Flush(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	f.call("GET", "/platform/traffic", "", f.climber, http.StatusForbidden)
+	out := f.call("GET", "/platform/traffic?range=1h", "", f.operator, http.StatusOK)
+	totals := out["totals"].(map[string]any)
+	if totals["requests"] != 21.0 || totals["server_errors"] != 1.0 || totals["client_errors"] != 1.0 {
+		t.Errorf("totals = %v", totals)
+	}
+	if series := out["series"].([]any); len(series) != 12 {
+		t.Errorf("1h series has %d points, want 12", len(series))
+	}
+	endpoints := out["endpoints"].([]any)
+	top := endpoints[0].(map[string]any)
+	if top["pattern"] != "/api/gyms/{gym}" || top["requests"] != 20.0 || top["p95_ms"] != 25.0 {
+		t.Errorf("top endpoint = %v", top)
+	}
+	if out["visitors_per_day"] != 2.0 {
+		t.Errorf("visitors = %v", out["visitors_per_day"])
+	}
+	replicas.Beat(context.Background(), f.app.DB, replicas.Replica{Name: "app-1", Role: "all", Started: time.Now()}, 2)
+	replicas.Beat(context.Background(), f.app.DB, replicas.Replica{Name: "app-2", Role: "api", Started: time.Now()}, 3)
+	replicas.Beat(context.Background(), f.app.DB, replicas.Replica{Name: "app-gone", Role: "api", Started: time.Now()}, 5)
+	f.exec(`UPDATE replicas SET last_seen = now() - interval '5 minutes' WHERE name = 'app-gone'`)
+	out = f.call("GET", "/platform/traffic?range=1h", "", f.operator, http.StatusOK)
+	if servers := out["system"].(map[string]any)["replicas"].([]any); len(servers) != 3 || servers[0].(map[string]any)["realtime_clients"] != 2.0 {
+		t.Errorf("replicas = %v", servers)
+	}
+	if online := out["people"].(map[string]any)["online"]; online != 5.0 {
+		t.Errorf("online = %v, want the clients of every online replica", online)
 	}
 }

@@ -16,6 +16,11 @@ fail_permissions() {
 
 write_probe="/data/storage/.write-test-$$"
 touch "$write_probe" 2>/dev/null && rm -f "$write_probe" || fail_permissions /data/storage writable ./storage
+if [ -n "${BACKUP_DIR:-}" ] && [ -d "$BACKUP_DIR" ]; then
+    write_probe="$BACKUP_DIR/.write-test-$$"
+    # Backups are optional: an unwritable folder (e.g. a bind mount Docker created as root) only disables them.
+    touch "$write_probe" 2>/dev/null && rm -f "$write_probe" || echo "[startup] WARNING: $BACKUP_DIR is not writable, backups will fail. Fix with: sudo chown -R $(id -u):$(id -g) ./backups" >&2
+fi
 
 if [ -f /etc/nginx/ssl/cert.pem ] && [ -f /etc/nginx/ssl/key.pem ]; then
     [ -r /etc/nginx/ssl/cert.pem ] && [ -r /etc/nginx/ssl/key.pem ] || fail_permissions /etc/nginx/ssl readable ./ssl
@@ -74,6 +79,7 @@ gripello migrate
 
 echo "[api] starting..."
 gripello serve --http=:8080 &
+API_PID=$!
 
 # Start Nuxt.js UI
 CPUS="$(nproc)"
@@ -85,7 +91,19 @@ WORKERS=$(( CPUS < 2 ? 1 : CPUS / 2 ))
 export NITRO_CLUSTER_WORKERS="${NITRO_CLUSTER_WORKERS:-$(( WORKERS > 8 ? 8 : WORKERS ))}"
 echo "[nuxt] starting ${NITRO_CLUSTER_WORKERS} workers..."
 node ui/server/index.mjs &
+UI_PID=$!
 
 # Start Nginx
 echo "[nginx] starting..."
-exec nginx -e stderr -g "daemon off;"
+nginx -e stderr -g "daemon off;" &
+NGINX_PID=$!
+
+# Bash as PID 1 forwards docker stop to every process (QUIT is nginx's graceful stop); any process exiting stops the container.
+stop_all() {
+    kill -TERM $API_PID $UI_PID 2>/dev/null || true
+    kill -QUIT $NGINX_PID 2>/dev/null || true
+}
+trap stop_all TERM INT
+wait -n || true
+stop_all
+wait

@@ -16,6 +16,10 @@ import {
     requestPasswordReset,
     requestVerification,
     useAuthState,
+    finishOAuth2,
+    finishOAuth2Link,
+    listOAuth2Providers,
+    startOAuth2,
 } from '~/api/auth'
 import { mockApi } from './apiMock'
 
@@ -209,5 +213,36 @@ describe('token flows', () => {
                 body,
             })
         }
+    })
+})
+
+describe('oauth2', () => {
+    it('lists providers, starts a flow and finishes it into the auth store', async () => {
+        api.respond({
+            oauth2: { providers: [{ name: 'google', displayName: '' }] },
+        })
+        expect(await listOAuth2Providers()).toEqual([
+            { name: 'google', displayName: '' },
+        ])
+        api.respond({ url: 'https://accounts.google.com/o?x' })
+        await startOAuth2('google', { redirect: '/hall/routes' })
+        expect(api.request()).toMatchObject({
+            url: '/api/auth/oauth2/google/start',
+            method: 'POST',
+            body: { redirect: '/hall/routes' },
+        })
+        api.respond({ token: 'x.y.z', record: { id: 'u9' } })
+        await finishOAuth2('ticket-1')
+        expect(api.request()).toMatchObject({
+            url: '/api/auth/oauth2/finish',
+            body: { ticket: 'ticket-1' },
+        })
+        api.respond(null)
+        await finishOAuth2Link('ticket-2')
+        expect(api.request()).toMatchObject({
+            url: '/api/auth/oauth2/link',
+            method: 'POST',
+            body: { ticket: 'ticket-2' },
+        })
     })
 })

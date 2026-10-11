@@ -28,9 +28,22 @@ test('platform admin edits a user, manages memberships and deletes the account',
 
         await row.getByTestId('platform-user-edit').click()
         const dialog = page.getByTestId('platform-user-dialog')
-        await expect(
-            page.getByTestId('platform-user-platform-admin'),
-        ).toBeDisabled()
+        for (const admin of [true, false]) {
+            await page.getByTestId('platform-user-platform-admin').click()
+            await page
+                .getByTestId('platform-user-admin-password')
+                .fill('E2ePassw0rd!')
+            await page.getByTestId('platform-user-security-confirm').click()
+            await expect(
+                page.getByTestId('platform-user-security-dialog'),
+            ).toBeHidden()
+            await expect
+                .poll(
+                    async () =>
+                        !!(await getPlatformUser(api, user.id)).platform_admin,
+                )
+                .toBe(admin)
+        }
         await page
             .getByTestId('platform-user-username')
             .fill(`e2e_renamed_${stamp}`)
@@ -66,6 +79,9 @@ test('platform admin edits a user, manages memberships and deletes the account',
         ).toHaveCount(0)
 
         await page.getByTestId('platform-user-delete-account').click()
+        await page
+            .getByTestId('platform-delete-admin-password')
+            .fill('E2ePassw0rd!')
         await page.getByTestId('confirm-dialog-confirm').click()
         await expect(row).toHaveCount(0)
         await expect(getPlatformUser(api, user.id)).rejects.toMatchObject({

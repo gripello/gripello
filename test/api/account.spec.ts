@@ -8,11 +8,13 @@ import {
     exportMyData,
     followWall,
     getMe,
+    listLinkedAccounts,
     listMFAFactors,
     listOwnMemberships,
     listSessions,
     passkeyRegister,
     passkeyRegistrationOptions,
+    reauthenticate,
     regenerateRecoveryCodes,
     renameMFAFactor,
     revokeSession,
@@ -20,6 +22,7 @@ import {
     totpEnable,
     totpSetup,
     unfollowWall,
+    unlinkAccount,
     updateMe,
 } from '~/api/account'
 import { useAuthState } from '~/api/auth'
@@ -183,6 +186,29 @@ describe('account', () => {
         expect(useAuthState().isSignedIn()).toBe(true)
     })
 
+    it('confirms the password for sensitive admin actions', async () => {
+        await reauthenticate('secret')
+        expect(api.request()).toMatchObject({
+            url: '/api/me/reauthenticate',
+            method: 'POST',
+            body: { password: 'secret' },
+        })
+    })
+
+    it('lists and unlinks sign-in providers', async () => {
+        api.respond({ items: [], hasPassword: true })
+        expect(await listLinkedAccounts()).toEqual({
+            items: [],
+            hasPassword: true,
+        })
+        expect(api.request().url).toBe('/api/me/identities')
+        await unlinkAccount('i1')
+        expect(api.request()).toMatchObject({
+            url: '/api/me/identities/i1',
+            method: 'DELETE',
+        })
+    })
+
     it('deletes the account with the current password', async () => {
         await deleteMe('secret')
         expect(api.request()).toMatchObject({
@@ -274,10 +300,12 @@ describe('sessions', () => {
             url: '/api/me/sessions/s1',
             method: 'DELETE',
         })
+        api.respond({ token: 'kept-session', record: { id: 'u1' } })
         await signOutOtherSessions()
         expect(api.request()).toMatchObject({
             url: '/api/me/sessions/sign-out-others',
             method: 'POST',
         })
+        expect(useAuthState().token()).toBe('kept-session')
     })
 })

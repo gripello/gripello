@@ -102,6 +102,33 @@ export function passkeyLogin(picked: PickedPasskey, mfaId?: string) {
     })
 }
 
+export interface OAuth2Provider {
+    name: string
+    displayName: string
+}
+
+export async function listOAuth2Providers() {
+    const methods = await useApi()<{ oauth2: { providers: OAuth2Provider[] } }>(
+        '/auth/methods',
+    )
+    return methods.oauth2.providers
+}
+
+export function startOAuth2(
+    provider: string,
+    options: { redirect?: string; link?: boolean; persistent?: boolean } = {},
+) {
+    return post<{ url: string }>(`/auth/oauth2/${provider}/start`, options)
+}
+
+export function finishOAuth2(ticket: string) {
+    return signIn(post<AuthResult>('/auth/oauth2/finish', { ticket }))
+}
+
+export function finishOAuth2Link(ticket: string) {
+    return post('/auth/oauth2/link', { ticket })
+}
+
 export function refreshAuth() {
     return signIn(post<AuthResult>('/auth/refresh'))
 }

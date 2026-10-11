@@ -275,12 +275,14 @@
                     :src="existingPhotoUrl"
                     :alt="$t('tasks.photo')"
                     class="block w-full overflow-hidden rounded-lg ring ring-default"
+                    @click="renewFileToken"
                 >
                     <img
                         :src="existingThumbUrl"
                         :alt="$t('tasks.photo')"
                         class="max-h-56 w-full object-cover"
                         data-testid="task-form-photo-preview"
+                        @error="renewFileToken"
                     />
                 </LayoutImageViewer>
                 <UFileUpload
@@ -480,20 +482,23 @@ const headerSubtitle = computed(() =>
         : t('tasks.newSubtitle'),
 )
 
-const fileToken = useFileToken(() =>
+const { token: fileToken, renew: renewFileToken } = useFileToken(() =>
     props.task?.photo ? { table: 'tasks', id: props.task.id } : null,
 )
-const fileQuery = computed(() =>
-    fileToken.value ? { token: fileToken.value } : undefined,
-)
 const existingPhotoUrl = computed(() =>
-    fileUrl('tasks', props.task, props.task?.photo, fileQuery.value),
+    fileToken.value
+        ? fileUrl('tasks', props.task, props.task?.photo, {
+              token: fileToken.value,
+          })
+        : '',
 )
 const existingThumbUrl = computed(() =>
-    fileUrl('tasks', props.task, props.task?.photo, {
-        ...fileQuery.value,
-        thumb: '400x0',
-    }),
+    fileToken.value
+        ? fileUrl('tasks', props.task, props.task?.photo, {
+              token: fileToken.value,
+              thumb: '400x0',
+          })
+        : '',
 )
 
 watch(

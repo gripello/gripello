@@ -17,6 +17,7 @@ import (
 
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/lockout"
 	"gripello/internal/platform/mail"
 )
 
@@ -25,10 +26,6 @@ const (
 	methodTOTP     = "totp"
 	methodPasskey  = "passkey"
 	methodRecovery = "recovery"
-
-	lockoutMaxFailures = 10
-	lockoutWindow      = 15 * time.Minute
-	lockoutDuration    = 15 * time.Minute
 
 	sessionUserAgentMax = 300
 
@@ -43,7 +40,6 @@ const (
 var (
 	errFailedAuth      = httpx.NewError(http.StatusBadRequest, "Failed to authenticate.")
 	errInvalidMFA      = httpx.NewError(http.StatusBadRequest, "Invalid or expired MFA session.")
-	errAccountLocked   = httpx.NewError(http.StatusTooManyRequests, "Account temporarily locked. Try again later.")
 	errNotVerified     = httpx.NewError(http.StatusForbidden, "The account is not verified.")
 	errSuspended       = httpx.NewError(http.StatusForbidden, "This account is suspended.")
 	errCeremonyExpired = httpx.NewError(http.StatusBadRequest, "The passkey request expired.")
@@ -57,35 +53,8 @@ func lockoutKey(user *account, identity string) string {
 	return hex.EncodeToString(digest[:])
 }
 
-func isLockedOut(ctx context.Context, q querier, key string) bool {
-	var locked bool
-	q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM login_lockouts WHERE key = $1 AND locked_until > now())`, key).Scan(&locked)
-	return locked
-}
-
-// countLoginFailure is one upsert, so parallel guesses are all counted; the tenth locks the key.
-func countLoginFailure(ctx context.Context, q querier, key string) (bool, error) {
-	var failures int
-	err := q.QueryRow(ctx, `INSERT INTO login_lockouts (id, key, failures, window_start) VALUES ($1, $2, 1, now())
-		ON CONFLICT (key) DO UPDATE SET
-		  failures = CASE WHEN login_lockouts.window_start IS NULL OR login_lockouts.window_start < now() - $3::interval THEN 1 ELSE login_lockouts.failures + 1 END,
-		  window_start = CASE WHEN login_lockouts.window_start IS NULL OR login_lockouts.window_start < now() - $3::interval THEN now() ELSE login_lockouts.window_start END
-		RETURNING failures`, ids.New(), key, lockoutWindow.String()).Scan(&failures)
-	if err != nil || failures < lockoutMaxFailures {
-		return false, err
-	}
-	_, err = q.Exec(ctx, `UPDATE login_lockouts SET locked_until = now() + $2::interval, failures = 0, window_start = now() WHERE key = $1`,
-		key, lockoutDuration.String())
-	return err == nil, err
-}
-
-func clearLoginFailures(ctx context.Context, q querier, key string) error {
-	_, err := q.Exec(ctx, `DELETE FROM login_lockouts WHERE key = $1`, key)
-	return err
-}
-
 func (m *module) recordLoginFailure(ctx context.Context, r *http.Request, key string, user *account, label string) {
-	locked, err := countLoginFailure(ctx, m.db, key)
+	locked, err := lockout.CountFailure(ctx, m.db, key)
 	if err != nil {
 		slog.Error("authn: counting a failed login failed", "error", err)
 		return
@@ -172,7 +141,7 @@ func (m *module) signIn(w http.ResponseWriter, r *http.Request, user account, me
 		if sessionID, err = insertSession(ctx, tx, user.ID, method, r.UserAgent(), clientIP(r)); err != nil {
 			return err
 		}
-		if err := clearLoginFailures(ctx, tx, user.ID); err != nil {
+		if err := lockout.Clear(ctx, tx, user.ID); err != nil {
 			return err
 		}
 		return publishAuthEvent(ctx, tx, AuthEvent{Action: "login", User: user.ID, Label: user.label(), Method: method, IP: clientIP(r)})
@@ -233,8 +202,8 @@ func (m *module) mfaUser(ctx context.Context, mfaID string) (account, error) {
 	if err != nil {
 		return account{}, err
 	}
-	if isLockedOut(ctx, m.db, user.ID) {
-		return account{}, errAccountLocked
+	if lockout.IsLocked(ctx, m.db, user.ID) {
+		return account{}, lockout.ErrLocked
 	}
 	return user, checkAccess(user)
 }
@@ -275,11 +244,15 @@ func (m *module) parseMailToken(ctx context.Context, q querier, token, kind stri
 	return user, claims, err == nil && strings.EqualFold(claims.Email, user.Email)
 }
 
+// sendAuthMail runs off the request path, so answer times don't tell whether an address got a mail.
 func (m *module) sendAuthMail(ctx context.Context, user account, to string, content mail.Content) {
-	_, err := m.templates.Send(ctx, m.mail, m.templates.AppBrand(), content, []mail.Recipient{{Address: to, Language: user.Language}})
-	if err != nil {
-		slog.Error("authn: sending mail failed", "mail", content.Key, "user", user.ID, "error", err)
-	}
+	ctx = context.WithoutCancel(ctx)
+	go func() {
+		_, err := m.templates.Send(ctx, m.mail, m.templates.AppBrand(), content, []mail.Recipient{{Address: to, Language: user.Language}})
+		if err != nil {
+			slog.Error("authn: sending mail failed", "mail", content.Key, "user", user.ID, "error", err)
+		}
+	}()
 }
 
 // clientIP trusts X-Real-IP / X-Forwarded-For because nginx sets them in front of every replica.

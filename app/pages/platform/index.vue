@@ -2,17 +2,21 @@
     <div class="w-full p-4">
         <LayoutPageHeader :title="t('platform.overview.title')" class="mb-6">
             <template #actions>
-                <UButton
-                    :href="dashboardUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                <UBadge
+                    v-if="traffic"
                     color="neutral"
-                    variant="outline"
-                    icon="i-lucide-database"
-                    data-testid="platform-dashboard-link"
+                    variant="subtle"
+                    icon="i-lucide-server"
+                    data-testid="platform-overview-version"
                 >
-                    {{ t('platform.overview.dashboard') }}
-                </UButton>
+                    {{ traffic.system.version }}
+                </UBadge>
+                <SegmentedControl
+                    v-model="range"
+                    :items="rangeItems"
+                    size="sm"
+                    test-id="platform-traffic-range"
+                />
             </template>
         </LayoutPageHeader>
 
@@ -34,41 +38,44 @@
         </LayoutEmptyState>
 
         <template v-else>
-            <LayoutSectionHeader :title="t('platform.overview.needsYou')" />
             <div
-                class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4"
-                data-testid="platform-needs-you"
+                class="mb-3 grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6"
+                data-testid="platform-traffic-kpis"
             >
-                <NuxtLink
-                    v-for="tile in attentionTiles"
-                    :key="tile.key"
-                    :to="tile.to"
-                    class="flex rounded-2xl focus-visible:outline-2 focus-visible:outline-primary"
-                    :data-testid="`platform-attention-${tile.key}`"
-                >
-                    <AnalyticsStatsCard
-                        :title="tile.label"
-                        :value="tile.value"
-                        :icon="tile.icon"
-                        :color="tile.color"
-                        class="w-full"
-                    />
-                </NuxtLink>
-            </div>
-            <div class="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <AnalyticsStatsCard
-                    v-for="tile in tiles"
-                    :key="tile.key"
-                    :title="tile.label"
-                    :value="tile.value"
-                    :icon="tile.icon"
-                    :color="tile.color"
-                    :data-testid="`platform-stat-${tile.key}`"
+                    v-for="kpi in kpis"
+                    :key="kpi.key"
+                    :title="kpi.label"
+                    :value="kpi.value"
+                    :previous="kpi.previous"
+                    :icon="kpi.icon"
+                    :color="kpi.color"
+                    :format="kpi.format"
+                    :spark="kpi.spark"
+                    :loading="trafficPending && !traffic"
+                    :data-testid="`platform-kpi-${kpi.key}`"
                 />
             </div>
 
             <div class="grid grid-cols-12 gap-3">
-                <div class="col-span-12 flex lg:col-span-8">
+                <div class="col-span-12 flex flex-col gap-3 xl:col-span-8">
+                    <AnalyticsSection
+                        :title="t('platform.overview.traffic.title')"
+                        icon="i-lucide-activity"
+                        :loading="trafficPending && !traffic"
+                        :empty="!!trafficError"
+                        :empty-text="t('errors.loadFailed')"
+                        testid="platform-traffic"
+                    >
+                        <PlatformTrafficChart
+                            v-if="traffic"
+                            :series="traffic.series"
+                            :step-seconds="traffic.step_seconds"
+                        />
+                    </AnalyticsSection>
+                    <PlatformEndpointTable
+                        :endpoints="traffic?.endpoints ?? []"
+                    />
                     <AnalyticsSection
                         :title="t('platform.gyms.title')"
                         icon="i-lucide-building-2"
@@ -163,8 +170,218 @@
                         </ul>
                     </AnalyticsSection>
                 </div>
-
-                <div class="col-span-12 flex lg:col-span-4">
+                <div class="col-span-12 flex flex-col gap-3 xl:col-span-4">
+                    <AnalyticsSection
+                        :title="t('platform.overview.needsYou')"
+                        icon="i-lucide-bell-ring"
+                        color="error"
+                        flush
+                        testid="platform-needs-you"
+                    >
+                        <ul class="divide-y divide-default">
+                            <li v-for="tile in attentionTiles" :key="tile.key">
+                                <NuxtLink
+                                    :to="tile.to"
+                                    class="flex min-h-11 items-center gap-3 px-4 py-2 text-sm hover:bg-elevated/50 focus-visible:outline-2 focus-visible:outline-primary"
+                                    :data-testid="`platform-attention-${tile.key}`"
+                                >
+                                    <UIcon
+                                        :name="tile.icon"
+                                        class="size-4 shrink-0"
+                                        :class="
+                                            tile.value
+                                                ? ATTENTION_COLORS[tile.color]
+                                                : 'text-dimmed'
+                                        "
+                                    />
+                                    <span
+                                        class="flex-1"
+                                        :class="
+                                            tile.value
+                                                ? 'text-highlighted'
+                                                : 'text-muted'
+                                        "
+                                    >
+                                        {{ tile.label }}
+                                    </span>
+                                    <span
+                                        class="font-bold tabular-nums"
+                                        :class="
+                                            tile.value
+                                                ? 'text-highlighted'
+                                                : 'text-dimmed'
+                                        "
+                                    >
+                                        {{ tile.value }}
+                                    </span>
+                                </NuxtLink>
+                            </li>
+                        </ul>
+                    </AnalyticsSection>
+                    <AnalyticsSection
+                        :title="t('platform.overview.people.title')"
+                        icon="i-lucide-users-round"
+                        color="info"
+                        testid="platform-people"
+                    >
+                        <dl v-if="traffic" class="grid grid-cols-2 gap-4">
+                            <div
+                                v-for="item in peopleItems"
+                                :key="item.key"
+                                :data-testid="`platform-people-${item.key}`"
+                            >
+                                <dd
+                                    class="text-2xl font-bold tabular-nums text-highlighted"
+                                >
+                                    {{ item.value }}
+                                </dd>
+                                <dt class="text-xs text-muted">
+                                    {{ item.label }}
+                                </dt>
+                            </div>
+                        </dl>
+                        <div
+                            v-if="signInShares.length"
+                            class="mt-4 flex flex-col gap-2"
+                        >
+                            <div
+                                class="flex h-2.5 overflow-hidden rounded-full"
+                            >
+                                <span
+                                    v-for="(entry, index) in signInShares"
+                                    :key="entry.method"
+                                    :style="{
+                                        flex: entry.share,
+                                        opacity: 1 - index * 0.25,
+                                    }"
+                                    class="bg-primary"
+                                />
+                            </div>
+                            <div
+                                class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted"
+                            >
+                                <span
+                                    v-for="entry in signInShares"
+                                    :key="entry.method"
+                                >
+                                    {{ signInMethodLabel(entry.method) }}
+                                    {{ formatPercent(entry.share, locale) }}
+                                </span>
+                            </div>
+                        </div>
+                    </AnalyticsSection>
+                    <AnalyticsSection
+                        :title="t('platform.overview.platform')"
+                        icon="i-lucide-building-2"
+                        testid="platform-totals"
+                    >
+                        <dl class="grid grid-cols-2 gap-4">
+                            <div
+                                v-for="tile in tiles"
+                                :key="tile.key"
+                                :data-testid="`platform-stat-${tile.key}`"
+                            >
+                                <dd
+                                    class="text-2xl font-bold tabular-nums text-highlighted"
+                                    data-testid="stats-card-value"
+                                >
+                                    {{ tile.value }}
+                                </dd>
+                                <dt class="text-xs text-muted">
+                                    {{ tile.label }}
+                                </dt>
+                            </div>
+                        </dl>
+                    </AnalyticsSection>
+                    <AnalyticsSection
+                        :title="t('platform.overview.servers.title')"
+                        icon="i-lucide-server-cog"
+                        color="secondary"
+                        flush
+                        testid="platform-servers"
+                    >
+                        <ul
+                            v-if="traffic"
+                            class="divide-y divide-default text-sm"
+                        >
+                            <li
+                                v-for="server in traffic.system.replicas"
+                                :key="server.name"
+                                class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5"
+                                :data-testid="`platform-server-${server.name}`"
+                            >
+                                <span
+                                    class="size-2 shrink-0 rounded-full"
+                                    :class="
+                                        server.online
+                                            ? 'bg-success'
+                                            : 'bg-error'
+                                    "
+                                    role="img"
+                                    :aria-label="
+                                        server.online
+                                            ? t(
+                                                  'platform.overview.servers.online',
+                                              )
+                                            : t(
+                                                  'platform.overview.servers.offline',
+                                              )
+                                    "
+                                />
+                                <span
+                                    class="min-w-0 flex-1 truncate font-mono text-highlighted"
+                                >
+                                    {{ server.name }}
+                                </span>
+                                <UBadge
+                                    color="neutral"
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    {{ server.version }} · {{ server.role }}
+                                </UBadge>
+                                <span
+                                    class="w-full pl-5 text-xs text-muted"
+                                    :class="{ 'text-error': !server.online }"
+                                >
+                                    {{ serverDetails(server) }}
+                                </span>
+                            </li>
+                        </ul>
+                    </AnalyticsSection>
+                    <AnalyticsSection
+                        :title="t('platform.overview.system.title')"
+                        icon="i-lucide-server"
+                        color="secondary"
+                        flush
+                        testid="platform-system"
+                    >
+                        <dl
+                            v-if="traffic"
+                            class="divide-y divide-default text-sm"
+                        >
+                            <div
+                                v-for="item in systemItems"
+                                :key="item.key"
+                                class="flex items-center gap-3 px-4 py-2.5"
+                                :data-testid="`platform-system-${item.key}`"
+                            >
+                                <dt class="flex-1 text-muted">
+                                    {{ item.label }}
+                                </dt>
+                                <dd class="text-right" :class="item.tone">
+                                    <NuxtLink
+                                        v-if="item.to"
+                                        :to="item.to"
+                                        class="hover:underline"
+                                    >
+                                        {{ item.value }}
+                                    </NuxtLink>
+                                    <template v-else>{{ item.value }}</template>
+                                </dd>
+                            </div>
+                        </dl>
+                    </AnalyticsSection>
                     <AnalyticsSection
                         :title="t('platform.overview.admins')"
                         icon="i-lucide-shield-user"
@@ -204,18 +421,31 @@
 </template>
 
 <script setup lang="ts">
-import { listPlatformUsers } from '~/api/platform'
+import {
+    getPlatformTraffic,
+    listPlatformUsers,
+    type ServerReplica,
+    type TrafficRange,
+} from '~/api/platform'
+import { formatBytes } from '~/utils/backups'
+import {
+    errorRate,
+    formatCompact,
+    formatMs,
+    formatPercent,
+    formatUptime,
+    methodShares,
+} from '~/utils/platformTraffic'
+import { formatDate } from '#shared/utils/formatting'
 import { platformTotals, type PlatformGym } from '~/utils/platformGyms'
 import { userDisplayName } from '~/utils/platformUsers'
 import { parseDate } from '#shared/utils/formatting'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
-const { t } = useI18n()
+const { t, te, locale } = useI18n()
 
 useHead({ title: () => t('platform.overview.title') })
-
-const dashboardUrl = (import.meta.dev ? 'http://localhost:8090' : '') + '/_/'
 
 const [
     { data: gyms, error: gymsError, refresh: refreshGyms },
@@ -237,6 +467,204 @@ const [
 ])
 
 const error = computed(() => gymsError.value || adminsError.value)
+
+const range = ref<TrafficRange>('24h')
+const rangeItems = (['1h', '24h', '7d', '30d'] as const).map((value) => ({
+    value,
+    label: value,
+}))
+const {
+    data: traffic,
+    pending: trafficPending,
+    error: trafficError,
+    refresh: refreshTraffic,
+} = useAsyncData('platform-traffic', () => getPlatformTraffic(range.value), {
+    watch: [range],
+    server: false,
+})
+let trafficTimer: ReturnType<typeof setInterval> | undefined
+onMounted(() => {
+    trafficTimer = setInterval(() => refreshTraffic(), 60_000)
+})
+onBeforeUnmount(() => clearInterval(trafficTimer))
+
+const kpis = computed(() => {
+    const data = traffic.value
+    const series = data?.series ?? []
+    const compact = (value: number) => formatCompact(value, locale.value)
+    return [
+        {
+            key: 'requests',
+            label: t('platform.overview.traffic.requests'),
+            value: data?.totals.requests ?? null,
+            previous: data?.previous.requests ?? null,
+            icon: 'i-lucide-activity',
+            color: 'primary',
+            format: compact,
+            spark: series.map((point) => point.requests),
+        },
+        {
+            key: 'peak',
+            label: t('platform.overview.traffic.peakRps'),
+            value: data?.peak_rps ?? null,
+            previous: null,
+            icon: 'i-lucide-gauge',
+            color: 'secondary',
+            format: (value: number) =>
+                new Intl.NumberFormat(locale.value, {
+                    maximumFractionDigits: 1,
+                }).format(value),
+            spark: [],
+        },
+        {
+            key: 'errors',
+            label: t('platform.overview.traffic.serverErrorRate'),
+            value: data ? errorRate(data.totals) : null,
+            previous: null,
+            icon: 'i-lucide-triangle-alert',
+            color: 'error',
+            format: (value: number) => formatPercent(value, locale.value),
+            spark: series.map((point) =>
+                point.requests ? point.server_errors / point.requests : 0,
+            ),
+        },
+        {
+            key: 'p95',
+            label: t('platform.overview.traffic.p95'),
+            value: data?.totals.p95_ms ?? null,
+            previous: null,
+            icon: 'i-lucide-timer',
+            color: 'info',
+            format: (value: number) => formatMs(value, locale.value),
+            spark: [],
+        },
+        {
+            key: 'visitors',
+            label: t('platform.overview.traffic.visitors'),
+            value: data?.visitors_per_day ?? null,
+            previous: null,
+            icon: 'i-lucide-user-round',
+            color: 'success',
+            format: compact,
+            spark: [],
+        },
+        {
+            key: 'online',
+            label: t('platform.overview.people.online'),
+            value: data?.people.online ?? null,
+            previous: null,
+            icon: 'i-lucide-radio',
+            color: 'warning',
+            format: compact,
+            spark: [],
+        },
+    ]
+})
+
+const peopleItems = computed(() => {
+    const people = traffic.value?.people
+    if (!people) return []
+    return [
+        {
+            key: 'online',
+            label: t('platform.overview.people.online'),
+            value: people.online,
+        },
+        {
+            key: 'signed-in',
+            label: t('platform.overview.people.signedIn'),
+            value: people.signed_in,
+        },
+        {
+            key: 'new',
+            label: t('platform.overview.people.newAccounts'),
+            value: people.new_accounts,
+        },
+        {
+            key: 'failed',
+            label: t('platform.overview.people.failedLogins'),
+            value: people.failed_logins,
+        },
+    ]
+})
+
+const signInShares = computed(() =>
+    methodShares(traffic.value?.people.sign_in_methods ?? {}),
+)
+
+const PROVIDER_NAMES: Record<string, string> = {
+    google: 'Google',
+    apple: 'Apple',
+    microsoft: 'Microsoft',
+    oidc: 'OpenID Connect',
+}
+
+function signInMethodLabel(method: string) {
+    const [kind, provider] = method.split(':')
+    if (kind === 'oauth2') return PROVIDER_NAMES[provider ?? ''] ?? provider
+    const key = `platform.overview.people.methods.${kind}`
+    return te(key) ? t(key) : method
+}
+
+const systemItems = computed(() => {
+    const system = traffic.value?.system
+    if (!system) return []
+    return [
+        {
+            key: 'database',
+            label: t('platform.overview.system.database'),
+            value: `${formatBytes(system.database_bytes, locale.value)} · ${t('platform.overview.system.connections', system.database_connections)}`,
+        },
+        {
+            key: 'jobs',
+            label: t('platform.overview.system.jobs'),
+            value: t('platform.overview.system.jobsState', {
+                waiting: system.jobs_waiting,
+                running: system.jobs_running,
+            }),
+        },
+        {
+            key: 'backup',
+            label: t('platform.overview.system.lastBackup'),
+            value: system.backup_error
+                ? t('platform.backups.lastFailed')
+                : system.last_backup
+                  ? formatDate(system.last_backup, {
+                        locale: locale.value,
+                        withTime: true,
+                    })
+                  : '—',
+            tone: system.backup_error ? 'text-error' : undefined,
+            to: '/platform/backups',
+        },
+        {
+            key: 'mail',
+            label: t('platform.overview.system.mail'),
+            value: system.mail_configured
+                ? t('platform.overview.system.mailOn')
+                : t('platform.overview.system.mailOff'),
+            tone: system.mail_configured ? undefined : 'text-warning',
+            to: '/platform/settings?section=mail',
+        },
+    ]
+})
+
+function serverDetails(server: ServerReplica) {
+    if (!server.online)
+        return t('platform.overview.servers.lastSeen', {
+            time: formatDate(server.last_seen, {
+                locale: locale.value,
+                withTime: true,
+            }),
+        })
+    return [
+        t('platform.overview.servers.uptime', {
+            time: formatUptime(server.started, locale.value),
+        }),
+        t('platform.overview.servers.connections', server.realtime_clients),
+        formatBytes(server.memory_bytes, locale.value),
+    ].join(' · ')
+}
 
 function retry() {
     return Promise.all([refreshGyms(), refreshAdmins()])
@@ -277,6 +705,13 @@ const tiles = computed(() => {
 })
 
 const { summary } = useModerationSummary()
+
+const ATTENTION_COLORS: Record<string, string> = {
+    error: 'text-error',
+    warning: 'text-warning',
+    info: 'text-info',
+    secondary: 'text-secondary',
+}
 
 const STALE_CASE_MS = 3 * 86_400_000
 

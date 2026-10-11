@@ -186,6 +186,8 @@
 
                 <AccountTwoFactorSettings ref="twoFactor" />
 
+                <AccountLinkedAccounts />
+
                 <AccountSessionList />
 
                 <UPageCard
@@ -260,6 +262,7 @@
 
 <script setup lang="ts">
 import { required, validEmail, validateRules } from '~/utils/validation'
+import { needsPasswordFirst } from '~/utils/reauth'
 import { fileUrl, type ApiError } from '~/api/client'
 import type { Form } from '@nuxt/ui'
 import { SUPPORTED_LOCALES, isLocaleCode } from '~/utils/locales'
@@ -610,6 +613,8 @@ async function saveUser(section: Section) {
         const code = (err as ApiError)?.response?.data?.oldPassword?.code
         if (code === 'validation_invalid_old_password') {
             notifyError(t('account.wrongOldPassword'))
+        } else if (needsPasswordFirst(err)) {
+            notifyError(t('account.passwordRequired'))
         } else {
             notifyError(t('notifications.error.edit'))
         }
@@ -638,6 +643,8 @@ async function deleteAccount() {
         const code = (err as ApiError)?.response?.data?.password?.code
         if (code === 'validation_invalid_password') {
             notifyError(t('account.wrongOldPassword'))
+        } else if (needsPasswordFirst(err)) {
+            notifyError(t('account.passwordRequired'))
         } else {
             console.error('Error deleting account:', err)
             notifyError(t('notifications.error.delete'))

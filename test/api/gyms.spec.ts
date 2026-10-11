@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
     createGym,
     deleteGym,
+    freeRetiredSlug,
     getGym,
     getGymById,
     getSettings,
     listGyms,
     listPermissions,
+    listRetiredSlugs,
     updateGym,
     updateSettings,
 } from '~/api/gyms'
@@ -52,6 +54,18 @@ describe('gyms', () => {
         api.respond({ items: [] })
         await listGyms({ all: true })
         expect(api.request().url).toBe('/api/gyms?all=1')
+    })
+
+    it('lists and frees retired slugs', async () => {
+        api.respond({ items: [{ id: 's1', slug: 'old' }] })
+        expect(await listRetiredSlugs()).toEqual([{ id: 's1', slug: 'old' }])
+        expect(api.request().url).toBe('/api/platform/retired-slugs')
+        api.respond(null, 204)
+        await freeRetiredSlug('s1')
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/retired-slugs/s1',
+            method: 'DELETE',
+        })
     })
 
     it('creates, patches and deletes gyms as JSON', async () => {

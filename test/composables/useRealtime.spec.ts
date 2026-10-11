@@ -117,7 +117,9 @@ describe('subscribeRealtime', () => {
         track(onConnect(connected))
         track(subscribeRealtime('own_ticks', vi.fn()))
         await connect('c1')
-        await vi.waitFor(() => expect(connected).toHaveBeenLastCalledWith(false))
+        await vi.waitFor(() =>
+            expect(connected).toHaveBeenLastCalledWith(false),
+        )
 
         useAuthState().saveAuth({ token, record: { id: 'u1' } as never })
         await connect('c2')

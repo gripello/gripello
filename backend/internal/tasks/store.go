@@ -125,6 +125,19 @@ func findTask(ctx context.Context, q querier, id string) (Task, error) {
 	return items[0], nil
 }
 
+func lockTask(ctx context.Context, q querier, id string) (Task, error) {
+	where := &conditions{}
+	where.add("id = ?", id)
+	items, err := queryTasks(ctx, q, where, " FOR UPDATE")
+	if err != nil {
+		return Task{}, err
+	}
+	if len(items) == 0 {
+		return Task{}, httpx.ErrNotFound
+	}
+	return items[0], nil
+}
+
 func insertTask(ctx context.Context, q querier, t Task) error {
 	_, err := q.Exec(ctx, `INSERT INTO tasks (id, gym, kind, title, category, priority, status, route, wall, location, description,
 		photo, reporter, assignee, due_date, resolution_note, done_at, done_by, route_type, grade)

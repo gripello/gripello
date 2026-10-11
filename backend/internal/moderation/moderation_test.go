@@ -193,7 +193,7 @@ func TestModerationQueuesAndHidesReviews(t *testing.T) {
 	f.call("setterA", "GET", url, "", http.StatusOK)
 	f.call("setterA", "POST", url, action("approve"), http.StatusOK, `"state":"approved"`)
 
-	f.exec(`UPDATE ratings SET comment = 'buy more pills' WHERE id = $1 RETURNING id`, rating)
+	f.exec(`UPDATE ratings SET comment = 'buy more pills', created = '2020-01-02T00:00:00Z' WHERE id = $1 RETURNING id`, rating)
 	f.gymChange("rating.updated", rating)
 	testapp.WaitFor(t, func() bool { it, _ := f.find("rating", rating); return it.State == "unreviewed" })
 
@@ -215,6 +215,9 @@ func TestModerationQueuesAndHidesReviews(t *testing.T) {
 	if err := f.app.DB.QueryRow(context.Background(), `SELECT comment, "user" FROM ratings WHERE id = $1`, rating).Scan(&comment, &author); err != nil ||
 		comment != "buy more pills" || author != f.users["climber"] {
 		t.Fatalf("restored review = %q by %q (%v)", comment, author, err)
+	}
+	if f.count(`SELECT count(*) FROM ratings WHERE id = $1 AND created = '2020-01-02T00:00:00Z'`, rating) != 1 {
+		t.Error("restoring a review reset its creation date")
 	}
 
 	f.call("operator", "POST", url, action("hide"), http.StatusOK, `"hidden_by":"platform"`)
@@ -759,5 +762,89 @@ func TestContactAddressGetsNoNotifierIdentity(t *testing.T) {
 		if slices.Contains(m.To, "adminA@example.com") && !strings.Contains(m.Text, "n@example.com") {
 			t.Error("report handler lost the notifier's e-mail")
 		}
+	}
+}
+
+func (f *fixture) events(topic, kind string) int {
+	return f.count(`SELECT count(*) FROM events WHERE topic = $1 AND kind = $2`, topic, kind)
+}
+
+func TestHidingAndRestoringTellTheOwningModules(t *testing.T) {
+	f := newFixture(t)
+	entry := f.entry()
+	competition := f.exec(`SELECT competition FROM competition_entries WHERE id = $1`, entry)
+	task := f.exec(`INSERT INTO tasks (id, gym, kind, priority, status, route, description, reporter)
+		VALUES ($1, $2, 'defect', 2, 'open', $3, 'insult', $4) RETURNING id`, ids.New(), f.gymA, f.route, f.users["climber"])
+	f.editProfile("climber", "Rude")
+	profile := f.item("profile", f.users["climber"]).ID
+	entryCase := f.call("operator", "POST", "/moderation/cases", `{"content_type":"competition_entry","content_id":"`+entry+`"}`, http.StatusOK)["id"].(string)
+	taskCase := f.call("operator", "POST", "/moderation/cases", `{"content_type":"task","content_id":"`+task+`"}`, http.StatusOK)["id"].(string)
+
+	for _, id := range []string{entryCase, taskCase, profile} {
+		f.call("operator", "POST", "/moderation/"+id, action("hide"), http.StatusOK)
+	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = $1 AND kind = 'competition.changed' AND payload->>'entry' = $2
+		AND payload->>'kind' = 'entries' AND audience->'users' ? $3`, "competition_changes:"+competition, entry, f.users["climber"]); n != 1 {
+		t.Errorf("hiding an entry sent %d owner competition changes", n)
+	}
+	if f.events("competition_changes:"+competition, "competition.changed") != 3 {
+		t.Error("hiding an entry did not reach guests and other climbers")
+	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = $1 AND kind = 'task.updated' AND payload->'record'->>'description' = ''
+		AND audience->>'gym_perm' = $2`, "tasks:"+f.gymA, f.gymA+":manage_tasks"); n != 1 {
+		t.Errorf("hiding a task sent %d task.updated events", n)
+	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = $1 AND kind = 'user.updated' AND payload->'changed' ? 'firstname'
+		AND payload->'record'->>'firstname' = '' AND NOT payload->'record' ? 'token_key'`, "user:"+f.users["climber"]); n != 1 {
+		t.Errorf("hiding a profile sent %d user.updated events", n)
+	}
+
+	for _, id := range []string{entryCase, taskCase, profile} {
+		f.call("operator", "POST", "/moderation/"+id, action("restore"), http.StatusOK)
+	}
+	if f.events("competition_changes:"+competition, "competition.changed") != 6 {
+		t.Error("restoring an entry sent no competition change")
+	}
+	if f.count(`SELECT count(*) FROM events WHERE topic = $1 AND kind = 'task.updated' AND payload->'record'->>'description' = 'insult'`, "tasks:"+f.gymA) != 1 {
+		t.Error("restoring a task sent no task.updated event")
+	}
+	restored := f.exec(`SELECT id FROM events WHERE topic = $1 AND kind = 'user.updated' AND payload->'record'->>'firstname' = 'Rude'
+		ORDER BY id DESC LIMIT 1`, "user:"+f.users["climber"])
+	testapp.WaitFor(t, func() bool {
+		return f.count(`SELECT count(*) FROM event_claims WHERE event_id = $1::bigint AND handler = 'moderation.user'`, restored) == 1
+	})
+	for _, kind := range []string{"competition_entry", "task", "profile"} {
+		var id string
+		switch kind {
+		case "competition_entry":
+			id = entry
+		case "task":
+			id = task
+		default:
+			id = f.users["climber"]
+		}
+		if state := f.item(kind, id).State; state != "approved" {
+			t.Errorf("%s case after restore = %s", kind, state)
+		}
+	}
+}
+
+func TestDeletedContentDropsHiddenFieldCases(t *testing.T) {
+	f := newFixture(t)
+	entry := f.entry()
+	f.hiddenCase("competition_entry", entry)
+	rating := f.rating("climber", "spam")
+	f.call("operator", "POST", "/moderation/"+f.item("rating", rating).ID, action("hide"), http.StatusOK)
+
+	f.exec(`DELETE FROM competition_entries WHERE id = $1 RETURNING id`, entry)
+	f.publish("entry.deleted", "entry.deleted", map[string]string{"id": entry}, events.Audience{})
+	f.gymChange("rating.deleted", rating)
+	testapp.WaitFor(t, func() bool { _, ok := f.find("competition_entry", entry); return !ok })
+	testapp.WaitFor(t, func() bool {
+		return f.count(`SELECT count(*) FROM event_claims c JOIN events e ON e.id = c.event_id
+			WHERE e.kind = 'rating.deleted' AND e.payload->'record'->>'id' = $1 AND c.handler = 'moderation.gym_changes'`, rating) == 2
+	})
+	if it, ok := f.find("rating", rating); !ok || it.State != "hidden" {
+		t.Error("a hidden review lost its quarantine")
 	}
 }

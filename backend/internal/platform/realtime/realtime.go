@@ -23,6 +23,8 @@ const (
 	absoluteTimeout = 30 * time.Minute
 	replayLimit     = 500
 	permCacheTTL    = 5 * time.Second
+	// Server-only (empty audience): a subscription change on its way to the replica holding the stream.
+	subscriptionTopic = "realtime.subscriptions"
 )
 
 // Permissions answers audience questions the hub can't decide from the principal alone.
@@ -42,12 +44,14 @@ type client struct {
 
 // Hub holds this replica's SSE clients; cross-replica delivery comes through the events bus.
 type Hub struct {
-	bus     *events.Bus
-	perms   Permissions
-	mu      sync.RWMutex
-	clients map[string]*client
-	cacheMu sync.Mutex
-	cache   map[string]cachedAnswer
+	bus       *events.Bus
+	perms     Permissions
+	mu        sync.RWMutex
+	clients   map[string]*client
+	cacheMu   sync.Mutex
+	cache     map[string]cachedAnswer
+	closing   chan struct{}
+	closeOnce sync.Once
 }
 
 type cachedAnswer struct {
@@ -56,10 +60,14 @@ type cachedAnswer struct {
 }
 
 func NewHub(bus *events.Bus, perms Permissions) *Hub {
-	h := &Hub{bus: bus, perms: perms, clients: map[string]*client{}}
+	h := &Hub{bus: bus, perms: perms, clients: map[string]*client{}, closing: make(chan struct{})}
 	bus.Subscribe("", h.deliver)
-	bus.Subscribe("session.revoked", h.dropSession)
 	return h
+}
+
+// Close ends every open stream, so a graceful server shutdown doesn't wait for them; clients reconnect to another replica.
+func (h *Hub) Close() {
+	h.closeOnce.Do(func() { close(h.closing) })
 }
 
 func (h *Hub) Clients() int {
@@ -97,6 +105,16 @@ func (h *Hub) cached(key string, ask func() bool) bool {
 }
 
 func (h *Hub) deliver(e events.Event) {
+	switch {
+	case e.Topic == subscriptionTopic:
+		h.applySubscription(e)
+		return
+	case e.Topic == "session.revoked":
+		h.dropSession(e)
+		return
+	case e.Kind == "user.updated":
+		h.refreshPlatformAdmin(e)
+	}
 	if invalidatesPermissions(e.Topic) {
 		h.cacheMu.Lock()
 		h.cache = nil
@@ -130,6 +148,30 @@ func (h *Hub) dropSession(e events.Event) {
 		c.mu.Lock()
 		if c.principal != nil && c.principal.SessionID == payload.Session {
 			c.principal = nil
+		}
+		c.mu.Unlock()
+	}
+}
+
+func (h *Hub) refreshPlatformAdmin(e events.Event) {
+	var payload struct {
+		Record struct {
+			PlatformAdmin bool `json:"platform_admin"`
+		} `json:"record"`
+		Changed []string `json:"changed"`
+	}
+	if json.Unmarshal(e.Payload, &payload) != nil || !slices.Contains(payload.Changed, "platform_admin") {
+		return
+	}
+	userID := strings.TrimPrefix(e.Topic, "user:")
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for _, c := range h.clients {
+		c.mu.Lock()
+		if c.principal != nil && c.principal.UserID == userID {
+			refreshed := *c.principal
+			refreshed.PlatformAdmin = payload.Record.PlatformAdmin
+			c.principal = &refreshed
 		}
 		c.mu.Unlock()
 	}
@@ -179,6 +221,9 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 	if p, ok := auth.From(r.Context()); ok {
 		c.principal = &p
 	}
+	if last, err := strconv.ParseInt(r.Header.Get("Last-Event-ID"), 10, 64); err == nil && last > 0 {
+		c.replayFrom = last
+	}
 	h.mu.Lock()
 	h.clients[c.id] = c
 	h.mu.Unlock()
@@ -193,9 +238,6 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("X-Accel-Buffering", "no")
 	fmt.Fprintf(w, "event:connect\ndata:%s\n\n", mustJSON(map[string]string{"clientId": c.id}))
 	flusher.Flush()
-	if last, err := strconv.ParseInt(r.Header.Get("Last-Event-ID"), 10, 64); err == nil && last > 0 {
-		c.replayFrom = last
-	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), absoluteTimeout)
 	defer cancel()
@@ -204,6 +246,8 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 	for {
 		select {
 		case <-ctx.Done():
+			return nil
+		case <-h.closing:
 			return nil
 		case <-ping.C:
 			fmt.Fprint(w, ":ping\n\n")
@@ -222,6 +266,7 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 }
 
 // Subscriptions is PUT /realtime/{clientId}/subscriptions {"topics": [...]}; the auth of this request becomes the stream's principal.
+// The stream may live on another replica, so the change travels over the bus; the deliver loop applies it in event order.
 func (h *Hub) Subscriptions(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		Topics []string `json:"topics"`
@@ -229,34 +274,56 @@ func (h *Hub) Subscriptions(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
 	}
-	h.mu.RLock()
-	c := h.clients[r.PathValue("clientId")]
-	h.mu.RUnlock()
-	if c == nil {
-		return httpx.NewError(http.StatusNotFound, "Unknown client.")
-	}
-	c.mu.Lock()
-	c.topics = body.Topics
-	c.principal = nil
+	change := subscriptionChange{Client: r.PathValue("clientId"), Topics: body.Topics}
 	if p, ok := auth.From(r.Context()); ok {
-		c.principal = &p
+		change.Principal = &p
 	}
-	replayFrom, principal := c.replayFrom, c.principal
-	c.replayFrom = 0
-	c.mu.Unlock()
-	if replayFrom > 0 {
-		missed, _ := h.bus.Since(r.Context(), replayFrom, replayLimit)
-		for _, e := range missed {
-			if slices.Contains(body.Topics, e.Topic) && h.accepts(e.Audience, principal) {
-				select {
-				case c.send <- e:
-				default:
-				}
-			}
-		}
+	if err := h.bus.PublishNow(r.Context(), subscriptionTopic, "subscriptions.set", change); err != nil {
+		return err
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+type subscriptionChange struct {
+	Client    string          `json:"client"`
+	Topics    []string        `json:"topics"`
+	Principal *auth.Principal `json:"principal,omitempty"`
+}
+
+func (h *Hub) applySubscription(e events.Event) {
+	var change subscriptionChange
+	if json.Unmarshal(e.Payload, &change) != nil {
+		return
+	}
+	h.mu.RLock()
+	c := h.clients[change.Client]
+	h.mu.RUnlock()
+	if c == nil {
+		return
+	}
+	c.mu.Lock()
+	c.topics = change.Topics
+	c.principal = change.Principal
+	replayFrom := c.replayFrom
+	c.replayFrom = 0
+	c.mu.Unlock()
+	if replayFrom == 0 {
+		return
+	}
+	missed, _ := h.bus.Since(context.Background(), replayFrom, replayLimit)
+	for _, missedEvent := range missed {
+		// Events after this one still pass through deliver; replaying them too would send them twice.
+		if missedEvent.ID >= e.ID {
+			break
+		}
+		if slices.Contains(change.Topics, missedEvent.Topic) && h.accepts(missedEvent.Audience, change.Principal) {
+			select {
+			case c.send <- missedEvent:
+			default:
+			}
+		}
+	}
 }
 
 func mustJSON(v any) []byte {

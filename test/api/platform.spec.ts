@@ -1,15 +1,27 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+    clearUserLockout,
     deletePlatformUser,
+    getMailSettings,
     getPlatformStats,
+    getPlatformTraffic,
     getPlatformUser,
     grantPlatformAdmin,
     liftSuspension,
     listFeatureFlags,
+    listOAuthProviderSettings,
     listPlatformUsers,
+    listServerLogs,
+    resetUserMfa,
     revokePlatformAdmin,
+    revokeUserSessions,
+    saveOAuthProviderSettings,
+    sendTestMail,
     setGymFeatures,
+    setLogLevel,
+    setUserPassword,
     suspendUser,
+    updateMailSettings,
     updatePlatformUser,
 } from '~/api/platform'
 import { mockApi } from './apiMock'
@@ -125,6 +137,91 @@ describe('platform users', () => {
 })
 
 describe('platform stats and features', () => {
+    it('runs the security actions on a user', async () => {
+        await resetUserMfa('u1')
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/users/u1/mfa',
+            method: 'DELETE',
+        })
+        await revokeUserSessions('u1')
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/users/u1/sessions',
+            method: 'DELETE',
+        })
+        await clearUserLockout('u1')
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/users/u1/lockout',
+            method: 'DELETE',
+        })
+        await setUserPassword('u1', 'new-pass-123', 'new-pass-123')
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/users/u1/password',
+            method: 'POST',
+            body: { password: 'new-pass-123', passwordConfirm: 'new-pass-123' },
+        })
+    })
+
+    it('reads, saves and tests the mail settings', async () => {
+        api.respond({ source: 'none' })
+        expect(await getMailSettings()).toEqual({ source: 'none' })
+        expect(api.request().url).toBe('/api/platform/mail')
+        api.respond({ source: 'database' })
+        await updateMailSettings({
+            smtp_host: 'smtp.example.com',
+            smtp_port: 587,
+            smtp_username: '',
+            smtp_tls: false,
+            sender_address: 'a@example.com',
+            sender_name: '',
+        })
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/mail',
+            method: 'PUT',
+            body: { smtp_host: 'smtp.example.com' },
+        })
+        await sendTestMail()
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/mail/test',
+            method: 'POST',
+        })
+    })
+
+    it('reads server logs by level and changes the runtime level', async () => {
+        api.respond({ replica: 'a', level: 'INFO', items: [] })
+        await listServerLogs('warn')
+        expect(api.request().url).toBe('/api/platform/logs?level=warn')
+        api.respond({ level: 'debug' })
+        await setLogLevel('debug')
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/logs/level',
+            method: 'PUT',
+            body: { level: 'debug' },
+        })
+    })
+
+    it('reads and saves sign-in providers', async () => {
+        api.respond({ items: [{ provider: 'google' }] })
+        expect(await listOAuthProviderSettings()).toEqual([
+            { provider: 'google' },
+        ])
+        expect(api.request().url).toBe('/api/platform/oauth2')
+        api.respond({ items: [] })
+        await saveOAuthProviderSettings('google', {
+            enabled: true,
+            client_id: 'id',
+            display_name: '',
+            issuer_url: '',
+            tenant: '',
+            team_id: '',
+            key_id: '',
+        })
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/oauth2/google',
+            method: 'PUT',
+            body: { client_id: 'id' },
+        })
+    })
+
     it('reads the per-gym stats', async () => {
         const stats = {
             gyms: [{ id: 'g1', members: 2, routes: 3 }],
@@ -139,6 +236,12 @@ describe('platform stats and features', () => {
         api.respond(stats)
         expect(await getPlatformStats()).toEqual(stats)
         expect(api.request().url).toBe('/api/platform/stats')
+    })
+
+    it('loads traffic for a range', async () => {
+        api.respond({ range: '7d' })
+        expect(await getPlatformTraffic('7d')).toEqual({ range: '7d' })
+        expect(api.request().url).toBe('/api/platform/traffic?range=7d')
     })
 
     it('lists the flag registry', async () => {

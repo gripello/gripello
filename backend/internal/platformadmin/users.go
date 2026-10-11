@@ -49,7 +49,10 @@ var (
 )
 
 const userJSON = `to_jsonb(u) - 'password_hash' - 'token_key' || jsonb_build_object('memberships', COALESCE(
-	(SELECT jsonb_agg(jsonb_build_object('id', m.id, 'gym', m.gym, 'role', m.role) ORDER BY m.created) FROM memberships m WHERE m."user" = u.id), '[]'))`
+	(SELECT jsonb_agg(jsonb_build_object('id', m.id, 'gym', m.gym, 'role', m.role) ORDER BY m.created) FROM memberships m WHERE m."user" = u.id), '[]'),
+	'mfa_enabled', EXISTS (SELECT 1 FROM mfa_factors f WHERE f."user" = u.id),
+	'session_count', (SELECT count(*) FROM sessions s WHERE s."user" = u.id),
+	'locked_until', (SELECT l.locked_until FROM login_lockouts l WHERE l.key = u.id AND l.locked_until > now()))`
 
 type target struct {
 	ID            string
@@ -131,10 +134,16 @@ func (m *module) getUser(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// changeUser runs mutate in a transaction and sends user.updated (same payload as the account module, plus the actor).
-func (m *module) changeUser(ctx context.Context, userID string, mutate func(tx pgx.Tx) error, record *json.RawMessage) error {
+// changeUser runs mutate on a locked user row and publishes the change; lockFirst runs before that lock,
+// so callers that lock several users can take them in one fixed order.
+func (m *module) changeUser(ctx context.Context, userID string, mutate func(tx pgx.Tx) error, record *json.RawMessage, lockFirst ...func(tx pgx.Tx) error) error {
 	p, _ := auth.From(ctx)
 	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		for _, lock := range lockFirst {
+			if err := lock(tx); err != nil {
+				return err
+			}
+		}
 		var before map[string]json.RawMessage
 		if err := tx.QueryRow(ctx, `SELECT to_jsonb(u) - 'password_hash' - 'token_key' FROM users u WHERE id = $1 FOR UPDATE`, userID).Scan(&before); err != nil {
 			return notFoundIfNoRows(err)
@@ -158,7 +167,7 @@ func (m *module) changeUser(ctx context.Context, userID string, mutate func(tx p
 			return nil
 		}
 		slices.Sort(changed)
-		payload := map[string]any{"record": own, "changed": changed, "actor": p.UserID}
+		payload := map[string]any{"record": own, "changed": changed}
 		return events.PublishAs(ctx, tx, p.UserID, "user:"+userID, "user.updated", payload, events.Audience{Users: []string{userID}})
 	})
 }
@@ -180,6 +189,11 @@ func (m *module) updateUser(w http.ResponseWriter, r *http.Request) error {
 	changes, err := m.validate(r.Context(), t.ID, body)
 	if err != nil {
 		return err
+	}
+	if email, ok := changes["email"]; ok && email != t.Email {
+		if err := m.requireRecentReauth(r); err != nil {
+			return err
+		}
 	}
 	var uploaded []string
 	for field, header := range files {
@@ -378,26 +392,38 @@ func (m *module) deleteKey(ctx context.Context, key string) {
 	}
 }
 
+func (m *module) requireRecentReauth(r *http.Request) error {
+	p, _ := auth.From(r.Context())
+	return auth.RequireRecentReauth(r.Context(), m.app.DB, p)
+}
+
 func (m *module) deleteUser(w http.ResponseWriter, r *http.Request) error {
-	t, err := m.loadTarget(r, true)
+	t, err := m.loadTarget(r, false)
 	if err != nil {
+		return err
+	}
+	if err := m.requireRecentReauth(r); err != nil {
 		return err
 	}
 	ctx := r.Context()
-	var soleAdmin bool
-	err = m.app.DB.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM memberships m JOIN roles r ON r.id = m.role
-		WHERE m."user" = $1 AND r.name = 'admin'
-		AND NOT EXISTS (SELECT 1 FROM memberships o JOIN roles orole ON orole.id = o.role
-		                WHERE o.gym = m.gym AND o."user" <> m."user" AND orole.name = 'admin'))`, t.ID).Scan(&soleAdmin)
-	if err != nil {
-		return err
-	}
-	if soleAdmin {
-		return httpx.NewError(http.StatusBadRequest, "A gym needs at least one admin.")
-	}
 	p, _ := auth.From(ctx)
 	var keys []string
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		// Locked like membership changes lock them, so two deletes can't each leave the other as the last admin.
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM gyms WHERE id IN (SELECT gym FROM memberships WHERE "user" = $1) ORDER BY id FOR UPDATE`, t.ID); err != nil {
+			return err
+		}
+		var soleAdmin bool
+		err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM memberships m JOIN roles r ON r.id = m.role
+			WHERE m."user" = $1 AND r.name = 'admin'
+			AND NOT EXISTS (SELECT 1 FROM memberships o JOIN roles orole ON orole.id = o.role
+			                WHERE o.gym = m.gym AND o."user" <> m."user" AND orole.name = 'admin'))`, t.ID).Scan(&soleAdmin)
+		if err != nil {
+			return err
+		}
+		if soleAdmin {
+			return httpx.NewError(http.StatusBadRequest, "A gym needs at least one admin.")
+		}
 		rows, err := tx.Query(ctx, `SELECT 'beta_videos/' || id FROM beta_videos WHERE "user" = $1 AND file <> ''
 			UNION ALL SELECT 'moderation_items/' || id FROM moderation_items WHERE author = $1 AND cardinality(files) > 0`, t.ID)
 		if err != nil {
@@ -412,7 +438,7 @@ func (m *module) deleteUser(w http.ResponseWriter, r *http.Request) error {
 		if _, err := tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, t.ID); err != nil {
 			return err
 		}
-		return events.PublishAs(ctx, tx, p.UserID, "user:"+t.ID, "user.deleted", map[string]string{"id": t.ID, "actor": p.UserID}, events.Audience{Users: []string{t.ID}})
+		return events.PublishAs(ctx, tx, p.UserID, "user:"+t.ID, "user.deleted", map[string]string{"id": t.ID}, events.Audience{Users: []string{t.ID}})
 	})
 	if err != nil {
 		return err
@@ -446,6 +472,9 @@ func revokeSessions(ctx context.Context, tx pgx.Tx, actor, userID string) error 
 func (m *module) suspend(w http.ResponseWriter, r *http.Request) error {
 	t, err := m.loadTarget(r, false)
 	if err != nil {
+		return err
+	}
+	if err := m.requireRecentReauth(r); err != nil {
 		return err
 	}
 	var body struct {

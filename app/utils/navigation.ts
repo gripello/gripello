@@ -98,6 +98,24 @@ export const PLATFORM_LINKS: NavLink[] = [
         permission: PLATFORM_ADMIN,
     },
     {
+        to: '/platform/audit',
+        icon: 'i-lucide-clipboard-clock',
+        label: 'audit.title',
+        permission: PLATFORM_ADMIN,
+    },
+    {
+        to: '/platform/backups',
+        icon: 'i-lucide-archive',
+        label: 'platform.backups.title',
+        permission: PLATFORM_ADMIN,
+    },
+    {
+        to: '/platform/logs',
+        icon: 'i-lucide-scroll-text',
+        label: 'platform.logs.title',
+        permission: PLATFORM_ADMIN,
+    },
+    {
         to: '/platform/settings',
         icon: 'i-lucide-sliders-horizontal',
         label: 'platform.settings.title',

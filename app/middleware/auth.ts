@@ -36,7 +36,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
         })
     }
 
-    if (to.meta.platformAdmin) {
+    if (
+        to.meta.platformAdmin ||
+        to.path === '/platform' ||
+        to.path.startsWith('/platform/')
+    ) {
         const { isPlatformAdmin, ensureLoaded } = usePermissions()
         await ensureLoaded()
         if (!isPlatformAdmin.value) return navigateTo('/')

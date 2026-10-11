@@ -28,8 +28,9 @@ const (
 var (
 	authActions        = []string{"login", "login_failed", "password_reset_request", "password_reset", "email_change_request", "email_change"}
 	skippedCollections = []string{"audit_logs", "mfa_factors", "mfa_recovery_codes", "login_lockouts", "cap_nonces", "sessions"}
-	kindCollections    = map[string]string{"gym": "gyms", "membership": "memberships", "role": "roles", "invite": "invites", "user": "users", "tick": "ticks", "task": "tasks"}
-	recordActions      = map[string]string{"create": "create", "created": "create", "update": "update", "updated": "update", "accepted": "update", "delete": "delete", "deleted": "delete"}
+	kindCollections    = map[string]string{"gym": "gyms", "membership": "memberships", "role": "roles", "invite": "invites", "user": "users", "tick": "ticks", "task": "tasks",
+		"platform_config": "platform_config", "oauth2_provider": "oauth2_providers", "retired_slug": "retired_slugs", "backup": "backups"}
+	recordActions = map[string]string{"create": "create", "created": "create", "update": "update", "updated": "update", "accepted": "update", "delete": "delete", "deleted": "delete"}
 )
 
 type module struct {
@@ -43,7 +44,7 @@ func Register(app *platform.App) {
 	app.Handle("GET /platform/audit", httpx.Handler(m.listPlatform))
 	app.Handle("GET /me/audit", httpx.Handler(m.listOwn))
 	if app.Bus != nil {
-		for _, prefix := range []string{"audit", "gym_changes:", "gym:", "tasks", "user:", "own_ticks"} {
+		for _, prefix := range []string{"audit", "gym_changes:", "gym:", "tasks", "user:", "own_ticks", "platform"} {
 			app.Bus.SubscribeOnce(prefix, "audit.write", m.onEvent)
 		}
 	}
@@ -117,6 +118,7 @@ func entryFor(e events.Event) (entry, bool) {
 		if p.Record != nil && en.Actor == "" {
 			en.Actor = p.Record.User
 		}
+	case "platform":
 	default:
 		return entry{}, false
 	}

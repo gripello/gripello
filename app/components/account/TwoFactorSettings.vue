@@ -334,6 +334,7 @@
 import { formatDate } from '#shared/utils/formatting'
 import { OTP_LENGTH, otpCode, otpDigits } from '~/utils/otp'
 import { deviceLabel } from '~/utils/push'
+import { needsPasswordFirst } from '~/utils/reauth'
 import {
     createPasskey,
     isPasskeyCancel,
@@ -532,6 +533,7 @@ function askPassword(action: PendingAction) {
 function passwordError(err: unknown) {
     const status = (err as { status?: number })?.status
     if (status === 429) return t('notifications.error.account_locked')
+    if (needsPasswordFirst(err)) return t('account.passwordRequired')
     return status === 400
         ? t('account.wrongOldPassword')
         : t('notifications.error.generic')

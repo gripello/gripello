@@ -73,15 +73,18 @@ ENV NODE_ENV=production NITRO_PRESET=node-cluster APP_VERSION=${APP_VERSION}
 RUN yarn build
 
 FROM node:26.10.0-trixie-slim@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1
+# pg_dump/pg_restore must match the PostgreSQL 18 server; trixie ships 17, so the client comes from PGDG.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends nginx openssl ca-certificates libcap2-bin libvips-tools \
+ && apt-get install -y --no-install-recommends nginx openssl ca-certificates libcap2-bin libvips-tools postgresql-common \
+ && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+ && apt-get install -y --no-install-recommends postgresql-client-18 \
  && setcap cap_net_bind_service=+ep /usr/sbin/nginx \
  && rm -rf /var/lib/apt/lists/* /var/log/nginx /etc/nginx/sites-* /etc/nginx/conf.d \
     /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx \
     /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-* \
- && mkdir -p /data/storage /etc/nginx/ssl \
+ && mkdir -p /data/storage /data/backups /etc/nginx/ssl \
  && touch /etc/nginx/real-ip.conf /etc/nginx/rate-limit.conf \
- && chown node:node /data /data/storage /etc/nginx/ssl /etc/nginx/real-ip.conf /etc/nginx/rate-limit.conf
+ && chown node:node /data /data/storage /data/backups /etc/nginx/ssl /etc/nginx/real-ip.conf /etc/nginx/rate-limit.conf
 
 COPY .docker/nginx.conf /etc/nginx/nginx.conf
 COPY --chmod=755 .docker/docker-entrypoint.sh /app/entrypoint.sh
@@ -96,7 +99,7 @@ LABEL org.opencontainers.image.licenses="BUSL-1.1" \
 
 ARG APP_VERSION
 ENV NODE_ENV=production APP_VERSION=${APP_VERSION} LOCALES_DIR=/app/locales \
-    BLOB_DIR=/data/storage BLOB_ACCEL_PREFIX=/_blob/ VIPS_BLOCK_UNTRUSTED=1 PATH=/app/bin:$PATH
+    BLOB_DIR=/data/storage BACKUP_DIR=/data/backups BLOB_ACCEL_PREFIX=/_blob/ VIPS_BLOCK_UNTRUSTED=1 PATH=/app/bin:$PATH
 WORKDIR /app
 USER node
 

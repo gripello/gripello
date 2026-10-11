@@ -1,6 +1,6 @@
 <template>
     <LayoutEmptyState
-        v-if="push.loadError.value"
+        v-if="push.loadError.value || prefsLoadFailed"
         variant="error"
         :title="t('errors.loadFailed')"
         data-testid="load-error"
@@ -11,7 +11,7 @@
                 variant="soft"
                 icon="i-lucide-refresh-cw"
                 data-testid="load-error-retry"
-                @click="push.refresh()"
+                @click="retryLoad"
             >
                 {{ t('errors.retry') }}
             </UButton>
@@ -37,6 +37,7 @@
                     <USwitch
                         :model-value="isTopicEnabled(prefs, 'push', topic.key)"
                         :data-testid="`push-topic-${topic.key}`"
+                        :disabled="!prefsLoaded"
                         @update:model-value="setTopic(topic.key, $event)"
                     />
                 </label>
@@ -208,6 +209,7 @@ import {
     updateNotificationPrefs,
 } from '~/api/notifications'
 import { listWallsByIds } from '~/api/routes'
+import { useAuthState } from '~/api/auth'
 import { formatDate } from '#shared/utils/formatting'
 import {
     isTopicEnabled,
@@ -216,7 +218,11 @@ import {
     type NotificationPrefs,
 } from '~/utils/notificationPrefs'
 import { isMobileDevice } from '~/utils/push'
-import type { PushSubscriptionRecord, WallRecord } from '~/types/models'
+import type {
+    PushSubscriptionRecord,
+    UserRecord,
+    WallRecord,
+} from '~/types/models'
 
 type FollowedWall = WallRecord & { location_name: string }
 
@@ -260,10 +266,27 @@ const topics = computed(() =>
         icon: TOPIC_ICONS[topic.key] ?? 'i-lucide-bell',
     })),
 )
-const prefs = ref<NotificationPrefs>({})
-onMounted(async () => {
-    prefs.value = await getNotificationPrefs()
-})
+const prefs = ref<NotificationPrefs>(
+    useAuthState().currentUser<UserRecord>()?.notification_prefs ?? {},
+)
+const prefsLoaded = ref(false)
+const prefsLoadFailed = ref(false)
+
+async function loadPrefs() {
+    prefsLoadFailed.value = false
+    try {
+        prefs.value = await getNotificationPrefs()
+        prefsLoaded.value = true
+    } catch {
+        prefsLoadFailed.value = true
+    }
+}
+onMounted(loadPrefs)
+
+function retryLoad() {
+    if (push.loadError.value) push.refresh()
+    if (prefsLoadFailed.value) loadPrefs()
+}
 
 async function addThisDevice() {
     try {

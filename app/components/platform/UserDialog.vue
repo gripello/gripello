@@ -61,17 +61,18 @@
                         />
                     </UFormField>
                 </div>
+                <UserPasswordField
+                    v-if="emailChanged"
+                    v-model="adminPassword"
+                    :label="t('platform.users.adminPassword')"
+                    icon="i-lucide-shield-check"
+                    data-testid="platform-user-email-admin-password"
+                />
                 <div class="flex flex-wrap gap-x-6 gap-y-3">
                     <USwitch
                         v-model="form.verified"
                         :label="t('platform.users.verified')"
                         data-testid="platform-user-verified"
-                    />
-                    <USwitch
-                        :model-value="!!user.platform_admin"
-                        :label="t('platform.users.platformAdmin')"
-                        disabled
-                        data-testid="platform-user-platform-admin"
                     />
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -98,6 +99,8 @@
                     </UButton>
                 </div>
             </UForm>
+
+            <PlatformUserSecurity :user="user" @changed="emit('changed')" />
 
             <section class="mt-6 flex flex-col gap-3">
                 <h3 class="text-sm font-semibold text-highlighted">
@@ -193,7 +196,7 @@
             <UButton
                 color="primary"
                 :loading="saving"
-                :disabled="locked"
+                :disabled="locked || (emailChanged && !adminPassword)"
                 data-testid="platform-user-save"
                 @click="userForm?.submit()"
             >
@@ -212,6 +215,7 @@ import {
 } from '~/api/members'
 import type { GymRecord, RoleRecord, UserRecord } from '~/types/models'
 import { updatePlatformUser } from '~/api/platform'
+import { reauthenticate } from '~/api/account'
 import { fileUrl } from '~/api/client'
 import { requestPasswordReset, useAuthState } from '~/api/auth'
 import { gymTitle } from '~/utils/gymNames'
@@ -222,6 +226,7 @@ import {
     type MembershipChip,
     type PlatformUser,
 } from '~/utils/platformUsers'
+import { isWrongPassword } from '~/utils/reauth'
 import {
     required,
     validEmail,
@@ -256,6 +261,10 @@ function formFrom(user: UserRecord | null) {
 }
 
 const form = reactive(formFrom(props.user))
+const adminPassword = ref('')
+const emailChanged = computed(
+    () => !!props.user && form.email.trim() !== (props.user.email ?? ''),
+)
 const userForm = ref<Form<typeof form> | null>(null)
 const newMembership = reactive({ gym: '', role: '' })
 
@@ -264,6 +273,7 @@ watch([open, () => props.user?.id], () => {
     Object.assign(newMembership, { gym: '', role: '' })
     avatarFile.value = null
     avatarRemoved.value = false
+    adminPassword.value = ''
 })
 
 const avatarFile = ref<File | null>(null)
@@ -326,6 +336,7 @@ async function saveUser() {
     if (!user) return
     const saved = await runSave(
         async () => {
+            if (emailChanged.value) await reauthenticate(adminPassword.value)
             await updatePlatformUser(
                 user.id,
                 {
@@ -335,9 +346,7 @@ async function saveUser() {
                     firstname: form.firstname.trim(),
                     name: form.name.trim(),
                     verified: form.verified,
-                    ...(form.email.trim() !== user.email && {
-                        email: form.email.trim(),
-                    }),
+                    ...(emailChanged.value && { email: form.email.trim() }),
                 },
                 {
                     ...(avatarFile.value && { avatar: avatarFile.value }),
@@ -348,7 +357,10 @@ async function saveUser() {
         },
         {
             success: t('notifications.success.edit'),
-            error: t('notifications.error.edit'),
+            error: (error) =>
+                isWrongPassword(error)
+                    ? t('platform.users.adminPasswordWrong')
+                    : t('notifications.error.edit'),
         },
     )
     if (!saved) return
@@ -357,14 +369,19 @@ async function saveUser() {
 }
 
 const { pending: sendingReset, run: runReset } = useAsyncAction()
+const { capHeaders } = useCapToken()
 
 async function sendPasswordReset() {
     const email = props.user?.email
     if (!email) return
-    await runReset(() => requestPasswordReset(email), {
-        success: t('platform.users.passwordResetSent'),
-        error: t('notifications.error.resetPassword'),
-    })
+    await runReset(
+        async () =>
+            requestPasswordReset(email, await capHeaders('password-reset')),
+        {
+            success: t('platform.users.passwordResetSent'),
+            error: t('notifications.error.resetPassword'),
+        },
+    )
 }
 
 const { pending: membershipBusy, run: runMembership } = useAsyncAction()

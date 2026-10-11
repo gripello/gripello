@@ -78,6 +78,8 @@ export default defineNuxtConfig({
         storageKey: 'theme-mode',
     },
     icon: {
+        // /api/* belongs to the Go backend, so the default /api/_nuxt_icon can never answer.
+        localApiEndpoint: '/_nuxt_icon',
         clientBundle: {
             scan: { globInclude: ['app/**/*.{vue,ts}', 'shared/**/*.ts'] },
         },

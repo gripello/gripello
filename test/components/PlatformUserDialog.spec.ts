@@ -23,6 +23,9 @@ const user = {
 describe('PlatformUserDialog', () => {
     beforeEach(() => {
         vi.stubGlobal('reactive', reactive)
+        vi.stubGlobal('useCapToken', () => ({
+            capHeaders: async () => ({ 'X-Cap-Token': 'token' }),
+        }))
         vi.stubGlobal('useAsyncAction', () => ({
             pending: ref(false),
             run: vi.fn(),

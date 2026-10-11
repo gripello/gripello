@@ -3,6 +3,7 @@ package routes
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -102,6 +103,13 @@ func TestLocationLifecycle(t *testing.T) {
 	f.wall(f.hall, "Slab")
 	f.call("admin", "DELETE", "/locations/"+f.hall, "", http.StatusBadRequest)
 	f.call("admin", "DELETE", "/locations/"+f.hallB, "", http.StatusNoContent)
+
+	arena := f.call("admin", "POST", "/gyms/"+f.gymA+"/locations", `{"name":"Arena"}`, http.StatusCreated)["id"].(string)
+	f.exec(`INSERT INTO competitions (id, gym, name, location, status, starts_at, ends_at, scoring_format, discipline)
+		VALUES ('arenacomp000001', $1, 'Jam', $2, 'draft', now(), now() + interval '1 hour', 'dynamic', 'boulder') RETURNING id`, f.gymA, arena)
+	if refused := f.call("admin", "DELETE", "/locations/"+arena, "", http.StatusBadRequest); !strings.Contains(fmt.Sprint(refused), "still used by competitions") {
+		t.Errorf("deleting a competition location = %v", refused)
+	}
 }
 
 func TestFloorPlanSave(t *testing.T) {
