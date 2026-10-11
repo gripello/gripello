@@ -48,7 +48,7 @@ test.describe('account security', () => {
         await page.getByTestId('two-factor-totp-setup').click()
         await confirmPassword(page, user.password)
         const secret = await page.getByTestId('two-factor-secret').innerText()
-        await typeCode(page, 'two-factor-setup-code', totp(secret, -1))
+        await typeCode(page, 'two-factor-setup-code', totp(secret))
         await expect(
             page.getByTestId('two-factor-codes').locator('li'),
         ).toHaveCount(10)
@@ -58,7 +58,7 @@ test.describe('account security', () => {
         await gotoSettled(page, '/auth/login')
         await fillLogin(page, user.email, user.password)
         await page.getByTestId('login-submit').click()
-        await typeCode(page, 'two-factor-code', totp(secret))
+        await typeCode(page, 'two-factor-code', totp(secret, 1))
         await expect(page).not.toHaveURL(/\/auth\/login/)
     })
 

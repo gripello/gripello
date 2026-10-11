@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, searchRoutes } from '../../support/nav'
 
 const horizontalOverflow = (page: Page) =>
     page.evaluate(() => {
@@ -34,12 +34,22 @@ test('the page strip keeps its ends in view on a small phone', async ({
     await Promise.all(Array.from({ length: 60 }, () => createRoute()))
 
     await gotoSettled(page, '/manage/routes')
-    await page.getByTestId('filter-search').fill(testPrefix)
+    await searchRoutes(page, testPrefix)
     await page.getByTestId('routes-mobile-page-size').click()
+    const routesResponse = page.waitForResponse((res) =>
+        /\/api\/gyms\/[^/]+\/routes$/.test(new URL(res.url()).pathname),
+    )
     await page.getByRole('option', { name: '10', exact: true }).click()
+    await routesResponse
+    await expect(page.getByTestId('routes-row')).toHaveCount(10)
     await expect(page.getByTestId('routes-mobile-goto-6')).toBeVisible()
+    await expect(page.getByTestId('routes-mobile-goto-7')).toHaveCount(0)
 
     await page.getByTestId('routes-mobile-next').click()
+    await expect(page.getByTestId('routes-mobile-goto-2')).toHaveAttribute(
+        'aria-current',
+        'page',
+    )
     await page.getByTestId('routes-mobile-next').click()
     await expect(page.getByTestId('routes-mobile-goto-3')).toHaveAttribute(
         'aria-current',

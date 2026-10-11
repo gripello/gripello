@@ -11,6 +11,7 @@ services:
             NUXT_API_BASE: http://127.0.0.1:8080
             RATE_LIMITS: 'off'
             SSR_CACHE_SECONDS: '0'
+            URGENT_ALERT_SECONDS: '0'
             SSL_DNS_NAMES: vg.test
             SMTP_HOST: mailpit
             SMTP_PORT: 1025
@@ -73,6 +74,7 @@ services:
             DATABASE_URL: postgres://postgres:e2e@postgres:5432/gripello?sslmode=disable
             MAILPIT_URL: http://mailpit:8025
             CI: 'true'
+            E2E_WORKERS: ${E2E_WORKERS:-}
             NODE_TLS_REJECT_UNAUTHORIZED: '0'
         depends_on:
             app:

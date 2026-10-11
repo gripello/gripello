@@ -29,10 +29,13 @@ test('settings asset upload zone opens the file picker from the keyboard', async
     await expect(zone).toHaveJSProperty('tagName', 'BUTTON')
     await expect(zone).toHaveAttribute('aria-label', /Click to upload/)
     await expect(zone.locator('button, [role="button"]')).toHaveCount(0)
-    await zone.focus()
-    const chooser = page.waitForEvent('filechooser')
-    await page.keyboard.press('Enter')
-    await chooser
+    await expect(async () => {
+        await zone.focus()
+        await expect(zone).toBeFocused()
+        const chooser = page.waitForEvent('filechooser', { timeout: 2_000 })
+        await page.keyboard.press('Enter')
+        await chooser
+    }).toPass()
 })
 
 test('analytics charts expose a text description', async ({

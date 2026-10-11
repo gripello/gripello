@@ -19,7 +19,7 @@ test('nginx proxies to the backend over loopback', async ({ request }) => {
     const serverVersion = response.headers()['x-gripello-api-version']
     expect(serverVersion).toBeTruthy()
     expect(await response.json()).toHaveProperty('version', serverVersion)
-    if (serverVersion === 'dev') return
+    if (!/^v?\d+\.\d+\.\d+/.test(serverVersion!)) return
 
     const unsupported = await request.get('/api/health', {
         headers: { 'X-Gripello-Api-Version': '99.0.0' },

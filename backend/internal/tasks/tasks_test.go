@@ -696,7 +696,7 @@ func TestUrgentDefectMailsAreCoalescedPerGym(t *testing.T) {
 	f.exec(`DELETE FROM jobs RETURNING id`)
 	f.defect("climber", "loose_hold")
 	f.defect("climber", "broken_hold")
-	if wait := runAfter(); wait < urgentAlertWindow-5*time.Second {
+	if wait := runAfter(); wait < f.app.Cfg.UrgentAlertWindow-5*time.Second {
 		t.Errorf("follow-up alert waits only %s", wait)
 	}
 	f.runUrgentAlerts()

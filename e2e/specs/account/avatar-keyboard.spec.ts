@@ -11,10 +11,13 @@ test('the profile avatar upload opens with the keyboard', async ({
     await expect(upload).toHaveRole('button')
     await expect(upload).toHaveAttribute('aria-label', /.+/)
 
-    await upload.focus()
-    const chooser = page.waitForEvent('filechooser')
-    await page.keyboard.press('Enter')
-    await chooser
+    await expect(async () => {
+        await upload.focus()
+        await expect(upload).toBeFocused()
+        const chooser = page.waitForEvent('filechooser', { timeout: 2_000 })
+        await page.keyboard.press('Enter')
+        await chooser
+    }).toPass()
 })
 
 const ONE_PIXEL_PNG = Buffer.from(

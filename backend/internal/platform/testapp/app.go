@@ -57,6 +57,7 @@ func App(t *testing.T) *platform.App {
 	app.Cfg.AppURL = "http://localhost:3000"
 	app.Cfg.LocalesDir = localesDir
 	app.Cfg.AppName = "Gripello"
+	app.Cfg.UrgentAlertWindow = time.Minute
 	app.Cfg.BlobDir = blobDir
 	app.Handle("GET /files/{table}/{id}/{name}", store.ServeFile(app.Cfg.TokenSecret))
 	app.Handle("POST /files/token", store.IssueToken(app.Cfg.TokenSecret))

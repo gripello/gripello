@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, searchRoutes } from '../../support/nav'
 
 test('paginates the mobile route card list', async ({
     adminPage: page,
@@ -51,10 +51,16 @@ test('the pager stays under the thumb while stepping', async ({
     await Promise.all(Array.from({ length: 30 }, () => createRoute()))
 
     await gotoSettled(page, '/manage/routes')
-    await page.getByTestId('filter-search').fill(testPrefix)
+    await searchRoutes(page, testPrefix)
     await page.getByTestId('routes-mobile-page-size').click()
+    const routesResponse = page.waitForResponse((res) =>
+        /\/api\/gyms\/[^/]+\/routes$/.test(new URL(res.url()).pathname),
+    )
     await page.getByRole('option', { name: '10', exact: true }).click()
+    await routesResponse
+    await expect(page.getByTestId('routes-row')).toHaveCount(10)
     await expect(page.getByTestId('routes-mobile-goto-3')).toBeVisible()
+    await expect(page.getByTestId('routes-mobile-goto-4')).toHaveCount(0)
 
     const next = page.getByTestId('routes-mobile-next')
     await next.click()
