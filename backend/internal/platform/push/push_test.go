@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
@@ -74,11 +75,24 @@ func TestOnlyPushServiceEndpointsAreAllowed(t *testing.T) {
 	}
 }
 
-func TestSubscriberIsNeverDoublePrefixed(t *testing.T) {
-	if got := New("", "", "mailto:env@gripello.app").subscriber; got != "env@gripello.app" {
+func TestSubjectFallsBackToTheAppURLAndFollowsTheMailSettings(t *testing.T) {
+	sender := New("", "", "mailto:env@gripello.app", "https://gripello.app")
+	if got := sender.subject(); got != "env@gripello.app" {
 		t.Errorf("got %q, webpush-go adds the prefix itself", got)
 	}
-	if New("pub", "", "x").Enabled() || !New("pub", "priv", "x").Enabled() {
+	sender.UseSubject("", "https://gripello.app")
+	if got := sender.subject(); got != "https://gripello.app" {
+		t.Errorf("without a sender address the subject must be the app URL, got %q", got)
+	}
+	sender.UseSubject(" no-reply@example.com ", "https://gripello.app")
+	if got := sender.subject(); got != "no-reply@example.com" {
+		t.Errorf("platform sender address not applied, got %q", got)
+	}
+	sender.UseSubject("", "http://localhost:3000")
+	if got := sender.subject(); got != "" {
+		t.Errorf("an http URL is no valid subject, got %q", got)
+	}
+	if New("pub", "", "x", "").Enabled() || !New("pub", "priv", "x", "").Enabled() {
 		t.Error("Enabled needs both keys")
 	}
 }
@@ -88,9 +102,12 @@ func TestSendReportsGoneSubscriptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	status := http.StatusGone
+	status, body := http.StatusGone, ""
+	var subjects []string
 	service := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		subjects = append(subjects, vapidSubject(t, r.Header.Get("Authorization")))
 		w.WriteHeader(status)
+		w.Write([]byte(body))
 	}))
 	defer service.Close()
 
@@ -102,14 +119,41 @@ func TestSendReportsGoneSubscriptions(t *testing.T) {
 		P256dh:   base64.RawURLEncoding.EncodeToString(key.PublicKey().Bytes()),
 		Auth:     base64.RawURLEncoding.EncodeToString(secret),
 	}
-	sender := New(publicKey, privateKey, "push@gripello.app")
+	sender := New(publicKey, privateKey, "push@gripello.app", "")
 	payload, _ := json.Marshal(Payload{Title: "Gripello", Body: "hi", URL: "/", Tag: "test"})
 
 	if gone, err := sender.Send(context.Background(), sub, payload); err != nil || !gone {
 		t.Errorf("410: gone=%v err=%v", gone, err)
 	}
+	if subjects[0] != "mailto:push@gripello.app" {
+		t.Errorf("signed sub = %q", subjects[0])
+	}
 	status = http.StatusCreated
 	if gone, err := sender.Send(context.Background(), sub, payload); err != nil || gone {
 		t.Errorf("201: gone=%v err=%v", gone, err)
 	}
+	status, body = http.StatusForbidden, `{"reason":"BadJwtToken"}`
+	gone, err := sender.Send(context.Background(), sub, payload)
+	if gone || err == nil || !strings.Contains(err.Error(), "403") || !strings.Contains(err.Error(), "BadJwtToken") {
+		t.Errorf("a rejected push must surface status and reason: gone=%v err=%v", gone, err)
+	}
+}
+
+// vapidSubject reads the sub claim of the "vapid t=<jwt>, k=<key>" header the push service receives.
+func vapidSubject(t *testing.T, header string) string {
+	t.Helper()
+	token := strings.TrimPrefix(strings.SplitN(header, ",", 2)[0], "vapid t=")
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		t.Fatalf("authorization header %q", header)
+	}
+	claims, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded struct {
+		Sub string `json:"sub"`
+	}
+	json.Unmarshal(claims, &decoded)
+	return decoded.Sub
 }

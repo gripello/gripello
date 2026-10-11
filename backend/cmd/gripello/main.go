@@ -115,7 +115,7 @@ func connect(ctx context.Context) (config.Config, *platform.App, error) {
 		MailTemplates: mail.NewTemplates(cfg, messages),
 		Locales:       messages,
 		Blob:          store,
-		Push:          push.New(cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.SenderAddress),
+		Push:          push.New(cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.SenderAddress, cfg.AppURL),
 		Cfg:           cfg,
 		DB:            pool,
 		Mux:           http.NewServeMux(),
@@ -175,6 +175,7 @@ func serve(ctx context.Context, args []string) error {
 		if err := mailer.Reload(ctx, app.DB, cfg, app.Tokens.Secret); err != nil {
 			slog.Error("mail: loading the platform mail settings failed", "error", err)
 		}
+		app.Push.UseSubject(mailer.SenderAddress(), cfg.AppURL)
 	}
 	reloadLogLevel := func() {
 		var level slog.Level
