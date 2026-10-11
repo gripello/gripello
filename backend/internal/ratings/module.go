@@ -15,7 +15,6 @@ import (
 const (
 	permManageComments = "manage_comments"
 	permManageRoutes   = "manage_routes"
-	permViewAnalytics  = "view_analytics"
 )
 
 type module struct {

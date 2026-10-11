@@ -516,20 +516,25 @@ func (p *phone) react(topic, data string) {
 	switch {
 	case strings.HasPrefix(topic, "gym_changes:") && change.Collection == "routes":
 		if change.Action == "create" {
-			p.later("routes", time.Second)
+			p.later("routes", p.coalesceDelay())
 		}
 		p.later("route:"+change.Record.ID, 0)
-		p.later("manage-routes", time.Second)
+		p.later("manage-routes", p.coalesceDelay())
 	case strings.HasPrefix(topic, "gym_changes:") && change.Collection == "beta_videos":
-		p.later("feed", time.Second)
+		p.later("feed", p.coalesceDelay())
 	case topic == "own_ticks":
-		p.later("sends", 300*time.Millisecond)
-		p.later("logbook", 300*time.Millisecond)
+		p.later("sends", p.coalesceDelay())
+		p.later("logbook", p.coalesceDelay())
 	case strings.HasPrefix(topic, "competition_changes:"):
-		p.later("results", time.Second)
+		p.later("results", 2*time.Second+time.Duration(rand.Int64N(int64(2*time.Second))))
 	case strings.HasPrefix(topic, "tasks:"):
-		p.later("tasks", time.Second)
+		p.later("tasks", p.coalesceDelay())
 	}
+}
+
+// coalesceDelay is the app's coalesce() wait (app/utils/realtimeCache.ts): 1–2 s, so phones don't refetch in lockstep.
+func (p *phone) coalesceDelay() time.Duration {
+	return time.Second + time.Duration(rand.Int64N(int64(time.Second)))
 }
 
 // pause is a think time that ends early when the run stops.

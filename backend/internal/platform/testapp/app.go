@@ -52,7 +52,9 @@ func App(t *testing.T) *platform.App {
 		Workers:       map[string]jobs.Worker{},
 		Realtime:      realtime.NewHub(bus, tenancy.New(pool)),
 		Tokens:        auth.Issuer{Secret: "test-secret", Duration: time.Hour},
+		Verified:      auth.NewVerifiedTokens(),
 	}
+	t.Cleanup(app.Verified.Listen(bus))
 	app.Cfg.TokenSecret = "test-secret"
 	app.Cfg.AppURL = "http://localhost:3000"
 	app.Cfg.LocalesDir = localesDir

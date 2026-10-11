@@ -7,12 +7,16 @@ import (
 )
 
 type module struct {
-	app   *platform.App
-	perms *tenancy.Permissions
+	app            *platform.App
+	perms          *tenancy.Permissions
+	standingsCache *standingsCache
 }
 
-func Register(app *platform.App) {
-	m := &module{app: app, perms: tenancy.New(app.DB)}
+func Register(app *platform.App) { register(app) }
+
+func register(app *platform.App) *module {
+	m := &module{app: app, perms: tenancy.New(app.DB), standingsCache: newStandingsCache()}
+	app.Bus.Subscribe("competition_changes:", m.onCompetitionChange)
 	for pattern, handler := range map[string]httpx.Handler{
 		"GET /gyms/{gym}/competitions":        m.listCompetitions,
 		"POST /gyms/{gym}/competitions":       m.postCompetition,
@@ -36,8 +40,8 @@ func Register(app *platform.App) {
 		"PUT /competitions/{id}/scores":       m.putScores,
 		"DELETE /competition-scores/{id}":     m.deleteScoreHandler,
 		"GET /competitions/{id}/standings":    m.getStandings,
-		"GET /competitions/{id}/results":      m.getResults,
 	} {
 		app.Handle(pattern, handler)
 	}
+	return m
 }

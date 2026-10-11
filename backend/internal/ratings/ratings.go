@@ -114,7 +114,7 @@ func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	moderator := m.can(ctx, gym, permManageComments)
-	if !moderator && !m.can(ctx, gym, permViewAnalytics) && !m.can(ctx, gym, permManageRoutes) {
+	if !moderator && !m.can(ctx, gym, permManageRoutes) {
 		return httpx.ErrForbidden
 	}
 	query := r.URL.Query()

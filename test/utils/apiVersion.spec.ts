@@ -36,7 +36,7 @@ describe('isGoApiPath', () => {
         ['/api/files/users/u1/a.png', true],
         ['/api/uix', true],
         ['/api/ui/export', false],
-        ['/api/manage/routes', false],
+        ['/api/gyms/g1/analytics', true],
         ['/api/version', false],
         ['/api/cap/challenge', false],
         ['/routes', false],

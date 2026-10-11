@@ -17,6 +17,7 @@ func Register(app *platform.App) {
 		"GET /gyms/{gym}/routes":           m.listRoutes,
 		"POST /gyms/{gym}/routes":          m.postRoute,
 		"GET /gyms/{gym}/routes/colors":    m.listColors,
+		"GET /gyms/{gym}/analytics":        m.getAnalytics,
 		"POST /gyms/{gym}/routes/archive":  m.archiveGymRoutes,
 		"PUT /gyms/{gym}/map/placements":   m.putPlacements,
 		"GET /routes":                      m.listRoutesByID,

@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/db"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/testkit"
 )
 
@@ -68,5 +70,85 @@ func TestVerifyRejectsWrongTypeMissingExpiryAndExpiredLegacyTokens(t *testing.T)
 	legacyTokensUntil = time.Now()
 	if _, err := Verify(ctx, pool, "s", legacy); err == nil {
 		t.Error("token without a session accepted after the cutoff")
+	}
+}
+
+func TestVerifiedTokensSkipTheDatabaseUntilAnEventDropsThem(t *testing.T) {
+	ctx := context.Background()
+	pool := testkit.Pool(t)
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	pool.Exec(ctx, `INSERT INTO users (id, username, token_key) VALUES ('u1', 'u1', 'key1'), ('u2', 'u2', 'key2')`)
+	token, _ := Issuer{Secret: "s", Duration: time.Hour}.Sign("u1", "key1", "sid1")
+	otherToken, _ := Issuer{Secret: "s", Duration: time.Hour}.Sign("u2", "key2", "sid2")
+	cache := NewVerifiedTokens()
+	createSessions := func() {
+		pool.Exec(ctx, `INSERT INTO sessions (id, "user") VALUES ('sid1', 'u1'), ('sid2', 'u2') ON CONFLICT DO NOTHING`)
+	}
+	verifies := func(token string) bool {
+		_, err := cache.Verify(ctx, pool, "s", token)
+		return err == nil
+	}
+
+	if verifies(token) {
+		t.Fatal("token without a session row accepted")
+	}
+	createSessions()
+	if !verifies(token) || !verifies(otherToken) {
+		t.Fatal("failed verification was cached")
+	}
+	pool.Exec(ctx, `DELETE FROM sessions`)
+	if !verifies(token) {
+		t.Fatal("cached token queried the database")
+	}
+
+	cache.Forget(events.Event{Topic: "session.revoked", Kind: "session.revoked", Payload: []byte(`{"session":"sid1","user":"u1"}`)})
+	if verifies(token) {
+		t.Error("session.revoked kept the entry")
+	}
+	if !verifies(otherToken) {
+		t.Error("session.revoked dropped another user's entry")
+	}
+
+	createSessions()
+	verifies(token)
+	pool.Exec(ctx, `DELETE FROM sessions`)
+	cache.Forget(events.Event{Topic: "user:u1", Kind: "user.updated", Payload: []byte(`{"record":{},"changed":["platform_admin"]}`)})
+	if verifies(token) {
+		t.Error("user:<id> event kept the entry")
+	}
+
+	createSessions()
+	verifies(token)
+	defer cache.Listen(events.NewBus(pool))()
+	pool.Exec(ctx, `DELETE FROM sessions`)
+	err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+		return events.Publish(ctx, tx, "session.revoked", "session.revoked", map[string]string{"session": "sid1", "user": "u1"}, events.Audience{})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verifies(token) {
+		t.Error("publishing on this replica kept the entry until the bus delivered it")
+	}
+}
+
+func TestVerifiedTokensRefuseExpiredTokens(t *testing.T) {
+	ctx := context.Background()
+	pool := testkit.Pool(t)
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	pool.Exec(ctx, `INSERT INTO users (id, username, token_key) VALUES ('u1', 'u1', 'key1')`)
+	pool.Exec(ctx, `INSERT INTO sessions (id, "user") VALUES ('sid1', 'u1')`)
+	token, _ := Issuer{Secret: "s", Duration: time.Second}.Sign("u1", "key1", "sid1")
+	cache := NewVerifiedTokens()
+	if _, err := cache.Verify(ctx, pool, "s", token); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1100 * time.Millisecond)
+	if _, err := cache.Verify(ctx, pool, "s", token); err == nil {
+		t.Error("expired token served from the cache")
 	}
 }

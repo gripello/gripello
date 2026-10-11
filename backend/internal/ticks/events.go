@@ -30,7 +30,7 @@ type TickChanged struct {
 
 var kindOf = map[string]string{"create": "tick.created", "update": "tick.updated", "delete": "tick.deleted"}
 
-// publishTick emits one tick.changed per affected day so leaderboards covering either day get capped.
+// publishTick emits one tick.changed per affected day so consumers covering either day see the change.
 func publishTick(ctx context.Context, tx pgx.Tx, action string, tick Tick, days ...time.Time) error {
 	tick.Expand, tick.Climber = nil, nil
 	kind := kindOf[action]

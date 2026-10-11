@@ -12,8 +12,7 @@ import {
     deleteEntry,
     deleteScore,
     getCompetition,
-    getResults,
-    getStandings,
+    getCompetitionStandings,
     listCategories,
     listCompetitionRoutes,
     listCompetitions,
@@ -239,25 +238,24 @@ describe('scores', () => {
     })
 })
 
-describe('standings and results', () => {
-    it('reads the standings with the categories', async () => {
-        const standings = { items: [{ id: 'e1' }], categories: [{ id: 'k1' }] }
+describe('standings', () => {
+    it('reads the ranked standings with their visibility', async () => {
+        const standings = {
+            visibility: 'live',
+            format: 'dynamic',
+            updated: '2026-10-11T12:00:00Z',
+            categories: [{ id: 'k1', name: 'Open', rows: [] }],
+        }
         api.respond(standings)
-        expect(await getStandings('c1')).toEqual(standings)
+        expect(await getCompetitionStandings('c1')).toEqual(standings)
         expect(api.request().url).toBe('/api/competitions/c1/standings')
     })
 
-    it('reads the results input with its visibility', async () => {
-        const results = {
-            visibility: 'frozen',
-            competition: { id: 'c1' },
-            categories: [],
-            entries: [],
-            routes: [],
-            scores: [],
-        }
-        api.respond(results)
-        expect(await getResults('c1')).toEqual(results)
-        expect(api.request().url).toBe('/api/competitions/c1/results')
+    it('asks for the public view', async () => {
+        api.respond({ categories: [] })
+        await getCompetitionStandings('c1', { view: 'public' })
+        expect(api.request().url).toBe(
+            '/api/competitions/c1/standings?view=public',
+        )
     })
 })

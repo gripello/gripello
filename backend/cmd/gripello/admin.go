@@ -24,6 +24,7 @@ import (
 	"gripello/internal/members"
 	"gripello/internal/platform/config"
 	"gripello/internal/platform/db"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
 )
 
@@ -186,16 +187,22 @@ func adminSetUser(ctx context.Context, pool *pgxpool.Pool, args []string) (strin
 		}
 		until = &parsed
 	}
-	_, err = pool.Exec(ctx, `UPDATE users SET
-			verified = CASE WHEN $2 THEN $3 ELSE verified END,
-			platform_admin = CASE WHEN $4 THEN $5 ELSE platform_admin END,
-			suspended_until = CASE WHEN $6 THEN $7 ELSE suspended_until END,
-			password_hash = CASE WHEN $8 THEN $9 ELSE password_hash END,
-			token_key = CASE WHEN $6 OR $8 THEN $10 ELSE token_key END,
-			updated = now()
-		WHERE id = $1`,
-		id, set["verified"], *verified, set["platform-admin"], *platformAdmin,
-		set["suspended-until"], until, set["password"], string(hash), rand.Text()+rand.Text())
+	err = pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `UPDATE users SET
+				verified = CASE WHEN $2 THEN $3 ELSE verified END,
+				platform_admin = CASE WHEN $4 THEN $5 ELSE platform_admin END,
+				suspended_until = CASE WHEN $6 THEN $7 ELSE suspended_until END,
+				password_hash = CASE WHEN $8 THEN $9 ELSE password_hash END,
+				token_key = CASE WHEN $6 OR $8 THEN $10 ELSE token_key END,
+				updated = now()
+			WHERE id = $1`,
+			id, set["verified"], *verified, set["platform-admin"], *platformAdmin,
+			set["suspended-until"], until, set["password"], string(hash), rand.Text()+rand.Text()); err != nil {
+			return err
+		}
+		// The running replicas cache verified tokens per user; any user:<id> event makes them check the new state.
+		return events.Publish(ctx, tx, "user:"+id, "user.token_rotated", map[string]string{"user": id}, events.Audience{})
+	})
 	return id, err
 }
 

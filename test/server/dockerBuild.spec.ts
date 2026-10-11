@@ -101,6 +101,18 @@ describe('docker ui build', () => {
         expect(read('docker-compose.yml')).toContain('./backups:/data/backups')
     })
 
+    it('gives postgres more than docker’s 64 MB /dev/shm for parallel queries', () => {
+        for (const file of [
+            'docker-compose.yml',
+            'docker-compose.dev.yml',
+            'e2e/docker-compose.e2e.yml',
+        ]) {
+            expect(read(file)).toMatch(
+                /image: postgres:\d+-alpine\n\s+shm_size: 256mb/,
+            )
+        }
+    })
+
     it('builds and starts the go api instead of pocketbase', () => {
         const dockerfile = read('Dockerfile')
         expect(dockerfile).toContain('-o /out/gripello ./cmd/gripello')

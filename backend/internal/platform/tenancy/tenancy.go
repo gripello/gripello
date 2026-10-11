@@ -31,6 +31,33 @@ func (p *Permissions) Follows(ctx context.Context, followerID, followeeID string
 	return ok
 }
 
+// UsersWith lists everyone holding permission in gym, so one query answers a whole fan-out.
+func (p *Permissions) UsersWith(ctx context.Context, gym, permission string) ([]string, error) {
+	return p.userIDs(ctx, `SELECT m."user" FROM memberships m JOIN roles r ON r.id = m.role
+		WHERE m.gym = $1 AND $2 = ANY (r.permissions)`, gym, permission)
+}
+
+func (p *Permissions) Followers(ctx context.Context, followeeID string) ([]string, error) {
+	return p.userIDs(ctx, `SELECT follower FROM follows WHERE followee = $1 AND status = 'accepted'`, followeeID)
+}
+
+func (p *Permissions) userIDs(ctx context.Context, query string, args ...any) ([]string, error) {
+	rows, err := p.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 // Memberships returns gym → permission names for one user; loaded once per request by the auth middleware's callers.
 func (p *Permissions) Memberships(ctx context.Context, userID string) (map[string][]string, error) {
 	rows, err := p.pool.Query(ctx, `SELECT m.gym, r.permissions FROM memberships m JOIN roles r ON r.id = m.role WHERE m."user" = $1`, userID)

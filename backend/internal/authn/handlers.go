@@ -19,6 +19,7 @@ import (
 
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/captcha"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/lockout"
@@ -429,7 +430,20 @@ func (m *module) confirmVerification(w http.ResponseWriter, r *http.Request) err
 	if !ok {
 		return invalidToken()
 	}
-	if _, err := m.db.Exec(r.Context(), `UPDATE users SET verified = true WHERE id = $1 AND NOT verified`, user.ID); err != nil {
+	ctx := r.Context()
+	err := pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `UPDATE users SET verified = true WHERE id = $1 AND NOT verified`, user.ID)
+		if err != nil || tag.RowsAffected() == 0 {
+			return err
+		}
+		record, err := userRecord(ctx, tx, user.ID)
+		if err != nil {
+			return err
+		}
+		payload := map[string]any{"record": record, "changed": []string{"verified"}}
+		return events.Publish(ctx, tx, "user:"+user.ID, "user.updated", payload, events.Audience{Users: []string{user.ID}})
+	})
+	if err != nil {
 		return err
 	}
 	w.WriteHeader(http.StatusNoContent)

@@ -2,15 +2,19 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 )
 
@@ -62,44 +66,138 @@ type userRow struct {
 
 // Verify parses the token, loads the user's tokenKey and checks the session row still exists.
 func Verify(ctx context.Context, pool *pgxpool.Pool, secret, token string) (Principal, error) {
+	p, _, err := verify(ctx, pool, secret, token)
+	return p, err
+}
+
+func verify(ctx context.Context, pool *pgxpool.Pool, secret, token string) (Principal, time.Time, error) {
 	var claims Claims
 	parser := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
 	if _, _, err := parser.ParseUnverified(token, &claims); err != nil || claims.ID == "" || claims.Type != "auth" {
-		return Principal{}, ErrInvalidToken
+		return Principal{}, time.Time{}, ErrInvalidToken
 	}
 	if claims.SessionID == "" && !time.Now().Before(legacyTokensUntil) {
-		return Principal{}, ErrInvalidToken
+		return Principal{}, time.Time{}, ErrInvalidToken
 	}
 	var u userRow
 	err := pool.QueryRow(ctx, `SELECT token_key, platform_admin, verified FROM users WHERE id = $1`, claims.ID).
 		Scan(&u.TokenKey, &u.PlatformAdmin, &u.Verified)
 	if err != nil {
-		return Principal{}, ErrInvalidToken
+		return Principal{}, time.Time{}, ErrInvalidToken
 	}
 	_, err = parser.ParseWithClaims(token, &Claims{}, func(*jwt.Token) (any, error) {
 		return []byte(u.TokenKey + secret), nil
 	})
 	if err != nil {
-		return Principal{}, ErrInvalidToken
+		return Principal{}, time.Time{}, ErrInvalidToken
 	}
 	if claims.SessionID != "" {
 		var exists bool
 		pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM sessions WHERE id = $1 AND "user" = $2)`, claims.SessionID, claims.ID).Scan(&exists)
 		if !exists {
-			return Principal{}, ErrInvalidToken
+			return Principal{}, time.Time{}, ErrInvalidToken
 		}
 	}
-	return Principal{UserID: claims.ID, SessionID: claims.SessionID, PlatformAdmin: u.PlatformAdmin, Verified: u.Verified}, nil
+	return Principal{UserID: claims.ID, SessionID: claims.SessionID, PlatformAdmin: u.PlatformAdmin, Verified: u.Verified}, claims.ExpiresAt.Time, nil
+}
+
+const (
+	verifiedTokenTTL   = 15 * time.Second
+	verifiedTokenLimit = 100_000
+)
+
+// VerifiedTokens remembers recent Verify results per token on this replica, so a busy client costs no queries; events drop a user's entries the moment a session or the user changes.
+type VerifiedTokens struct {
+	mu      sync.Mutex
+	entries map[[32]byte]verifiedToken
+	byUser  map[string]map[[32]byte]struct{}
+	// A fill that started before an invalidation must not store what it read.
+	generation uint64
+}
+
+type verifiedToken struct {
+	principal Principal
+	expires   time.Time
+}
+
+func NewVerifiedTokens() *VerifiedTokens {
+	return &VerifiedTokens{entries: map[[32]byte]verifiedToken{}, byUser: map[string]map[[32]byte]struct{}{}}
+}
+
+// Verify is the package Verify behind the cache; failures are never cached.
+func (c *VerifiedTokens) Verify(ctx context.Context, pool *pgxpool.Pool, secret, token string) (Principal, error) {
+	if c == nil {
+		return Verify(ctx, pool, secret, token)
+	}
+	key := sha256.Sum256([]byte(token))
+	now := time.Now()
+	c.mu.Lock()
+	hit, ok := c.entries[key]
+	generation := c.generation
+	c.mu.Unlock()
+	if ok && now.Before(hit.expires) {
+		return hit.principal, nil
+	}
+	p, expires, err := verify(ctx, pool, secret, token)
+	if err != nil {
+		return Principal{}, err
+	}
+	if ttl := now.Add(verifiedTokenTTL); ttl.Before(expires) {
+		expires = ttl
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.generation != generation {
+		return p, nil
+	}
+	if len(c.entries) >= verifiedTokenLimit {
+		c.entries, c.byUser = map[[32]byte]verifiedToken{}, map[string]map[[32]byte]struct{}{}
+	}
+	c.entries[key] = verifiedToken{p, expires}
+	if c.byUser[p.UserID] == nil {
+		c.byUser[p.UserID] = map[[32]byte]struct{}{}
+	}
+	c.byUser[p.UserID][key] = struct{}{}
+	return p, nil
+}
+
+// Forget drops the entries of the user behind a session.revoked event or any event on topic user:<id>.
+func (c *VerifiedTokens) Forget(e events.Event) {
+	userID, ok := strings.CutPrefix(e.Topic, "user:")
+	if e.Topic == "session.revoked" {
+		var revoked struct {
+			User string `json:"user"`
+		}
+		json.Unmarshal(e.Payload, &revoked)
+		userID, ok = revoked.User, true
+	}
+	if !ok {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.generation++
+	for key := range c.byUser[userID] {
+		delete(c.entries, key)
+	}
+	delete(c.byUser, userID)
+}
+
+// Listen drops entries when the writing transaction publishes (so this replica's next request already misses) and again when the bus delivers the committed event (every replica, and fills that raced the commit).
+func (c *VerifiedTokens) Listen(bus *events.Bus) (stop func()) {
+	bus.Subscribe("session.revoked", c.Forget)
+	bus.Subscribe("user:", c.Forget)
+	return events.ObservePublish(c.Forget)
 }
 
 type ctxKey struct{}
 
 // Middleware resolves the bearer token (or pb_auth/auth cookie for SSR + SSE) into a Principal; guests pass through.
-func Middleware(pool *pgxpool.Pool, secret string) func(http.Handler) http.Handler {
+func Middleware(pool *pgxpool.Pool, secret string, verified *VerifiedTokens) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if token := TokenFrom(r); token != "" {
-				if p, err := Verify(r.Context(), pool, secret, token); err == nil {
+				if p, err := verified.Verify(r.Context(), pool, secret, token); err == nil {
 					r = r.WithContext(context.WithValue(r.Context(), ctxKey{}, p))
 				}
 			}

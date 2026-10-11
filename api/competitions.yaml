@@ -374,43 +374,28 @@ paths:
     get:
       operationId: getCompetitionStandings
       tags: [competitions]
-      description: Non-draft only. Active entries with hidden names blanked, plus the categories.
-      responses:
-        '200':
-          description: Standings input
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [items, categories]
-                properties:
-                  items: { type: array, items: { $ref: '#/components/schemas/Standing' } }
-                  categories: { type: array, items: { $ref: '#/components/schemas/Category' } }
-        '404': { $ref: '#/components/responses/Error' }
-  /competitions/{id}/results:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      operationId: getCompetitionResults
-      tags: [competitions]
       description: >
-        Input for buildStandings. visibility follows resultsVisibility (managers get live until published); hidden
-        and frozen return empty lists. Managers get real names of hidden entries.
+        Ranked standings per category. visibility follows resultsVisibility; hidden and frozen return no categories.
+        Managers get live standings with real names of hidden entries (drafts too) unless view=public; everyone else
+        gets a per-replica cache dropped on every competition_changes event. Drafts are 404 for non-managers.
+      parameters:
+        - name: view
+          in: query
+          description: public = what spectators see, also for managers
+          schema: { type: string, enum: [public] }
       responses:
         '200':
-          description: Results input
+          description: Standings
           content:
             application/json:
               schema:
                 type: object
-                required: [visibility, competition, categories, entries, routes, scores]
+                required: [visibility, format, updated, categories]
                 properties:
                   visibility: { type: string, enum: [final, live, frozen, hidden] }
-                  competition: { $ref: '#/components/schemas/Competition' }
-                  categories: { type: array, items: { $ref: '#/components/schemas/Category' } }
-                  entries: { type: array, items: { $ref: '#/components/schemas/Standing' } }
-                  routes: { type: array, items: { $ref: '#/components/schemas/CompRoute' } }
-                  scores: { type: array, items: { $ref: '#/components/schemas/Score' } }
+                  format: { type: string, enum: [dynamic, fixed, ifsc, tops, route_points, lead_height] }
+                  updated: { type: string, format: date-time }
+                  categories: { type: array, items: { $ref: '#/components/schemas/CategoryStanding' } }
         '404': { $ref: '#/components/responses/Error' }
 components:
   parameters:
@@ -598,12 +583,23 @@ components:
             created: { type: string, format: date-time }
             updated: { type: string, format: date-time }
             competition: { type: string }
-    Standing:
+    CategoryStanding:
       type: object
-      required: [id, competition, category, bib, display_name]
+      required: [id, name, rows]
       properties:
         id: { type: string }
-        competition: { type: string }
-        category: { type: string }
-        bib: { type: integer }
-        display_name: { type: string, description: empty for hidden entries }
+        name: { type: string }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [entry, rank, bib, name, points, tops, zones]
+            properties:
+              entry: { type: string }
+              rank: { type: integer }
+              bib: { type: integer }
+              name: { type: string, description: empty for hidden entries }
+              points: { type: number }
+              tops: { type: integer }
+              zones: { type: integer }
+              rankPoints: { type: number, description: lead_height only }

@@ -207,11 +207,10 @@ func TestGymRatingsForModerators(t *testing.T) {
 		t.Errorf("staff must see anonymous authors: %v", byID)
 	}
 	f.user("analyst", f.gymA, "", "", "view_analytics")
-	for _, staff := range []string{"analyst", "setter"} {
-		forStaff := items(f.call(staff, "GET", "/gyms/alpha/ratings?ids="+shy, "", http.StatusOK))
-		if len(forStaff) != 1 || forStaff[0]["author"] != nil {
-			t.Errorf("%s must not see anonymous authors: %v", staff, forStaff)
-		}
+	f.call("analyst", "GET", "/gyms/alpha/ratings", "", http.StatusForbidden)
+	forSetter := items(f.call("setter", "GET", "/gyms/alpha/ratings?ids="+shy, "", http.StatusOK))
+	if len(forSetter) != 1 || forSetter[0]["author"] != nil {
+		t.Errorf("setters must not see anonymous authors: %v", forSetter)
 	}
 	f.call("moderator", "DELETE", "/ratings/"+shy, "", http.StatusNoContent)
 	stats := f.call("", "GET", "/gyms/alpha/ratings/stats", "", http.StatusOK)

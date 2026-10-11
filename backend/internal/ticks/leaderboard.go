@@ -2,6 +2,8 @@ package ticks
 
 import (
 	"context"
+	"log/slog"
+	"maps"
 	"math"
 	"slices"
 	"strings"
@@ -12,15 +14,16 @@ import (
 )
 
 const (
-	leaderboardBestSends   = 10
-	leaderboardFlashBonus  = 33
-	leaderboardRollingDays = 60
-	leaderboardRowLimit    = 100
-	leaderboardCacheTTL    = time.Minute
-	finishedSeasonCacheTTL = 6 * time.Hour
-	tickStalenessLimit     = 5 * time.Second
-	leaderboardTopRoutes   = 5
-	leaderboardTickMemory  = 5 * time.Minute
+	leaderboardBestSends      = 10
+	leaderboardFlashBonus     = 33
+	leaderboardRollingDays    = 60
+	leaderboardRowLimit       = 100
+	leaderboardCacheTTL       = time.Minute
+	finishedSeasonCacheTTL    = 6 * time.Hour
+	idleBoardLimit            = 10 * time.Minute
+	leaderboardDeriveInterval = time.Second
+	leaderboardPairTimeout    = 2 * time.Second
+	leaderboardTopRoutes      = 5
 )
 
 type leaderboardSend struct {
@@ -92,30 +95,33 @@ type leaderboardResult struct {
 	TopRoutes []leaderboardRoute `json:"topRoutes"`
 }
 
-type cachedBoard struct {
-	gym      string
-	board    leaderboardBoard
-	from, to time.Time
-	built    time.Time
-	expires  time.Time
+type pairKey struct{ user, route string }
+
+// liveBoard keeps the best send per (climber, route); tick changes refresh one pair, a full load runs once per reload interval.
+type liveBoard struct {
+	gym, kind string
+	from, to  time.Time
+	best      map[pairKey]leaderboardSend
+	labels    map[string]routeLabel
+	board     leaderboardBoard
+	ready     bool
+	dirty     bool
+	loading   bool
+	pending   map[pairKey]bool
+	derivedAt time.Time
+	loadedAt  time.Time
+	readAt    time.Time
 }
 
-// Ticks of the last minutes, so a board built while one landed is capped like an older board.
-type recentTick struct {
-	gym     string
-	day, at time.Time
-}
-
-// ponytail: per-process cache, every replica computes its own copy; tick.changed reaches all of them through the bus
+// ponytail: per-process boards, every replica keeps its own copy; tick.changed reaches all of them through the bus
 type boardCache struct {
-	mu      sync.Mutex
-	entries map[string]cachedBoard
-	ticks   []recentTick
-	builds  singleflight.Group
+	mu     sync.Mutex
+	boards map[string]*liveBoard
+	builds singleflight.Group
 }
 
 func newBoardCache() *boardCache {
-	return &boardCache{entries: map[string]cachedBoard{}}
+	return &boardCache{boards: map[string]*liveBoard{}}
 }
 
 func (m *module) leaderboard(ctx context.Context, gymID, kind, seasonID, viewer string, from, to time.Time) (leaderboardResult, error) {
@@ -185,95 +191,237 @@ func leaderboardKey(gymID, kind, seasonID string, from, to time.Time) string {
 func (m *module) cachedBoard(ctx context.Context, gymID, kind, seasonID string, from, to time.Time) (leaderboardBoard, error) {
 	key := leaderboardKey(gymID, kind, seasonID, from, to)
 	c := m.boards
-	c.mu.Lock()
-	cached, ok := c.entries[key]
-	c.mu.Unlock()
-	if ok && time.Now().Before(cached.expires) {
-		return cached.board, nil
-	}
-	board, err, _ := c.builds.Do(key, func() (any, error) {
-		started := time.Now()
-		board, err := m.buildLeaderboard(context.WithoutCancel(ctx), gymID, kind, from, to)
-		if err == nil {
-			c.store(key, gymID, board, from, to, started)
-		}
-		return board, err
-	})
-	return board.(leaderboardBoard), err
-}
-
-// started is when the build began reading ticks; ticks after it may be missing from the board.
-func (c *boardCache) store(key, gymID string, board leaderboardBoard, from, to, started time.Time) {
-	expires := time.Now().Add(leaderboardCacheTTL)
-	if !to.After(time.Now()) {
-		expires = time.Now().Add(finishedSeasonCacheTTL)
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	for stale, cached := range c.entries {
-		if time.Now().After(cached.expires) {
-			delete(c.entries, stale)
-		}
-	}
-	for _, tick := range c.ticks {
-		if (tick.gym == "" || tick.gym == gymID) && !tick.at.Before(started) && (tick.day.IsZero() || !tick.day.Before(from) && !tick.day.After(to)) {
-			// ponytail: builds slower than the limit still serve 1 s, else the cache starves under load
-			expires = later(tick.at.Add(tickStalenessLimit), time.Now().Add(time.Second))
-			break
-		}
-	}
-	c.entries[key] = cachedBoard{gym: gymID, board: board, from: from, to: to, built: started, expires: expires}
-}
-
-func later(a, b time.Time) time.Time {
-	if a.After(b) {
-		return a
-	}
-	return b
-}
-
-func (c *boardCache) forgetAll() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	clear(c.entries)
-	// Boards still being built read the old names; an all-gym marker caps them like a tick would.
-	c.ticks = append(c.ticks, recentTick{at: time.Now()})
-}
-
-func (c *boardCache) forgetCovering(gymID string, days ...time.Time) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	now := time.Now()
-	recent := c.ticks[:0]
-	for _, tick := range c.ticks {
-		if now.Sub(tick.at) < leaderboardTickMemory {
-			recent = append(recent, tick)
+	c.mu.Lock()
+	c.evictIdle(now)
+	b := c.boards[key]
+	if b == nil || !b.ready {
+		c.mu.Unlock()
+		board, err, _ := c.builds.Do(key, func() (any, error) {
+			return m.loadNewBoard(context.WithoutCancel(ctx), key, gymID, kind, from, to)
+		})
+		return board.(leaderboardBoard), err
+	}
+	b.readAt = now
+	if !b.loading && now.Sub(b.loadedAt) >= b.reloadInterval(now) {
+		b.loading = true
+		go func() {
+			if err := m.loadBoard(context.WithoutCancel(ctx), b); err != nil {
+				slog.Warn("leaderboard: reload failed", "board", key, "error", err)
+			}
+		}()
+	}
+	board := b.board
+	stale := b.dirty && now.Sub(b.derivedAt) >= leaderboardDeriveInterval
+	c.mu.Unlock()
+	if !stale {
+		return board, nil
+	}
+	derived, err, _ := c.builds.Do("derive|"+key, func() (any, error) { return m.derive(context.WithoutCancel(ctx), b) })
+	if err != nil {
+		slog.Warn("leaderboard: derive failed", "board", key, "error", err)
+		return board, nil
+	}
+	return derived.(leaderboardBoard), nil
+}
+
+func (b *liveBoard) reloadInterval(now time.Time) time.Duration {
+	if !b.to.After(now) {
+		return finishedSeasonCacheTTL
+	}
+	return leaderboardCacheTTL
+}
+
+func (c *boardCache) evictIdle(now time.Time) {
+	for key, b := range c.boards {
+		if b.ready && !b.loading && now.Sub(b.readAt) > max(idleBoardLimit, b.reloadInterval(now)) {
+			delete(c.boards, key)
 		}
 	}
-	for _, day := range days {
-		if !day.IsZero() {
-			recent = append(recent, recentTick{gym: gymID, day: day, at: now})
-		}
+}
+
+func (m *module) loadNewBoard(ctx context.Context, key, gymID, kind string, from, to time.Time) (leaderboardBoard, error) {
+	c := m.boards
+	c.mu.Lock()
+	if b := c.boards[key]; b != nil {
+		c.mu.Unlock()
+		return b.board, nil
 	}
-	c.ticks = recent
-	for key, cached := range c.entries {
-		if gymID != "" && cached.gym != gymID {
+	b := &liveBoard{gym: gymID, kind: kind, from: from, to: to, best: map[pairKey]leaderboardSend{}, pending: map[pairKey]bool{}, loading: true, readAt: time.Now()}
+	c.boards[key] = b
+	c.mu.Unlock()
+	err := m.loadBoard(ctx, b)
+	var board leaderboardBoard
+	if err == nil {
+		board, err = m.derive(ctx, b)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err != nil {
+		delete(c.boards, key)
+		return leaderboardBoard{}, err
+	}
+	b.ready = true
+	return board, nil
+}
+
+// loadBoard runs with b.loading set; changes seen meanwhile wait in b.pending and are replayed on top.
+func (m *module) loadBoard(ctx context.Context, b *liveBoard) error {
+	c := m.boards
+	started := time.Now()
+	sends, err := m.loadPairs(ctx, b.gym, b.kind, b.from, b.to)
+	c.mu.Lock()
+	if err == nil {
+		b.best = make(map[pairKey]leaderboardSend, len(sends))
+		for _, send := range sends {
+			b.best[pairKey{send.User, send.Route}] = send
+		}
+		b.labels, b.loadedAt, b.dirty = nil, started, true
+	}
+	for len(b.pending) > 0 {
+		pending := b.pending
+		b.pending = map[pairKey]bool{}
+		c.mu.Unlock()
+		for change := range pending {
+			sends, err := m.climberSends(change.user, change.route)
+			c.mu.Lock()
+			if err == nil {
+				b.replace(change, sends)
+			}
+			c.mu.Unlock()
+		}
+		c.mu.Lock()
+	}
+	b.loading = false
+	c.mu.Unlock()
+	return err
+}
+
+func (m *module) derive(ctx context.Context, b *liveBoard) (leaderboardBoard, error) {
+	c := m.boards
+	c.mu.Lock()
+	sends := slices.Collect(maps.Values(b.best))
+	labels, loadedAt := b.labels, b.loadedAt
+	b.dirty, b.derivedAt = false, time.Now()
+	c.mu.Unlock()
+	board, err := m.boardFromSends(ctx, sends, labels)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err != nil {
+		b.dirty = true
+		return leaderboardBoard{}, err
+	}
+	b.board = board
+	if b.loadedAt.Equal(loadedAt) {
+		b.labels = board.routes
+	}
+	return board, nil
+}
+
+// refreshClimber re-reads one climber's sends (one route, or all with route "") for the boards of gym ("" = every gym).
+func (m *module) refreshClimber(gym, user, route string) {
+	c := m.boards
+	change := pairKey{user, route}
+	c.mu.Lock()
+	var live []*liveBoard
+	for _, b := range c.boards {
+		if gym != "" && b.gym != gym {
 			continue
 		}
-		for _, day := range days {
-			if !day.IsZero() && !day.Before(cached.from) && !day.After(cached.to) {
-				// A busy gym ticks every second; rebuilding on each would leave the cache always empty.
-				if limit := cached.built.Add(tickStalenessLimit); limit.Before(cached.expires) {
-					cached.expires = limit
-					c.entries[key] = cached
-				}
-				break
-			}
+		if b.loading {
+			b.pending[change] = true
+		} else {
+			live = append(live, b)
+		}
+	}
+	c.mu.Unlock()
+	if len(live) == 0 {
+		return
+	}
+	sends, err := m.climberSends(user, route)
+	if err != nil {
+		slog.Warn("leaderboard: refreshing a climber failed", "user", user, "route", route, "error", err)
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, b := range live {
+		if b.loading {
+			b.pending[change] = true
+		} else {
+			b.replace(change, sends)
 		}
 	}
 }
 
-func (m *module) buildLeaderboard(ctx context.Context, gymID, kind string, from, to time.Time) (leaderboardBoard, error) {
+func (c *boardCache) markDirty() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, b := range c.boards {
+		b.dirty = true
+	}
+}
+
+type climberSend struct {
+	leaderboardSend
+	gym, gradeSystem string
+	date             time.Time
+}
+
+func (b *liveBoard) replace(change pairKey, sends []climberSend) {
+	for pair := range b.best {
+		if pair.user == change.user && (change.route == "" || pair.route == change.route) {
+			delete(b.best, pair)
+		}
+	}
+	for _, send := range sends {
+		if send.gym != b.gym || isBoulderGrade(send.gradeSystem) != (b.kind == "boulder") || send.date.Before(b.from) || !send.date.Before(b.to) {
+			continue
+		}
+		pair := pairKey{change.user, send.Route}
+		best, seen := b.best[pair]
+		flash := send.Flash || seen && best.Flash
+		if !seen || send.GradeIndex > best.GradeIndex {
+			best = send.leaderboardSend
+		}
+		best.Flash = flash
+		b.best[pair] = best
+	}
+	b.dirty = true
+}
+
+func isBoulderGrade(system string) bool {
+	return system == "font" || system == "v"
+}
+
+func (m *module) climberSends(user, route string) ([]climberSend, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), leaderboardPairTimeout)
+	defer cancel()
+	sql := `SELECT t.route, r.gym, t.grade, t.grade_index, t.type = 'flash', t.grade_system, t.date
+		FROM ticks t JOIN routes r ON r.id = t.route JOIN users u ON u.id = t."user"
+		WHERE t."user" = $1 AND t.type <> 'attempt' AND t.grade_index > 0 AND NOT u.leaderboard_hidden AND NOT u.ticks_private`
+	args := []any{user}
+	if route != "" {
+		sql += ` AND t.route = $2`
+		args = append(args, route)
+	}
+	rows, err := m.app.DB.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var sends []climberSend
+	for rows.Next() {
+		send := climberSend{leaderboardSend: leaderboardSend{User: user}}
+		if err := rows.Scan(&send.Route, &send.gym, &send.Grade, &send.GradeIndex, &send.Flash, &send.gradeSystem, &send.date); err != nil {
+			return nil, err
+		}
+		sends = append(sends, send)
+	}
+	return sends, rows.Err()
+}
+
+func (m *module) loadPairs(ctx context.Context, gymID, kind string, from, to time.Time) ([]leaderboardSend, error) {
 	systems := "t.grade_system IN ('font', 'v')"
 	if kind == "route" {
 		systems = "t.grade_system NOT IN ('font', 'v')"
@@ -285,20 +433,22 @@ func (m *module) buildLeaderboard(ctx context.Context, gymID, kind string, from,
 		AND t.date >= $2 AND t.date < $3 AND NOT u.leaderboard_hidden AND NOT u.ticks_private
 		GROUP BY t."user", t.route`, gymID, from, to)
 	if err != nil {
-		return leaderboardBoard{}, err
+		return nil, err
 	}
+	defer rows.Close()
 	var sends []leaderboardSend
 	for rows.Next() {
 		var s leaderboardSend
 		if err := rows.Scan(&s.User, &s.Route, &s.Grade, &s.GradeIndex, &s.Flash); err != nil {
-			rows.Close()
-			return leaderboardBoard{}, err
+			return nil, err
 		}
 		sends = append(sends, s)
 	}
-	if err := rows.Err(); err != nil {
-		return leaderboardBoard{}, err
-	}
+	return sends, rows.Err()
+}
+
+// boardFromSends ranks and summarizes in memory; only route labels missing from known are queried.
+func (m *module) boardFromSends(ctx context.Context, sends []leaderboardSend, known map[string]routeLabel) (leaderboardBoard, error) {
 	ranked := rankLeaderboard(sends)
 	userIDs := make([]string, len(ranked))
 	for i, row := range ranked {
@@ -315,17 +465,29 @@ func (m *module) buildLeaderboard(ctx context.Context, gymID, kind string, from,
 	}
 	board := summarizeSends(sends)
 	board.rows = ranked
-	routeIDs := []string{}
+	board.routes = maps.Clone(known)
+	if board.routes == nil {
+		board.routes = map[string]routeLabel{}
+	}
+	missing := []string{}
 	for _, userSends := range board.sends {
 		for _, send := range userSends {
-			routeIDs = append(routeIDs, send.Route)
+			if _, ok := board.routes[send.Route]; !ok {
+				missing = append(missing, send.Route)
+			}
 		}
 	}
 	for _, route := range board.topRoutes {
-		routeIDs = append(routeIDs, route.ID)
+		if _, ok := board.routes[route.ID]; !ok {
+			missing = append(missing, route.ID)
+		}
 	}
-	if board.routes, err = m.routeLabels(ctx, routeIDs); err != nil {
-		return leaderboardBoard{}, err
+	if len(missing) > 0 {
+		fetched, err := m.routeLabels(ctx, missing)
+		if err != nil {
+			return leaderboardBoard{}, err
+		}
+		maps.Copy(board.routes, fetched)
 	}
 	for i, top := range board.topRoutes {
 		if route, ok := board.routes[top.ID]; ok {

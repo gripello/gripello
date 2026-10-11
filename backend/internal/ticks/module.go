@@ -2,6 +2,7 @@ package ticks
 
 import (
 	"encoding/json"
+	"slices"
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/climbers"
@@ -45,11 +46,11 @@ func newModule(app *platform.App) *module {
 func (m *module) onTickChanged(e events.Event) {
 	var change TickChanged
 	if json.Unmarshal(e.Payload, &change) == nil {
-		m.boards.forgetCovering(change.Gym, change.Date)
+		m.refreshClimber(change.Gym, change.User, change.Route)
 	}
 }
 
-// user.updated carries {record, changed}; without `changed` every profile update forgets the boards.
+// user.updated carries {record, changed}; without `changed` every leaderboard field counts as changed.
 func (m *module) onUserEvent(e events.Event) {
 	if e.Kind == "user.deleted" {
 		var deleted struct {
@@ -57,8 +58,8 @@ func (m *module) onUserEvent(e events.Event) {
 		}
 		if json.Unmarshal(e.Payload, &deleted) == nil {
 			m.climbers.Forget(deleted.ID)
+			m.refreshClimber("", deleted.ID, "")
 		}
-		m.boards.forgetAll()
 		return
 	}
 	if e.Kind != "user.updated" {
@@ -74,7 +75,11 @@ func (m *module) onUserEvent(e events.Event) {
 		return
 	}
 	m.climbers.Forget(update.Record.ID)
-	if touchesLeaderboard(update.Changed) {
-		m.boards.forgetAll()
+	if !touchesLeaderboard(update.Changed) {
+		return
+	}
+	m.boards.markDirty()
+	if update.Changed == nil || slices.Contains(update.Changed, "leaderboard_hidden") || slices.Contains(update.Changed, "ticks_private") {
+		m.refreshClimber("", update.Record.ID, "")
 	}
 }

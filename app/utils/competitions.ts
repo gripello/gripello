@@ -444,10 +444,3 @@ export function defaultDisplayName(
         .join(' ')
     return fullName || user?.username || ''
 }
-
-export function resultsChangedAt(
-    current: number,
-    change: { kind: string; at: number },
-): number {
-    return change.kind === 'resync' ? current : Math.max(current, change.at)
-}

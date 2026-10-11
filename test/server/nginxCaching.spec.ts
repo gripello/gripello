@@ -25,13 +25,6 @@ describe('nginx caching', () => {
         )
     })
 
-    it('shares public competition results across workers but not staff results', () => {
-        const results = block('= /api/ui/competition-results')
-        expect(results).toContain('proxy_cache_lock on')
-        expect(results).toContain('proxy_cache_bypass $http_authorization')
-        expect(results).toContain('proxy_no_cache $http_authorization')
-    })
-
     it('asks GitHub for the version once per 10 minutes for all workers', () => {
         const version = block('= /api/version')
         expect(version).toContain('proxy_cache_valid 200 10m')
@@ -41,6 +34,23 @@ describe('nginx caching', () => {
 
     it('lets the API hand file bodies to nginx only for requests that pass through it', () => {
         expect(block('/api/')).toContain('proxy_set_header X-Blob-Accel 1;')
+    })
+
+    it('serves public standings from a shared 1 s cache and passes personal ones through', () => {
+        const standings = block('~ ^/api/competitions/[^/]+/standings$')
+        expect(standings).toContain('proxy_pass http://api')
+        expect(standings).toContain('proxy_cache_valid 200 1s')
+        expect(standings).toContain('proxy_cache_lock on')
+        expect(standings).toContain('proxy_cache_bypass $standings_personal')
+        expect(standings).toContain('proxy_no_cache $standings_personal')
+        expect(standings).toContain('limit_req zone=api')
+        expect(nginx).toMatch(
+            /map \$arg_view \$standings_public_view \{\s+default 0;\s+public 1;/,
+        )
+        expect(nginx).toContain(
+            'map "$standings_public_view|$http_authorization$cookie_pb_auth$cookie_auth" $standings_personal {',
+        )
+        expect(nginx).toMatch(/default 1;\s+"~\^1\\\|" 0;\s+"0\|" 0;/)
     })
 
     it('caches the unhashed app icons for a day', () => {

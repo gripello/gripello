@@ -50,6 +50,7 @@ type App struct {
 	Workers       map[string]jobs.Worker
 	Realtime      *realtime.Hub
 	Tokens        auth.Issuer
+	Verified      *auth.VerifiedTokens
 	Logs          *logbuf.Buffer
 	Metrics       *metrics.Recorder
 }
@@ -71,7 +72,7 @@ func (a *App) Handler() http.Handler {
 	if a.Metrics != nil {
 		mux = a.Metrics.Middleware(mux)
 	}
-	return httpx.Versioned(config.Version)(auth.Middleware(a.DB, a.Cfg.TokenSecret)(mux))
+	return httpx.Versioned(config.Version)(auth.Middleware(a.DB, a.Cfg.TokenSecret, a.Verified)(mux))
 }
 
 // Below docker's default 10 s stop timeout, so draining finishes before the SIGKILL.

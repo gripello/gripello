@@ -175,11 +175,7 @@ func (p *phone) competition() (myEntry string) {
 			myEntry = mine.Items[0].ID
 		}
 	}
-	since := ""
-	results := func() {
-		p.get("GET /ui/competition-results", "/api/ui/competition-results?id="+c+since)
-		since = fmt.Sprintf("&since=%d", time.Now().UnixMilli())
-	}
+	results := func() { p.get("GET /competitions/{id}/standings", "/api/competitions/"+c+"/standings?view=public") }
 	results()
 	if p.signedIn() {
 		p.get("GET /competitions/{id}/routes", "/api/competitions/"+c+"/routes?voided=false")
@@ -490,7 +486,9 @@ func judge(p *phone) {
 func tv(p *phone) {
 	p.entry("GET /{gym}/competitions/{id}/tv", p.page("/competitions/"+p.gym.competition+"/tv"))
 	p.subscribe("competition_changes:" + p.gym.competition)
-	results := func() { p.get("GET /ui/competition-results", "/api/ui/competition-results?id="+p.gym.competition) }
+	results := func() {
+		p.get("GET /competitions/{id}/standings", "/api/competitions/"+p.gym.competition+"/standings?view=public")
+	}
 	results()
 	p.loaded("results", results)
 	p.watch(24 * time.Hour)

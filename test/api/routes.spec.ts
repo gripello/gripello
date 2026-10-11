@@ -7,6 +7,7 @@ import {
     deleteLocation,
     deleteMapTrace,
     deleteRoute,
+    getAnalytics,
     getRoute,
     listLocations,
     listRouteColors,
@@ -195,6 +196,18 @@ describe('route records', () => {
         api.respond({ items: ['#fff', ''] })
         expect(await listRouteColors('g1')).toEqual(['#fff'])
         expect(api.request().url).toBe('/api/gyms/g1/routes/colors')
+    })
+})
+
+describe('getAnalytics', () => {
+    it('sends the filters to the gym analytics', async () => {
+        api.respond({ bucket: 'day' })
+        expect(
+            await getAnalytics('g 1', { range: '30d', type: 'Boulder' }),
+        ).toEqual({ bucket: 'day' })
+        expect(api.request().url).toBe(
+            '/api/gyms/g%201/analytics?range=30d&type=Boulder',
+        )
     })
 })
 

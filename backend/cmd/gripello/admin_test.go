@@ -118,6 +118,11 @@ func TestAdminTruncatePrefixDeletesOnlyPrefixedTestRows(t *testing.T) {
 	if !verified || !platformAdmin || !suspended {
 		t.Fatalf("verified %v platform admin %v suspended %v", verified, platformAdmin, suspended)
 	}
+	var userEvents int
+	pool.QueryRow(ctx, `SELECT count(*) FROM events WHERE topic = $1 AND kind = 'user.token_rotated'`, "user:"+keptUser).Scan(&userEvents)
+	if userEvents != 1 {
+		t.Fatalf("set-user published %d user events, want 1 so replicas drop cached tokens", userEvents)
+	}
 	if _, err := adminSetUser(ctx, pool, []string{"--user", "e2e-w13-123-user@gripello.test", "--verified=false", "--suspended-until", ""}); err != nil {
 		t.Fatal(err)
 	}
