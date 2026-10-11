@@ -263,9 +263,28 @@ func TestServeFileHandsTheBodyToNginx(t *testing.T) {
 	s.AccelPrefix = "/_blob/"
 	s.Put(context.Background(), "gyms/g1/logo_abc.png", bytes.NewReader(pngBytes(t, 300, 300)))
 	rec := httptest.NewRecorder()
-	mux(s).ServeHTTP(rec, httptest.NewRequest("GET", "/files/gyms/g1/logo_abc.png?thumb=100x100", nil))
+	mux(s).ServeHTTP(rec, viaNginx(httptest.NewRequest("GET", "/files/gyms/g1/logo_abc.png?thumb=100x100", nil)))
 	if got := rec.Header().Get("X-Accel-Redirect"); got != "/_blob/gyms/g1/thumbs_logo_abc.png/100x100_logo_abc.png" || rec.Body.Len() != 0 || rec.Header().Get("Content-Type") != "image/png" {
 		t.Fatalf("accel %q, body %d bytes, type %q", got, rec.Body.Len(), rec.Header().Get("Content-Type"))
+	}
+}
+
+func viaNginx(r *http.Request) *http.Request {
+	r.Header.Set(AccelHeader, "1")
+	return r
+}
+
+func TestServeFileSendsTheBodyToCallersThatBypassNginx(t *testing.T) {
+	s, _ := newStore(t)
+	s.AccelPrefix = "/_blob/"
+	body := pngBytes(t, 50, 50)
+	s.Put(context.Background(), "gyms/g1/logo_abc.png", bytes.NewReader(body))
+	for range 2 {
+		rec := httptest.NewRecorder()
+		mux(s).ServeHTTP(rec, httptest.NewRequest("GET", "/files/gyms/g1/logo_abc.png", nil))
+		if rec.Header().Get("X-Accel-Redirect") != "" || !bytes.Equal(rec.Body.Bytes(), body) {
+			t.Fatalf("accel %q, body %d bytes; want the file itself", rec.Header().Get("X-Accel-Redirect"), rec.Body.Len())
+		}
 	}
 }
 
@@ -309,7 +328,7 @@ func TestServeFileRemembersTheTypeSoNginxServesWithoutAFileRead(t *testing.T) {
 	s.Put(ctx, "gyms/g1/logo_abc.png", bytes.NewReader(pngBytes(t, 50, 50)))
 	get := func() *httptest.ResponseRecorder {
 		rec := httptest.NewRecorder()
-		mux(s).ServeHTTP(rec, httptest.NewRequest("GET", "/files/gyms/g1/logo_abc.png", nil))
+		mux(s).ServeHTTP(rec, viaNginx(httptest.NewRequest("GET", "/files/gyms/g1/logo_abc.png", nil)))
 		return rec
 	}
 	get()
