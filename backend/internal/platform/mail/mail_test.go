@@ -334,3 +334,12 @@ func TestStallingServerTimesOut(t *testing.T) {
 		}
 	}
 }
+
+func TestSenderAddressFollowsTheSettingsInUse(t *testing.T) {
+	c := &Client{}
+	c.Use(SMTP{SenderAddress: "env@example.com"})
+	c.Use(SMTP{Host: "smtp.example.com", Port: "587", SenderAddress: "platform@example.com"})
+	if got := c.SenderAddress(); got != "platform@example.com" {
+		t.Errorf("sender address = %q, want the settings applied last", got)
+	}
+}

@@ -51,9 +51,10 @@ func FromEnv(cfg config.Config) SMTP {
 }
 
 type transport struct {
-	senderName string
-	configured bool
-	deliver    func(context.Context, Message) error
+	senderName    string
+	senderAddress string
+	configured    bool
+	deliver       func(context.Context, Message) error
 }
 
 // Client swaps its transport at runtime, so modules keep the instance they got at Register.
@@ -69,11 +70,16 @@ func New(cfg config.Config) *Client {
 }
 
 func (c *Client) Use(s SMTP) {
-	t := &transport{senderName: s.SenderName, deliver: logMessage}
+	t := &transport{senderName: s.SenderName, senderAddress: s.SenderAddress, deliver: logMessage}
 	if s.Host != "" {
 		t.configured, t.deliver = true, smtpTransport(s)
 	}
 	c.current.Store(t)
+}
+
+// SenderAddress is the From address in use, from the platform settings or the environment.
+func (c *Client) SenderAddress() string {
+	return c.current.Load().senderAddress
 }
 
 // Configured is the GET /mail-status body.

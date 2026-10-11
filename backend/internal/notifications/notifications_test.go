@@ -101,7 +101,7 @@ func newFixture(t *testing.T, pushEnabled bool) *fixture {
 		if err != nil {
 			t.Fatal(err)
 		}
-		app.Push = push.New(public, private, "test@example.com")
+		app.Push = push.New(public, private, "test@example.com", "")
 	}
 	Register(app)
 	f := &fixture{t: t, app: app, m: &module{app: app}, handler: testapp.Handler(app), users: map[string]string{}, tokens: map[string]string{}}

@@ -44,7 +44,7 @@ func App(t *testing.T) *platform.App {
 		MailTemplates: &mail.Templates{Messages: messages, AppName: "Gripello", AppURL: "http://localhost:3000"},
 		Locales:       messages,
 		Blob:          store,
-		Push:          push.New("", "", ""),
+		Push:          push.New("", "", "", ""),
 		DB:            pool,
 		Mux:           http.NewServeMux(),
 		Bus:           bus,
