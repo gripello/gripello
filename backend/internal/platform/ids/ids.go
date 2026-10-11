@@ -9,7 +9,7 @@ const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
 
 var valid = regexp.MustCompile(`^[a-z0-9]{15}$`)
 
-// New returns a 15-char lowercase id, the shape PocketBase used, so old and new ids are indistinguishable.
+// New returns a 15-char lowercase id, the shape every existing row id has.
 func New() string {
 	b := make([]byte, 15)
 	rand.Read(b)

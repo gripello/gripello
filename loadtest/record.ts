@@ -39,7 +39,7 @@ async function signIn(page: Page, email: string) {
     )
     await page.context().addCookies([
         {
-            name: 'pb_auth',
+            name: 'gripello_auth',
             value: encodeURIComponent(JSON.stringify(login)),
             url: base,
         },

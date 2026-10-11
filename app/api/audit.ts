@@ -1,6 +1,6 @@
 import type { AuditAction, AuditLogRecord } from '../../types/models'
 import { useApi } from './client'
-import type { PbReadOptions, RouteList } from './client'
+import type { RouteList } from './client'
 
 export interface AuditQuery {
     action?: AuditAction | null
@@ -36,24 +36,16 @@ function listAudit(
     })
 }
 
-export function listGymAudit(
-    gym: string,
-    query: AuditQuery = {},
-    _options: PbReadOptions = {},
-) {
+export function listGymAudit(gym: string, query: AuditQuery = {}) {
     return listAudit(`/gyms/${gym}/audit`, query)
 }
 
 export function listPlatformAudit(
     query: AuditQuery & { gym?: string | null } = {},
-    _options: PbReadOptions = {},
 ) {
     return listAudit('/platform/audit', query)
 }
 
-export function listOwnAudit(
-    query: AuditQuery = {},
-    _options: PbReadOptions = {},
-) {
+export function listOwnAudit(query: AuditQuery = {}) {
     return listAudit('/me/audit', query)
 }

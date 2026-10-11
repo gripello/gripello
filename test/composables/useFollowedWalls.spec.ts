@@ -7,8 +7,8 @@ vi.stubGlobal('useState', (key: string, init?: () => unknown) => {
     return useStateMocks[key]
 })
 
-let pbMock: any
-vi.stubGlobal('useAuthStore', () => pbMock.authStore)
+let apiMock: any
+vi.stubGlobal('useAuthStore', () => apiMock.authStore)
 
 const follow = vi.fn()
 const unfollow = vi.fn()
@@ -23,7 +23,7 @@ describe('useFollowedWalls', () => {
         for (const key of Object.keys(useStateMocks)) delete useStateMocks[key]
         follow.mockReset().mockResolvedValue({ id: 'u1' })
         unfollow.mockReset().mockResolvedValue({ id: 'u1' })
-        pbMock = {
+        apiMock = {
             authStore: {
                 token: 't',
                 record: { id: 'u1', followed_walls: ['w1'] },

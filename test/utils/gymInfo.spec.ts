@@ -23,7 +23,7 @@ const gym = {
 describe('gymInfo', () => {
     afterEach(() => vi.unstubAllGlobals())
 
-    it('treats PocketBase zero coordinates as no location', () => {
+    it('treats zero coordinates as no location', () => {
         expect(hasLocation({ latitude: 0, longitude: 0 })).toBe(false)
         expect(hasLocation(gym)).toBe(true)
     })

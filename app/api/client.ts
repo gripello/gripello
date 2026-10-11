@@ -13,7 +13,6 @@ export class ApiError extends Error {
     readonly status: number
     readonly response: ApiErrorBody
     readonly isAbort: boolean
-    readonly originalError: unknown
 
     constructor(context: FetchContext) {
         const body = context.response?._data
@@ -31,7 +30,6 @@ export class ApiError extends Error {
         this.status = context.response?.status ?? 0
         this.response = response
         this.isAbort = isAbort
-        this.originalError = context.error
     }
 
     get data() {
@@ -129,12 +127,6 @@ export function toFormData(input: Record<string, unknown> | FormData) {
     }
     form.append('@jsonPayload', JSON.stringify(payload))
     return form
-}
-
-export interface PbReadOptions {
-    fields?: string
-    requestKey?: string | null
-    rated?: boolean
 }
 
 export interface RouteList<T> {

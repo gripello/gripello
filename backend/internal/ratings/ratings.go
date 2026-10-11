@@ -184,7 +184,7 @@ func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// expandRoutes keeps the shape the reviews page read from PocketBase: expand.route_id.{id,name,expand.location.name}.
+// expandRoutes fills the shape the reviews page reads: expand.route_id.{id,name,expand.location.name}.
 func (m *module) expandRoutes(ctx context.Context, items []Rating) error {
 	routeIDs := make([]string, len(items))
 	for i, r := range items {

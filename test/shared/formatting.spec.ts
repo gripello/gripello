@@ -163,7 +163,7 @@ describe('dates west of UTC', () => {
         process.env.TZ = originalTimeZone
     })
 
-    it('keeps the stored PocketBase day when editing', () => {
+    it('keeps the stored day when editing', () => {
         expect(formatDateToYYYYMMDD('2024-06-15 00:00:00.000Z')).toBe(
             '2024-06-15',
         )
@@ -199,7 +199,7 @@ describe('formatDate', () => {
         expect(formatDate('nope', { fallback: '—' })).toBe('—')
     })
 
-    it('parses PocketBase space-separated dates', () => {
+    it('parses space-separated dates', () => {
         expect(
             formatDate('2024-03-05 10:00:00.000Z', {
                 locale: 'en-US',

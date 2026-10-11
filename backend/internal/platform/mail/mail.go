@@ -158,7 +158,7 @@ func smtpTransport(cfg SMTP) func(context.Context, Message) error {
 		deadline := time.Now().Add(smtpTimeout)
 		dialCtx, cancel := context.WithDeadline(ctx, deadline)
 		defer cancel()
-		// Like PocketBase: TLS means implicit TLS (SMTPS); otherwise upgrade via STARTTLS when offered.
+		// TLS means implicit TLS (SMTPS); otherwise upgrade via STARTTLS when offered.
 		var conn net.Conn
 		startTLS := !cfg.TLS
 		if cfg.TLS {

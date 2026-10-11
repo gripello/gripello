@@ -316,7 +316,7 @@ func validateString(spec field, s string) string {
 	return ""
 }
 
-// platformOnlyChange returns why a non-platform admin may not send body; it runs before validation, as PB's request hook did.
+// platformOnlyChange returns why a non-platform admin may not send body; it runs before validation.
 func platformOnlyChange(body map[string]json.RawMessage, current *gymState) string {
 	if raw, ok := body["slug"]; ok {
 		var slug string

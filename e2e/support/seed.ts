@@ -52,7 +52,6 @@ export async function getRoleIds(): Promise<Record<string, string>> {
 }
 
 export async function setMembership(
-    _pb: unknown,
     userId: string,
     roleId: string | undefined,
 ) {
@@ -70,7 +69,6 @@ export async function setMembership(
 }
 
 export async function ensureUser(
-    pb: unknown,
     roleId: string | undefined,
     role: SeededUser['role'],
     prefix: string,
@@ -93,7 +91,7 @@ export async function ensureUser(
         '--verified',
         ...(platformAdmin ? ['--platform-admin'] : []),
     )
-    await setMembership(pb, id, roleId)
+    await setMembership(id, roleId)
     return { id, email, password, role }
 }
 

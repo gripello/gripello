@@ -16,7 +16,7 @@ test('a leftover session of a deleted account still renders the site', async ({
 
     await page
         .context()
-        .addCookies([{ name: 'pb_auth', value: cookie, url: baseURL! }])
+        .addCookies([{ name: 'gripello_auth', value: cookie, url: baseURL! }])
 
     const response = await page.goto(gymPath('/'))
     expect(response?.status()).toBe(200)

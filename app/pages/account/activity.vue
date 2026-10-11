@@ -244,12 +244,11 @@ async function fetchList(target = 1) {
         page: target,
         limit: PER_PAGE,
     }
-    const options = { requestKey: 'auditList' }
     const result = gymFilter.value
-        ? await listGymAudit(gymFilter.value, query, options)
+        ? await listGymAudit(gymFilter.value, query)
         : isPlatformAdmin.value
-          ? await listPlatformAudit(query, options)
-          : await listOwnAudit(query, options)
+          ? await listPlatformAudit(query)
+          : await listOwnAudit(query)
 
     totalItems.value = result.total ?? 0
     entries.value =

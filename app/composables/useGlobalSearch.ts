@@ -68,11 +68,12 @@ export function useGlobalSearch() {
     const searchRoutes = async (query: string): Promise<SearchResult[]> => {
         const search = routeSearchQuery(query)
         if (!search.q && !search.grade) return []
-        const res = await listRoutes<RouteRecord>(
-            gymId.value,
-            { ...search, sort: 'name', page: 1, limit: 8 },
-            { requestKey: null },
-        )
+        const res = await listRoutes<RouteRecord>(gymId.value, {
+            ...search,
+            sort: 'name',
+            page: 1,
+            limit: 8,
+        })
         return res.items.map((route) => ({
             key: `route-${route.id}`,
             to: gymPath(`/route?id=${route.id}`),
@@ -141,16 +142,13 @@ export function useGlobalSearch() {
     }
 
     const searchModeration = async (query: string): Promise<SearchResult[]> => {
-        const res = await listCases(
-            {
-                gym: gymId.value,
-                q: query,
-                sort: 'newest',
-                page: 1,
-                limit: RESULTS_PER_GROUP,
-            },
-            { requestKey: null },
-        )
+        const res = await listCases({
+            gym: gymId.value,
+            q: query,
+            sort: 'newest',
+            page: 1,
+            limit: RESULTS_PER_GROUP,
+        })
         return res.items.map((item) => ({
             key: `moderation-${item.id}`,
             to: gymPath(`/manage/moderation?case=${item.id}`),

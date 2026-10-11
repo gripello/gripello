@@ -73,7 +73,7 @@ func (p *phone) signedIn() bool { return p.acct != nil && p.acct.token != "" }
 func (p *phone) cookie() string {
 	c := "gym=" + p.gym.slug
 	if p.signedIn() {
-		c += "; pb_auth=" + p.acct.cookie
+		c += "; gripello_auth=" + p.acct.cookie
 	}
 	return c
 }

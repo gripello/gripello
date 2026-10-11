@@ -133,7 +133,7 @@ func (m *module) listTasks(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// expand fills `expand` like PocketBase did, so `task.expand.route.name` keeps working.
+// expand fills `expand`, so `task.expand.route.name` keeps working.
 func (m *module) expand(ctx context.Context, items []Task) error {
 	var routeIDs, wallIDs, userIDs []string
 	for _, t := range items {

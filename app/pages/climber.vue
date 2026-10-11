@@ -297,13 +297,7 @@ const { data: myTicks, error: myTicksError } = await useAsyncData(
     () =>
         isSelf
             ? Promise.resolve([])
-            : listOwnTicks(
-                  {},
-                  {
-                      fields: 'id,route,type,attempts,date,grade,grade_system,grade_index',
-                      requestKey: null,
-                  },
-              ).then((list) => list.items),
+            : listOwnTicks({}).then((list) => list.items),
     { default: () => [] },
 )
 

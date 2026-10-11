@@ -14,8 +14,8 @@ vi.stubGlobal('useState', (key: string, init?: () => unknown) => {
 vi.stubGlobal('ref', vueRef)
 vi.stubGlobal('computed', vueComputed)
 
-let pbMock: any
-vi.stubGlobal('useAuthStore', () => pbMock.authStore)
+let apiMock: any
+vi.stubGlobal('useAuthStore', () => apiMock.authStore)
 
 function record(id: string, read = false) {
     return { id, user: 'u1', type: 'report_filed', read, created: '' }
@@ -36,7 +36,7 @@ describe('useNotificationQueue', () => {
     beforeEach(() => {
         vi.resetModules()
         for (const key of Object.keys(useStateMocks)) delete useStateMocks[key]
-        pbMock = { authStore: { isValid: true } }
+        apiMock = { authStore: { isValid: true } }
     })
 
     async function loadComposable() {
@@ -172,7 +172,7 @@ describe('useNotificationQueue', () => {
     })
 
     it('empties the queue when signed out', async () => {
-        pbMock.authStore.isValid = false
+        apiMock.authStore.isValid = false
         serve([record('a')])
 
         const { refresh, items } = await loadComposable()

@@ -452,11 +452,7 @@ const wallItems = computed(() =>
 
 async function loadWalls(locationId: string) {
     locationWalls.value = locationId
-        ? await listWalls(
-              gymId.value,
-              { location: locationId },
-              { requestKey: 'routeFormWalls' },
-          ).catch(() => [])
+        ? await listWalls(gymId.value, { location: locationId }).catch(() => [])
         : []
 }
 
@@ -479,11 +475,9 @@ watch([savedAnchorPoint, locationWalls], ([anchor, walls]) => {
 async function wallPosition(wallId: string | null) {
     if (!wallId) return null
     if (wallId === originalWall.value.wall) return originalWall.value.position
-    const { items: neighbours } = await listRoutes<RouteRecord>(
-        gymId.value,
-        { wall: wallId },
-        { fields: 'id,anchor_point,wall_position', requestKey: null },
-    )
+    const { items: neighbours } = await listRoutes<RouteRecord>(gymId.value, {
+        wall: wallId,
+    })
     const anchor = Number(savedAnchorPoint.value)
     if (!(anchor > 0))
         return freePosition(
@@ -614,16 +608,12 @@ const loadFromRoute = (route: RouteRecord) => {
 const getSetters = async () => {
     if (!gymId.value) return
     try {
-        const recent = await listRoutes<RouteRecord>(
-            gymId.value,
-            {
-                archived: 'all',
-                sort: '-created',
-                page: 1,
-                limit: SETTER_SUGGESTION_ROUTES,
-            },
-            { fields: 'creator' },
-        )
+        const recent = await listRoutes<RouteRecord>(gymId.value, {
+            archived: 'all',
+            sort: '-created',
+            page: 1,
+            limit: SETTER_SUGGESTION_ROUTES,
+        })
         setterItems.value = setterNames(recent.items)
     } catch (error) {
         console.error('Failed to fetch route setters:', error)

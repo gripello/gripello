@@ -18,14 +18,14 @@ vi.stubGlobal('useI18n', () => ({ t: (key: string) => key }))
 const notifyErrorMock = vi.fn()
 vi.stubGlobal('useNotification', () => ({ error: notifyErrorMock }))
 
-let pbMock: any
+let apiMock: any
 let getMe: (...args: unknown[]) => unknown
 
 vi.mock('~/api/account', () => ({
     getMe: (...args: unknown[]) => getMe(...args),
 }))
 
-vi.stubGlobal('useAuthStore', () => pbMock.authStore)
+vi.stubGlobal('useAuthStore', () => apiMock.authStore)
 
 const currentGym = vueRef('gymA')
 vi.stubGlobal('useCurrentGymId', () => currentGym)
@@ -58,7 +58,7 @@ describe('usePermissions', () => {
             delete useStateMocks[key]
         }
         currentGym.value = 'gymA'
-        pbMock = {
+        apiMock = {
             authStore: {
                 isValid: true,
                 record: { id: 'user123' },
@@ -144,8 +144,8 @@ describe('usePermissions', () => {
     // ── Unauthenticated / no role ────────────────────────────────────────
 
     it('clears permissions when user is not authenticated', async () => {
-        pbMock.authStore.isValid = false
-        pbMock.authStore.record = null
+        apiMock.authStore.isValid = false
+        apiMock.authStore.record = null
 
         const { can, refreshPermissions, loaded } = await loadComposable()
         await refreshPermissions()
@@ -376,13 +376,13 @@ describe('usePermissions', () => {
             .fn()
             .mockResolvedValue(memberOf('routesetter', ['manage_routes']))
         getMe = getMeMock
-        Object.assign(pbMock.authStore, { isValid: false, record: null })
+        Object.assign(apiMock.authStore, { isValid: false, record: null })
 
         const { ensureLoaded, can } = await loadComposable()
         await ensureLoaded()
         expect(can('manage_routes')).toBe(false)
 
-        Object.assign(pbMock.authStore, {
+        Object.assign(apiMock.authStore, {
             isValid: true,
             record: { id: 'user123' },
         })
@@ -401,7 +401,7 @@ describe('usePermissions', () => {
         await ensureLoaded()
         expect(can('manage_routes')).toBe(true)
 
-        Object.assign(pbMock.authStore, { isValid: false, record: null })
+        Object.assign(apiMock.authStore, { isValid: false, record: null })
         await ensureLoaded()
 
         expect(can('manage_routes')).toBe(false)
@@ -416,7 +416,7 @@ describe('usePermissions', () => {
 
         const { ensureLoaded, can } = await loadComposable()
         await ensureLoaded()
-        pbMock.authStore.record = { id: 'user456' }
+        apiMock.authStore.record = { id: 'user456' }
         await ensureLoaded()
 
         expect(getMeMock).toHaveBeenCalledTimes(2)
@@ -430,7 +430,7 @@ describe('usePermissions', () => {
         const { ensureLoaded, refreshPermissions, can } = await loadComposable()
         const inFlight = ensureLoaded()
 
-        Object.assign(pbMock.authStore, { isValid: false, record: null })
+        Object.assign(apiMock.authStore, { isValid: false, record: null })
         await refreshPermissions()
         resolveRole(memberOf('routesetter', ['manage_routes']))
         await inFlight
@@ -477,7 +477,7 @@ describe('usePermissions', () => {
         let firstSettled = false
         const first = ensureLoaded().then(() => (firstSettled = true))
 
-        pbMock.authStore.record = { id: 'user456' }
+        apiMock.authStore.record = { id: 'user456' }
         const second = refreshPermissions()
         rejectFirst(autoCancel)
         await new Promise((resolve) => setTimeout(resolve, 0))

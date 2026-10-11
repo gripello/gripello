@@ -10,11 +10,9 @@ const route = useRoute()
 const routeId = String(route.query.id ?? '')
 
 const target = routeId
-    ? await getRoute<RouteRecord & { expand?: { gym?: GymRecord } }>(
-          routeId,
-          ['gym'],
-          { fields: 'expand.gym.slug', requestKey: null },
-      )
+    ? await getRoute<RouteRecord & { expand?: { gym?: GymRecord } }>(routeId, [
+          'gym',
+      ])
           .then((record) => record.expand?.gym?.slug)
           .catch(() => undefined)
     : undefined

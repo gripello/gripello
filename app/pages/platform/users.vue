@@ -277,18 +277,15 @@ const {
     reloadLoaded,
     loadMore,
     prefetch,
-} = usePbList<PlatformUser>(
+} = useList<PlatformUser>(
     (page, limit) =>
-        listPlatformUsers(
-            {
-                q: search.value,
-                filter: kind.value,
-                page,
-                limit,
-                total: true,
-            },
-            { requestKey: 'platformUsers' },
-        ),
+        listPlatformUsers({
+            q: search.value,
+            filter: kind.value,
+            page,
+            limit,
+            total: true,
+        }),
     { perPage: 48, requestKey: 'platformUsers' },
 )
 

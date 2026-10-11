@@ -530,7 +530,7 @@ watch(open, async (isOpen) => {
         listTaskAssignees(gymId.value).catch(() => []),
         walls.value.length || targetRouteId.value
             ? walls.value
-            : listWalls(gymId.value, {}, { requestKey: null }).catch(() => []),
+            : listWalls(gymId.value).catch(() => []),
     ])
     assignees.value = loadedAssignees
     walls.value = loadedWalls

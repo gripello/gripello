@@ -75,7 +75,7 @@ func actorOf(ctx context.Context) string {
 
 var kindSuffix = map[string]string{"create": "created", "update": "updated", "delete": "deleted"}
 
-// publishRatingChange sends PocketBase's audience variants so each client gets exactly one: guests the bare record,
+// publishRatingChange sends three audience variants so each client gets exactly one: guests the bare record,
 // signed-in non-authors author + mine:false, the author mine:true.
 func (m *module) publishRatingChange(ctx context.Context, tx pgx.Tx, actor, action string, rating Rating, changed []string) error {
 	topic, kind := "gym_changes:"+rating.Gym, "rating."+kindSuffix[action]

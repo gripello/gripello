@@ -40,9 +40,6 @@ func (s *Store) IssueToken(secret string) http.Handler {
 		if err := httpx.Decode(r, &body); err != nil {
 			return err
 		}
-		if body.Table == "_pb_users_auth_" {
-			body.Table = "users"
-		}
 		if !validKey(body.Table, body.ID, "x") {
 			return httpx.NewError(http.StatusBadRequest, "table and id are required.")
 		}
@@ -79,9 +76,6 @@ const AccelHeader = "X-Blob-Accel"
 func (s *Store) ServeFile(secret string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		table, id, name := r.PathValue("table"), r.PathValue("id"), r.PathValue("name")
-		if table == "_pb_users_auth_" {
-			table = "users"
-		}
 		if !validKey(table, id, name) {
 			httpx.Fail(w, httpx.ErrNotFound)
 			return

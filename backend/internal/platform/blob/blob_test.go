@@ -352,7 +352,7 @@ func TestWarmThumbsRendersSizesInTheBackground(t *testing.T) {
 	}
 }
 
-func TestVipsArgsMirrorThePocketBaseModes(t *testing.T) {
+func TestVipsArgsMirrorTheThumbModes(t *testing.T) {
 	for _, c := range []struct {
 		width, height int
 		mode          string

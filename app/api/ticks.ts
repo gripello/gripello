@@ -4,7 +4,7 @@ import type { LogbookKind } from '../../shared/utils/logbook'
 import { ROLLING_SEASON, type Leaderboard } from '../utils/leaderboard'
 import { updatableFields } from '../utils/tickOutbox'
 import { useApi } from './client'
-import type { PageQuery, PbReadOptions, RouteList } from './client'
+import type { PageQuery, RouteList } from './client'
 
 export interface OwnTickQuery extends PageQuery {
     route?: string
@@ -46,7 +46,6 @@ async function readTicks<T>(
 
 export function listOwnTicks<T = TickRecord>(
     query: OwnTickQuery = {},
-    _options: PbReadOptions = {},
 ): Promise<RouteList<T>> {
     const { include: _include, since, ...rest } = query
     return readTicks<T>('/me/ticks', {
@@ -87,7 +86,6 @@ export function deleteTick(id: string) {
 
 export function listFeed<T = FeedTick>(
     query: FeedQuery = {},
-    _options: PbReadOptions = {},
 ): Promise<RouteList<T>> {
     return readTicks<T>('/me/feed', { ...query, sort: query.sort ?? '-date' })
 }

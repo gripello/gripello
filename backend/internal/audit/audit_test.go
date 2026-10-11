@@ -117,7 +117,7 @@ func (f *fixture) get(url, caller string, status int) map[string]any {
 	f.t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/api"+url, nil)
 	if caller != "" {
-		token, _ := f.app.Tokens.Sign(caller, f.tokenKeys[caller], "")
+		token := testapp.Token(f.t, f.app, caller, f.tokenKeys[caller])
 		request.Header.Set("Authorization", token)
 	}
 	recorder := httptest.NewRecorder()

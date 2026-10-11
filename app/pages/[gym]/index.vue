@@ -173,8 +173,6 @@ import { cacheKeys } from '~/utils/realtimeCache'
 
 const gymPath = useGymPath()
 
-const OVERVIEW_FIELDS =
-    'id,name,color,grade,grade_system,grade_index,anchor_point,type,location,wall,screw_date,average_rating,ratings_count'
 const RECENT_DAYS = 7
 const POPULAR_LIMIT = 6
 
@@ -206,31 +204,12 @@ const [
 ] = await Promise.all([
     useAsyncData(
         cacheKeys.overviewRoutes,
-        () =>
-            listRoutes(
-                gymId.value,
-                {},
-                {
-                    rated: true,
-                    fields: OVERVIEW_FIELDS,
-                    requestKey: 'overviewRoutes',
-                },
-            ).then((list) => list.items),
+        () => listRoutes(gymId.value, {}).then((list) => list.items),
         { default: () => [] },
     ),
-    useAsyncData(
-        cacheKeys.overviewWalls,
-        () =>
-            listWalls(
-                gymId.value,
-                {},
-                {
-                    fields: 'id,name,location,sort',
-                    requestKey: 'overviewWalls',
-                },
-            ),
-        { default: () => [] },
-    ),
+    useAsyncData(cacheKeys.overviewWalls, () => listWalls(gymId.value), {
+        default: () => [],
+    }),
 ])
 
 const loadFailed = computed(() => !!routesError.value || !!wallsError.value)

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed } from 'vue'
-import { usePbList } from '~/composables/usePbList'
+import { useList } from '~/composables/useList'
 
 const notifyError = vi.fn()
 vi.stubGlobal('useNotification', () => ({ error: notifyError }))
@@ -18,7 +18,7 @@ beforeEach(() => {
 })
 
 function createList() {
-    const list = usePbList<{ id: string }>(getList, {
+    const list = useList<{ id: string }>(getList, {
         perPage: 2,
         requestKey: 'thingsList',
     })
@@ -28,7 +28,7 @@ function createList() {
     }
 }
 
-describe('usePbList', () => {
+describe('useList', () => {
     it('loads the first page with the query options', async () => {
         getList.mockResolvedValue(pageOf(['a', 'b'], 3))
         const list = createList()

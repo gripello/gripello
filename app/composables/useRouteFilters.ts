@@ -20,11 +20,7 @@ export function useRouteFilters() {
         cacheKeys.routeFilterWalls,
         () =>
             selectedLocation.value
-                ? listWalls(
-                      gymId.value,
-                      { location: selectedLocation.value },
-                      { fields: 'id,name', requestKey: null },
-                  )
+                ? listWalls(gymId.value, { location: selectedLocation.value })
                 : Promise.resolve([] as WallRecord[]),
         { default: () => [], server: false, watch: [selectedLocation] },
     )

@@ -469,8 +469,6 @@ definePageMeta({
     requiredPermission: 'manage_routes',
 })
 
-const PLACEMENT_FIELDS =
-    'id,name,color,grade,grade_system,grade_index,anchor_point,type,wall,wall_position,screw_date,permanent'
 const DRAG_THRESHOLD_PX = 6
 const LONG_PRESS_MS = 400
 
@@ -500,11 +498,10 @@ const { data: routes, refresh: refreshRoutes } = await useAsyncData(
     cacheKeys.placementRoutes,
     () =>
         locationId.value
-            ? listRoutes<RouteRecord>(
-                  gymId.value,
-                  { location: locationId.value, sort: 'anchor_point,name' },
-                  { fields: PLACEMENT_FIELDS, requestKey: 'placementRoutes' },
-              ).then((list) => list.items)
+            ? listRoutes<RouteRecord>(gymId.value, {
+                  location: locationId.value,
+                  sort: 'anchor_point,name',
+              }).then((list) => list.items)
             : Promise.resolve([]),
     { watch: [locationId], default: () => [] },
 )
@@ -552,17 +549,13 @@ const { data: lastReset, refresh: refreshLastReset } = useAsyncData(
     'placement-wall-reset',
     () =>
         placement.selectedWallId.value
-            ? listRoutes<RouteRecord>(
-                  gymId.value,
-                  {
-                      archived: true,
-                      wall: placement.selectedWallId.value,
-                      sort: '-archived_at',
-                      page: 1,
-                      limit: 1,
-                  },
-                  { fields: 'archived_at', requestKey: 'placementWallReset' },
-              ).then((result) => result.items[0]?.archived_at ?? null)
+            ? listRoutes<RouteRecord>(gymId.value, {
+                  archived: true,
+                  wall: placement.selectedWallId.value,
+                  sort: '-archived_at',
+                  page: 1,
+                  limit: 1,
+              }).then((result) => result.items[0]?.archived_at ?? null)
             : Promise.resolve(null),
     {
         watch: [placement.selectedWallId],
@@ -738,11 +731,9 @@ async function resetWall() {
     const wallId = placement.selectedWallId.value
     if (resetting.value || !wallId) return
     const archived = await runReset(async () => {
-        const { items } = await listRoutes<RouteRecord>(
-            gymId.value,
-            { wall: wallId },
-            { fields: 'id', requestKey: null },
-        )
+        const { items } = await listRoutes<RouteRecord>(gymId.value, {
+            wall: wallId,
+        })
         const ids = items.map((item) => item.id)
         await archiveRoutes(gymId.value, ids)
         await Promise.all([refreshRoutes(), refreshLastReset()])

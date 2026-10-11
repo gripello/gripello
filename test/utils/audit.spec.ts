@@ -79,7 +79,7 @@ describe('AUDIT_ACTIONS', () => {
         expect(new Set(AUDIT_ACTIONS).size).toBe(AUDIT_ACTIONS.length)
     })
 
-    it('matches the values the PocketBase select accepts', () => {
+    it('matches the values the audit action check accepts', () => {
         expect([...AUDIT_ACTIONS].sort()).toEqual(
             [
                 'create',

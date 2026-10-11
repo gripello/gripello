@@ -26,20 +26,20 @@ wget https://raw.githubusercontent.com/gripello/gripello/main/docker-compose.yml
 
 ### Docker Compose Configuration
 
+The downloaded `docker-compose.yml` runs the app container and PostgreSQL. Set
+`POSTGRES_PASSWORD` (e.g. in a `.env` file next to it) **before the first start**:
+PostgreSQL only reads it when its volume is created.
+
+```sh
+echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)" > .env
+```
+
+To pin the latest release instead of the rolling build, change the app image:
+
 ```yaml
 services:
     gripello:
-        container_name: gripello-app
         image: ghcr.io/gripello/gripello:latest
-        ports:
-            - '80:80'
-            - '443:443'
-        environment:
-            # Default superuser created on first boot. Change before deploying!
-            PB_SUPERUSER_EMAIL: admin@example.com
-            PB_SUPERUSER_PASSWORD: changeme123
-        volumes:
-            - ./pb_data:/pb/pb_data
 ```
 
 ### Running the Project
@@ -58,49 +58,39 @@ Navigate to **`https://localhost`** in your browser.
 
 > The default setup uses a self-signed TLS certificate. Your browser will show a security warning — click "Advanced" → "Proceed" to continue. See [Custom TLS Certificate](#custom-tls-certificate) to use a real certificate.
 
-### 2. Log In as Superuser
+### 2. Create the Platform Admin
 
-The superuser account is created automatically on first boot using the credentials set in `docker-compose.yml`:
+Create the first account from the command line and make it a platform admin:
 
-| Field    | Default value       |
-| -------- | ------------------- |
-| Email    | `admin@example.com` |
-| Password | `changeme123`       |
+```sh
+docker compose exec gripello gripello admin create-user \
+    --email admin@example.com --password 'a-long-password' \
+    --username admin --verified --platform-admin
+```
 
-**Change these before deploying to production.**
+Sign in at `https://localhost/auth/login`. Gyms, users and operator settings
+(mail, sign-in providers, backups, logs) are managed under `/platform`.
 
-The superuser account is used to access the PocketBase admin panel at `https://localhost/_/` — it is separate from regular user accounts.
+### 3. Create a Gym
 
-### 3. Create Your First User Account
-
-Regular user accounts must be created via the PocketBase admin panel:
-
-1. Open `https://localhost/_/` and log in with the superuser credentials
-2. Navigate to **Collections → users → New record**
-3. Fill in the email, password, and any other required fields
-4. Set **verified** to `true` so the user can log in immediately
-5. Save the record
-
-After that the user can log in at `https://localhost/auth/login`.
+Open **Platform → Gyms**, create a gym and invite its staff from the gym's
+member settings.
 
 ### 4. Configure Email
 
 Without SMTP the app sends no mail at all — a user created in the UI never gets
 their invitation and cannot sign in, and the DSA Art. 16 notices are not
-delivered. Set these in `docker-compose.yml` (they are read at every boot, so
-no visit to the PocketBase panel is needed):
+delivered. Configure it under **Platform → Mail**, or set these in
+`docker-compose.yml` (the platform settings win once a host is saved there):
 
-| Variable                                | Purpose                                           |
-| --------------------------------------- | ------------------------------------------------- |
-| `PB_SMTP_HOST` / `PB_SMTP_PORT`         | Mail server. Setting the host enables SMTP.       |
-| `PB_SMTP_USERNAME` / `PB_SMTP_PASSWORD` | Credentials, if the server needs them.            |
-| `PB_SMTP_TLS`                           | `false` for STARTTLS; anything else enforces TLS. |
-| `PB_APP_URL`                            | Origin used for links in mail.                    |
-| `PB_APP_NAME`                           | Name used in subject lines and signatures.        |
-| `PB_SENDER_ADDRESS` / `PB_SENDER_NAME`  | From address and display name.                    |
-
-Leave `PB_SMTP_HOST` unset to keep whatever is configured in the PocketBase
-panel instead.
+| Variable                          | Purpose                                           |
+| --------------------------------- | ------------------------------------------------- |
+| `SMTP_HOST` / `SMTP_PORT`         | Mail server. Setting the host enables SMTP.       |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | Credentials, if the server needs them.            |
+| `SMTP_TLS`                        | `false` for STARTTLS; anything else enforces TLS. |
+| `APP_URL`                         | Origin used for links in mail.                    |
+| `APP_NAME`                        | Name used in subject lines and signatures.        |
+| `SENDER_ADDRESS` / `SENDER_NAME`  | From address and display name.                    |
 
 ### 5. Configure Application Settings
 
@@ -113,7 +103,7 @@ Go to **Admin → Settings** in the Gripello UI to configure:
 
 ### 6. Start Adding Routes
 
-Once logged in as a regular user, use the dashboard to add and manage climbing routes.
+Once signed in as gym staff, use the dashboard to add and manage climbing routes.
 
 ---
 
@@ -123,7 +113,8 @@ By default, a self-signed certificate is generated automatically at startup. To 
 
 ```yaml
 volumes:
-    - ./pb_data:/pb/pb_data
+    - ./storage:/data/storage
+    - ./backups:/data/backups
     - ./ssl/cert.pem:/etc/nginx/ssl/cert.pem:ro
     - ./ssl/key.pem:/etc/nginx/ssl/key.pem:ro
 ```
@@ -132,11 +123,11 @@ volumes:
 
 ## Rate Limiting
 
-Rate limits are enabled by the migrations and need no configuration. They are
+Rate limits are enforced by the container's nginx and need no configuration. They are
 sized per client IP for a gym: generous on reads and route ratings, because a
 whole hall shares one address behind wifi NAT, and tight on sign-ins and on the
-endpoints that send mail. See `pocketbase/pb_migrations/1790200001_enable_rate_limits.js`
-for each rule and the reasoning behind its numbers.
+endpoints that send mail. See the `limit_req` zones in `.docker/nginx.conf` for
+each rule. `RATE_LIMITS: 'off'` disables them.
 
 The container only believes `X-Forwarded-For` from the addresses in
 `TRUSTED_PROXIES` (default `127.0.0.1 ::1`). If you put another reverse proxy in
@@ -158,9 +149,7 @@ form keeps working, which is what an existing install gets after an upgrade.
 
 The puzzle solves itself during submit (about a second on a phone); there is no
 checkbox to tick, and the challenge is issued and verified entirely by this
-application. Signed-in staff are never asked, and the PocketBase panel at `/_/`
-is deliberately not gated — it cannot attach a token, and the rate limits cover
-it instead.
+application. Signed-in staff are never asked.
 
 > **Note:** the solver's WebAssembly module is fetched from `cdn.jsdelivr.net`
 > at runtime by the upstream widget. Visitors' browsers therefore contact that
@@ -178,7 +167,7 @@ captcha is on by default there. Export your own to override it:
 CAP_SECRET=$(openssl rand -hex 32) yarn dev
 ```
 
-Do **not** put `CAP_SECRET` in `.env`: Nuxt would read it and PocketBase — a
+Do **not** put `CAP_SECRET` in `.env`: Nuxt would read it and the Go API — a
 sibling process started by `concurrently` — would not, which leaves visitors
 solving puzzles that nothing verifies.
 
@@ -190,7 +179,7 @@ solving puzzles that nothing verifies.
 docker-compose down
 ```
 
-Data is persisted in `./pb_data` and survives restarts.
+Data is persisted in the `postgres` volume, `./storage` and `./backups`, and survives restarts.
 
 ## Usage
 

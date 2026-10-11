@@ -257,7 +257,7 @@ const text = computed(() => moderationText(props.item))
 const files = computed(() => moderationFiles(props.item))
 const { token: fileToken, renew: renewFileToken } = useFileToken(() => {
     const [file] = files.value
-    return file ? { table: file.collectionName, id: file.id } : null
+    return file ? { table: file.table, id: file.id } : null
 })
 const shownFiles = computed(() => (fileToken.value ? files.value : []))
 const openReports = computed(() => openReportCount(context.value.reports))
@@ -318,7 +318,7 @@ const consequence = computed(() => {
 })
 
 function fileUrl(file: ModerationFile) {
-    return apiFileUrl(file.collectionName, file, file.name, {
+    return apiFileUrl(file.table, file, file.name, {
         token: fileToken.value,
     })
 }

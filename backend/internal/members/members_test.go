@@ -143,10 +143,7 @@ func (f *fixture) call(method, url, body, caller string, status int, content ...
 	request := httptest.NewRequest(method, "/api"+url, strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	if caller != "" {
-		token, err := f.app.Tokens.Sign(caller, f.tokenKeys[caller], "")
-		if err != nil {
-			f.t.Fatal(err)
-		}
+		token := testapp.Token(f.t, f.app, caller, f.tokenKeys[caller])
 		request.Header.Set("Authorization", token)
 	}
 	recorder := httptest.NewRecorder()

@@ -95,10 +95,7 @@ func (f *fixture) callToken(method, url, body, token string, status int) map[str
 }
 
 func (f *fixture) token(user string) string {
-	token, err := f.app.Tokens.Sign(user, f.tokenKeys[user], "")
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	token := testapp.Token(f.t, f.app, user, f.tokenKeys[user])
 	return token
 }
 

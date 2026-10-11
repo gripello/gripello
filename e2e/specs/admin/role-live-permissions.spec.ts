@@ -10,7 +10,7 @@ test('a permission added to the own role shows up without a reload', async ({
     testPrefix,
 }) => {
     const role = await createRole(adminApi, `${testPrefix}-live`)
-    const user = await ensureUser(null, role.id, 'user', testPrefix)
+    const user = await ensureUser(role.id, 'user', testPrefix)
     await signInAs(page, user.email, user.password)
     await gotoSubscribed(page, gymPath('/routes'), `gym:${await e2eGymId()}`)
     await expect(page.getByTestId('nav-staff-tools')).toHaveCount(0)

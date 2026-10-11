@@ -11,8 +11,8 @@ vi.stubGlobal('onMounted', (fn: () => void) => {
     mounted = fn
 })
 
-let pbMock: any
-vi.stubGlobal('useAuthStore', () => pbMock.authStore)
+let apiMock: any
+vi.stubGlobal('useAuthStore', () => apiMock.authStore)
 
 describe('usePushOffer', () => {
     let api: ReturnType<typeof vi.fn>
@@ -28,7 +28,7 @@ describe('usePushOffer', () => {
                 : { items: [{ id: 'phone' }] },
         )
         routeApi(api)
-        pbMock = { authStore: { isValid: true, record: { id: 'u1' } } }
+        apiMock = { authStore: { isValid: true, record: { id: 'u1' } } }
         vi.stubGlobal('PushManager', class {})
         Object.defineProperty(navigator, 'serviceWorker', {
             configurable: true,

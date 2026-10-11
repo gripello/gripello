@@ -69,7 +69,7 @@ export async function createModerationGym(
         active: true,
     })
     await setGymFeatures(platform, gym.id, { beta_videos: true })
-    const staff = await ensureUser(null, undefined, 'user', `${prefix}-staff`)
+    const staff = await ensureUser(undefined, 'user', `${prefix}-staff`)
     gripelloAdmin(
         'add-membership',
         '--user',
@@ -106,7 +106,7 @@ export async function staffOf(
     label: string,
 ): Promise<SeededUser> {
     await createRole(await platformAdminApi(), label, permissions, gymId)
-    const user = await ensureUser(null, undefined, 'user', label)
+    const user = await ensureUser(undefined, 'user', label)
     gripelloAdmin(
         'add-membership',
         '--user',

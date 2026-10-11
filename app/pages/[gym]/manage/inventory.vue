@@ -515,8 +515,6 @@ definePageMeta({
     requiredPermission: 'run_inventory',
 })
 
-const ROUTE_FIELDS =
-    'id,name,color,location,type,grade,grade_system,grade_index,anchor_point,archived,expand.location.name'
 const SCAN_COOLDOWN_MS = 2000
 
 const { t, locale } = useI18n()
@@ -909,11 +907,10 @@ const undoScan = (route: RouteRecord) => {
 const loadRoutes = async () => {
     loadingRoutes.value = true
     try {
-        const { items } = await listRoutes<RouteRecord>(
-            gymId.value,
-            { archived: 'all', include: ['location'] },
-            { fields: ROUTE_FIELDS, requestKey: null },
-        )
+        const { items } = await listRoutes<RouteRecord>(gymId.value, {
+            archived: 'all',
+            include: ['location'],
+        })
         allRoutes.value = items
         reconcileScannedIds()
     } catch (error) {

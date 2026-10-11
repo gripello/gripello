@@ -198,7 +198,7 @@ const {
     refresh: fetchList,
     loadMore: loadNextPage,
     prefetch,
-} = usePbList<RatingRecord, ManagedComment>(
+} = useList<RatingRecord, ManagedComment>(
     (page, limit) =>
         listGymRatings(gymId.value, {
             ...buildQuery(),

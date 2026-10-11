@@ -3,7 +3,7 @@ export interface SortOption {
     order?: 'asc' | 'desc'
 }
 
-export function toPbSort(
+export function toSortParam(
     sortByArr: SortOption[],
     defaultSort = '-created',
     keyMap: Record<string, string> = {},

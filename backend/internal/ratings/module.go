@@ -94,7 +94,7 @@ func (m *module) authors(ctx context.Context, userIDs []string, honourAnonymous 
 	return found, err
 }
 
-// enrichRatings adds author and mine for signed-in viewers, like PocketBase's OnRecordEnrich did; staff lists pass honourAnonymous=false.
+// enrichRatings adds author and mine for signed-in viewers; staff lists pass honourAnonymous=false.
 func (m *module) enrichRatings(ctx context.Context, items []Rating, honourAnonymous bool) error {
 	viewer, ok := auth.From(ctx)
 	if !ok {

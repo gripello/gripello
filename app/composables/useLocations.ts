@@ -7,7 +7,7 @@ export function useLocations() {
 
     return useAsyncData<LocationRecord[]>(
         'locations',
-        () => listLocations(gymId.value, { requestKey: 'locationsList' }),
+        () => listLocations(gymId.value),
         { ...sharedAsyncData, default: () => [] },
     )
 }

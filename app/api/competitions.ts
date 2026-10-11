@@ -10,10 +10,7 @@ import type {
 import type { CompetitionResults } from '../../shared/utils/competitionResults'
 import { useApi } from './client'
 
-type Writable<T> = Omit<
-    T,
-    'id' | 'created' | 'updated' | 'collectionId' | 'collectionName' | 'expand'
->
+type Writable<T> = Omit<T, 'id' | 'created' | 'updated' | 'expand'>
 
 export type CompetitionInput = Partial<Omit<Writable<CompetitionRecord>, 'gym'>>
 export type CategoryInput = Partial<

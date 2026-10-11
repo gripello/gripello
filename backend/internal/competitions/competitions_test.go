@@ -256,10 +256,7 @@ func (f *fixture) user(name, gym string, permissions ...string) {
 		role := f.exec(`INSERT INTO roles (id, gym, name, permissions) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), gym, name, permissions)
 		f.exec(`INSERT INTO memberships (id, "user", gym, role) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), id, gym, role)
 	}
-	token, err := f.app.Tokens.Sign(id, "key-"+name, "")
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	token := testapp.Token(f.t, f.app, id, "key-"+name)
 	f.users[name], f.tokens[name] = id, token
 }
 

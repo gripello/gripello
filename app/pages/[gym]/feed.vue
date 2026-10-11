@@ -190,21 +190,23 @@ const { data, error, refresh } = await useAsyncData(
         const gym = gymId.value
         const since = new Date(Date.now() - NEW_ROUTE_DAYS * 86_400_000)
         const [routes, betas, ticks] = await Promise.all([
-            listRoutes<FeedRoute>(
-                gym,
-                { since, sort: '-created', include: ['wall'] },
-                { requestKey: null },
-            ).then((list) => list.items),
+            listRoutes<FeedRoute>(gym, {
+                since,
+                sort: '-created',
+                include: ['wall'],
+            }).then((list) => list.items),
             listGymBetas<FeedBeta>(gym, {
                 page: 1,
                 limit: BETA_LIMIT,
                 include: ['route'],
             }),
             signedIn
-                ? listFeed(
-                      { gym, sort: '-created', page: 1, limit: SEND_LIMIT },
-                      { requestKey: null },
-                  )
+                ? listFeed({
+                      gym,
+                      sort: '-created',
+                      page: 1,
+                      limit: SEND_LIMIT,
+                  })
                 : { items: [] as FeedTick[] },
         ])
         return { routes, betas: betas.items, ticks: ticks.items }

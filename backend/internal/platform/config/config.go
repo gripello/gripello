@@ -39,30 +39,29 @@ type Config struct {
 	VAPIDPrivateKey   string
 }
 
-// Load reads env; PB_* names are accepted as aliases until the PocketBase deployment is gone.
 func Load() (Config, error) {
 	c := Config{
 		HTTPAddr:          env("HTTP_ADDR", ":8080"),
 		DatabaseURL:       env("DATABASE_URL", ""),
-		AppURL:            env("APP_URL", env("PB_APP_URL", "http://localhost:3000")),
+		AppURL:            env("APP_URL", "http://localhost:3000"),
 		BlobDir:           env("BLOB_DIR", "./data/storage"),
-		LocalesDir:        env("LOCALES_DIR", env("PB_LOCALES_DIR", "../i18n/locales")),
+		LocalesDir:        env("LOCALES_DIR", "../i18n/locales"),
 		TokenSecret:       env("TOKEN_SECRET", ""),
 		AuthTokenDuration: seconds("AUTH_TOKEN_SECONDS", 1209600),
 		UrgentAlertWindow: seconds("URGENT_ALERT_SECONDS", 60),
 		Role:              env("ROLE", "all"),
 		BlobDriver:        env("BLOB_DRIVER", "fs"),
 		BlobAccelPrefix:   env("BLOB_ACCEL_PREFIX", ""),
-		AppName:           pbEnv("APP_NAME", "Gripello"),
-		SMTPHost:          pbEnv("SMTP_HOST", ""),
-		SMTPPort:          pbEnv("SMTP_PORT", "587"),
-		SMTPUsername:      pbEnv("SMTP_USERNAME", ""),
-		SMTPPassword:      pbEnv("SMTP_PASSWORD", ""),
-		SMTPTLS:           pbEnv("SMTP_TLS", "true") != "false",
-		SenderAddress:     pbEnv("SENDER_ADDRESS", ""),
-		SenderName:        pbEnv("SENDER_NAME", "Gripello"),
-		VAPIDPublicKey:    pbEnv("VAPID_PUBLIC_KEY", ""),
-		VAPIDPrivateKey:   pbEnv("VAPID_PRIVATE_KEY", ""),
+		AppName:           env("APP_NAME", "Gripello"),
+		SMTPHost:          env("SMTP_HOST", ""),
+		SMTPPort:          env("SMTP_PORT", "587"),
+		SMTPUsername:      env("SMTP_USERNAME", ""),
+		SMTPPassword:      env("SMTP_PASSWORD", ""),
+		SMTPTLS:           env("SMTP_TLS", "true") != "false",
+		SenderAddress:     env("SENDER_ADDRESS", ""),
+		SenderName:        env("SENDER_NAME", "Gripello"),
+		VAPIDPublicKey:    env("VAPID_PUBLIC_KEY", ""),
+		VAPIDPrivateKey:   env("VAPID_PRIVATE_KEY", ""),
 	}
 	// Backups default to a folder beside the storage; BACKUP_DIR=off disables them.
 	c.BackupDir = env("BACKUP_DIR", filepath.Join(filepath.Dir(c.BlobDir), "backups"))
@@ -87,10 +86,6 @@ func env(key, fallback string) string {
 		return v
 	}
 	return fallback
-}
-
-func pbEnv(key, fallback string) string {
-	return env(key, env("PB_"+key, fallback))
 }
 
 func seconds(key string, fallback int) time.Duration {

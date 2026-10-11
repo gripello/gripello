@@ -48,7 +48,7 @@ func newModule(app *platform.App) *module {
 	return m
 }
 
-// limited requires a signed-in caller and limits per user: PocketBase limited by IP, which a whole gym shares over its WiFi.
+// limited requires a signed-in caller and limits per user: an IP limit would hit a whole gym sharing over its WiFi.
 func (m *module) limited(h httpx.Handler) httpx.Handler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		principal, err := auth.Require(r.Context())

@@ -29,7 +29,7 @@ function saveStorageState(baseURL: string, cookieValue: string, file: string) {
     const state = {
         cookies: [
             {
-                name: 'pb_auth',
+                name: 'gripello_auth',
                 value: cookieValue,
                 domain: url.hostname,
                 path: '/',
@@ -59,7 +59,7 @@ async function warmUpPages(baseURL: string, adminCookie: string) {
         await withRetry(async () => {
             const response = await fetch(new URL(pagePath, baseURL), {
                 headers: {
-                    cookie: `pb_auth=${adminCookie}; gym=${E2E_GYM_SLUG}`,
+                    cookie: `gripello_auth=${adminCookie}; gym=${E2E_GYM_SLUG}`,
                 },
             })
             if (response.status >= 500) {
@@ -72,15 +72,10 @@ async function warmUpPages(baseURL: string, adminCookie: string) {
 export default async function globalSetup(config: FullConfig) {
     ensureGym()
     const seededUsers = {
-        admin: await ensureUser(null, 'admin', 'admin', PREFIX),
-        routesetter: await ensureUser(
-            null,
-            'routesetter',
-            'routesetter',
-            PREFIX,
-        ),
-        user: await ensureUser(null, undefined, 'user', PREFIX),
-        platform: await ensureUser(null, undefined, 'platform', PREFIX, true),
+        admin: await ensureUser('admin', 'admin', PREFIX),
+        routesetter: await ensureUser('routesetter', 'routesetter', PREFIX),
+        user: await ensureUser(undefined, 'user', PREFIX),
+        platform: await ensureUser(undefined, 'platform', PREFIX, true),
     }
 
     const sessions: Record<string, AuthResult> = {}

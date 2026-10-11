@@ -455,13 +455,9 @@ const [
     useAsyncData(
         'platform-admins',
         () =>
-            listPlatformUsers(
-                { filter: 'platform_admins' },
-                {
-                    fields: 'id,collectionId,email,username,firstname,name,avatar',
-                    requestKey: null,
-                },
-            ).then(({ items }) => items),
+            listPlatformUsers({ filter: 'platform_admins' }).then(
+                ({ items }) => items,
+            ),
         { default: () => [] },
     ),
 ])

@@ -224,7 +224,7 @@ describe('extractRouteId', () => {
         expect(extractRouteId('/route?id=abc123def4567')).toBe('abc123def4567')
     })
 
-    it('accepts a bare PocketBase id', () => {
+    it('accepts a bare record id', () => {
         expect(extractRouteId('abc123def456789')).toBe('abc123def456789')
     })
 
