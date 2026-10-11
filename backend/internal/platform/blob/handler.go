@@ -73,6 +73,8 @@ func validFileToken(secret, token, table, id string) bool {
 	return err == nil && claims.Type == "file" && claims.ID != "" && claims.Table == table && claims.Record == id
 }
 
+const AccelHeader = "X-Blob-Accel"
+
 // ServeFile serves GET /files/{table}/{id}/{name}?thumb=&token=.
 func (s *Store) ServeFile(secret string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -98,8 +100,10 @@ func (s *Store) ServeFile(secret string) http.Handler {
 			}
 			key = thumbKey
 		}
+		// Only nginx resolves X-Accel-Redirect; direct callers (the Nuxt server on :8080) need the bytes.
+		accel := s.AccelPrefix != "" && r.Header.Get(AccelHeader) != ""
 		// The stat keeps a deleted file on Go's uncached 404; nginx's would carry the immutable Cache-Control.
-		if contentType, ok := s.types.Load(key); ok && s.AccelPrefix != "" && s.isFile(key) {
+		if contentType, ok := s.types.Load(key); ok && accel && s.isFile(key) {
 			setFileHeaders(w.Header(), contentType.(string), table)
 			w.Header().Set("X-Accel-Redirect", s.AccelPrefix+key)
 			return
@@ -122,7 +126,7 @@ func (s *Store) ServeFile(secret string) http.Handler {
 		s.cacheType(key, contentType)
 
 		setFileHeaders(w.Header(), contentType, table)
-		if s.AccelPrefix != "" {
+		if accel {
 			w.Header().Set("X-Accel-Redirect", s.AccelPrefix+key)
 			return
 		}

@@ -39,6 +39,10 @@ describe('nginx caching', () => {
         expect(nginx).toMatch(/keys_zone=microcache:[^;]*inactive=10m;/)
     })
 
+    it('lets the API hand file bodies to nginx only for requests that pass through it', () => {
+        expect(block('/api/')).toContain('proxy_set_header X-Blob-Accel 1;')
+    })
+
     it('caches the unhashed app icons for a day', () => {
         expect(nginx).toMatch(
             /location ~ \^\/\(app-icon[^{]+\{[^}]+Cache-Control "public, max-age=86400"/,
