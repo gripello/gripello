@@ -4,6 +4,8 @@
 !Dockerfile
 !Jenkinsfile
 !docker-compose.yml
+!docker-compose.dev.yml
+!e2e/docker-compose.e2e.yml
 !README.md
 !LICENSE
 !.yarnrc.yml
