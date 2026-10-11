@@ -18,12 +18,16 @@ export async function openCase(
     path = '/manage/moderation',
     view?: 'decide' | 'approval' | 'hidden' | 'history' | 'all',
 ) {
-    await gotoSettled(page, `${path}?search=${encodeURIComponent(text)}`)
-    if (view) await page.getByTestId(`moderation-view-${view}`).click()
-    await page
+    const entry = page
         .getByTestId('moderation-list')
         .getByRole('button', { name: new RegExp(text) })
-        .click()
+    // Cases are opened by a bus handler after the write, so the first load can miss them.
+    await expect(async () => {
+        await gotoSettled(page, `${path}?search=${encodeURIComponent(text)}`)
+        if (view) await page.getByTestId(`moderation-view-${view}`).click()
+        await expect(entry).toBeVisible({ timeout: 3_000 })
+    }).toPass({ timeout: 20_000 })
+    await entry.click()
     const detail = page.locator(
         'article[data-testid^="moderation-detail-"]:visible',
     )
