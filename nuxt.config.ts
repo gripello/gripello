@@ -49,11 +49,10 @@ export default defineNuxtConfig({
             viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
             meta: [
                 { name: 'mobile-web-app-capable', content: 'yes' },
+                // No apple-mobile-web-app-status-bar-style: with black-translucent the page runs under the status bar and
+                // iOS 26+ blurs the top ~40pt of the installed app (Liquid Glass scroll edge); without it the status bar
+                // takes the page colour. iOS reads the tag only when the app is added to the Home Screen.
                 { name: 'apple-mobile-web-app-title', content: 'Gripello' },
-                {
-                    name: 'apple-mobile-web-app-status-bar-style',
-                    content: 'black-translucent',
-                },
             ],
             link: [
                 { rel: 'manifest', href: '/manifest.webmanifest' },

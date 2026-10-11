@@ -1,5 +1,11 @@
 <template>
-    <UApp :locale="uiLocale" :toaster="{ position: 'top-center' }">
+    <UApp
+        :locale="uiLocale"
+        :toaster="{
+            position: 'top-center',
+            ui: { viewport: 'top-[calc(1rem+var(--app-top-inset,0px))]' },
+        }"
+    >
         <div class="app-root fontbody">
             <NuxtLoadingIndicator color="var(--ui-primary)" :height="3" />
             <NuxtAnnouncer />

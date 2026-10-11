@@ -36,10 +36,14 @@ export function useThemeMode() {
         const reduceMotion = window.matchMedia(
             '(prefers-reduced-motion: reduce)',
         ).matches
+        // iOS tints its status bar and toolbar from the page and only catches up once a view transition has
+        // finished, so the reveal would leave the bars lagging; switch instantly there.
+        const iosWebKit = CSS.supports('-webkit-touch-callout', 'none')
         if (
             colorMode.value === resolve(next) ||
             !origin ||
             reduceMotion ||
+            iosWebKit ||
             !document.startViewTransition
         ) {
             colorMode.preference = next

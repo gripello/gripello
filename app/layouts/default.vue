@@ -1,5 +1,7 @@
 <template>
-    <a href="#main-content" class="skip-link">{{ $t('nav.skipToContent') }}</a>
+    <a href="#main-content" class="skip-link" @click.prevent="skipToContent">{{
+        $t('nav.skipToContent')
+    }}</a>
     <div class="app-frame">
         <LayoutSideBar
             :loggedIn="isLoggedIn"
@@ -8,7 +10,7 @@
         />
         <div class="page-body">
             <LayoutNavBar :loggedIn="isLoggedIn" />
-            <main id="main-content" class="app-main" tabindex="-1">
+            <main ref="mainEl" id="main-content" class="app-main">
                 <slot />
             </main>
         </div>
@@ -176,6 +178,19 @@ onMounted(async () => {
 onBeforeUnmount(() => {
     unsubAuthChange?.()
 })
+
+// <main> is focusable only while the skip link holds focus there: WebKit hands a click on a button to the nearest
+// focusable ancestor, and a dialog restoring focus to a permanently focusable <main> scrolls the page on close.
+const mainEl = useTemplateRef<HTMLElement>('mainEl')
+function skipToContent() {
+    const main = mainEl.value
+    if (!main) return
+    main.tabIndex = -1
+    main.addEventListener('blur', () => main.removeAttribute('tabindex'), {
+        once: true,
+    })
+    main.focus()
+}
 </script>
 
 <style scoped>
