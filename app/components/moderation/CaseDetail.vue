@@ -80,13 +80,14 @@
                     >
                         {{ text }}
                     </blockquote>
-                    <template v-for="file in files" :key="file.name">
+                    <template v-for="file in shownFiles" :key="file.name">
                         <video
                             v-if="file.video"
                             :src="fileUrl(file)"
                             controls
                             preload="metadata"
                             class="max-h-80 w-full rounded-xl bg-inverted"
+                            @error="renewFileToken"
                         />
                         <img
                             v-else
@@ -94,6 +95,7 @@
                             alt=""
                             loading="lazy"
                             class="max-h-56 max-w-full rounded-xl object-contain"
+                            @error="renewFileToken"
                         />
                     </template>
                 </div>
@@ -253,10 +255,11 @@ const { t, locale } = useI18n()
 const context = computed(() => props.item.context ?? { reports: [] as never[] })
 const text = computed(() => moderationText(props.item))
 const files = computed(() => moderationFiles(props.item))
-const fileToken = useFileToken(() => {
+const { token: fileToken, renew: renewFileToken } = useFileToken(() => {
     const [file] = files.value
     return file ? { table: file.collectionName, id: file.id } : null
 })
+const shownFiles = computed(() => (fileToken.value ? files.value : []))
 const openReports = computed(() => openReportCount(context.value.reports))
 const authorAvatar = computed(() =>
     context.value.author

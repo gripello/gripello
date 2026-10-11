@@ -14,7 +14,9 @@ import (
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/jobs"
 	"gripello/internal/platform/locales"
+	"gripello/internal/platform/logbuf"
 	"gripello/internal/platform/mail"
+	"gripello/internal/platform/metrics"
 	"gripello/internal/platform/push"
 	"gripello/internal/platform/realtime"
 )
@@ -48,6 +50,8 @@ type App struct {
 	Workers       map[string]jobs.Worker
 	Realtime      *realtime.Hub
 	Tokens        auth.Issuer
+	Logs          *logbuf.Buffer
+	Metrics       *metrics.Recorder
 }
 
 type Module interface {
@@ -63,19 +67,33 @@ func (a *App) Handle(pattern string, h http.Handler) {
 func (a *App) Worker(kind string, w jobs.Worker) { a.Workers[kind] = w }
 
 func (a *App) Handler() http.Handler {
-	return httpx.Versioned(config.Version)(auth.Middleware(a.DB, a.Cfg.TokenSecret)(a.Mux))
+	var mux http.Handler = a.Mux
+	if a.Metrics != nil {
+		mux = a.Metrics.Middleware(mux)
+	}
+	return httpx.Versioned(config.Version)(auth.Middleware(a.DB, a.Cfg.TokenSecret)(mux))
 }
 
+// Below docker's default 10 s stop timeout, so draining finishes before the SIGKILL.
+var shutdownTimeout = 8 * time.Second
+
+// Serve returns once in-flight requests have finished (at most shutdownTimeout after ctx ends); open realtime streams are closed at once.
 func (a *App) Serve(ctx context.Context) error {
 	srv := &http.Server{Addr: a.Cfg.HTTPAddr, Handler: a.Handler(), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second}
+	if a.Realtime != nil {
+		srv.RegisterOnShutdown(a.Realtime.Close)
+	}
+	drained := make(chan error, 1)
 	go func() {
 		<-ctx.Done()
-		srv.Shutdown(context.Background())
+		drainCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+		drained <- srv.Shutdown(drainCtx)
 	}()
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		return err
 	}
-	return nil
+	return <-drained
 }
 
 func cutSpace(s string) (string, string, bool) {

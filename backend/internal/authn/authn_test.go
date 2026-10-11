@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+
 	"regexp"
 	"strings"
 	"sync"
@@ -20,6 +21,8 @@ import (
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/lockout"
+	"gripello/internal/platform/mail"
 	"gripello/internal/platform/testapp"
 )
 
@@ -352,11 +355,17 @@ func TestSessionsTrackAndRevokeLogins(t *testing.T) {
 		t.Errorf("revoked token refresh = %d", status)
 	}
 	f.loginToken("session@example.com")
-	if status, _ := f.send(http.MethodPost, "/me/sessions/sign-out-others", second, nil); status != http.StatusNoContent {
-		t.Errorf("sign out others = %d", status)
+	legacy := f.legacyToken(id)
+	status, kept := f.send(http.MethodPost, "/me/sessions/sign-out-others", second, nil)
+	if status != http.StatusOK || sidOf(kept["token"].(string)) != sidOf(second) {
+		t.Fatalf("sign out others = %d %v", status, kept)
 	}
+	second = kept["token"].(string)
 	if n := f.count(`SELECT count(*) FROM sessions WHERE "user" = $1`, id); n != 1 {
 		t.Errorf("%d sessions left", n)
+	}
+	if status, _ := f.send(http.MethodGet, "/me/sessions", legacy, nil); status != http.StatusUnauthorized {
+		t.Errorf("token without a session survived signing out the others: %d", status)
 	}
 	if status, _ := f.send(http.MethodPost, "/auth/logout", second, nil); status != http.StatusNoContent {
 		t.Errorf("logout = %d", status)
@@ -423,11 +432,53 @@ func TestPasswordChangeEndsEverySession(t *testing.T) {
 	}
 }
 
+func TestEveryPasswordConfirmationCountsTowardLockout(t *testing.T) {
+	f := newFixture(t)
+	f.user("guesser@example.com")
+	token := f.loginToken("guesser@example.com")
+	f.send(http.MethodPost, "/auth/email-change/request", token, map[string]string{"newEmail": "elsewhere@example.com"})
+	mailToken, _ := f.lastMailToken(1)
+	change := map[string]string{"oldPassword": "wrong", "password": "another-pass-1", "passwordConfirm": "another-pass-1"}
+	for i := range lockout.MaxFailures {
+		if i%2 == 0 {
+			f.send(http.MethodPost, "/me/password", token, change)
+		} else {
+			f.send(http.MethodPost, "/auth/email-change/confirm", "", map[string]string{"token": mailToken, "password": "wrong"})
+		}
+	}
+	change["oldPassword"] = testPassword
+	if status, _ := f.send(http.MethodPost, "/me/password", token, change); status != http.StatusTooManyRequests {
+		t.Errorf("password change while locked = %d", status)
+	}
+	if status, _ := f.send(http.MethodPost, "/auth/email-change/confirm", "", map[string]string{"token": mailToken, "password": testPassword}); status != http.StatusTooManyRequests {
+		t.Errorf("email change while locked = %d", status)
+	}
+}
+
+func TestPasswordlessAccountsAreAskedToSetAPassword(t *testing.T) {
+	f := newFixture(t)
+	id := f.user("oauth-only@example.com")
+	token := f.loginToken("oauth-only@example.com")
+	f.exec(`UPDATE users SET password_hash = '' WHERE id = $1`, id)
+	for path, body := range map[string]map[string]string{
+		"/me/reauthenticate": {"password": "anything"},
+		"/me/totp":           {"password": "anything", "secret": "x", "code": "000000"},
+		"/me/password":       {"oldPassword": "anything", "password": "another-pass-1", "passwordConfirm": "another-pass-1"},
+	} {
+		if status, res := f.send(http.MethodPost, path, token, body); status != http.StatusBadRequest || !strings.Contains(mustJSON(res), "password_required") {
+			t.Errorf("%s = %d %v", path, status, res)
+		}
+	}
+	if n := f.count(`SELECT count(*) FROM login_lockouts WHERE key = $1`, id); n != 0 {
+		t.Error("a missing password counted as a failed guess")
+	}
+}
+
 func TestLoginLockoutPerAccount(t *testing.T) {
 	f := newFixture(t)
 	id := f.user("locked@example.com")
 
-	for range lockoutMaxFailures {
+	for range lockout.MaxFailures {
 		if status, _ := f.login("locked@example.com", "wrong"); status != http.StatusBadRequest {
 			t.Fatalf("failure = %d", status)
 		}
@@ -436,7 +487,7 @@ func TestLoginLockoutPerAccount(t *testing.T) {
 		t.Errorf("locked login = %d", status)
 	}
 
-	for range lockoutMaxFailures {
+	for range lockout.MaxFailures {
 		f.login("nobody@example.com", "wrong")
 	}
 	if status, body := f.login("nobody@example.com", "wrong"); status != http.StatusTooManyRequests {
@@ -459,26 +510,26 @@ func TestTOTPFailuresCountTowardLockout(t *testing.T) {
 
 	_, body := f.login("guess@example.com", testPassword)
 	mfaID := body["mfaId"].(string)
-	for range lockoutMaxFailures {
+	for range lockout.MaxFailures {
 		f.send(http.MethodPost, "/auth/totp", "", map[string]string{"mfaId": mfaID, "code": "000000"})
 	}
 	if status, _ := f.send(http.MethodPost, "/auth/totp", "", map[string]string{"mfaId": mfaID, "code": "000000"}); status != http.StatusTooManyRequests {
-		t.Errorf("after %d guesses = %d", lockoutMaxFailures, status)
+		t.Errorf("after %d guesses = %d", lockout.MaxFailures, status)
 	}
 }
 
 func TestParallelFailuresStillLock(t *testing.T) {
 	f := newFixture(t)
 	var wg sync.WaitGroup
-	for range lockoutMaxFailures {
+	for range lockout.MaxFailures {
 		wg.Go(func() {
-			if _, err := countLoginFailure(context.Background(), f.app.DB, "parallel"); err != nil {
+			if _, err := lockout.CountFailure(context.Background(), f.app.DB, "parallel"); err != nil {
 				t.Error(err)
 			}
 		})
 	}
 	wg.Wait()
-	if !isLockedOut(context.Background(), f.app.DB, "parallel") {
+	if !lockout.IsLocked(context.Background(), f.app.DB, "parallel") {
 		t.Error("parallel failures were not all counted")
 	}
 }
@@ -626,12 +677,16 @@ func TestCaptchaGuardsLogin(t *testing.T) {
 
 var tokenInLink = regexp.MustCompile(`/auth/confirm-[a-z-]+/([A-Za-z0-9_.\-]+)`)
 
-func (f *fixture) lastMailToken() (string, string) {
+// mails waits for the asynchronous auth mails until at least want were sent.
+func (f *fixture) mails(want int) []mail.Message {
 	f.t.Helper()
-	mails := testapp.Mails(f.app)
-	if len(mails) == 0 {
-		f.t.Fatal("no mail sent")
-	}
+	testapp.WaitFor(f.t, func() bool { return len(testapp.Mails(f.app)) >= want })
+	return testapp.Mails(f.app)
+}
+
+func (f *fixture) lastMailToken(want int) (string, string) {
+	f.t.Helper()
+	mails := f.mails(want)
 	last := mails[len(mails)-1]
 	match := tokenInLink.FindStringSubmatch(last.Text)
 	if match == nil {
@@ -645,7 +700,7 @@ func TestPasswordResetFlow(t *testing.T) {
 	id := f.user("reset@example.com")
 	f.exec(`UPDATE users SET language = 'es', firstname = 'Rita' WHERE id = $1`, id)
 	session := f.loginToken("reset@example.com")
-	for range lockoutMaxFailures {
+	for range lockout.MaxFailures {
 		f.login("reset@example.com", "wrong")
 	}
 
@@ -658,11 +713,11 @@ func TestPasswordResetFlow(t *testing.T) {
 	if status, _ := f.send(http.MethodPost, "/auth/password-reset/request", "", map[string]string{"email": "reset@example.com"}); status != http.StatusNoContent {
 		t.Fatalf("request = %d", status)
 	}
-	mails := testapp.Mails(f.app)
+	mails := f.mails(1)
 	if !strings.HasPrefix(mails[0].Subject, "Restablece tu contraseña") || !strings.Contains(mails[0].HTML, "http://localhost:3000/auth/confirm-password-reset/") {
 		t.Errorf("mail = %q %s", mails[0].Subject, mails[0].Text)
 	}
-	token, _ := f.lastMailToken()
+	token, _ := f.lastMailToken(1)
 
 	if status, body := f.send(http.MethodPost, "/auth/password-reset/confirm", "", map[string]string{"token": token, "password": "short", "passwordConfirm": "short"}); status != http.StatusBadRequest || !strings.Contains(mustJSON(body), "validation_length_out_of_range") {
 		t.Errorf("short password = %d %v", status, body)
@@ -692,7 +747,7 @@ func TestVerificationFlow(t *testing.T) {
 	if status, _ := f.send(http.MethodPost, "/auth/verification/request", "", map[string]string{"email": "verify@example.com"}); status != http.StatusNoContent {
 		t.Fatalf("request = %d", status)
 	}
-	token, to := f.lastMailToken()
+	token, to := f.lastMailToken(1)
 	if to != "verify@example.com" {
 		t.Errorf("sent to %s", to)
 	}
@@ -737,7 +792,7 @@ func TestEmailChangeFlow(t *testing.T) {
 	if status, _ := f.send(http.MethodPost, "/auth/email-change/request", token, map[string]string{"newEmail": "taken@example.com"}); status != http.StatusNoContent {
 		t.Errorf("taken email = %d", status)
 	}
-	if mails := testapp.Mails(f.app); len(mails) != 1 || mails[0].To[0] != "taken@example.com" || !strings.HasPrefix(mails[0].Subject, "You already have an account") {
+	if mails := f.mails(1); len(mails) != 1 || mails[0].To[0] != "taken@example.com" || !strings.HasPrefix(mails[0].Subject, "You already have an account") {
 		t.Errorf("taken address owner was not told: %v", mails)
 	}
 	if status, _ := f.send(http.MethodPost, "/auth/email-change/request", "", map[string]string{"newEmail": "after@example.com"}); status != http.StatusUnauthorized {
@@ -746,7 +801,7 @@ func TestEmailChangeFlow(t *testing.T) {
 	if status, _ := f.send(http.MethodPost, "/auth/email-change/request", token, map[string]string{"newEmail": "after@example.com"}); status != http.StatusNoContent {
 		t.Fatalf("request = %d", status)
 	}
-	mailToken, to := f.lastMailToken()
+	mailToken, to := f.lastMailToken(2)
 	if to != "after@example.com" {
 		t.Errorf("sent to %s", to)
 	}
@@ -786,7 +841,7 @@ func TestRegistration(t *testing.T) {
 	if status != http.StatusAccepted || f.count(`SELECT count(*) FROM users WHERE username = 'newbie' AND email = 'new@example.com' AND NOT verified`) != 1 {
 		t.Fatalf("register = %d %v", status, res)
 	}
-	mails := testapp.Mails(f.app)
+	mails := f.mails(1)
 	if len(mails) != 1 || mails[0].To[0] != "new@example.com" || !strings.Contains(mails[0].Text, "/auth/confirm-verification/") {
 		t.Errorf("verification mail = %v", mails)
 	}
@@ -794,7 +849,7 @@ func TestRegistration(t *testing.T) {
 	if status, _ := f.send(http.MethodPost, "/auth/register", "", taken); status != http.StatusAccepted {
 		t.Errorf("taken address = %d, want the same answer as a free one", status)
 	}
-	if mails := testapp.Mails(f.app); len(mails) != 2 || mails[1].To[0] != "existing@example.com" || !strings.HasPrefix(mails[1].Subject, "You already have an account") {
+	if mails := f.mails(2); len(mails) != 2 || mails[1].To[0] != "existing@example.com" || !strings.HasPrefix(mails[1].Subject, "You already have an account") {
 		t.Errorf("owner of the taken address was not told: %v", mails)
 	}
 	if status, _ := f.login("new@example.com", testPassword); status != http.StatusForbidden {
@@ -825,7 +880,7 @@ func TestCleanupJobsKeepLiveRows(t *testing.T) {
 	f.exec(`INSERT INTO mfa_challenges (id, kind, created) VALUES ('stale', 'passkey', now() - interval '11 minutes'), ('live', 'passkey', now())`)
 	m := &module{db: f.app.DB, tokens: f.app.Tokens}
 	ctx := context.Background()
-	for _, prune := range []func(context.Context) error{m.pruneLockouts, m.pruneSessions, m.pruneChallenges} {
+	for _, prune := range []func(context.Context) error{func(ctx context.Context) error { return lockout.Prune(ctx, m.db) }, m.pruneSessions, m.pruneChallenges} {
 		if err := prune(ctx); err != nil {
 			t.Fatal(err)
 		}
@@ -850,15 +905,161 @@ func TestAuthMethods(t *testing.T) {
 	}
 }
 
-func TestPasswordResetRequestNeedsCaptchaForGuests(t *testing.T) {
+func TestPasswordResetRequestNeedsCaptchaEvenWhenSignedIn(t *testing.T) {
 	f := newFixture(t)
 	f.user("cap-reset@example.com")
+	token := f.loginToken("cap-reset@example.com")
 	t.Setenv("CAP_SECRET", "cap-secret")
 	body := map[string]string{"email": "cap-reset@example.com"}
 	if status, _ := f.send(http.MethodPost, "/auth/password-reset/request", "", body); status != http.StatusBadRequest {
 		t.Errorf("without captcha = %d", status)
 	}
+	if status, _ := f.send(http.MethodPost, "/auth/password-reset/request", token, body); status != http.StatusBadRequest {
+		t.Errorf("signed in without captcha = %d", status)
+	}
 	if status, _ := f.send(http.MethodPost, "/auth/password-reset/request", "", body, captcha.Header, capToken("cap-secret", "password-reset", "p1")); status != http.StatusNoContent {
 		t.Errorf("with captcha = %d", status)
+	}
+}
+
+func TestReauthenticateStampsTheSessionAndCountsFailures(t *testing.T) {
+	f := newFixture(t)
+	userID := f.user("reauth@example.com")
+	token := f.loginToken("reauth@example.com")
+	p := auth.Principal{UserID: userID, SessionID: sidOf(token)}
+	if err := auth.RequireRecentReauth(context.Background(), f.app.DB, p); err == nil {
+		t.Fatal("fresh session passed without a password confirmation")
+	}
+	if status, _ := f.send(http.MethodPost, "/me/reauthenticate", token, map[string]string{"password": "wrong-password"}); status != http.StatusBadRequest {
+		t.Fatalf("wrong password = %d", status)
+	}
+	if n := f.count(`SELECT count(*) FROM login_lockouts WHERE key = $1`, userID); n != 1 {
+		t.Errorf("failed confirmation not counted: %d lockout rows", n)
+	}
+	if status, _ := f.send(http.MethodPost, "/me/reauthenticate", token, map[string]string{"password": testPassword}); status != http.StatusNoContent {
+		t.Fatalf("reauthenticate = %d", status)
+	}
+	if err := auth.RequireRecentReauth(context.Background(), f.app.DB, p); err != nil {
+		t.Fatalf("confirmed session refused: %v", err)
+	}
+	f.exec(`UPDATE sessions SET reauthenticated_at = now() - interval '6 minutes' WHERE id = $1`, p.SessionID)
+	if err := auth.RequireRecentReauth(context.Background(), f.app.DB, p); err == nil {
+		t.Error("confirmation older than the window still accepted")
+	}
+	if err := auth.RequireRecentReauth(context.Background(), f.app.DB, auth.Principal{UserID: userID}); err == nil {
+		t.Error("token without a session accepted")
+	}
+}
+
+// platformAdmin returns a token of a fresh platform admin, optionally with a confirmed password.
+func (f *fixture) platformAdmin(email string, confirmed bool) string {
+	f.t.Helper()
+	id := f.user(email)
+	f.exec(`UPDATE users SET platform_admin = true WHERE id = $1`, id)
+	token := f.loginToken(email)
+	if confirmed {
+		if status, _ := f.send(http.MethodPost, "/me/reauthenticate", token, map[string]string{"password": testPassword}); status != http.StatusNoContent {
+			f.t.Fatalf("reauthenticate = %d", status)
+		}
+	}
+	return token
+}
+
+func TestAdminResetsTwoFactorAndEndsSessions(t *testing.T) {
+	f := newFixture(t)
+	climber := f.user("climber@example.com")
+	climberToken := f.loginToken("climber@example.com")
+	f.enableTOTP(climberToken)
+	path := "/platform/users/" + climber + "/mfa"
+
+	if status, _ := f.send(http.MethodDelete, path, f.platformAdmin("lazy@example.com", false), nil); status != http.StatusForbidden {
+		t.Fatalf("without confirmed password = %d", status)
+	}
+	if status, _ := f.send(http.MethodDelete, path, f.platformAdmin("root@example.com", true), nil); status != http.StatusNoContent {
+		t.Fatalf("reset = %d", status)
+	}
+	if n := f.count(`SELECT count(*) FROM mfa_factors WHERE "user" = $1`, climber) + f.count(`SELECT count(*) FROM mfa_recovery_codes WHERE "user" = $1`, climber); n != 0 {
+		t.Errorf("%d factor rows left", n)
+	}
+	if status, _ := f.send(http.MethodGet, "/me/mfa", climberToken, nil); status != http.StatusUnauthorized {
+		t.Errorf("old session still works: %d", status)
+	}
+	if status, body := f.login("climber@example.com", testPassword); status != http.StatusOK || body["token"] == nil {
+		t.Errorf("password-only login after reset = %d %v", status, body)
+	}
+	mails := f.mails(1)
+	if last := mails[len(mails)-1]; last.To[0] != "climber@example.com" || !strings.Contains(last.Subject, "Two-factor") {
+		t.Errorf("notice = %+v", last)
+	}
+}
+
+func TestAdminSetsPasswordRevokesSessionsAndUnlocks(t *testing.T) {
+	f := newFixture(t)
+	climber := f.user("climber@example.com")
+	climberToken := f.loginToken("climber@example.com")
+	admin := f.platformAdmin("root@example.com", true)
+	base := "/platform/users/" + climber
+
+	if status, _ := f.send(http.MethodPost, base+"/password", admin, map[string]string{"password": "short", "passwordConfirm": "short"}); status != http.StatusBadRequest {
+		t.Errorf("short password = %d", status)
+	}
+	f.exec(`INSERT INTO login_lockouts (id, key, failures, window_start, locked_until) VALUES ($1, $2, 10, now(), now() + interval '15 minutes')`, ids.New(), climber)
+	if status, _ := f.send(http.MethodPost, base+"/password", admin, map[string]string{"password": "brand-new-pass", "passwordConfirm": "brand-new-pass"}); status != http.StatusNoContent {
+		t.Fatalf("set password = %d", status)
+	}
+	if status, _ := f.send(http.MethodGet, "/me/sessions", climberToken, nil); status != http.StatusUnauthorized {
+		t.Errorf("old token still valid: %d", status)
+	}
+	if status, _ := f.login("climber@example.com", "brand-new-pass"); status != http.StatusOK {
+		t.Errorf("login with the new password = %d", status)
+	}
+	if mails := f.mails(1); !strings.Contains(mails[len(mails)-1].Subject, "password") {
+		t.Errorf("notice = %+v", mails[len(mails)-1])
+	}
+
+	f.login("climber@example.com", "brand-new-pass")
+	legacy := f.legacyToken(climber)
+	if status, _ := f.send(http.MethodDelete, base+"/sessions", admin, nil); status != http.StatusNoContent {
+		t.Fatalf("revoke sessions = %d", status)
+	}
+	if n := f.count(`SELECT count(*) FROM sessions WHERE "user" = $1`, climber); n != 0 {
+		t.Errorf("%d sessions left", n)
+	}
+	if status, _ := f.send(http.MethodGet, "/me/sessions", legacy, nil); status != http.StatusUnauthorized {
+		t.Errorf("token without a session survived the revocation: %d", status)
+	}
+	f.exec(`INSERT INTO login_lockouts (id, key, failures, window_start, locked_until) VALUES ($1, $2, 10, now(), now() + interval '15 minutes')`, ids.New(), climber)
+	if status, _ := f.send(http.MethodDelete, base+"/lockout", admin, nil); status != http.StatusNoContent {
+		t.Fatalf("clear lockout = %d", status)
+	}
+	if status, _ := f.login("climber@example.com", "brand-new-pass"); status != http.StatusOK {
+		t.Errorf("login after unlock = %d", status)
+	}
+	var changed []string
+	f.app.DB.QueryRow(context.Background(), `SELECT array_agg(payload->'changed'->>0 ORDER BY id) FROM events WHERE topic = $1 AND kind = 'user.updated'`, "user:"+climber).Scan(&changed)
+	if strings.Join(changed, ",") != "password,sessions,lockout" {
+		t.Errorf("audited changes = %v", changed)
+	}
+}
+
+func TestAdminActionsRefuseSelfOtherAdminsAndClimbers(t *testing.T) {
+	f := newFixture(t)
+	admin := f.platformAdmin("root@example.com", true)
+	f.platformAdmin("other@example.com", false)
+	var otherID, selfID string
+	f.app.DB.QueryRow(context.Background(), `SELECT id FROM users WHERE email = 'other@example.com'`).Scan(&otherID)
+	f.app.DB.QueryRow(context.Background(), `SELECT id FROM users WHERE email = 'root@example.com'`).Scan(&selfID)
+	climber := f.user("climber@example.com")
+	climberToken := f.loginToken("climber@example.com")
+	for _, id := range []string{selfID, otherID} {
+		if status, _ := f.send(http.MethodDelete, "/platform/users/"+id+"/sessions", admin, nil); status != http.StatusForbidden {
+			t.Errorf("sessions of %s = %d", id, status)
+		}
+	}
+	if status, _ := f.send(http.MethodDelete, "/platform/users/"+climber+"/lockout", climberToken, nil); status != http.StatusForbidden {
+		t.Errorf("climber = %d", status)
+	}
+	if status, _ := f.send(http.MethodDelete, "/platform/users/missing/lockout", admin, nil); status != http.StatusNotFound {
+		t.Errorf("missing user = %d", status)
 	}
 }

@@ -437,6 +437,24 @@ func TestInviteRejectsForeignAndHigherRoles(t *testing.T) {
 	}
 }
 
+func TestLowerManagersCannotReplaceOrRevokeHigherInvites(t *testing.T) {
+	f := newFixture(t)
+	manager := f.role(f.gymA, "manager", []string{"manage_users"})
+	managerUser := f.user("manager@example.com", false)
+	f.member(managerUser, f.gymA, manager)
+	f.invite(f.adminA, f.gymA, "boss@example.com", f.adminRoleA)
+	var inviteID string
+	f.app.DB.QueryRow(context.Background(), `SELECT id FROM invites WHERE email = 'boss@example.com'`).Scan(&inviteID)
+
+	f.call(http.MethodPost, "/gyms/"+f.gymA+"/members", `{"email":"boss@example.com","role":"`+manager+`"}`, managerUser, http.StatusForbidden)
+	f.call(http.MethodDelete, "/invites/"+inviteID, "", managerUser, http.StatusForbidden)
+	if f.count(`SELECT count(*) FROM invites WHERE id = $1 AND role = $2`, inviteID, f.adminRoleA) != 1 {
+		t.Error("the admin invitation was changed")
+	}
+	f.call(http.MethodPost, "/gyms/"+f.gymA+"/members", `{"email":"boss@example.com","role":"`+manager+`"}`, f.adminA, http.StatusAccepted)
+	f.call(http.MethodDelete, "/invites/"+inviteID, "", managerUser, http.StatusNoContent)
+}
+
 func TestInviteNewAccount(t *testing.T) {
 	f := newFixture(t)
 	first := f.invite(f.adminA, f.gymA, "new@example.com", f.adminRoleA)

@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -13,17 +15,20 @@ import (
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
+	gmail "gripello/internal/platform/mail"
+	"gripello/internal/platform/ratelimit"
 )
 
 // Mirrored in shared/utils/featureFlags.ts; the gyms module only checks that flags are booleans.
 var featureFlags = []string{"beta_videos"}
 
 type module struct {
-	app *platform.App
+	app       *platform.App
+	testMails *ratelimit.Limiter
 }
 
 func Register(app *platform.App) {
-	m := &module{app: app}
+	m := &module{app: app, testMails: ratelimit.New(5, time.Minute)}
 	for pattern, handler := range map[string]httpx.Handler{
 		"GET /platform/users":                    m.listUsers,
 		"GET /platform/users/{id}":               m.getUser,
@@ -32,10 +37,16 @@ func Register(app *platform.App) {
 		"POST /platform/users/{id}/suspension":   m.suspend,
 		"DELETE /platform/users/{id}/suspension": m.liftSuspension,
 		"GET /platform/stats":                    m.stats,
+		"GET /platform/traffic":                  m.traffic,
 		"GET /platform/features":                 m.features,
 		"PUT /platform/gyms/{id}/features":       m.setFeatures,
 		"POST /platform/admins":                  m.addAdmin,
 		"DELETE /platform/admins/{user}":         m.removeAdmin,
+		"GET /platform/mail":                     m.getMail,
+		"PUT /platform/mail":                     m.putMail,
+		"POST /platform/mail/test":               m.sendTestMail,
+		"GET /platform/logs":                     m.listLogs,
+		"PUT /platform/logs/level":               m.setLogLevel,
 	} {
 		app.Handle(pattern, onlyPlatformAdmins(handler))
 	}
@@ -152,31 +163,68 @@ func (m *module) addAdmin(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
 	}
+	p, _ := auth.From(r.Context())
+	if err := auth.RequireRecentReauth(r.Context(), m.app.DB, p); err != nil {
+		return err
+	}
 	record, err := m.setPlatformAdmin(r.Context(), body.User, true)
 	if err != nil {
 		return err
 	}
+	m.mailUser(r.Context(), body.User, "platformAdminGranted")
 	httpx.JSON(w, http.StatusOK, record)
 	return nil
 }
 
+// removeAdmin locks every admin row: of two admins revoking each other, the second finds itself no longer admin.
 func (m *module) removeAdmin(w http.ResponseWriter, r *http.Request) error {
-	p, _ := auth.From(r.Context())
-	if r.PathValue("user") == p.UserID {
+	ctx := r.Context()
+	p, _ := auth.From(ctx)
+	userID := r.PathValue("user")
+	if userID == p.UserID {
 		return httpx.NewError(http.StatusBadRequest, "You can't remove your own platform admin rights.")
 	}
-	var isAdmin bool
-	if err := m.app.DB.QueryRow(r.Context(), `SELECT platform_admin FROM users WHERE id = $1`, r.PathValue("user")).Scan(&isAdmin); err != nil {
-		return notFoundIfNoRows(err)
-	}
-	if isAdmin {
-		return httpx.NewError(http.StatusForbidden, "Platform admins can't change another platform admin.")
-	}
-	if _, err := m.setPlatformAdmin(r.Context(), r.PathValue("user"), false); err != nil {
+	if err := auth.RequireRecentReauth(ctx, m.app.DB, p); err != nil {
 		return err
 	}
+	var record json.RawMessage
+	var admins []string
+	// All admin rows are locked in id order before the target row, so two admins revoking each other can't deadlock.
+	lockAdmins := func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT id FROM users WHERE platform_admin ORDER BY id FOR UPDATE`)
+		if err != nil {
+			return err
+		}
+		admins, err = pgx.CollectRows(rows, pgx.RowTo[string])
+		return err
+	}
+	err := m.changeUser(ctx, userID, func(tx pgx.Tx) error {
+		if !slices.Contains(admins, p.UserID) {
+			return httpx.ErrForbidden
+		}
+		if !slices.Contains(admins, userID) {
+			return httpx.NewError(http.StatusBadRequest, "This user is not a platform admin.")
+		}
+		_, err := tx.Exec(ctx, `UPDATE users SET platform_admin = false WHERE id = $1`, userID)
+		return err
+	}, &record, lockAdmins)
+	if err != nil {
+		return err
+	}
+	m.mailUser(ctx, userID, "platformAdminRevoked")
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+func (m *module) mailUser(ctx context.Context, userID, key string) {
+	var t target
+	if err := m.app.DB.QueryRow(ctx, `SELECT id, email, firstname, language FROM users WHERE id = $1`, userID).Scan(&t.ID, &t.Email, &t.Firstname, &t.Language); err != nil || t.Email == "" {
+		return
+	}
+	content := gmail.Content{Key: key, Name: t.Firstname}
+	if _, err := m.app.MailTemplates.Send(ctx, m.app.Mail, m.app.MailTemplates.AppBrand(), content, []gmail.Recipient{{Address: t.Email, Language: t.Language}}); err != nil {
+		slog.Error("platformadmin: sending mail failed", "mail", key, "user", userID, "error", err)
+	}
 }
 
 func (m *module) setPlatformAdmin(ctx context.Context, userID string, on bool) (record json.RawMessage, err error) {

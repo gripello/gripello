@@ -298,3 +298,10 @@ func TestFeedShowsAcceptedFollowsOnly(t *testing.T) {
 	f.call("friend", "GET", "/climbers/"+f.users["climber"]+"/ticks", "", http.StatusOK, `"items":[]`)
 	f.call("friend", "GET", "/me/feed", "", http.StatusOK, `"items":[]`)
 }
+
+func TestPagingCapsThePage(t *testing.T) {
+	page, _, tail := paging(httptest.NewRequest(http.MethodGet, "/?page=9223372036854775807&limit=1000", nil))
+	if page != maxPage || !strings.HasSuffix(tail, " OFFSET 999999000") {
+		t.Errorf("page %d, tail %q", page, tail)
+	}
+}

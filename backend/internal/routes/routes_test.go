@@ -288,6 +288,10 @@ func TestMapPlacements(t *testing.T) {
 	if len(placed) != 2 || placed[0].(map[string]any)["wall_position"] != 0.25 || placed[1].(map[string]any)["wall_position"] != 0.0 {
 		t.Fatalf("placed = %v", placed)
 	}
+	kept := `{"placements":[{"route":"` + first + `","wall":"` + wall + `","wall_position":null}]}`
+	if placed := items(f.call("setter", "PUT", "/gyms/"+f.gymA+"/map/placements", kept, http.StatusOK)); placed[0].(map[string]any)["wall_position"] != 0.25 {
+		t.Fatalf("a null position moved the route: %v", placed)
+	}
 	f.exec(`UPDATE locations SET map = $2 WHERE id = $1 RETURNING id`, f.hallB, floorPlanJSON)
 	annexWall := f.wall(f.hallB, "Annex wall")
 	bad := `{"placements":[{"route":"` + first + `","wall":""},{"route":"` + second + `","wall":"` + annexWall + `"}]}`

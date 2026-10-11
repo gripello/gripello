@@ -21,6 +21,10 @@ export const AUDITED_COLLECTIONS: string[] = [
     'settings',
     'reports',
     'tasks',
+    'platform_config',
+    'oauth2_providers',
+    'retired_slugs',
+    'backups',
 ]
 
 export type AuditPeriod = '24h' | '7d' | '30d' | 'all'
@@ -89,10 +93,6 @@ export function actionColor(action: AuditAction | string): string {
     if (action === 'login') return 'primary'
     if (action === 'login_failed') return 'warning'
     return 'medium-emphasis'
-}
-
-export function pbDateString(date: Date): string {
-    return date.toISOString().replace('T', ' ')
 }
 
 export const AUDIT_ACTOR_GUESTS = 'guest'

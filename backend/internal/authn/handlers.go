@@ -21,6 +21,7 @@ import (
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/lockout"
 	platformmail "gripello/internal/platform/mail"
 )
 
@@ -34,17 +35,6 @@ var (
 	usernamePattern = regexp.MustCompile(`^[\w][\w.\-]*$`)
 	languages       = []string{"", "en", "de", "nl", "fr", "es"}
 )
-
-// authMethods keeps PocketBase's listAuthMethods shape; OAuth2 and OTP are not offered, second factors are per account.
-func authMethods(w http.ResponseWriter, r *http.Request) error {
-	httpx.JSON(w, http.StatusOK, map[string]any{
-		"password": map[string]any{"enabled": true, "identityFields": []string{"email", "username"}},
-		"oauth2":   map[string]any{"enabled": false, "providers": []any{}},
-		"mfa":      map[string]any{"enabled": false, "duration": 0},
-		"otp":      map[string]any{"enabled": false, "duration": 0},
-	})
-	return nil
-}
 
 func (m *module) login(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
@@ -67,8 +57,8 @@ func (m *module) login(w http.ResponseWriter, r *http.Request) error {
 		known = &user
 	}
 	key := lockoutKey(known, body.Identity)
-	if isLockedOut(ctx, m.db, key) {
-		return errAccountLocked
+	if lockout.IsLocked(ctx, m.db, key) {
+		return lockout.ErrLocked
 	}
 	if !checkPassword(user.PasswordHash, body.Password) || known == nil {
 		m.recordLoginFailure(ctx, r, key, known, maskedIdentity(body.Identity))
@@ -77,22 +67,28 @@ func (m *module) login(w http.ResponseWriter, r *http.Request) error {
 	if err := checkAccess(user); err != nil {
 		return err
 	}
+	return m.firstFactorDone(w, r, user, methodPassword)
+}
+
+// firstFactorDone signs in, or answers 401 {mfaId, methods} when the account has second factors.
+func (m *module) firstFactorDone(w http.ResponseWriter, r *http.Request, user account, method string) error {
+	ctx := r.Context()
 	factors, err := listFactors(ctx, m.db, user.ID)
 	if err != nil {
 		return err
 	}
 	if len(factors) == 0 {
-		return m.signIn(w, r, user, methodPassword, "")
+		return m.signIn(w, r, user, method, "")
 	}
 	methods, err := m.secondFactorMethods(ctx, user.ID)
 	if err != nil {
 		return err
 	}
-	mfaID, err := insertChallenge(ctx, m.db, "login", user.ID, methodPassword, nil)
+	mfaID, err := insertChallenge(ctx, m.db, "login", user.ID, method, nil)
 	if err != nil {
 		return err
 	}
-	m.audit(ctx, AuthEvent{Action: "login_second_factor", User: user.ID, Label: user.label(), Method: methodPassword, IP: clientIP(r)})
+	m.audit(ctx, AuthEvent{Action: "login_second_factor", User: user.ID, Label: user.label(), Method: method, IP: clientIP(r)})
 	httpx.JSON(w, http.StatusUnauthorized, map[string]any{"mfaId": mfaID, "methods": methods})
 	return nil
 }
@@ -341,16 +337,14 @@ func (m *module) requestPasswordReset(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 	ctx := r.Context()
-	if _, signedIn := auth.From(ctx); !signedIn {
-		if err := captcha.Request(ctx, m.db, r, "password-reset"); err != nil {
-			return err
-		}
+	if err := captcha.Request(ctx, m.db, r, "password-reset"); err != nil {
+		return err
 	}
 	if user, err := findAccountByEmail(ctx, m.db, strings.TrimSpace(body.Email)); err == nil {
 		if token, err := m.signMailToken(user, "passwordReset", "", passwordResetTokenTTL); err == nil {
 			m.sendAuthMail(ctx, user, user.Email, platformmail.PasswordReset(user.Firstname, token))
 		}
-		m.audit(ctx, AuthEvent{Action: "password_reset_request", User: user.ID, Label: user.label(), IP: clientIP(r)})
+		go m.audit(context.WithoutCancel(ctx), AuthEvent{Action: "password_reset_request", User: user.ID, Label: user.label(), IP: clientIP(r)})
 	} else if !isNoRows(err) {
 		return err
 	}
@@ -392,7 +386,7 @@ func (m *module) confirmPasswordReset(w http.ResponseWriter, r *http.Request) er
 		if err := rotateTokenKey(ctx, tx, user.ID); err != nil {
 			return err
 		}
-		if err := clearLoginFailures(ctx, tx, user.ID); err != nil {
+		if err := lockout.Clear(ctx, tx, user.ID); err != nil {
 			return err
 		}
 		return publishAuthEvent(ctx, tx, AuthEvent{Action: "password_reset", User: user.ID, Label: user.label(), IP: clientIP(r)})
@@ -491,8 +485,8 @@ func (m *module) confirmEmailChange(w http.ResponseWriter, r *http.Request) erro
 	if !ok || claims.NewEmail == "" {
 		return invalidToken()
 	}
-	if !checkPassword(user.PasswordHash, body.Password) {
-		return httpx.NewError(http.StatusBadRequest, "Failed to validate.").Field("password", "validation_invalid_password", "Missing or invalid auth record password.")
+	if err := m.confirmPassword(r, user, "password", body.Password, "validation_invalid_password"); err != nil {
+		return err
 	}
 	if code, message := m.validateNewEmail(r, claims.NewEmail, user.ID); code != "" {
 		return httpx.NewError(http.StatusBadRequest, "Failed to validate.").Field("newEmail", code, message)
@@ -533,12 +527,12 @@ func (m *module) changePassword(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	invalid := httpx.NewError(http.StatusBadRequest, "Failed to validate.")
-	if !checkPassword(user.PasswordHash, body.OldPassword) {
-		invalid.Field("oldPassword", "validation_invalid_old_password", "Missing or invalid old password.")
-	}
 	validatePassword(invalid, "password", body.Password, body.PasswordConfirm)
 	if len(invalid.Data) > 0 {
 		return invalid
+	}
+	if err := m.confirmPassword(r, user, "oldPassword", body.OldPassword, "validation_invalid_old_password"); err != nil {
+		return err
 	}
 	hash, err := hashPassword(body.Password)
 	if err != nil {
@@ -567,6 +561,25 @@ func (m *module) changePassword(w http.ResponseWriter, r *http.Request) error {
 	return m.respondWithToken(w, r, user, sessionID)
 }
 
+// reauthenticate stamps the caller's session so sensitive admin actions accept it for auth.ReauthWindow.
+func (m *module) reauthenticate(w http.ResponseWriter, r *http.Request) error {
+	p, err := auth.Require(r.Context())
+	if err != nil {
+		return err
+	}
+	if p.SessionID == "" {
+		return httpx.NewError(http.StatusBadRequest, "Sign in again to confirm your password.")
+	}
+	if _, err := m.requirePassword(r); err != nil {
+		return err
+	}
+	if _, err := m.db.Exec(r.Context(), `UPDATE sessions SET reauthenticated_at = now() WHERE id = $1`, p.SessionID); err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
 // requirePassword guards adding or removing factors; wrong passwords count toward the lockout.
 func (m *module) requirePassword(r *http.Request) (account, error) {
 	p, err := auth.Require(r.Context())
@@ -584,14 +597,26 @@ func (m *module) requirePassword(r *http.Request) (account, error) {
 	if err != nil {
 		return account{}, err
 	}
-	if isLockedOut(ctx, m.db, user.ID) {
-		return account{}, errAccountLocked
-	}
-	if !checkPassword(user.PasswordHash, body.Password) {
-		m.recordLoginFailure(ctx, r, user.ID, &user, "")
-		return account{}, httpx.NewError(http.StatusBadRequest, "Invalid password.").Field("password", "invalid_password", "Invalid password.")
+	if err := m.confirmPassword(r, user, "password", body.Password, "invalid_password"); err != nil {
+		return account{}, err
 	}
 	return user, nil
+}
+
+// confirmPassword checks the password of a known account; wrong guesses count toward its lockout.
+func (m *module) confirmPassword(r *http.Request, user account, field, password, wrongCode string) error {
+	ctx := r.Context()
+	if lockout.IsLocked(ctx, m.db, user.ID) {
+		return lockout.ErrLocked
+	}
+	if user.PasswordHash == "" {
+		return httpx.NewError(http.StatusBadRequest, "Set a password first.").Field(field, "password_required", "Set a password first.")
+	}
+	if !checkPassword(user.PasswordHash, password) {
+		m.recordLoginFailure(ctx, r, user.ID, &user, "")
+		return httpx.NewError(http.StatusBadRequest, "Invalid password.").Field(field, wrongCode, "Invalid password.")
+	}
+	return nil
 }
 
 func (m *module) listMFAFactors(w http.ResponseWriter, r *http.Request) error {
@@ -691,12 +716,8 @@ func (m *module) totpEnable(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if isLockedOut(ctx, m.db, user.ID) {
-		return errAccountLocked
-	}
-	if !checkPassword(user.PasswordHash, body.Password) {
-		m.recordLoginFailure(ctx, r, user.ID, &user, "")
-		return httpx.NewError(http.StatusBadRequest, "Invalid password.").Field("password", "invalid_password", "Invalid password.")
+	if err := m.confirmPassword(r, user, "password", body.Password, "invalid_password"); err != nil {
+		return err
 	}
 	key, err := decodeTOTPSecret(body.Secret)
 	if err != nil {
@@ -827,15 +848,24 @@ func (m *module) signOutOtherSessions(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 	ctx := r.Context()
+	sessionID := p.SessionID
 	err = pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
-		if err := deleteSessions(ctx, tx, p.UserID, `"user" = $1 AND id <> $2`, p.SessionID); err != nil {
+		if err := rotateTokenKeyExcept(ctx, tx, p.UserID, sessionID); err != nil {
 			return err
+		}
+		if sessionID == "" {
+			if sessionID, err = insertSession(ctx, tx, p.UserID, "", r.UserAgent(), clientIP(r)); err != nil {
+				return err
+			}
 		}
 		return publishAuthEvent(ctx, tx, AuthEvent{Action: "sessions_revoked", User: p.UserID, IP: clientIP(r)})
 	})
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	user, err := findAccount(ctx, m.db, p.UserID)
+	if err != nil {
+		return err
+	}
+	return m.respondWithToken(w, r, user, sessionID)
 }

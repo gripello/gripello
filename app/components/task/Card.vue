@@ -56,6 +56,7 @@
                 :src="photoUrl"
                 :alt="t('tasks.photo')"
                 class="shrink-0"
+                @click="renewFileToken"
             >
                 <img
                     :src="thumbUrl"
@@ -63,6 +64,7 @@
                     class="size-12 rounded-md object-cover ring ring-default"
                     loading="lazy"
                     data-testid="task-card-photo"
+                    @error="renewFileToken"
                 />
             </LayoutImageViewer>
         </div>
@@ -344,19 +346,22 @@ const moveItems = computed(() => [
     ],
 ])
 
-const fileToken = useFileToken(() =>
+const { token: fileToken, renew: renewFileToken } = useFileToken(() =>
     props.task.photo ? { table: 'tasks', id: props.task.id } : null,
 )
-const fileQuery = computed(() =>
-    fileToken.value ? { token: fileToken.value } : undefined,
-)
 const photoUrl = computed(() =>
-    fileUrl('tasks', props.task, props.task.photo, fileQuery.value),
+    fileToken.value
+        ? fileUrl('tasks', props.task, props.task.photo, {
+              token: fileToken.value,
+          })
+        : '',
 )
 const thumbUrl = computed(() =>
-    fileUrl('tasks', props.task, props.task.photo, {
-        ...fileQuery.value,
-        thumb: '400x0',
-    }),
+    fileToken.value
+        ? fileUrl('tasks', props.task, props.task.photo, {
+              token: fileToken.value,
+              thumb: '400x0',
+          })
+        : '',
 )
 </script>

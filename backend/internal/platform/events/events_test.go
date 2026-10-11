@@ -187,3 +187,79 @@ func TestFailedOnceHandlerReleasesItsClaimAndRetries(t *testing.T) {
 		t.Fatalf("%d claims after the retry succeeded", claims)
 	}
 }
+
+func sweepOften(t *testing.T) {
+	every, age := onceSweepEvery, onceSweepMinAge
+	onceSweepEvery, onceSweepMinAge = 50*time.Millisecond, 0
+	t.Cleanup(func() { onceSweepEvery, onceSweepMinAge = every, age })
+}
+
+func TestOnceHandlerGetsEventsCommittedWhileNoBusRan(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool := testkit.Pool(t)
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	sweepOften(t)
+	tx, _ := pool.Begin(ctx)
+	Publish(ctx, tx, "audit", "while down", nil, Audience{})
+	tx.Commit(ctx)
+
+	bus := NewBus(pool)
+	runs := make(chan string, 4)
+	bus.SubscribeOnce("audit", "audit.write", func(e Event) { runs <- "once " + e.Kind })
+	bus.Subscribe("audit", func(e Event) { runs <- "each " + e.Kind })
+	go bus.Run(ctx)
+	select {
+	case r := <-runs:
+		if r != "once while down" {
+			t.Fatalf("got %q", r)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("missed event not replayed to the once handler")
+	}
+	select {
+	case r := <-runs:
+		t.Fatalf("extra run %q", r)
+	case <-time.After(300 * time.Millisecond):
+	}
+}
+
+func TestOnceHandlerGetsEventSkippedBehindAGap(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool := testkit.Pool(t)
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	sweepOften(t)
+	seed, _ := pool.Begin(ctx)
+	Publish(ctx, seed, "t", "seed", nil, Audience{})
+	seed.Commit(ctx)
+	bus := NewBus(pool)
+	once := make(chan string, 4)
+	bus.SubscribeOnce("t", "t.once", func(e Event) { once <- e.Kind })
+	go bus.Run(ctx)
+	if kind := <-once; kind != "seed" {
+		t.Fatalf("got %q", kind)
+	}
+
+	slow, _ := pool.Begin(ctx)
+	Publish(ctx, slow, "t", "slow", nil, Audience{})
+	fast, _ := pool.Begin(ctx)
+	Publish(ctx, fast, "t", "fast", nil, Audience{})
+	fast.Commit(ctx)
+	if kind := <-once; kind != "fast" {
+		t.Fatalf("got %q", kind)
+	}
+	slow.Commit(ctx)
+	select {
+	case kind := <-once:
+		if kind != "slow" {
+			t.Fatalf("got %q", kind)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("event committed after its gap closed never reached the once handler")
+	}
+}

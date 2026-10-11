@@ -115,6 +115,13 @@ export async function unfollowWall(wall: string) {
     )
 }
 
+export function reauthenticate(password: string) {
+    return useApi()('/me/reauthenticate', {
+        method: 'POST',
+        body: { password },
+    })
+}
+
 export async function changePassword(change: PasswordChange) {
     const result = await useApi()<AuthResult>('/me/password', {
         method: 'POST',
@@ -207,6 +214,29 @@ export function revokeSession(id: string) {
     return useApi()(`/me/sessions/${id}`, { method: 'DELETE' })
 }
 
-export function signOutOtherSessions() {
-    return useApi()('/me/sessions/sign-out-others', { method: 'POST' })
+export async function signOutOtherSessions() {
+    useAuthState().saveAuth(
+        await useApi()<AuthResult>('/me/sessions/sign-out-others', {
+            method: 'POST',
+        }),
+    )
+}
+
+export interface LinkedAccount {
+    id: string
+    provider: string
+    email: string
+    created: string
+}
+
+export function listLinkedAccounts() {
+    return useApi()<{ items: LinkedAccount[]; hasPassword: boolean }>(
+        '/me/identities',
+    )
+}
+
+export function unlinkAccount(id: string) {
+    return useApi()(`/me/identities/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+    })
 }

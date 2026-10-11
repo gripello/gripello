@@ -49,6 +49,14 @@ describe('account pages', () => {
         )
     })
 
+    it('lists gym members as actors only for those allowed to list them', () => {
+        const source = page('activity')
+        const members = source.slice(source.indexOf("'audit-members'"))
+        expect(members).toMatch(
+            /enabled: \(\) =>[\s\S]*can\('manage_users', memberGymId\.value\)/,
+        )
+    })
+
     it('lists activity entries as rows without leading separators', () => {
         const source = page('activity')
         expect(source).toMatch(/class="mx-auto w-full p-4"/)

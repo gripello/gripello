@@ -103,6 +103,34 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /platform/retired-slugs:
+    get:
+      operationId: listRetiredSlugs
+      tags: [gyms]
+      description: Slugs kept after a gym was deleted; platform admins only.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { type: object, properties: { id: { type: string }, slug: { type: string }, gym_name: { type: string }, retired_at: { type: string, format: date-time } } }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/retired-slugs/{id}:
+    delete:
+      operationId: freeRetiredSlug
+      tags: [gyms]
+      description: Lets a new gym take the slug again; audited.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Freed }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /settings:
     get:
       operationId: getSettings

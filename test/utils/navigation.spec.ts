@@ -208,6 +208,9 @@ describe('platform section', () => {
             '/platform/moderation',
             '/platform/gyms',
             '/platform/users',
+            '/platform/audit',
+            '/platform/backups',
+            '/platform/logs',
             '/platform/settings',
         ])
         expect(
@@ -336,6 +339,9 @@ describe('sidebarSections', () => {
                 '/platform/moderation',
                 '/platform/gyms',
                 '/platform/users',
+                '/platform/audit',
+                '/platform/backups',
+                '/platform/logs',
                 '/platform/settings',
             ],
         ])

@@ -29,8 +29,9 @@ async function readTicks<T>(
     query: PageQuery & Record<string, unknown>,
 ): Promise<RouteList<T>> {
     const { total, ...rest } = query
+    const api = useApi()
     const read = (page: number, limit: number) =>
-        useApi()<RouteList<T>>(path, {
+        api<RouteList<T>>(path, {
             query: { ...rest, page, limit, total: total ? 'true' : undefined },
         })
     if (query.page) return read(query.page, query.limit ?? 50)

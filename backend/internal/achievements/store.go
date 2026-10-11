@@ -84,7 +84,7 @@ func seasonTopTenSQL(seasonFilter string) string {
 			SELECT s.id AS season, t.grade_system IN ('font', 'v') AS boulder, t."user",
 				round((MAX(t.grade_index) * 100)::numeric)::int + CASE WHEN bool_or(t.type = 'flash') THEN 33 ELSE 0 END AS points
 			FROM s JOIN routes r ON r.gym = s.gym JOIN ticks t ON t.route = r.id JOIN users u ON u.id = t."user"
-			WHERE t.type <> 'attempt' AND t.grade_index > 0 AND t.date >= s.window_from AND t.date < s.window_to AND NOT u.leaderboard_hidden
+			WHERE t.type <> 'attempt' AND t.grade_index > 0 AND t.date >= s.window_from AND t.date < s.window_to AND NOT u.leaderboard_hidden AND NOT u.ticks_private
 			GROUP BY s.id, boulder, t."user", t.route
 		), best AS (
 			SELECT season, boulder, "user", points, row_number() OVER (PARTITION BY season, boulder, "user" ORDER BY points DESC) AS n FROM sends
@@ -205,7 +205,7 @@ func profileVisible(ctx context.Context, db *pgxpool.Pool, viewer, userID string
 	err = db.QueryRow(ctx, `
 		SELECT true, NOT u.ticks_private
 			AND (EXISTS (SELECT 1 FROM follows WHERE follower = $1 AND followee = u.id AND status = 'accepted')
-				OR EXISTS (SELECT 1 FROM follows WHERE follower = u.id AND followee = $1))
+				OR EXISTS (SELECT 1 FROM follows WHERE follower = u.id AND followee = $1 AND status = 'accepted'))
 			AND NOT EXISTS (SELECT 1 FROM blocks WHERE blocker = u.id AND blocked = $1)
 		FROM users u WHERE u.id = $2`, viewer, userID).Scan(&exists, &visible)
 	if err == pgx.ErrNoRows {

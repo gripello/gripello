@@ -53,6 +53,7 @@
         "passwordStrength": "Passwortstärke",
         "unsavedChanges": "Ungespeicherte Änderungen",
         "wrongOldPassword": "Aktuelles Passwort ist falsch",
+        "passwordRequired": "Dein Konto hat noch kein Passwort. Lege zuerst über „Passwort zurücksetzen“ auf der Anmeldeseite eines fest.",
         "passwordChangedSignInAgain": "Passwort geändert. Bitte melde dich mit dem neuen Passwort erneut an.",
         "unknownUser": "Unbekannter Benutzer",
         "tabs": {
@@ -190,6 +191,15 @@
             "signOut": "{device} abmelden",
             "signOutOthers": "Andere Geräte abmelden",
             "signOutOthersConfirm": "Alle anderen Geräte werden abgemeldet."
+        },
+        "linkedAccounts": {
+            "title": "Verknüpfte Konten",
+            "link": "Verknüpfen",
+            "unlink": "Verknüpfung lösen",
+            "unlinkConfirm": "Du kannst dich dann nicht mehr mit {provider} anmelden.",
+            "lastMethod": "Das ist der einzige Zugang zu deinem Konto. Lege zuerst ein Passwort fest.",
+            "linked": "Anmeldung verknüpft",
+            "linkConfirm": "Eine verknüpfte Anmeldung öffnet dein Konto auch nach einer Passwortänderung. Bestätige mit deinem Passwort."
         }
     },
     "routes": {
@@ -932,8 +942,7 @@
         "saveError": "Einstellungen konnten nicht gespeichert werden. Bitte erneut versuchen.",
         "contactEmail": "Kontakt-E-Mail",
         "contactEmailHint": "Wird als Kontaktstelle veröffentlicht und über neue Inhaltsmeldungen benachrichtigt.",
-        "mailNotConfigured": "E-Mail ist nicht konfiguriert, daher können Passwort-Zurücksetzungen und Meldungsbenachrichtigungen nicht zugestellt werden. SMTP wird in PocketBase konfiguriert, nicht hier.",
-        "mailNotConfiguredAction": "PocketBase-E-Mail-Einstellungen öffnen",
+        "mailNotConfigured": "E-Mail ist nicht konfiguriert, daher können Passwort-Zurücksetzungen und Meldungsbenachrichtigungen nicht zugestellt werden. Ein Plattform-Admin richtet sie unter Plattform-Einstellungen › E-Mail ein.",
         "legalTitle": "Impressum",
         "legalAddress": "Postanschrift",
         "legalPhone": "Telefon",
@@ -1257,7 +1266,11 @@
             "settings": "Einstellungen",
             "reports": "Meldungen",
             "tasks": "Aufgaben",
-            "sessions": "Sitzungen"
+            "sessions": "Sitzungen",
+            "platform_config": "Plattform-Einstellungen",
+            "oauth2_providers": "Anmeldeanbieter",
+            "retired_slugs": "Freigegebene Adressen",
+            "backups": "Sicherungen"
         },
         "target": {
             "routes": "Route",
@@ -1268,7 +1281,11 @@
             "settings": "Einstellungen",
             "reports": "Meldung",
             "tasks": "Aufgabe",
-            "sessions": "Sitzung"
+            "sessions": "Sitzung",
+            "platform_config": "Plattform-Einstellungen",
+            "oauth2_providers": "Anmeldeanbieter",
+            "retired_slugs": "Gesperrte Hallen-URL",
+            "backups": "Sicherung"
         },
         "changedLabel": "Geändert",
         "filter": {
@@ -2002,7 +2019,71 @@
             "access": "Zugang",
             "allowRegistration": "Registrierung erlauben",
             "auditRetentionDays": "Audit-Log aufbewahren (Tage)",
-            "links": "Kontakt & Links"
+            "links": "Kontakt & Links",
+            "mail": {
+                "title": "E-Mail",
+                "host": "SMTP-Server",
+                "port": "Port",
+                "tls": "Verschlüsselung",
+                "username": "Benutzername",
+                "password": "Passwort",
+                "passwordSet": "Gespeichert",
+                "clearPassword": "Passwort entfernen",
+                "senderAddress": "Absenderadresse",
+                "senderName": "Absendername",
+                "sendTest": "Test-E-Mail an mich senden",
+                "testSent": "Test-E-Mail an deine Adresse verschickt",
+                "fromEnvironment": "Über die Server-Umgebung gesetzt",
+                "notConfigured": "Nicht konfiguriert",
+                "confirm": "Die E-Mail-Einstellungen bestimmen, wohin Links zum Zurücksetzen von Passwörtern gehen. Bestätige mit deinem Passwort.",
+                "check": "Verbindungstest",
+                "steps": {
+                    "connect": "Mit dem Server verbinden",
+                    "encrypt": "Verbindung verschlüsseln",
+                    "sign_in": "Anmelden",
+                    "deliver": "An dich zustellen"
+                }
+            },
+            "oauth2": {
+                "title": "Anmeldeanbieter",
+                "enabled": "Auf der Anmeldeseite anbieten",
+                "displayName": "Name auf dem Button",
+                "issuerUrl": "Issuer-URL",
+                "tenant": "Mandant (Tenant)",
+                "clientId": "Client-ID",
+                "clientSecret": "Client-Secret",
+                "teamId": "Team-ID",
+                "keyId": "Schlüssel-ID",
+                "privateKey": "Privater Schlüssel (.p8)",
+                "redirectUri": "Weiterleitungs-URI",
+                "copy": "Kopieren",
+                "copied": "Kopiert",
+                "confirm": "Anmeldeanbieter entscheiden, wer in Konten kommt. Bestätige mit deinem Passwort.",
+                "providers": {
+                    "google": "Google",
+                    "apple": "Apple",
+                    "microsoft": "Microsoft",
+                    "oidc": "OpenID Connect"
+                },
+                "status": {
+                    "live": "Aktiv",
+                    "configured": "Eingerichtet",
+                    "missing": "Nicht eingerichtet"
+                },
+                "checks": {
+                    "clientId": "Client-ID",
+                    "secret": "Secret gespeichert",
+                    "live": "Auf der Anmeldeseite"
+                }
+            },
+            "status": {
+                "registration": "Registrierung",
+                "open": "Offen",
+                "inviteOnly": "Nur mit Einladung",
+                "auditDays": "Audit-Log {n} Tag aufbewahrt | Audit-Log {n} Tage aufbewahrt",
+                "configured": "{n} eingerichtet",
+                "live": "{n} aktiv"
+            }
         },
         "overview": {
             "title": "Übersicht",
@@ -2010,12 +2091,61 @@
             "memberships": "Mitgliedschaften",
             "routes": "Routen",
             "admins": "Plattform-Admins",
-            "dashboard": "PocketBase-Dashboard",
             "needsYou": "Braucht dich",
             "legalReports": "Offene Rechtsmeldungen",
             "staleGyms": "Hallen im Rückstand",
             "profiles": "Profile zu prüfen",
-            "suspended": "Gesperrte Personen"
+            "suspended": "Gesperrte Personen",
+            "traffic": {
+                "title": "Anfragen",
+                "requests": "Anfragen",
+                "ok": "Erfolgreich",
+                "clientErrors": "Client-Fehler (4xx)",
+                "serverErrors": "Serverfehler (5xx)",
+                "serverErrorRate": "Serverfehlerquote",
+                "peakRps": "Spitze Anfragen/s",
+                "p95": "p95-Antwortzeit",
+                "visitors": "Besucher pro Tag",
+                "endpoints": "Endpunkte",
+                "endpoint": "Endpunkt",
+                "sortErrors": "Fehler",
+                "sortSlowest": "Langsamste",
+                "showAll": "Alle {n} zeigen",
+                "showLess": "Weniger zeigen"
+            },
+            "people": {
+                "title": "Personen",
+                "online": "Gerade online",
+                "signedIn": "Angemeldet",
+                "newAccounts": "Neue Konten",
+                "failedLogins": "Fehlgeschlagene Anmeldungen",
+                "methods": {
+                    "password": "Passwort",
+                    "passkey": "Passkey",
+                    "totp": "Authenticator-Code",
+                    "recovery": "Wiederherstellungscode"
+                }
+            },
+            "servers": {
+                "title": "Server",
+                "online": "Online",
+                "offline": "Offline",
+                "uptime": "läuft seit {time}",
+                "connections": "{n} Live-Verbindung | {n} Live-Verbindungen",
+                "lastSeen": "Offline · zuletzt gesehen {time}"
+            },
+            "system": {
+                "title": "System",
+                "database": "Datenbank",
+                "connections": "{n} Verbindung | {n} Verbindungen",
+                "jobs": "Warteschlange",
+                "jobsState": "{waiting} wartend · {running} laufend",
+                "lastBackup": "Letzte Sicherung",
+                "mail": "E-Mail",
+                "mailOn": "Eingerichtet",
+                "mailOff": "Nicht eingerichtet"
+            },
+            "platform": "Plattform"
         },
         "users": {
             "title": "Nutzer",
@@ -2053,13 +2183,130 @@
                 "kept": "Mitgliedschaften und Logbuch bleiben; nichts wird gelöscht.",
                 "lift": "Unter Personen kannst du die Sperre jederzeit aufheben."
             },
-            "suspendPermanently": "Dauerhaft sperren"
+            "suspendPermanently": "Dauerhaft sperren",
+            "security": "Sicherheit",
+            "locked": "Gesperrt",
+            "unlock": "Entsperren",
+            "revokeSessions": "Überall abmelden",
+            "resetMfa": "Zwei-Faktor zurücksetzen",
+            "setPassword": "Passwort setzen",
+            "adminPassword": "Dein Passwort",
+            "adminPasswordWrong": "Dein Passwort ist nicht korrekt.",
+            "actions": {
+                "unlock": {
+                    "title": "Entsperren",
+                    "confirm": "Entsperren",
+                    "done": "Konto entsperrt"
+                },
+                "revokeSessions": {
+                    "title": "Überall abmelden",
+                    "message": "{name} wird auf allen Geräten abgemeldet.",
+                    "confirm": "Abmelden",
+                    "done": "Überall abgemeldet"
+                },
+                "resetMfa": {
+                    "title": "Zwei-Faktor zurücksetzen",
+                    "message": "Entfernt Authenticator-Apps, Passkeys und Wiederherstellungscodes von {name} und meldet überall ab. Es wird eine E-Mail verschickt.",
+                    "confirm": "Zurücksetzen",
+                    "done": "Zwei-Faktor zurückgesetzt"
+                },
+                "setPassword": {
+                    "title": "Passwort setzen",
+                    "message": "{name} wird überall abgemeldet und bekommt eine E-Mail.",
+                    "confirm": "Passwort setzen",
+                    "done": "Passwort gesetzt"
+                },
+                "grantAdmin": {
+                    "title": "Zum Plattform-Admin machen",
+                    "message": "{name} kann dann alle Hallen, alle Nutzer und die Plattform-Einstellungen verwalten.",
+                    "confirm": "Zum Admin machen",
+                    "done": "Plattform-Admin hinzugefügt"
+                },
+                "revokeAdmin": {
+                    "title": "Plattform-Admin entfernen",
+                    "message": "{name} behält Konto und Hallen-Mitgliedschaften, verliert aber die Plattformrechte.",
+                    "confirm": "Entfernen",
+                    "done": "Plattform-Admin entfernt"
+                }
+            }
         },
         "features": {
             "title": "Feature-Flags",
             "flags": {
                 "beta_videos": "Beta-Videos"
             }
+        },
+        "retiredSlugs": {
+            "title": "Gesperrte URLs",
+            "empty": "Keine gesperrten URLs",
+            "free": "URL freigeben",
+            "freeConfirm": "Danach kann jede neue Halle /{slug} verwenden. Alte Links zur gelöschten Halle führen dann dorthin.",
+            "freed": "/{slug} ist wieder frei"
+        },
+        "logs": {
+            "title": "Server-Logs",
+            "refresh": "Aktualisieren",
+            "runtimeLevel": "Log-Level",
+            "levelChanged": "Log-Level auf allen Servern geändert",
+            "empty": "Keine Log-Zeilen auf dieser Stufe",
+            "levels": {
+                "debug": "Debug",
+                "info": "Info",
+                "warn": "Warnungen",
+                "error": "Fehler"
+            },
+            "live": "Live",
+            "paused": "Pausiert",
+            "now": "jetzt",
+            "search": "Nachricht oder Feld suchen",
+            "copyJson": "Als JSON kopieren",
+            "copied": "Kopiert",
+            "lineCount": "{n} Zeile | {n} Zeilen",
+            "inBuffer": "im Puffer",
+            "perMinute": "Ereignisse pro Minute",
+            "allLines": "Alle Zeilen",
+            "filterAll": "Alle",
+            "filterInfo": "Info+",
+            "filterWarn": "Warn+",
+            "verbose": "sehr ausführlich",
+            "default": "Standard",
+            "replicas": "Replikate",
+            "sameModule": "Gleiches Modul zeigen",
+            "replicaStatus": {
+                "online": "Online",
+                "offline": "Offline",
+                "gone": "Beendet"
+            }
+        },
+        "backups": {
+            "title": "Sicherungen",
+            "runNow": "Jetzt sichern",
+            "running": "Sicherung läuft…",
+            "disabled": "Sicherungen sind auf diesem Server aus",
+            "archives": "Archive",
+            "empty": "Noch keine Sicherungen",
+            "schedule": "Zeitplan",
+            "includeStorage": "Hochgeladene Dateien einschließen",
+            "download": "Herunterladen",
+            "delete": "Löschen",
+            "settings": "Zeitplan speichern",
+            "confirm": "Sicherungen enthalten alle Konten. Bestätige mit deinem Passwort.",
+            "time": "Täglich um",
+            "pgDumpMissing": "pg_dump ist auf diesem Server nicht installiert",
+            "lastFailed": "Letzte Sicherung fehlgeschlagen",
+            "lastRun": "Letzte Sicherung {date}",
+            "retry": "Erneut versuchen",
+            "daily": "Tägliche Sicherung",
+            "keepCount": "Aufzubewahrende Sicherungen",
+            "estimate": "≈ {size} auf der Festplatte",
+            "restore": "Wiederherstellen",
+            "copyCommand": "Befehl kopieren",
+            "lastBackup": "Letzte Sicherung",
+            "failed": "Fehlgeschlagen",
+            "nextBackup": "Nächste Sicherung",
+            "off": "Aus",
+            "manualOnly": "Nur manuelle Sicherungen",
+            "freeSpace": "Freier Speicher"
         }
     },
     "mails": {
@@ -2158,6 +2405,31 @@
             "subject": "Deine E-Mail-Adresse wurde geändert",
             "body": "Das Plattform-Team hat die E-Mail-Adresse deines {app}-Kontos auf {email} geändert. Du wurdest auf allen Geräten abgemeldet.",
             "note": "Wenn du das nicht veranlasst hast, antworte bitte sofort auf diese E-Mail."
+        },
+        "mfaResetByAdmin": {
+            "subject": "Zwei-Faktor-Authentifizierung wurde ausgeschaltet",
+            "body": "Das Plattform-Team hat die Authenticator-Apps, Passkeys und Wiederherstellungscodes aus deinem {app}-Konto entfernt. Du wurdest auf allen Geräten abgemeldet und kannst dich jetzt nur mit deinem Passwort anmelden.",
+            "note": "Richte die Zwei-Faktor-Authentifizierung in deinen Kontoeinstellungen wieder ein. Wenn du das nicht angefragt hast, antworte bitte sofort auf diese E-Mail."
+        },
+        "passwordSetByAdmin": {
+            "subject": "Dein Passwort wurde geändert",
+            "body": "Das Plattform-Team hat ein neues Passwort für dein {app}-Konto gesetzt. Du wurdest auf allen Geräten abgemeldet.",
+            "note": "Frag das Plattform-Team nach dem neuen Passwort und ändere es in deinen Kontoeinstellungen. Wenn du das nicht angefragt hast, antworte bitte sofort auf diese E-Mail."
+        },
+        "platformAdminGranted": {
+            "subject": "Du bist jetzt Plattform-Administrator",
+            "body": "Das Plattform-Team hat dich zum Plattform-Administrator von {app} gemacht. Du kannst jetzt Hallen, Nutzer und Plattform-Einstellungen verwalten.",
+            "note": "Wenn du das nicht erwartet hast, antworte bitte sofort auf diese E-Mail."
+        },
+        "platformAdminRevoked": {
+            "subject": "Du bist kein Plattform-Administrator mehr",
+            "body": "Das Plattform-Team hat dir die Plattform-Administratorrechte in {app} entzogen. Dein Konto und deine Hallen-Mitgliedschaften bleiben bestehen.",
+            "note": "Wenn du das nicht erwartet hast, antworte bitte sofort auf diese E-Mail."
+        },
+        "mailTest": {
+            "subject": "Test-E-Mail von {app}",
+            "body": "Der E-Mail-Versand funktioniert. Diese Nachricht wurde aus den Plattform-Einstellungen von {app} verschickt.",
+            "note": "Du kannst diese E-Mail ignorieren."
         }
     },
     "leaderboard": {
@@ -2511,5 +2783,18 @@
         "zoom": "Zoom",
         "rotate": "Drehen",
         "reset": "Zurücksetzen"
+    },
+    "auth": {
+        "or": "oder",
+        "oauth2": {
+            "continueWith": "Weiter mit {provider}",
+            "errors": {
+                "failed": "Die Anmeldung beim Anbieter ist fehlgeschlagen. Bitte versuche es erneut.",
+                "registration_disabled": "Für diese Anmeldung gibt es kein Konto und neue Registrierungen sind geschlossen.",
+                "account_exists": "Ein Konto mit dieser E-Mail-Adresse existiert bereits. Melde dich mit deinem Passwort an und verknüpfe den Anbieter in den Kontoeinstellungen.",
+                "already_linked": "Diese Anmeldung ist bereits mit einem anderen Konto verknüpft.",
+                "email_unverified": "Der Anbieter hat keine E-Mail-Adresse bestätigt, daher kann kein Konto angelegt werden."
+            }
+        }
     }
 }

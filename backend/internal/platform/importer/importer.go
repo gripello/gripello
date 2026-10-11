@@ -8,8 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +20,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "modernc.org/sqlite"
+
+	"gripello/internal/platform/secretbox"
 )
 
 // Tables in foreign-key order. Views, events, jobs and goose state are not imported.
@@ -45,7 +50,8 @@ type column struct {
 	nullable bool
 }
 
-func Run(ctx context.Context, pbData string, pool *pgxpool.Pool, blobDir string) (Report, error) {
+// Run imports pbData; tokenSecret is TOKEN_SECRET (empty: the imported users auth secret), used to seal OAuth2 secrets.
+func Run(ctx context.Context, pbData string, pool *pgxpool.Pool, blobDir, tokenSecret string) (Report, error) {
 	report := Report{Rows: map[string]int64{}}
 	lite, err := sql.Open("sqlite", "file:"+filepath.Join(pbData, "data.db")+"?mode=ro")
 	if err != nil {
@@ -53,9 +59,12 @@ func Run(ctx context.Context, pbData string, pool *pgxpool.Pool, blobDir string)
 	}
 	defer lite.Close()
 
-	collections, authSecret, err := readCollections(ctx, lite)
+	collections, users, err := readCollections(ctx, lite)
 	if err != nil {
 		return report, err
+	}
+	if tokenSecret == "" {
+		tokenSecret = users.AuthToken.Secret
 	}
 	permissionNames, err := readPermissionNames(ctx, lite)
 	if err != nil {
@@ -83,8 +92,11 @@ func Run(ctx context.Context, pbData string, pool *pgxpool.Pool, blobDir string)
 		return report, err
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO app_secrets (key, value) VALUES ('users_auth_token_secret', $1)
-		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, authSecret); err != nil {
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, users.AuthToken.Secret); err != nil {
 		return report, err
+	}
+	if report.Rows["oauth2_providers"], report.Rows["user_identities"], err = importOAuth2(ctx, lite, tx, users, tokenSecret); err != nil {
+		return report, fmt.Errorf("oauth2: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return report, err
@@ -94,32 +106,99 @@ func Run(ctx context.Context, pbData string, pool *pgxpool.Pool, blobDir string)
 	return report, err
 }
 
-func readCollections(ctx context.Context, lite *sql.DB) (map[string]string, string, error) {
+type usersOptions struct {
+	ID        string
+	AuthToken struct{ Secret string } `json:"authToken"`
+	OAuth2    struct {
+		Enabled   bool `json:"enabled"`
+		Providers []struct {
+			Name         string `json:"name"`
+			ClientID     string `json:"clientId"`
+			ClientSecret string `json:"clientSecret"`
+			AuthURL      string `json:"authURL"`
+			DisplayName  string `json:"displayName"`
+		} `json:"providers"`
+	} `json:"oauth2"`
+}
+
+func readCollections(ctx context.Context, lite *sql.DB) (map[string]string, usersOptions, error) {
+	var users usersOptions
 	rows, err := lite.QueryContext(ctx, `SELECT id, name, options FROM _collections`)
 	if err != nil {
-		return nil, "", err
+		return nil, users, err
 	}
 	defer rows.Close()
 	byID := map[string]string{}
-	secret := ""
 	for rows.Next() {
 		var id, name, options string
 		if err := rows.Scan(&id, &name, &options); err != nil {
-			return nil, "", err
+			return nil, users, err
 		}
 		byID[id] = name
 		if name == "users" {
-			var opts struct {
-				AuthToken struct{ Secret string } `json:"authToken"`
-			}
-			json.Unmarshal([]byte(options), &opts)
-			secret = opts.AuthToken.Secret
+			json.Unmarshal([]byte(options), &users)
+			users.ID = id
 		}
 	}
-	if secret == "" {
-		return nil, "", fmt.Errorf("users collection auth secret not found")
+	if users.AuthToken.Secret == "" {
+		return nil, users, fmt.Errorf("users collection auth secret not found")
 	}
-	return byID, secret, rows.Err()
+	return byID, users, rows.Err()
+}
+
+var microsoftTenant = regexp.MustCompile(`login\.microsoftonline\.com/([^/]+)/`)
+
+// importOAuth2 copies the users collection's OAuth2 providers (secrets sealed) and the _externalAuths links.
+// Apple's PocketBase secret is a generated JWT, so only its client id carries over; team, key and private key are set again in the platform settings.
+func importOAuth2(ctx context.Context, lite *sql.DB, tx pgx.Tx, users usersOptions, secret string) (providers, identities int64, err error) {
+	if _, err := tx.Exec(ctx, `TRUNCATE user_identities, oauth2_providers`); err != nil {
+		return 0, 0, err
+	}
+	known := []string{"google", "apple", "microsoft", "oidc"}
+	for _, p := range users.OAuth2.Providers {
+		if !slices.Contains(known, p.Name) {
+			slog.Warn("importer: skipping unsupported OAuth2 provider", "provider", p.Name)
+			continue
+		}
+		clientSecret := p.ClientSecret
+		if p.Name == "apple" {
+			clientSecret = ""
+		}
+		sealed, err := secretbox.Seal(secret, clientSecret)
+		if err != nil {
+			return 0, 0, err
+		}
+		tenant := ""
+		if m := microsoftTenant.FindStringSubmatch(p.AuthURL); p.Name == "microsoft" && m != nil {
+			tenant = m[1]
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO oauth2_providers (provider, enabled, client_id, client_secret, display_name, tenant) VALUES ($1, $2, $3, $4, $5, $6)`,
+			p.Name, users.OAuth2.Enabled, p.ClientID, sealed, p.DisplayName, tenant); err != nil {
+			return 0, 0, err
+		}
+		providers++
+	}
+	rows, err := lite.QueryContext(ctx, `SELECT id, recordRef, provider, providerId, created FROM _externalAuths WHERE collectionRef = ?`, users.ID)
+	if err != nil {
+		return providers, 0, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, user, provider, subject, created string
+		if err := rows.Scan(&id, &user, &provider, &subject, &created); err != nil {
+			return providers, identities, err
+		}
+		if !slices.Contains(known, provider) {
+			continue
+		}
+		tag, err := tx.Exec(ctx, `INSERT INTO user_identities (id, "user", provider, subject, created) SELECT $1, $2, $3, $4, $5::timestamptz
+			WHERE EXISTS (SELECT 1 FROM users WHERE id = $2)`, id, user, provider, subject, created)
+		if err != nil {
+			return providers, identities, err
+		}
+		identities += tag.RowsAffected()
+	}
+	return providers, identities, rows.Err()
 }
 
 func readPermissionNames(ctx context.Context, lite *sql.DB) (map[string]string, error) {

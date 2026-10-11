@@ -54,6 +54,7 @@ paths:
       description: >
         Profile fields only. Another platform admin can't be edited. The user's own settings (notification_prefs, followed_walls,
         leaderboard_hidden, follow_policy, reviews_anonymous, ticks_private), platform_admin, suspension and credentials answer 403.
+        A new email needs a password confirmation from the last five minutes (POST /me/reauthenticate, else 403 reauth_required).
         Sends user.updated {record, changed, actor} on `user:<id>`.
       requestBody:
         required: true
@@ -76,7 +77,7 @@ paths:
     delete:
       operationId: deletePlatformUser
       tags: [platform]
-      description: Not another platform admin, not the only admin of a gym (400). Revokes every session and sends user.deleted {id, actor}.
+      description: Not yourself (DELETE /me) or another platform admin (403), not the only admin of a gym (400). Needs a password confirmation from the last five minutes (POST /me/reauthenticate, else 403 reauth_required). Revokes every session and sends user.deleted {id, actor}.
       responses:
         '204': { description: Deleted }
         '400': { $ref: '#/components/responses/Error' }
@@ -89,7 +90,7 @@ paths:
     post:
       operationId: suspendUser
       tags: [platform]
-      description: Not yourself, not another platform admin. Rotates the token key, deletes every session (session.revoked each) and mails the user.
+      description: Not yourself, not another platform admin. Needs a password confirmation from the last five minutes (POST /me/reauthenticate, else 403 reauth_required). Rotates the token key, deletes every session (session.revoked each) and mails the user.
       requestBody:
         required: true
         content:
@@ -114,6 +115,50 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /platform/traffic:
+    get:
+      operationId: getPlatformTraffic
+      tags: [platform]
+      description: Request counts of every replica (5-minute buckets, 60-day retention) for the overview. Platform admins only.
+      parameters:
+        - { name: range, in: query, schema: { type: string, enum: ['1h', '24h', '7d', '30d'], default: '24h' } }
+      responses:
+        '200':
+          description: Series, totals with the previous window, endpoints, people and system state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [range, step_seconds, series, totals, previous, peak_rps, visitors_per_day, endpoints, people, system]
+                properties:
+                  range: { type: string }
+                  step_seconds: { type: integer }
+                  series:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        t: { type: string, format: date-time }
+                        requests: { type: integer }
+                        client_errors: { type: integer }
+                        server_errors: { type: integer }
+                  totals: { $ref: '#/components/schemas/TrafficTotals' }
+                  previous: { $ref: '#/components/schemas/TrafficTotals' }
+                  peak_rps: { type: number }
+                  visitors_per_day: { type: integer }
+                  endpoints:
+                    type: array
+                    items:
+                      allOf:
+                        - { $ref: '#/components/schemas/TrafficTotals' }
+                        - type: object
+                          properties:
+                            method: { type: string }
+                            pattern: { type: string }
+                            avg_ms: { type: number }
+                  people: { type: object, additionalProperties: true }
+                  system: { type: object, additionalProperties: true, description: 'Database, jobs, backup and mail state plus replicas: every server seen within 15 minutes (name, version, role, started, last_seen, online, realtime_clients, memory_bytes).' }
+        '403': { $ref: '#/components/responses/Error' }
   /platform/stats:
     get:
       operationId: platformStats
@@ -208,6 +253,173 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /platform/users/{id}/mfa:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    delete:
+      operationId: resetUserMfa
+      tags: [platform]
+      description: Served by authn. Deletes the user's second factors and recovery codes, ends every session and emails the user. Needs a recent password confirmation; refuses yourself and other platform admins (403).
+      responses:
+        '204': { description: Reset }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/users/{id}/sessions:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    delete:
+      operationId: revokeUserSessions
+      tags: [platform]
+      description: Served by authn. Ends every session of the user (realtime connections lose their auth). Refuses yourself and other platform admins.
+      responses:
+        '204': { description: Revoked }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/users/{id}/lockout:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    delete:
+      operationId: clearUserLockout
+      tags: [platform]
+      description: Served by authn. Clears failed sign-in attempts and an active lockout. Refuses yourself and other platform admins.
+      responses:
+        '204': { description: Cleared }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/users/{id}/password:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: setUserPassword
+      tags: [platform]
+      description: Served by authn. Sets a new password, ends every session, clears the lockout and emails the user. Needs a recent password confirmation; refuses yourself and other platform admins.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [password, passwordConfirm], properties: { password: { type: string }, passwordConfirm: { type: string } } }
+      responses:
+        '204': { description: Set }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/mail:
+    get:
+      operationId: getMailSettings
+      tags: [platform]
+      description: The stored mail settings, or the environment's (source environment) or none. The SMTP password is never returned, only smtp_password_set.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MailSettings' }
+        '403': { $ref: '#/components/responses/Error' }
+    put:
+      operationId: updateMailSettings
+      tags: [platform]
+      description: Needs a recent password confirmation. An empty smtp_host hands mail back to the environment; smtp_password left out keeps the stored one, "" clears it. The password is sealed at rest; every replica reloads its mailer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                smtp_host: { type: string }
+                smtp_port: { type: integer, minimum: 1, maximum: 65535 }
+                smtp_username: { type: string }
+                smtp_password: { type: string }
+                smtp_tls: { type: boolean }
+                sender_address: { type: string, format: email }
+                sender_name: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MailSettings' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/mail/test:
+    post:
+      operationId: sendTestMail
+      tags: [platform]
+      description: Sends a test email to the caller over the live transport; 5 per minute per admin, 409 when mail is not configured, 400 carries the SMTP error.
+      responses:
+        '204': { description: Sent }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /platform/logs:
+    get:
+      operationId: listServerLogs
+      tags: [platform]
+      description: The newest 2000 log records of every replica (kept 7 days), newest first, at or above level.
+      parameters:
+        - { name: level, in: query, schema: { type: string, enum: [debug, info, warn, error], default: info } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  level: { type: string }
+                  replicas: { type: array, description: 'Servers seen within 15 minutes, as in getPlatformTraffic system.replicas', items: { type: object, additionalProperties: true } }
+                  items:
+                    type: array
+                    items: { type: object, properties: { time: { type: string, format: date-time }, replica: { type: string }, level: { type: string }, message: { type: string }, attrs: { type: object } } }
+        '400': { $ref: '#/components/responses/Error' }
+  /platform/logs/level:
+    put:
+      operationId: setLogLevel
+      tags: [platform]
+      description: Stores the runtime log level; every replica applies it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [level], properties: { level: { type: string, enum: [debug, info, warn, error] } } }
+      responses:
+        '200': { description: OK }
+        '400': { $ref: '#/components/responses/Error' }
+  /platform/oauth2:
+    get:
+      operationId: listOAuthProviderSettings
+      tags: [platform]
+      description: Served by authn. Every provider with its settings, client_secret_set/private_key_set instead of the secrets, and the redirect URI to register at the provider.
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/oauth2/{provider}:
+    put:
+      operationId: saveOAuthProviderSettings
+      tags: [platform]
+      description: Served by authn. Needs a recent password confirmation. client_secret and private_key left out keep the stored values; secrets are sealed at rest. The generic oidc provider needs an https issuer_url and a display_name when enabled.
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string, enum: [google, apple, microsoft, oidc] } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean }
+                client_id: { type: string }
+                client_secret: { type: string }
+                display_name: { type: string }
+                issuer_url: { type: string }
+                tenant: { type: string }
+                team_id: { type: string }
+                key_id: { type: string }
+                private_key: { type: string }
+      responses:
+        '200': { description: OK }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
   /platform/admins/{user}:
     parameters:
       - name: user
@@ -217,7 +429,7 @@ paths:
     delete:
       operationId: revokePlatformAdmin
       tags: [platform]
-      description: Removing your own rights answers 400; another platform admin's rights only change through `gripello admin` (403).
+      description: Needs a password confirmation from the last five minutes (POST /me/reauthenticate, else 403 reauth_required). Removing your own rights or a non-admin answers 400; admin rows are locked, so of two admins revoking each other the second gets 403. The user gets an email.
       responses:
         '204': { description: Revoked }
         '400': { $ref: '#/components/responses/Error' }
@@ -243,6 +455,24 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
   schemas:
+    TrafficTotals:
+      type: object
+      properties:
+        requests: { type: integer }
+        client_errors: { type: integer }
+        server_errors: { type: integer }
+        p95_ms: { type: number }
+    MailSettings:
+      type: object
+      properties:
+        smtp_host: { type: string }
+        smtp_port: { type: integer }
+        smtp_username: { type: string }
+        smtp_password_set: { type: boolean }
+        smtp_tls: { type: boolean }
+        sender_address: { type: string }
+        sender_name: { type: string }
+        source: { type: string, enum: [database, environment, none] }
     Error:
       type: object
       required: [status, message, data]

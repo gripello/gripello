@@ -90,12 +90,18 @@ type Worker func(ctx context.Context, job Job) error
 func RunQueue(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, concurrency int) {
 	sem := make(chan struct{}, concurrency)
 	for ctx.Err() == nil {
+		// A free slot first: a claimed job waiting for one would let its unrenewed lease run out.
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			return
+		}
 		job, ok := claim(ctx, pool)
 		if !ok {
+			<-sem
 			time.Sleep(time.Second)
 			continue
 		}
-		sem <- struct{}{}
 		go func() {
 			defer func() { <-sem }()
 			run(ctx, pool, workers, job)
@@ -148,5 +154,5 @@ func run(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, job
 	}
 	// An Enqueue that landed while the job ran moved run_after; keep that row so the job runs again.
 	pool.Exec(ctx, `DELETE FROM jobs WHERE id = $1 AND run_after = $2`, job.ID, job.RunAfter)
-	pool.Exec(ctx, `UPDATE jobs SET locked_until = NULL WHERE id = $1`, job.ID)
+	pool.Exec(ctx, `UPDATE jobs SET locked_until = NULL, attempts = 0 WHERE id = $1`, job.ID)
 }

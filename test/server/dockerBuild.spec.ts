@@ -91,6 +91,16 @@ describe('docker ui build', () => {
         expect(read('Dockerfile')).toContain('LOCALES_DIR=/app/locales')
     })
 
+    it('ships a pg_dump that matches the postgres server and a shared backup dir', () => {
+        const server = read('docker-compose.yml').match(
+            /image: postgres:(\d+)-alpine/,
+        )?.[1]
+        const dockerfile = read('Dockerfile')
+        expect(dockerfile).toContain(`postgresql-client-${server}`)
+        expect(dockerfile).toContain('BACKUP_DIR=/data/backups')
+        expect(read('docker-compose.yml')).toContain('./backups:/data/backups')
+    })
+
     it('builds and starts the go api instead of pocketbase', () => {
         const dockerfile = read('Dockerfile')
         expect(dockerfile).toContain('-o /out/gripello ./cmd/gripello')
@@ -110,6 +120,23 @@ describe('docker ui build', () => {
         expect(read('.docker/healthcheck.mjs')).toContain(
             'http://127.0.0.1:8080/api/health',
         )
+    })
+
+    it('ends the health check without waiting for idle keep-alive sockets', () => {
+        expect(read('.docker/healthcheck.mjs')).toMatch(/^process\.exit\(0\)$/m)
+    })
+
+    it('forwards docker stop to the api so a replica shuts down cleanly', () => {
+        const entrypoint = read('.docker/docker-entrypoint.sh')
+        expect(entrypoint).not.toMatch(/^exec /m)
+        expect(entrypoint).toMatch(/^trap stop_all TERM INT$/m)
+        expect(entrypoint).toContain(
+            'kill -TERM $API_PID $UI_PID 2>/dev/null || true',
+        )
+        expect(entrypoint).toContain(
+            'kill -QUIT $NGINX_PID 2>/dev/null || true',
+        )
+        expect(entrypoint.trimEnd()).toMatch(/\nwait$/)
     })
 
     it('rate-limits the api in nginx and keeps the realtime stream open', () => {

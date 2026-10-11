@@ -14,22 +14,9 @@
             data-testid="settings-mail-warning"
         >
             <template #description>
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="alert-message">{{
-                        $t('settings.mailNotConfigured')
-                    }}</span>
-                    <UButton
-                        color="neutral"
-                        variant="ghost"
-                        size="sm"
-                        :href="pbMailSettingsUrl"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        data-testid="settings-mail-warning-link"
-                    >
-                        {{ $t('settings.mailNotConfiguredAction') }}
-                    </UButton>
-                </div>
+                <span class="alert-message">{{
+                    $t('settings.mailNotConfigured')
+                }}</span>
             </template>
         </UAlert>
 
@@ -61,8 +48,6 @@ definePageMeta({
 const { gym } = useGym()
 
 const { data: mailStatus } = useMailStatus()
-const pbMailSettingsUrl =
-    (import.meta.dev ? 'http://localhost:8090' : '') + '/_/#/settings/mail'
 const mailConfigured = computed(() => mailStatus.value?.configured !== false)
 
 const extraSections = computed(() => [

@@ -20,6 +20,7 @@ import (
 const (
 	defaultPageSize    = 50
 	maxPageSize        = 500
+	maxPage            = 1_000_000
 	maxCommentLength   = 5000
 	maxGradeIndex      = 40
 	maxImportedRatings = 500
@@ -79,7 +80,7 @@ func pageParams(r *http.Request) (int, int, string) {
 		}
 		return fallback
 	}
-	page := max(1, atoi(r.URL.Query().Get("page"), 1))
+	page := min(maxPage, max(1, atoi(r.URL.Query().Get("page"), 1)))
 	limit := min(maxPageSize, max(1, atoi(r.URL.Query().Get("limit"), defaultPageSize)))
 	return page, limit, " LIMIT " + strconv.Itoa(limit) + " OFFSET " + strconv.Itoa((page-1)*limit)
 }
@@ -109,8 +110,12 @@ func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.require(ctx, gym, permManageComments); err != nil {
+	if _, err := auth.Require(ctx); err != nil {
 		return err
+	}
+	moderator := m.can(ctx, gym, permManageComments)
+	if !moderator && !m.can(ctx, gym, permViewAnalytics) && !m.can(ctx, gym, permManageRoutes) {
+		return httpx.ErrForbidden
 	}
 	query := r.URL.Query()
 	where := &conditions{}
@@ -161,7 +166,7 @@ func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.enrichRatings(ctx, items, false); err != nil {
+	if err := m.enrichRatings(ctx, items, !moderator); err != nil {
 		return err
 	}
 	if err := m.expandRoutes(ctx, items); err != nil {
@@ -389,7 +394,7 @@ func (m *module) importRating(ctx context.Context, gym string, raw json.RawMessa
 		if err != nil {
 			return err
 		}
-		return m.publishRatingChange(ctx, tx, "", "create", saved, nil)
+		return m.publishRatingChange(ctx, tx, actorOf(ctx), "create", saved, nil)
 	})
 }
 

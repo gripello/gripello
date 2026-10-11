@@ -303,6 +303,20 @@ func TestLeavingTheLeaderboardForgetsCachedBoards(t *testing.T) {
 	}
 }
 
+func TestDeletedClimbersLeaveCachedBoards(t *testing.T) {
+	f := newFixture(t)
+	boards := f.module.boards
+	boards.store("cached", f.gymA, leaderboardBoard{}, time.Now().AddDate(0, 0, -10), time.Now().AddDate(0, 0, -1), time.Now())
+	climber := f.users["climber"]
+	err := pgx.BeginFunc(context.Background(), f.app.DB, func(tx pgx.Tx) error {
+		return events.Publish(context.Background(), tx, "user:"+climber, "user.deleted", map[string]string{"id": climber}, events.Audience{Users: []string{climber}})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	testapp.WaitFor(t, func() bool { return cappedOrMissing(boards, "cached") })
+}
+
 func TestProfileChangesWithoutAFieldListForgetBoards(t *testing.T) {
 	if !touchesLeaderboard(nil) || touchesLeaderboard([]string{"followed_walls"}) || !touchesLeaderboard([]string{"avatar"}) {
 		t.Fatal("touchesLeaderboard")

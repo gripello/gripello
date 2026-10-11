@@ -55,6 +55,26 @@ export async function deleteGym(id: string) {
     return true
 }
 
+export interface RetiredSlug {
+    id: string
+    slug: string
+    gym_name: string
+    retired_at: string
+}
+
+export async function listRetiredSlugs() {
+    const { items } = await useApi()<{ items: RetiredSlug[] }>(
+        '/platform/retired-slugs',
+    )
+    return items
+}
+
+export async function freeRetiredSlug(id: string) {
+    await useApi()(`/platform/retired-slugs/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+    })
+}
+
 export function getSettings() {
     return useApi()<SettingsRecord>('/settings')
 }

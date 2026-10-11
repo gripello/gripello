@@ -29,7 +29,7 @@ const SCHEMA_DAYS = [
     'Sunday',
 ]
 
-// Mirrored in pocketbase/hooks/opening_hours.go.
+// Mirrored in backend/internal/gyms/service.go.
 export function isValidOpeningHours(value: unknown): value is GymOpeningHours {
     if (value === null || value === undefined) return true
     if (typeof value !== 'object' || Array.isArray(value)) return false

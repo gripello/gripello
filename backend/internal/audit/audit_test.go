@@ -424,3 +424,16 @@ func TestGymChangeUpdatesListChangedFields(t *testing.T) {
 		t.Errorf("rows = %+v", got)
 	}
 }
+
+func TestPlatformChangesAreAuditedWithoutAGym(t *testing.T) {
+	f := newFixture(t)
+	admin := f.user("root@example.com", true)
+	f.publishAs(admin, "platform", "platform_config.updated", map[string]any{"id": "platformconfig", "changed": []string{"smtp_host"}}, events.Audience{})
+	f.publishAs(admin, "platform", "retired_slug.deleted", map[string]any{"id": "slug1"}, events.Audience{})
+	f.publishAs(admin, "platform", "something.unknown", map[string]any{"id": "x"}, events.Audience{})
+	got := f.rows()
+	if len(got) != 2 || got[0].Collection != "platform_config" || got[0].Action != "update" || got[0].Gym != "" || got[0].Actor != admin ||
+		len(got[0].Changed) != 1 || got[1].Collection != "retired_slugs" || got[1].Action != "delete" || got[1].Record != "slug1" {
+		t.Errorf("rows = %+v", got)
+	}
+}

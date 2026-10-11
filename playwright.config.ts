@@ -6,6 +6,7 @@ const SETTINGS_WRITERS = [
     '**/admin/settings.spec.ts',
     '**/admin/gym-info.spec.ts',
     '**/admin/platform-settings.spec.ts',
+    '**/admin/platform-operations.spec.ts',
     '**/auth/guest-register-link.spec.ts',
     '**/mail/register.spec.ts',
 ]

@@ -2,6 +2,12 @@
     <div class="w-full p-4">
         <LayoutPageHeader :title="t('platform.settings.title')" />
 
+        <PlatformSettingsStatus
+            v-if="!error"
+            :allow-registration="!!settings?.allow_registration"
+            :audit-days="settings?.audit_retention_days ?? 90"
+        />
+
         <LayoutEmptyState
             v-if="error"
             variant="error"
@@ -23,13 +29,29 @@
             v-else
             v-slot="{ activeSection }"
             :sections="sections"
-            :has-changes="hasChanges"
-            :saving="saving"
+            :has-changes="
+                activeSection === 'mail'
+                    ? !!mailSettings?.hasChanges
+                    : activeSection !== 'signIn' && hasChanges
+            "
+            :saving="activeSection === 'mail' ? !!mailSettings?.saving : saving"
             test-id-prefix="platform-settings"
-            @save="settingsForm?.submit()"
-            @cancel="resetForm"
+            @save="
+                activeSection === 'mail'
+                    ? mailSettings?.submit()
+                    : settingsForm?.submit()
+            "
+            @cancel="
+                activeSection === 'mail' ? mailSettings?.reset() : resetForm()
+            "
         >
+            <PlatformMailSettings
+                v-if="activeSection === 'mail'"
+                ref="mailSettings"
+            />
+            <PlatformOAuthSettings v-else-if="activeSection === 'signIn'" />
             <UForm
+                v-else
                 ref="settingsForm"
                 :state="form"
                 :validate="validateSettings"
@@ -137,6 +159,7 @@
 import { updateSettings } from '~/api/gyms'
 import type { Form } from '@nuxt/ui'
 import type { SettingsRecord } from '~/types/models'
+import { requestedSection } from '~/utils/navigation'
 import { SETTINGS_CARD_UI, SETTINGS_FIELD_UI } from '~/utils/settingsUi'
 import { integerBetween, validEmail, validateRules } from '~/utils/validation'
 
@@ -175,7 +198,31 @@ const sections = computed(() => [
     },
     { id: 'links', label: t('platform.settings.links'), icon: 'i-lucide-link' },
     { id: 'legal', label: t('settings.legalTitle'), icon: 'i-lucide-scale' },
+    {
+        id: 'mail',
+        label: t('platform.settings.mail.title'),
+        icon: 'i-lucide-mail',
+    },
+    {
+        id: 'signIn',
+        label: t('platform.settings.oauth2.title'),
+        icon: 'i-lucide-log-in',
+    },
 ])
+
+const route = useRoute()
+const activeSection = computed(() =>
+    requestedSection(
+        route.query.section,
+        sections.value.map((section) => section.id),
+    ),
+)
+const mailSettings = ref<{
+    submit: () => void
+    reset: () => void
+    hasChanges: boolean
+    saving: boolean
+} | null>(null)
 
 const fieldUi = SETTINGS_FIELD_UI
 const formCardUi = SETTINGS_CARD_UI

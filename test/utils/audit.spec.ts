@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
+import en from '../../i18n/locales/en.json'
 import {
+    AUDITED_COLLECTIONS,
     AUDIT_ACTIONS,
     actionColor,
     actionIcon,
@@ -11,16 +13,7 @@ import {
     matchesAuditActor,
     AUDIT_ACTOR_GUESTS,
     AUDIT_ACTOR_PLATFORM,
-    pbDateString,
 } from '~/utils/audit'
-
-describe('pbDateString', () => {
-    it('formats as PocketBase stores dates', () => {
-        expect(pbDateString(new Date('2026-06-23T06:28:16.309Z'))).toBe(
-            '2026-06-23 06:28:16.309Z',
-        )
-    })
-})
 
 describe('actionColor', () => {
     it('gives the destructive and failed actions their own colours', () => {
@@ -151,5 +144,12 @@ describe('matchesAuditActor', () => {
         expect(matchesAuditActor(guest, AUDIT_ACTOR_GUESTS)).toBe(true)
         expect(matchesAuditActor(platform, AUDIT_ACTOR_GUESTS)).toBe(false)
         expect(matchesAuditActor(platform, AUDIT_ACTOR_PLATFORM)).toBe(true)
+    })
+})
+
+describe('AUDITED_COLLECTIONS', () => {
+    it('has a filter label for every collection', () => {
+        const labels = en.audit.collection as Record<string, string>
+        expect(AUDITED_COLLECTIONS.filter((name) => !labels[name])).toEqual([])
     })
 })

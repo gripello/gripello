@@ -115,7 +115,7 @@ const props = withDefaults(
         action: (token: string) => Promise<unknown>
         auto?: boolean
         isTokenError?: (error: unknown) => boolean
-        errorMessage?: string
+        errorMessage?: string | ((error: unknown) => string)
     }>(),
     {
         auto: false,
@@ -160,7 +160,13 @@ async function submit() {
         step.value = 'done'
     } catch (error) {
         if (props.isTokenError(error)) step.value = 'invalid'
-        else notifyError(props.errorMessage || t('notifications.error.unknown'))
+        else {
+            const message =
+                typeof props.errorMessage === 'function'
+                    ? props.errorMessage(error)
+                    : props.errorMessage
+            notifyError(message || t('notifications.error.unknown'))
+        }
     } finally {
         submitting.value = false
     }

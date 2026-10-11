@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"net/http"
-	"net/url"
 	"testing"
 	"time"
 
@@ -29,10 +28,8 @@ func TestSignKeepsPocketBaseClaimNames(t *testing.T) {
 
 func TestTokenFromPocketBaseCookie(t *testing.T) {
 	r, _ := http.NewRequest("GET", "/", nil)
-	r.AddCookie(&http.Cookie{Name: "pb_auth", Value: url.QueryEscape(`{"token":"abc.def.ghi","record":{"id":"x"}}`)})
-	c, _ := r.Cookie("pb_auth")
-	c.Value, _ = url.QueryUnescape(c.Value)
-	if got := cookieToken(c.Value); got != "abc.def.ghi" {
+	r.Header.Set("Cookie", "pb_auth=%7B%22token%22%3A%22abc.def.ghi%22%2C%22record%22%3A%7B%22id%22%3A%22x%22%7D%7D")
+	if got := TokenFrom(r); got != "abc.def.ghi" {
 		t.Fatalf("got %q", got)
 	}
 	r.Header.Set("Authorization", "Bearer zzz")

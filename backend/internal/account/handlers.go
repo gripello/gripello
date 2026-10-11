@@ -19,6 +19,7 @@ import (
 
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/lockout"
 )
 
 const (
@@ -350,7 +351,16 @@ func (m *module) deleteMe(w http.ResponseWriter, r *http.Request) error {
 	if err := m.db.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, p.UserID).Scan(&hash); err != nil {
 		return err
 	}
-	if hash == "" || bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.Password)) != nil {
+	if lockout.IsLocked(ctx, m.db, p.UserID) {
+		return lockout.ErrLocked
+	}
+	if hash == "" {
+		return httpx.NewError(http.StatusBadRequest, "Set a password first.").Field("password", "password_required", "Set a password first.")
+	}
+	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.Password)) != nil {
+		if _, err := lockout.CountFailure(ctx, m.db, p.UserID); err != nil {
+			return err
+		}
 		return httpx.NewError(http.StatusBadRequest, "Failed to validate.").Field("password", "validation_invalid_password", "Missing or invalid password.")
 	}
 	var betas, moderated []string

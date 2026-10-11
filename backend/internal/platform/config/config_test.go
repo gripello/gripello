@@ -18,3 +18,14 @@ func TestDatabaseURLIsRequiredOutsideDev(t *testing.T) {
 		t.Fatalf("explicit url: %q, %v", c.DatabaseURL, err)
 	}
 }
+
+func TestBackupsDefaultBesideTheStorage(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://prod")
+	t.Setenv("BLOB_DIR", "/srv/gripello/storage")
+	for env, want := range map[string]string{"": "/srv/gripello/backups", "/mnt/backups": "/mnt/backups", "off": ""} {
+		t.Setenv("BACKUP_DIR", env)
+		if c, _ := Load(); c.BackupDir != want {
+			t.Errorf("BACKUP_DIR=%q gives %q", env, c.BackupDir)
+		}
+	}
+}

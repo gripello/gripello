@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     createSeason,
     createTick,
@@ -13,16 +13,22 @@ import {
     updateSeason,
     updateTick,
 } from '~/api/ticks'
-import { ApiError } from '~/api/client'
+import { ApiError, useApi } from '~/api/client'
 import { ROLLING_SEASON } from '~/utils/leaderboard'
 import { isAlreadyApplied } from '~/utils/tickOutbox'
 import type { TickRecord } from '~/types/models'
 import { jsonResponse, mockApi } from './apiMock'
 
+vi.mock('~/api/client', async (importActual) => {
+    const actual = await importActual<typeof import('~/api/client')>()
+    return { ...actual, useApi: vi.fn(actual.useApi) }
+})
+
 let api: ReturnType<typeof mockApi>
 
 beforeEach(() => {
     api = mockApi()
+    vi.mocked(useApi).mockClear()
 })
 
 function call(index = -1) {
@@ -52,6 +58,7 @@ describe('own ticks', () => {
             include: ['route.gym'],
         })
         expect(list.items).toHaveLength(1001)
+        expect(useApi).toHaveBeenCalledTimes(1)
         expect(call(0).url).toBe(
             '/api/me/ticks?sort=-date,-created&page=1&limit=1000',
         )

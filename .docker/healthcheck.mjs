@@ -16,3 +16,5 @@ try {
     console.error(error.message)
     process.exit(1)
 }
+// fetch keeps idle keep-alive sockets open for ~4 s, which would push the check past its 5 s timeout
+process.exit(0)

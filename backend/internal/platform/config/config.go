@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -18,6 +19,7 @@ type Config struct {
 	DatabaseURL       string
 	AppURL            string
 	BlobDir           string
+	BackupDir         string
 	LocalesDir        string
 	TokenSecret       string
 	AuthTokenDuration time.Duration
@@ -59,6 +61,11 @@ func Load() (Config, error) {
 		SenderName:        pbEnv("SENDER_NAME", "Gripello"),
 		VAPIDPublicKey:    pbEnv("VAPID_PUBLIC_KEY", ""),
 		VAPIDPrivateKey:   pbEnv("VAPID_PRIVATE_KEY", ""),
+	}
+	// Backups default to a folder beside the storage; BACKUP_DIR=off disables them.
+	c.BackupDir = env("BACKUP_DIR", filepath.Join(filepath.Dir(c.BlobDir), "backups"))
+	if c.BackupDir == "off" {
+		c.BackupDir = ""
 	}
 	if c.BlobDriver != "fs" {
 		return c, errors.New("BLOB_DRIVER: only fs is supported")

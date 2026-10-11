@@ -47,8 +47,9 @@ var kinds = map[string]kind{
 	},
 	"profile": {
 		table: "users", author: "id", gym: "NULL", fields: []string{"username", "firstname", "name", "avatar", "banner"},
-		files: []string{"avatar", "banner"},
-		hide:  "username = 'climber_' || t.id, firstname = '', name = '', avatar = '', banner = ''",
+		files:   []string{"avatar", "banner"},
+		hide:    "username = 'climber_' || t.id, firstname = '', name = '', avatar = '', banner = ''",
+		exposed: "(t.username <> 'climber_' || t.id OR t.firstname <> '' OR t.name <> '' OR t.avatar <> '' OR t.banner <> '')",
 	},
 	"competition_entry": {
 		table: "competition_entries", author: "user", gym: "(SELECT gym FROM competitions WHERE id = t.competition)",
@@ -88,6 +89,16 @@ func loadContent(ctx context.Context, q querier, kindName, id string) (content, 
 		return c, httpx.ErrNotFound
 	}
 	return c, err
+}
+
+func exposed(ctx context.Context, q querier, kindName, id string) (bool, error) {
+	k := kinds[kindName]
+	if k.exposed == "" {
+		return true, nil
+	}
+	var shown bool
+	err := q.QueryRow(ctx, `SELECT `+k.exposed+` FROM `+k.table+` t WHERE t.id = $1`, id).Scan(&shown)
+	return shown, err
 }
 
 type Item struct {

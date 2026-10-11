@@ -53,6 +53,7 @@
         "passwordStrength": "Wachtwoordsterkte",
         "unsavedChanges": "Niet-opgeslagen wijzigingen",
         "wrongOldPassword": "Huidig wachtwoord is onjuist",
+        "passwordRequired": "Je account heeft nog geen wachtwoord. Stel er eerst een in via wachtwoord herstellen op de inlogpagina.",
         "passwordChangedSignInAgain": "Wachtwoord gewijzigd. Log opnieuw in met je nieuwe wachtwoord.",
         "unknownUser": "Onbekende gebruiker",
         "tabs": {
@@ -190,6 +191,15 @@
             "signOut": "{device} uitloggen",
             "signOutOthers": "Andere apparaten uitloggen",
             "signOutOthersConfirm": "Alle andere apparaten worden uitgelogd."
+        },
+        "linkedAccounts": {
+            "title": "Gekoppelde accounts",
+            "link": "Koppelen",
+            "unlink": "Ontkoppelen",
+            "unlinkConfirm": "Je kunt dan niet meer inloggen met {provider}.",
+            "lastMethod": "Dit is de enige toegang tot je account. Stel eerst een wachtwoord in.",
+            "linked": "Aanmelding gekoppeld",
+            "linkConfirm": "Een gekoppelde aanmelding opent je account ook na een wachtwoordwijziging. Bevestig met je wachtwoord."
         }
     },
     "routes": {
@@ -932,8 +942,7 @@
         "saveError": "Instellingen konden niet worden opgeslagen. Probeer het opnieuw.",
         "contactEmail": "Contact-e-mail",
         "contactEmailHint": "Wordt gepubliceerd als aanspreekpunt en ontvangt meldingen over nieuwe inhoudsmeldingen.",
-        "mailNotConfigured": "E-mail is niet geconfigureerd, dus wachtwoordherstel en meldingen over inhoud kunnen niet worden verzonden. SMTP stel je in PocketBase in, niet hier.",
-        "mailNotConfiguredAction": "E-mailinstellingen van PocketBase openen",
+        "mailNotConfigured": "E-mail is niet geconfigureerd, dus wachtwoordherstel en meldingen over inhoud kunnen niet worden verzonden. Een platformbeheerder stelt dit in onder Platforminstellingen › E-mail.",
         "legalTitle": "Colofon",
         "legalAddress": "Postadres",
         "legalPhone": "Telefoon",
@@ -1257,7 +1266,11 @@
             "settings": "Instellingen",
             "reports": "Meldingen",
             "tasks": "Taken",
-            "sessions": "Sessies"
+            "sessions": "Sessies",
+            "platform_config": "Platforminstellingen",
+            "oauth2_providers": "Aanmeldproviders",
+            "retired_slugs": "Vrijgegeven adressen",
+            "backups": "Back-ups"
         },
         "target": {
             "routes": "Route",
@@ -1268,7 +1281,11 @@
             "settings": "Instellingen",
             "reports": "Melding",
             "tasks": "Taak",
-            "sessions": "Sessie"
+            "sessions": "Sessie",
+            "platform_config": "Platforminstellingen",
+            "oauth2_providers": "Aanmeldprovider",
+            "retired_slugs": "Vrijgehouden hal-URL",
+            "backups": "Back-up"
         },
         "changedLabel": "Gewijzigd",
         "filter": {
@@ -2002,7 +2019,71 @@
             "access": "Toegang",
             "allowRegistration": "Registratie toestaan",
             "auditRetentionDays": "Auditlog bewaren (dagen)",
-            "links": "Contact en links"
+            "links": "Contact en links",
+            "mail": {
+                "title": "E-mail",
+                "host": "SMTP-server",
+                "port": "Poort",
+                "tls": "Versleuteling",
+                "username": "Gebruikersnaam",
+                "password": "Wachtwoord",
+                "passwordSet": "Opgeslagen",
+                "clearPassword": "Wachtwoord verwijderen",
+                "senderAddress": "Afzenderadres",
+                "senderName": "Afzendernaam",
+                "sendTest": "Test-e-mail naar mij sturen",
+                "testSent": "Test-e-mail naar je adres verstuurd",
+                "fromEnvironment": "Ingesteld via de serveromgeving",
+                "notConfigured": "Niet geconfigureerd",
+                "confirm": "De e-mailinstellingen bepalen waarheen links voor wachtwoordherstel gaan. Bevestig met je wachtwoord.",
+                "check": "Verbindingstest",
+                "steps": {
+                    "connect": "Verbinden met de server",
+                    "encrypt": "Verbinding versleutelen",
+                    "sign_in": "Aanmelden",
+                    "deliver": "Aan jou bezorgen"
+                }
+            },
+            "oauth2": {
+                "title": "Aanmeldproviders",
+                "enabled": "Aanbieden op de inlogpagina",
+                "displayName": "Naam op de knop",
+                "issuerUrl": "Issuer-URL",
+                "tenant": "Tenant",
+                "clientId": "Client-ID",
+                "clientSecret": "Clientgeheim",
+                "teamId": "Team-ID",
+                "keyId": "Sleutel-ID",
+                "privateKey": "Privésleutel (.p8)",
+                "redirectUri": "Redirect-URI",
+                "copy": "Kopiëren",
+                "copied": "Gekopieerd",
+                "confirm": "Aanmeldproviders bepalen wie in accounts komt. Bevestig met je wachtwoord.",
+                "providers": {
+                    "google": "Google",
+                    "apple": "Apple",
+                    "microsoft": "Microsoft",
+                    "oidc": "OpenID Connect"
+                },
+                "status": {
+                    "live": "Actief",
+                    "configured": "Ingesteld",
+                    "missing": "Niet ingesteld"
+                },
+                "checks": {
+                    "clientId": "Client-ID",
+                    "secret": "Secret opgeslagen",
+                    "live": "Op de aanmeldpagina"
+                }
+            },
+            "status": {
+                "registration": "Registratie",
+                "open": "Open",
+                "inviteOnly": "Alleen op uitnodiging",
+                "auditDays": "Auditlog {n} dag bewaard | Auditlog {n} dagen bewaard",
+                "configured": "{n} ingesteld",
+                "live": "{n} actief"
+            }
         },
         "overview": {
             "title": "Overzicht",
@@ -2010,12 +2091,61 @@
             "memberships": "Lidmaatschappen",
             "routes": "Routes",
             "admins": "Platformbeheerders",
-            "dashboard": "PocketBase-dashboard",
             "needsYou": "Heeft je nodig",
             "legalReports": "Open juridische meldingen",
             "staleGyms": "Hallen met achterstand",
             "profiles": "Profielen te controleren",
-            "suspended": "Geschorste personen"
+            "suspended": "Geschorste personen",
+            "traffic": {
+                "title": "Verzoeken",
+                "requests": "Verzoeken",
+                "ok": "Geslaagd",
+                "clientErrors": "Clientfouten (4xx)",
+                "serverErrors": "Serverfouten (5xx)",
+                "serverErrorRate": "Serverfoutpercentage",
+                "peakRps": "Piek verzoeken/s",
+                "p95": "p95-responstijd",
+                "visitors": "Bezoekers per dag",
+                "endpoints": "Endpoints",
+                "endpoint": "Endpoint",
+                "sortErrors": "Fouten",
+                "sortSlowest": "Traagste",
+                "showAll": "Alle {n} tonen",
+                "showLess": "Minder tonen"
+            },
+            "people": {
+                "title": "Mensen",
+                "online": "Nu online",
+                "signedIn": "Aangemeld",
+                "newAccounts": "Nieuwe accounts",
+                "failedLogins": "Mislukte aanmeldingen",
+                "methods": {
+                    "password": "Wachtwoord",
+                    "passkey": "Passkey",
+                    "totp": "Authenticatorcode",
+                    "recovery": "Herstelcode"
+                }
+            },
+            "servers": {
+                "title": "Servers",
+                "online": "Online",
+                "offline": "Offline",
+                "uptime": "actief sinds {time}",
+                "connections": "{n} liveverbinding | {n} liveverbindingen",
+                "lastSeen": "Offline · laatst gezien {time}"
+            },
+            "system": {
+                "title": "Systeem",
+                "database": "Database",
+                "connections": "{n} verbinding | {n} verbindingen",
+                "jobs": "Takenwachtrij",
+                "jobsState": "{waiting} wachtend · {running} actief",
+                "lastBackup": "Laatste back-up",
+                "mail": "E-mail",
+                "mailOn": "Ingesteld",
+                "mailOff": "Niet ingesteld"
+            },
+            "platform": "Platform"
         },
         "users": {
             "title": "Gebruikers",
@@ -2053,13 +2183,130 @@
                 "kept": "Lidmaatschappen en logboek blijven; niets wordt verwijderd.",
                 "lift": "Onder Gebruikers kun je de schorsing altijd opheffen."
             },
-            "suspendPermanently": "Permanent schorsen"
+            "suspendPermanently": "Permanent schorsen",
+            "security": "Beveiliging",
+            "locked": "Geblokkeerd",
+            "unlock": "Deblokkeren",
+            "revokeSessions": "Overal uitloggen",
+            "resetMfa": "Tweestaps resetten",
+            "setPassword": "Wachtwoord instellen",
+            "adminPassword": "Jouw wachtwoord",
+            "adminPasswordWrong": "Je wachtwoord klopt niet.",
+            "actions": {
+                "unlock": {
+                    "title": "Deblokkeren",
+                    "confirm": "Deblokkeren",
+                    "done": "Account gedeblokkeerd"
+                },
+                "revokeSessions": {
+                    "title": "Overal uitloggen",
+                    "message": "{name} wordt op alle apparaten uitgelogd.",
+                    "confirm": "Uitloggen",
+                    "done": "Overal uitgelogd"
+                },
+                "resetMfa": {
+                    "title": "Tweestaps resetten",
+                    "message": "Verwijdert de authenticator-apps, passkeys en herstelcodes van {name} en logt overal uit. Er gaat een e-mail uit.",
+                    "confirm": "Resetten",
+                    "done": "Tweestaps gereset"
+                },
+                "setPassword": {
+                    "title": "Wachtwoord instellen",
+                    "message": "{name} wordt overal uitgelogd en krijgt een e-mail.",
+                    "confirm": "Wachtwoord instellen",
+                    "done": "Wachtwoord ingesteld"
+                },
+                "grantAdmin": {
+                    "title": "Platformbeheerder maken",
+                    "message": "{name} kan dan alle hallen, alle gebruikers en de platforminstellingen beheren.",
+                    "confirm": "Beheerder maken",
+                    "done": "Platformbeheerder toegevoegd"
+                },
+                "revokeAdmin": {
+                    "title": "Platformbeheerder verwijderen",
+                    "message": "{name} houdt het account en de hallidmaatschappen, maar verliest de platformrechten.",
+                    "confirm": "Verwijderen",
+                    "done": "Platformbeheerder verwijderd"
+                }
+            }
         },
         "features": {
             "title": "Feature flags",
             "flags": {
                 "beta_videos": "Beta-video's"
             }
+        },
+        "retiredSlugs": {
+            "title": "Vrijgehouden URL's",
+            "empty": "Geen vrijgehouden URL's",
+            "free": "URL vrijgeven",
+            "freeConfirm": "Daarna kan elke nieuwe hal /{slug} gebruiken. Oude links naar de verwijderde hal komen daar uit.",
+            "freed": "/{slug} is weer vrij"
+        },
+        "logs": {
+            "title": "Serverlogs",
+            "refresh": "Vernieuwen",
+            "runtimeLevel": "Logniveau",
+            "levelChanged": "Logniveau op alle servers gewijzigd",
+            "empty": "Geen logregels op dit niveau",
+            "levels": {
+                "debug": "Debug",
+                "info": "Info",
+                "warn": "Waarschuwingen",
+                "error": "Fouten"
+            },
+            "live": "Live",
+            "paused": "Gepauzeerd",
+            "now": "nu",
+            "search": "Bericht of veld zoeken",
+            "copyJson": "Kopiëren als JSON",
+            "copied": "Gekopieerd",
+            "lineCount": "{n} regel | {n} regels",
+            "inBuffer": "in de buffer",
+            "perMinute": "Gebeurtenissen per minuut",
+            "allLines": "Alle regels",
+            "filterAll": "Alles",
+            "filterInfo": "Info+",
+            "filterWarn": "Warn+",
+            "verbose": "zeer uitgebreid",
+            "default": "standaard",
+            "replicas": "Replica’s",
+            "sameModule": "Zelfde module tonen",
+            "replicaStatus": {
+                "online": "Online",
+                "offline": "Offline",
+                "gone": "Gestopt"
+            }
+        },
+        "backups": {
+            "title": "Back-ups",
+            "runNow": "Nu back-uppen",
+            "running": "Back-up loopt…",
+            "disabled": "Back-ups staan op deze server uit",
+            "archives": "Archieven",
+            "empty": "Nog geen back-ups",
+            "schedule": "Planning",
+            "includeStorage": "Geüploade bestanden meenemen",
+            "download": "Downloaden",
+            "delete": "Verwijderen",
+            "settings": "Schema opslaan",
+            "confirm": "Back-ups bevatten alle accounts. Bevestig met je wachtwoord.",
+            "time": "Dagelijks om",
+            "pgDumpMissing": "pg_dump is niet geïnstalleerd op deze server",
+            "lastFailed": "Laatste back-up mislukt",
+            "lastRun": "Laatste back-up {date}",
+            "retry": "Opnieuw",
+            "daily": "Dagelijkse back-ups",
+            "keepCount": "Te bewaren back-ups",
+            "estimate": "≈ {size} op schijf",
+            "restore": "Herstellen",
+            "copyCommand": "Opdracht kopiëren",
+            "lastBackup": "Laatste back-up",
+            "failed": "Mislukt",
+            "nextBackup": "Volgende back-up",
+            "off": "Uit",
+            "manualOnly": "Alleen handmatige back-ups",
+            "freeSpace": "Vrije ruimte"
         }
     },
     "mails": {
@@ -2158,6 +2405,31 @@
             "subject": "Je e-mailadres is gewijzigd",
             "body": "Het platformteam heeft het e-mailadres van je {app}-account gewijzigd in {email}. Je bent op alle apparaten afgemeld.",
             "note": "Heb je hier niet om gevraagd? Beantwoord deze e-mail dan meteen."
+        },
+        "mfaResetByAdmin": {
+            "subject": "Tweestapsverificatie is uitgeschakeld",
+            "body": "Het platformteam heeft de authenticator-apps, passkeys en herstelcodes van je {app}-account verwijderd. Je bent op alle apparaten uitgelogd en kunt nu alleen met je wachtwoord inloggen.",
+            "note": "Stel tweestapsverificatie opnieuw in via je accountinstellingen. Heb je hier niet om gevraagd? Beantwoord deze e-mail dan meteen."
+        },
+        "passwordSetByAdmin": {
+            "subject": "Je wachtwoord is gewijzigd",
+            "body": "Het platformteam heeft een nieuw wachtwoord ingesteld voor je {app}-account. Je bent op alle apparaten uitgelogd.",
+            "note": "Vraag het platformteam om het nieuwe wachtwoord en wijzig het in je accountinstellingen. Heb je hier niet om gevraagd? Beantwoord deze e-mail dan meteen."
+        },
+        "platformAdminGranted": {
+            "subject": "Je bent nu platformbeheerder",
+            "body": "Het platformteam heeft je platformbeheerder van {app} gemaakt. Je kunt nu hallen, gebruikers en platforminstellingen beheren.",
+            "note": "Had je dit niet verwacht? Beantwoord deze e-mail dan meteen."
+        },
+        "platformAdminRevoked": {
+            "subject": "Je bent geen platformbeheerder meer",
+            "body": "Het platformteam heeft je rechten als platformbeheerder in {app} ingetrokken. Je account en je hallidmaatschappen blijven zoals ze zijn.",
+            "note": "Had je dit niet verwacht? Beantwoord deze e-mail dan meteen."
+        },
+        "mailTest": {
+            "subject": "Test-e-mail van {app}",
+            "body": "Het versturen van e-mail werkt. Dit bericht is verstuurd vanuit de platforminstellingen van {app}.",
+            "note": "Je kunt deze e-mail negeren."
         }
     },
     "leaderboard": {
@@ -2511,5 +2783,18 @@
         "zoom": "Zoomen",
         "rotate": "Draaien",
         "reset": "Herstellen"
+    },
+    "auth": {
+        "or": "of",
+        "oauth2": {
+            "continueWith": "Doorgaan met {provider}",
+            "errors": {
+                "failed": "Inloggen via de provider is mislukt. Probeer het opnieuw.",
+                "registration_disabled": "Er is geen account voor deze login en nieuwe registraties zijn gesloten.",
+                "account_exists": "Er bestaat al een account met dit e-mailadres. Log in met je wachtwoord en koppel de provider in je accountinstellingen.",
+                "already_linked": "Deze login is al aan een ander account gekoppeld.",
+                "email_unverified": "De provider heeft geen e-mailadres bevestigd, dus er kan geen account worden aangemaakt."
+            }
+        }
     }
 }

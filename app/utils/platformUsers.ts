@@ -10,6 +10,31 @@ export type PlatformUserFilter = 'platform_admins' | 'unverified' | 'suspended'
 
 export type PlatformUser = UserRecord & {
     expand?: { memberships_via_user?: MembershipRecord[] }
+    mfa_enabled?: boolean
+    session_count?: number
+    locked_until?: string | null
+}
+
+export interface UserSecurityState {
+    isSelf: boolean
+    canAct: boolean
+    mfa: boolean
+    sessions: number
+    locked: boolean
+}
+
+export function userSecurityState(
+    user: PlatformUser,
+    selfId: string,
+): UserSecurityState {
+    const isSelf = user.id === selfId
+    return {
+        isSelf,
+        canAct: !isSelf && !user.platform_admin,
+        mfa: !!user.mfa_enabled,
+        sessions: user.session_count ?? 0,
+        locked: !!user.locked_until,
+    }
 }
 
 export interface MembershipChip {

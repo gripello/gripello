@@ -13,6 +13,7 @@ import (
 const (
 	defaultPageSize = 50
 	maxPageSize     = 1000
+	maxPage         = 1_000_000
 )
 
 type tickPage struct {
@@ -64,7 +65,7 @@ func atoi(value string, fallback int) int {
 
 func paging(r *http.Request) (page, limit int, tail string) {
 	query := r.URL.Query()
-	page = max(1, atoi(query.Get("page"), 1))
+	page = min(maxPage, max(1, atoi(query.Get("page"), 1)))
 	limit = min(maxPageSize, max(1, atoi(query.Get("limit"), defaultPageSize)))
 	return page, limit, " LIMIT " + strconv.Itoa(limit) + " OFFSET " + strconv.Itoa((page-1)*limit)
 }

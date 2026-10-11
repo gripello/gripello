@@ -53,6 +53,7 @@
         "passwordStrength": "Seguridad de la contraseña",
         "unsavedChanges": "Cambios sin guardar",
         "wrongOldPassword": "La contraseña actual es incorrecta",
+        "passwordRequired": "Tu cuenta aún no tiene contraseña. Crea una primero con el restablecimiento de contraseña en la página de inicio de sesión.",
         "passwordChangedSignInAgain": "Contraseña cambiada. Vuelve a iniciar sesión con tu nueva contraseña.",
         "unknownUser": "Usuario desconocido",
         "tabs": {
@@ -190,6 +191,15 @@
             "signOut": "Cerrar sesión en {device}",
             "signOutOthers": "Cerrar sesión en otros dispositivos",
             "signOutOthersConfirm": "Se cerrará la sesión en todos los demás dispositivos."
+        },
+        "linkedAccounts": {
+            "title": "Cuentas vinculadas",
+            "link": "Vincular",
+            "unlink": "Desvincular",
+            "unlinkConfirm": "Ya no podrás iniciar sesión con {provider}.",
+            "lastMethod": "Es el único acceso a tu cuenta. Primero establece una contraseña.",
+            "linked": "Inicio de sesión vinculado",
+            "linkConfirm": "Un inicio de sesión vinculado abre tu cuenta incluso tras cambiar la contraseña. Confirma con tu contraseña."
         }
     },
     "routes": {
@@ -932,8 +942,7 @@
         "saveError": "No se pudieron guardar los ajustes. Inténtalo de nuevo.",
         "contactEmail": "Correo de contacto",
         "contactEmailHint": "Se publica como punto de contacto y recibe avisos de nuevas denuncias de contenido.",
-        "mailNotConfigured": "El correo no está configurado, así que no se pueden enviar restablecimientos de contraseña ni avisos de denuncias. El SMTP se configura en PocketBase, no aquí.",
-        "mailNotConfiguredAction": "Abrir ajustes de correo de PocketBase",
+        "mailNotConfigured": "El correo no está configurado, así que no se pueden enviar restablecimientos de contraseña ni avisos de denuncias. Un administrador de la plataforma lo configura en Ajustes de la plataforma › Correo.",
         "legalTitle": "Aviso legal",
         "legalAddress": "Dirección postal",
         "legalPhone": "Teléfono",
@@ -1257,7 +1266,11 @@
             "settings": "Ajustes",
             "reports": "Denuncias",
             "tasks": "Tareas",
-            "sessions": "Sesiones"
+            "sessions": "Sesiones",
+            "platform_config": "Ajustes de la plataforma",
+            "oauth2_providers": "Proveedores de inicio de sesión",
+            "retired_slugs": "Direcciones retiradas",
+            "backups": "Copias de seguridad"
         },
         "target": {
             "routes": "Vía",
@@ -1268,7 +1281,11 @@
             "settings": "Ajustes",
             "reports": "Denuncia",
             "tasks": "Tarea",
-            "sessions": "Sesión"
+            "sessions": "Sesión",
+            "platform_config": "Ajustes de la plataforma",
+            "oauth2_providers": "Proveedor de inicio de sesión",
+            "retired_slugs": "URL de rocódromo retirada",
+            "backups": "Copia de seguridad"
         },
         "changedLabel": "Cambiado",
         "filter": {
@@ -2002,7 +2019,71 @@
             "access": "Acceso",
             "allowRegistration": "Permitir registro",
             "auditRetentionDays": "Conservar registro de auditoría (días)",
-            "links": "Contacto y enlaces"
+            "links": "Contacto y enlaces",
+            "mail": {
+                "title": "Correo",
+                "host": "Servidor SMTP",
+                "port": "Puerto",
+                "tls": "Cifrado",
+                "username": "Usuario",
+                "password": "Contraseña",
+                "passwordSet": "Guardada",
+                "clearPassword": "Quitar contraseña",
+                "senderAddress": "Dirección del remitente",
+                "senderName": "Nombre del remitente",
+                "sendTest": "Enviarme un correo de prueba",
+                "testSent": "Correo de prueba enviado a tu dirección",
+                "fromEnvironment": "Definido por el entorno del servidor",
+                "notConfigured": "Sin configurar",
+                "confirm": "Los ajustes de correo deciden adónde van los enlaces para restablecer contraseñas. Confirma con tu contraseña.",
+                "check": "Prueba de conexión",
+                "steps": {
+                    "connect": "Conectar con el servidor",
+                    "encrypt": "Cifrar la conexión",
+                    "sign_in": "Iniciar sesión",
+                    "deliver": "Entregarte el correo"
+                }
+            },
+            "oauth2": {
+                "title": "Proveedores de inicio de sesión",
+                "enabled": "Ofrecer en la página de inicio de sesión",
+                "displayName": "Nombre del botón",
+                "issuerUrl": "URL del emisor",
+                "tenant": "Inquilino (tenant)",
+                "clientId": "ID de cliente",
+                "clientSecret": "Secreto de cliente",
+                "teamId": "ID de equipo",
+                "keyId": "ID de clave",
+                "privateKey": "Clave privada (.p8)",
+                "redirectUri": "URI de redirección",
+                "copy": "Copiar",
+                "copied": "Copiado",
+                "confirm": "Los proveedores de inicio de sesión deciden quién entra en las cuentas. Confirma con tu contraseña.",
+                "providers": {
+                    "google": "Google",
+                    "apple": "Apple",
+                    "microsoft": "Microsoft",
+                    "oidc": "OpenID Connect"
+                },
+                "status": {
+                    "live": "Activo",
+                    "configured": "Configurado",
+                    "missing": "Sin configurar"
+                },
+                "checks": {
+                    "clientId": "ID de cliente",
+                    "secret": "Secreto guardado",
+                    "live": "En la página de inicio de sesión"
+                }
+            },
+            "status": {
+                "registration": "Registro",
+                "open": "Abierto",
+                "inviteOnly": "Solo con invitación",
+                "auditDays": "Registro de auditoría {n} día | Registro de auditoría {n} días",
+                "configured": "{n} configurados",
+                "live": "{n} activos"
+            }
         },
         "overview": {
             "title": "Resumen",
@@ -2010,12 +2091,61 @@
             "memberships": "Membresías",
             "routes": "Vías",
             "admins": "Admins de la plataforma",
-            "dashboard": "Panel de PocketBase",
             "needsYou": "Te necesita",
             "legalReports": "Denuncias legales abiertas",
             "staleGyms": "Rocódromos con retraso",
             "profiles": "Perfiles por revisar",
-            "suspended": "Personas suspendidas"
+            "suspended": "Personas suspendidas",
+            "traffic": {
+                "title": "Solicitudes",
+                "requests": "Solicitudes",
+                "ok": "Correctas",
+                "clientErrors": "Errores de cliente (4xx)",
+                "serverErrors": "Errores de servidor (5xx)",
+                "serverErrorRate": "Tasa de errores de servidor",
+                "peakRps": "Pico de solicitudes/s",
+                "p95": "Tiempo de respuesta p95",
+                "visitors": "Visitantes por día",
+                "endpoints": "Endpoints",
+                "endpoint": "Endpoint",
+                "sortErrors": "Errores",
+                "sortSlowest": "Más lentos",
+                "showAll": "Mostrar los {n}",
+                "showLess": "Mostrar menos"
+            },
+            "people": {
+                "title": "Personas",
+                "online": "En línea",
+                "signedIn": "Con sesión",
+                "newAccounts": "Cuentas nuevas",
+                "failedLogins": "Inicios fallidos",
+                "methods": {
+                    "password": "Contraseña",
+                    "passkey": "Llave de acceso",
+                    "totp": "Código de autenticación",
+                    "recovery": "Código de recuperación"
+                }
+            },
+            "servers": {
+                "title": "Servidores",
+                "online": "En línea",
+                "offline": "Sin conexión",
+                "uptime": "activo desde hace {time}",
+                "connections": "{n} conexión en vivo | {n} conexiones en vivo",
+                "lastSeen": "Sin conexión · visto por última vez {time}"
+            },
+            "system": {
+                "title": "Sistema",
+                "database": "Base de datos",
+                "connections": "{n} conexión | {n} conexiones",
+                "jobs": "Cola de tareas",
+                "jobsState": "{waiting} en espera · {running} en curso",
+                "lastBackup": "Última copia",
+                "mail": "Correo",
+                "mailOn": "Configurado",
+                "mailOff": "Sin configurar"
+            },
+            "platform": "Plataforma"
         },
         "users": {
             "title": "Usuarios",
@@ -2053,13 +2183,130 @@
                 "kept": "Membresías y registro se mantienen; no se borra nada.",
                 "lift": "Puedes levantar la suspensión cuando quieras en Usuarios."
             },
-            "suspendPermanently": "Suspender permanentemente"
+            "suspendPermanently": "Suspender permanentemente",
+            "security": "Seguridad",
+            "locked": "Bloqueado",
+            "unlock": "Desbloquear",
+            "revokeSessions": "Cerrar sesión en todas partes",
+            "resetMfa": "Restablecer verificación en dos pasos",
+            "setPassword": "Establecer contraseña",
+            "adminPassword": "Tu contraseña",
+            "adminPasswordWrong": "Tu contraseña no es correcta.",
+            "actions": {
+                "unlock": {
+                    "title": "Desbloquear",
+                    "confirm": "Desbloquear",
+                    "done": "Cuenta desbloqueada"
+                },
+                "revokeSessions": {
+                    "title": "Cerrar sesión en todas partes",
+                    "message": "Se cerrará la sesión de {name} en todos los dispositivos.",
+                    "confirm": "Cerrar sesión",
+                    "done": "Sesión cerrada en todas partes"
+                },
+                "resetMfa": {
+                    "title": "Restablecer verificación en dos pasos",
+                    "message": "Elimina las apps de autenticación, llaves de acceso y códigos de recuperación de {name} y cierra su sesión en todas partes. Se envía un correo.",
+                    "confirm": "Restablecer",
+                    "done": "Verificación en dos pasos restablecida"
+                },
+                "setPassword": {
+                    "title": "Establecer contraseña",
+                    "message": "Se cerrará la sesión de {name} en todas partes y recibirá un correo.",
+                    "confirm": "Establecer",
+                    "done": "Contraseña establecida"
+                },
+                "grantAdmin": {
+                    "title": "Hacer administrador de la plataforma",
+                    "message": "{name} podrá gestionar todos los rocódromos, todos los usuarios y los ajustes de la plataforma.",
+                    "confirm": "Hacer administrador",
+                    "done": "Administrador añadido"
+                },
+                "revokeAdmin": {
+                    "title": "Quitar administrador de la plataforma",
+                    "message": "{name} conserva la cuenta y las membresías, pero pierde los permisos de la plataforma.",
+                    "confirm": "Quitar",
+                    "done": "Administrador eliminado"
+                }
+            }
         },
         "features": {
             "title": "Funciones",
             "flags": {
                 "beta_videos": "Vídeos beta"
             }
+        },
+        "retiredSlugs": {
+            "title": "URL retiradas",
+            "empty": "No hay URL retiradas",
+            "free": "Liberar URL",
+            "freeConfirm": "Después, cualquier rocódromo nuevo podrá usar /{slug}. Los enlaces antiguos al rocódromo eliminado llevarán allí.",
+            "freed": "/{slug} vuelve a estar libre"
+        },
+        "logs": {
+            "title": "Registros del servidor",
+            "refresh": "Actualizar",
+            "runtimeLevel": "Nivel de registro",
+            "levelChanged": "Nivel de registro cambiado en todos los servidores",
+            "empty": "No hay líneas en este nivel",
+            "levels": {
+                "debug": "Depuración",
+                "info": "Info",
+                "warn": "Avisos",
+                "error": "Errores"
+            },
+            "live": "En vivo",
+            "paused": "En pausa",
+            "now": "ahora",
+            "search": "Buscar mensaje o campo",
+            "copyJson": "Copiar como JSON",
+            "copied": "Copiado",
+            "lineCount": "{n} línea | {n} líneas",
+            "inBuffer": "en el búfer",
+            "perMinute": "Eventos por minuto",
+            "allLines": "Todas las líneas",
+            "filterAll": "Todo",
+            "filterInfo": "Info+",
+            "filterWarn": "Warn+",
+            "verbose": "muy detallado",
+            "default": "predeterminado",
+            "replicas": "Réplicas",
+            "sameModule": "Mismo módulo",
+            "replicaStatus": {
+                "online": "En línea",
+                "offline": "Sin conexión",
+                "gone": "Detenido"
+            }
+        },
+        "backups": {
+            "title": "Copias de seguridad",
+            "runNow": "Hacer copia ahora",
+            "running": "Copiando…",
+            "disabled": "Las copias están desactivadas en este servidor",
+            "archives": "Archivos",
+            "empty": "Aún no hay copias",
+            "schedule": "Programación",
+            "includeStorage": "Incluir archivos subidos",
+            "download": "Descargar",
+            "delete": "Eliminar",
+            "settings": "Guardar programación",
+            "confirm": "Las copias contienen todas las cuentas. Confirma con tu contraseña.",
+            "time": "Cada día a las",
+            "pgDumpMissing": "pg_dump no está instalado en este servidor",
+            "lastFailed": "La última copia de seguridad falló",
+            "lastRun": "Última copia {date}",
+            "retry": "Reintentar",
+            "daily": "Copias diarias",
+            "keepCount": "Copias a conservar",
+            "estimate": "≈ {size} en disco",
+            "restore": "Restaurar",
+            "copyCommand": "Copiar comando",
+            "lastBackup": "Última copia",
+            "failed": "Fallida",
+            "nextBackup": "Próxima copia",
+            "off": "Desactivado",
+            "manualOnly": "Solo copias manuales",
+            "freeSpace": "Espacio libre"
         }
     },
     "mails": {
@@ -2158,6 +2405,31 @@
             "subject": "Tu dirección de correo ha cambiado",
             "body": "El equipo de la plataforma cambió la dirección de correo de tu cuenta de {app} a {email}. Se ha cerrado tu sesión en todos los dispositivos.",
             "note": "Si no lo pediste, responde a este correo de inmediato."
+        },
+        "mfaResetByAdmin": {
+            "subject": "Se ha desactivado la verificación en dos pasos",
+            "body": "El equipo de la plataforma ha eliminado las apps de autenticación, las llaves de acceso y los códigos de recuperación de tu cuenta de {app}. Se ha cerrado tu sesión en todos los dispositivos y ahora puedes entrar solo con tu contraseña.",
+            "note": "Vuelve a activar la verificación en dos pasos en los ajustes de tu cuenta. Si no lo has pedido, responde a este correo de inmediato."
+        },
+        "passwordSetByAdmin": {
+            "subject": "Se ha cambiado tu contraseña",
+            "body": "El equipo de la plataforma ha establecido una contraseña nueva para tu cuenta de {app}. Se ha cerrado tu sesión en todos los dispositivos.",
+            "note": "Pide la contraseña nueva al equipo de la plataforma y cámbiala en los ajustes de tu cuenta. Si no lo has pedido, responde a este correo de inmediato."
+        },
+        "platformAdminGranted": {
+            "subject": "Ahora eres administrador de la plataforma",
+            "body": "El equipo de la plataforma te ha nombrado administrador de {app}. Ahora puedes gestionar rocódromos, usuarios y ajustes de la plataforma.",
+            "note": "Si no lo esperabas, responde a este correo de inmediato."
+        },
+        "platformAdminRevoked": {
+            "subject": "Ya no eres administrador de la plataforma",
+            "body": "El equipo de la plataforma te ha retirado los permisos de administrador de {app}. Tu cuenta y tus membresías de rocódromos siguen igual.",
+            "note": "Si no lo esperabas, responde a este correo de inmediato."
+        },
+        "mailTest": {
+            "subject": "Correo de prueba de {app}",
+            "body": "El envío de correos funciona. Este mensaje se ha enviado desde los ajustes de la plataforma de {app}.",
+            "note": "Puedes ignorar este correo."
         }
     },
     "leaderboard": {
@@ -2511,5 +2783,18 @@
         "zoom": "Zoom",
         "rotate": "Girar",
         "reset": "Restablecer"
+    },
+    "auth": {
+        "or": "o",
+        "oauth2": {
+            "continueWith": "Continuar con {provider}",
+            "errors": {
+                "failed": "No se pudo iniciar sesión con el proveedor. Inténtalo de nuevo.",
+                "registration_disabled": "No hay ninguna cuenta para este acceso y los registros están cerrados.",
+                "account_exists": "Ya existe una cuenta con este correo. Inicia sesión con tu contraseña y vincula el proveedor en los ajustes de tu cuenta.",
+                "already_linked": "Este acceso ya está vinculado a otra cuenta.",
+                "email_unverified": "El proveedor no confirmó ninguna dirección de correo, así que no se puede crear una cuenta."
+            }
+        }
     }
 }

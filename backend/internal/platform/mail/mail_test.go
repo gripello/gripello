@@ -1,14 +1,24 @@
 package mail
 
 import (
+	"bufio"
 	"context"
+	"crypto/tls"
+	"errors"
+	"fmt"
+	"net"
+	"net/textproto"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"gripello/internal/platform/config"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/locales"
+	"gripello/internal/platform/secretbox"
+	"gripello/internal/platform/testkit"
 )
 
 var leftoverPlaceholder = regexp.MustCompile(`\{[a-zA-Z]+\}`)
@@ -125,10 +135,11 @@ func TestRecipientsAreGroupedByLanguage(t *testing.T) {
 func TestUrgentDefectIsLocalizedPerRecipient(t *testing.T) {
 	var sent []Message
 	c := testClient(t)
-	client := &Client{senderName: "Gripello", deliver: func(_ context.Context, m Message) error {
+	client := &Client{}
+	client.current.Store(&transport{senderName: "Gripello", deliver: func(_ context.Context, m Message) error {
 		sent = append(sent, m)
 		return nil
-	}}
+	}})
 	brand := testBrand()
 	brand.Language = "fr"
 	brand.ReplyTo = "front@nord.example"
@@ -171,9 +182,36 @@ func TestComposeEncodesHeadersAndRejectsInjection(t *testing.T) {
 	}
 }
 
-func TestStatusReflectsSMTPConfig(t *testing.T) {
-	if Status(config.Config{})["configured"] || !Status(config.Config{SMTPHost: "smtp.example.com"})["configured"] {
+func TestConfiguredFollowsTheSMTPHost(t *testing.T) {
+	if New(config.Config{}).Configured() || !New(config.Config{SMTPHost: "smtp.example.com"}).Configured() {
 		t.Error("configured must follow SMTP_HOST")
+	}
+}
+
+func TestReloadPrefersStoredSettingsOverTheEnvironment(t *testing.T) {
+	pool := testkit.Pool(t)
+	ctx := context.Background()
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	env := config.Config{SMTPHost: "env.example.com", SMTPPort: "587", SenderName: "Env"}
+	c := New(config.Config{})
+	if err := c.Reload(ctx, pool, env, "secret"); err != nil || !c.Configured() || c.current.Load().senderName != "Env" {
+		t.Fatalf("env fallback: configured %v, sender %q, %v", c.Configured(), c.current.Load().senderName, err)
+	}
+	sealed, _ := secretbox.Seal("secret", "pw")
+	if _, err := pool.Exec(ctx, `UPDATE platform_config SET smtp_host = 'db.example.com', smtp_password = $1, sender_name = 'Stored'`, sealed); err != nil {
+		t.Fatal(err)
+	}
+	stored, err := Settings(ctx, pool, "secret")
+	if err != nil || stored.Host != "db.example.com" || stored.Password != "pw" || stored.Port != "587" {
+		t.Fatalf("settings = %+v, %v", stored, err)
+	}
+	if err := c.Reload(ctx, pool, config.Config{}, "secret"); err != nil || !c.Configured() || c.current.Load().senderName != "Stored" {
+		t.Errorf("stored settings not applied: configured %v, sender %q", c.Configured(), c.current.Load().senderName)
+	}
+	if unreadable, _ := Settings(ctx, pool, "rotated"); unreadable.Password != "" || unreadable.Host != "db.example.com" {
+		t.Errorf("password under a rotated secret = %+v", unreadable)
 	}
 }
 
@@ -193,4 +231,106 @@ type plainSender func(to string)
 func (p plainSender) Send(_ context.Context, to, _, _, _ string) error {
 	p(to)
 	return nil
+}
+
+func TestTLSOnAStartTLSPortFallsBackToPlainSMTP(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	delivered := make(chan string, 1)
+	go fakeSMTP(ln, delivered)
+
+	host, port, _ := net.SplitHostPort(ln.Addr().String())
+	send := smtpTransport(SMTP{Host: host, Port: port, TLS: true, SenderAddress: "noreply@example.com"})
+	if err := send(context.Background(), Message{To: []string{"kim@example.com"}, Subject: "Hi", Text: "Hello"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := <-delivered; got != "kim@example.com" {
+		t.Errorf("delivered to %q", got)
+	}
+}
+
+// fakeSMTP answers the first connection (the failed TLS dial) by closing it and serves the second in plain text.
+func fakeSMTP(ln net.Listener, delivered chan<- string) {
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		go func() {
+			defer conn.Close()
+			r := bufio.NewReader(conn)
+			fmt.Fprint(conn, "220 fake\r\n")
+			var rcpt string
+			for {
+				line, err := r.ReadString('\n')
+				if err != nil {
+					return
+				}
+				switch cmd := strings.ToUpper(strings.TrimSpace(line)); {
+				case strings.HasPrefix(cmd, "EHLO"), strings.HasPrefix(cmd, "HELO"):
+					fmt.Fprint(conn, "250 fake\r\n")
+				case strings.HasPrefix(cmd, "RCPT TO:"):
+					rcpt = strings.Trim(strings.TrimSpace(line)[len("RCPT TO:"):], "<>")
+					fmt.Fprint(conn, "250 ok\r\n")
+				case cmd == "DATA":
+					fmt.Fprint(conn, "354 go\r\n")
+					for l, _ := r.ReadString('\n'); l != ".\r\n" && l != ""; l, _ = r.ReadString('\n') {
+					}
+					fmt.Fprint(conn, "250 ok\r\n")
+					delivered <- rcpt
+				case cmd == "QUIT":
+					fmt.Fprint(conn, "221 bye\r\n")
+					return
+				default:
+					fmt.Fprint(conn, "250 ok\r\n")
+				}
+			}
+		}()
+	}
+}
+
+func TestFailedStageNamesTheBrokenStep(t *testing.T) {
+	for err, want := range map[error]string{
+		&net.OpError{Op: "dial", Err: errors.New("connection refused")}:               "connect",
+		tls.RecordHeaderError{Msg: "first record does not look like a TLS handshake"}: "encrypt",
+		&textproto.Error{Code: 535, Msg: "Authentication credentials invalid"}:        "sign_in",
+		fmt.Errorf("send: %v", &textproto.Error{Code: 535, Msg: "invalid"}):           "sign_in",
+		&textproto.Error{Code: 550, Msg: "mailbox unavailable"}:                       "deliver",
+	} {
+		if got := FailedStage(err); got != want {
+			t.Errorf("%v = %s, want %s", err, got, want)
+		}
+	}
+}
+
+func TestStallingServerTimesOut(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			defer conn.Close()
+		}
+	}()
+	defer func(previous time.Duration) { smtpTimeout = previous }(smtpTimeout)
+	smtpTimeout = 200 * time.Millisecond
+
+	host, port, _ := net.SplitHostPort(ln.Addr().String())
+	for _, implicitTLS := range []bool{false, true} {
+		send := smtpTransport(SMTP{Host: host, Port: port, TLS: implicitTLS, SenderAddress: "noreply@example.com"})
+		started := time.Now()
+		err := send(context.Background(), Message{To: []string{"kim@example.com"}, Subject: "Hi", Text: "Hello"})
+		if err == nil || time.Since(started) > 2*time.Second {
+			t.Fatalf("TLS=%v: err %v after %s", implicitTLS, err, time.Since(started))
+		}
+	}
 }

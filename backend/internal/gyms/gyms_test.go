@@ -477,6 +477,27 @@ func TestDeleteGymCascadesAndRetiresSlugs(t *testing.T) {
 	f.call(f.operator, "PATCH", "/gyms/"+keeper, `{"slug":"doomed-hall"}`, http.StatusBadRequest)
 }
 
+func TestPlatformAdminsListAndFreeRetiredSlugs(t *testing.T) {
+	f := newFixture(t)
+	gym := f.createGym("gone", "Gone Hall", true)
+	f.call(f.operator, "DELETE", "/gyms/"+gym, "", http.StatusNoContent)
+	climber := f.user("climber")
+	f.call(climber, "GET", "/platform/retired-slugs", "", http.StatusForbidden)
+
+	items := f.call(f.operator, "GET", "/platform/retired-slugs", "", http.StatusOK, `"slug":"gone"`, `"gym_name":"Gone Hall"`).json(t)["items"].([]any)
+	id := items[0].(map[string]any)["id"].(string)
+	f.call(f.operator, "POST", "/gyms", `{"slug":"gone","name":"Again"}`, http.StatusBadRequest)
+	f.call(climber, "DELETE", "/platform/retired-slugs/"+id, "", http.StatusForbidden)
+	f.call(f.operator, "DELETE", "/platform/retired-slugs/"+id, "", http.StatusNoContent)
+	f.call(f.operator, "DELETE", "/platform/retired-slugs/"+id, "", http.StatusNotFound)
+	f.call(f.operator, "POST", "/gyms", `{"slug":"gone","name":"Again"}`, http.StatusCreated)
+	var events int
+	f.scalar(`SELECT count(*) FROM events WHERE topic = 'platform' AND kind = 'retired_slug.deleted' AND actor = $1`, &events, f.operator)
+	if events != 1 {
+		t.Errorf("%d audit events for the freed slug", events)
+	}
+}
+
 func TestSettings(t *testing.T) {
 	f := newFixture(t)
 	gym := f.createGym("gym-a", "Gym A", true)

@@ -224,7 +224,9 @@ func TestAchievementsAwardNotifyAndPrivacy(t *testing.T) {
 	f.get("setter", path, http.StatusNotFound)
 	f.exec(`DELETE FROM blocks WHERE id = $1 RETURNING id`, block)
 	f.exec(`DELETE FROM follows WHERE id = $1 RETURNING id`, follow)
-	f.exec(`INSERT INTO follows (id, follower, followee, status) VALUES ($1, $2, $3, 'pending') RETURNING id`, ids.New(), climber, setter)
+	reverse := f.exec(`INSERT INTO follows (id, follower, followee, status) VALUES ($1, $2, $3, 'pending') RETURNING id`, ids.New(), climber, setter)
+	f.get("setter", path, http.StatusNotFound)
+	f.exec(`UPDATE follows SET status = 'accepted' WHERE id = $1 RETURNING id`, reverse)
 	f.get("setter", path, http.StatusOK)
 	f.exec(`UPDATE users SET ticks_private = true WHERE id = $1 RETURNING id`, climber)
 	f.get("setter", path, http.StatusNotFound)
@@ -381,6 +383,10 @@ func TestSeasonTopTens(t *testing.T) {
 	}
 	if err := f.m.queueSeasonPlacements(context.Background(), now.AddDate(0, 0, 3)); err != nil || f.queued(climber) {
 		t.Fatalf("seasons ended over 48 h ago are not re-queued (err %v)", err)
+	}
+	f.exec(`UPDATE users SET ticks_private = true WHERE id = $1 RETURNING id`, climber)
+	if got := placements(climber); got != 0 {
+		t.Fatalf("private sends are off the board, got %d placements", got)
 	}
 }
 

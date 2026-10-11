@@ -627,6 +627,17 @@ func (h *handlers) inviteMember(w http.ResponseWriter, r *http.Request) error {
 	}
 	token := newInviteToken()
 	err = h.inTx(ctx, func(tx pgx.Tx) error {
+		if err := lockGym(ctx, tx, gymID); err != nil {
+			return err
+		}
+		var existingRole string
+		if err := tx.QueryRow(ctx, `SELECT role FROM invites WHERE gym = $1 AND email = $2`, gymID, pending.Email).Scan(&existingRole); err == nil {
+			if !callerMayReplaceInvite(ctx, tx, p, existingRole) {
+				return errInviteRoleTooHigh
+			}
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
 		id, inserted, err := upsertInvite(ctx, tx, ids.New(), pending, hashToken(token))
 		if err != nil {
 			return err
@@ -661,6 +672,13 @@ func (h *handlers) sendInviteMail(ctx context.Context, pending invite, roleName,
 	return h.app.Mail.Send(ctx, pending.Email, "You're invited to join the team", body, text)
 }
 
+var errInviteRoleTooHigh = httpx.NewError(http.StatusForbidden, "This invitation is for a role with permissions you do not hold.")
+
+func callerMayReplaceInvite(ctx context.Context, q querier, caller auth.Principal, roleID string) bool {
+	invited, err := findRole(ctx, q, roleID)
+	return err == nil && callerMayAssignRole(ctx, q, caller, invited)
+}
+
 func (h *handlers) revokeInvite(w http.ResponseWriter, r *http.Request) error {
 	p, err := auth.Require(r.Context())
 	if err != nil {
@@ -674,6 +692,9 @@ func (h *handlers) revokeInvite(w http.ResponseWriter, r *http.Request) error {
 		}
 		if !canManageUsers(ctx, h.perms, p, revoked.Gym) {
 			return httpx.ErrNotFound
+		}
+		if !callerMayReplaceInvite(ctx, tx, p, revoked.Role) {
+			return errInviteRoleTooHigh
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM invites WHERE id = $1`, revoked.ID); err != nil {
 			return err

@@ -206,6 +206,13 @@ func TestGymRatingsForModerators(t *testing.T) {
 	if len(byID) != 1 || byID[0]["author"].(map[string]any)["name"] != "Shy Person" {
 		t.Errorf("staff must see anonymous authors: %v", byID)
 	}
+	f.user("analyst", f.gymA, "", "", "view_analytics")
+	for _, staff := range []string{"analyst", "setter"} {
+		forStaff := items(f.call(staff, "GET", "/gyms/alpha/ratings?ids="+shy, "", http.StatusOK))
+		if len(forStaff) != 1 || forStaff[0]["author"] != nil {
+			t.Errorf("%s must not see anonymous authors: %v", staff, forStaff)
+		}
+	}
 	f.call("moderator", "DELETE", "/ratings/"+shy, "", http.StatusNoContent)
 	stats := f.call("", "GET", "/gyms/alpha/ratings/stats", "", http.StatusOK)
 	if stats["total_reviews"] != float64(2) || stats["avg_rating"] != float64(3) || stats["low_rated"] != float64(1) || stats["this_week"] != float64(2) {
@@ -281,6 +288,9 @@ func TestImportRatings(t *testing.T) {
 	}
 	if n := f.exec(`SELECT COUNT(*)::text FROM ratings WHERE "user" IS NOT NULL`); n != "0" {
 		t.Errorf("imported ratings with user: %s", n)
+	}
+	if actors := f.exec(`SELECT string_agg(DISTINCT actor, ',') FROM events WHERE kind = 'rating.created'`); actors != f.users["setter"] {
+		t.Errorf("import actors = %q", actors)
 	}
 	if past := f.exec(`SELECT created::date::text FROM ratings WHERE comment = 'old'`); past != "2024-03-01" {
 		t.Errorf("past created = %s", past)
@@ -472,4 +482,11 @@ func TestGuestRatingsNeedCaptcha(t *testing.T) {
 	guest(token, http.StatusCreated)
 	guest(token, http.StatusBadRequest)
 	f.rate("climber", `{"rating":5}`)
+}
+
+func TestPageParamsCapThePage(t *testing.T) {
+	page, _, tail := pageParams(httptest.NewRequest(http.MethodGet, "/?page=9223372036854775807&limit=500", nil))
+	if page != maxPage || !strings.HasSuffix(tail, " OFFSET 499999500") {
+		t.Errorf("page %d, tail %q", page, tail)
+	}
 }

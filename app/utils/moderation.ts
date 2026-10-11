@@ -40,7 +40,7 @@ export function moderationViewQuery(view: ModerationView, platform = false) {
     }
 }
 
-// Mirrors moderationAllowed in pocketbase/hooks/moderation.go.
+// Mirrors allowed in backend/internal/moderation/service.go.
 export function moderationActions(
     item: Pick<ModerationItemRecord, 'state' | 'hidden_by'>,
     who: { platform: boolean; gymStaff: boolean },

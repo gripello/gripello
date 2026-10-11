@@ -89,10 +89,14 @@ func newTokenKey() string {
 
 // rotateTokenKey invalidates every token of the user and ends all their sessions (password or email change).
 func rotateTokenKey(ctx context.Context, tx pgx.Tx, userID string) error {
+	return rotateTokenKeyExcept(ctx, tx, userID, "")
+}
+
+func rotateTokenKeyExcept(ctx context.Context, tx pgx.Tx, userID, keptSession string) error {
 	if _, err := tx.Exec(ctx, `UPDATE users SET token_key = $2 WHERE id = $1`, userID, newTokenKey()); err != nil {
 		return err
 	}
-	return deleteSessions(ctx, tx, userID, `"user" = $1`)
+	return deleteSessions(ctx, tx, userID, `"user" = $1 AND id <> $2`, keptSession)
 }
 
 func deleteSessions(ctx context.Context, tx pgx.Tx, userID, where string, args ...any) error {

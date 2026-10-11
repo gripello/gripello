@@ -6,6 +6,7 @@ export interface ThemePalette {
     scrim: string
     primary: string
     success: string
+    warning: string
     error: string
     info: string
 }
@@ -17,6 +18,7 @@ export const THEME_COLORS: Record<ThemeName, ThemePalette> = {
         scrim: 'rgba(245, 245, 245, 0.75)',
         primary: '#38741c',
         success: '#2e7d32',
+        warning: '#9a5b00',
         error: '#ba1a1a',
         info: '#0061a4',
     },
@@ -26,6 +28,7 @@ export const THEME_COLORS: Record<ThemeName, ThemePalette> = {
         scrim: 'rgba(28, 33, 40, 0.75)',
         primary: '#238636',
         success: '#238636',
+        warning: '#e3b341',
         error: '#f85149',
         info: '#58a6ff',
     },

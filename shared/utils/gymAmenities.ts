@@ -1,4 +1,4 @@
-// Mirrored in pocketbase/pb_migrations/1792800001_gym_info.js.
+// Mirrored in backend/internal/gyms/service.go.
 export const GYM_AMENITIES = {
     toilets: 'i-lucide-toilet',
     showers: 'i-lucide-shower-head',

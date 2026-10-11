@@ -2,7 +2,10 @@ package moderation
 
 import (
 	"context"
+	"encoding/json"
 	"maps"
+	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -12,13 +15,14 @@ import (
 )
 
 const (
-	TopicModeration     = "moderation"
-	KindContentHidden   = "content.hidden"
-	KindContentRestored = "content.restored"
-	TopicNotify         = "notify"
-	KindNotify          = "notify"
-	topicBetaCreated    = "beta.created"
-	topicRouteArchived  = "route.archived"
+	TopicModeration        = "moderation"
+	KindContentHidden      = "content.hidden"
+	KindContentRestored    = "content.restored"
+	TopicNotify            = "notify"
+	KindNotify             = "notify"
+	topicBetaCreated       = "beta.created"
+	topicRouteArchived     = "route.archived"
+	kindCompetitionChanged = "competition.changed"
 )
 
 // ContentChange tells the owning module that moderation hid or restored its content.
@@ -41,6 +45,26 @@ type GymChange struct {
 	Collection string `json:"collection"`
 	Action     string `json:"action"`
 	Record     any    `json:"record"`
+}
+
+// CompetitionChange, TaskChange and UserUpdated mirror what the competitions, tasks and account modules publish.
+type CompetitionChange struct {
+	Competition string `json:"competition"`
+	Gym         string `json:"gym"`
+	Kind        string `json:"kind"`
+	User        string `json:"user,omitempty"`
+	Entry       string `json:"entry,omitempty"`
+	At          int64  `json:"at"`
+}
+
+type TaskChange struct {
+	Action string         `json:"action"`
+	Record map[string]any `json:"record"`
+}
+
+type UserUpdated struct {
+	Record  json.RawMessage `json:"record"`
+	Changed []string        `json:"changed"`
 }
 
 // ItemChange is what the inbox receives on moderation:<gym> and moderation:platform.
@@ -168,4 +192,74 @@ func (m *module) author(ctx context.Context, q querier, userID string, honourAno
 		return c, !anonymous
 	}
 	return c, true
+}
+
+// publishOwnerChange sends the update the owning module would have sent, so live lists and caches drop or show the content again.
+func publishOwnerChange(ctx context.Context, tx pgx.Tx, it Item, before map[string]any) error {
+	switch it.ContentType {
+	case "competition_entry":
+		return publishEntryChange(ctx, tx, it.ContentID)
+	case "task":
+		return publishTaskChange(ctx, tx, it.ContentID)
+	case "profile":
+		return publishProfileChange(ctx, tx, it.ContentID, before)
+	}
+	return nil
+}
+
+func publishEntryChange(ctx context.Context, tx pgx.Tx, entryID string) error {
+	change := CompetitionChange{Kind: "entries", Entry: entryID, At: time.Now().UnixMilli()}
+	var status string
+	if err := tx.QueryRow(ctx, `SELECT c.id, c.gym, c.status, e."user" FROM competition_entries e JOIN competitions c ON c.id = e.competition
+		WHERE e.id = $1`, entryID).Scan(&change.Competition, &change.Gym, &status, &change.User); err != nil {
+		return err
+	}
+	topic := "competition_changes:" + change.Competition
+	if status == "draft" {
+		return publish(ctx, tx, topic, kindCompetitionChanged, change, events.Audience{GymPerm: change.Gym + ":manage_competitions"})
+	}
+	if err := publish(ctx, tx, topic, kindCompetitionChanged, change, events.Audience{Users: []string{change.User}}); err != nil {
+		return err
+	}
+	stripped := change
+	stripped.User, stripped.Entry = "", ""
+	if err := publish(ctx, tx, topic, kindCompetitionChanged, stripped, events.Audience{GuestsOnly: true}); err != nil {
+		return err
+	}
+	return publish(ctx, tx, topic, kindCompetitionChanged, stripped, events.Audience{SignedIn: true, NotUsers: []string{change.User}})
+}
+
+const taskColumns = `id, created, updated, gym, kind, title, category, priority, status, COALESCE(route, '') AS route,
+	COALESCE(wall, '') AS wall, COALESCE(location, '') AS location, description, photo, COALESCE(reporter, '') AS reporter,
+	COALESCE(assignee, '') AS assignee, due_date, resolution_note, done_at, COALESCE(done_by, '') AS done_by, route_type, grade`
+
+func publishTaskChange(ctx context.Context, tx pgx.Tx, taskID string) error {
+	var task map[string]any
+	if err := tx.QueryRow(ctx, `SELECT to_jsonb(x) FROM (SELECT `+taskColumns+` FROM tasks WHERE id = $1) x`, taskID).Scan(&task); err != nil {
+		return err
+	}
+	gym, _ := task["gym"].(string)
+	return publish(ctx, tx, "tasks:"+gym, "task.updated", TaskChange{"update", task}, events.Audience{GymPerm: gym + ":manage_tasks"})
+}
+
+func publishProfileChange(ctx context.Context, tx pgx.Tx, userID string, before map[string]any) error {
+	after, err := loadContent(ctx, tx, "profile", userID)
+	if err != nil {
+		return err
+	}
+	changed := []string{}
+	for _, field := range profileFields {
+		if before[field] != after.Snapshot[field] {
+			changed = append(changed, field)
+		}
+	}
+	if len(changed) == 0 {
+		return nil
+	}
+	slices.Sort(changed)
+	var record json.RawMessage
+	if err := tx.QueryRow(ctx, `SELECT to_jsonb(u) - 'password_hash' - 'token_key' FROM users u WHERE id = $1`, userID).Scan(&record); err != nil {
+		return err
+	}
+	return publish(ctx, tx, "user:"+userID, "user.updated", UserUpdated{record, changed}, events.Audience{Users: []string{userID}})
 }

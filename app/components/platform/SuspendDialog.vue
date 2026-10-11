@@ -56,6 +56,12 @@
                 :label="t('platform.users.suspendHideContent')"
                 data-testid="platform-suspend-hide-content"
             />
+            <UserPasswordField
+                v-model="adminPassword"
+                :label="t('platform.users.adminPassword')"
+                icon="i-lucide-shield-check"
+                data-testid="platform-suspend-admin-password"
+            />
             <section class="rounded-xl bg-muted px-4 py-3">
                 <h3 class="mb-1 text-sm font-semibold text-highlighted">
                     {{ t('moderation.decision.whatHappens') }}
@@ -101,6 +107,7 @@
 </template>
 
 <script setup lang="ts">
+import { reauthenticate } from '~/api/account'
 import { hideAuthor } from '~/api/moderation'
 import { liftSuspension, suspendUser, type Suspension } from '~/api/platform'
 import type { UserRecord } from '~/types/models'
@@ -111,6 +118,7 @@ import {
     userDisplayName,
     type SuspensionDuration,
 } from '~/utils/platformUsers'
+import { isWrongPassword } from '~/utils/reauth'
 import { localDateYYYYMMDD, parseDate } from '#shared/utils/formatting'
 
 const DURATIONS: SuspensionDuration[] = ['week', 'month', 'until', 'permanent']
@@ -127,12 +135,15 @@ const duration = ref<SuspensionDuration>('week')
 const until = ref('')
 const reason = ref('')
 const hideContent = ref(false)
+const adminPassword = ref('')
 const displayName = computed(() =>
     props.user ? userDisplayName(props.user) || props.user.username : '',
 )
 const ready = computed(
     () =>
-        !!reason.value.trim() && (duration.value !== 'until' || !!until.value),
+        !!reason.value.trim() &&
+        (duration.value !== 'until' || !!until.value) &&
+        !!adminPassword.value,
 )
 
 watch(open, (isOpen) => {
@@ -148,19 +159,28 @@ watch(open, (isOpen) => {
             : ''
     reason.value = props.user?.suspension_reason ?? ''
     hideContent.value = false
+    adminPassword.value = ''
 })
 
 async function send(suspension?: Suspension) {
     const done = await run(
         async () => {
             const id = props.user!.id
-            if (suspension) await suspendUser(id, suspension)
-            else await liftSuspension(id)
+            if (suspension) {
+                await reauthenticate(adminPassword.value)
+                await suspendUser(id, suspension)
+            } else await liftSuspension(id)
             if (suspension && hideContent.value)
                 await hideAuthor(id, reason.value.trim())
             return true
         },
-        { success: t('moderation.saved') },
+        {
+            success: t('moderation.saved'),
+            error: (error) =>
+                isWrongPassword(error)
+                    ? t('platform.users.adminPasswordWrong')
+                    : t('notifications.error.generic'),
+        },
     )
     if (!done) return
     open.value = false

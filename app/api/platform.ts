@@ -118,6 +118,70 @@ export function getPlatformStats() {
     return useApi()<PlatformStats>('/platform/stats')
 }
 
+export type TrafficRange = '1h' | '24h' | '7d' | '30d'
+
+export interface TrafficTotals {
+    requests: number
+    client_errors: number
+    server_errors: number
+    p95_ms: number
+}
+
+export interface TrafficEndpoint extends TrafficTotals {
+    method: string
+    pattern: string
+    avg_ms: number
+}
+
+export interface ServerReplica {
+    name: string
+    version: string
+    role: string
+    started: string
+    last_seen: string
+    online: boolean
+    realtime_clients: number
+    memory_bytes: number
+}
+
+export interface PlatformTraffic {
+    range: TrafficRange
+    step_seconds: number
+    series: Array<{
+        t: string
+        requests: number
+        client_errors: number
+        server_errors: number
+    }>
+    totals: TrafficTotals
+    previous: TrafficTotals
+    peak_rps: number
+    visitors_per_day: number
+    endpoints: TrafficEndpoint[]
+    people: {
+        online: number
+        signed_in: number
+        new_accounts: number
+        failed_logins: number
+        sign_in_methods: Record<string, number>
+    }
+    system: {
+        version: string
+        replicas: ServerReplica[]
+        database_bytes: number
+        database_connections: number
+        jobs_waiting: number
+        jobs_running: number
+        last_backup: string | null
+        backup_error: string
+        mail_configured?: boolean
+    }
+}
+
+export function getPlatformTraffic(range: TrafficRange) {
+    return useApi()<PlatformTraffic>('/platform/traffic', { query: { range } })
+}
+
 export function listFeatureFlags() {
     return useApi()<{ flags: FeatureFlag[] }>('/platform/features')
 }
@@ -143,4 +207,128 @@ export async function grantPlatformAdmin(user: string) {
 
 export function revokePlatformAdmin(user: string) {
     return useApi()(`/platform/admins/${user}`, { method: 'DELETE' })
+}
+
+export function resetUserMfa(user: string) {
+    return useApi()(`/platform/users/${user}/mfa`, { method: 'DELETE' })
+}
+
+export function revokeUserSessions(user: string) {
+    return useApi()(`/platform/users/${user}/sessions`, { method: 'DELETE' })
+}
+
+export function clearUserLockout(user: string) {
+    return useApi()(`/platform/users/${user}/lockout`, { method: 'DELETE' })
+}
+
+export function setUserPassword(
+    user: string,
+    password: string,
+    passwordConfirm: string,
+) {
+    return useApi()(`/platform/users/${user}/password`, {
+        method: 'POST',
+        body: { password, passwordConfirm },
+    })
+}
+
+export interface MailSettings {
+    smtp_host: string
+    smtp_port: number
+    smtp_username: string
+    smtp_password_set: boolean
+    smtp_tls: boolean
+    sender_address: string
+    sender_name: string
+    source: 'database' | 'environment' | 'none'
+}
+
+export type MailSettingsInput = Omit<
+    MailSettings,
+    'smtp_password_set' | 'source'
+> & { smtp_password?: string }
+
+export function getMailSettings() {
+    return useApi()<MailSettings>('/platform/mail')
+}
+
+export function updateMailSettings(input: MailSettingsInput) {
+    return useApi()<MailSettings>('/platform/mail', {
+        method: 'PUT',
+        body: input,
+    })
+}
+
+export function sendTestMail() {
+    return useApi()('/platform/mail/test', { method: 'POST' })
+}
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+export interface ServerLogEntry {
+    time: string
+    replica: string
+    level: string
+    message: string
+    attrs?: Record<string, unknown>
+}
+
+export interface ServerLogs {
+    level: string
+    replicas: ServerReplica[]
+    items: ServerLogEntry[]
+}
+
+export function listServerLogs(level: LogLevel) {
+    return useApi()<ServerLogs>('/platform/logs', { query: { level } })
+}
+
+export function setLogLevel(level: LogLevel) {
+    return useApi()<{ level: LogLevel }>('/platform/logs/level', {
+        method: 'PUT',
+        body: { level },
+    })
+}
+
+export interface OAuthProviderSettings {
+    provider: 'google' | 'apple' | 'microsoft' | 'oidc'
+    enabled: boolean
+    client_id: string
+    client_secret_set: boolean
+    display_name: string
+    issuer_url: string
+    tenant: string
+    team_id: string
+    key_id: string
+    private_key_set: boolean
+    redirect_uri: string
+}
+
+export type OAuthProviderInput = Pick<
+    OAuthProviderSettings,
+    | 'enabled'
+    | 'client_id'
+    | 'display_name'
+    | 'issuer_url'
+    | 'tenant'
+    | 'team_id'
+    | 'key_id'
+> & { client_secret?: string; private_key?: string }
+
+export async function listOAuthProviderSettings() {
+    const { items } = await useApi()<{ items: OAuthProviderSettings[] }>(
+        '/platform/oauth2',
+    )
+    return items
+}
+
+export async function saveOAuthProviderSettings(
+    provider: string,
+    input: OAuthProviderInput,
+) {
+    const { items } = await useApi()<{ items: OAuthProviderSettings[] }>(
+        `/platform/oauth2/${provider}`,
+        { method: 'PUT', body: input },
+    )
+    return items
 }
