@@ -9,8 +9,8 @@ services:
         environment:
             DATABASE_URL: postgres://gripello:${POSTGRES_PASSWORD:-change-me}@postgres:5432/gripello?sslmode=disable
             NUXT_API_BASE: http://127.0.0.1:8080
-            # Cache server-rendered public pages for guests this many seconds (0 = off).
-            #SSR_CACHE_SECONDS: 5
+            # Cache server-rendered public pages for guests this many seconds (default 5, 0 = off).
+            #SSR_CACHE_SECONDS: 0
             # Server-rendering worker processes (default: half the CPUs or CPU quota, 1 to 8).
             #NITRO_CLUSTER_WORKERS: 4
             # Per-IP rate limits in nginx; "off" disables them.

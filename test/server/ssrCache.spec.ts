@@ -16,8 +16,13 @@ import { viewportBucket } from '../../shared/utils/breakpoints'
 describe('ssr cache', () => {
     beforeEach(() => ssrCache.clear())
 
-    it('is off unless SSR_CACHE_SECONDS is set', () => {
+    it('caches 5 s in production unless SSR_CACHE_SECONDS overrides it', () => {
         expect(ssrCacheTtlMs({})).toBe(0)
+        expect(ssrCacheTtlMs({ NODE_ENV: 'production' })).toBe(5000)
+        expect(
+            ssrCacheTtlMs({ NODE_ENV: 'production', SSR_CACHE_SECONDS: '0' }),
+        ).toBe(0)
+        expect(ssrCacheTtlMs({ SSR_CACHE_SECONDS: 'off' })).toBe(0)
         expect(ssrCacheTtlMs({ SSR_CACHE_SECONDS: '5' })).toBe(5000)
         expect(ssrCacheTtlMs({ SSR_CACHE_SECONDS: '-1' })).toBe(0)
     })

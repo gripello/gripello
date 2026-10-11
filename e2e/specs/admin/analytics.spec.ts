@@ -284,9 +284,12 @@ test('heatmap tooltip hides when the page scrolls', async ({
     await gotoSettled(page, '/manage/analytics?range=all')
     const heatmap = page.getByTestId('analytics-heatmap')
     await heatmap.scrollIntoViewIfNeeded()
-    await heatmap.locator('[data-date]').last().click()
     const tooltip = page.getByTestId('analytics-heatmap-tooltip')
-    await expect(tooltip).toBeVisible()
+    // Live analytics updates from other workers can shift the page and fire a scroll that closes it.
+    await expect(async () => {
+        await heatmap.locator('[data-date]').last().click()
+        await expect(tooltip).toBeVisible({ timeout: 1_000 })
+    }).toPass()
     await expect
         .poll(() => page.evaluate(() => window.scrollY))
         .toBeGreaterThan(0)
