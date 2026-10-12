@@ -2,6 +2,8 @@ import { expect, type Page } from '@playwright/test'
 import { gotoSettled } from './nav'
 import {
     apiAs,
+    listModerationCases,
+    type Api,
     createGym,
     createLocation,
     createRole,
@@ -11,6 +13,22 @@ import {
     setGymFeatures,
 } from './api'
 import { ensureUser, gripelloAdmin, type SeededUser } from './seed'
+
+// Cases are opened by a bus handler after the write, so they show up a moment later.
+export async function caseFor(api: Api, text: string) {
+    let item:
+        Awaited<ReturnType<typeof listModerationCases>>[number] | undefined
+    await expect
+        .poll(
+            async () => {
+                ;[item] = await listModerationCases(api, { q: text })
+                return item
+            },
+            { message: `no moderation case for ${text}` },
+        )
+        .toBeTruthy()
+    return item!
+}
 
 export async function openCase(
     page: Page,

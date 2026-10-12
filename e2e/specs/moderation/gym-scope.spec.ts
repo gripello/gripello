@@ -1,14 +1,13 @@
 import { test, expect } from '../../support/fixtures'
 import { apiOf, gotoSettled, gymPath } from '../../support/nav'
-import {
-    deleteGym,
-    getModerationCase,
-    listModerationCases,
-    updateMe,
-} from '../../support/api'
+import { deleteGym, getModerationCase, updateMe } from '../../support/api'
 import { createComment } from '../../support/comments'
 import { reportAs } from '../../support/reports'
-import { createModerationGym, openCase } from '../../support/moderation'
+import {
+    caseFor,
+    createModerationGym,
+    openCase,
+} from '../../support/moderation'
 
 test('only report handlers see who reported and why', async ({
     adminPage,
@@ -51,15 +50,14 @@ test('staff of another gym never see this gym’s cases', async ({
     await gotoSettled(author, gymPath('/'))
     const text = `${testPrefix}-foreign`
     await createComment(author, route.id, text)
-    const [item] = await listModerationCases(api, { q: text })
-    expect(item).toBeTruthy()
+    const item = await caseFor(api, text)
 
     const gym = await createModerationGym(testPrefix)
     try {
         const outsider = await pageAs(gym.staff)
         await gotoSettled(
             outsider,
-            `/${gym.slug}/manage/moderation?case=${item!.id}`,
+            `/${gym.slug}/manage/moderation?case=${item.id}`,
         )
         await expect(
             outsider.getByTestId('moderation-list').getByText(text),
@@ -68,7 +66,7 @@ test('staff of another gym never see this gym’s cases', async ({
             outsider.locator('article[data-testid^="moderation-detail-"]'),
         ).toHaveCount(0)
         await expect(
-            getModerationCase(await apiOf(outsider), item!.id),
+            getModerationCase(await apiOf(outsider), item.id),
         ).rejects.toMatchObject({ status: 404 })
     } finally {
         await deleteGym(api, gym.id)
