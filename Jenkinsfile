@@ -8,6 +8,27 @@ def runTestSuite(String target, boolean junitReport = true) {
     }
 }
 
+@NonCPS
+def typeErrors(String log) {
+    log.readLines().findAll { it.contains('error TS') }
+}
+
+def reportCheck(String name, String errorLog = null, Closure body) {
+    publishChecks name: name, status: 'IN_PROGRESS'
+    try {
+        body()
+        publishChecks name: name, conclusion: 'SUCCESS'
+    } catch (err) {
+        def errors = errorLog && fileExists(errorLog)
+            ? typeErrors(readFile(errorLog))
+            : []
+        publishChecks name: name, conclusion: 'FAILURE',
+            title: errors ? "${errors.size()} errors" : 'Failed',
+            text: errors ? "```\n${errors.join('\n').take(60000)}\n```" : ''
+        throw err
+    }
+}
+
 pipeline {
     agent any
 
@@ -28,7 +49,7 @@ pipeline {
     }
 
     stages {
-        stage('Setup Buildx') {
+        stage('Setup') {
             steps {
                 script {
                     sh 'docker buildx inspect gripello >/dev/null 2>&1 || docker buildx create --name gripello --driver docker-container || docker buildx inspect gripello'
@@ -80,7 +101,7 @@ pipeline {
             }
         }
 
-        stage('Build & Unit Tests') {
+        stage('Build & Test') {
             parallel {
                 stage('Vitest') {
                     steps {
@@ -89,20 +110,26 @@ pipeline {
                 }
                 stage('Typecheck') {
                     steps {
-                        script { runTestSuite('typecheck-results', false) }
+                        script {
+                            reportCheck('Typecheck', 'test-results/typecheck-results/typecheck.txt') { runTestSuite('typecheck-results', false) }
+                        }
                     }
                 }
-                stage('Go Hooks') {
+                stage('Go Tests') {
                     steps {
                         script { runTestSuite('go-results') }
                     }
                 }
-                stage('Build (test image)') {
+                stage('Build Image') {
                     steps {
-                        sh "docker buildx build --platform linux/amd64 --load --build-arg APP_VERSION=${env.APP_VERSION} -t ${env.E2E_IMAGE} ."
+                        script {
+                            reportCheck('Build Image') {
+                                sh "docker buildx build --platform linux/amd64 --load --build-arg APP_VERSION=${env.APP_VERSION} -t ${env.E2E_IMAGE} ."
+                            }
+                        }
                     }
                 }
-                stage('E2E deps') {
+                stage('E2E Install') {
                     steps {
                         sh '''
                             docker volume create gripello-e2e-yarn-cache
@@ -138,11 +165,13 @@ pipeline {
             }
         }
 
-        stage('Build & Push (release image)') {
+        stage('Push Image') {
             steps {
-                sh """
-                    docker buildx build --platform linux/amd64 --provenance=true --sbom=true --build-arg APP_VERSION=${env.APP_VERSION} ${env.RELEASE_TAGS} --push .
-                """
+                script {
+                    reportCheck('Push Image') {
+                        sh "docker buildx build --platform linux/amd64 --provenance=true --sbom=true --build-arg APP_VERSION=${env.APP_VERSION} ${env.RELEASE_TAGS} --push ."
+                    }
+                }
             }
         }
     }

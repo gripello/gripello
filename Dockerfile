@@ -72,7 +72,7 @@ COPY --from=unit-test /out /
 
 FROM ui-deps AS typecheck
 COPY . .
-RUN mkdir /out && { yarn typecheck; echo $? > /out/exit-code; }
+RUN mkdir /out && { yarn typecheck > /out/typecheck.txt 2>&1; echo $? > /out/exit-code; }; cat /out/typecheck.txt
 
 FROM scratch AS typecheck-results
 COPY --from=typecheck /out /
