@@ -128,6 +128,8 @@ describe('message syntax', () => {
             for (const key of Object.keys(flatten(messages)))
                 expect(() => i18n.global.t(key, {}), key).not.toThrow()
         },
+        // Compiles every message of the locale; grows with each key and runs slower on a busy CI agent.
+        30_000,
     )
 })
 
