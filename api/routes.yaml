@@ -412,7 +412,7 @@ paths:
     put:
       operationId: saveFloorPlan
       tags: [locations]
-      description: manage_settings. One transaction - sets the map, deletes `removed` walls, then creates (no id) or updates walls; `walls` in the response follow the request order.
+      description: manage_settings. One transaction - sets the map, deletes `removed` walls, then creates (no id) or updates walls; `walls` in the response follow the request order. Validation errors are keyed by position (`walls.{i}.{field}`, `removed.{i}.routes` with code `validation_wall_has_routes`); walls may swap names within one request.
       requestBody:
         required: true
         content:
@@ -639,8 +639,9 @@ components:
             type: object
             required: [kind, points]
             properties:
-              kind: { type: string, enum: [floor, mat, structure] }
-              points: { type: array, minItems: 3, maxItems: 200, items: { $ref: '#/components/schemas/Point' } }
+              kind: { type: string, enum: [floor, path, entrance, mat, structure, line] }
+              points: { type: array, minItems: 2, maxItems: 200, description: 'at least 3 points; a line needs 2', items: { $ref: '#/components/schemas/Point' } }
+              level: { type: integer, minimum: 1, maximum: 3, description: 'height of a structure; omitted means 1' }
     RouteInput:
       type: object
       properties:

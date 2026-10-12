@@ -134,6 +134,64 @@ func TestFloorPlanSave(t *testing.T) {
 	}
 }
 
+func TestFloorPlanShapeKinds(t *testing.T) {
+	f := newFixture(t)
+	plan := func(shapes string) string {
+		return `{"map":{"width":30,"height":30,"shapes":[` + shapes + `]},"walls":[]}`
+	}
+	ok := `{"kind":"line","points":[[1,1],[4,1]]},{"kind":"path","points":[[1,1],[4,1],[4,3]]},` +
+		`{"kind":"entrance","points":[[0,0],[2,0],[2,1]]},{"kind":"structure","level":3,"points":[[5,5],[7,5],[7,7]]}`
+	f.call("admin", "PUT", "/locations/"+f.hall+"/floor-plan", plan(ok), http.StatusOK)
+	for _, bad := range []string{
+		`{"kind":"path","points":[[1,1],[4,1]]}`,
+		`{"kind":"structure","level":4,"points":[[5,5],[7,5],[7,7]]}`,
+		`{"kind":"door","points":[[5,5],[7,5],[7,7]]}`,
+	} {
+		f.call("admin", "PUT", "/locations/"+f.hall+"/floor-plan", plan(bad), http.StatusBadRequest)
+	}
+}
+
+func TestFloorPlanErrorsNameTheWall(t *testing.T) {
+	f := newFixture(t)
+	north := f.wall(f.hall, "North")
+	south := f.wall(f.hall, "South")
+	shape := `"outline":[[1,1],[2,1],[2,2]],"edge":[[1,1],[2,1]]`
+	plan := func(removed, walls string) string {
+		return `{"map":{"width":30,"height":30,"shapes":[]},"removed":[` + removed + `],"walls":[` + walls + `]}`
+	}
+	fieldsOf := func(body map[string]any) map[string]any {
+		data, _ := body["data"].(map[string]any)
+		return data
+	}
+
+	swapped := plan("", `{"id":"`+north+`","name":"South",`+shape+`},{"id":"`+south+`","name":"North",`+shape+`}`)
+	result := f.call("admin", "PUT", "/locations/"+f.hall+"/floor-plan", swapped, http.StatusOK)
+	if walls := result["walls"].([]any); walls[0].(map[string]any)["name"] != "South" || walls[1].(map[string]any)["name"] != "North" {
+		t.Fatalf("swap = %v", walls)
+	}
+
+	duplicate := plan("", `{"name":"Cave",`+shape+`},{"name":"cave",`+shape+`}`)
+	failure := f.call("admin", "PUT", "/locations/"+f.hall+"/floor-plan", duplicate, http.StatusBadRequest)
+	if code := fieldsOf(failure)["walls.1.name"]; code == nil || code.(map[string]any)["code"] != "validation_not_unique" {
+		t.Fatalf("duplicate name = %v", failure)
+	}
+
+	blank := plan("", `{"id":"`+north+`","name":"South",`+shape+`},{"name":" ",`+shape+`}`)
+	if fieldsOf(f.call("admin", "PUT", "/locations/"+f.hall+"/floor-plan", blank, http.StatusBadRequest))["walls.1.name"] == nil {
+		t.Fatal("blank name not keyed by index")
+	}
+
+	f.route(`,"wall":"` + north + `"`)
+	busy := plan(`"`+south+`","`+north+`"`, "")
+	failure = f.call("admin", "PUT", "/locations/"+f.hall+"/floor-plan", busy, http.StatusBadRequest)
+	if code := fieldsOf(failure)["removed.1.routes"]; code == nil || code.(map[string]any)["code"] != "validation_wall_has_routes" {
+		t.Fatalf("wall with routes = %v", failure)
+	}
+	if len(items(f.call("", "GET", "/gyms/"+f.gymA+"/walls", "", http.StatusOK))) != 2 {
+		t.Fatal("failed save was not rolled back")
+	}
+}
+
 func TestMapTraceUpload(t *testing.T) {
 	f := newFixture(t)
 	upload := func(user, filename string, content []byte, status int) map[string]any {

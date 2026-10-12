@@ -8,8 +8,10 @@
         "
         data-testid="map-editor-canvas"
         @click="onCanvasClick"
-        @dblclick.prevent="finishDraft"
+        @dblclick.prevent="editor.finishDraft()"
+        @pointerdown="onCanvasPointerDown"
         @pointermove="onHover"
+        @pointerup="onCanvasPointerUp"
         @pointerleave="hoverPoint = null"
     >
         <defs>
@@ -38,9 +40,9 @@
             :x="map.trace.x"
             :y="map.trace.y"
             :width="map.trace.width"
-            :height="map.height * 10"
+            :height="traceHeight"
             :opacity="map.trace.opacity"
-            preserveAspectRatio="xMinYMin meet"
+            preserveAspectRatio="none"
             pointer-events="none"
             data-testid="map-editor-trace"
         />
@@ -55,8 +57,8 @@
         <MapFloorLayer
             :shapes="map.shapes"
             :selected-index="selectedShapeIndex"
+            :pixels-per-unit="pixelsPerUnit"
             selectable
-            @shape-pointer-down="onShapePointerDown"
             @shape-click="onShapeClick"
         />
 
@@ -65,7 +67,6 @@
             :key="wall.key"
             class="editor-wall"
             :class="{ 'editor-wall--selected': wall.key === selectedWallKey }"
-            :data-draggable="wall.key === selectedWallKey ? '' : undefined"
             data-testid="map-editor-wall"
             :data-name="wall.name"
             :role="isSelectTool ? 'button' : undefined"
@@ -74,7 +75,6 @@
                 isSelectTool ? wall.key === selectedWallKey : undefined
             "
             :aria-label="wall.name || $t('mapEditor.missing.name')"
-            @pointerdown="onWallPointerDown(wall, $event)"
             @click="onWallClick(wall, $event)"
             @keydown.enter.prevent="onWallClick(wall, $event)"
             @keydown.space.prevent="onWallClick(wall, $event)"
@@ -108,20 +108,52 @@
             </text>
         </g>
 
-        <g v-for="handleSet in handleSets" :key="handleSet.id">
+        <g v-if="isTraceTool && traceUrl && map.trace">
             <rect
+                class="editor-trace-frame"
+                data-draggable
+                data-testid="map-editor-trace-frame"
+                :x="map.trace.x"
+                :y="map.trace.y"
+                :width="map.trace.width"
+                :height="traceHeight"
+                @pointerdown.stop="onTraceDown"
+                @click.stop
+            />
+            <g
+                class="editor-handle editor-vertex"
+                data-draggable
+                data-testid="map-editor-trace-scale"
+                role="button"
+                :aria-label="$t('mapEditor.traceScale')"
+                @pointerdown.stop="onTraceScaleDown"
+                @click.stop
+            >
+                <circle
+                    class="editor-hit"
+                    :cx="map.trace.x + map.trace.width"
+                    :cy="map.trace.y + traceHeight"
+                    :r="hitRadius"
+                />
+                <circle
+                    class="editor-handle__mark"
+                    :cx="map.trace.x + map.trace.width"
+                    :cy="map.trace.y + traceHeight"
+                    :r="handleSize / 1.6"
+                />
+            </g>
+        </g>
+
+        <g v-for="handleSet in handleSets" :key="handleSet.id">
+            <g
                 v-for="midpoint in handleSet.midpoints"
                 :key="`mid-${midpoint.afterIndex}`"
-                class="editor-midpoint"
+                class="editor-handle editor-midpoint"
                 data-draggable
                 data-testid="map-editor-midpoint"
                 role="button"
                 tabindex="0"
                 :aria-label="$t('mapEditor.addPointLabel')"
-                :x="midpoint.point[0] - handleSize / 2"
-                :y="midpoint.point[1] - handleSize / 2"
-                :width="handleSize"
-                :height="handleSize"
                 @pointerdown.stop="
                     onMidpointDown(handleSet.path, midpoint, $event)
                 "
@@ -132,11 +164,25 @@
                 @keydown.space.stop.prevent="
                     insertMidpoint(handleSet.path, midpoint)
                 "
-            />
-            <circle
+            >
+                <circle
+                    class="editor-hit"
+                    :cx="midpoint.point[0]"
+                    :cy="midpoint.point[1]"
+                    :r="hitRadius"
+                />
+                <rect
+                    class="editor-handle__mark"
+                    :x="midpoint.point[0] - handleSize / 2"
+                    :y="midpoint.point[1] - handleSize / 2"
+                    :width="handleSize"
+                    :height="handleSize"
+                />
+            </g>
+            <g
                 v-for="(point, index) in handleSet.points"
                 :key="`vertex-${index}`"
-                class="editor-vertex"
+                class="editor-handle editor-vertex"
                 :class="{
                     'editor-vertex--selected': isSelectedVertex(
                         handleSet.path,
@@ -151,9 +197,6 @@
                 tabindex="0"
                 :aria-pressed="isSelectedVertex(handleSet.path, index)"
                 :aria-label="$t('mapEditor.pointLabel', { n: index + 1 })"
-                :cx="point[0]"
-                :cy="point[1]"
-                :r="handleSize / 1.6"
                 @pointerdown.stop="onVertexDown(handleSet.path, index, $event)"
                 @click.stop
                 @keydown.enter.stop.prevent="
@@ -162,6 +205,47 @@
                 @keydown.space.stop.prevent="
                     selectVertex(handleSet.path, index)
                 "
+            >
+                <circle
+                    class="editor-hit"
+                    :cx="point[0]"
+                    :cy="point[1]"
+                    :r="hitRadius"
+                />
+                <circle
+                    class="editor-handle__mark"
+                    :cx="point[0]"
+                    :cy="point[1]"
+                    :r="handleSize / 1.6"
+                />
+            </g>
+        </g>
+
+        <g
+            v-if="moveHandle"
+            class="editor-handle editor-move"
+            data-draggable
+            data-testid="map-editor-move"
+            role="button"
+            :aria-label="$t('mapEditor.move')"
+            @pointerdown.stop="onMoveDown"
+            @click.stop
+        >
+            <circle
+                class="editor-hit"
+                :cx="moveHandle[0]"
+                :cy="moveHandle[1]"
+                :r="hitRadius"
+            />
+            <circle
+                class="editor-move__disc"
+                :cx="moveHandle[0]"
+                :cy="moveHandle[1]"
+                :r="handleSize"
+            />
+            <path
+                class="editor-move__arrows"
+                :d="moveArrows(moveHandle, handleSize * 0.6)"
             />
         </g>
 
@@ -195,23 +279,25 @@
 
 <script setup lang="ts">
 import {
+    isOpenShape,
     labelPoint,
+    pointInPolygon,
+    roundToCm,
     snapPoint,
+    type MapTrace,
     type MapBounds,
     type MapPoint,
 } from '#shared/utils/mapGeometry'
 import {
-    addShape,
     clampToMap,
+    isOpenPath,
     insertVertex,
     midpoints,
-    minPointsFor,
     moveVertex,
     readPath,
     snapToVertices,
     translatePoints,
     updateWall,
-    withoutRepeats,
     writePath,
     type EditorPath,
     type EditorState,
@@ -227,6 +313,8 @@ const props = defineProps<{
 }>()
 
 const HANDLE_PX = { fine: 12, coarse: 22 }
+const HIT_PX = { fine: 12, coarse: 22 }
+const DRAG_START_PX = 4
 const SNAP_PX = { fine: 10, coarse: 18 }
 
 const gridId = useId()
@@ -258,10 +346,36 @@ const hoverPoint = ref<MapPoint | null>(null)
 const handleSize = computed(
     () => HANDLE_PX[pointerKind.value] / pixelsPerUnit.value,
 )
-const isSelectTool = computed(() => editor.tool.value === 'select')
-const isDrawing = computed(() =>
-    ['shape', 'outline', 'edge'].includes(editor.tool.value),
+const hitRadius = computed(
+    () => HIT_PX[pointerKind.value] / pixelsPerUnit.value,
 )
+const isTraceTool = computed(() => editor.tool.value === 'trace')
+const traceRatio = ref<number | null>(null)
+const traceHeight = computed(() => {
+    const trace = map.value.trace
+    if (!trace) return 0
+    return (
+        trace.width * (traceRatio.value ?? map.value.height / map.value.width)
+    )
+})
+
+watch(
+    () => props.traceUrl,
+    (url) => {
+        traceRatio.value = null
+        if (!url || typeof Image === 'undefined') return
+        const image = new Image()
+        image.onload = () => {
+            if (props.traceUrl === url && image.naturalWidth)
+                traceRatio.value = image.naturalHeight / image.naturalWidth
+        }
+        image.src = url
+    },
+    { immediate: true },
+)
+
+const isSelectTool = computed(() => editor.tool.value === 'select')
+const isDrawing = editor.isDrawing
 const selectedShapeIndex = computed(() =>
     editor.selection.value?.kind === 'shape'
         ? editor.selection.value.index
@@ -295,7 +409,7 @@ const handleSets = computed(() => {
             id: JSON.stringify(path),
             path,
             points,
-            midpoints: midpoints(points, path.type !== 'edge'),
+            midpoints: midpoints(points, !isOpenPath(editor.state.value, path)),
         }
     })
 })
@@ -347,25 +461,86 @@ function snapped(
     return clampToMap(vertex ?? snapPoint(raw, props.grid), map.value)
 }
 
+let pressing = false
+
+function showsCursor() {
+    return isDrawing.value || editor.tool.value === 'label'
+}
+
 function onHover(event: PointerEvent) {
-    if (!isDrawing.value && editor.tool.value !== 'label') return
+    if (!showsCursor()) return
+    if (
+        event.pointerType !== 'mouse' &&
+        (!pressing || panZoom.isPanning.value)
+    ) {
+        hoverPoint.value = null
+        return
+    }
     hoverPoint.value = snapped(event)
 }
 
-function trackDrag(event: PointerEvent, onMove: (move: PointerEvent) => void) {
+function onCanvasPointerDown(event: PointerEvent) {
+    if (event.pointerType === 'mouse' || !showsCursor()) return
+    pressing = true
+    hoverPoint.value = snapped(event)
+}
+
+function onCanvasPointerUp(event: PointerEvent) {
+    if (event.pointerType === 'mouse') return
+    pressing = false
+    hoverPoint.value = null
+}
+
+function trackDrag(
+    event: PointerEvent,
+    onMove: (move: PointerEvent) => void,
+    hooks: { onStart?: () => void; onTap?: () => void } = {},
+) {
     const target = event.currentTarget as SVGElement
-    target.setPointerCapture(event.pointerId)
-    editor.beginGesture()
-    const move = (moveEvent: PointerEvent) => onMove(moveEvent)
-    const end = () => {
+    const pointerId = event.pointerId
+    target.setPointerCapture(pointerId)
+    const origin = { x: event.clientX, y: event.clientY }
+    let last = origin
+    let started = false
+
+    const move = (moveEvent: PointerEvent) => {
+        if (moveEvent.pointerId !== pointerId) return
+        last = { x: moveEvent.clientX, y: moveEvent.clientY }
+        if (!started) {
+            if (
+                Math.hypot(last.x - origin.x, last.y - origin.y) < DRAG_START_PX
+            )
+                return
+            started = true
+            editor.beginGesture()
+            hooks.onStart?.()
+        }
+        onMove(moveEvent)
+    }
+    const stop = () => {
         target.removeEventListener('pointermove', move)
         target.removeEventListener('pointerup', end)
         target.removeEventListener('pointercancel', end)
-        editor.endGesture()
+        window.removeEventListener('pointerdown', secondPointer, true)
+    }
+    const end = (endEvent: PointerEvent) => {
+        if (endEvent.pointerId !== pointerId) return
+        stop()
+        if (started) editor.endGesture()
+        else if (endEvent.type === 'pointerup') hooks.onTap?.()
+    }
+    const secondPointer = (other: PointerEvent) => {
+        if (other.pointerId === pointerId) return
+        stop()
+        if (started) editor.cancelGesture()
+        if (target.hasPointerCapture(pointerId))
+            target.releasePointerCapture(pointerId)
+        panZoom.adoptPointer(pointerId, last)
     }
     target.addEventListener('pointermove', move)
     target.addEventListener('pointerup', end)
     target.addEventListener('pointercancel', end)
+    window.addEventListener('pointerdown', secondPointer, true)
 }
 
 function selectVertex(path: EditorPath, index: number) {
@@ -413,8 +588,39 @@ function onMidpointDown(
     event: PointerEvent,
 ) {
     if (event.button !== 0) return
-    insertMidpoint(path, midpoint)
-    onVertexDown(path, midpoint.afterIndex + 1, event)
+    const index = midpoint.afterIndex + 1
+    trackDrag(
+        event,
+        (move) => {
+            const point = snapped(move, { path, index })
+            const state = editor.state.value
+            editor.preview(
+                writePath(
+                    state,
+                    path,
+                    moveVertex(readPath(state, path), index, point),
+                ),
+            )
+        },
+        {
+            onStart: () => {
+                const state = editor.state.value
+                editor.preview(
+                    writePath(
+                        state,
+                        path,
+                        insertVertex(
+                            readPath(state, path),
+                            midpoint.afterIndex,
+                            midpoint.point,
+                        ),
+                    ),
+                )
+                selectVertex(path, index)
+            },
+            onTap: () => insertMidpoint(path, midpoint),
+        },
+    )
 }
 
 function dragSelection(
@@ -433,17 +639,6 @@ function dragSelection(
     })
 }
 
-function onShapePointerDown(index: number, event: PointerEvent) {
-    if (selectedShapeIndex.value !== index) return
-    dragSelection(event, (start, dx, dy) =>
-        writePath(
-            start,
-            { type: 'shape', index },
-            translatePoints(start.map.shapes[index]!.points, dx, dy, start.map),
-        ),
-    )
-}
-
 function onShapeClick(index: number, event: Event) {
     if (editor.tool.value !== 'select') return
     event.stopPropagation()
@@ -451,27 +646,106 @@ function onShapeClick(index: number, event: Event) {
     editor.selectedVertex.value = null
 }
 
-function onWallPointerDown(wall: EditorWall, event: PointerEvent) {
-    if (selectedWallKey.value !== wall.key) return
-    dragSelection(event, (start, dx, dy) => {
-        const original = start.walls.find((item) => item.key === wall.key)!
-        const all = [
-            ...original.outline,
-            ...original.edge,
-            ...(original.label ? [original.label] : []),
-        ]
-        const moved = translatePoints(all, dx, dy, start.map)
-        const [safeDx, safeDy] = all.length
-            ? [moved[0]![0] - all[0]![0], moved[0]![1] - all[0]![1]]
-            : [0, 0]
-        const shift = (points: MapPoint[]) =>
-            translatePoints(points, safeDx, safeDy, start.map)
-        return updateWall(start, wall.key, {
-            outline: shift(original.outline),
-            edge: shift(original.edge),
-            label: original.label ? shift([original.label])[0]! : null,
-        })
+function withTrace(patch: (trace: MapTrace) => Partial<MapTrace>) {
+    const state = editor.state.value
+    const trace = state.map.trace
+    if (!trace) return
+    editor.preview({
+        ...state,
+        map: { ...state.map, trace: { ...trace, ...patch(trace) } },
     })
+}
+
+function onTraceDown(event: PointerEvent) {
+    const start = editor.state.value.map.trace
+    if (event.button !== 0 || !start) return
+    const origin = toMap({ x: event.clientX, y: event.clientY })
+    trackDrag(event, (move) => {
+        const point = toMap({ x: move.clientX, y: move.clientY })
+        withTrace(() => ({
+            x: roundToCm(
+                snapPoint([start.x + point[0] - origin[0], 0], props.grid)[0],
+            ),
+            y: roundToCm(
+                snapPoint([0, start.y + point[1] - origin[1]], props.grid)[1],
+            ),
+        }))
+    })
+}
+
+function onTraceScaleDown(event: PointerEvent) {
+    if (event.button !== 0) return
+    trackDrag(event, (move) => {
+        const point = toMap({ x: move.clientX, y: move.clientY })
+        withTrace((trace) => ({
+            width: roundToCm(Math.max(0.5, point[0] - trace.x)),
+        }))
+    })
+}
+
+function onMoveDown(event: PointerEvent) {
+    const selection = editor.selection.value
+    if (selection?.kind === 'shape') {
+        const index = selection.index
+        dragSelection(event, (start, dx, dy) =>
+            writePath(
+                start,
+                { type: 'shape', index },
+                translatePoints(
+                    start.map.shapes[index]!.points,
+                    dx,
+                    dy,
+                    start.map,
+                ),
+            ),
+        )
+    } else if (selection?.kind === 'wall') {
+        const key = selection.key
+        dragSelection(event, (start, dx, dy) => {
+            const original = start.walls.find((item) => item.key === key)!
+            const all = [
+                ...original.outline,
+                ...original.edge,
+                ...(original.label ? [original.label] : []),
+            ]
+            const moved = translatePoints(all, dx, dy, start.map)
+            const [safeDx, safeDy] = all.length
+                ? [moved[0]![0] - all[0]![0], moved[0]![1] - all[0]![1]]
+                : [0, 0]
+            const shift = (points: MapPoint[]) =>
+                translatePoints(points, safeDx, safeDy, start.map)
+            return updateWall(start, key, {
+                outline: shift(original.outline),
+                edge: shift(original.edge),
+                label: original.label ? shift([original.label])[0]! : null,
+            })
+        })
+    }
+}
+
+const moveHandle = computed<MapPoint | null>(() => {
+    if (editor.tool.value !== 'select') return null
+    const selection = editor.selection.value
+    if (selection?.kind === 'shape') {
+        const points = editor.state.value.map.shapes[selection.index]?.points
+        return points && points.length >= 3 ? labelPoint(points) : null
+    }
+    const wall = editor.selectedWall.value
+    if (!wall || wall.outline.length < 3) return null
+    const [x, y] = labelFor(wall)
+    return [x, y + 28 / pixelsPerUnit.value]
+})
+
+function moveArrows([x, y]: MapPoint, size: number) {
+    const head = size * 0.35
+    return [
+        `M ${x - size} ${y} L ${x + size} ${y}`,
+        `M ${x} ${y - size} L ${x} ${y + size}`,
+        `M ${x - size + head} ${y - head} L ${x - size} ${y} L ${x - size + head} ${y + head}`,
+        `M ${x + size - head} ${y - head} L ${x + size} ${y} L ${x + size - head} ${y + head}`,
+        `M ${x - head} ${y - size + head} L ${x} ${y - size} L ${x + head} ${y - size + head}`,
+        `M ${x - head} ${y + size - head} L ${x} ${y + size} L ${x + head} ${y + size - head}`,
+    ].join(' ')
 }
 
 function onLabelDown(wall: EditorWall, event: PointerEvent) {
@@ -502,11 +776,15 @@ function closesPolygon(point: MapPoint) {
     const [first] = editor.draft.value
     if (!first || editor.draft.value.length < 3) return false
     const gap = Math.hypot(point[0] - first[0], point[1] - first[1])
-    return gap <= snapPx.value / pixelsPerUnit.value
+    return (
+        gap <=
+        Math.max(snapPx.value, HIT_PX[pointerKind.value]) / pixelsPerUnit.value
+    )
 }
 
 function onCanvasClick(event: MouseEvent) {
     const tool = editor.tool.value
+    if (tool === 'trace') return
     if (tool === 'select') {
         if ((event.target as Element).hasAttribute('data-background')) {
             editor.selection.value = null
@@ -517,6 +795,12 @@ function onCanvasClick(event: MouseEvent) {
     const point = snapped(event)
     if (tool === 'label') {
         const wall = editor.selectedWall.value
+        if (
+            wall &&
+            wall.outline.length >= 3 &&
+            !pointInPolygon(point, wall.outline)
+        )
+            return
         if (wall)
             editor.commit(
                 updateWall(editor.state.value, wall.key, { label: point }),
@@ -524,55 +808,17 @@ function onCanvasClick(event: MouseEvent) {
         editor.selectTool('select')
         return
     }
-    if (tool !== 'edge' && closesPolygon(point)) {
-        finishDraft()
+    const open =
+        tool === 'edge' ||
+        (tool === 'shape' && isOpenShape(editor.shapeKind.value))
+    if (!open && closesPolygon(point)) {
+        editor.finishDraft()
         return
     }
     editor.draft.value = [...editor.draft.value, point]
 }
 
-function finishDraft() {
-    const tool = editor.tool.value
-    if (!isDrawing.value) return
-    const points = withoutRepeats(editor.draft.value)
-    const state = editor.state.value
-    const wall = editor.selectedWall.value
-    const minPoints = tool === 'edge' ? 2 : 3
-    if (points.length < minPoints) return
-
-    if (tool === 'shape') {
-        const next = addShape(state, editor.shapeKind.value, points)
-        editor.commit(next)
-        editor.selection.value = {
-            kind: 'shape',
-            index: next.map.shapes.length - 1,
-        }
-        editor.selectTool('select')
-    } else if (wall && tool === 'outline') {
-        editor.commit(updateWall(state, wall.key, { outline: points }))
-        editor.selectTool(wall.edge.length ? 'select' : 'edge')
-    } else if (wall && tool === 'edge') {
-        editor.commit(updateWall(state, wall.key, { edge: points }))
-        editor.selectTool('select')
-    }
-}
-
-function removeSelectedVertex() {
-    const selected = editor.selectedVertex.value
-    if (!selected) return false
-    const state = editor.state.value
-    const points = readPath(state, selected.path)
-    const remaining =
-        points.length > minPointsFor(selected.path)
-            ? points.filter((_, index) => index !== selected.index)
-            : null
-    if (!remaining) return false
-    editor.commit(writePath(state, selected.path, remaining))
-    editor.selectedVertex.value = null
-    return true
-}
-
-defineExpose({ fitAll, zoomBy, finishDraft, removeSelectedVertex })
+defineExpose({ fitAll, zoomBy })
 </script>
 
 <style scoped>
@@ -600,13 +846,8 @@ defineExpose({ fitAll, zoomBy, finishDraft, removeSelectedVertex })
     stroke-width: 2;
 }
 
-.editor-wall--selected {
-    cursor: move;
-}
-
 .editor-wall:focus-visible .editor-wall-outline,
-.editor-vertex:focus-visible,
-.editor-midpoint:focus-visible {
+.editor-handle:focus-visible .editor-handle__mark {
     outline: none;
     stroke: var(--ui-secondary);
     stroke-width: 3;
@@ -632,26 +873,69 @@ defineExpose({ fitAll, zoomBy, finishDraft, removeSelectedVertex })
     text-decoration: underline dotted;
 }
 
+.editor-trace-frame {
+    fill: transparent;
+    stroke: var(--ui-info);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 4;
+    vector-effect: non-scaling-stroke;
+    cursor: move;
+}
+
+.editor-hit {
+    fill: transparent;
+}
+
+.editor-handle {
+    outline: none;
+}
+
 .editor-vertex {
+    cursor: grab;
+}
+
+.editor-vertex .editor-handle__mark {
     fill: var(--ui-bg);
     stroke: var(--ui-primary);
     stroke-width: 2;
     vector-effect: non-scaling-stroke;
-    cursor: grab;
 }
 
-.editor-vertex--edge {
+.editor-vertex--edge .editor-handle__mark {
     fill: var(--ui-primary);
 }
 
-.editor-vertex--selected {
+.editor-vertex--selected .editor-handle__mark {
     fill: var(--ui-error);
     stroke: var(--ui-error);
 }
 
 .editor-midpoint {
-    fill: color-mix(in oklab, var(--ui-primary) 50%, transparent);
     cursor: copy;
+}
+
+.editor-midpoint .editor-handle__mark {
+    fill: color-mix(in oklab, var(--ui-primary) 50%, transparent);
+}
+
+.editor-move {
+    cursor: move;
+}
+
+.editor-move__disc {
+    fill: var(--ui-primary);
+    stroke: var(--ui-bg);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+}
+
+.editor-move__arrows {
+    fill: none;
+    stroke: var(--ui-bg);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
 }
 
 .editor-draft-line {

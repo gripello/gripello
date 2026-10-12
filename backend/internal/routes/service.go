@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"slices"
 	"strconv"
@@ -628,7 +629,7 @@ func (m *module) removeWall(ctx context.Context, tx pgx.Tx, wall Wall) error {
 		return err
 	}
 	if active > 0 {
-		return httpx.NewError(400, "Wall still has routes.")
+		return httpx.NewError(400, "Wall still has routes.").Field("routes", "validation_wall_has_routes", "Wall still has routes.")
 	}
 	if err := deleteRow(ctx, tx, "walls", wall.ID); err != nil {
 		return err
@@ -702,6 +703,23 @@ type floorPlanResult struct {
 	Walls    []Wall   `json:"walls"`
 }
 
+// atIndex re-keys a validation error as walls.{i}.{field} so the editor can mark the wall that failed.
+func atIndex(list string, index int, err error) error {
+	var failure *httpx.Error
+	if !errors.As(err, &failure) {
+		return err
+	}
+	keyed := httpx.NewError(failure.Status, failure.Message)
+	prefix := fmt.Sprintf("%s.%d", list, index)
+	if len(failure.Data) == 0 {
+		keyed.Field(prefix, "validation_invalid_value", failure.Message)
+	}
+	for field, fieldError := range failure.Data {
+		keyed.Data[prefix+"."+field] = fieldError
+	}
+	return keyed
+}
+
 // saveFloorPlan replaces the map editor's batch: map, removed walls, then created/updated walls in request order.
 func (m *module) saveFloorPlan(ctx context.Context, id string, plan floorPlan) (floorPlanResult, error) {
 	original, err := m.editableLocation(ctx, id)
@@ -717,29 +735,46 @@ func (m *module) saveFloorPlan(ctx context.Context, id string, plan floorPlan) (
 		if result.Location, err = m.saveLocation(ctx, tx, original, in); err != nil {
 			return err
 		}
-		for _, wallID := range plan.Removed {
+		for index, wallID := range plan.Removed {
 			wall, err := findWall(ctx, tx, wallID)
 			if err != nil || wall.Location != id {
 				return httpx.ErrNotFound
 			}
 			if err := m.removeWall(ctx, tx, wall); err != nil {
+				return atIndex("removed", index, err)
+			}
+		}
+		existing := map[string]Wall{}
+		renamed := []string{}
+		for _, in := range plan.Walls {
+			if in.ID == "" {
+				continue
+			}
+			wall, err := findWall(ctx, tx, in.ID)
+			if err != nil || wall.Location != id {
+				return httpx.ErrNotFound
+			}
+			existing[in.ID] = wall
+			if !strings.EqualFold(strings.TrimSpace(in.Name), wall.Name) {
+				renamed = append(renamed, wall.ID)
+			}
+		}
+		// Renamed walls step aside first, so a batch may swap two names without hitting the unique index.
+		if len(renamed) > 0 {
+			if _, err := tx.Exec(ctx, `UPDATE walls SET name = '~' || id WHERE id = ANY($1)`, renamed); err != nil {
 				return err
 			}
 		}
-		for _, in := range plan.Walls {
+		for index, in := range plan.Walls {
 			in.Location = id
 			var wall Wall
 			if in.ID == "" {
 				wall, err = m.insertWall(ctx, tx, original.Gym, in)
 			} else {
-				var existing Wall
-				if existing, err = findWall(ctx, tx, in.ID); err != nil || existing.Location != id {
-					return httpx.ErrNotFound
-				}
-				wall, err = m.saveWall(ctx, tx, existing, in)
+				wall, err = m.saveWall(ctx, tx, existing[in.ID], in)
 			}
 			if err != nil {
-				return err
+				return atIndex("walls", index, err)
 			}
 			result.Walls = append(result.Walls, wall)
 		}

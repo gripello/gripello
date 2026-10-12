@@ -286,6 +286,13 @@ export function useSvgPanZoom(options: PanZoomOptions) {
         pointers.set(event.pointerId, current)
     }
 
+    // Hands a pointer that started on a draggable handle over to the gesture, so a second finger turns it into a pinch.
+    function adoptPointer(pointerId: number, point: ScreenPoint) {
+        pointers.set(pointerId, point)
+        samples.length = 0
+        dragged = true
+    }
+
     function zoomOnDoubleTap(event: PointerEvent) {
         if (!options.doubleClickZoom || event.pointerType === 'mouse') return
         const tap = {
@@ -440,6 +447,7 @@ export function useSvgPanZoom(options: PanZoomOptions) {
         size,
         pixelsPerUnit,
         isPanning,
+        adoptPointer,
         toMap,
         zoomBy,
         fitTo,
