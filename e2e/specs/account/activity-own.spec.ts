@@ -1,7 +1,7 @@
 import { test, expect } from '../../support/fixtures'
 import { apiOf, gotoSettled, gymPath } from '../../support/nav'
 import { createRoute, getMe, routeInput, updateMe } from '../../support/api'
-import { fetchAuditRows } from '../../support/audit'
+import { fetchAuditRows, waitForAuditRow } from '../../support/audit'
 
 test('a user sees their own entries and nobody else’s', async ({
     createUser,
@@ -17,8 +17,7 @@ test('a user sees their own entries and nobody else’s', async ({
 
     await updateMe(api, { firstname: `${testPrefix}-self` })
 
-    const rows = await fetchAuditRows(page, {}, 'own')
-    expect(rows.length).toBeGreaterThan(0)
+    const rows = await waitForAuditRow(page, {}, 'own')
     for (const row of rows) {
         expect(row.actor).toBe(myId)
     }
@@ -61,8 +60,7 @@ test('an admin sees entries from other actors too', async ({
         )
     ).id
 
-    const rows = await fetchAuditRows(page, { q: routeId })
-    expect(rows.length).toBeGreaterThan(0)
+    await waitForAuditRow(page, { q: routeId })
 
     const all = await fetchAuditRows(page, {})
     const actors = new Set(all.map((r) => r.actor))
