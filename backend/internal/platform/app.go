@@ -3,6 +3,7 @@ package platform
 import (
 	"context"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -68,11 +69,14 @@ func (a *App) Handle(pattern string, h http.Handler) {
 func (a *App) Worker(kind string, w jobs.Worker) { a.Workers[kind] = w }
 
 func (a *App) Handler() http.Handler {
-	var mux http.Handler = a.Mux
+	var mux http.Handler = httpx.Observe(func(ctx context.Context) string {
+		p, _ := auth.From(ctx)
+		return p.UserID
+	})(a.Mux)
 	if a.Metrics != nil {
 		mux = a.Metrics.Middleware(mux)
 	}
-	return httpx.Versioned(config.Version)(auth.Middleware(a.DB, a.Cfg.TokenSecret, a.Verified)(mux))
+	return httpx.WithRequestID(httpx.Versioned(config.Version)(auth.Middleware(a.DB, a.Cfg.TokenSecret, a.Verified)(mux)))
 }
 
 // Below docker's default 10 s stop timeout, so draining finishes before the SIGKILL.
@@ -80,7 +84,8 @@ var shutdownTimeout = 8 * time.Second
 
 // Serve returns once in-flight requests have finished (at most shutdownTimeout after ctx ends); open realtime streams are closed at once.
 func (a *App) Serve(ctx context.Context) error {
-	srv := &http.Server{Addr: a.Cfg.HTTPAddr, Handler: a.Handler(), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second}
+	srv := &http.Server{Addr: a.Cfg.HTTPAddr, Handler: a.Handler(), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second,
+		ErrorLog: slog.NewLogLogger(slog.Default().Handler(), slog.LevelWarn)}
 	if a.Realtime != nil {
 		srv.RegisterOnShutdown(a.Realtime.Close)
 	}

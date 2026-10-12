@@ -544,7 +544,8 @@
                 "content_hidden": "Je inhoud is verborgen: {reason}",
                 "beta_approved": "Je beta-video is goedgekeurd",
                 "beta_rejected": "Je beta-video is afgewezen: {reason}",
-                "wall_reset_planned": "{wall}: {count} routes worden op {date} weggehaald"
+                "wall_reset_planned": "{wall}: {count} routes worden op {date} weggehaald",
+                "platform_issue": "{level}: {summary} ({count}×)"
             }
         }
     },
@@ -1631,7 +1632,8 @@
                 "achievements": "Prestaties",
                 "platform_reports": "Inhoudsmeldingen uit alle hallen",
                 "content": "Moderatie van mijn inhoud",
-                "moderation": "Te beoordelen inhoud"
+                "moderation": "Te beoordelen inhoud",
+                "platform_issues": "Serverfouten en waarschuwingen"
             },
             "devices": "Apparaten",
             "thisDevice": "Dit apparaat",
@@ -2145,7 +2147,16 @@
                 "offline": "Offline",
                 "uptime": "actief sinds {time}",
                 "connections": "{n} liveverbinding | {n} liveverbindingen",
-                "lastSeen": "Offline · laatst gezien {time}"
+                "lastSeen": "Offline · laatst gezien {time}",
+                "heap": "heap {size}",
+                "goroutines": "{n} goroutine | {n} goroutines",
+                "dbPool": "DB {used}/{max}",
+                "strain": {
+                    "dbWaits": "{ms} ms gewacht op DB-verbindingen ({waits}×)",
+                    "dbFull": "DB-pool vol",
+                    "realtimeDropped": "{dropped} live-gebeurtenissen overgeslagen",
+                    "busLag": "gebeurtenissen {seconds} s achter"
+                }
             },
             "system": {
                 "title": "Systeem",
@@ -2156,7 +2167,11 @@
                 "lastBackup": "Laatste back-up",
                 "mail": "E-mail",
                 "mailOn": "Ingesteld",
-                "mailOff": "Niet ingesteld"
+                "mailOff": "Niet ingesteld",
+                "issues": "Fouten (24 u)",
+                "issuesCount": "{n} probleem | {n} problemen",
+                "jobsRetrying": "{n} opnieuw | {n} opnieuw",
+                "jobsOldest": "oudste wacht {minutes} min"
             },
             "platform": "Platform"
         },
@@ -2323,6 +2338,19 @@
         },
         "more": {
             "operations": "Beheer"
+        },
+        "issues": {
+            "title": "Problemen",
+            "empty": "Geen waarschuwingen of fouten",
+            "new": "Nieuw",
+            "count": "{n} keer | {n} keer",
+            "users": "{n} gebruiker | {n} gebruikers",
+            "firstSeen": "Voor het eerst {time}",
+            "ranges": {
+                "1h": "1 u",
+                "24h": "24 u",
+                "7d": "7 dagen"
+            }
         }
     },
     "mails": {

@@ -570,12 +570,38 @@ const systemItems = computed(() => {
             value: `${formatBytes(system.database_bytes, locale.value)} · ${t('platform.overview.system.connections', system.database_connections)}`,
         },
         {
+            key: 'issues',
+            label: t('platform.overview.system.issues'),
+            value: t('platform.overview.system.issuesCount', system.issues_24h),
+            tone: system.issues_24h ? 'text-error' : undefined,
+            to: '/platform/logs',
+        },
+        {
             key: 'jobs',
             label: t('platform.overview.system.jobs'),
-            value: t('platform.overview.system.jobsState', {
-                waiting: system.jobs_waiting,
-                running: system.jobs_running,
-            }),
+            value: [
+                t('platform.overview.system.jobsState', {
+                    waiting: system.jobs_waiting,
+                    running: system.jobs_running,
+                }),
+                system.jobs_retrying
+                    ? t(
+                          'platform.overview.system.jobsRetrying',
+                          system.jobs_retrying,
+                      )
+                    : '',
+                system.jobs_oldest_wait_s >= 60
+                    ? t('platform.overview.system.jobsOldest', {
+                          minutes: Math.round(system.jobs_oldest_wait_s / 60),
+                      })
+                    : '',
+            ]
+                .filter(Boolean)
+                .join(' · '),
+            tone:
+                system.jobs_oldest_wait_s >= 300 || system.jobs_retrying
+                    ? 'text-warning'
+                    : undefined,
         },
         {
             key: 'backup',

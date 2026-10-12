@@ -37,6 +37,10 @@ type Config struct {
 	SenderName        string
 	VAPIDPublicKey    string
 	VAPIDPrivateKey   string
+	DBMaxConns        int
+	SlowRequest       time.Duration
+	SlowQuery         time.Duration
+	DebugAddr         string
 }
 
 func Load() (Config, error) {
@@ -62,6 +66,10 @@ func Load() (Config, error) {
 		SenderName:        env("SENDER_NAME", "Gripello"),
 		VAPIDPublicKey:    env("VAPID_PUBLIC_KEY", ""),
 		VAPIDPrivateKey:   env("VAPID_PRIVATE_KEY", ""),
+		DBMaxConns:        number("DB_MAX_CONNS", 20),
+		SlowRequest:       time.Duration(number("SLOW_REQUEST_MS", 2000)) * time.Millisecond,
+		SlowQuery:         time.Duration(number("SLOW_QUERY_MS", 500)) * time.Millisecond,
+		DebugAddr:         env("DEBUG_ADDR", ""),
 	}
 	// Backups default to a folder beside the storage; BACKUP_DIR=off disables them.
 	c.BackupDir = env("BACKUP_DIR", filepath.Join(filepath.Dir(c.BlobDir), "backups"))
@@ -89,9 +97,13 @@ func env(key, fallback string) string {
 }
 
 func seconds(key string, fallback int) time.Duration {
+	return time.Duration(number(key, fallback)) * time.Second
+}
+
+func number(key string, fallback int) int {
 	n, err := strconv.Atoi(os.Getenv(key))
-	if err != nil {
-		n = fallback
+	if err != nil || n < 0 {
+		return fallback
 	}
-	return time.Duration(n) * time.Second
+	return n
 }

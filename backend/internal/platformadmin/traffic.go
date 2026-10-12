@@ -239,13 +239,18 @@ func (m *module) system(w http.ResponseWriter, r *http.Request) error {
 
 func (m *module) systemState(ctx context.Context) (map[string]any, error) {
 	var dbSize int64
-	var connections, jobsWaiting, jobsRunning int
+	var connections, jobsWaiting, jobsRunning, jobsRetrying, issues int
+	var jobsOldestWait float64
 	var lastBackup *time.Time
 	var backupError string
 	err := m.app.DB.QueryRow(ctx, `SELECT pg_database_size(current_database()),
 		(SELECT count(*) FROM pg_stat_activity WHERE datname = current_database()),
 		(SELECT count(*) FILTER (WHERE locked_until IS NULL OR locked_until < now()) FROM jobs),
-		(SELECT count(*) FILTER (WHERE locked_until >= now()) FROM jobs)`).Scan(&dbSize, &connections, &jobsWaiting, &jobsRunning)
+		(SELECT count(*) FILTER (WHERE locked_until >= now()) FROM jobs),
+		(SELECT count(*) FILTER (WHERE attempts > 0 AND (locked_until IS NULL OR locked_until < now())) FROM jobs),
+		(SELECT COALESCE(EXTRACT(EPOCH FROM now() - min(run_after)), 0) FROM jobs WHERE run_after <= now() AND (locked_until IS NULL OR locked_until < now())),
+		(SELECT count(DISTINCT fingerprint) FROM server_logs WHERE fingerprint IS NOT NULL AND level = 'ERROR' AND time > now() - interval '24 hours')`).
+		Scan(&dbSize, &connections, &jobsWaiting, &jobsRunning, &jobsRetrying, &jobsOldestWait, &issues)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +263,7 @@ func (m *module) systemState(ctx context.Context) (map[string]any, error) {
 	}
 	state := map[string]any{
 		"version": config.Version, "replicas": servers, "database_bytes": dbSize, "database_connections": connections,
-		"jobs_waiting": jobsWaiting, "jobs_running": jobsRunning, "last_backup": lastBackup, "backup_error": backupError,
+		"jobs_waiting": jobsWaiting, "jobs_running": jobsRunning, "jobs_retrying": jobsRetrying, "jobs_oldest_wait_s": math.Round(jobsOldestWait), "issues_24h": issues, "last_backup": lastBackup, "backup_error": backupError,
 	}
 	if c, ok := m.app.Mail.(interface{ Configured() bool }); ok {
 		state["mail_configured"] = c.Configured()

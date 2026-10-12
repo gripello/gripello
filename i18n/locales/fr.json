@@ -544,7 +544,8 @@
                 "content_hidden": "Ton contenu a été masqué : {reason}",
                 "beta_approved": "Ta vidéo bêta a été approuvée",
                 "beta_rejected": "Ta vidéo bêta a été refusée : {reason}",
-                "wall_reset_planned": "{wall} : {count} voies démontées le {date}"
+                "wall_reset_planned": "{wall} : {count} voies démontées le {date}",
+                "platform_issue": "{level} : {summary} ({count}×)"
             }
         }
     },
@@ -1631,7 +1632,8 @@
                 "achievements": "Succès",
                 "platform_reports": "Signalements de toutes les salles",
                 "content": "Modération de mon contenu",
-                "moderation": "Contenu à examiner"
+                "moderation": "Contenu à examiner",
+                "platform_issues": "Erreurs et avertissements du serveur"
             },
             "devices": "Appareils",
             "thisDevice": "Cet appareil",
@@ -2145,7 +2147,16 @@
                 "offline": "Hors ligne",
                 "uptime": "actif depuis {time}",
                 "connections": "{n} connexion en direct | {n} connexions en direct",
-                "lastSeen": "Hors ligne · vu pour la dernière fois {time}"
+                "lastSeen": "Hors ligne · vu pour la dernière fois {time}",
+                "heap": "tas {size}",
+                "goroutines": "{n} goroutine | {n} goroutines",
+                "dbPool": "BD {used}/{max}",
+                "strain": {
+                    "dbWaits": "{ms} ms d’attente de connexions BD ({waits}×)",
+                    "dbFull": "Pool BD plein",
+                    "realtimeDropped": "{dropped} événements en direct ignorés",
+                    "busLag": "événements en retard de {seconds} s"
+                }
             },
             "system": {
                 "title": "Système",
@@ -2156,7 +2167,11 @@
                 "lastBackup": "Dernière sauvegarde",
                 "mail": "E-mail",
                 "mailOn": "Configuré",
-                "mailOff": "Non configuré"
+                "mailOff": "Non configuré",
+                "issues": "Erreurs (24 h)",
+                "issuesCount": "{n} problème | {n} problèmes",
+                "jobsRetrying": "{n} en nouvel essai | {n} en nouvel essai",
+                "jobsOldest": "le plus ancien attend {minutes} min"
             },
             "platform": "Plateforme"
         },
@@ -2323,6 +2338,19 @@
         },
         "more": {
             "operations": "Exploitation"
+        },
+        "issues": {
+            "title": "Problèmes",
+            "empty": "Aucun avertissement ni erreur",
+            "new": "Nouveau",
+            "count": "{n} fois | {n} fois",
+            "users": "{n} utilisateur | {n} utilisateurs",
+            "firstSeen": "Vu pour la première fois {time}",
+            "ranges": {
+                "1h": "1 h",
+                "24h": "24 h",
+                "7d": "7 jours"
+            }
         }
     },
     "mails": {

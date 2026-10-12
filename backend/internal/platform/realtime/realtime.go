@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gripello/internal/platform/auth"
@@ -54,6 +55,7 @@ type Hub struct {
 	cache     map[string]cachedUsers
 	closing   chan struct{}
 	closeOnce sync.Once
+	dropped   atomic.Int64
 }
 
 type cachedUsers struct {
@@ -71,6 +73,9 @@ func NewHub(bus *events.Bus, perms Permissions) *Hub {
 func (h *Hub) Close() {
 	h.closeOnce.Do(func() { close(h.closing) })
 }
+
+// Dropped counts events skipped for slow clients since start.
+func (h *Hub) Dropped() int64 { return h.dropped.Load() }
 
 func (h *Hub) Clients() int {
 	h.mu.RLock()
@@ -144,6 +149,7 @@ func (h *Hub) deliver(e events.Event) {
 		select {
 		case c.send <- e:
 		default: // slow client: drop; it catches up through Last-Event-ID on reconnect
+			h.dropped.Add(1)
 		}
 	}
 }

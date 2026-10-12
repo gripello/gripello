@@ -33,6 +33,7 @@
             :title="t('errors.loadFailed')"
         />
         <div v-else class="flex flex-col gap-4">
+            <PlatformIssueList />
             <div
                 class="grid grid-cols-2 gap-3 max-lg:hidden lg:grid-cols-4"
                 data-testid="platform-logs-counts"

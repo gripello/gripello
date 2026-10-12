@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/robfig/cron/v3"
 )
@@ -26,8 +27,11 @@ func (c *Cron) Add(name, spec string, fn func(ctx context.Context) error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
 		runLocked(ctx, c.pool, key, func(ctx context.Context) {
+			start := time.Now()
 			if err := fn(ctx); err != nil {
-				slog.Error("cron job failed", "job", name, "error", err)
+				slog.Error("cron job failed", "job", name, "ms", time.Since(start).Milliseconds(), "error", err)
+			} else {
+				slog.Debug("cron job done", "job", name, "ms", time.Since(start).Milliseconds())
 			}
 		})
 	})
@@ -40,11 +44,15 @@ func (c *Cron) Add(name, spec string, fn func(ctx context.Context) error) {
 func runLocked(ctx context.Context, pool *pgxpool.Pool, key int64, fn func(ctx context.Context)) {
 	conn, err := pool.Acquire(ctx)
 	if err != nil {
+		slog.Warn("cron: no connection for the lock", "error", err)
 		return
 	}
 	defer conn.Release()
 	var locked bool
 	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1)`, key).Scan(&locked); err != nil || !locked {
+		if err != nil {
+			slog.Warn("cron: taking the lock failed", "error", err)
+		}
 		return
 	}
 	defer func() {
@@ -82,6 +90,7 @@ type Job struct {
 	Key      string
 	Payload  []byte
 	RunAfter time.Time
+	Attempts int
 }
 
 type Worker func(ctx context.Context, job Job) error
@@ -112,12 +121,17 @@ func RunQueue(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker
 // lease is how long a claim holds without renewal; a running job renews it every lease/3, so only a dead replica's jobs are taken over.
 var lease = 5 * time.Minute
 
+const maxAttempts = 5
+
 func claim(ctx context.Context, pool *pgxpool.Pool) (Job, bool) {
 	var j Job
 	err := pool.QueryRow(ctx, `UPDATE jobs SET locked_until = now() + $1::interval, attempts = attempts + 1
 		WHERE id = (SELECT id FROM jobs WHERE run_after <= now() AND (locked_until IS NULL OR locked_until < now())
 		            ORDER BY run_after FOR UPDATE SKIP LOCKED LIMIT 1)
-		RETURNING id, kind, key, payload, run_after`, lease.String()).Scan(&j.ID, &j.Kind, &j.Key, &j.Payload, &j.RunAfter)
+		RETURNING id, kind, key, payload, run_after, attempts`, lease.String()).Scan(&j.ID, &j.Kind, &j.Key, &j.Payload, &j.RunAfter, &j.Attempts)
+	if err != nil && err != pgx.ErrNoRows && ctx.Err() == nil {
+		slog.Warn("jobs: claiming failed", "error", err)
+	}
 	return j, err == nil
 }
 
@@ -138,19 +152,33 @@ func run(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, job
 			case <-done:
 				return
 			case <-ticker.C:
-				pool.Exec(ctx, `UPDATE jobs SET locked_until = now() + $2::interval WHERE id = $1`, job.ID, lease.String())
+				if _, err := pool.Exec(ctx, `UPDATE jobs SET locked_until = now() + $2::interval WHERE id = $1`, job.ID, lease.String()); err != nil {
+					slog.Warn("jobs: renewing the lease failed, another replica may take the job over", "kind", job.Kind, "key", job.Key, "error", err)
+				}
 			}
 		}
 	}()
+	start := time.Now()
 	err := w(ctx, job)
+	took := time.Since(start)
 	close(done)
 	<-renewing
+	attrs := []any{"kind", job.Kind, "key", job.Key, "attempt", job.Attempts, "ms", took.Milliseconds(), "waited_ms", start.Sub(job.RunAfter).Milliseconds()}
 	if err != nil {
-		slog.Error("job failed", "kind", job.Kind, "key", job.Key, "error", err)
+		if job.Attempts >= maxAttempts {
+			slog.Error("job failed for good, dropped", append(attrs, "error", err)...)
+			pool.Exec(ctx, `DELETE FROM jobs WHERE id = $1`, job.ID)
+			return
+		}
+		slog.Warn("job failed, retrying in a minute", append(attrs, "error", err)...)
 		// ponytail: fixed 1 min retry, no backoff; attempts is there when one is needed
-		pool.Exec(ctx, `UPDATE jobs SET run_after = now() + interval '1 minute', locked_until = NULL WHERE id = $1 AND attempts < 5`, job.ID)
-		pool.Exec(ctx, `DELETE FROM jobs WHERE id = $1 AND attempts >= 5`, job.ID)
+		pool.Exec(ctx, `UPDATE jobs SET run_after = now() + interval '1 minute', locked_until = NULL WHERE id = $1`, job.ID)
 		return
+	}
+	if took > lease/2 {
+		slog.Warn("job slow, close to its lease", attrs...)
+	} else {
+		slog.Debug("job done", attrs...)
 	}
 	// An Enqueue that landed while the job ran moved run_after; keep that row so the job runs again.
 	pool.Exec(ctx, `DELETE FROM jobs WHERE id = $1 AND run_after = $2`, job.ID, job.RunAfter)

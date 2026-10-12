@@ -22,6 +22,9 @@ var migrations embed.FS
 
 const migrateLock = 7231001
 
+// MaxConns is the pool size per replica; replicas × MaxConns must stay below Postgres' max_connections.
+var MaxConns int32 = 20
+
 func MigrationsChecksum() string {
 	hash := sha256.New()
 	fs.WalkDir(migrations, ".", func(path string, entry fs.DirEntry, err error) error {
@@ -40,7 +43,8 @@ func Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg.MaxConns = 20
+	cfg.MaxConns = MaxConns
+	cfg.ConnConfig.Tracer = tracer{}
 	// timestamptz values are rendered in the session zone; clients compare ISO strings, so keep it UTC everywhere.
 	cfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
