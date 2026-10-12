@@ -457,6 +457,10 @@ function fetchRoutes(page: number, perPage: number): Promise<RoutePage> {
     }).then((list) => ({ items: list.items, totalItems: list.total ?? 0 }))
 }
 
+const nuxtApp = useNuxtApp()
+const loadedRoutePage = () =>
+    nuxtApp._asyncData[cacheKeys.routesList]?.data.value as RoutePage
+
 function fetchLoadedRoutes(): Promise<RoutePage> {
     const { page, itemsPerPage } = tableOptions
     return unlessQueryChanged(
@@ -465,7 +469,7 @@ function fetchLoadedRoutes(): Promise<RoutePage> {
             isWideLayout.value
                 ? fetchRoutes(page, itemsPerPage)
                 : fetchRoutes(1, page * itemsPerPage),
-        () => routePage.value,
+        loadedRoutePage,
     )
 }
 
