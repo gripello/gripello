@@ -88,6 +88,16 @@
                         {{ t('platform.users.sendPasswordReset') }}
                     </UButton>
                     <UButton
+                        color="neutral"
+                        variant="soft"
+                        icon="i-lucide-ban"
+                        :disabled="!!user.platform_admin"
+                        data-testid="platform-user-suspend-account"
+                        @click="emit('suspend', user.id)"
+                    >
+                        {{ t('platform.users.suspend') }}
+                    </UButton>
+                    <UButton
                         color="error"
                         variant="soft"
                         icon="i-lucide-trash-2"
@@ -240,7 +250,11 @@ const props = defineProps<{
     gyms: GymRecord[]
     roles: RoleRecord[]
 }>()
-const emit = defineEmits<{ changed: []; delete: [id: string] }>()
+const emit = defineEmits<{
+    changed: []
+    delete: [id: string]
+    suspend: [id: string]
+}>()
 
 const { t } = useI18n()
 

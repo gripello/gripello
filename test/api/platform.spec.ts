@@ -4,6 +4,7 @@ import {
     deletePlatformUser,
     getMailSettings,
     getPlatformStats,
+    getPlatformSystem,
     getPlatformTraffic,
     getPlatformUser,
     grantPlatformAdmin,
@@ -242,6 +243,12 @@ describe('platform stats and features', () => {
         api.respond({ range: '7d' })
         expect(await getPlatformTraffic('7d')).toEqual({ range: '7d' })
         expect(api.request().url).toBe('/api/platform/traffic?range=7d')
+    })
+
+    it('loads the system state', async () => {
+        api.respond({ version: 'dev' })
+        expect(await getPlatformSystem()).toEqual({ version: 'dev' })
+        expect(api.request().url).toBe('/api/platform/system')
     })
 
     it('lists the flag registry', async () => {

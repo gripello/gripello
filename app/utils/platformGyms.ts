@@ -22,3 +22,19 @@ export function platformTotals(gyms: PlatformGym[]) {
         routes: gyms.reduce((sum, gym) => sum + gym.routes, 0),
     }
 }
+
+export function filterPlatformGyms(
+    gyms: PlatformGym[],
+    query: string,
+    status: 'all' | 'active' | 'offline',
+) {
+    const needle = query.trim().toLowerCase()
+    return gyms.filter(
+        (gym) =>
+            (status === 'all' || !!gym.active === (status === 'active')) &&
+            (!needle ||
+                [gym.name, gym.slug].some((text) =>
+                    text?.toLowerCase().includes(needle),
+                )),
+    )
+}

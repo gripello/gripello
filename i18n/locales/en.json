@@ -846,7 +846,8 @@
         "staff": "Staff",
         "more": "More",
         "sections": "Sections",
-        "noStaffTools": "You have no staff tools in this gym"
+        "noStaffTools": "You have no staff tools in this gym",
+        "inbox": "Inbox"
     },
     "users": {
         "create": "Add user",
@@ -2023,7 +2024,8 @@
             "open": "Open gym",
             "inactive": "Inactive",
             "takeOffline": "Take offline",
-            "takeOfflineConfirm": "{name} disappears for climbers until you switch it back on."
+            "takeOfflineConfirm": "{name} disappears for climbers until you switch it back on.",
+            "search": "Name or URL"
         },
         "settings": {
             "title": "Platform settings",
@@ -2318,6 +2320,9 @@
             "off": "Off",
             "manualOnly": "Manual backups only",
             "freeSpace": "Free space"
+        },
+        "more": {
+            "operations": "Operations"
         }
     },
     "mails": {

@@ -4,6 +4,7 @@
 
         <PlatformSettingsStatus
             v-if="!error"
+            :class="{ 'max-lg:hidden': route.query.section }"
             :allow-registration="!!settings?.allow_registration"
             :audit-days="settings?.audit_retention_days ?? 90"
         />
@@ -29,6 +30,7 @@
             v-else
             v-slot="{ activeSection }"
             :sections="sections"
+            drill-down
             :has-changes="
                 activeSection === 'mail'
                     ? !!mailSettings?.hasChanges

@@ -5,6 +5,7 @@
                 <UButton
                     color="primary"
                     icon="i-lucide-plus"
+                    class="max-lg:fixed max-lg:right-4 max-lg:bottom-[calc(5rem+env(safe-area-inset-bottom))] max-lg:z-30 max-lg:h-12 max-lg:shadow-lg"
                     data-testid="platform-gym-create"
                     @click="openCreate"
                 >
@@ -30,125 +31,128 @@
             </template>
         </LayoutEmptyState>
 
-        <UTable
-            v-else-if="mdAndUp"
-            :data="gyms"
-            :columns="columns"
-            :get-row-id="(row: PlatformGym) => row.id"
-            :empty="t('table.no_data')"
-            class="rounded-lg bg-default ring ring-default"
-            :ui="{ tr: 'cursor-pointer' }"
-            data-testid="platform-gym-table"
-            @select="(_event, row) => navigateTo(detailPath(row.original))"
-        >
-            <template #venue-cell="{ row }">
-                <ULink
-                    :to="detailPath(row.original)"
-                    class="block max-w-80 min-w-0"
-                    :data-testid="`platform-gym-link-${row.original.slug}`"
-                >
-                    <PlatformGymIdentity :gym="row.original" />
-                </ULink>
-            </template>
-            <template #members-cell="{ row }">
-                <span class="tabular-nums">{{ row.original.members }}</span>
-            </template>
-            <template #routes-cell="{ row }">
-                <span class="tabular-nums">{{ row.original.routes }}</span>
-            </template>
-            <template #active-cell="{ row }">
-                <USwitch
-                    :model-value="!!row.original.active"
-                    :aria-label="t('platform.gyms.active')"
-                    :data-testid="`platform-gym-active-${row.original.slug}`"
-                    @update:model-value="
-                        (active) => requestActive(row.original, active)
-                    "
+        <template v-else>
+            <div class="mb-4 flex flex-wrap items-center gap-3">
+                <UInput
+                    v-model="search"
+                    icon="i-lucide-search"
+                    :placeholder="t('platform.gyms.search')"
+                    :aria-label="t('platform.gyms.search')"
+                    size="lg"
+                    class="min-w-48 flex-1 lg:max-w-sm"
+                    data-testid="platform-gym-search"
                 />
-            </template>
-            <template #created-cell="{ row }">
-                <span class="text-muted">
-                    {{
-                        formatDate(row.original.created, {
-                            locale,
-                            timeZone: 'UTC',
-                        })
-                    }}
-                </span>
-            </template>
-            <template #edit-cell="{ row }">
-                <div class="flex justify-end">
-                    <UButton
-                        v-if="row.original.active"
-                        :to="`/${row.original.slug}`"
-                        icon="i-lucide-external-link"
-                        variant="ghost"
-                        color="neutral"
-                        class="icon-btn"
-                        :aria-label="t('platform.gyms.open')"
-                        :data-testid="`platform-gym-open-${row.original.slug}`"
-                        @click.stop
-                    />
-                    <UButton
-                        :to="detailPath(row.original)"
-                        icon="i-lucide-pencil"
-                        variant="ghost"
-                        color="neutral"
-                        class="icon-btn"
-                        :aria-label="t('actions.edit')"
-                        :data-testid="`platform-gym-edit-${row.original.slug}`"
-                        @click.stop
-                    />
-                </div>
-            </template>
-        </UTable>
+                <SegmentedControl
+                    v-model="status"
+                    :items="statusItems"
+                    size="sm"
+                    test-id="platform-gym-status"
+                />
+            </div>
 
-        <LayoutEmptyState
-            v-else-if="!gyms.length"
-            icon="i-lucide-building-2"
-            :title="t('table.no_data')"
-        />
-
-        <LayoutListGroup v-else data-testid="platform-gym-list">
-            <li
-                v-for="gym in gyms"
-                :key="gym.id"
-                class="flex items-center gap-2 px-4 py-3"
+            <UTable
+                v-if="mdAndUp"
+                :data="shownGyms"
+                :columns="columns"
+                :get-row-id="(row: PlatformGym) => row.id"
+                :empty="t('table.no_data')"
+                class="rounded-lg bg-default ring ring-default"
+                :ui="{ tr: 'cursor-pointer' }"
+                data-testid="platform-gym-table"
+                @select="(_event, row) => navigateTo(detailPath(row.original))"
             >
-                <ULink
+                <template #venue-cell="{ row }">
+                    <ULink
+                        :to="detailPath(row.original)"
+                        class="block max-w-80 min-w-0"
+                        :data-testid="`platform-gym-link-${row.original.slug}`"
+                    >
+                        <PlatformGymIdentity :gym="row.original" />
+                    </ULink>
+                </template>
+                <template #members-cell="{ row }">
+                    <span class="tabular-nums">{{ row.original.members }}</span>
+                </template>
+                <template #routes-cell="{ row }">
+                    <span class="tabular-nums">{{ row.original.routes }}</span>
+                </template>
+                <template #active-cell="{ row }">
+                    <USwitch
+                        :model-value="!!row.original.active"
+                        :aria-label="t('platform.gyms.active')"
+                        :data-testid="`platform-gym-active-${row.original.slug}`"
+                        @update:model-value="
+                            (active) => requestActive(row.original, active)
+                        "
+                    />
+                </template>
+                <template #created-cell="{ row }">
+                    <span class="text-muted">
+                        {{
+                            formatDate(row.original.created, {
+                                locale,
+                                timeZone: 'UTC',
+                            })
+                        }}
+                    </span>
+                </template>
+                <template #edit-cell="{ row }">
+                    <div class="flex justify-end">
+                        <UButton
+                            v-if="row.original.active"
+                            :to="`/${row.original.slug}`"
+                            icon="i-lucide-external-link"
+                            variant="ghost"
+                            color="neutral"
+                            class="icon-btn"
+                            :aria-label="t('platform.gyms.open')"
+                            :data-testid="`platform-gym-open-${row.original.slug}`"
+                            @click.stop
+                        />
+                        <UButton
+                            :to="detailPath(row.original)"
+                            icon="i-lucide-pencil"
+                            variant="ghost"
+                            color="neutral"
+                            class="icon-btn"
+                            :aria-label="t('actions.edit')"
+                            :data-testid="`platform-gym-edit-${row.original.slug}`"
+                            @click.stop
+                        />
+                    </div>
+                </template>
+            </UTable>
+
+            <LayoutEmptyState
+                v-else-if="!shownGyms.length"
+                icon="i-lucide-building-2"
+                :title="t('table.no_data')"
+            />
+
+            <LayoutListGroup v-else data-testid="platform-gym-list">
+                <LayoutListRow
+                    v-for="gym in shownGyms"
+                    :key="gym.id"
                     :to="detailPath(gym)"
-                    class="min-w-0 flex-1"
                     :data-testid="`platform-gym-link-${gym.slug}`"
                 >
-                    <PlatformGymIdentity :gym="gym" />
-                </ULink>
-                <USwitch
-                    :model-value="!!gym.active"
-                    :aria-label="t('platform.gyms.active')"
-                    :data-testid="`platform-gym-active-${gym.slug}`"
-                    @update:model-value="(active) => requestActive(gym, active)"
-                />
-                <UButton
-                    v-if="gym.active"
-                    :to="`/${gym.slug}`"
-                    icon="i-lucide-external-link"
-                    variant="ghost"
-                    color="neutral"
-                    class="icon-btn"
-                    :aria-label="t('platform.gyms.open')"
-                    :data-testid="`platform-gym-open-${gym.slug}`"
-                />
-                <UButton
-                    :to="detailPath(gym)"
-                    icon="i-lucide-pencil"
-                    variant="ghost"
-                    color="neutral"
-                    class="icon-btn"
-                    :aria-label="t('actions.edit')"
-                    :data-testid="`platform-gym-edit-${gym.slug}`"
-                />
-            </li>
-        </LayoutListGroup>
+                    <PlatformGymIdentity :gym="gym" class="flex-1" />
+                    <UBadge
+                        v-if="openCases(gym.id)"
+                        color="error"
+                        variant="soft"
+                        size="sm"
+                        class="shrink-0"
+                    >
+                        {{ t('moderation.openCases', openCases(gym.id)) }}
+                    </UBadge>
+                    <UIcon
+                        name="i-lucide-chevron-right"
+                        class="size-5 shrink-0 text-dimmed"
+                    />
+                </LayoutListRow>
+            </LayoutListGroup>
+        </template>
 
         <PlatformRetiredSlugs class="mt-6" />
 
@@ -247,7 +251,7 @@ import type { Form, TableColumn } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { isValidGymSlug, slugifyGymName } from '#shared/utils/gymSlug'
 import { formatDate } from '#shared/utils/formatting'
-import type { PlatformGym } from '~/utils/platformGyms'
+import { filterPlatformGyms, type PlatformGym } from '~/utils/platformGyms'
 import { required, validEmail, validateRules } from '~/utils/validation'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
@@ -258,6 +262,31 @@ useHead({ title: () => t('platform.gyms.title') })
 
 const { data: gyms, error, refresh } = await usePlatformGyms()
 const { mdAndUp } = useDisplay()
+const { summary } = useModerationSummary()
+
+const search = ref('')
+const status = ref<'all' | 'active' | 'offline'>('all')
+const statusItems = computed(() => {
+    const active = gyms.value.filter((gym) => gym.active).length
+    return [
+        { value: 'all' as const, label: t('filter.all') },
+        {
+            value: 'active' as const,
+            label: `${t('platform.gyms.active')} · ${active}`,
+        },
+        {
+            value: 'offline' as const,
+            label: `${t('platform.gyms.inactive')} · ${gyms.value.length - active}`,
+        },
+    ]
+})
+const shownGyms = computed(() =>
+    filterPlatformGyms(gyms.value, search.value, status.value),
+)
+
+function openCases(gymId: string) {
+    return summary.value?.gyms?.find((entry) => entry.gym === gymId)?.open ?? 0
+}
 
 const detailPath = (gym: GymRecord) => `/platform/gyms/${gym.id}`
 

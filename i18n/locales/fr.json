@@ -846,7 +846,8 @@
         "staff": "Équipe",
         "more": "Plus",
         "sections": "Sections",
-        "noStaffTools": "Tu n’as pas d’outils équipe dans cette salle"
+        "noStaffTools": "Tu n’as pas d’outils équipe dans cette salle",
+        "inbox": "Réception"
     },
     "users": {
         "create": "Ajouter un utilisateur",
@@ -2023,7 +2024,8 @@
             "open": "Ouvrir la salle",
             "inactive": "Inactif",
             "takeOffline": "Mettre hors ligne",
-            "takeOfflineConfirm": "{name} disparaît pour les grimpeurs jusqu’à ce que tu la réactives."
+            "takeOfflineConfirm": "{name} disparaît pour les grimpeurs jusqu’à ce que tu la réactives.",
+            "search": "Nom ou URL"
         },
         "settings": {
             "title": "Paramètres de la plateforme",
@@ -2318,6 +2320,9 @@
             "off": "Désactivé",
             "manualOnly": "Sauvegardes manuelles uniquement",
             "freeSpace": "Espace libre"
+        },
+        "more": {
+            "operations": "Exploitation"
         }
     },
     "mails": {

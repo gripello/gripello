@@ -17,7 +17,7 @@
             />
         </template>
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[640px] text-sm whitespace-nowrap">
+            <table class="w-full text-sm whitespace-nowrap md:min-w-[640px]">
                 <thead>
                     <tr class="text-left text-xs text-muted">
                         <th class="px-4 py-2 font-medium">
@@ -26,11 +26,26 @@
                         <th class="px-2 py-2 text-right font-medium">
                             {{ t('platform.overview.traffic.requests') }}
                         </th>
-                        <th class="w-48 px-2 py-2 font-medium">
-                            {{ t('platform.overview.traffic.serverErrorRate') }}
+                        <th class="px-2 py-2 font-medium md:w-48">
+                            <span class="max-md:hidden">
+                                {{
+                                    t(
+                                        'platform.overview.traffic.serverErrorRate',
+                                    )
+                                }}
+                            </span>
+                            <span class="md:hidden">5xx</span>
                         </th>
-                        <th class="px-2 py-2 text-right font-medium">4xx</th>
-                        <th class="px-4 py-2 text-right font-medium">p95</th>
+                        <th
+                            class="px-2 py-2 text-right font-medium max-md:hidden"
+                        >
+                            4xx
+                        </th>
+                        <th
+                            class="px-4 py-2 text-right font-medium max-md:hidden"
+                        >
+                            p95
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-default">
@@ -39,7 +54,9 @@
                         :key="`${endpoint.method} ${endpoint.pattern}`"
                         :data-testid="`platform-endpoint-${endpoint.method}-${endpoint.pattern}`"
                     >
-                        <td class="px-4 py-2 font-mono text-xs">
+                        <td
+                            class="px-4 py-2 font-mono text-xs max-md:pr-2 max-md:whitespace-normal max-md:[overflow-wrap:anywhere]"
+                        >
                             <UBadge
                                 v-if="endpoint.method"
                                 :color="
@@ -69,7 +86,7 @@
                                     "
                                     :color="errorRateColor(errorRate(endpoint))"
                                     size="sm"
-                                    class="flex-1"
+                                    class="flex-1 max-md:hidden"
                                 />
                                 <span
                                     class="w-14 text-right tabular-nums"
@@ -88,13 +105,15 @@
                             </div>
                         </td>
                         <td
-                            class="px-2 py-2 text-right tabular-nums text-muted"
+                            class="px-2 py-2 text-right tabular-nums text-muted max-md:hidden"
                         >
                             {{
                                 formatPercent(clientErrorRate(endpoint), locale)
                             }}
                         </td>
-                        <td class="px-4 py-2 text-right tabular-nums">
+                        <td
+                            class="px-4 py-2 text-right tabular-nums max-md:hidden"
+                        >
                             {{
                                 endpoint.p95_ms
                                     ? formatMs(endpoint.p95_ms, locale)

@@ -846,7 +846,8 @@
         "staff": "Team",
         "more": "Meer",
         "sections": "Onderdelen",
-        "noStaffTools": "Je hebt geen teamtools in deze hal"
+        "noStaffTools": "Je hebt geen teamtools in deze hal",
+        "inbox": "Inbox"
     },
     "users": {
         "create": "Gebruiker toevoegen",
@@ -2023,7 +2024,8 @@
             "open": "Hal openen",
             "inactive": "Inactief",
             "takeOffline": "Offline halen",
-            "takeOfflineConfirm": "{name} verdwijnt voor klimmers tot je de hal weer inschakelt."
+            "takeOfflineConfirm": "{name} verdwijnt voor klimmers tot je de hal weer inschakelt.",
+            "search": "Naam of URL"
         },
         "settings": {
             "title": "Platforminstellingen",
@@ -2318,6 +2320,9 @@
             "off": "Uit",
             "manualOnly": "Alleen handmatige back-ups",
             "freeSpace": "Vrije ruimte"
+        },
+        "more": {
+            "operations": "Beheer"
         }
     },
     "mails": {

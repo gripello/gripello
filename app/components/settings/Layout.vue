@@ -1,6 +1,41 @@
 <template>
     <div :class="{ 'max-lg:pb-24': hasChanges }">
+        <template v-if="drillDown">
+            <LayoutListGroup
+                v-if="!sectionChosen"
+                class="mb-4 lg:hidden"
+                :aria-label="$t('settings.sections')"
+            >
+                <LayoutListRow
+                    v-for="section in sections"
+                    :key="section.id"
+                    :to="{ query: { section: section.id } }"
+                    :data-testid="`${testIdPrefix}-drill-${section.id}`"
+                >
+                    <UIcon :name="section.icon" class="size-5 text-muted" />
+                    <span class="flex-1 text-highlighted">
+                        {{ section.label }}
+                    </span>
+                    <UIcon
+                        name="i-lucide-chevron-right"
+                        class="size-5 text-dimmed"
+                    />
+                </LayoutListRow>
+            </LayoutListGroup>
+            <UButton
+                v-else
+                :to="{ query: {} }"
+                icon="i-lucide-arrow-left"
+                color="neutral"
+                variant="ghost"
+                class="mb-2 -ml-2 min-h-11 lg:hidden"
+                :data-testid="`${testIdPrefix}-drill-back`"
+            >
+                {{ activeLabel }}
+            </UButton>
+        </template>
         <LayoutTabs
+            v-else
             v-model="selectedSection"
             :items="sectionTabItems"
             :content="false"
@@ -38,7 +73,12 @@
                     @save="emit('save')"
                     @cancel="emit('cancel')"
                 />
-                <slot :active-section="activeSection" />
+                <div
+                    class="contents"
+                    :class="{ 'max-lg:hidden': drillDown && !sectionChosen }"
+                >
+                    <slot :active-section="activeSection" />
+                </div>
             </div>
         </div>
 
@@ -60,6 +100,7 @@ const props = defineProps<{
     hasChanges: boolean
     testIdPrefix: string
     saving?: boolean
+    drillDown?: boolean
 }>()
 const emit = defineEmits<{ save: []; cancel: [] }>()
 
@@ -69,6 +110,13 @@ const activeSection = computed(() =>
         route.query.section,
         props.sections.map((section) => section.id),
     ),
+)
+
+const sectionChosen = computed(() => !!route.query.section)
+const activeLabel = computed(
+    () =>
+        props.sections.find((section) => section.id === activeSection.value)
+            ?.label,
 )
 
 const selectedSection = computed({
