@@ -17,18 +17,20 @@ test('shows controls beside both checklists, without tabs', async ({
     await expect(page.getByTestId('inventory-missing-count')).toBeVisible()
     await expect(page.getByTestId('inventory-found-count')).toBeVisible()
 
-    const missing = (await page
-        .getByTestId('inventory-column-missing')
-        .boundingBox())!
-    const controls = (await page
-        .getByTestId('inventory-controls')
-        .boundingBox())!
-    const found = (await page
-        .getByTestId('inventory-column-found')
-        .boundingBox())!
+    await expect(async () => {
+        const missing = (await page
+            .getByTestId('inventory-column-missing')
+            .boundingBox())!
+        const controls = (await page
+            .getByTestId('inventory-controls')
+            .boundingBox())!
+        const found = (await page
+            .getByTestId('inventory-column-found')
+            .boundingBox())!
 
-    expect(controls.x).toBeGreaterThanOrEqual(missing.x + missing.width)
-    expect(found.x).toBeGreaterThanOrEqual(controls.x + controls.width)
+        expect(controls.x).toBeGreaterThanOrEqual(missing.x + missing.width)
+        expect(found.x).toBeGreaterThanOrEqual(controls.x + controls.width)
+    }).toPass()
 })
 
 for (const viewport of [
@@ -42,22 +44,26 @@ for (const viewport of [
         await gotoSettled(page, '/manage/inventory')
 
         await expect(page.getByTestId('inventory-tab-missing')).toHaveCount(0)
-        const controls = (await page
-            .getByTestId('inventory-controls')
-            .boundingBox())!
-        const missing = (await page
-            .getByTestId('inventory-column-missing')
-            .boundingBox())!
-        const found = (await page
-            .getByTestId('inventory-column-found')
-            .boundingBox())!
+        await expect(async () => {
+            const controls = (await page
+                .getByTestId('inventory-controls')
+                .boundingBox())!
+            const missing = (await page
+                .getByTestId('inventory-column-missing')
+                .boundingBox())!
+            const found = (await page
+                .getByTestId('inventory-column-found')
+                .boundingBox())!
 
-        expect(missing.y).toBeGreaterThanOrEqual(controls.y + controls.height)
-        expect(found.y).toBe(missing.y)
-        expect(found.x).toBeGreaterThanOrEqual(missing.x + missing.width)
-        expect(missing.width + found.width).toBeGreaterThan(
-            viewport.width * 0.8,
-        )
+            expect(missing.y).toBeGreaterThanOrEqual(
+                controls.y + controls.height,
+            )
+            expect(found.y).toBe(missing.y)
+            expect(found.x).toBeGreaterThanOrEqual(missing.x + missing.width)
+            expect(missing.width + found.width).toBeGreaterThan(
+                viewport.width * 0.8,
+            )
+        }).toPass()
     })
 }
 
