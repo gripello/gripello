@@ -39,6 +39,7 @@ export default defineNuxtConfig({
     },
     experimental: {
         viewTransition: true,
+        routeTypedFetch: false,
     },
     nitro: {
         compressPublicAssets: { gzip: true, brotli: true },
