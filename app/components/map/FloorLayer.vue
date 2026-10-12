@@ -1,51 +1,31 @@
 <template>
     <g class="floor-layer">
-        <defs>
-            <filter
-                v-for="(depth, name) in SHADOW_DEPTHS"
-                :id="`${uid}-${name}`"
-                :key="name"
-                x="-100%"
-                y="-100%"
-                width="300%"
-                height="300%"
-                primitiveUnits="userSpaceOnUse"
-            >
-                <feDropShadow
-                    class="floor-shadow"
-                    :dx="depth * 0.5"
-                    :dy="depth"
-                    :stdDeviation="depth * 0.6"
-                />
-            </filter>
-        </defs>
-        <path
-            v-for="(shape, index) in shapes"
-            :key="index"
-            :d="svgPath(shape.points, !isOpenShape(shape.kind))"
-            class="floor-shape"
-            :class="[
-                `floor-shape--${shape.kind}`,
-                shape.level ? `floor-shape--level-${shape.level}` : '',
-                { 'floor-shape--selected': index === selectedIndex },
-            ]"
-            data-testid="map-floor-shape"
-            :data-kind="shape.kind"
-            :filter="shadowOf(shape)"
-            :role="selectable ? 'button' : undefined"
-            :tabindex="selectable ? 0 : undefined"
-            :aria-pressed="selectable ? index === selectedIndex : undefined"
-            :aria-label="
-                selectable ? $t(`mapEditor.kinds.${shape.kind}`) : undefined
-            "
-            @click="emit('shapeClick', index, $event)"
-            @keydown.enter.prevent="
-                selectable && emit('shapeClick', index, $event)
-            "
-            @keydown.space.prevent="
-                selectable && emit('shapeClick', index, $event)
-            "
-        />
+        <template v-for="(shape, index) in shapes" :key="index">
+            <path
+                :d="svgPath(shape.points, !isOpenShape(shape.kind))"
+                class="floor-shape"
+                :class="[
+                    `floor-shape--${shape.kind}`,
+                    shape.level ? `floor-shape--level-${shape.level}` : '',
+                    { 'floor-shape--selected': index === selectedIndex },
+                ]"
+                data-testid="map-floor-shape"
+                :data-kind="shape.kind"
+                :role="selectable ? 'button' : undefined"
+                :tabindex="selectable ? 0 : undefined"
+                :aria-pressed="selectable ? index === selectedIndex : undefined"
+                :aria-label="
+                    selectable ? $t(`mapEditor.kinds.${shape.kind}`) : undefined
+                "
+                @click="emit('shapeClick', index, $event)"
+                @keydown.enter.prevent="
+                    selectable && emit('shapeClick', index, $event)
+                "
+                @keydown.space.prevent="
+                    selectable && emit('shapeClick', index, $event)
+                "
+            />
+        </template>
         <g
             v-for="marker in markers"
             :key="`marker-${marker.index}`"
@@ -88,18 +68,6 @@ const emit = defineEmits<{
 }>()
 
 type MarkerKind = 'path' | 'entrance'
-
-// Shadow offsets in metres, so they scale with the map like real height does.
-const SHADOW_DEPTHS = { mat: 0.05, low: 0.14, medium: 0.24, high: 0.36 }
-const LEVEL_SHADOWS = ['low', 'medium', 'high'] as const
-
-const uid = useId()
-
-function shadowOf(shape: MapShape) {
-    if (shape.kind === 'mat') return `url(#${uid}-mat)`
-    if (shape.kind !== 'structure') return undefined
-    return `url(#${uid}-${LEVEL_SHADOWS[(shape.level ?? 1) - 1] ?? 'low'})`
-}
 
 const MARKER_PX = 16
 const MARKER_MIN_SHAPE_PX = 40
@@ -176,15 +144,6 @@ const markers = computed(() => {
         color-mix(in oklab, var(--ui-text-highlighted) 4%, var(--ui-bg))
     );
     stroke: color-mix(in oklab, var(--ui-secondary) 35%, transparent);
-}
-
-.floor-shadow {
-    flood-color: #000;
-    flood-opacity: 0.22;
-}
-
-:global(.dark) .floor-shadow {
-    flood-opacity: 0.45;
 }
 
 .floor-marker__disc {
