@@ -160,6 +160,7 @@
 
 <script setup lang="ts">
 import { listRoutes, listWalls } from '~/api/routes'
+import { keepWhenOffline } from '~/utils/errors'
 import type { RouteListItem } from '~/types/models'
 import { gradeLabels } from '#shared/utils/grades'
 import {
@@ -204,12 +205,20 @@ const [
 ] = await Promise.all([
     useAsyncData(
         cacheKeys.overviewRoutes,
-        () => listRoutes(gymId.value, {}).then((list) => list.items),
+        (nuxtApp) =>
+            keepWhenOffline(nuxtApp, cacheKeys.overviewRoutes, () =>
+                listRoutes(gymId.value, {}).then((list) => list.items),
+            ),
         { default: () => [] },
     ),
-    useAsyncData(cacheKeys.overviewWalls, () => listWalls(gymId.value), {
-        default: () => [],
-    }),
+    useAsyncData(
+        cacheKeys.overviewWalls,
+        (nuxtApp) =>
+            keepWhenOffline(nuxtApp, cacheKeys.overviewWalls, () =>
+                listWalls(gymId.value),
+            ),
+        { default: () => [] },
+    ),
 ])
 
 const loadFailed = computed(() => !!routesError.value || !!wallsError.value)

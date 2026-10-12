@@ -1,4 +1,5 @@
 import type { FollowRecord } from '~/types/models'
+import { keepWhenOffline } from '~/utils/errors'
 import { followState } from '~/utils/friends'
 import {
     acceptFollow,
@@ -14,7 +15,10 @@ export function useFollows() {
     const myId = computed(() => authRecord.value?.id ?? '')
     const request = useAsyncData(
         cacheKeys.follows,
-        () => (myId.value ? listFollows() : Promise.resolve([])),
+        (nuxtApp) =>
+            keepWhenOffline(nuxtApp, cacheKeys.follows, () =>
+                myId.value ? listFollows() : Promise.resolve([]),
+            ),
         { ...serverDedupe, default: () => [], watch: [myId] },
     )
     const follows = request.data

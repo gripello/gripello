@@ -263,6 +263,7 @@
 
 <script setup lang="ts">
 import { listRoutes } from '~/api/routes'
+import { keepWhenOffline } from '~/utils/errors'
 import type { RouteListItem } from '~/types/models'
 import type { SheetSnap } from '~/components/map/Sheet.vue'
 import type { RouteTypeFilter } from '~/components/map/FilterChips.vue'
@@ -319,12 +320,18 @@ const {
     refresh: refreshRoutes,
 } = await useAsyncData(
     cacheKeys.mapRoutes,
-    () =>
-        locationId.value
-            ? listRoutes(gymId.value, { location: locationId.value }).then(
-                  (list) => list.items,
-              )
-            : Promise.resolve([]),
+    (nuxtApp) =>
+        keepWhenOffline(
+            nuxtApp,
+            cacheKeys.mapRoutes,
+            () =>
+                locationId.value
+                    ? listRoutes(gymId.value, {
+                          location: locationId.value,
+                      }).then((list) => list.items)
+                    : Promise.resolve([]),
+            (rows) => rows.every((row) => row.location === locationId.value),
+        ),
     { watch: [locationId], default: () => [] },
 )
 

@@ -270,7 +270,7 @@
 
 <script setup lang="ts">
 import { listRoutes } from '~/api/routes'
-import { isAbortError } from '~/utils/errors'
+import { isAbortError, keepWhenOffline } from '~/utils/errors'
 import type { TableColumn } from '@nuxt/ui'
 import type { RouteListItem, RouteScoreRecord } from '~/types/models'
 import {
@@ -475,7 +475,8 @@ function fetchLoadedRoutes(): Promise<RoutePage> {
 
 const { data: routePage } = await useAsyncData(
     cacheKeys.routesList,
-    fetchLoadedRoutes,
+    (nuxtApp) =>
+        keepWhenOffline(nuxtApp, cacheKeys.routesList, fetchLoadedRoutes),
     { default: () => ({ items: [] as RouteScoreRecord[], totalItems: 0 }) },
 )
 loading.value = false

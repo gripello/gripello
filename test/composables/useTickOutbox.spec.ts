@@ -5,7 +5,11 @@ describe('useTickOutbox', () => {
     it('asks the browser to keep storage once a tick waits offline', async () => {
         vi.stubGlobal('indexedDB', { open: () => ({}) })
         const persist = vi.fn().mockResolvedValue(true)
-        vi.stubGlobal('navigator', { ...navigator, storage: { persist } })
+        vi.stubGlobal('navigator', {
+            ...navigator,
+            onLine: false,
+            storage: { persist },
+        })
 
         const { queued } = await useTickOutbox().createTick({
             user: 'anna',

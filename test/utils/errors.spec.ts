@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { keepWhenOffline } from '~/utils/errors'
 
 const store = (value: unknown) => ({
@@ -33,5 +33,41 @@ describe('keepWhenOffline', () => {
                 id: 'new',
             })),
         ).resolves.toEqual({ id: 'new' })
+    })
+
+    it('drops loaded data that no longer fits the request', async () => {
+        await expect(
+            keepWhenOffline(
+                store([{ location: 'hall-a' }]),
+                'key',
+                () => Promise.reject(offline),
+                (rows) => rows.every((row) => row.location === 'hall-b'),
+            ),
+        ).rejects.toBe(offline)
+    })
+
+    it('treats a failure without a connection as offline', async () => {
+        const onLine = vi
+            .spyOn(navigator, 'onLine', 'get')
+            .mockReturnValue(false)
+        const swOffline = Object.assign(new Error('Offline'), { status: 503 })
+        await expect(
+            keepWhenOffline(store({ id: 'e1' }), 'key', () =>
+                Promise.reject(swOffline),
+            ),
+        ).resolves.toEqual({ id: 'e1' })
+        onLine.mockRestore()
+    })
+
+    it('does not treat server errors as offline where navigator has no onLine', async () => {
+        const onLine = vi
+            .spyOn(navigator, 'onLine', 'get')
+            .mockReturnValue(undefined as unknown as boolean)
+        await expect(
+            keepWhenOffline(store({ id: 'e1' }), 'key', () =>
+                Promise.reject(notFound),
+            ),
+        ).rejects.toBe(notFound)
+        onLine.mockRestore()
     })
 })

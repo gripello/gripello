@@ -105,6 +105,7 @@
 
 <script setup lang="ts">
 import { listEntries, updateEntry } from '~/api/competitions'
+import { keepWhenOffline } from '~/utils/errors'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type {
     CompetitionCategoryRecord,
@@ -134,7 +135,12 @@ const search = ref('')
 
 const { data: entries, refresh } = useAsyncData(
     () => `competition-entries:${props.competitionId}`,
-    () => listEntries(props.competitionId),
+    (nuxtApp) =>
+        keepWhenOffline(
+            nuxtApp,
+            `competition-entries:${props.competitionId}`,
+            () => listEntries(props.competitionId),
+        ),
     { deep: true },
 )
 

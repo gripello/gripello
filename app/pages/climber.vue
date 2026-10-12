@@ -224,6 +224,7 @@
 
 <script setup lang="ts">
 import { getClimber } from '~/api/social'
+import { keepWhenOffline } from '~/utils/errors'
 import { listClimberTicks, listOwnTicks } from '~/api/ticks'
 import type { RouteRecord } from '~/types/models'
 import {
@@ -252,7 +253,10 @@ const isSelf = climberId === myId
 
 const { data: profile, error: profileError } = await useAsyncData(
     `climber:${climberId}`,
-    () => getClimber(climberId),
+    (nuxtApp) =>
+        keepWhenOffline(nuxtApp, `climber:${climberId}`, () =>
+            getClimber(climberId),
+        ),
 )
 if (!profile.value && !profileError.value)
     throw createError({ statusCode: 404, fatal: true })
@@ -286,10 +290,12 @@ const {
     refresh: refreshTheirs,
 } = await useAsyncData(
     `climber-ticks:${climberId}`,
-    () =>
-        canSee.value
-            ? listClimberTicks<RoutedTick>(climberId)
-            : Promise.resolve([]),
+    (nuxtApp) =>
+        keepWhenOffline(nuxtApp, `climber-ticks:${climberId}`, () =>
+            canSee.value
+                ? listClimberTicks<RoutedTick>(climberId)
+                : Promise.resolve([]),
+        ),
     { default: () => [] },
 )
 const { data: myTicks, error: myTicksError } = await useAsyncData(

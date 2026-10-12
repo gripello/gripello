@@ -29,6 +29,20 @@ function createList() {
 }
 
 describe('useList', () => {
+    it('keeps the loaded rows quietly when a reload has no network', async () => {
+        getList
+            .mockResolvedValueOnce(pageOf(['a', 'b'], 2))
+            .mockRejectedValueOnce(
+                Object.assign(new Error('offline'), { status: 0 }),
+            )
+        const list = createList()
+        await list.refresh()
+        await list.reloadLoaded()
+        expect(list.ids.value).toEqual(['a', 'b'])
+        expect(list.error.value).toBeNull()
+        expect(notifyError).not.toHaveBeenCalled()
+    })
+
     it('loads the first page with the query options', async () => {
         getList.mockResolvedValue(pageOf(['a', 'b'], 3))
         const list = createList()

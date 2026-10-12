@@ -97,7 +97,9 @@ export function isOfflineError(error: unknown) {
         (error as { status?: number; isAbort?: boolean } | null) ?? {}
     if (isAbort) return false
     return (
-        (typeof navigator !== 'undefined' && !navigator.onLine) || status === 0
+        // Node has a navigator without onLine, which must not make every SSR error look offline
+        (typeof navigator !== 'undefined' && navigator.onLine === false) ||
+        status === 0
     )
 }
 

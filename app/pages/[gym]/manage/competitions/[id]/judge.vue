@@ -300,6 +300,7 @@ import {
     putScores,
     type ScoreInput,
 } from '~/api/competitions'
+import { keepWhenOffline } from '~/utils/errors'
 import { translatedColorName } from '~/utils/colorName'
 import {
     applyScoreAction,
@@ -359,7 +360,12 @@ const saving = reactive(new Set<string>())
 
 const { data: competition } = await useAsyncData(
     () => `judge-competition:${competitionId.value}`,
-    () => getCompetition(competitionId.value),
+    (nuxtApp) =>
+        keepWhenOffline(
+            nuxtApp,
+            `judge-competition:${competitionId.value}`,
+            () => getCompetition(competitionId.value),
+        ),
     { enabled: () => !!competitionId.value },
 )
 
@@ -368,22 +374,30 @@ if (competition.value && competition.value.gym !== useCurrentGymId().value)
 
 const { data: compRoutes, refresh: refreshRoutes } = useAsyncData(
     () => `judge-routes:${competitionId.value}`,
-    () => listCompetitionRoutes(competitionId.value, { voided: false }),
+    (nuxtApp) =>
+        keepWhenOffline(nuxtApp, `judge-routes:${competitionId.value}`, () =>
+            listCompetitionRoutes(competitionId.value, { voided: false }),
+        ),
     { default: () => [], enabled: () => !!competitionId.value },
 )
 
 const { data: entries, refresh: refreshEntries } = useAsyncData(
     () => `judge-entries:${competitionId.value}`,
-    () =>
-        listEntries(competitionId.value, {
-            status: ['registered', 'checked_in'],
-        }),
+    (nuxtApp) =>
+        keepWhenOffline(nuxtApp, `judge-entries:${competitionId.value}`, () =>
+            listEntries(competitionId.value, {
+                status: ['registered', 'checked_in'],
+            }),
+        ),
     { default: () => [], enabled: () => !!competitionId.value },
 )
 
 const { data: scores, refresh: refreshScores } = useAsyncData(
     () => `judge-scores:${competitionId.value}`,
-    () => listScores(competitionId.value),
+    (nuxtApp) =>
+        keepWhenOffline(nuxtApp, `judge-scores:${competitionId.value}`, () =>
+            listScores(competitionId.value),
+        ),
     { default: () => [], deep: true, enabled: () => !!competitionId.value },
 )
 
