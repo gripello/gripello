@@ -54,7 +54,7 @@ export default defineConfig({
         ignoreHTTPSErrors: true,
         serviceWorkers: 'block',
         actionTimeout: 15_000,
-        trace: record,
+        trace: process.env.CI ? 'retain-on-first-failure' : 'retain-on-failure',
         video: record,
         screenshot: 'only-on-failure',
     },

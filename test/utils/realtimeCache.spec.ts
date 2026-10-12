@@ -307,6 +307,35 @@ describe('unlessQueryChanged', () => {
             ),
         ).resolves.toBe('fresh')
     })
+
+    it('fetches again when a live patch landed while fetching', async () => {
+        let data = 'loaded'
+        const answers = ['before patch', 'after patch']
+        const fetch = vi.fn(async () => {
+            if (fetch.mock.calls.length === 1) data = 'patched'
+            return answers[fetch.mock.calls.length - 1]!
+        })
+        await expect(
+            unlessQueryChanged(
+                () => 'q',
+                fetch,
+                () => data,
+            ),
+        ).resolves.toBe('after patch')
+        expect(fetch).toHaveBeenCalledTimes(2)
+    })
+
+    it('gives up asking again after three answers', async () => {
+        let data = 0
+        const fetch = vi.fn(async () => ++data)
+        await expect(
+            unlessQueryChanged(
+                () => 'q',
+                fetch,
+                () => data,
+            ),
+        ).resolves.toBe(3)
+    })
 })
 
 describe('servedStaleFromSsrCache', () => {
