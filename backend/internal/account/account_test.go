@@ -87,7 +87,7 @@ func (f *fixture) member(userID, role, permission string) {
 func (f *fixture) token(userID string) string {
 	var tokenKey string
 	f.app.DB.QueryRow(context.Background(), `SELECT token_key FROM users WHERE id = $1`, userID).Scan(&tokenKey)
-	token, _ := f.app.Tokens.Sign(userID, tokenKey, "")
+	token := testapp.Token(f.t, f.app, userID, tokenKey)
 	return token
 }
 

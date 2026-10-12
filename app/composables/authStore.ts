@@ -1,4 +1,9 @@
-import { AUTH_COOKIE, SESSION_ONLY_AUTH_COOKIE } from '~/utils/clientStorage'
+import {
+    AUTH_COOKIE,
+    LEGACY_AUTH_COOKIE,
+    LEGACY_SESSION_ONLY_AUTH_COOKIE,
+    SESSION_ONLY_AUTH_COOKIE,
+} from '~/utils/clientStorage'
 import { tokenExpired, tokenPayload } from '~/utils/session'
 
 export type ApiRecord = { id: string; [key: string]: any }
@@ -6,7 +11,8 @@ export type AuthRecord = ApiRecord | null
 type AuthChange = (token: string, record: AuthRecord) => void
 
 const COOKIE_LIMIT = 4096
-const TRIMMED_RECORD_FIELDS = ['collectionId', 'collectionName', 'verified']
+const EXPIRED = '; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+const TRIMMED_RECORD_FIELDS = ['verified']
 
 export function readCookie(cookies: string, name: string) {
     for (const pair of cookies.split(';')) {
@@ -52,13 +58,19 @@ export class AuthStore {
 
     constructor(cookies: string, writesCookie = false) {
         this.writesCookie = writesCookie
+        const current = readCookie(cookies, AUTH_COOKIE)
+        const sessionOnlyCookie = current
+            ? SESSION_ONLY_AUTH_COOKIE
+            : LEGACY_SESSION_ONLY_AUTH_COOKIE
         this.persistent = !cookies
             .split('; ')
-            .includes(`${SESSION_ONLY_AUTH_COOKIE}=1`)
+            .includes(`${sessionOnlyCookie}=1`)
         let data: { token?: string; record?: AuthRecord; model?: AuthRecord } =
             {}
         try {
-            const parsed = JSON.parse(readCookie(cookies, AUTH_COOKIE))
+            const parsed = JSON.parse(
+                current || readCookie(cookies, LEGACY_AUTH_COOKIE),
+            )
             if (parsed && typeof parsed === 'object') data = parsed
         } catch {}
         this.save(data.token || '', data.record || data.model || null)
@@ -94,7 +106,13 @@ export class AuthStore {
             secure: location.protocol === 'https:',
             session,
         })
-        document.cookie = `${SESSION_ONLY_AUTH_COOKIE}=1; Path=/; SameSite=Lax${session ? '' : '; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT'}`
+        document.cookie = `${SESSION_ONLY_AUTH_COOKIE}=1; Path=/; SameSite=Lax${session ? '' : EXPIRED}`
+        for (const legacy of [
+            LEGACY_AUTH_COOKIE,
+            LEGACY_SESSION_ONLY_AUTH_COOKIE,
+        ])
+            if (readCookie(document.cookie, legacy))
+                document.cookie = `${legacy}=${EXPIRED}`
     }
 }
 

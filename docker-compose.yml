@@ -15,7 +15,7 @@ services:
             #NITRO_CLUSTER_WORKERS: 4
             # Per-IP rate limits in nginx; "off" disables them.
             #RATE_LIMITS: 'on'
-            # Mail (SMTP). Uncomment and fill in to enable. The old PB_ names still work.
+            # Mail (SMTP). Uncomment and fill in to enable.
             #SMTP_HOST: smtp.example.com
             #SMTP_PORT: 587
             #SMTP_USERNAME: apikey
@@ -58,20 +58,6 @@ services:
             interval: 5s
             timeout: 5s
             retries: 20
-
-    # One-shot move from PocketBase: stop gripello, then `docker compose --profile import run --rm import`.
-    import:
-        image: ghcr.io/gripello/gripello:rolling
-        profiles: [import]
-        entrypoint: ['/app/bin/gripello', 'import-pocketbase', '--pb-data', '/pb_data']
-        environment:
-            DATABASE_URL: postgres://gripello:${POSTGRES_PASSWORD:-change-me}@postgres:5432/gripello?sslmode=disable
-        depends_on:
-            postgres:
-                condition: service_healthy
-        volumes:
-            - ./pb_data:/pb_data
-            - ./storage:/data/storage
 
 volumes:
     postgres:

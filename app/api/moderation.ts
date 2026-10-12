@@ -8,7 +8,7 @@ import type {
 } from '../../types/models'
 import type { ModerationSummary } from '../utils/moderation'
 import { useApi } from './client'
-import type { PageQuery, PbReadOptions, RouteList } from './client'
+import type { PageQuery, RouteList } from './client'
 
 export type ReportInput = Pick<
     ReportRecord,
@@ -81,7 +81,6 @@ export function getModerationSummary(gym?: string) {
 
 export function listCases(
     query: CaseQuery = {},
-    _options: PbReadOptions = {},
 ): Promise<RouteList<ModerationItemRecord>> {
     return useApi()<RouteList<ModerationItemRecord>>('/moderation/cases', {
         query: {

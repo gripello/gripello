@@ -324,7 +324,7 @@ const {
     reloadLoaded,
     loadMore,
     prefetch,
-} = usePbList<ApiMember, Member>(
+} = useList<ApiMember, Member>(
     (page, limit) =>
         listMembers(gymId.value, {
             q: search.value.trim(),

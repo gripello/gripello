@@ -54,7 +54,7 @@ export async function authHeader(
     const token = await page.evaluate(() => {
         const raw = document.cookie
             .split('; ')
-            .find((c) => c.startsWith('pb_auth='))
+            .find((c) => c.startsWith('gripello_auth='))
         if (!raw) return ''
         try {
             return JSON.parse(

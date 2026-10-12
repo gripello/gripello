@@ -170,8 +170,13 @@ beforeEach(() => {
     delete (globalThis as Record<string, unknown>)._authStore
     globalThis.__AUTH_STORE__ = undefined
     if (typeof document !== 'undefined') {
-        document.cookie = 'pb_auth=; Path=/; Max-Age=0'
-        document.cookie = 'pb_auth_session=; Path=/; Max-Age=0'
+        for (const name of [
+            'gripello_auth',
+            'gripello_auth_session',
+            'pb_auth',
+            'pb_auth_session',
+        ])
+            document.cookie = `${name}=; Path=/; Max-Age=0`
     }
     globalThis.__NUXT_RUNTIME_CONFIG__ = undefined
     for (const key of Object.keys(useStateMocks)) {

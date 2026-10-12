@@ -6,7 +6,7 @@ import type {
 import type { FeatureFlag } from '../../shared/utils/featureFlags'
 import type { PlatformUser, PlatformUserFilter } from '../utils/platformUsers'
 import { toFormData, useApi } from './client'
-import type { PageQuery, PbReadOptions, RouteList } from './client'
+import type { PageQuery, RouteList } from './client'
 
 export interface PlatformUserQuery extends PageQuery {
     q?: string
@@ -59,7 +59,6 @@ function toPlatformUser({ memberships, ...user }: ApiPlatformUser) {
 
 export async function listPlatformUsers(
     query: PlatformUserQuery = {},
-    _options: PbReadOptions = {},
 ): Promise<RouteList<PlatformUser>> {
     const result = await useApi()<RouteList<ApiPlatformUser>>(
         '/platform/users',
@@ -75,10 +74,7 @@ export async function listPlatformUsers(
     return { ...result, items: result.items.map(toPlatformUser) }
 }
 
-export async function getPlatformUser(
-    id: string,
-    _options: PbReadOptions = {},
-) {
+export async function getPlatformUser(id: string) {
     return toPlatformUser(
         await useApi()<ApiPlatformUser>(`/platform/users/${id}`),
     )

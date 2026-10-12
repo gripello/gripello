@@ -378,14 +378,10 @@ const loadExistingRoutes = async () => {
     routesLoading.value = true
     routesError.value = false
     try {
-        const { items: routes } = await listRoutes<ExistingRoute>(
-            gymId.value,
-            { archived: 'all', include: ['location'] },
-            {
-                fields: 'id,name,type,color,grade,grade_system,grade_index,screw_date,created,expand.location.name',
-                requestKey: null,
-            },
-        )
+        const { items: routes } = await listRoutes<ExistingRoute>(gymId.value, {
+            archived: 'all',
+            include: ['location'],
+        })
         if (request === routesRequest) existingRoutes.value = routes
     } catch (error) {
         if (request !== routesRequest) return
@@ -547,11 +543,7 @@ const confirmImport = async () => {
                 location.id,
             ]),
         )
-        const walls = await listWalls(
-            gymId.value,
-            {},
-            { fields: 'id,name,location' },
-        )
+        const walls = await listWalls(gymId.value)
         const wallIdByKey = new Map(
             walls.map((wall) => [wallKey(wall.location, wall.name), wall.id]),
         )

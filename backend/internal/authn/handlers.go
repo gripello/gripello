@@ -167,16 +167,10 @@ func (m *module) refresh(w http.ResponseWriter, r *http.Request) error {
 	if err := checkAccess(user); err != nil {
 		return err
 	}
-	sessionID := p.SessionID
-	if sessionID == "" {
-		sessionID, err = insertSession(ctx, m.db, user.ID, "", r.UserAgent(), clientIP(r))
-	} else {
-		_, err = m.db.Exec(ctx, `UPDATE sessions SET last_seen = now(), ip = $2 WHERE id = $1`, sessionID, clientIP(r))
-	}
-	if err != nil {
+	if _, err := m.db.Exec(ctx, `UPDATE sessions SET last_seen = now(), ip = $2 WHERE id = $1`, p.SessionID, clientIP(r)); err != nil {
 		return err
 	}
-	return m.respondWithToken(w, r, user, sessionID)
+	return m.respondWithToken(w, r, user, p.SessionID)
 }
 
 func (m *module) logout(w http.ResponseWriter, r *http.Request) error {
@@ -184,11 +178,9 @@ func (m *module) logout(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if p.SessionID != "" {
-		err = pgx.BeginFunc(r.Context(), m.db, func(tx pgx.Tx) error {
-			return deleteSessions(r.Context(), tx, p.UserID, `"user" = $1 AND id = $2`, p.SessionID)
-		})
-	}
+	err = pgx.BeginFunc(r.Context(), m.db, func(tx pgx.Tx) error {
+		return deleteSessions(r.Context(), tx, p.UserID, `"user" = $1 AND id = $2`, p.SessionID)
+	})
 	if err != nil {
 		return err
 	}
@@ -521,7 +513,7 @@ func (m *module) confirmEmailChange(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
-// changePassword ends every session (like PocketBase's tokenKey refresh) and answers with a fresh login for this device.
+// changePassword rotates the tokenKey, ending every session, and answers with a fresh login for this device.
 func (m *module) changePassword(w http.ResponseWriter, r *http.Request) error {
 	p, err := auth.Require(r.Context())
 	if err != nil {
@@ -580,9 +572,6 @@ func (m *module) reauthenticate(w http.ResponseWriter, r *http.Request) error {
 	p, err := auth.Require(r.Context())
 	if err != nil {
 		return err
-	}
-	if p.SessionID == "" {
-		return httpx.NewError(http.StatusBadRequest, "Sign in again to confirm your password.")
 	}
 	if _, err := m.requirePassword(r); err != nil {
 		return err
@@ -866,11 +855,6 @@ func (m *module) signOutOtherSessions(w http.ResponseWriter, r *http.Request) er
 	err = pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
 		if err := rotateTokenKeyExcept(ctx, tx, p.UserID, sessionID); err != nil {
 			return err
-		}
-		if sessionID == "" {
-			if sessionID, err = insertSession(ctx, tx, p.UserID, "", r.UserAgent(), clientIP(r)); err != nil {
-				return err
-			}
 		}
 		return publishAuthEvent(ctx, tx, AuthEvent{Action: "sessions_revoked", User: p.UserID, IP: clientIP(r)})
 	})

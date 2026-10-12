@@ -1,7 +1,7 @@
 import type { BetaVideoRecord, RatingRecord } from '../../types/models'
 import type { Contribution } from '../utils/timeline'
 import { toFormData, useApi } from './client'
-import type { PageQuery, PbReadOptions, RouteList } from './client'
+import type { PageQuery, RouteList } from './client'
 
 export type RatingSort = 'newest' | 'oldest' | 'highest' | 'lowest'
 
@@ -56,7 +56,6 @@ export function listRouteRatings<T = RatingRecord>(
 export async function listGymRatings<T = RatingRecord>(
     gym: string,
     query: RatingQuery = {},
-    _options: PbReadOptions = {},
 ): Promise<RouteList<T>> {
     if (query.ids?.length === 0 || query.route?.length === 0)
         return { items: [], page: 1, limit: query.limit ?? 50 }
@@ -72,7 +71,7 @@ export async function listGymRatings<T = RatingRecord>(
     })
 }
 
-export function getRatingStats(gym: string, _requestKey?: string) {
+export function getRatingStats(gym: string) {
     return useApi()<RatingStats>(`/gyms/${gym}/ratings/stats`)
 }
 

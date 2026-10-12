@@ -99,10 +99,7 @@ func newFixture(t *testing.T) *fixture {
 	f.hall = f.exec(`INSERT INTO locations (id, gym, name) VALUES ($1, $2, 'Hall') RETURNING id`, ids.New(), f.gym)
 	for _, name := range []string{"climber", "setter", "admin"} {
 		id := f.exec(`INSERT INTO users (id, username, token_key) VALUES ($1, $2, $3) RETURNING id`, ids.New(), name, "key-"+name)
-		token, err := app.Tokens.Sign(id, "key-"+name, "")
-		if err != nil {
-			t.Fatal(err)
-		}
+		token := testapp.Token(t, app, id, "key-"+name)
 		f.users[name], f.tokens[name] = id, token
 	}
 	return f

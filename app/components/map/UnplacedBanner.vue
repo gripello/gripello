@@ -12,15 +12,8 @@ const { data: unplaced } = useAsyncData(
     cacheKeys.unplacedRoutes,
     async () => {
         const [walls, locations] = await Promise.all([
-            listWalls(
-                gymId.value,
-                {},
-                { fields: 'location', requestKey: 'unplacedWalls' },
-            ),
-            listLocations(gymId.value, {
-                fields: 'id,map',
-                requestKey: 'unplacedLocations',
-            }),
+            listWalls(gymId.value),
+            listLocations(gymId.value),
         ])
         const mapped = new Set(
             locations
@@ -36,11 +29,10 @@ const { data: unplaced } = useAsyncData(
         ]
         if (!locationIds.length) return null
         const wanted = new Set(locationIds)
-        const { items } = await listRoutes<RouteRecord>(
-            gymId.value,
-            { wall: 'none', sort: 'location' },
-            { fields: 'location', requestKey: 'unplacedRoutes' },
-        )
+        const { items } = await listRoutes<RouteRecord>(gymId.value, {
+            wall: 'none',
+            sort: 'location',
+        })
         const unplaced = items.filter((route) => wanted.has(route.location!))
         return unplaced.length
             ? { count: unplaced.length, location: unplaced[0]!.location }

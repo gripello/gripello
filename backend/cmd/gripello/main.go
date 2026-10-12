@@ -36,7 +36,6 @@ import (
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
-	"gripello/internal/platform/importer"
 	"gripello/internal/platform/jobs"
 	"gripello/internal/platform/locales"
 	"gripello/internal/platform/logbuf"
@@ -52,7 +51,7 @@ var logs = logbuf.New(os.Stderr)
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: gripello serve|migrate|import-pocketbase|admin")
+		fmt.Fprintln(os.Stderr, "usage: gripello serve|migrate|admin")
 		os.Exit(2)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -64,8 +63,6 @@ func main() {
 		err = serve(ctx, os.Args[2:])
 	case "migrate":
 		err = migrate(ctx)
-	case "import-pocketbase":
-		err = importPocketBase(ctx, os.Args[2:])
 	case "admin":
 		err = admin(ctx, os.Args[2:])
 	default:
@@ -263,28 +260,4 @@ func serve(ctx context.Context, args []string) error {
 	}
 	slog.Info("listening", "addr", cfg.HTTPAddr, "role", cfg.Role)
 	return app.Serve(ctx)
-}
-
-func importPocketBase(ctx context.Context, args []string) error {
-	fs := flag.NewFlagSet("import-pocketbase", flag.ExitOnError)
-	pbData := fs.String("pb-data", "../pocketbase/pb_data", "PocketBase data directory")
-	fs.Parse(args)
-	cfg, err := config.Load()
-	if err != nil {
-		return err
-	}
-	pool, err := db.Connect(ctx, cfg.DatabaseURL)
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-	if err := db.Migrate(ctx, pool); err != nil {
-		return err
-	}
-	report, err := importer.Run(ctx, *pbData, pool, cfg.BlobDir, cfg.TokenSecret)
-	for table, n := range report.Rows {
-		fmt.Printf("%-24s %d\n", table, n)
-	}
-	fmt.Printf("%-24s %d\n", "files", report.Files)
-	return err
 }

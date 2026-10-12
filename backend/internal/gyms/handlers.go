@@ -247,7 +247,7 @@ func (m *module) writeGym(ctx context.Context, actor, id, slug string, creating 
 	return gym, err
 }
 
-// readBody accepts JSON or multipart (file parts plus the other fields as JSON in `@jsonPayload`, like the PocketBase SDK sends).
+// readBody accepts JSON or multipart (file parts plus the other fields as JSON in `@jsonPayload`).
 func readBody(w http.ResponseWriter, r *http.Request) (map[string]json.RawMessage, map[string]*multipart.FileHeader, error) {
 	body := map[string]json.RawMessage{}
 	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {

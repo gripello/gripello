@@ -18,14 +18,13 @@ import (
 	"gripello/internal/platform/httpx"
 )
 
-// Claims keep PocketBase's names: the cookie store on the client reads `exp`, the server reads `id` and `sid`.
+// The cookie store on the client reads `exp`, the server reads `id` and `sid`.
 type Claims struct {
 	jwt.RegisteredClaims
-	ID           string `json:"id"`
-	Type         string `json:"type"`
-	CollectionID string `json:"collectionId"`
-	Refreshable  bool   `json:"refreshable"`
-	SessionID    string `json:"sid"`
+	ID          string `json:"id"`
+	Type        string `json:"type"`
+	Refreshable bool   `json:"refreshable"`
+	SessionID   string `json:"sid"`
 }
 
 type Principal struct {
@@ -40,13 +39,12 @@ type Issuer struct {
 	Duration time.Duration
 }
 
-// Sign matches PocketBase: HS256 with secret = user's tokenKey + collection secret, so imported sessions stay valid.
+// Sign uses HS256 with the user's tokenKey + the token secret, so rotating tokenKey revokes every token of the user.
 func (i Issuer) Sign(userID, tokenKey, sessionID string) (string, error) {
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(i.Duration))},
 		ID:               userID,
 		Type:             "auth",
-		CollectionID:     "_pb_users_auth_",
 		Refreshable:      true,
 		SessionID:        sessionID,
 	}
@@ -54,9 +52,6 @@ func (i Issuer) Sign(userID, tokenKey, sessionID string) (string, error) {
 }
 
 var ErrInvalidToken = errors.New("invalid token")
-
-// Imported PocketBase tokens carry no sid and can't be revoked by logout; refresh gives them one, after this date they are refused.
-var legacyTokensUntil = time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)
 
 type userRow struct {
 	TokenKey      string
@@ -73,10 +68,7 @@ func Verify(ctx context.Context, pool *pgxpool.Pool, secret, token string) (Prin
 func verify(ctx context.Context, pool *pgxpool.Pool, secret, token string) (Principal, time.Time, error) {
 	var claims Claims
 	parser := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
-	if _, _, err := parser.ParseUnverified(token, &claims); err != nil || claims.ID == "" || claims.Type != "auth" {
-		return Principal{}, time.Time{}, ErrInvalidToken
-	}
-	if claims.SessionID == "" && !time.Now().Before(legacyTokensUntil) {
+	if _, _, err := parser.ParseUnverified(token, &claims); err != nil || claims.ID == "" || claims.Type != "auth" || claims.SessionID == "" {
 		return Principal{}, time.Time{}, ErrInvalidToken
 	}
 	var u userRow
@@ -91,12 +83,10 @@ func verify(ctx context.Context, pool *pgxpool.Pool, secret, token string) (Prin
 	if err != nil {
 		return Principal{}, time.Time{}, ErrInvalidToken
 	}
-	if claims.SessionID != "" {
-		var exists bool
-		pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM sessions WHERE id = $1 AND "user" = $2)`, claims.SessionID, claims.ID).Scan(&exists)
-		if !exists {
-			return Principal{}, time.Time{}, ErrInvalidToken
-		}
+	var exists bool
+	pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM sessions WHERE id = $1 AND "user" = $2)`, claims.SessionID, claims.ID).Scan(&exists)
+	if !exists {
+		return Principal{}, time.Time{}, ErrInvalidToken
 	}
 	return Principal{UserID: claims.ID, SessionID: claims.SessionID, PlatformAdmin: u.PlatformAdmin, Verified: u.Verified}, claims.ExpiresAt.Time, nil
 }
@@ -192,7 +182,7 @@ func (c *VerifiedTokens) Listen(bus *events.Bus) (stop func()) {
 
 type ctxKey struct{}
 
-// Middleware resolves the bearer token (or pb_auth/auth cookie for SSR + SSE) into a Principal; guests pass through.
+// Middleware resolves the bearer token (or the auth cookie for SSR + SSE) into a Principal; guests pass through.
 func Middleware(pool *pgxpool.Pool, secret string, verified *VerifiedTokens) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -210,7 +200,8 @@ func TokenFrom(r *http.Request) string {
 	if h := r.Header.Get("Authorization"); h != "" {
 		return strings.TrimSpace(strings.TrimPrefix(h, "Bearer "))
 	}
-	for _, name := range []string{"auth", "pb_auth"} {
+	// pb_auth is read until every client has rewritten it to gripello_auth; drop it in the release after.
+	for _, name := range []string{"gripello_auth", "pb_auth"} {
 		if c, err := r.Cookie(name); err == nil {
 			return cookieToken(c.Value)
 		}
@@ -258,9 +249,6 @@ var ErrReauthRequired = httpx.NewError(http.StatusForbidden, "Confirm your passw
 
 // RequireRecentReauth passes when the caller's session confirmed its password within ReauthWindow.
 func RequireRecentReauth(ctx context.Context, pool *pgxpool.Pool, p Principal) error {
-	if p.SessionID == "" {
-		return ErrReauthRequired
-	}
 	var fresh bool
 	err := pool.QueryRow(ctx, `SELECT COALESCE(reauthenticated_at > now() - make_interval(secs => $3), false) FROM sessions WHERE id = $1 AND "user" = $2`,
 		p.SessionID, p.UserID, ReauthWindow.Seconds()).Scan(&fresh)

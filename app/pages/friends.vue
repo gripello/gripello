@@ -305,11 +305,10 @@ const {
     refresh: refreshFeed,
     reloadLoaded: reloadFeed,
     loadMore: loadMoreFeed,
-} = usePbList<FeedTick>(
-    (page, limit) =>
-        listFeed({ page, limit, total: true }, { requestKey: 'friendsFeed' }),
-    { perPage: 60, requestKey: 'friendsFeed' },
-)
+} = useList<FeedTick>((page, limit) => listFeed({ page, limit, total: true }), {
+    perPage: 60,
+    requestKey: 'friendsFeed',
+})
 const { data: feedPage } = await useAsyncData(
     cacheKeys.friendsFeed,
     async () => {

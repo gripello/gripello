@@ -86,10 +86,7 @@ export function fromDateTimeInput(value: string): string {
 export function copiedCompetition(
     competition: CompetitionRecord,
     copyName: string,
-): Omit<
-    CompetitionRecord,
-    'id' | 'created' | 'updated' | 'collectionId' | 'collectionName' | 'expand'
-> {
+): Omit<CompetitionRecord, 'id' | 'created' | 'updated' | 'expand'> {
     return {
         name: copyName,
         description: competition.description,

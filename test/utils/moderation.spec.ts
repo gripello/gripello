@@ -146,7 +146,7 @@ describe('moderationFiles', () => {
     it('points at the live record while content is visible', () => {
         expect(moderationFiles({ ...base, state: 'unreviewed' })).toEqual([
             {
-                collectionName: 'beta_videos',
+                table: 'beta_videos',
                 id: 'vid1',
                 name: 'beta.mp4',
                 video: true,
@@ -157,7 +157,7 @@ describe('moderationFiles', () => {
     it('points at the quarantine while content is hidden or waiting', () => {
         expect(moderationFiles({ ...base, state: 'hidden' })).toEqual([
             {
-                collectionName: 'moderation_items',
+                table: 'moderation_items',
                 id: 'item1',
                 name: 'beta_q.mp4',
                 video: true,
@@ -176,7 +176,7 @@ describe('viewOfState', () => {
     })
 })
 
-describe('isNewSince with PocketBase dates', () => {
+describe('isNewSince with space-separated dates', () => {
     it('reads the space-separated server format', () => {
         expect(
             isNewSince('2026-10-06 08:00:00.000Z', '2026-10-06 07:00:00.000Z'),

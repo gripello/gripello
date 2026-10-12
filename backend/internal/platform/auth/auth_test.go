@@ -13,7 +13,7 @@ import (
 	"gripello/internal/platform/testkit"
 )
 
-func TestSignKeepsPocketBaseClaimNames(t *testing.T) {
+func TestSignCarriesUserSessionAndType(t *testing.T) {
 	token, err := Issuer{Secret: "s", Duration: time.Hour}.Sign("user1", "key1", "sid1")
 	if err != nil {
 		t.Fatal(err)
@@ -27,11 +27,20 @@ func TestSignKeepsPocketBaseClaimNames(t *testing.T) {
 	}
 }
 
-func TestTokenFromPocketBaseCookie(t *testing.T) {
+func TestTokenFromAuthCookie(t *testing.T) {
 	r, _ := http.NewRequest("GET", "/", nil)
-	r.Header.Set("Cookie", "pb_auth=%7B%22token%22%3A%22abc.def.ghi%22%2C%22record%22%3A%7B%22id%22%3A%22x%22%7D%7D")
+	r.Header.Set("Cookie", "gripello_auth=%7B%22token%22%3A%22abc.def.ghi%22%2C%22record%22%3A%7B%22id%22%3A%22x%22%7D%7D")
 	if got := TokenFrom(r); got != "abc.def.ghi" {
 		t.Fatalf("got %q", got)
+	}
+	r, _ = http.NewRequest("GET", "/", nil)
+	r.Header.Set("Cookie", "pb_auth=old.legacy.jwt")
+	if got := TokenFrom(r); got != "old.legacy.jwt" {
+		t.Fatalf("legacy cookie: got %q", got)
+	}
+	r.Header.Set("Cookie", "pb_auth=old.legacy.jwt; gripello_auth=new.current.jwt")
+	if got := TokenFrom(r); got != "new.current.jwt" {
+		t.Fatalf("new cookie should win: got %q", got)
 	}
 	r.Header.Set("Authorization", "Bearer zzz")
 	if TokenFrom(r) != "zzz" {
@@ -39,7 +48,7 @@ func TestTokenFromPocketBaseCookie(t *testing.T) {
 	}
 }
 
-func TestVerifyRejectsWrongTypeMissingExpiryAndExpiredLegacyTokens(t *testing.T) {
+func TestVerifyRejectsWrongTypeMissingExpiryAndMissingSession(t *testing.T) {
 	ctx := context.Background()
 	pool := testkit.Pool(t)
 	pool.Exec(ctx, `INSERT INTO users (id, username, token_key) VALUES ('u1', 'u1', 'key1')`)
@@ -48,24 +57,21 @@ func TestVerifyRejectsWrongTypeMissingExpiryAndExpiredLegacyTokens(t *testing.T)
 		return token
 	}
 	inAnHour := jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour))}
-	legacy := sign(Claims{RegisteredClaims: inAnHour, ID: "u1", Type: "auth"})
-	if _, err := Verify(ctx, pool, "s", legacy); err != nil {
-		t.Fatalf("legacy token refused before the cutoff: %v", err)
+	pool.Exec(ctx, `INSERT INTO sessions (id, "user") VALUES ('s1', 'u1')`)
+	if _, err := Verify(ctx, pool, "s", sign(Claims{RegisteredClaims: inAnHour, ID: "u1", Type: "auth", SessionID: "s1"})); err != nil {
+		t.Fatalf("valid token refused: %v", err)
 	}
 	for name, token := range map[string]string{
-		"file type":  sign(Claims{RegisteredClaims: inAnHour, ID: "u1", Type: "file"}),
-		"no expiry":  sign(Claims{ID: "u1", Type: "auth"}),
-		"no type":    sign(Claims{RegisteredClaims: inAnHour, ID: "u1"}),
-		"wrong user": sign(Claims{RegisteredClaims: inAnHour, ID: "u2", Type: "auth"}),
+		"no session":      sign(Claims{RegisteredClaims: inAnHour, ID: "u1", Type: "auth"}),
+		"revoked session": sign(Claims{RegisteredClaims: inAnHour, ID: "u1", Type: "auth", SessionID: "gone"}),
+		"file type":       sign(Claims{RegisteredClaims: inAnHour, ID: "u1", Type: "file"}),
+		"no expiry":       sign(Claims{ID: "u1", Type: "auth"}),
+		"no type":         sign(Claims{RegisteredClaims: inAnHour, ID: "u1"}),
+		"wrong user":      sign(Claims{RegisteredClaims: inAnHour, ID: "u2", Type: "auth"}),
 	} {
 		if _, err := Verify(ctx, pool, "s", token); err == nil {
 			t.Errorf("%s accepted", name)
 		}
-	}
-	defer func(previous time.Time) { legacyTokensUntil = previous }(legacyTokensUntil)
-	legacyTokensUntil = time.Now()
-	if _, err := Verify(ctx, pool, "s", legacy); err == nil {
-		t.Error("token without a session accepted after the cutoff")
 	}
 }
 

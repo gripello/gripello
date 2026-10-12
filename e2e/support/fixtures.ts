@@ -167,7 +167,6 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
     createUser: async ({ testPrefix }, use) => {
         await use(async (role = 'user', label = role) =>
             ensureUser(
-                null,
                 role === 'user' ? undefined : role,
                 'user',
                 `${testPrefix}-${label}`,

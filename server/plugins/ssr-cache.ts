@@ -1,9 +1,9 @@
 import { finishRender, writeSsrCache } from '../utils/ssrCache'
-import { ssrCacheRequest } from '../utils/ssrCacheRequest'
+import { hasAuthCookie, ssrCacheRequest } from '../utils/ssrCacheRequest'
 
 export default defineNitroPlugin((nitroApp) => {
     nitroApp.hooks.hook('render:response', (response, { event }) => {
-        if (getCookie(event, 'pb_auth'))
+        if (hasAuthCookie(event))
             response.headers = {
                 ...response.headers,
                 'cache-control': 'private, no-store',

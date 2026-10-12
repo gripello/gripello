@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-export const API_URL = process.env.E2E_PB_URL || 'https://localhost'
+export const API_URL = process.env.E2E_API_URL || 'https://localhost'
 
 export interface AuthResult {
     token: string
@@ -76,11 +76,11 @@ export function login(email: string, password: string) {
 export function authCookieValue({ token, record }: AuthResult) {
     const value = encodeURIComponent(JSON.stringify({ token, record }))
     if (value.length <= 4000) return value
-    const { id, email, collectionId, collectionName, verified } = record
+    const { id, email, verified } = record
     return encodeURIComponent(
         JSON.stringify({
             token,
-            record: { id, email, collectionId, collectionName, verified },
+            record: { id, email, verified },
         }),
     )
 }
@@ -89,7 +89,7 @@ export async function signInAs(page: Page, email: string, password: string) {
     const baseURL = test.info().project.use.baseURL!
     await page.context().addCookies([
         {
-            name: 'pb_auth',
+            name: 'gripello_auth',
             value: authCookieValue(await login(email, password)),
             url: baseURL,
         },

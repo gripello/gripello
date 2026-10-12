@@ -47,10 +47,7 @@ func (f *fixture) exec(sql string, args ...any) string {
 func (f *fixture) user(name string) {
 	f.t.Helper()
 	id := f.exec(`INSERT INTO users (id, username, token_key) VALUES ($1, $2, $3) RETURNING id`, ids.New(), name, "key-"+name)
-	token, err := f.app.Tokens.Sign(id, "key-"+name, "")
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	token := testapp.Token(f.t, f.app, id, "key-"+name)
 	f.users[name], f.tokens[name] = id, token
 }
 

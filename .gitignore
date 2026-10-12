@@ -8,11 +8,8 @@ dist
 .nitro
 .output
 
-# PocketBase
 pb_data/
-pb_data_backup/
-pb_public/
-pb_temp/
+pocketbase/
 
 # Environment variables
 .env
@@ -38,8 +35,6 @@ pnpm-debug.log*
 *.swp
 *.bak
 *.tmp
-pocketbase/pocketbase.exe
-pocketbase/pocketbase
 .yarn/install-state.gz
 
 # Playwright e2e
@@ -49,7 +44,6 @@ playwright-report/
 test-results/
 .playwright-mcp/
 CLAUDE.md
-pocketbase/tmp/
 
 # Go backend local state
 backend/data/

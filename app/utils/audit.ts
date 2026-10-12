@@ -119,13 +119,13 @@ const AUDIT_TARGET_PATHS: Record<string, string> = {
 }
 
 export function auditTargetUrl(
-    collectionName?: string | null,
+    table?: string | null,
     recordId?: string | null,
     gymSlug?: string | null,
 ): string | null {
-    if (!collectionName || !recordId) return null
-    if (collectionName === 'routes') return `/route?id=${recordId}`
-    const path = AUDIT_TARGET_PATHS[collectionName]
+    if (!table || !recordId) return null
+    if (table === 'routes') return `/route?id=${recordId}`
+    const path = AUDIT_TARGET_PATHS[table]
     if (!path) return null
     return gymSlug ? `/${gymSlug}${path}` : path
 }

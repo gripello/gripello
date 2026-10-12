@@ -30,7 +30,6 @@ export function useRouteSelection(
         const { items } = await listRoutes<{ id: string }>(
             gym.value,
             routeQuery.value,
-            { fields: 'id' },
         )
         const ids = items.map((route) => route.id).filter(Boolean)
         cachedIds = { filter, ids }

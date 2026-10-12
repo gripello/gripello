@@ -12,6 +12,7 @@ import (
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/blob"
 	"gripello/internal/platform/events"
+	"gripello/internal/platform/ids"
 	"gripello/internal/platform/jobs"
 	"gripello/internal/platform/locales"
 	"gripello/internal/platform/mail"
@@ -107,4 +108,18 @@ func WaitFor(t *testing.T, cond func() bool) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	t.Fatal("condition not met in time")
+}
+
+// Token signs in an existing user with a fresh session row, as a login would.
+func Token(t testing.TB, app *platform.App, userID, tokenKey string) string {
+	t.Helper()
+	sid := ids.New()
+	if _, err := app.DB.Exec(context.Background(), `INSERT INTO sessions (id, "user") VALUES ($1, $2)`, sid, userID); err != nil {
+		t.Fatal(err)
+	}
+	token, err := app.Tokens.Sign(userID, tokenKey, sid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return token
 }

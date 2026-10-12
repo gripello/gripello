@@ -13,7 +13,7 @@ async function signIn(page: Page, rememberMe: boolean) {
 
 async function authCookie(page: Page) {
     const cookies = await page.context().cookies()
-    return cookies.find((cookie) => cookie.name === 'pb_auth')
+    return cookies.find((cookie) => cookie.name === 'gripello_auth')
 }
 
 test('an unchecked remember me keeps the session only until the browser closes', async ({

@@ -72,10 +72,7 @@ func (f *fixture) member(userID, gymID, role string) {
 func (f *fixture) token(userID string) string {
 	var tokenKey string
 	f.scalar(`SELECT token_key FROM users WHERE id = $1`, &tokenKey, userID)
-	token, err := f.app.Tokens.Sign(userID, tokenKey, "")
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	token := testapp.Token(f.t, f.app, userID, tokenKey)
 	return token
 }
 
@@ -107,7 +104,7 @@ func (f *fixture) send(userID, method, path string, body io.Reader, contentType 
 	return response{rec.Code, rec.Body.String()}
 }
 
-// call sends JSON and asserts status plus substrings of the body, like the PocketBase hook tests did.
+// call sends JSON and asserts status plus substrings of the body.
 func (f *fixture) call(userID, method, path, body string, status int, contains ...string) response {
 	f.t.Helper()
 	var reader io.Reader

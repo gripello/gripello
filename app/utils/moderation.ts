@@ -98,7 +98,7 @@ const FILE_FIELDS: Record<ModerationContentType, string[]> = {
     route: [],
 }
 
-export const CONTENT_COLLECTIONS: Record<ModerationContentType, string> = {
+export const CONTENT_TABLES: Record<ModerationContentType, string> = {
     rating: 'ratings',
     beta_video: 'beta_videos',
     profile: 'users',
@@ -128,7 +128,7 @@ export function moderationText(
 }
 
 export interface ModerationFile {
-    collectionName: string
+    table: string
     id: string
     name: string
     video: boolean
@@ -143,7 +143,7 @@ export function moderationFiles(
     const video = item.content_type === 'beta_video'
     if (item.state === 'hidden' || item.state === 'pending')
         return (item.files ?? []).map((name) => ({
-            collectionName: 'moderation_items',
+            table: 'moderation_items',
             id: item.id,
             name,
             video,
@@ -156,7 +156,7 @@ export function moderationFiles(
                 (name): name is string => typeof name === 'string' && !!name,
             )
             .map((name) => ({
-                collectionName: CONTENT_COLLECTIONS[item.content_type],
+                table: CONTENT_TABLES[item.content_type],
                 id: item.content_id,
                 name,
                 video,

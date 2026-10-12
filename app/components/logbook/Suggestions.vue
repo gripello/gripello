@@ -72,19 +72,15 @@ const gymId = useCurrentGymId()
 const { data: candidates } = useAsyncData(
     () => `logbook-suggestions-${gymId.value}-${props.kind ?? 'any'}`,
     () =>
-        listRoutes<RouteRecord>(
-            gymId.value,
-            {
-                ...(props.kind
-                    ? { type: props.kind === 'boulder' ? 'Boulder' : 'Route' }
-                    : {}),
-                sort: '-created',
-                include: ['location'],
-                page: 1,
-                limit: CANDIDATE_COUNT,
-            },
-            { requestKey: null },
-        )
+        listRoutes<RouteRecord>(gymId.value, {
+            ...(props.kind
+                ? { type: props.kind === 'boulder' ? 'Boulder' : 'Route' }
+                : {}),
+            sort: '-created',
+            include: ['location'],
+            page: 1,
+            limit: CANDIDATE_COUNT,
+        })
             .then((page) => page.items)
             .catch(() => []),
     { default: () => [], enabled: () => !!gymId.value },

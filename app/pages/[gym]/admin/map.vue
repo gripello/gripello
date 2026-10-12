@@ -303,15 +303,10 @@ const { data: locationRoutes } = useAsyncData(
     cacheKeys.mapEditorRoutes,
     () =>
         locationId.value
-            ? listRoutes(
-                  gymId.value,
-                  { location: locationId.value, wall: 'any' },
-                  {
-                      rated: true,
-                      fields: 'id,name,color,wall,wall_position,type,grade,grade_system',
-                      requestKey: 'mapEditorRoutes',
-                  },
-              ).then((list) => list.items)
+            ? listRoutes(gymId.value, {
+                  location: locationId.value,
+                  wall: 'any',
+              }).then((list) => list.items)
             : Promise.resolve([]),
     { watch: [locationId], default: () => [], server: false },
 )

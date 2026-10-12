@@ -294,21 +294,18 @@ const {
     refresh,
     reloadLoaded,
     loadMore,
-} = usePbList<ModerationItemRecord>(
+} = useList<ModerationItemRecord>(
     (page, limit) =>
-        listCases(
-            {
-                ...moderationViewQuery(view.value, props.platform),
-                gym: props.gymId ?? gymFilter.value,
-                content_type: contentType.value,
-                author: authorFilter.value?.id,
-                q: search.value.trim(),
-                page,
-                limit,
-                total: true,
-            },
-            { requestKey: 'moderationInbox' },
-        ),
+        listCases({
+            ...moderationViewQuery(view.value, props.platform),
+            gym: props.gymId ?? gymFilter.value,
+            content_type: contentType.value,
+            author: authorFilter.value?.id,
+            q: search.value.trim(),
+            page,
+            limit,
+            total: true,
+        }),
     { perPage: 30, requestKey: 'moderationInbox' },
 )
 
@@ -477,9 +474,7 @@ const suspendUser = ref<UserRecord | null>(null)
 async function openSuspend(item: ModerationItemRecord) {
     const authorId = item.context?.author?.id
     if (!authorId) return
-    const user = await getPlatformUser(authorId, {
-        fields: 'id,username,firstname,name,platform_admin,suspended_until,suspension_reason',
-    }).catch(() => null)
+    const user = await getPlatformUser(authorId).catch(() => null)
     if (!user) return notifyError(t('notifications.error.generic'))
     if (user.platform_admin || user.id === useAuthState().currentUserId())
         return notifyError(t('moderation.author.cannotSuspend'))

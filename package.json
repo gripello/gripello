@@ -9,7 +9,6 @@
         "dev": "CAP_SECRET=${CAP_SECRET:-dev-only-cap-secret-not-for-production} concurrently \"nuxt dev\" \"yarn dev:db\"",
         "dev:db": "docker compose -f docker-compose.dev.yml up -d --wait && cd backend && GRIPELLO_ENV=dev go run github.com/air-verse/air@v1.67.4",
         "start:db": "cd backend && GRIPELLO_ENV=dev go run ./cmd/gripello serve --http=:8099",
-        "import:pb": "cd backend && GRIPELLO_ENV=dev go run ./cmd/gripello import-pocketbase --pb-data ../pocketbase/pb_data",
         "generate": "nuxt generate",
         "preview": "nuxt preview",
         "postinstall": "nuxt prepare",

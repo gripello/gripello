@@ -22,7 +22,7 @@ import (
 	_ "golang.org/x/image/webp"
 )
 
-// Sizes from the PocketBase file fields' thumbs options plus the 100x100 default PocketBase always allowed.
+// Thumb sizes the UI requests, plus the 100x100 default.
 var thumbSizes = []string{"16x16", "32x32", "48x48", "80x80", "100x100", "320x320", "0x200", "400x0", "800x300", "1600x400", "1600x500"}
 
 // A 25 MP source decodes to ~100 MB RGBA; thumbSlots caps how many decode at once on this replica.
@@ -169,7 +169,7 @@ func vipsArgs(out string, width, height int, mode string) []string {
 	return args
 }
 
-// resize follows PocketBase: WxH crops to fill from the centre (t: top, b: bottom), WxHf fits inside, a 0 side keeps the ratio.
+// resize: WxH crops to fill from the centre (t: top, b: bottom), WxHf fits inside, a 0 side keeps the ratio.
 func resize(src image.Image, width, height int, mode string) image.Image {
 	bounds := src.Bounds()
 	srcW, srcH := bounds.Dx(), bounds.Dy()

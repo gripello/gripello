@@ -264,7 +264,7 @@ describe('mapRows', () => {
 })
 
 describe('newRecordId', () => {
-    it('matches the PocketBase id format', () => {
+    it('matches the 15-character record id format', () => {
         expect(newRecordId()).toMatch(/^[a-z0-9]{15}$/)
     })
 })

@@ -47,7 +47,7 @@ func findAccount(ctx context.Context, q querier, id string) (account, error) {
 	return scanAccount(q.QueryRow(ctx, `SELECT `+accountColumns+` FROM users WHERE id = $1`, id))
 }
 
-// The identity is an email or a username, matched like PocketBase: email exactly, username case-insensitively.
+// The identity is an email or a username: email matched exactly, username case-insensitively.
 func findAccountByIdentity(ctx context.Context, q querier, identity string) (account, error) {
 	return scanAccount(q.QueryRow(ctx, `SELECT `+accountColumns+` FROM users
 		WHERE (email <> '' AND lower(email) = lower($1)) OR lower(username) = lower($1)

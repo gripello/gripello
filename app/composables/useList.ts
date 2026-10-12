@@ -1,21 +1,21 @@
 import type { Ref } from 'vue'
 import { isAbortError } from '~/utils/errors'
 
-export type PbListFetch<TRecord> = (
+export type ListFetch<TRecord> = (
     page: number,
     perPage: number,
 ) => Promise<{ items: TRecord[]; total?: number }>
 
-interface PbListOptions<TRecord, TItem> {
+interface ListOptions<TRecord, TItem> {
     perPage: number
     requestKey: string
     map?: (record: TRecord) => TItem
 }
 
-export function usePbList<
+export function useList<
     TRecord,
     TItem extends { id: string } = TRecord & { id: string },
->(load: PbListFetch<TRecord>, options: PbListOptions<TRecord, TItem>) {
+>(load: ListFetch<TRecord>, options: ListOptions<TRecord, TItem>) {
     const { t } = useI18n()
     const { error: notifyError } = useNotification()
 

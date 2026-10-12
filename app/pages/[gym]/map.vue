@@ -275,8 +275,6 @@ const gymPath = useGymPath()
 
 definePageMeta({ keepalive: true })
 
-const MAP_ROUTE_FIELDS =
-    'id,name,color,grade,grade_system,grade_index,anchor_point,location,type,comment,creator,screw_date,wall,wall_position,average_rating,ratings_count'
 const TYPE_STORAGE_KEY = 'map-route-type'
 
 const { t } = useI18n()
@@ -323,15 +321,9 @@ const {
     cacheKeys.mapRoutes,
     () =>
         locationId.value
-            ? listRoutes(
-                  gymId.value,
-                  { location: locationId.value },
-                  {
-                      rated: true,
-                      fields: MAP_ROUTE_FIELDS,
-                      requestKey: 'mapRoutes',
-                  },
-              ).then((list) => list.items)
+            ? listRoutes(gymId.value, { location: locationId.value }).then(
+                  (list) => list.items,
+              )
             : Promise.resolve([]),
     { watch: [locationId], default: () => [] },
 )
@@ -396,11 +388,10 @@ const { data: serverMatches } = useAsyncData(
     'map-matching',
     () =>
         locationId.value && hasServerFilter.value
-            ? listRoutes<{ id: string }>(
-                  gymId.value,
-                  { ...routeQuery.value, location: locationId.value },
-                  { rated: true, fields: 'id', requestKey: 'mapMatching' },
-              ).then((list) => list.items)
+            ? listRoutes<{ id: string }>(gymId.value, {
+                  ...routeQuery.value,
+                  location: locationId.value,
+              }).then((list) => list.items)
             : Promise.resolve(null),
     {
         watch: [routeQueryKey, locationId],

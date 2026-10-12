@@ -156,7 +156,7 @@ func atoi(value string, fallback int) int {
 	return fallback
 }
 
-// expand fills `expand` like PocketBase did, so `route.expand.location.name` keeps working.
+// expand fills `expand`, so `route.expand.location.name` keeps working.
 func (m *module) expand(ctx context.Context, items []Route, include string) error {
 	if include == "" || len(items) == 0 {
 		return nil

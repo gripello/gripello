@@ -268,7 +268,7 @@ import {
     formatDate,
     wallName,
 } from '#shared/utils/formatting'
-import { toPbSort, type SortOption } from '~/utils/sorting'
+import { toSortParam, type SortOption } from '~/utils/sorting'
 import { cacheKeys, unlessQueryChanged } from '~/utils/realtimeCache'
 
 const { t, locale } = useI18n()
@@ -419,8 +419,8 @@ function onMobileSortChange(sortBy: SortOption[]) {
     void loadRoutes({}, { append: false })
 }
 
-const toPbSortIndex = (sortByArr: SortOption[]) =>
-    toPbSort(sortByArr, '-screw_date', {
+const toRouteSort = (sortByArr: SortOption[]) =>
+    toSortParam(sortByArr, '-screw_date', {
         score: 'average_rating',
         difficulty: 'type,grade_index',
     })
@@ -430,23 +430,15 @@ interface RoutePage {
     totalItems: number
 }
 
-function fetchRoutes(
-    page: number,
-    perPage: number,
-    requestKey: string | null = 'routesList',
-): Promise<RoutePage> {
-    return listRoutes(
-        gymId.value,
-        {
-            ...baseQuery.value,
-            sort: toPbSortIndex(tableOptions.sortBy),
-            include: ['location', 'wall'],
-            page,
-            limit: perPage,
-            total: true,
-        },
-        { rated: true, requestKey },
-    ).then((list) => ({ items: list.items, totalItems: list.total ?? 0 }))
+function fetchRoutes(page: number, perPage: number): Promise<RoutePage> {
+    return listRoutes(gymId.value, {
+        ...baseQuery.value,
+        sort: toRouteSort(tableOptions.sortBy),
+        include: ['location', 'wall'],
+        page,
+        limit: perPage,
+        total: true,
+    }).then((list) => ({ items: list.items, totalItems: list.total ?? 0 }))
 }
 
 function fetchLoadedRoutes(): Promise<RoutePage> {
@@ -455,8 +447,8 @@ function fetchLoadedRoutes(): Promise<RoutePage> {
         () => JSON.stringify([routeQueryKey.value, tableOptions.sortBy]),
         () =>
             isWideLayout.value
-                ? fetchRoutes(page, itemsPerPage, null)
-                : fetchRoutes(1, page * itemsPerPage, null),
+                ? fetchRoutes(page, itemsPerPage)
+                : fetchRoutes(1, page * itemsPerPage),
         () => routePage.value,
     )
 }

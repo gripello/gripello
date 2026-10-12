@@ -57,7 +57,7 @@ describe('timelineDays', () => {
         ).toEqual(['v1', 't1'])
     })
 
-    it('groups PocketBase timestamps with a space separator', () => {
+    it('groups timestamps with a space separator', () => {
         const days = timelineDays(
             [],
             [{ ...review, created: '2026-10-03 19:00:00.000Z' }],

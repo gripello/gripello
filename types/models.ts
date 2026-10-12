@@ -25,8 +25,6 @@ export type RecordId = string
 
 export interface BaseRecord {
     id: RecordId
-    collectionId?: string
-    collectionName?: string
     created?: string
     updated?: string
     expand?: Record<string, unknown>
@@ -470,29 +468,4 @@ export interface PushSubscriptionRecord extends BaseRecord {
 export interface RouteScoreRecord extends RouteRecord {
     average_rating?: number | null
     ratings_count?: number
-}
-
-export type PocketBaseRecord =
-    | RouteRecord
-    | RouteListItem
-    | RatingRecord
-    | TickRecord
-    | RouteComment
-    | PermissionRecord
-    | RoleRecord
-    | UserRecord
-    | SettingsRecord
-    | GymRecord
-    | MembershipRecord
-    | ReportRecord
-    | AuditLogRecord
-    | NotificationRecord
-    | RouteScoreRecord
-
-export interface ListResult<T> {
-    page: number
-    perPage: number
-    totalItems: number
-    totalPages: number
-    items: T[]
 }

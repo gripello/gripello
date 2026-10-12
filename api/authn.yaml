@@ -7,7 +7,7 @@ paths:
     get:
       operationId: listAuthMethods
       tags: [authn]
-      description: PocketBase listAuthMethods shape; only password login is offered, second factors are per account.
+      description: Only password login is offered, second factors are per account.
       responses:
         '200':
           description: Methods
@@ -574,7 +574,7 @@ components:
       type: object
       required: [token, record]
       properties:
-        token: { type: string, description: 'HS256 JWT with claims id, type, collectionId, refreshable, sid, exp' }
+        token: { type: string, description: 'HS256 JWT with claims id, type, refreshable, sid, exp' }
         record: { $ref: '#/components/schemas/User' }
     MFARequired:
       type: object

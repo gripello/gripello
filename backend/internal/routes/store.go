@@ -280,7 +280,7 @@ func nullJSON(raw json.RawMessage) any {
 	return raw
 }
 
-// uniqueViolation turns a unique index hit on name into the field error PocketBase used.
+// uniqueViolation turns a unique index hit on name into a field error.
 func uniqueViolation(err error) error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {

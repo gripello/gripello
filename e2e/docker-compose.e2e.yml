@@ -70,7 +70,7 @@ services:
             - yarn-cache:/root/.yarn/berry/cache
         environment:
             E2E_BASE_URL: https://vg.test
-            E2E_PB_URL: https://vg.test
+            E2E_API_URL: https://vg.test
             E2E_GRIPELLO: /opt/gripello/gripello
             DATABASE_URL: postgres://postgres:e2e@postgres:5432/gripello?sslmode=disable
             MAILPIT_URL: http://mailpit:8025

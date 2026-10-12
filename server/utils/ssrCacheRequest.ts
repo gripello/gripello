@@ -1,6 +1,10 @@
 import type { H3Event } from 'h3'
 import { getCookie, getHeader, getRequestURL } from 'h3'
+import { AUTH_COOKIE, LEGACY_AUTH_COOKIE } from '#shared/utils/authCookie'
 import { isSsrCacheable, ssrCacheKey, ssrCacheTtlMs } from './ssrCache'
+
+export const hasAuthCookie = (event: H3Event) =>
+    !!(getCookie(event, AUTH_COOKIE) || getCookie(event, LEGACY_AUTH_COOKIE))
 
 export function ssrCacheRequest(event: H3Event) {
     const ttlMs = ssrCacheTtlMs()
@@ -8,7 +12,7 @@ export function ssrCacheRequest(event: H3Event) {
     const cacheable = isSsrCacheable({
         method: event.method,
         pathname: url.pathname,
-        hasAuthCookie: !!getCookie(event, 'pb_auth'),
+        hasAuthCookie: hasAuthCookie(event),
         ttlMs,
     })
     return {

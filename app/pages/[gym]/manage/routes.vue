@@ -464,7 +464,7 @@ import {
     locationName,
     normalizeCreators,
 } from '#shared/utils/formatting'
-import { toPbSort, type SortOption } from '~/utils/sorting'
+import { toSortParam, type SortOption } from '~/utils/sorting'
 import {
     coalesce,
     gymChangesTopic,
@@ -720,8 +720,8 @@ const selectAll = async () => {
     }
 }
 
-const toPbSortRoutes = (sortByArr: SortOption[]) =>
-    toPbSort(sortByArr, '-created', {
+const toRouteSort = (sortByArr: SortOption[]) =>
+    toSortParam(sortByArr, '-created', {
         score: 'average_rating',
         location: 'location',
         difficulty: 'type,grade_index',
@@ -763,18 +763,14 @@ const loadRoutes = async (options: LoadOptions = {}) => {
     loading.value = true
 
     try {
-        const list = await listRoutes(
-            gymId.value,
-            {
-                ...routeQuery.value,
-                sort: toPbSortRoutes(tableOptions.sortBy),
-                include: ['location'],
-                page: tableOptions.page,
-                limit: tableOptions.itemsPerPage,
-                total: true,
-            },
-            { rated: true, requestKey: 'adminRoutesList' },
-        )
+        const list = await listRoutes(gymId.value, {
+            ...routeQuery.value,
+            sort: toRouteSort(tableOptions.sortBy),
+            include: ['location'],
+            page: tableOptions.page,
+            limit: tableOptions.itemsPerPage,
+            total: true,
+        })
 
         const normalizedRoutes = list.items.map((route) => {
             const hasRatings =

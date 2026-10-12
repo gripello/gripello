@@ -11,8 +11,11 @@ const tokenWith = (payload: object) =>
     `x.${btoa(JSON.stringify(payload)).replace(/=+$/, '')}.y`
 const validToken = tokenWith({ id: 'u1', exp: 4102444800 })
 const expiredToken = tokenWith({ id: 'u1', exp: 1 })
-const cookieOf = (token: string, record: object | null) =>
-    `pb_auth=${encodeURIComponent(JSON.stringify({ token, record }))}`
+const cookieOf = (
+    token: string,
+    record: object | null,
+    name = 'gripello_auth',
+) => `${name}=${encodeURIComponent(JSON.stringify({ token, record }))}`
 
 describe('AuthStore', () => {
     beforeEach(() => {
@@ -34,7 +37,7 @@ describe('AuthStore', () => {
             new AuthStore(cookieOf(expiredToken, { id: 'u1' })).isValid,
         ).toBe(false)
         expect(new AuthStore('').isValid).toBe(false)
-        expect(new AuthStore('pb_auth=%7Bbroken').token).toBe('')
+        expect(new AuthStore('gripello_auth=%7Bbroken').token).toBe('')
     })
 
     it('notifies listeners on save and clear', () => {
@@ -60,24 +63,47 @@ describe('AuthStore', () => {
     it('persists the login in the cookie until the token expires', () => {
         const store = useAuthStore()
         store.save(validToken, { id: 'u1' })
-        expect(JSON.parse(readCookie(document.cookie, 'pb_auth'))).toEqual({
+        expect(
+            JSON.parse(readCookie(document.cookie, 'gripello_auth')),
+        ).toEqual({
             token: validToken,
             record: { id: 'u1' },
         })
         expect(useAuthStore()).toBe(store)
         store.clear()
-        expect(readCookie(document.cookie, 'pb_auth')).toBe('')
+        expect(readCookie(document.cookie, 'gripello_auth')).toBe('')
     })
 
     it('writes a session cookie when remember me is off', () => {
         const store = useAuthStore()
         setAuthPersistent(false)
         store.save(validToken, { id: 'u1' })
-        expect(document.cookie).toContain('pb_auth_session=1')
+        expect(document.cookie).toContain('gripello_auth_session=1')
 
         setAuthPersistent(true)
         store.save(validToken, { id: 'u1' })
-        expect(document.cookie).not.toContain('pb_auth_session=1')
+        expect(document.cookie).not.toContain('gripello_auth_session=1')
+    })
+
+    it('moves a pre-rename login to the new cookie and expires the old one', () => {
+        document.cookie = `${cookieOf(validToken, { id: 'u1' }, 'pb_auth')}; Path=/`
+        document.cookie = 'pb_auth_session=1; Path=/'
+        const store = useAuthStore()
+        expect(store.record).toEqual({ id: 'u1' })
+        expect(store.persistent).toBe(false)
+        expect(
+            JSON.parse(readCookie(document.cookie, 'gripello_auth')).token,
+        ).toBe(validToken)
+        expect(document.cookie).toContain('gripello_auth_session=1')
+        expect(readCookie(document.cookie, 'pb_auth')).toBe('')
+        expect(readCookie(document.cookie, 'pb_auth_session')).toBe('')
+    })
+
+    it('prefers the new cookie when both are present', () => {
+        const store = new AuthStore(
+            `${cookieOf(expiredToken, { id: 'old' }, 'pb_auth')}; ${cookieOf(validToken, { id: 'u1' })}`,
+        )
+        expect(store.record).toEqual({ id: 'u1' })
     })
 })
 
@@ -100,15 +126,13 @@ describe('authCookie', () => {
             id: 'u1',
             email: 'a@b.c',
             verified: true,
-            collectionName: 'users',
             bio: 'x'.repeat(5000),
         }
         const value = authCookie(validToken, record).split(';')[0]!
-        expect(JSON.parse(readCookie(value, 'pb_auth')).record).toEqual({
+        expect(JSON.parse(readCookie(value, 'gripello_auth')).record).toEqual({
             id: 'u1',
             email: 'a@b.c',
             verified: true,
-            collectionName: 'users',
         })
     })
 })

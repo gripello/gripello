@@ -83,7 +83,7 @@ func (m *module) viewerFor(ctx context.Context, c Competition) viewer {
 
 func visible(c Competition, v viewer) bool { return c.Status != "draft" || v.manager }
 
-// loadVisible returns the competition unless it is a draft the caller may not manage (404, like PocketBase's view rule).
+// loadVisible returns the competition unless it is a draft the caller may not manage (404).
 func (m *module) loadVisible(ctx context.Context, id string) (Competition, viewer, error) {
 	c, err := findCompetition(ctx, m.app.DB, id)
 	if err != nil {
@@ -814,7 +814,7 @@ func validateScoreNumbers(s Score) error {
 	return nil
 }
 
-// guardScore is the PocketBase hook: entry and route must share the competition; climbers score only their own
+// guardScore: entry and route must share the competition; climbers score only their own
 // active entry, on open competitions inside the window, never voided routes or judge-only formats.
 func guardScore(s *Score, e Entry, r CompRoute, c Competition, v viewer, now time.Time) error {
 	if e.Competition != c.ID {

@@ -261,10 +261,10 @@ const {
     cacheKeys.logbook,
     async () => {
         try {
-            const { items: list } = await listOwnTicks<LoggedTick>(
-                { sort: '-date,-created', include: ['route.gym'] },
-                { requestKey: null },
-            )
+            const { items: list } = await listOwnTicks<LoggedTick>({
+                sort: '-date,-created',
+                include: ['route.gym'],
+            })
             outbox.cacheTicks(list)
             return list
         } catch (error) {

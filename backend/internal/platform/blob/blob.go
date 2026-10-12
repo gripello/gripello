@@ -162,7 +162,7 @@ var (
 	validSegment = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.\-]*$`)
 )
 
-// SanitizeName follows PocketBase: snake_case base, max 100 chars, "_" + 10 random chars, lower-case extension.
+// SanitizeName: snake_case base, max 100 chars, "_" + 10 random chars, lower-case extension.
 func SanitizeName(original string) string {
 	ext := path.Ext(original)
 	base := strings.Trim(nonWord.ReplaceAllString(strings.ToLower(strings.TrimSuffix(original, ext)), "_"), "_")

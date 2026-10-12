@@ -132,15 +132,10 @@ export default defineNuxtPlugin((nuxtApp) => {
     const rescoreSoon = coalesce(async () => {
         const ids = [...routesToRescore]
         routesToRescore.clear()
-        const { items: scores } = await listRoutes(
-            null,
-            { ids, archived: 'all' },
-            {
-                rated: true,
-                fields: 'id,average_rating,ratings_count',
-                requestKey: null,
-            },
-        )
+        const { items: scores } = await listRoutes(null, {
+            ids,
+            archived: 'all',
+        })
         for (const { id, average_rating, ratings_count } of scores)
             patchRouteRows((rows) =>
                 patchList(

@@ -311,7 +311,7 @@ func (m *module) unfollowWall(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// readBody accepts JSON or multipart (avatar/banner parts plus the other fields as JSON in `@jsonPayload`, like the PocketBase SDK sends).
+// readBody accepts JSON or multipart (avatar/banner parts plus the other fields as JSON in `@jsonPayload`).
 func readBody(w http.ResponseWriter, r *http.Request) (map[string]json.RawMessage, map[string]*multipart.FileHeader, error) {
 	body := map[string]json.RawMessage{}
 	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {

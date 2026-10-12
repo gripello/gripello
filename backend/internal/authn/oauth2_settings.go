@@ -15,7 +15,7 @@ import (
 	"gripello/internal/platform/secretbox"
 )
 
-// authMethods keeps PocketBase's listAuthMethods shape; OTP is not offered, second factors are per account.
+// authMethods lists the sign-in methods; OTP is not offered, second factors are per account.
 func (m *module) authMethods(w http.ResponseWriter, r *http.Request) error {
 	rows, err := m.db.Query(r.Context(), `SELECT provider, display_name FROM oauth2_providers WHERE enabled AND client_id <> '' ORDER BY provider`)
 	if err != nil {

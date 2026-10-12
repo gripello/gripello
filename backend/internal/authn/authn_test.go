@@ -78,10 +78,7 @@ func (f *fixture) legacyToken(userID string) string {
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	token, err := f.app.Tokens.Sign(userID, user.TokenKey, "")
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	token := testapp.Token(f.t, f.app, userID, user.TokenKey)
 	return token
 }
 

@@ -86,7 +86,7 @@ func (m *module) listGymBetas(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// expandBetaRoutes fills expand.route with the routes row as PocketBase's expand did.
+// expandBetaRoutes fills expand.route with the routes row.
 func (m *module) expandBetaRoutes(ctx context.Context, items []BetaVideo) error {
 	routeIDs := make([]string, len(items))
 	for i, b := range items {

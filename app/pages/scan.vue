@@ -158,10 +158,7 @@ function lookup(routeId: string) {
     if (Date.now() - (failedLookupAt.get(routeId) ?? 0) < LOOKUP_RETRY_MS)
         return
     routes.set(routeId, null)
-    getRoute(routeId, [], {
-        fields: 'id,name,grade,grade_system',
-        requestKey: null,
-    })
+    getRoute(routeId)
         .then((route) => routes.set(routeId, route))
         .catch((error: { status?: number }) => {
             if (error?.status === 404)

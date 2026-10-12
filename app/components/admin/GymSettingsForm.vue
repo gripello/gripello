@@ -751,13 +751,6 @@ function adoptRecord(rec: GymRecord | null | undefined) {
 
 const { pending: saving, run: runSave } = useAsyncAction()
 
-function pbFileUrl(
-    rec: Partial<GymRecord> | null | undefined,
-    filename: string | null | undefined,
-) {
-    return fileUrl('gyms', rec, filename) || null
-}
-
 function onFileChange(event: Event, onSelect: (file: File | null) => void) {
     const input = event.target as HTMLInputElement
     onSelect(input.files?.[0] ?? null)
@@ -776,7 +769,7 @@ function assetSlot(
     const inputRef = ref<FileInputRef>(null)
     const preview = ref<string | null>(null)
     const stored = (rec: Partial<GymRecord> | null | undefined) =>
-        pbFileUrl(rec, rec?.[field])
+        fileUrl('gyms', rec, rec?.[field]) || null
     return {
         key,
         field,

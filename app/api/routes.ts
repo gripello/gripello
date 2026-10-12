@@ -10,7 +10,7 @@ import type {
     AnalyticsQuery,
 } from '../../shared/utils/analytics'
 import { useApi } from './client'
-import type { PbReadOptions, RouteList } from './client'
+import type { RouteList } from './client'
 
 export type RouteInclude = 'location' | 'wall' | 'gym'
 
@@ -99,7 +99,6 @@ async function listByIds<T>(
 export async function listRoutes<T = RouteScoreRecord>(
     gym: string | null,
     query: RouteQuery = {},
-    _options: PbReadOptions = {},
 ): Promise<RouteList<T>> {
     if (query.ids?.length === 0 || query.grade?.length === 0)
         return { items: [], page: 1, limit: query.limit ?? DEFAULT_LIMIT }
@@ -140,7 +139,6 @@ export async function listRoutes<T = RouteScoreRecord>(
 export function getRoute<T = RouteRecord>(
     id: string,
     include: RouteInclude[] = [],
-    _options: PbReadOptions = {},
 ) {
     return useApi()<T>(`/routes/${encodeURIComponent(id)}`, {
         query: include.length ? { include: include.join(',') } : undefined,
@@ -210,7 +208,7 @@ export function getAnalytics(gym: string, query: AnalyticsQuery = {}) {
     )
 }
 
-export async function listLocations(gym: string, _options: PbReadOptions = {}) {
+export async function listLocations(gym: string) {
     const { items } = await useApi()<Items<LocationRecord>>(
         `/gyms/${encodeURIComponent(gym)}/locations`,
     )
@@ -271,7 +269,6 @@ export function saveFloorPlan(locationId: string, plan: FloorPlan) {
 export async function listWalls<T = WallRecord>(
     gym: string,
     query: { location?: string } = {},
-    _options: PbReadOptions = {},
 ) {
     const { items } = await useApi()<Items<T>>(
         `/gyms/${encodeURIComponent(gym)}/walls`,
