@@ -11,9 +11,11 @@ import {
     resolveExportLocale,
     resolveExportLabel,
     resolveExportShow,
+    resolveExportTemplate,
     TAG_QR_ERROR_CORRECTION,
 } from '../../utils/export'
-import { drawRouteTag } from '../../utils/routeTag'
+import { drawRouteTag, TAG_PADDING } from '../../utils/routeTag'
+import { TAG_GEOMETRY, tagSlot } from '#shared/utils/tagTemplates'
 import { gymBandsFrom } from '#shared/utils/gradeReference'
 import type { GymRecord } from '../../../types/models'
 
@@ -37,6 +39,8 @@ export default eventHandler(async (event) => {
         const bands = gymBandsFrom(gym.boulder_bands)
         const locale = await resolveExportLocale(event)
         const anchorLabel = await resolveExportLabel(event, 'anchor', 'Anchor')
+        const template = await resolveExportTemplate(event)
+        const { page, scale } = TAG_GEOMETRY[template]
         const fonts = useStorage('assets:server')
         const [regularFont, boldFont] = await Promise.all([
             fonts.getItemRaw<Buffer>('fonts/Roboto-Regular.ttf'),
@@ -52,14 +56,15 @@ export default eventHandler(async (event) => {
             .map((id) => byId.get(id))
             .filter((route) => route !== undefined)
 
-        const doc = new PDFDocument({ size: [595.28, 841.89] })
+        const doc = new PDFDocument({ size: page })
         doc.registerFont('Sans', Buffer.from(regularFont))
         doc.registerFont('Sans-Bold', Buffer.from(boldFont))
         doc.font('Sans')
 
         const pdf = await pdfBuffer(doc, async () => {
             for (const [index, route] of routes.entries()) {
-                if (index % 8 === 0 && index > 0) doc.addPage()
+                const slot = tagSlot(template, index)
+                if (slot.newPage) doc.addPage()
 
                 const qrCode = await QRCode.toBuffer(
                     `${applicationUrl}/route?id=${route.id}`,
@@ -70,13 +75,16 @@ export default eventHandler(async (event) => {
                         color: { dark: '#000000', light: '#FFFFFF' },
                     },
                 )
-                drawRouteTag(
-                    doc,
-                    route,
-                    index % 2 === 0 ? 20 : 315,
-                    (Math.floor(index / 2) % 4) * 193 + 30,
-                    { anchorLabel, locale, qrCode, logo, show, bands },
-                )
+                doc.save().translate(slot.x, slot.y).scale(scale)
+                drawRouteTag(doc, route, TAG_PADDING, TAG_PADDING, {
+                    anchorLabel,
+                    locale,
+                    qrCode,
+                    logo,
+                    show,
+                    bands,
+                })
+                doc.restore()
             }
         })
         setResponseHeaders(event, { 'Content-Type': 'application/pdf' })

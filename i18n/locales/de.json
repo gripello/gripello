@@ -695,6 +695,7 @@
                 "colorScheme": "Merkt sich hellen oder dunklen Modus",
                 "sidebar": "Merkt sich, ob die Seitennavigation ausgeklappt ist",
                 "exportColumns": "Merkt sich die gewählten Export-Spalten",
+                "exportTagTemplate": "Merkt sich das gewählte Schild-Layout",
                 "inventorySession": "Speichert den Fortschritt einer Inventur",
                 "inventoryInstructions": "Merkt sich, dass die Inventur-Anleitung angezeigt wurde",
                 "offlineLogbook": "Hält dein Logbuch und noch nicht gesendete Begehungen offline verfügbar",
@@ -1020,6 +1021,13 @@
     "export": {
         "title": "Als Excel exportieren",
         "title_pdf": "QR-Schilder drucken",
+        "template": "Layout",
+        "templates": {
+            "standard": "A4 · 8",
+            "large": "A4 quer · 4",
+            "compact": "A4 · 12",
+            "label": "Etikett · 1"
+        },
         "language": "Sprache",
         "logo": "Logo",
         "columns": "Spalten",

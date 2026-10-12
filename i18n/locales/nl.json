@@ -695,6 +695,7 @@
                 "colorScheme": "Onthoudt de lichte of donkere modus",
                 "sidebar": "Onthoudt of de zijnavigatie is uitgeklapt",
                 "exportColumns": "Onthoudt de gekozen exportkolommen",
+                "exportTagTemplate": "Onthoudt de gekozen labelindeling",
                 "inventorySession": "Bewaart de voortgang van een inventarisatiescan",
                 "inventoryInstructions": "Onthoudt dat de inventarisatie-instructies zijn getoond",
                 "offlineLogbook": "Houdt je logboek en nog niet verzonden beklimmingen offline beschikbaar",
@@ -1020,6 +1021,13 @@
     "export": {
         "title": "Exporteren als Excel",
         "title_pdf": "QR-bordjes printen",
+        "template": "Indeling",
+        "templates": {
+            "standard": "A4 · 8",
+            "large": "A4 liggend · 4",
+            "compact": "A4 · 12",
+            "label": "Etiket · 1"
+        },
         "language": "Taal",
         "logo": "Logo",
         "columns": "Kolommen",
