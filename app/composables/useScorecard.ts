@@ -8,6 +8,7 @@ import {
     type ScoreState,
 } from '~/utils/scorecard'
 import { listScores, putScores } from '~/api/competitions'
+import { isNetworkError } from '~/utils/errors'
 import type { CompetitionRouteRecord } from '~/types/models'
 
 type QueueStore = Record<string, Record<string, ScoreState>>
@@ -25,9 +26,6 @@ function writeStore(store: QueueStore) {
         localStorage.setItem(COMPETITION_SCORES_KEY, JSON.stringify(store))
     } catch {}
 }
-
-const isNetworkError = (error: unknown) =>
-    (error as { status?: number })?.status === 0
 
 export function useScorecard(competitionId: Ref<string>, entryId: Ref<string>) {
     const { t } = useI18n()

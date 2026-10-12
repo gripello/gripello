@@ -163,6 +163,7 @@
 <script setup lang="ts">
 import { listCompetitionRoutes } from '~/api/competitions'
 import { EMPTY_SCORE, isFlash } from '~/utils/scorecard'
+import { keepWhenOffline } from '~/utils/errors'
 import type { ClimbStyle } from '#shared/utils/competitionScoring'
 import type {
     CompetitionEntryRecord,
@@ -189,9 +190,13 @@ const { scores, pendingCount, offline, load, act } = useScorecard(
 
 const isRope = computed(() => props.competition.discipline === 'rope')
 
+const compRoutesKey = () => `scorecard-routes:${props.competition.id}`
 const { data: compRoutes } = useAsyncData(
-    () => `scorecard-routes:${props.competition.id}`,
-    () => listCompetitionRoutes(props.competition.id, { voided: false }),
+    compRoutesKey,
+    (nuxtApp) =>
+        keepWhenOffline(nuxtApp, compRoutesKey(), () =>
+            listCompetitionRoutes(props.competition.id, { voided: false }),
+        ),
     { default: () => [] },
 )
 

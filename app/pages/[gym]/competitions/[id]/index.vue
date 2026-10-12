@@ -153,6 +153,7 @@ import {
 } from '~/utils/competitions'
 import { JUDGE_ONLY_FORMATS } from '#shared/utils/competitionScoring'
 import { getCompetition, listEntries } from '~/api/competitions'
+import { keepWhenOffline } from '~/utils/errors'
 
 const gymPath = useGymPath()
 
@@ -162,6 +163,8 @@ const route = useRoute()
 const { can } = usePermissions()
 
 const competitionId = computed(() => String(route.params.id ?? ''))
+const competitionKey = () => `public-competition:${competitionId.value}`
+const myEntryKey = () => `competition-my-entry:${competitionId.value}`
 
 const {
     data: competition,
@@ -169,8 +172,11 @@ const {
     error,
     refresh,
 } = await useAsyncData(
-    () => `public-competition:${competitionId.value}`,
-    () => getCompetition(competitionId.value),
+    competitionKey,
+    (nuxtApp) =>
+        keepWhenOffline(nuxtApp, competitionKey(), () =>
+            getCompetition(competitionId.value),
+        ),
     { enabled: () => !!competitionId.value },
 )
 
@@ -187,9 +193,15 @@ const phase = computed(() =>
 const userId = authStore.record?.id ?? ''
 
 const { data: myEntry, refresh: refreshMyEntry } = await useAsyncData(
-    () => `competition-my-entry:${competitionId.value}`,
-    async () =>
-        (await listEntries(competitionId.value, { user: userId }))[0] ?? null,
+    myEntryKey,
+    (nuxtApp) =>
+        keepWhenOffline(
+            nuxtApp,
+            myEntryKey(),
+            async () =>
+                (await listEntries(competitionId.value, { user: userId }))[0] ??
+                null,
+        ),
     { default: () => null, enabled: () => !!userId && !!competitionId.value },
 )
 
