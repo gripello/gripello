@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -82,5 +83,20 @@ func TestRejectedRequestsLogTheirFieldCodesAtDebug(t *testing.T) {
 	line := logs.String()
 	if !strings.Contains(line, "level=DEBUG") || !strings.Contains(line, "codes=[invalid_email]") || strings.Contains(line, "bad id") {
 		t.Errorf("rejected log = %s", line)
+	}
+}
+
+func TestClientAbortsAreLoggedAtDebugNot500(t *testing.T) {
+	logs := captureLogs(t)
+	server := observedServer(map[string]http.HandlerFunc{
+		"GET /api/routes": func(w http.ResponseWriter, r *http.Request) {
+			Fail(w, fmt.Errorf("list routes: %w", context.Canceled))
+		},
+	})
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, httptest.NewRequest("GET", "/api/routes", nil))
+	line := logs.String()
+	if rec.Code != 499 || strings.Contains(line, "level=ERROR") || !strings.Contains(line, `level=DEBUG msg="request rejected"`) {
+		t.Errorf("abort answered %d, log = %s", rec.Code, line)
 	}
 }
