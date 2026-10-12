@@ -42,10 +42,11 @@ test('leaving with unsaved changes asks in a dialog', async ({
     const seeded = await seedMap(adminApi, testPrefix, { routes: 1 })
     try {
         await gotoSettled(page, `/admin/map?location=${seeded.locationId}`)
-        await page
-            .getByTestId('map-editor-new-wall')
-            .fill(`${testPrefix} Draft`)
         await page.getByTestId('map-editor-add-wall').click()
+        await page
+            .getByTestId('map-editor-wall-name')
+            .fill(`${testPrefix} Draft`)
+        await page.getByTestId('map-editor-wall-name').press('Tab')
         await expect(
             page.locator(
                 `[data-testid="map-editor-wall-item"][data-name="${testPrefix} Draft"]`,

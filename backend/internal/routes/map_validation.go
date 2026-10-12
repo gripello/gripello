@@ -14,15 +14,21 @@ const (
 	maxShapePoints    = 200
 	mapShapeMinPoints = 3
 	wallEdgeMinPoints = 2
+	maxShapeLevel     = 3
 )
 
-var mapShapeKinds = map[string]bool{"floor": true, "mat": true, "structure": true}
+// mapShapeKinds maps each kind to its minimum point count; lines are open paths.
+var mapShapeKinds = map[string]int{
+	"floor": mapShapeMinPoints, "path": mapShapeMinPoints, "entrance": mapShapeMinPoints,
+	"mat": mapShapeMinPoints, "structure": mapShapeMinPoints, "line": wallEdgeMinPoints,
+}
 
 type mapPoint [2]float64
 
 type mapShape struct {
 	Kind   string     `json:"kind"`
 	Points []mapPoint `json:"points"`
+	Level  *int       `json:"level,omitempty"`
 }
 
 type gymMap struct {
@@ -70,7 +76,11 @@ func validGymMap(floorPlan *gymMap) bool {
 		return false
 	}
 	for _, shape := range floorPlan.Shapes {
-		if !mapShapeKinds[shape.Kind] || !validPath(shape.Points, mapShapeMinPoints, floorPlan) {
+		minPoints, known := mapShapeKinds[shape.Kind]
+		if !known || !validPath(shape.Points, minPoints, floorPlan) {
+			return false
+		}
+		if shape.Level != nil && (*shape.Level < 1 || *shape.Level > maxShapeLevel) {
 			return false
 		}
 	}

@@ -1466,9 +1466,8 @@
     },
     "mapEditor": {
         "title": "Editor de plano",
-        "noLocations": "Primero añade una ubicación en los ajustes.",
+        "noLocations": "Aún no hay ubicaciones",
         "setupTitle": "Crear un plano",
-        "setupIntro": "Introduce el tamaño de la sala. Después puedes dibujar colchonetas, estructuras y paredes.",
         "width": "Ancho",
         "height": "Fondo",
         "create": "Crear",
@@ -1480,14 +1479,13 @@
         "backToEditing": "Editar",
         "save": "Guardar",
         "saved": "Plano guardado.",
-        "saveFailed": "No se pudo guardar. Los nombres de pared deben ser únicos y una pared que aún tiene vías no se puede eliminar.",
+        "saveFailed": "No se pudo guardar el plano.",
         "discard": "¿Descartar los cambios del plano sin guardar?",
         "canvasLabel": "Área de dibujo del plano",
         "pointLabel": "Punto {n}",
         "addPointLabel": "Añadir punto",
         "walls": "Paredes",
-        "newWall": "Nombre de la nueva pared",
-        "addWall": "Añadir",
+        "newWall": "Nueva pared",
         "moveUp": "Subir",
         "moveDown": "Bajar",
         "wallName": "Nombre",
@@ -1495,15 +1493,11 @@
         "drawEdge": "Dibujar cara de escalada",
         "placeLabel": "Colocar etiqueta",
         "deleteWall": "Eliminar pared",
-        "wallHasRoutes": "Mueve o archiva las vías de esta pared antes de eliminarla.",
-        "shapes": "Suelo, colchonetas y estructuras",
         "shapeKind": "Tipo",
         "deleteShape": "Eliminar forma",
-        "canvas": "Tamaño de la sala",
         "apply": "Aplicar",
         "resizeTooSmall": "La sala no puede ser más pequeña que lo ya dibujado (5–500 m).",
         "trace": "Imagen de referencia",
-        "traceHint": "Sube el plano técnico y calca encima. Los escaladores nunca ven esta imagen.",
         "uploadTrace": "Subir plano",
         "replaceTrace": "Reemplazar plano",
         "removeTrace": "Quitar",
@@ -1511,31 +1505,68 @@
         "kinds": {
             "floor": "Suelo",
             "mat": "Colchoneta",
-            "structure": "Estructura"
+            "structure": "Estructura",
+            "path": "Pasillo",
+            "entrance": "Entrada",
+            "line": "Línea"
         },
         "missing": {
             "name": "Falta el nombre",
             "outline": "Falta el contorno",
-            "edge": "Falta la cara de escalada"
+            "edge": "Falta la cara de escalada",
+            "duplicate": "Nombre ya usado"
         },
         "tools": {
-            "select": "Seleccionar"
-        },
-        "hints": {
-            "select": "Haz clic en una forma o pared para editarla. Arrastra el área vacía para mover la vista y desplázate para hacer zoom.",
-            "selected": "Arrastra para moverla, arrastra los puntos para cambiar la forma y haz clic en un cuadradito para añadir un punto. Supr elimina el punto seleccionado.",
-            "polygon": "Haz clic para añadir puntos. Haz clic en el primer punto, doble clic o pulsa Intro para terminar. Esc cancela.",
-            "edge": "Ahora dibuja la cara de escalada de «{name}»: haz clic a lo largo de la cara frente a la que se colocan los escaladores, de izquierda a derecha. Doble clic o Intro para terminar.",
-            "label": "Haz clic donde debe aparecer el nombre de la pared.",
-            "outline": "Dibuja el contorno de «{name}»: haz clic en las esquinas, luego en el primer punto, doble clic o pulsa Intro.",
-            "incomplete": "«{name}» aún no está terminada ({missing}). Selecciónala y usa el botón resaltado antes de guardar."
+            "select": "Seleccionar",
+            "label": "Herramientas de dibujo",
+            "wall": "Pared",
+            "trace": "Referencia"
         },
         "anchorFrom": "Reuniones de",
         "anchorTo": "a",
-        "anchorHint": "Las vías con estos números de reunión se colocan automáticamente en esta pared.",
         "finish": "Terminar",
         "deletePoint": "Eliminar punto",
-        "panel": "Paredes y formas"
+        "panel": "Paredes y formas",
+        "floor": "Suelo",
+        "hall": "Sala",
+        "complete": "Completa",
+        "wallActions": "Acciones de la pared",
+        "defaultWallName": "Pared {n}",
+        "steps": {
+            "outline": "Contorno",
+            "edge": "Cara de escalada",
+            "label": "Etiqueta"
+        },
+        "draw": "Dibujar",
+        "redraw": "Volver a dibujar",
+        "moveLabel": "Mover",
+        "routesOnWall": "{n} vía en ella | {n} vías en ella",
+        "stillHasRoutes": "Aún tiene vías",
+        "deleted": "{name} eliminado",
+        "saveCount": "Guardar ({n})",
+        "points": "{n} punto | {n} puntos",
+        "undoPoint": "Deshacer punto",
+        "minPoints": "Al menos {n} puntos",
+        "finishIt": "Terminar",
+        "move": "Mover",
+        "shortcuts": {
+            "title": "Atajos de teclado",
+            "pan": "Mover la vista",
+            "zoom": "Zoom"
+        },
+        "traceInvalid": "Usa una imagen JPEG, PNG, WebP o SVG de hasta 10 MB.",
+        "traceFit": "Ajustar a la sala",
+        "traceScale": "Redimensionar dibujo",
+        "addLocation": "Añadir ubicación",
+        "changedElsewhere": "Este plano se cambió en otro lugar",
+        "reload": "Cargar la suya",
+        "keepMine": "Mantener la mía",
+        "level": "Altura",
+        "levels": {
+            "1": "Baja",
+            "2": "Media",
+            "3": "Alta"
+        }
     },
     "mapPlacement": {
         "title": "Colocar vías",

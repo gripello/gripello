@@ -6,24 +6,52 @@
             data-testid="map-svg"
             @click="onBackgroundClick"
         >
-            <MapFloorLayer :shapes="map.shapes" />
+            <MapFloorLayer
+                :shapes="map.shapes"
+                :pixels-per-unit="pixelsPerUnit"
+            />
 
-            <g
-                v-for="wall in mapWalls"
-                :key="wall.id"
-                class="map-wall"
-                :class="{ 'map-wall--selected': wall.id === selectedWallId }"
-                role="button"
-                tabindex="0"
-                :aria-pressed="wall.id === selectedWallId"
-                :aria-label="wallAriaLabel(wall)"
-                data-testid="map-wall"
-                :data-name="wall.name"
-                @click.stop="emit('selectWall', wall.id)"
-                @keydown.enter.prevent="emit('selectWall', wall.id)"
-                @keydown.space.prevent="emit('selectWall', wall.id)"
-            >
-                <path :d="svgPath(wall.outline)" class="map-wall-outline" />
+            <defs>
+                <filter
+                    :id="wallShadowId"
+                    x="-100%"
+                    y="-100%"
+                    width="300%"
+                    height="300%"
+                    primitiveUnits="userSpaceOnUse"
+                >
+                    <feDropShadow
+                        class="map-wall-shadow"
+                        dx="0.15"
+                        dy="0.3"
+                        stdDeviation="0.2"
+                    />
+                </filter>
+            </defs>
+            <g :filter="`url(#${wallShadowId})`">
+                <g
+                    v-for="wall in mapWalls"
+                    :key="wall.id"
+                    class="map-wall"
+                    :class="{
+                        'map-wall--selected': wall.id === selectedWallId,
+                    }"
+                    role="button"
+                    tabindex="0"
+                    :aria-pressed="wall.id === selectedWallId"
+                    :aria-label="wallAriaLabel(wall)"
+                    data-testid="map-wall"
+                    :data-name="wall.name"
+                    @click.stop="emit('selectWall', wall.id)"
+                    @keydown.enter.prevent="emit('selectWall', wall.id)"
+                    @keydown.space.prevent="emit('selectWall', wall.id)"
+                >
+                    <path :d="svgPath(wall.outline)" class="map-wall-outline" />
+                    <path
+                        :d="svgPath(wall.edge, false)"
+                        class="map-wall-edge"
+                    />
+                </g>
             </g>
 
             <g class="map-dots">
@@ -210,7 +238,7 @@ const emit = defineEmits<{
 const CLUSTER_RADIUS_PX = 11
 const CLUSTER_FONT_PX = 12
 const SPREAD_HIT_RADII = 2.2
-const LABEL_HEIGHT_PX = 24
+const LABEL_HEIGHT_PX = 38
 const LABEL_CHAR_PX = 7
 const LABEL_PADDING_PX = 24
 const LABEL_EDGE_PX = 4
@@ -241,6 +269,7 @@ const hitRadiusPx = computed(() =>
     coarsePointer.value ? HIT_RADIUS_PX.coarse : HIT_RADIUS_PX.fine,
 )
 
+const wallShadowId = useId()
 const mapWalls = computed(() => toMapWalls(props.walls, props.map))
 const dots = computed(() => placeRoutes(mapWalls.value, props.routes))
 const layoutDots = computed(() =>
@@ -390,9 +419,10 @@ const labels = computed(() => {
     const placed = mapWalls.value.flatMap((wall) => {
         const position = mapToScreen(wall.labelAt, size.value, viewBox.value)
         const count = countText(wall)
-        const width =
-            (wall.name.length + count.length + 3) * LABEL_CHAR_PX +
-            LABEL_PADDING_PX
+        const width = Math.max(
+            wall.name.length * LABEL_CHAR_PX + LABEL_PADDING_PX,
+            count.length * LABEL_CHAR_PX,
+        )
         const offScreen =
             position.x < -width / 2 ||
             position.x > size.value.width + width / 2 ||
@@ -470,17 +500,36 @@ defineExpose({ focusWall, focusRoute, fitAll })
 }
 
 .map-wall-outline {
-    fill: color-mix(in oklab, var(--ui-text-highlighted) 32%, transparent);
-    stroke: color-mix(in oklab, var(--ui-text-highlighted) 30%, transparent);
+    fill: color-mix(in oklab, var(--ui-text-highlighted) 40%, var(--ui-bg));
+    stroke: color-mix(in oklab, var(--ui-bg) 65%, transparent);
     stroke-width: 1;
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
     transition: fill 0.15s;
 }
 
+.map-wall-shadow {
+    flood-color: #000;
+    flood-opacity: 0.24;
+}
+
+:global(.dark) .map-wall-shadow {
+    flood-opacity: 0.48;
+}
+
+.map-wall-edge {
+    fill: none;
+    stroke: color-mix(in oklab, var(--ui-text-highlighted) 72%, var(--ui-bg));
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+}
+
 .map-wall:hover .map-wall-outline,
 .map-wall:focus-visible .map-wall-outline {
-    fill: color-mix(in oklab, var(--ui-text-highlighted) 40%, transparent);
+    fill: color-mix(in oklab, var(--ui-text-highlighted) 48%, var(--ui-bg));
 }
 
 .map-wall:focus-visible .map-wall-outline {
@@ -489,9 +538,13 @@ defineExpose({ focusWall, focusRoute, fitAll })
 }
 
 .map-wall--selected .map-wall-outline {
-    fill: color-mix(in oklab, var(--ui-primary) 22%, transparent);
+    fill: color-mix(in oklab, var(--ui-primary) 30%, var(--ui-bg));
     stroke: var(--ui-primary);
     stroke-width: 2;
+}
+
+.map-wall--selected .map-wall-edge {
+    stroke: var(--ui-primary);
 }
 
 .map-dot--dimmed {
@@ -543,36 +596,42 @@ defineExpose({ focusWall, focusRoute, fitAll })
     position: absolute;
     transform: translate(-50%, -50%);
     display: flex;
-    align-items: baseline;
-    gap: 6px;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
     pointer-events: auto;
-    padding: 2px 10px;
+    padding: 0;
     border: 0;
-    border-radius: 999px;
-    background: var(--ui-primary);
-    color: #fff;
-    font-size: 0.8125rem;
-    line-height: 1.4;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    background: none;
     cursor: pointer;
     white-space: nowrap;
 }
 
-.wall-pill--selected {
+.wall-pill__name {
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--ui-primary) 55%, #0b1a05);
+    color: #fff;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.wall-pill--selected .wall-pill__name {
+    background: var(--ui-primary);
+    color: #fff;
     outline: 3px solid color-mix(in oklab, var(--ui-primary) 35%, transparent);
 }
 
-.wall-pill__name {
-    font-weight: 600;
-}
-
 .wall-pill__count {
-    font-weight: 500;
-    opacity: 0.85;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--ui-text-highlighted);
     font-variant-numeric: tabular-nums;
-}
-
-.wall-pill__count::before {
-    content: '· ';
+    text-shadow:
+        0 0 3px var(--ui-bg),
+        0 0 2px var(--ui-bg);
 }
 </style>

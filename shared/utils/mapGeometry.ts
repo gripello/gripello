@@ -1,12 +1,24 @@
 export type MapPoint = [number, number]
 
-export const MAP_SHAPE_KINDS = ['floor', 'mat', 'structure'] as const
+export const MAP_SHAPE_KINDS = [
+    'floor',
+    'path',
+    'entrance',
+    'mat',
+    'structure',
+    'line',
+] as const
 export type MapShapeKind = (typeof MAP_SHAPE_KINDS)[number]
+
+export const MAX_SHAPE_LEVEL = 3
 
 export interface MapShape {
     kind: MapShapeKind
     points: MapPoint[]
+    level?: number
 }
+
+export const isOpenShape = (kind: MapShapeKind) => kind === 'line'
 
 export interface MapTrace {
     x: number
@@ -286,6 +298,12 @@ function toTrace(value: unknown): MapTrace | null {
     }
 }
 
+export function shapeMinPoints(kind: MapShapeKind): number {
+    return isOpenShape(kind)
+        ? MAP_LIMITS.edgeMinPoints
+        : MAP_LIMITS.shapeMinPoints
+}
+
 export function sanitizeGymMap(value: unknown): GymMap | null {
     if (!value || typeof value !== 'object') return null
     const { width, height, shapes, trace } = value as Record<string, unknown>
@@ -305,10 +323,16 @@ export function sanitizeGymMap(value: unknown): GymMap | null {
         if (!kind || !MAP_SHAPE_KINDS.includes(kind)) continue
         const points = toPath(
             (shape as MapShape).points,
-            MAP_LIMITS.shapeMinPoints,
+            shapeMinPoints(kind),
             map,
         )
-        if (points) map.shapes.push({ kind, points })
+        if (!points) continue
+        const level = (shape as MapShape).level
+        map.shapes.push(
+            Number.isInteger(level) && level! > 1 && level! <= MAX_SHAPE_LEVEL
+                ? { kind, points, level }
+                : { kind, points },
+        )
     }
     const traceSettings = toTrace(trace)
     if (traceSettings) map.trace = traceSettings

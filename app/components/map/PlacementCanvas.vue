@@ -7,7 +7,7 @@
         data-testid="placement-canvas"
         @click="onCanvasClick"
     >
-        <MapFloorLayer :shapes="map.shapes" />
+        <MapFloorLayer :shapes="map.shapes" :pixels-per-unit="pixelsPerUnit" />
 
         <g
             v-for="wall in walls"

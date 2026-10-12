@@ -3,15 +3,23 @@ import {
     addShape,
     addWall,
     canResize,
+    dropTrace,
+    floorPlanErrors,
     insertVertex,
+    isOpenPath,
     midpoints,
+    minPointsFor,
     moveVertex,
     moveWall,
     newFloorPlan,
+    nextWallName,
     readPath,
     removeVertex,
     removeWall,
+    setShapeKind,
+    setShapeLevel,
     snapToVertices,
+    stageTrace,
     translatePoints,
     wallChanges,
     wallProblems,
@@ -186,5 +194,155 @@ describe('canvas size', () => {
         expect(canResize(state, 40, 30)).toBe(true)
         expect(canResize(state, 30, 30)).toBe(false)
         expect(canResize(state, 3, 30)).toBe(false)
+    })
+})
+
+describe('floor plan save errors', () => {
+    const wall = (key: string, name: string, id?: string): EditorWall => ({
+        key,
+        id,
+        name,
+        outline: [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+        ],
+        edge: [
+            [0, 0],
+            [1, 0],
+        ],
+        label: null,
+        sort: 1,
+        anchorFrom: null,
+        anchorTo: null,
+    })
+
+    it('flags names used twice, ignoring case', () => {
+        const walls = [wall('a', 'Cave'), wall('b', ' cave ')]
+        expect(wallProblems(walls[0]!, walls)).toEqual(['duplicate'])
+        expect(wallProblems(walls[0]!)).toEqual([])
+    })
+
+    it('maps indexed field errors back to the walls that were sent', () => {
+        const sent = {
+            walls: [wall('new-1', 'Cave'), wall('w2', 'Slab', 'w2')],
+            removed: [wall('w9', 'Kids', 'w9')],
+        }
+        const error = {
+            data: {
+                data: {
+                    'walls.1.name': {
+                        code: 'validation_not_unique',
+                        message: 'Value must be unique.',
+                    },
+                    'removed.0.routes': {
+                        code: 'validation_wall_has_routes',
+                        message: 'Wall still has routes.',
+                    },
+                    name: { code: 'validation_required', message: '' },
+                    'walls.7.name': { code: 'x', message: '' },
+                },
+            },
+        }
+        expect(floorPlanErrors(error, sent)).toEqual([
+            {
+                key: 'w2',
+                name: 'Slab',
+                code: 'validation_not_unique',
+                message: 'Value must be unique.',
+            },
+            {
+                key: null,
+                name: 'Kids',
+                code: 'validation_wall_has_routes',
+                message: 'Wall still has routes.',
+            },
+        ])
+        expect(floorPlanErrors(new Error('offline'), sent)).toEqual([])
+    })
+})
+
+describe('nextWallName', () => {
+    it('numbers new walls past names already in use', () => {
+        const named = (name: string) =>
+            ({ key: name, name }) as unknown as EditorWall
+        const format = (n: number) => `Wall ${n}`
+        expect(nextWallName([], format)).toBe('Wall 1')
+        expect(nextWallName([named('wall 2'), named('Cave')], format)).toBe(
+            'Wall 3',
+        )
+        expect(nextWallName([named('Wall 2')], format)).toBe('Wall 3')
+    })
+})
+
+describe('tracing image in the draft', () => {
+    it('stages a file with a default placement and drops it again', () => {
+        const state: EditorState = { map: newFloorPlan(20, 10), walls: [] }
+        const staged = stageTrace(state, 'trace-1')
+        expect(staged.trace).toEqual({ file: 'trace-1' })
+        expect(staged.map.trace).toEqual({
+            x: 0,
+            y: 0,
+            width: 20,
+            opacity: 0.5,
+        })
+
+        const placed = {
+            ...staged,
+            map: {
+                ...staged.map,
+                trace: { x: 1, y: 2, width: 5, opacity: 0.3 },
+            },
+        }
+        expect(stageTrace(placed, 'trace-2').map.trace).toEqual(
+            placed.map.trace,
+        )
+
+        const dropped = dropTrace(placed)
+        expect(dropped.trace).toEqual({ removed: true })
+        expect(dropped.map.trace).toBeUndefined()
+    })
+})
+
+describe('shape kinds in the editor', () => {
+    const state: EditorState = {
+        map: {
+            width: 10,
+            height: 10,
+            shapes: [
+                {
+                    kind: 'line',
+                    points: [
+                        [1, 1],
+                        [3, 1],
+                    ],
+                },
+                {
+                    kind: 'structure',
+                    points: [
+                        [0, 0],
+                        [2, 0],
+                        [2, 2],
+                    ],
+                },
+            ],
+        },
+        walls: [],
+    }
+
+    it('lets lines stay open with two points', () => {
+        const line = { type: 'shape' as const, index: 0 }
+        expect(minPointsFor(state, line)).toBe(2)
+        expect(isOpenPath(state, line)).toBe(true)
+        expect(isOpenPath(state, { type: 'shape', index: 1 })).toBe(false)
+        expect(setShapeKind(state, 0, 'mat')).toBe(state)
+    })
+
+    it('stores a height only above the lowest level', () => {
+        const raised = setShapeLevel(state, 1, 3)
+        expect(raised.map.shapes[1]?.level).toBe(3)
+        expect(setShapeLevel(raised, 1, 1).map.shapes[1]).not.toHaveProperty(
+            'level',
+        )
     })
 })

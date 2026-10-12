@@ -1,7 +1,9 @@
 import {
     boundsOf,
     distance,
+    isOpenShape,
     MAP_LIMITS,
+    shapeMinPoints,
     polylineLength,
     roundToCm,
     type GymMap,
@@ -22,9 +24,21 @@ export interface EditorWall {
     anchorTo: number | null
 }
 
+export const SHAPE_ICONS: Record<MapShapeKind, string> = {
+    floor: 'i-lucide-land-plot',
+    path: 'i-lucide-footprints',
+    entrance: 'i-lucide-door-open',
+    mat: 'i-lucide-rectangle-horizontal',
+    structure: 'i-lucide-box',
+    line: 'i-lucide-slash',
+}
+
+export type TraceChange = { file: string } | { removed: true }
+
 export interface EditorState {
     map: GymMap
     walls: EditorWall[]
+    trace?: TraceChange
 }
 
 export type EditorPath =
@@ -32,7 +46,8 @@ export type EditorPath =
     | { type: 'outline'; key: string }
     | { type: 'edge'; key: string }
 
-export type EditorTool = 'select' | 'shape' | 'outline' | 'edge' | 'label'
+export type EditorTool =
+    'select' | 'shape' | 'outline' | 'edge' | 'label' | 'trace'
 
 export interface WallChanges {
     create: EditorWall[]
@@ -86,10 +101,18 @@ export function writePath(
     return updateWall(state, path.key, { [path.type]: points })
 }
 
-export function minPointsFor(path: EditorPath): number {
-    return path.type === 'edge'
-        ? MAP_LIMITS.edgeMinPoints
-        : MAP_LIMITS.shapeMinPoints
+export function minPointsFor(state: EditorState, path: EditorPath): number {
+    if (path.type === 'edge') return MAP_LIMITS.edgeMinPoints
+    if (path.type === 'outline') return MAP_LIMITS.shapeMinPoints
+    const kind = state.map.shapes[path.index]?.kind
+    return kind ? shapeMinPoints(kind) : MAP_LIMITS.shapeMinPoints
+}
+
+export function isOpenPath(state: EditorState, path: EditorPath): boolean {
+    if (path.type === 'edge') return true
+    if (path.type === 'outline') return false
+    const kind = state.map.shapes[path.index]?.kind
+    return !!kind && isOpenShape(kind)
 }
 
 export function addShape(
@@ -108,12 +131,43 @@ export function setShapeKind(
     index: number,
     kind: MapShapeKind,
 ): EditorState {
+    const shape = state.map.shapes[index]
+    if (!shape || shape.points.length < shapeMinPoints(kind)) return state
+    return updateShape(state, index, { kind })
+}
+
+export function setShapeLevel(
+    state: EditorState,
+    index: number,
+    level: number,
+): EditorState {
+    const shape = state.map.shapes[index]
+    if (!shape) return state
+    const { level: _previous, ...rest } = shape
+    return updateShape(
+        state,
+        index,
+        level > 1 ? { ...rest, level } : rest,
+        true,
+    )
+}
+
+function updateShape(
+    state: EditorState,
+    index: number,
+    patch: Partial<GymMap['shapes'][number]>,
+    replace = false,
+): EditorState {
     return {
         ...state,
         map: {
             ...state.map,
             shapes: state.map.shapes.map((shape, shapeIndex) =>
-                shapeIndex === index ? { ...shape, kind } : shape,
+                shapeIndex !== index
+                    ? shape
+                    : replace
+                      ? (patch as GymMap['shapes'][number])
+                      : { ...shape, ...patch },
             ),
         },
     }
@@ -153,6 +207,16 @@ export function addWall(
             },
         ],
     }
+}
+
+export function nextWallName(
+    walls: EditorWall[],
+    format: (n: number) => string,
+): string {
+    const taken = new Set(walls.map((wall) => wall.name.trim().toLowerCase()))
+    let n = walls.length + 1
+    while (taken.has(format(n).toLowerCase())) n++
+    return format(n)
 }
 
 export function updateWall(
@@ -292,6 +356,31 @@ export function withoutRepeats(points: MapPoint[]): MapPoint[] {
     )
 }
 
+export const TRACE_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/svg+xml',
+    'image/webp',
+]
+export const TRACE_MAX_BYTES = 10 * 1024 * 1024
+
+export function stageTrace(state: EditorState, file: string): EditorState {
+    const { map } = state
+    return {
+        ...state,
+        trace: { file },
+        map: {
+            ...map,
+            trace: map.trace ?? { x: 0, y: 0, width: map.width, opacity: 0.5 },
+        },
+    }
+}
+
+export function dropTrace(state: EditorState): EditorState {
+    const { trace: _placement, ...map } = state.map
+    return { ...state, map, trace: { removed: true } }
+}
+
 export function contentBounds(state: EditorState): MapBounds | null {
     return boundsOf([
         ...state.map.shapes.flatMap((shape) => shape.points),
@@ -319,11 +408,23 @@ export function canResize(
     return !bounds || (bounds.maxX <= width && bounds.maxY <= height)
 }
 
+export type WallProblem = 'name' | 'duplicate' | 'outline' | 'edge'
+
+const nameKey = (wall: EditorWall) => wall.name.trim().toLowerCase()
+
 export function wallProblems(
     wall: EditorWall,
-): ('name' | 'outline' | 'edge')[] {
-    const problems: ('name' | 'outline' | 'edge')[] = []
+    walls: EditorWall[] = [],
+): WallProblem[] {
+    const problems: WallProblem[] = []
     if (!wall.name.trim()) problems.push('name')
+    else if (
+        walls.some(
+            (other) =>
+                other.key !== wall.key && nameKey(other) === nameKey(wall),
+        )
+    )
+        problems.push('duplicate')
     if (wall.outline.length < MAP_LIMITS.shapeMinPoints)
         problems.push('outline')
     if (
@@ -332,6 +433,44 @@ export function wallProblems(
     )
         problems.push('edge')
     return problems
+}
+
+export interface FloorPlanError {
+    key: string | null
+    name: string
+    code: string
+    message: string
+}
+
+const ERROR_KEY = /^(walls|removed)\.(\d+)(?:\.|$)/
+
+export function floorPlanErrors(
+    error: unknown,
+    sent: { walls: EditorWall[]; removed: EditorWall[] },
+): FloorPlanError[] {
+    const fields =
+        (
+            error as {
+                data?: {
+                    data?: Record<string, { code?: string; message?: string }>
+                }
+            }
+        )?.data?.data ?? {}
+    return Object.entries(fields).flatMap(([field, detail]) => {
+        const match = ERROR_KEY.exec(field)
+        if (!match) return []
+        const list = match[1] === 'walls' ? sent.walls : sent.removed
+        const wall = list[Number(match[2])]
+        if (!wall) return []
+        return [
+            {
+                key: match[1] === 'walls' ? wall.key : null,
+                name: wall.name,
+                code: detail.code ?? '',
+                message: detail.message ?? '',
+            },
+        ]
+    })
 }
 
 export function wallChanges(

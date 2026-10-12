@@ -1466,9 +1466,8 @@
     },
     "mapEditor": {
         "title": "Plattegrondeditor",
-        "noLocations": "Voeg eerst een locatie toe in de instellingen.",
+        "noLocations": "Nog geen locaties",
         "setupTitle": "Plattegrond maken",
-        "setupIntro": "Voer de afmetingen van de hal in. Matten, bouwwerken en wanden teken je daarna.",
         "width": "Breedte",
         "height": "Diepte",
         "create": "Maken",
@@ -1480,14 +1479,13 @@
         "backToEditing": "Bewerken",
         "save": "Opslaan",
         "saved": "Plattegrond opgeslagen.",
-        "saveFailed": "Opslaan mislukt. Wandnamen moeten uniek zijn, en een wand met routes kan niet worden verwijderd.",
+        "saveFailed": "Plattegrond kon niet worden opgeslagen.",
         "discard": "Niet-opgeslagen wijzigingen aan de plattegrond verwerpen?",
         "canvasLabel": "Tekengebied van de plattegrond",
         "pointLabel": "Punt {n}",
         "addPointLabel": "Punt toevoegen",
         "walls": "Wanden",
-        "newWall": "Naam van nieuwe wand",
-        "addWall": "Toevoegen",
+        "newWall": "Nieuwe wand",
         "moveUp": "Omhoog",
         "moveDown": "Omlaag",
         "wallName": "Naam",
@@ -1495,15 +1493,11 @@
         "drawEdge": "Klimrand tekenen",
         "placeLabel": "Label plaatsen",
         "deleteWall": "Wand verwijderen",
-        "wallHasRoutes": "Verplaats of archiveer de routes op deze wand voordat je hem verwijdert.",
-        "shapes": "Vloer, matten en bouwwerken",
         "shapeKind": "Soort",
         "deleteShape": "Vorm verwijderen",
-        "canvas": "Afmetingen hal",
         "apply": "Toepassen",
         "resizeTooSmall": "De hal kan niet kleiner zijn dan wat al getekend is (5–500 m).",
         "trace": "Onderlegger",
-        "traceHint": "Upload de technische tekening en teken eroverheen. Klimmers zien deze afbeelding nooit.",
         "uploadTrace": "Tekening uploaden",
         "replaceTrace": "Tekening vervangen",
         "removeTrace": "Verwijderen",
@@ -1511,31 +1505,68 @@
         "kinds": {
             "floor": "Vloer",
             "mat": "Mat",
-            "structure": "Bouwwerk"
+            "structure": "Bouwwerk",
+            "path": "Looppad",
+            "entrance": "Ingang",
+            "line": "Lijn"
         },
         "missing": {
             "name": "Naam ontbreekt",
             "outline": "Omtrek ontbreekt",
-            "edge": "Klimrand ontbreekt"
+            "edge": "Klimrand ontbreekt",
+            "duplicate": "Naam al in gebruik"
         },
         "tools": {
-            "select": "Selecteren"
-        },
-        "hints": {
-            "select": "Klik op een vorm of wand om die te bewerken. Sleep het lege vlak om het beeld te verschuiven, scroll om te zoomen.",
-            "selected": "Sleep om te verplaatsen, sleep de punten om de vorm te wijzigen, klik op een klein vierkantje om een punt toe te voegen. Delete verwijdert het geselecteerde punt.",
-            "polygon": "Klik om punten toe te voegen. Klik op het eerste punt, dubbelklik of druk op Enter om af te ronden. Esc annuleert.",
-            "edge": "Teken nu de klimrand van “{name}”: klik langs het vlak waar klimmers voor staan, van links naar rechts. Dubbelklik of druk op Enter om af te ronden.",
-            "label": "Klik waar de naam van de wand moet komen.",
-            "outline": "Teken de omtrek van “{name}”: klik de hoeken aan, klik dan op het eerste punt, dubbelklik of druk op Enter.",
-            "incomplete": "“{name}” is nog niet af ({missing}). Selecteer de wand en gebruik de gemarkeerde knop voordat je opslaat."
+            "select": "Selecteren",
+            "label": "Tekengereedschap",
+            "wall": "Wand",
+            "trace": "Onderlegger"
         },
         "anchorFrom": "Lijnen van",
         "anchorTo": "tot",
-        "anchorHint": "Routes met deze lijnnummers worden automatisch op deze wand geplaatst.",
         "finish": "Klaar",
         "deletePoint": "Punt verwijderen",
-        "panel": "Wanden en vormen"
+        "panel": "Wanden en vormen",
+        "floor": "Vloer",
+        "hall": "Hal",
+        "complete": "Klaar",
+        "wallActions": "Wandacties",
+        "defaultWallName": "Wand {n}",
+        "steps": {
+            "outline": "Omtrek",
+            "edge": "Klimrand",
+            "label": "Label"
+        },
+        "draw": "Tekenen",
+        "redraw": "Opnieuw tekenen",
+        "moveLabel": "Verplaatsen",
+        "routesOnWall": "{n} route erop | {n} routes erop",
+        "stillHasRoutes": "Heeft nog routes",
+        "deleted": "{name} verwijderd",
+        "saveCount": "Opslaan ({n})",
+        "points": "{n} punt | {n} punten",
+        "undoPoint": "Punt terug",
+        "minPoints": "Minstens {n} punten",
+        "finishIt": "Afmaken",
+        "move": "Verplaatsen",
+        "shortcuts": {
+            "title": "Sneltoetsen",
+            "pan": "Weergave verschuiven",
+            "zoom": "Zoomen"
+        },
+        "traceInvalid": "Gebruik een JPEG-, PNG-, WebP- of SVG-afbeelding tot 10 MB.",
+        "traceFit": "Passend in hal",
+        "traceScale": "Tekening schalen",
+        "addLocation": "Locatie toevoegen",
+        "changedElsewhere": "Deze plattegrond is elders gewijzigd",
+        "reload": "Die van hen laden",
+        "keepMine": "Mijne houden",
+        "level": "Hoogte",
+        "levels": {
+            "1": "Laag",
+            "2": "Middel",
+            "3": "Hoog"
+        }
     },
     "mapPlacement": {
         "title": "Routes plaatsen",

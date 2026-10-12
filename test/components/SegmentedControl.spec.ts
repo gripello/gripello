@@ -63,4 +63,16 @@ describe('SegmentedControl', () => {
 
         expect(wrapper.emitted('update:modelValue')).toEqual([['route']])
     })
+
+    it('lets an option carry its own test id', () => {
+        const wrapper = createWrapper({
+            items: [
+                { value: 'boulder', label: 'Boulders', testId: 'tool-boulder' },
+                { value: 'route', label: 'Routes' },
+            ],
+        })
+
+        expect(wrapper.find('[data-testid="tool-boulder"]').exists()).toBe(true)
+        expect(wrapper.find('[data-testid="kind-route"]').exists()).toBe(true)
+    })
 })

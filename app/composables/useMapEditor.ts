@@ -1,6 +1,19 @@
-import type { MapPoint, MapShapeKind } from '#shared/utils/mapGeometry'
 import {
+    MAP_LIMITS,
+    shapeMinPoints,
+    type MapPoint,
+    type MapShapeKind,
+} from '#shared/utils/mapGeometry'
+import {
+    addShape,
+    addWall,
+    minPointsFor,
     newFloorPlan,
+    readPath,
+    removeVertex,
+    updateWall,
+    withoutRepeats,
+    writePath,
     type EditorPath,
     type EditorState,
     type EditorTool,
@@ -33,6 +46,17 @@ export function useMapEditor() {
     )
     const canUndo = computed(() => past.value.length > 0)
     const canRedo = computed(() => future.value.length > 0)
+    const isDrawing = computed(() =>
+        ['shape', 'outline', 'edge'].includes(tool.value),
+    )
+    const draftMinimum = computed(() => {
+        if (tool.value === 'edge') return MAP_LIMITS.edgeMinPoints
+        if (tool.value === 'shape') return shapeMinPoints(shapeKind.value)
+        return MAP_LIMITS.shapeMinPoints
+    })
+    const canFinish = computed(
+        () => isDrawing.value && draft.value.length >= draftMinimum.value,
+    )
     const selectedWall = computed(() => {
         const current = selection.value
         if (current?.kind !== 'wall') return null
@@ -76,6 +100,15 @@ export function useMapEditor() {
         state.value = next
     }
 
+    function cancelGesture() {
+        if (gestureStart) state.value = gestureStart
+        gestureStart = null
+    }
+
+    function inGesture() {
+        return gestureStart !== null
+    }
+
     function endGesture() {
         if (gestureStart && gestureStart !== state.value)
             pushHistory(gestureStart)
@@ -116,6 +149,52 @@ export function useMapEditor() {
         draft.value = []
     }
 
+    function finishDraft() {
+        if (!isDrawing.value) return
+        const points = withoutRepeats(draft.value)
+        const current = tool.value
+        const wall = selectedWall.value
+        if (points.length < draftMinimum.value) return
+
+        if (current === 'shape') {
+            const next = addShape(state.value, shapeKind.value, points)
+            commit(next)
+            selection.value = {
+                kind: 'shape',
+                index: next.map.shapes.length - 1,
+            }
+            selectTool('select')
+        } else if (wall && current === 'outline') {
+            commit(updateWall(state.value, wall.key, { outline: points }))
+            selectTool(wall.edge.length ? 'select' : 'edge')
+        } else if (wall && current === 'edge') {
+            commit(updateWall(state.value, wall.key, { edge: points }))
+            selectTool('select')
+        }
+    }
+
+    function addNewWall(name: string) {
+        const key = `new-${Date.now()}`
+        commit(addWall(state.value, key, name))
+        selection.value = { kind: 'wall', key }
+        selectedVertex.value = null
+        selectTool('outline')
+    }
+
+    function removeSelectedVertex() {
+        const selected = selectedVertex.value
+        if (!selected) return false
+        const remaining = removeVertex(
+            readPath(state.value, selected.path),
+            selected.index,
+            minPointsFor(state.value, selected.path),
+        )
+        if (!remaining) return false
+        commit(writePath(state.value, selected.path, remaining))
+        selectedVertex.value = null
+        return true
+    }
+
     return {
         state,
         saved,
@@ -128,14 +207,21 @@ export function useMapEditor() {
         isDirty,
         canUndo,
         canRedo,
+        isDrawing,
+        canFinish,
         load,
         markSaved,
         commit,
         beginGesture,
         preview,
         endGesture,
+        inGesture,
+        cancelGesture,
         undo,
         redo,
         selectTool,
+        finishDraft,
+        addNewWall,
+        removeSelectedVertex,
     }
 }

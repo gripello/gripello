@@ -81,6 +81,7 @@ describe('MapView', () => {
             1,
         )
         expect(wrapper.findAll('[data-testid="map-wall"]')).toHaveLength(1)
+        expect(wrapper.get('.map-wall-edge').attributes('d')).toBe('M2 5 L38 5')
         const dots = wrapper.findAll('[data-testid="map-route-dot"]')
         expect(dots.map((dot) => dot.attributes('data-color'))).toEqual([
             '#E53935',

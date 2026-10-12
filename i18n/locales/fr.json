@@ -1466,9 +1466,8 @@
     },
     "mapEditor": {
         "title": "Éditeur de plan",
-        "noLocations": "Ajoutez d'abord un site dans les paramètres.",
+        "noLocations": "Aucun site pour l'instant",
         "setupTitle": "Créer un plan au sol",
-        "setupIntro": "Indiquez les dimensions de la salle. Vous pourrez ensuite dessiner les tapis, les structures et les murs.",
         "width": "Largeur",
         "height": "Profondeur",
         "create": "Créer",
@@ -1480,14 +1479,13 @@
         "backToEditing": "Modifier",
         "save": "Enregistrer",
         "saved": "Plan enregistré.",
-        "saveFailed": "Échec de l'enregistrement. Les noms de murs doivent être uniques, et un mur qui contient encore des voies ne peut pas être supprimé.",
+        "saveFailed": "Impossible d'enregistrer le plan.",
         "discard": "Abandonner les modifications non enregistrées du plan ?",
         "canvasLabel": "Zone de dessin du plan",
         "pointLabel": "Point {n}",
         "addPointLabel": "Ajouter un point",
         "walls": "Murs",
-        "newWall": "Nom du nouveau mur",
-        "addWall": "Ajouter",
+        "newWall": "Nouveau mur",
         "moveUp": "Monter",
         "moveDown": "Descendre",
         "wallName": "Nom",
@@ -1495,15 +1493,11 @@
         "drawEdge": "Dessiner la face d'escalade",
         "placeLabel": "Placer l'étiquette",
         "deleteWall": "Supprimer le mur",
-        "wallHasRoutes": "Déplacez ou archivez les voies de ce mur avant de le supprimer.",
-        "shapes": "Sol, tapis et structures",
         "shapeKind": "Type",
         "deleteShape": "Supprimer la forme",
-        "canvas": "Taille de la salle",
         "apply": "Appliquer",
         "resizeTooSmall": "La salle ne peut pas être plus petite que ce qui est déjà dessiné (5–500 m).",
         "trace": "Image de calque",
-        "traceHint": "Importez le plan technique et redessinez par-dessus. Les grimpeurs ne voient jamais cette image.",
         "uploadTrace": "Importer le plan",
         "replaceTrace": "Remplacer le plan",
         "removeTrace": "Retirer",
@@ -1511,31 +1505,68 @@
         "kinds": {
             "floor": "Sol",
             "mat": "Tapis",
-            "structure": "Structure"
+            "structure": "Structure",
+            "path": "Passage",
+            "entrance": "Entrée",
+            "line": "Ligne"
         },
         "missing": {
             "name": "Nom manquant",
             "outline": "Contour manquant",
-            "edge": "Face d'escalade manquante"
+            "edge": "Face d'escalade manquante",
+            "duplicate": "Nom déjà utilisé"
         },
         "tools": {
-            "select": "Sélectionner"
-        },
-        "hints": {
-            "select": "Cliquez sur une forme ou un mur pour le modifier. Faites glisser la zone vide pour déplacer la vue, faites défiler pour zoomer.",
-            "selected": "Faites glisser pour déplacer, faites glisser les points pour modifier la forme, cliquez sur un petit carré pour ajouter un point. Suppr supprime le point sélectionné.",
-            "polygon": "Cliquez pour ajouter des points. Cliquez sur le premier point, double-cliquez ou appuyez sur Entrée pour terminer. Échap annule.",
-            "edge": "Dessinez maintenant la face d'escalade de « {name} » : cliquez le long de la face devant laquelle se tiennent les grimpeurs, de gauche à droite. Double-cliquez ou appuyez sur Entrée pour terminer.",
-            "label": "Cliquez à l'endroit où le nom du mur doit apparaître.",
-            "outline": "Dessinez le contour de « {name} » : cliquez sur les angles, puis sur le premier point, double-cliquez ou appuyez sur Entrée.",
-            "incomplete": "« {name} » n'est pas encore terminé ({missing}). Sélectionnez-le et utilisez le bouton mis en évidence avant d'enregistrer."
+            "select": "Sélectionner",
+            "label": "Outils de dessin",
+            "wall": "Mur",
+            "trace": "Calque"
         },
         "anchorFrom": "Relais de",
         "anchorTo": "à",
-        "anchorHint": "Les voies avec ces numéros de relais sont placées automatiquement sur ce mur.",
         "finish": "Terminer",
         "deletePoint": "Supprimer le point",
-        "panel": "Murs et formes"
+        "panel": "Murs et formes",
+        "floor": "Sol",
+        "hall": "Salle",
+        "complete": "Terminé",
+        "wallActions": "Actions du mur",
+        "defaultWallName": "Mur {n}",
+        "steps": {
+            "outline": "Contour",
+            "edge": "Face d'escalade",
+            "label": "Étiquette"
+        },
+        "draw": "Dessiner",
+        "redraw": "Redessiner",
+        "moveLabel": "Déplacer",
+        "routesOnWall": "{n} voie dessus | {n} voies dessus",
+        "stillHasRoutes": "A encore des voies",
+        "deleted": "{name} supprimé",
+        "saveCount": "Enregistrer ({n})",
+        "points": "{n} point | {n} points",
+        "undoPoint": "Annuler le point",
+        "minPoints": "Au moins {n} points",
+        "finishIt": "Terminer",
+        "move": "Déplacer",
+        "shortcuts": {
+            "title": "Raccourcis clavier",
+            "pan": "Déplacer la vue",
+            "zoom": "Zoomer"
+        },
+        "traceInvalid": "Utilisez une image JPEG, PNG, WebP ou SVG de 10 Mo maximum.",
+        "traceFit": "Ajuster à la salle",
+        "traceScale": "Redimensionner le dessin",
+        "addLocation": "Ajouter un site",
+        "changedElsewhere": "Ce plan a été modifié ailleurs",
+        "reload": "Charger la leur",
+        "keepMine": "Garder la mienne",
+        "level": "Hauteur",
+        "levels": {
+            "1": "Basse",
+            "2": "Moyenne",
+            "3": "Haute"
+        }
     },
     "mapPlacement": {
         "title": "Placer les voies",

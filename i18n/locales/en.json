@@ -1466,9 +1466,8 @@
     },
     "mapEditor": {
         "title": "Map editor",
-        "noLocations": "Add a location in the settings first.",
+        "noLocations": "No locations yet",
         "setupTitle": "Create a floor plan",
-        "setupIntro": "Enter the size of the hall. You can draw mats, structures and walls afterwards.",
         "width": "Width",
         "height": "Depth",
         "create": "Create",
@@ -1480,14 +1479,13 @@
         "backToEditing": "Edit",
         "save": "Save",
         "saved": "Map saved.",
-        "saveFailed": "Could not save. Wall names must be unique, and a wall that still has routes cannot be deleted.",
+        "saveFailed": "Could not save the map.",
         "discard": "Discard your unsaved map changes?",
         "canvasLabel": "Map drawing area",
         "pointLabel": "Point {n}",
         "addPointLabel": "Add point",
         "walls": "Walls",
-        "newWall": "New wall name",
-        "addWall": "Add",
+        "newWall": "New wall",
         "moveUp": "Move up",
         "moveDown": "Move down",
         "wallName": "Name",
@@ -1495,15 +1493,11 @@
         "drawEdge": "Draw climbing edge",
         "placeLabel": "Place label",
         "deleteWall": "Delete wall",
-        "wallHasRoutes": "Move or archive the routes on this wall before deleting it.",
-        "shapes": "Floor, mats and structures",
         "shapeKind": "Type",
         "deleteShape": "Delete shape",
-        "canvas": "Hall size",
         "apply": "Apply",
         "resizeTooSmall": "The hall cannot be smaller than what is already drawn (5–500 m).",
         "trace": "Tracing image",
-        "traceHint": "Upload the technical drawing and trace over it. Climbers never see this image.",
         "uploadTrace": "Upload drawing",
         "replaceTrace": "Replace drawing",
         "removeTrace": "Remove",
@@ -1511,31 +1505,68 @@
         "kinds": {
             "floor": "Floor",
             "mat": "Mat",
-            "structure": "Structure"
+            "structure": "Structure",
+            "path": "Walkway",
+            "entrance": "Entrance",
+            "line": "Line"
         },
         "missing": {
             "name": "Name missing",
             "outline": "Outline missing",
-            "edge": "Climbing edge missing"
+            "edge": "Climbing edge missing",
+            "duplicate": "Name already used"
         },
         "tools": {
-            "select": "Select"
-        },
-        "hints": {
-            "select": "Click a shape or wall to edit it. Drag the empty area to move the view, scroll to zoom.",
-            "selected": "Drag to move it, drag the points to reshape, click a small square to add a point. Delete removes the selected point.",
-            "polygon": "Click to add points. Click the first point, double-click or press Enter to finish. Esc cancels.",
-            "edge": "Now draw the climbing edge of \"{name}\": click along the face climbers stand in front of, left to right. Double-click or press Enter to finish.",
-            "label": "Click where the wall name should appear.",
-            "outline": "Draw the outline of \"{name}\": click the corners, then click the first point, double-click or press Enter.",
-            "incomplete": "\"{name}\" is not finished yet ({missing}). Select it and use the highlighted button before saving."
+            "select": "Select",
+            "label": "Drawing tools",
+            "wall": "Wall",
+            "trace": "Trace"
         },
         "anchorFrom": "Anchors from",
         "anchorTo": "to",
-        "anchorHint": "Routes with these anchor numbers are placed on this wall automatically.",
         "finish": "Finish",
         "deletePoint": "Delete point",
-        "panel": "Walls and shapes"
+        "panel": "Walls and shapes",
+        "floor": "Floor",
+        "hall": "Hall",
+        "complete": "Complete",
+        "wallActions": "Wall actions",
+        "defaultWallName": "Wall {n}",
+        "steps": {
+            "outline": "Outline",
+            "edge": "Climbing edge",
+            "label": "Label"
+        },
+        "draw": "Draw",
+        "redraw": "Redraw",
+        "moveLabel": "Move",
+        "routesOnWall": "{n} route on it | {n} routes on it",
+        "stillHasRoutes": "Still has routes",
+        "deleted": "{name} deleted",
+        "saveCount": "Save ({n})",
+        "points": "{n} point | {n} points",
+        "undoPoint": "Undo point",
+        "minPoints": "At least {n} points",
+        "finishIt": "Finish it",
+        "move": "Move",
+        "shortcuts": {
+            "title": "Keyboard shortcuts",
+            "pan": "Move the view",
+            "zoom": "Zoom"
+        },
+        "traceInvalid": "Use a JPEG, PNG, WebP or SVG image up to 10 MB.",
+        "traceFit": "Fit to hall",
+        "traceScale": "Resize drawing",
+        "addLocation": "Add a location",
+        "changedElsewhere": "This map was changed elsewhere",
+        "reload": "Load theirs",
+        "keepMine": "Keep mine",
+        "level": "Height",
+        "levels": {
+            "1": "Low",
+            "2": "Medium",
+            "3": "High"
+        }
     },
     "mapPlacement": {
         "title": "Place routes",

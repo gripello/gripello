@@ -1466,9 +1466,8 @@
     },
     "mapEditor": {
         "title": "Plan-Editor",
-        "noLocations": "Lege zuerst in den Einstellungen einen Standort an.",
+        "noLocations": "Noch keine Standorte",
         "setupTitle": "Grundriss anlegen",
-        "setupIntro": "Gib die Größe der Halle ein. Matten, Einbauten und Wände zeichnest du danach.",
         "width": "Breite",
         "height": "Tiefe",
         "create": "Anlegen",
@@ -1480,14 +1479,13 @@
         "backToEditing": "Bearbeiten",
         "save": "Speichern",
         "saved": "Plan gespeichert.",
-        "saveFailed": "Speichern fehlgeschlagen. Wandnamen müssen eindeutig sein, und eine Wand mit Routen kann nicht gelöscht werden.",
+        "saveFailed": "Plan konnte nicht gespeichert werden.",
         "discard": "Ungespeicherte Änderungen am Plan verwerfen?",
         "canvasLabel": "Zeichenfläche des Plans",
         "pointLabel": "Punkt {n}",
         "addPointLabel": "Punkt hinzufügen",
         "walls": "Wände",
-        "newWall": "Name der neuen Wand",
-        "addWall": "Hinzufügen",
+        "newWall": "Neue Wand",
         "moveUp": "Nach oben",
         "moveDown": "Nach unten",
         "wallName": "Name",
@@ -1495,15 +1493,11 @@
         "drawEdge": "Kletterkante zeichnen",
         "placeLabel": "Beschriftung setzen",
         "deleteWall": "Wand löschen",
-        "wallHasRoutes": "Verschiebe oder archiviere die Routen dieser Wand, bevor du sie löschst.",
-        "shapes": "Boden, Matten und Einbauten",
         "shapeKind": "Art",
         "deleteShape": "Form löschen",
-        "canvas": "Hallengröße",
         "apply": "Übernehmen",
         "resizeTooSmall": "Die Halle kann nicht kleiner sein als das bereits Gezeichnete (5–500 m).",
         "trace": "Vorlage",
-        "traceHint": "Lade die technische Zeichnung hoch und zeichne darüber. Kletternde sehen dieses Bild nie.",
         "uploadTrace": "Zeichnung hochladen",
         "replaceTrace": "Zeichnung ersetzen",
         "removeTrace": "Entfernen",
@@ -1511,31 +1505,68 @@
         "kinds": {
             "floor": "Boden",
             "mat": "Matte",
-            "structure": "Einbau"
+            "structure": "Einbau",
+            "path": "Laufweg",
+            "entrance": "Eingang",
+            "line": "Linie"
         },
         "missing": {
             "name": "Name fehlt",
             "outline": "Umriss fehlt",
-            "edge": "Kletterkante fehlt"
+            "edge": "Kletterkante fehlt",
+            "duplicate": "Name schon vergeben"
         },
         "tools": {
-            "select": "Auswählen"
-        },
-        "hints": {
-            "select": "Klicke eine Form oder Wand an, um sie zu bearbeiten. Ziehe die leere Fläche zum Verschieben, scrolle zum Zoomen.",
-            "selected": "Ziehen zum Verschieben, Punkte ziehen zum Umformen, kleines Quadrat klicken fügt einen Punkt hinzu. Entf löscht den gewählten Punkt.",
-            "polygon": "Klicke, um Punkte zu setzen. Ersten Punkt anklicken, doppelklicken oder Enter drücken zum Abschließen. Esc bricht ab.",
-            "edge": "Zeichne jetzt die Kletterkante von „{name}“: entlang der Fläche klicken, vor der man steht, von links nach rechts. Doppelklick oder Enter zum Abschließen.",
-            "label": "Klicke dorthin, wo der Wandname stehen soll.",
-            "outline": "Zeichne den Umriss von „{name}“: Ecken anklicken, dann den ersten Punkt anklicken, doppelklicken oder Enter drücken.",
-            "incomplete": "„{name}“ ist noch nicht fertig ({missing}). Wähle die Wand und nutze den markierten Knopf, bevor du speicherst."
+            "select": "Auswählen",
+            "label": "Zeichenwerkzeuge",
+            "wall": "Wand",
+            "trace": "Vorlage"
         },
         "anchorFrom": "Umlenker von",
         "anchorTo": "bis",
-        "anchorHint": "Routen mit diesen Umlenker-Nummern werden automatisch an dieser Wand platziert.",
         "finish": "Fertig",
         "deletePoint": "Punkt löschen",
-        "panel": "Wände und Flächen"
+        "panel": "Wände und Flächen",
+        "floor": "Boden",
+        "hall": "Halle",
+        "complete": "Fertig",
+        "wallActions": "Wandaktionen",
+        "defaultWallName": "Wand {n}",
+        "steps": {
+            "outline": "Umriss",
+            "edge": "Kletterkante",
+            "label": "Beschriftung"
+        },
+        "draw": "Zeichnen",
+        "redraw": "Neu zeichnen",
+        "moveLabel": "Verschieben",
+        "routesOnWall": "{n} Route darauf | {n} Routen darauf",
+        "stillHasRoutes": "Hat noch Routen",
+        "deleted": "{name} gelöscht",
+        "saveCount": "Speichern ({n})",
+        "points": "{n} Punkt | {n} Punkte",
+        "undoPoint": "Punkt zurück",
+        "minPoints": "Mindestens {n} Punkte",
+        "finishIt": "Fertigstellen",
+        "move": "Verschieben",
+        "shortcuts": {
+            "title": "Tastenkürzel",
+            "pan": "Ansicht verschieben",
+            "zoom": "Zoomen"
+        },
+        "traceInvalid": "Nutze ein JPEG-, PNG-, WebP- oder SVG-Bild bis 10 MB.",
+        "traceFit": "An Halle anpassen",
+        "traceScale": "Zeichnung skalieren",
+        "addLocation": "Standort anlegen",
+        "changedElsewhere": "Dieser Plan wurde anderswo geändert",
+        "reload": "Deren laden",
+        "keepMine": "Meine behalten",
+        "level": "Höhe",
+        "levels": {
+            "1": "Niedrig",
+            "2": "Mittel",
+            "3": "Hoch"
+        }
     },
     "mapPlacement": {
         "title": "Routen platzieren",

@@ -14,6 +14,7 @@ import {
     projectOntoPolyline,
     sanitizeGymMap,
     sanitizeWall,
+    shapeMinPoints,
     snapPoint,
     type GymMap,
     type MapPoint,
@@ -352,5 +353,74 @@ describe('descending ranges', () => {
             true,
         )
         expect(positions.get('a15')).toBe(0.5)
+    })
+})
+
+describe('map shape kinds', () => {
+    it('keeps open lines with two points, levels 2–3 and drops the rest', () => {
+        const map = sanitizeGymMap({
+            width: 10,
+            height: 10,
+            shapes: [
+                {
+                    kind: 'line',
+                    points: [
+                        [1, 1],
+                        [4, 1],
+                    ],
+                },
+                {
+                    kind: 'path',
+                    points: [
+                        [1, 1],
+                        [4, 1],
+                    ],
+                },
+                {
+                    kind: 'entrance',
+                    points: [
+                        [0, 0],
+                        [2, 0],
+                        [2, 1],
+                    ],
+                },
+                {
+                    kind: 'structure',
+                    points: [
+                        [0, 0],
+                        [2, 0],
+                        [2, 2],
+                    ],
+                    level: 3,
+                },
+                {
+                    kind: 'structure',
+                    points: [
+                        [0, 0],
+                        [2, 0],
+                        [2, 2],
+                    ],
+                    level: 1,
+                },
+                {
+                    kind: 'structure',
+                    points: [
+                        [0, 0],
+                        [2, 0],
+                        [2, 2],
+                    ],
+                    level: 9,
+                },
+            ],
+        })!
+        expect(map.shapes.map((shape) => [shape.kind, shape.level])).toEqual([
+            ['line', undefined],
+            ['entrance', undefined],
+            ['structure', 3],
+            ['structure', undefined],
+            ['structure', undefined],
+        ])
+        expect(shapeMinPoints('line')).toBe(2)
+        expect(shapeMinPoints('path')).toBe(3)
     })
 })
