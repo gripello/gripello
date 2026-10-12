@@ -7,6 +7,7 @@ import {
     normalizeCreators,
 } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
+import { isTagTemplate } from '#shared/utils/tagTemplates'
 import { fetchAll, type Api } from './api-server'
 
 interface ExportBody {
@@ -17,6 +18,7 @@ interface ExportBody {
     typeLabels?: Record<string, unknown>
     columns?: unknown[]
     show?: Record<string, unknown>
+    template?: unknown
 }
 
 export interface ExportColumn {
@@ -176,6 +178,11 @@ export async function resolveExportShow(event: H3Event) {
         date: show?.date !== false,
         logo: show?.logo !== false,
     }
+}
+
+export async function resolveExportTemplate(event: H3Event) {
+    const template = (await readExportBody(event))?.template
+    return isTagTemplate(template) ? template : 'standard'
 }
 
 export const TAG_QR_ERROR_CORRECTION = 'Q'

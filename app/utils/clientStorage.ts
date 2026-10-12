@@ -15,6 +15,7 @@ export const THEME_MODE_COOKIE = 'theme-mode'
 export const SIDEBAR_OPEN_COOKIE = 'sidebar-open'
 export const GYM_COOKIE = 'gym'
 export const EXPORT_COLUMNS_KEY = 'gripello.export-columns'
+export const EXPORT_TAG_TEMPLATE_KEY = 'gripello.export-tag-template'
 export const COMPETITION_SCORES_KEY = 'gripello:competition-scores'
 export const MAP_ROUTE_TYPE_KEY = 'map-route-type'
 export const MAP_CONSENT_KEY = 'gripello-map-consent'
@@ -73,6 +74,12 @@ export const CLIENT_STORAGE: ClientStorageEntry[] = [
         name: EXPORT_COLUMNS_KEY,
         kind: 'localStorage',
         purpose: 'exportColumns',
+        duration: 'persistent',
+    },
+    {
+        name: EXPORT_TAG_TEMPLATE_KEY,
+        kind: 'localStorage',
+        purpose: 'exportTagTemplate',
         duration: 'persistent',
     },
     {

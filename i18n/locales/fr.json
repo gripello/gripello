@@ -695,6 +695,7 @@
                 "colorScheme": "Mémorise le mode clair ou sombre",
                 "sidebar": "Mémorise si la navigation latérale est dépliée",
                 "exportColumns": "Mémorise les colonnes d’export choisies",
+                "exportTagTemplate": "Mémorise la mise en page d’étiquette choisie",
                 "inventorySession": "Conserve la progression d’un inventaire",
                 "inventoryInstructions": "Mémorise que les instructions d’inventaire ont été affichées",
                 "offlineLogbook": "Garde votre carnet et les réussites non envoyées disponibles hors ligne",
@@ -1020,6 +1021,13 @@
     "export": {
         "title": "Exporter en Excel",
         "title_pdf": "Imprimer les étiquettes QR",
+        "template": "Mise en page",
+        "templates": {
+            "standard": "A4 · 8",
+            "large": "A4 paysage · 4",
+            "compact": "A4 · 12",
+            "label": "Étiquette · 1"
+        },
         "language": "Langue",
         "logo": "Logo",
         "columns": "Colonnes",

@@ -3,6 +3,7 @@ import {
     attachmentHeader,
     resolveApplicationUrl,
     resolveExportGymId,
+    resolveExportTemplate,
     resolveExportColumns,
     resolveRouteIds,
     requireRouteIds,
@@ -204,6 +205,21 @@ describe('resolveExportGymId', () => {
         await expect(resolveExportGymId(eventWith({}))).rejects.toMatchObject({
             statusCode: 400,
         })
+    })
+})
+
+describe('resolveExportTemplate', () => {
+    it('reads a known layout', async () => {
+        expect(
+            await resolveExportTemplate(eventWith({ template: 'label' })),
+        ).toBe('label')
+    })
+
+    it('falls back to the standard layout', async () => {
+        expect(
+            await resolveExportTemplate(eventWith({ template: 'poster' })),
+        ).toBe('standard')
+        expect(await resolveExportTemplate(eventWith({}))).toBe('standard')
     })
 })
 

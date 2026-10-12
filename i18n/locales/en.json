@@ -695,6 +695,7 @@
                 "colorScheme": "Remembers light or dark mode",
                 "sidebar": "Remembers whether the side navigation is expanded",
                 "exportColumns": "Remembers selected export columns",
+                "exportTagTemplate": "Remembers the chosen tag layout",
                 "inventorySession": "Keeps the progress of an inventory scan",
                 "inventoryInstructions": "Remembers that inventory instructions were shown",
                 "offlineLogbook": "Keeps your logbook and unsent ascents available offline",
@@ -1020,6 +1021,13 @@
     "export": {
         "title": "Export as Excel",
         "title_pdf": "Print QR tags",
+        "template": "Layout",
+        "templates": {
+            "standard": "A4 · 8",
+            "large": "A4 landscape · 4",
+            "compact": "A4 · 12",
+            "label": "Label · 1"
+        },
         "language": "Language",
         "logo": "Logo",
         "columns": "Columns",

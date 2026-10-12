@@ -695,6 +695,7 @@
                 "colorScheme": "Recuerda el modo claro u oscuro",
                 "sidebar": "Recuerda si la navegación lateral está desplegada",
                 "exportColumns": "Recuerda las columnas de exportación elegidas",
+                "exportTagTemplate": "Recuerda el diseño de etiqueta elegido",
                 "inventorySession": "Guarda el progreso de un inventario",
                 "inventoryInstructions": "Recuerda que ya se mostraron las instrucciones del inventario",
                 "offlineLogbook": "Mantiene tu libreta y las ascensiones no enviadas disponibles sin conexión",
@@ -1020,6 +1021,13 @@
     "export": {
         "title": "Exportar a Excel",
         "title_pdf": "Imprimir etiquetas QR",
+        "template": "Diseño",
+        "templates": {
+            "standard": "A4 · 8",
+            "large": "A4 horizontal · 4",
+            "compact": "A4 · 12",
+            "label": "Etiqueta · 1"
+        },
         "language": "Idioma",
         "logo": "Logo",
         "columns": "Columnas",

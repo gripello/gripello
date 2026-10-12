@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { EXPORT_COLUMNS_KEY } from '~/utils/clientStorage'
+import {
+    EXPORT_COLUMNS_KEY,
+    EXPORT_TAG_TEMPLATE_KEY,
+} from '~/utils/clientStorage'
+import {
+    TAG_TEMPLATES,
+    isTagTemplate,
+    type TagTemplate,
+} from '#shared/utils/tagTemplates'
 import { SUPPORTED_LOCALES, type LocaleCode } from '~/utils/locales'
 
 export interface ExportOptions {
@@ -7,6 +15,7 @@ export interface ExportOptions {
     labels: Record<string, string>
     columns?: string[]
     show?: Record<PdfField, boolean>
+    template?: TagTemplate
 }
 
 type PdfField = 'creators' | 'date' | 'logo'
@@ -36,6 +45,22 @@ const PDF_FIELDS: { key: PdfField; labelKey: string }[] = [
     { key: 'logo', labelKey: 'export.logo' },
 ]
 const pdfFields = ref<PdfField[]>(PDF_FIELDS.map((field) => field.key))
+
+const template = ref<TagTemplate>(readStoredTemplate())
+const templateItems = computed(() =>
+    TAG_TEMPLATES.map((value) => ({
+        value,
+        label: t(`export.templates.${value}`),
+    })),
+)
+
+function readStoredTemplate(): TagTemplate {
+    try {
+        const stored = localStorage.getItem(EXPORT_TAG_TEMPLATE_KEY)
+        if (isTagTemplate(stored)) return stored
+    } catch {}
+    return 'standard'
+}
 
 const EXPORT_COLUMNS = [
     { key: 'color', labelKey: 'climbing.color' },
@@ -132,6 +157,9 @@ const confirm = async () => {
         t(key, {}, { locale: exportLocale.value })
 
     if (props.format === 'pdf') {
+        try {
+            localStorage.setItem(EXPORT_TAG_TEMPLATE_KEY, template.value)
+        } catch {}
         emit('confirm', {
             locale: exportLocale.value,
             labels: { anchor: translate('climbing.anchor_point') },
@@ -141,6 +169,7 @@ const confirm = async () => {
                     pdfFields.value.includes(key),
                 ]),
             ) as Record<PdfField, boolean>,
+            template: template.value,
         })
         open.value = false
         return
@@ -193,6 +222,13 @@ const confirm = async () => {
             />
         </UFormField>
         <div v-if="format === 'pdf'" class="flex flex-col gap-3">
+            <UFormField :label="$t('export.template')">
+                <SegmentedControl
+                    v-model="template"
+                    :items="templateItems"
+                    test-id="export-template"
+                />
+            </UFormField>
             <UCheckbox
                 v-for="field in PDF_FIELDS"
                 :key="field.key"

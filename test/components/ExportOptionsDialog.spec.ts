@@ -23,6 +23,15 @@ const selectStub = {
     @input="$emit('update:modelValue', $event.target.value)" />`,
 }
 
+const segmentedStub = {
+    props: ['modelValue', 'items'],
+    emits: ['update:modelValue'],
+    template: `<select data-testid="export-template" :value="modelValue"
+    @change="$emit('update:modelValue', $event.target.value)">
+    <option v-for="item in items" :key="item.value" :value="item.value">{{ item.label }}</option>
+    </select>`,
+}
+
 function createWrapper(format: 'pdf' | 'xlsx' = 'xlsx') {
     return mount(ExportOptionsDialog, {
         props: { modelValue: true, format },
@@ -35,6 +44,7 @@ function createWrapper(format: 'pdf' | 'xlsx' = 'xlsx') {
                 UButton: buttonStub,
                 UCheckbox: checkboxStub,
                 USelect: selectStub,
+                SegmentedControl: segmentedStub,
             },
         },
     })
@@ -166,7 +176,37 @@ describe('ExportOptionsDialog', () => {
                 locale: 'fr',
                 labels: { anchor: 'climbing.anchor_point' },
                 show: { creators: true, date: true, logo: false },
+                template: 'standard',
             },
         ])
+    })
+
+    it('confirms the chosen tag layout and remembers it', async () => {
+        const wrapper = createWrapper('pdf')
+        await wrapper.find('[data-testid="export-template"]').setValue('large')
+        await confirmButton(wrapper)
+
+        expect(wrapper.emitted('confirm')![0]![0]).toMatchObject({
+            template: 'large',
+        })
+        expect(localStorage.getItem('gripello.export-tag-template')).toBe(
+            'large',
+        )
+        expect(
+            (
+                createWrapper('pdf').find('[data-testid="export-template"]')
+                    .element as HTMLSelectElement
+            ).value,
+        ).toBe('large')
+    })
+
+    it('falls back to the standard layout for an unknown stored one', () => {
+        localStorage.setItem('gripello.export-tag-template', 'poster')
+        expect(
+            (
+                createWrapper('pdf').find('[data-testid="export-template"]')
+                    .element as HTMLSelectElement
+            ).value,
+        ).toBe('standard')
     })
 })
