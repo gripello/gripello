@@ -237,7 +237,9 @@
         "leaderboard": "Rangliste",
         "friends": "Freunde",
         "feed": "Feed",
-        "info": "Info"
+        "info": "Info",
+        "outSoon": "Raus am {date}",
+        "mapWork": "Routen & Resets"
     },
     "dashboard": {
         "online": "{0} online"
@@ -541,7 +543,8 @@
                 "moderation_pending": "Ein Beta-Video wartet auf Freigabe",
                 "content_hidden": "Dein Inhalt wurde ausgeblendet: {reason}",
                 "beta_approved": "Dein Beta-Video wurde freigegeben",
-                "beta_rejected": "Dein Beta-Video wurde abgelehnt: {reason}"
+                "beta_rejected": "Dein Beta-Video wurde abgelehnt: {reason}",
+                "wall_reset_planned": "{wall}: {count} Routen werden am {date} abgeschraubt"
             }
         }
     },
@@ -1539,7 +1542,7 @@
         "save": "Speichern ({n})",
         "saved": "Routenpositionen gespeichert.",
         "wallRoutes": "{n} Routen an dieser Wand",
-        "distribute": "Gleichmäßig nach Umlenker verteilen",
+        "distribute": "Routen gleichmäßig an der Wand verteilen",
         "unplaced": "Nicht platziert ({n})",
         "placed": "Auf dem Plan ({n})",
         "remove": "Vom Plan entfernen",
@@ -1555,9 +1558,9 @@
         "auto": "Automatisch platzieren ({n})",
         "keepGoing": "Mit nächster Route weitermachen",
         "checked": "{n} Route ausgewählt | {n} Routen ausgewählt",
-        "wallAge": "Älteste {oldest} T · Ø {average} T",
-        "lastReset": "zuletzt umgeschraubt {date}",
-        "resetWall": "Wand umschrauben",
+        "wallAge": "Älteste Route {oldest} · Durchschnitt {average}",
+        "lastReset": "zuletzt abgeschraubt {date}",
+        "resetWall": "Alle Routen jetzt abschrauben",
         "resetNeedsSave": "Speichere oder verwirf zuerst deine Änderungen.",
         "resetConfirm": "Alle {n} Routen an {wall} archivieren? Sie verschwinden vom Plan und aus der Routenliste.",
         "resetDone": "{n} Route archiviert. | {n} Routen archiviert.",
@@ -2804,5 +2807,60 @@
                 "email_unverified": "Der Anbieter hat keine E-Mail-Adresse bestätigt, daher kann kein Konto angelegt werden."
             }
         }
+    },
+    "resets": {
+        "title": "Wand-Resets",
+        "empty": "Noch keine Wände.",
+        "routes": "{n} Route | {n} Routen",
+        "averageAge": "Ø {n} Tag | Ø {n} Tage",
+        "done": "{wall} neu schrauben",
+        "date": "Abschrauben am",
+        "clear": "Plan entfernen",
+        "doneConfirm": "{n} Route archivieren und Plan entfernen. | {n} Routen archivieren und Plan entfernen.",
+        "doneAction": "Reset erledigt",
+        "doneSuccess": "{wall} neu geschraubt",
+        "pickWall": "Wand auswählen",
+        "inWeeks": "In {n} Woche | In {n} Wochen",
+        "select": {
+            "flagged": "Markierte",
+            "oldest": "Ältere Hälfte",
+            "all": "Alle",
+            "none": "Keine"
+        },
+        "days": "{n} Tag | {n} Tage",
+        "planAction": "{n} Route planen | {n} Routen planen",
+        "flags": {
+            "defect": "Defekt",
+            "old": "Am ältesten",
+            "stale": "Keine Begehungen",
+            "disliked": "Wenig Sterne",
+            "quiet": "Wenig Betrieb",
+            "gradeOff": "Grad daneben"
+        },
+        "recentTicks": "{n} Begehung/30 T | {n} Begehungen/30 T",
+        "flaggedOf": "{flagged} von {total} Routen markiert",
+        "selectedOf": "{selected} von {total} Routen ausgewählt",
+        "selectLabel": "Auswählen",
+        "urgency": {
+            "high": "Am dringendsten",
+            "medium": "Mittel dringend",
+            "low": "Am wenigsten dringend"
+        },
+        "facts": {
+            "age": "Alter",
+            "recent": "Begehungen 30 T",
+            "ticks": "Begehungen gesamt",
+            "climbers": "Kletternde",
+            "stars": "Sterne",
+            "grade": "Gradvorschläge"
+        },
+        "gradeFeedback": {
+            "fits": "Passt",
+            "harder": "Eher schwerer",
+            "easier": "Eher leichter"
+        },
+        "months": "{n} Monat | {n} Monate",
+        "years": "{n} Jahr | {n} Jahre",
+        "openDefects": "{n} offener Defekt | {n} offene Defekte"
     }
 }

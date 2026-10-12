@@ -104,8 +104,9 @@ const gymId = useCurrentGymId()
 const { data: locationRecords } = useLocations()
 
 const boardRef = ref<{ reload: () => Promise<void> }>()
-const search = ref('')
-const debouncedSearch = ref('')
+const initialSearch = (useRoute().query.q as string | undefined) ?? ''
+const search = ref(initialSearch)
+const debouncedSearch = ref(initialSearch)
 const kindFilter = ref<string | null>(null)
 const assigneeFilter = ref<string | null>(null)
 const locationFilter = ref<string | null>(null)

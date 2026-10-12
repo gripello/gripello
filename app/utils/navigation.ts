@@ -208,7 +208,7 @@ export const NAV_ITEMS: NavItem[] = [
             {
                 to: '/manage/map',
                 icon: 'i-lucide-map-pinned',
-                label: 'routes.mapPlacement',
+                label: 'routes.mapWork',
                 permission: 'manage_routes',
             },
             {

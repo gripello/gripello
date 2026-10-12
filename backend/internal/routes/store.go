@@ -21,29 +21,30 @@ type querier interface {
 }
 
 type Route struct {
-	ID            string          `db:"id" json:"id"`
-	Created       time.Time       `db:"created" json:"created"`
-	Updated       time.Time       `db:"updated" json:"updated"`
-	Gym           string          `db:"gym" json:"gym"`
-	Name          string          `db:"name" json:"name"`
-	AnchorPoint   int             `db:"anchor_point" json:"anchor_point"`
-	Type          string          `db:"type" json:"type"`
-	Comment       string          `db:"comment" json:"comment"`
-	Creator       json.RawMessage `db:"creator" json:"creator"`
-	Archived      bool            `db:"archived" json:"archived"`
-	ArchivedAt    *time.Time      `db:"archived_at" json:"archived_at"`
-	Color         string          `db:"color" json:"color"`
-	ScrewDate     *time.Time      `db:"screw_date" json:"screw_date"`
-	Location      string          `db:"location" json:"location"`
-	Wall          string          `db:"wall" json:"wall"`
-	WallPosition  float64         `db:"wall_position" json:"wall_position"`
-	Grade         string          `db:"grade" json:"grade"`
-	GradeSystem   string          `db:"grade_system" json:"grade_system"`
-	GradeIndex    float64         `db:"grade_index" json:"grade_index"`
-	Permanent     bool            `db:"permanent" json:"permanent"`
-	AverageRating *float64        `db:"average_rating" json:"average_rating"`
-	RatingsCount  int             `db:"ratings_count" json:"ratings_count"`
-	Expand        map[string]any  `db:"-" json:"expand,omitempty"`
+	ID                string          `db:"id" json:"id"`
+	Created           time.Time       `db:"created" json:"created"`
+	Updated           time.Time       `db:"updated" json:"updated"`
+	Gym               string          `db:"gym" json:"gym"`
+	Name              string          `db:"name" json:"name"`
+	AnchorPoint       int             `db:"anchor_point" json:"anchor_point"`
+	Type              string          `db:"type" json:"type"`
+	Comment           string          `db:"comment" json:"comment"`
+	Creator           json.RawMessage `db:"creator" json:"creator"`
+	Archived          bool            `db:"archived" json:"archived"`
+	ArchivedAt        *time.Time      `db:"archived_at" json:"archived_at"`
+	Color             string          `db:"color" json:"color"`
+	ScrewDate         *time.Time      `db:"screw_date" json:"screw_date"`
+	Location          string          `db:"location" json:"location"`
+	Wall              string          `db:"wall" json:"wall"`
+	WallPosition      float64         `db:"wall_position" json:"wall_position"`
+	Grade             string          `db:"grade" json:"grade"`
+	GradeSystem       string          `db:"grade_system" json:"grade_system"`
+	GradeIndex        float64         `db:"grade_index" json:"grade_index"`
+	Permanent         bool            `db:"permanent" json:"permanent"`
+	RemovalPlannedFor *string         `db:"removal_planned_for" json:"removal_planned_for"`
+	AverageRating     *float64        `db:"average_rating" json:"average_rating"`
+	RatingsCount      int             `db:"ratings_count" json:"ratings_count"`
+	Expand            map[string]any  `db:"-" json:"expand,omitempty"`
 }
 
 type Location struct {
@@ -80,7 +81,7 @@ type GymRef struct {
 
 const routeColumns = `id, created, updated, gym, name, anchor_point, type, comment, creator, archived, archived_at, color,
 	screw_date, COALESCE(location, '') AS location, COALESCE(wall, '') AS wall, wall_position, grade, grade_system,
-	grade_index, permanent, average_rating, ratings_count`
+	grade_index, permanent, removal_planned_for::text AS removal_planned_for, average_rating, ratings_count`
 
 const locationColumns = `id, created, updated, gym, name, map_area, map, map_trace`
 
@@ -207,7 +208,7 @@ func updateRoute(ctx context.Context, q querier, id string, r routeInput) error 
 	_, err := q.Exec(ctx, `UPDATE routes SET name = $2, anchor_point = $3, type = $4, comment = $5, creator = $6,
 		archived_at = `+archivedAtSQL("$7")+`, archived = $7, color = $8, screw_date = $9, location = NULLIF($10, ''),
 		wall = NULLIF($11, ''), wall_position = $12, grade = $13, grade_system = $14, grade_index = $15, permanent = $16,
-		updated = now() WHERE id = $1`,
+		removal_planned_for = CASE WHEN $7 THEN NULL ELSE removal_planned_for END, updated = now() WHERE id = $1`,
 		id, r.Name, r.AnchorPoint, r.Type, r.Comment, r.Creator, r.Archived, r.Color, r.ScrewDate, r.Location, r.Wall,
 		r.WallPosition, r.Grade, r.GradeSystem, r.GradeIndex, r.Permanent)
 	return err
@@ -219,7 +220,8 @@ func archivedAtSQL(archived string) string {
 }
 
 func setArchived(ctx context.Context, q querier, id string, archived bool) error {
-	_, err := q.Exec(ctx, `UPDATE routes SET archived_at = `+archivedAtSQL("$2")+`, archived = $2, updated = now() WHERE id = $1`, id, archived)
+	_, err := q.Exec(ctx, `UPDATE routes SET archived_at = `+archivedAtSQL("$2")+`, archived = $2,
+		removal_planned_for = CASE WHEN $2 THEN NULL ELSE removal_planned_for END, updated = now() WHERE id = $1`, id, archived)
 	return err
 }
 

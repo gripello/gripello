@@ -53,6 +53,14 @@
             </div>
 
             <div class="list-card__pills">
+                <span
+                    v-if="removalDate"
+                    class="list-card__pill text-warning"
+                    data-testid="route-card-out-soon"
+                >
+                    <UIcon name="i-lucide-calendar-clock" class="size-[13px]" />
+                    {{ $t('routes.outSoon', { date: removalDate }) }}
+                </span>
                 <span v-if="route.creator?.length" class="list-card__pill">
                     <UIcon name="i-lucide-hard-hat" class="size-[13px]" />
                     {{ route.creator.join(', ') }}
@@ -139,6 +147,13 @@ const anchorPoint = computed(() =>
 )
 const screwDate = computed(() =>
     formatDate(props.route.screw_date, { locale: locale.value }),
+)
+const removalDate = computed(() =>
+    props.route.archived
+        ? ''
+        : formatDate(props.route.removal_planned_for, {
+              locale: locale.value,
+          }),
 )
 const hasScore = computed(
     () =>

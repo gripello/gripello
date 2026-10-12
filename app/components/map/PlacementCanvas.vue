@@ -15,7 +15,13 @@
             class="placement-wall"
             :class="{
                 'placement-wall--selected': wall.id === selectedWallId,
+                'placement-wall--tinted': wallTints?.has(wall.id),
             }"
+            :style="
+                wallTints?.has(wall.id)
+                    ? { '--wall-tint': wallTints.get(wall.id) }
+                    : undefined
+            "
             data-testid="placement-wall"
             :data-name="wall.name"
             role="button"
@@ -119,6 +125,7 @@ const props = defineProps<{
     selectedWallId: string | null
     armedRouteId: string | null
     insetBottom?: number
+    wallTints?: ReadonlyMap<string, string> | null
 }>()
 
 const emit = defineEmits<{
@@ -332,6 +339,17 @@ function onDotDown(routeId: string, event: PointerEvent) {
     fill: color-mix(in oklab, var(--ui-primary) 20%, transparent);
     stroke: var(--ui-primary);
     stroke-width: 2;
+}
+
+.placement-wall--tinted .placement-wall-outline {
+    fill: color-mix(in oklab, var(--wall-tint) 40%, transparent);
+    stroke: var(--wall-tint);
+}
+
+.placement-wall--tinted.placement-wall--selected .placement-wall-outline {
+    fill: color-mix(in oklab, var(--wall-tint) 60%, transparent);
+    stroke: var(--ui-text-highlighted);
+    stroke-width: 3;
 }
 
 .placement-wall-edge {

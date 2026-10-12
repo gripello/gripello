@@ -186,6 +186,38 @@ export async function archiveRoutes(
     })
 }
 
+export async function planRouteRemoval(
+    gym: string,
+    ids: string[],
+    plannedFor: string | null,
+) {
+    if (!ids.length) return
+    await useApi()(`/gyms/${encodeURIComponent(gym)}/routes/removal`, {
+        method: 'PUT',
+        body: { ids, planned_for: plannedFor },
+    })
+}
+
+export interface ResetStat {
+    route: string
+    ticks: number
+    recent_ticks: number
+    climbers: number
+    last_tick: string | null
+    average_rating: number | null
+    ratings: number
+    grade_deviation: number | null
+    open_defects: number
+}
+
+export async function listResetStats(gym: string, location: string) {
+    const { items } = await useApi()<Items<ResetStat>>(
+        `/gyms/${encodeURIComponent(gym)}/routes/reset-stats`,
+        { query: { location } },
+    )
+    return items
+}
+
 export async function placeRoutes(gym: string, placements: RoutePlacement[]) {
     if (!placements.length) return
     await useApi()(`/gyms/${encodeURIComponent(gym)}/map/placements`, {

@@ -13,7 +13,7 @@ type topic struct {
 
 // New notification types join a topic here; the client lists topics from /notifications/settings.
 var topics = []topic{
-	{Key: "new_routes", Types: []string{"wall_new_routes"}},
+	{Key: "new_routes", Types: []string{"wall_new_routes", "wall_reset_planned"}},
 	{Key: "defect_fixed", Types: []string{"task_defect_fixed"}},
 	{Key: "wish_done", Types: []string{"task_wish_done"}},
 	{Key: "competition_results", Types: []string{"competition_published", "competition_entry_added"}},

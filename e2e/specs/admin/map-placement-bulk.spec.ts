@@ -158,7 +158,7 @@ test('resetting a wall archives its routes', async ({
     expect(first!.archived).toBe(true)
     expect(second!.archived).toBe(true)
     await expect(page.getByTestId('placement-wall-age')).toContainText(
-        'last reset',
+        'last stripped',
     )
 })
 

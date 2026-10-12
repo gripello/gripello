@@ -1,7 +1,7 @@
 <template>
     <div class="map-screen placement-page">
         <div class="map-screen__bar">
-            <h1 class="map-screen__title">{{ $t('mapPlacement.title') }}</h1>
+            <h1 class="map-screen__title">{{ $t('routes.mapWork') }}</h1>
             <USelect
                 v-if="locationItems.length > 1"
                 v-model="locationId"
@@ -78,6 +78,7 @@
                     :selected-wall-id="placement.selectedWallId.value"
                     :armed-route-id="placement.canvasArmedId.value"
                     :inset-bottom="sheetCover"
+                    :wall-tints="wallTints"
                     @place="placement.place"
                     @select-route="selectFromMap"
                     @select-wall="selectWall"
@@ -95,6 +96,16 @@
                     data-testid="placement-filters"
                     @clear="placement.clearFilters()"
                 />
+                <div
+                    v-if="wallTints.size"
+                    class="placement-legend"
+                    :style="{ bottom: `${sheetCover + 12}px` }"
+                    data-testid="placement-legend"
+                >
+                    <span>{{ $t('resets.urgency.low') }}</span>
+                    <span class="placement-legend__bar" />
+                    <span>{{ $t('resets.urgency.high') }}</span>
+                </div>
             </div>
 
             <MapSheet
@@ -185,6 +196,16 @@
                     </template>
                 </template>
 
+                <ManageRouteReset
+                    v-if="placement.selectedPlaced.value"
+                    :route="placement.selectedPlaced.value"
+                    :flags="flagsOf(placement.selectedPlaced.value)"
+                    :stat="resetStats.get(placement.selectedPlaced.value.id)"
+                    :now="today"
+                    class="placement-wall-box"
+                    @changed="refreshReset"
+                />
+
                 <div
                     v-if="placement.selectedWall.value"
                     class="placement-wall-box"
@@ -220,8 +241,12 @@
                         <template v-if="placement.wallAge.value">
                             {{
                                 $t('mapPlacement.wallAge', {
-                                    oldest: placement.wallAge.value.oldest,
-                                    average: placement.wallAge.value.average,
+                                    oldest: ageText(
+                                        placement.wallAge.value.oldest,
+                                    ),
+                                    average: ageText(
+                                        placement.wallAge.value.average,
+                                    ),
                                 })
                             }}
                         </template>
@@ -248,26 +273,38 @@
                         >
                             {{ $t('mapPlacement.distribute') }}
                         </UButton>
-                        <UButton
-                            size="sm"
-                            variant="ghost"
-                            color="error"
-                            icon="i-lucide-history"
-                            :disabled="
-                                !placement.savedWallRouteIds.value.length ||
-                                placement.changes.value.length > 0
-                            "
-                            :title="
-                                placement.changes.value.length
-                                    ? $t('mapPlacement.resetNeedsSave')
-                                    : undefined
-                            "
-                            data-testid="placement-reset-wall"
-                            @click="resetDialogOpen = true"
-                        >
-                            {{ $t('mapPlacement.resetWall') }}
-                        </UButton>
                     </div>
+                    <ManageWallReset
+                        v-if="selectedResetRow"
+                        :row="selectedResetRow"
+                        :stats="resetStats"
+                        :urgency="urgency"
+                        :now="today"
+                        class="mt-3 border-t border-default pt-3"
+                        @changed="refreshReset"
+                    >
+                        <template #actions>
+                            <UButton
+                                size="sm"
+                                variant="ghost"
+                                color="error"
+                                icon="i-lucide-history"
+                                :disabled="
+                                    !placement.savedWallRouteIds.value.length ||
+                                    placement.changes.value.length > 0
+                                "
+                                :title="
+                                    placement.changes.value.length
+                                        ? $t('mapPlacement.resetNeedsSave')
+                                        : undefined
+                                "
+                                data-testid="placement-reset-wall"
+                                @click="resetDialogOpen = true"
+                            >
+                                {{ $t('mapPlacement.resetWall') }}
+                            </UButton>
+                        </template>
+                    </ManageWallReset>
                 </div>
 
                 <div
@@ -456,8 +493,22 @@
 </template>
 
 <script setup lang="ts">
-import { archiveRoutes, listRoutes, placeRoutes } from '~/api/routes'
+import {
+    archiveRoutes,
+    listResetStats,
+    listRoutes,
+    placeRoutes,
+} from '~/api/routes'
 import type { RouteRecord } from '~/types/models'
+import {
+    ageUnit,
+    heatColor,
+    resetContext,
+    resetFlags,
+    routeUrgency,
+    wallResetRows,
+    type PlannableRoute,
+} from '~/utils/wallResets'
 import type { SheetSnap } from '~/components/map/Sheet.vue'
 import { formatAnchorPoint, formatDate } from '#shared/utils/formatting'
 import { cacheKeys } from '~/utils/realtimeCache'
@@ -479,7 +530,7 @@ const { mdAndUp } = useDisplay()
 const { can } = usePermissions()
 const { success: notifySuccess } = useNotification()
 
-useSeoMeta({ title: () => t('page.title.mapPlacement') })
+useSeoMeta({ title: () => t('routes.mapWork') })
 
 const { discardDialogOpen, confirmDiscard, settleDiscard } = useDiscardConfirm(
     () => placement.changes.value.length > 0,
@@ -508,6 +559,67 @@ const { data: routes, refresh: refreshRoutes } = await useAsyncData(
 useLiveLocation([cacheKeys.placementRoutes], locationId)
 
 const placement = useMapPlacement(routes, walls, mapWalls)
+
+const { data: resetStatList, refresh: refreshResetStats } = await useAsyncData(
+    'placement-reset-stats',
+    () =>
+        locationId.value
+            ? listResetStats(gymId.value, locationId.value)
+            : Promise.resolve([]),
+    { watch: [locationId], default: () => [] },
+)
+const today = new Date()
+const activeRoutes = computed(() =>
+    routes.value.filter((item) => !item.archived),
+)
+const resetStats = computed(
+    () => new Map(resetStatList.value.map((stat) => [stat.route, stat])),
+)
+const resetCtx = computed(() =>
+    resetContext(activeRoutes.value, resetStats.value, today),
+)
+const flagsOf = (item: PlannableRoute) =>
+    resetFlags(item, resetStats.value.get(item.id), resetCtx.value, today)
+const urgency = computed(() => routeUrgency(activeRoutes.value, flagsOf, today))
+const resetRows = computed(() =>
+    wallResetRows(walls.value, activeRoutes.value, {
+        now: today,
+        flagsOf,
+        urgency: urgency.value,
+    }),
+)
+const selectedResetRow = computed(
+    () =>
+        resetRows.value.find(
+            (row) => row.wall.id === placement.selectedWallId.value,
+        ) ?? null,
+)
+const wallTints = computed(
+    () =>
+        new Map(
+            resetRows.value
+                .filter((row) => row.routes.length)
+                .map((row) => [row.wall.id, heatColor(row.heat)]),
+        ),
+)
+
+watch(
+    () => routes.value.length,
+    () => {
+        if (!placement.unplacedRoutes.value.length)
+            placement.tab.value = 'placed'
+    },
+    { immediate: true },
+)
+
+const ageText = (days: number) => {
+    const age = ageUnit(days)
+    return t(`resets.${age.key}`, age.n)
+}
+
+async function refreshReset() {
+    await Promise.all([refreshRoutes(), refreshResetStats()])
+}
 const placementTabs = computed(() => [
     {
         value: 'unplaced' as const,
@@ -587,19 +699,25 @@ function selectFromMap(routeId: string | null) {
     placement.selectedRouteId.value = routeId
     if (!routeId) return
     placement.tab.value = 'placed'
+    const wallId = placement.selectedPlaced.value?.wall
+    if (wallId) placement.selectedWallId.value = wallId
     nextTick(() =>
         document
-            .querySelector(
-                `[data-testid="placement-route"][data-route-id="${routeId}"]`,
-            )
+            .querySelector('[data-testid="route-reset"]')
             ?.scrollIntoView({ block: 'nearest' }),
     )
 }
 
 function selectWall(wallId: string | null) {
     placement.selectedWallId.value = wallId
-    if (wallId && !mdAndUp.value && sheetSnap.value === 'peek')
-        sheetSnap.value = 'half'
+    if (!wallId) return
+    canvasRef.value?.focusWall(wallId)
+    if (!mdAndUp.value && sheetSnap.value === 'peek') sheetSnap.value = 'half'
+    nextTick(() =>
+        document
+            .querySelector('[data-testid="placement-wall-box"]')
+            ?.scrollIntoView({ block: 'start' }),
+    )
 }
 
 function revealMap() {
@@ -615,6 +733,7 @@ async function discard() {
 }
 
 const canvasRef = useTemplateRef<{
+    focusWall: (wallId: string) => void
     previewAt: (routeId: string, clientX: number, clientY: number) => void
     placeAt: (routeId: string, clientX: number, clientY: number) => boolean
 }>('canvasRef')
@@ -813,11 +932,38 @@ onBeforeUnmount(() => {
     padding-top: 48px;
 }
 
+.placement-legend {
+    position: absolute;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--ui-bg);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
+    font-size: 0.75rem;
+    color: var(--ui-text-muted);
+    pointer-events: none;
+}
+
+.placement-legend__bar {
+    width: 72px;
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(
+        to right,
+        var(--ui-success),
+        var(--ui-warning),
+        var(--ui-error)
+    );
+}
+
 .placement-hint {
     flex: 1 1 auto;
     min-width: 0;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
     color: var(--ui-text-muted);
