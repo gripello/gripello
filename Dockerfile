@@ -5,8 +5,9 @@ ARG TARGETARCH
 ENV CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH}
 WORKDIR /src/backend
 COPY backend/go.mod backend/go.sum ./
+COPY backend/tools/go.mod backend/tools/go.sum ./tools/
 RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download
+    go mod download && go mod download -modfile=tools/go.mod
 COPY backend/cmd ./cmd
 COPY backend/internal ./internal
 
@@ -18,9 +19,6 @@ RUN apt-get update \
  && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
  && apt-get install -y --no-install-recommends postgresql-18 \
  && rm -rf /var/lib/apt/lists/*
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    GOOS= GOARCH= go install gotest.tools/gotestsum@v1.13.0
 COPY backend/testdata ./testdata
 COPY i18n/locales/*.json /src/i18n/locales/
 COPY shared /src/shared
@@ -32,7 +30,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
  && su postgres -c '/usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/test -U postgres -A trust -E UTF8 --locale=C.UTF-8 >/dev/null' \
  && su postgres -c "/usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/test -w -l /tmp/postgres.log \
       -o '-c listen_addresses=127.0.0.1 -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300' start" \
- && mkdir /out && { gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 ./...; echo $? > /out/exit-code; }
+ && mkdir /out && { GOOS= GOARCH= go tool -modfile=tools/go.mod gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 ./...; echo $? > /out/exit-code; }
 
 FROM scratch AS go-results
 COPY --from=go-test /out /
@@ -53,7 +51,7 @@ COPY <<'EOF' /go-licenses.tpl
 EOF
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    GOOS= GOARCH= go run github.com/google/go-licenses/v2@v2.0.1 report ./... \
+    GOOS= GOARCH= go tool -modfile=tools/go.mod go-licenses report ./... \
       --ignore gripello --template /go-licenses.tpl > /out/third-party-notices-go.txt
 
 FROM node:26.11.1-trixie@sha256:32fa97f3363975684b08bf4e8a68a47c7905175cc20275b50b974bbd02aba731 AS ui-deps
@@ -88,25 +86,43 @@ COPY public ./public
 COPY app ./app
 ARG APP_VERSION
 ENV NODE_ENV=production NITRO_PRESET=node-cluster APP_VERSION=${APP_VERSION}
-RUN yarn build
+# capjs-core only imports esbuild and the obfuscator for instrumented challenges, which /api/cap never asks for; rm -r fails the build once they move.
+RUN yarn build \
+ && rm -r .output/server/node_modules/esbuild .output/server/node_modules/@esbuild \
+    .output/server/node_modules/javascript-obfuscator .output/server/node_modules/@javascript-obfuscator
 COPY .docker/third-party-notices.mts ./.docker/
 COPY --from=go-build /out/third-party-notices-go.txt /tmp/
 RUN { node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.txt; } \
       > .output/public/third-party-notices.txt
 
-FROM node:26.11.1-trixie-slim@sha256:193fe51b64e77981119c98c2002c9e32a70e2f006fb4d25068ce0558998917f0
+FROM debian:trixie-slim@sha256:918311b7b6c4c6f68b232ba516584925f6c78ad82b6fd534b98979df6438e483 AS pg-client
 # pg_dump/pg_restore must match the PostgreSQL 18 server; trixie ships 17, so the client comes from PGDG.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends nginx openssl ca-certificates libcap2-bin libvips-tools postgresql-common \
+ && apt-get install -y --no-install-recommends ca-certificates postgresql-common \
  && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
  && apt-get install -y --no-install-recommends postgresql-client-18 \
+ && mkdir -p /out/bin /out/lib \
+ && cp /usr/lib/postgresql/18/bin/pg_dump /usr/lib/postgresql/18/bin/pg_restore /out/bin/ \
+ && cp -L /usr/lib/*-linux-gnu/libpq.so.5 /out/lib/
+
+# Only the binaries of node and the PostgreSQL client: their packages bring npm, perl and gnupg along.
+FROM debian:trixie-slim@sha256:918311b7b6c4c6f68b232ba516584925f6c78ad82b6fd534b98979df6438e483
+COPY --from=ui-deps /usr/local/bin/node /usr/local/bin/node
+COPY --from=pg-client /out/bin/ /usr/local/bin/
+COPY --from=pg-client /out/lib/ /usr/local/lib/
+# libvips-tools needs python3 only for vipsprofile; the vips CLI alone comes out of its package.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends nginx openssl ca-certificates libcap2-bin libvips42t64 \
+ && cd /tmp && apt-get download libvips-tools && dpkg-deb -x libvips-tools_*.deb vips-tools \
+ && mv vips-tools/usr/bin/vips /usr/local/bin/ && rm -rf vips-tools libvips-tools_*.deb \
+ && ldconfig \
  && setcap cap_net_bind_service=+ep /usr/sbin/nginx \
+ && useradd --uid 1000 --user-group --create-home node \
  && rm -rf /var/lib/apt/lists/* /var/log/nginx /etc/nginx/sites-* /etc/nginx/conf.d \
-    /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx \
-    /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-* \
  && mkdir -p /data/storage /data/backups /etc/nginx/ssl \
  && touch /etc/nginx/real-ip.conf /etc/nginx/rate-limit.conf \
- && chown node:node /data /data/storage /data/backups /etc/nginx/ssl /etc/nginx/real-ip.conf /etc/nginx/rate-limit.conf
+ && chown node:node /data /data/storage /data/backups /etc/nginx/ssl /etc/nginx/real-ip.conf /etc/nginx/rate-limit.conf \
+ && pg_dump --version && vips --version && node --version
 
 COPY .docker/nginx.conf /etc/nginx/nginx.conf
 COPY --chmod=755 .docker/docker-entrypoint.sh /app/entrypoint.sh

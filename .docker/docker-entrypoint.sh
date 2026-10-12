@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-APP_VER="${APP_VERSION:-dev}"
 OWNER="$(id -u):$(id -g)"
 
 fail_permissions() {
@@ -14,19 +13,12 @@ fail_permissions() {
     exit 1
 }
 
-write_probe="/data/storage/.write-test-$$"
-touch "$write_probe" 2>/dev/null && rm -f "$write_probe" || fail_permissions /data/storage writable ./storage
-if [ -n "${BACKUP_DIR:-}" ] && [ -d "$BACKUP_DIR" ]; then
-    write_probe="$BACKUP_DIR/.write-test-$$"
-    # Backups are optional: an unwritable folder (e.g. a bind mount Docker created as root) only disables them.
-    touch "$write_probe" 2>/dev/null && rm -f "$write_probe" || echo "[startup] WARNING: $BACKUP_DIR is not writable, backups will fail. Fix with: sudo chown -R $(id -u):$(id -g) ./backups" >&2
-fi
+writable() { touch "$1/.write-test-$$" 2>/dev/null && rm -f "$1/.write-test-$$"; }
 
-if [ -f /etc/nginx/ssl/cert.pem ] && [ -f /etc/nginx/ssl/key.pem ]; then
-    [ -r /etc/nginx/ssl/cert.pem ] && [ -r /etc/nginx/ssl/key.pem ] || fail_permissions /etc/nginx/ssl readable ./ssl
-else
-    write_probe="/etc/nginx/ssl/.write-test-$$"
-    touch "$write_probe" 2>/dev/null && rm -f "$write_probe" || fail_permissions /etc/nginx/ssl writable ./ssl
+writable /data/storage || fail_permissions /data/storage writable ./storage
+# Backups are optional: an unwritable folder (e.g. a bind mount Docker created as root) only disables them.
+if [ -d "${BACKUP_DIR:-}" ] && ! writable "$BACKUP_DIR"; then
+    echo "[startup] WARNING: $BACKUP_DIR is not writable, backups will fail. Fix with: sudo chown -R $OWNER ./backups" >&2
 fi
 
 TRUSTED_PROXIES="${TRUSTED_PROXIES:-127.0.0.1 ::1}"
@@ -38,50 +30,37 @@ RATE_LIMIT_KEY='$binary_remote_addr'
 [ "${RATE_LIMITS:-on}" = "off" ] && RATE_LIMIT_KEY='""'
 echo "map \$remote_addr \$rl_key { default $RATE_LIMIT_KEY; }" > /etc/nginx/rate-limit.conf
 
-# Generate a self-signed TLS certificate if none is present.
-# Mount real certs at /etc/nginx/ssl/cert.pem and /etc/nginx/ssl/key.pem to override.
-SSL_CERT=/etc/nginx/ssl/cert.pem
-SSL_KEY=/etc/nginx/ssl/key.pem
-# SSL_DNS_NAMES adds comma-separated hostnames to the SAN, for callers that
-# reach the container under a name of their own (the e2e harness does).
-if [ ! -f "$SSL_CERT" ] || [ ! -f "$SSL_KEY" ]; then
-    echo "[nginx] no TLS certificate found — generating self-signed certificate..."
+# Mount real certs at /etc/nginx/ssl/cert.pem and key.pem; without them a self-signed one is generated.
+SSL=/etc/nginx/ssl
+if [ -f $SSL/cert.pem ] && [ -f $SSL/key.pem ]; then
+    [ -r $SSL/cert.pem ] && [ -r $SSL/key.pem ] || fail_permissions $SSL readable ./ssl
+else
+    writable $SSL || fail_permissions $SSL writable ./ssl
+    # SSL_DNS_NAMES (comma-separated) adds names callers reach the container under (the e2e harness does).
     SAN="DNS:localhost,IP:127.0.0.1"
-    if [ -n "$SSL_DNS_NAMES" ]; then
-        IFS=',' read -ra EXTRA_NAMES <<< "$SSL_DNS_NAMES"
-        for name in "${EXTRA_NAMES[@]}"; do
-            SAN="$SAN,DNS:$name"
-        done
-    fi
+    for name in ${SSL_DNS_NAMES//,/ }; do SAN="$SAN,DNS:$name"; done
+    echo "[nginx] no TLS certificate found, generating a self-signed one (SAN: $SAN)"
     # CA:TRUE so the cert can be installed as a trust anchor; it signs only
     # itself, and nothing trusts it unless someone explicitly adds it.
     openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-        -keyout "$SSL_KEY" \
-        -out "$SSL_CERT" \
+        -keyout $SSL/key.pem -out $SSL/cert.pem \
         -subj "/CN=gripello/O=Gripello/C=DE" \
         -addext "subjectAltName=$SAN" \
         -addext "basicConstraints=critical,CA:TRUE" \
         2>/dev/null
-    echo "[nginx] self-signed certificate generated (valid 10 years, SAN: $SAN)"
 fi
 
-echo ""
-echo "========================================"
-echo "  Gripello ${APP_VER}"
-echo "  ──────────────────────────────────────"
-echo "  HTTP   →  http://0.0.0.0:80   (→ 443)"
-echo "  HTTPS  →  https://0.0.0.0:443"
-echo "========================================"
-echo ""
+# Bash as PID 1 forwards docker stop to every process (QUIT is nginx's graceful stop); any process exiting stops the container.
+stop_all() {
+    # Nuxt's whole process group: Nitro's cluster primary waits for its workers on SIGTERM but never signals them.
+    kill -TERM $API_PID -$UI_PID 2>/dev/null || true
+    kill -QUIT $NGINX_PID 2>/dev/null || true
+}
+trap stop_all TERM INT
 
-echo "[api] running migrations..."
-gripello migrate
-
-echo "[api] starting..."
 gripello serve --http=:8080 &
 API_PID=$!
 
-# Start Nuxt.js UI
 CPUS="$(nproc)"
 # nproc ignores a container CPU quota (docker --cpus), cgroup v2 exposes it here
 if read -r QUOTA PERIOD < /sys/fs/cgroup/cpu.max 2>/dev/null && [ "$QUOTA" != "max" ]; then
@@ -89,21 +68,20 @@ if read -r QUOTA PERIOD < /sys/fs/cgroup/cpu.max 2>/dev/null && [ "$QUOTA" != "m
 fi
 WORKERS=$(( CPUS < 2 ? 1 : CPUS / 2 ))
 export NITRO_CLUSTER_WORKERS="${NITRO_CLUSTER_WORKERS:-$(( WORKERS > 8 ? 8 : WORKERS ))}"
-echo "[nuxt] starting ${NITRO_CLUSTER_WORKERS} workers..."
-node ui/server/index.mjs &
+setsid node ui/server/index.mjs &
 UI_PID=$!
 
-# Start Nginx
-echo "[nginx] starting..."
+# Until both listen, visitors get a refused connection (the service worker's offline fallback) instead of a 502.
+for port in 8080 3000; do
+    until (exec 3<>/dev/tcp/127.0.0.1/$port) 2>/dev/null; do
+        kill -0 $API_PID $UI_PID 2>/dev/null || break 2
+        sleep 0.05
+    done
+done
+
 nginx -e stderr -g "daemon off;" &
 NGINX_PID=$!
 
-# Bash as PID 1 forwards docker stop to every process (QUIT is nginx's graceful stop); any process exiting stops the container.
-stop_all() {
-    kill -TERM $API_PID $UI_PID 2>/dev/null || true
-    kill -QUIT $NGINX_PID 2>/dev/null || true
-}
-trap stop_all TERM INT
 wait -n || true
 stop_all
 wait

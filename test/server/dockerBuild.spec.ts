@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { BETA_VIDEO_MAX_BYTES } from '#shared/utils/betaVideos'
@@ -26,6 +27,56 @@ describe('docker ui build', () => {
         expect(read('Dockerfile')).toContain('AS typecheck-results')
         expect(read('Jenkinsfile')).toContain(
             "reportCheck('Typecheck', 'test-results/typecheck-results/typecheck.txt') { runTestSuite('typecheck-results', false) }",
+        )
+    })
+
+    it('ships only the node, pg_dump and vips binaries, without npm, perl or python', () => {
+        const runtime = read('Dockerfile')
+            .split(/^FROM /m)
+            .at(-1)!
+        expect(runtime).toMatch(/^debian:trixie-slim@sha256:/)
+        expect(runtime).toContain(
+            'COPY --from=ui-deps /usr/local/bin/node /usr/local/bin/node',
+        )
+        expect(runtime).toContain(
+            'COPY --from=pg-client /out/bin/ /usr/local/bin/',
+        )
+        expect(runtime).not.toMatch(
+            /apt-get install .*(postgresql-common|libvips-tools)/,
+        )
+        expect(runtime).toContain(
+            'pg_dump --version && vips --version && node --version',
+        )
+    })
+
+    it('adds every SSL_DNS_NAMES entry to the self-signed certificate, skipping empty ones', () => {
+        const sanLines = read('.docker/docker-entrypoint.sh').match(
+            /^ *SAN="DNS:localhost,IP:127\.0\.0\.1"\n.*\n/m,
+        )![0]
+        const san = (names: string) =>
+            execFileSync('bash', ['-c', `${sanLines}echo "$SAN"`], {
+                env: { SSL_DNS_NAMES: names },
+                encoding: 'utf8',
+            }).trim()
+        expect(san('')).toBe('DNS:localhost,IP:127.0.0.1')
+        expect(san('a.test,,b.test,')).toBe(
+            'DNS:localhost,IP:127.0.0.1,DNS:a.test,DNS:b.test',
+        )
+    })
+
+    it('drops the esbuild binary nitro traces for an unused capjs-core path', () => {
+        expect(read('Dockerfile')).toContain(
+            'rm -r .output/server/node_modules/esbuild .output/server/node_modules/@esbuild',
+        )
+    })
+
+    it('keeps every pinned version where dependabot updates it', () => {
+        const dockerfile = read('Dockerfile')
+        expect(dockerfile).not.toMatch(/go (install|run) \S+@v/)
+        expect(dockerfile).not.toMatch(/^COPY --from=\S+[:@]/m)
+        expect(read('package.json')).not.toMatch(/go run \S+@v/)
+        expect(read('.github/dependabot.yml')).toContain(
+            'directory: "/backend/tools"',
         )
     })
 
@@ -73,7 +124,9 @@ describe('docker ui build', () => {
 
     it('serves third-party notices for npm and go dependencies', () => {
         const dockerfile = read('Dockerfile')
-        expect(dockerfile).toContain('go-licenses/v2@v2.0.1 report ./...')
+        expect(dockerfile).toContain(
+            'go tool -modfile=tools/go.mod go-licenses report ./...',
+        )
         expect(dockerfile).toContain(
             'node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.txt',
         )
@@ -93,7 +146,7 @@ describe('docker ui build', () => {
 
     it('gives the go hook tests more than the default ten minutes', () => {
         expect(read('Dockerfile')).toContain(
-            'gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 ./...',
+            'go tool -modfile=tools/go.mod gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 ./...',
         )
     })
 
@@ -140,7 +193,7 @@ describe('docker ui build', () => {
             )
         }
         const entrypoint = read('.docker/docker-entrypoint.sh')
-        expect(entrypoint).toContain('gripello migrate')
+        expect(entrypoint).not.toContain('gripello migrate')
         expect(entrypoint).toContain('gripello serve --http=:8080 &')
         expect(read('.docker/healthcheck.mjs')).toContain(
             'http://127.0.0.1:8080/api/health',
@@ -153,15 +206,36 @@ describe('docker ui build', () => {
 
     it('forwards docker stop to the api so a replica shuts down cleanly', () => {
         const entrypoint = read('.docker/docker-entrypoint.sh')
+        expect(entrypoint.indexOf('trap stop_all TERM INT')).toBeLessThan(
+            entrypoint.indexOf('gripello serve'),
+        )
         expect(entrypoint).not.toMatch(/^exec /m)
         expect(entrypoint).toMatch(/^trap stop_all TERM INT$/m)
         expect(entrypoint).toContain(
-            'kill -TERM $API_PID $UI_PID 2>/dev/null || true',
+            'kill -TERM $API_PID -$UI_PID 2>/dev/null || true',
         )
         expect(entrypoint).toContain(
             'kill -QUIT $NGINX_PID 2>/dev/null || true',
         )
         expect(entrypoint.trimEnd()).toMatch(/\nwait$/)
+    })
+
+    it('stops the nuxt cluster workers, which their primary never signals', () => {
+        const entrypoint = read('.docker/docker-entrypoint.sh')
+        expect(entrypoint).toContain('setsid node ui/server/index.mjs &')
+        expect(entrypoint).toContain('-$UI_PID')
+    })
+
+    it('starts nginx only once the api and nuxt accept connections', () => {
+        const entrypoint = read('.docker/docker-entrypoint.sh')
+        const waitLoop = entrypoint.indexOf(
+            'for port in 8080 3000; do\n    until (exec 3<>/dev/tcp/127.0.0.1/$port) 2>/dev/null; do',
+        )
+        expect(waitLoop).toBeGreaterThan(entrypoint.indexOf('UI_PID=$!'))
+        expect(waitLoop).toBeLessThan(entrypoint.indexOf('nginx -e stderr'))
+        expect(entrypoint).toContain(
+            'kill -0 $API_PID $UI_PID 2>/dev/null || break 2',
+        )
     })
 
     it('rate-limits the api in nginx and keeps the realtime stream open', () => {

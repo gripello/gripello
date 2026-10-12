@@ -23,6 +23,8 @@
 !vitest.config.ts
 !backend/go.mod
 !backend/go.sum
+!backend/tools/go.mod
+!backend/tools/go.sum
 !backend/cmd
 !backend/internal
 !backend/testdata
