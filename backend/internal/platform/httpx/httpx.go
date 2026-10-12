@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -46,7 +47,9 @@ func JSON(w http.ResponseWriter, status int, v any) {
 // Fail writes err as JSON; unknown errors become a 500 without leaking their text.
 func Fail(w http.ResponseWriter, err error) {
 	var e *Error
-	if errors.Is(err, ErrUnauthorized) {
+	if errors.Is(err, context.Canceled) {
+		e = NewError(499, "Client closed request.")
+	} else if errors.Is(err, ErrUnauthorized) {
 		e = NewError(http.StatusUnauthorized, "The request requires valid record authorization token.")
 	} else if errors.Is(err, ErrForbidden) {
 		e = NewError(http.StatusForbidden, "You are not allowed to perform this request.")
