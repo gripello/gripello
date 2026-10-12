@@ -11,24 +11,19 @@
                 :pixels-per-unit="pixelsPerUnit"
             />
 
-            <defs>
-                <filter
-                    :id="wallShadowId"
-                    x="-100%"
-                    y="-100%"
-                    width="300%"
-                    height="300%"
-                    primitiveUnits="userSpaceOnUse"
-                >
-                    <feDropShadow
-                        class="map-wall-shadow"
-                        dx="0.15"
-                        dy="0.3"
-                        stdDeviation="0.2"
-                    />
-                </filter>
-            </defs>
-            <g :filter="`url(#${wallShadowId})`">
+            <image
+                v-if="shadowHref"
+                :href="shadowHref"
+                x="0"
+                y="0"
+                :width="map.width"
+                :height="map.height"
+                preserveAspectRatio="none"
+                class="map-shadows"
+                pointer-events="none"
+                data-testid="map-shadows"
+            />
+            <g>
                 <g
                     v-for="wall in mapWalls"
                     :key="wall.id"
@@ -202,6 +197,7 @@ import {
 import { translatedColorName } from '~/utils/colorName'
 import { mapToScreen } from '~/utils/panZoom'
 import { svgPath } from '~/utils/mapSvg'
+import { renderShadowImage, shadowCasters } from '~/utils/mapShadow'
 import type { DefectSeverity } from '~/utils/tasks'
 
 const props = withDefaults(
@@ -269,8 +265,21 @@ const hitRadiusPx = computed(() =>
     coarsePointer.value ? HIT_RADIUS_PX.coarse : HIT_RADIUS_PX.fine,
 )
 
-const wallShadowId = useId()
+const shadowHref = shallowRef<string | null>(null)
 const mapWalls = computed(() => toMapWalls(props.walls, props.map))
+
+onMounted(() => {
+    watch(
+        [() => props.map, mapWalls],
+        () => {
+            shadowHref.value = renderShadowImage(
+                props.map,
+                shadowCasters(props.map, mapWalls.value),
+            )
+        },
+        { immediate: true },
+    )
+})
 const dots = computed(() => placeRoutes(mapWalls.value, props.routes))
 const layoutDots = computed(() =>
     props.layoutRoutes
@@ -508,13 +517,12 @@ defineExpose({ focusWall, focusRoute, fitAll })
     transition: fill 0.15s;
 }
 
-.map-wall-shadow {
-    flood-color: #000;
-    flood-opacity: 0.24;
+.map-shadows {
+    opacity: 0.32;
 }
 
-:global(.dark) .map-wall-shadow {
-    flood-opacity: 0.48;
+.map-shadows:where(.dark *) {
+    opacity: 0.9;
 }
 
 .map-wall-edge {
