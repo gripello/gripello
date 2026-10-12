@@ -53,18 +53,23 @@
             <li
                 v-for="user in rows"
                 :key="user.id"
-                class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3"
+                class="relative flex items-center gap-x-3 gap-y-2 px-4 py-3 md:flex-wrap"
                 :data-testid="`platform-user-${user.id}`"
             >
-                <AdminMemberIdentity
-                    :member="user.identity"
-                    class="min-w-0 flex-1 md:max-w-1/2 md:min-w-72 md:flex-none"
-                />
+                <button
+                    type="button"
+                    class="min-w-0 flex-1 text-left max-md:after:absolute max-md:after:inset-0 md:max-w-1/2 md:min-w-72 md:flex-none"
+                    data-testid="platform-user-open"
+                    @click="openEdit(user.id)"
+                >
+                    <AdminMemberIdentity :member="user.identity" />
+                </button>
                 <div
-                    class="order-last flex min-w-0 basis-full flex-wrap items-center gap-1.5 md:order-none md:flex-1 md:basis-auto"
+                    class="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-1.5 md:flex-1 md:justify-start"
                 >
                     <UBadge
                         size="sm"
+                        :class="{ 'max-md:hidden': user.verified }"
                         :color="user.verified ? 'success' : 'warning'"
                         variant="soft"
                         :icon="
@@ -114,7 +119,7 @@
                         size="sm"
                         color="neutral"
                         variant="outline"
-                        class="max-w-full"
+                        class="max-w-full max-md:hidden"
                         :data-testid="`platform-user-chip-${chip.gym}`"
                     >
                         <span
@@ -129,7 +134,11 @@
                         </span>
                     </UBadge>
                 </div>
-                <div class="flex shrink-0 justify-end gap-1">
+                <UIcon
+                    name="i-lucide-chevron-right"
+                    class="size-5 shrink-0 text-dimmed md:hidden"
+                />
+                <div class="flex shrink-0 justify-end gap-1 max-md:hidden">
                     <UButton
                         icon="i-lucide-pencil"
                         color="neutral"
@@ -182,6 +191,7 @@
             :roles="roles"
             @changed="reloadLoaded"
             @delete="openDelete"
+            @suspend="openSuspend"
         />
 
         <PlatformSuspendDialog

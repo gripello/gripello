@@ -11,12 +11,6 @@
                 >
                     {{ traffic.system.version }}
                 </UBadge>
-                <SegmentedControl
-                    v-model="range"
-                    :items="rangeItems"
-                    size="sm"
-                    test-id="platform-traffic-range"
-                />
             </template>
         </LayoutPageHeader>
 
@@ -37,9 +31,9 @@
             </template>
         </LayoutEmptyState>
 
-        <template v-else>
+        <div v-else class="flex flex-col gap-3">
             <div
-                class="mb-3 grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6"
+                class="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6"
                 data-testid="platform-traffic-kpis"
             >
                 <AnalyticsStatsCard
@@ -57,8 +51,8 @@
                 />
             </div>
 
-            <div class="grid grid-cols-12 gap-3">
-                <div class="col-span-12 flex flex-col gap-3 xl:col-span-8">
+            <div class="grid-cols-12 gap-3 max-xl:contents xl:grid">
+                <div class="col-span-8 flex-col gap-3 max-xl:contents xl:flex">
                     <AnalyticsSection
                         :title="t('platform.overview.traffic.title')"
                         icon="i-lucide-activity"
@@ -67,6 +61,14 @@
                         :empty-text="t('errors.loadFailed')"
                         testid="platform-traffic"
                     >
+                        <template #actions>
+                            <SegmentedControl
+                                v-model="range"
+                                :items="rangeItems"
+                                size="sm"
+                                test-id="platform-traffic-range"
+                            />
+                        </template>
                         <PlatformTrafficChart
                             v-if="traffic"
                             :series="traffic.series"
@@ -75,6 +77,7 @@
                     </AnalyticsSection>
                     <PlatformEndpointTable
                         :endpoints="traffic?.endpoints ?? []"
+                        class="max-lg:hidden"
                     />
                     <AnalyticsSection
                         :title="t('platform.gyms.title')"
@@ -84,6 +87,7 @@
                         :empty-text="t('table.no_data')"
                         flush
                         testid="platform-gyms"
+                        class="max-lg:hidden"
                     >
                         <template #actions>
                             <UButton
@@ -170,13 +174,14 @@
                         </ul>
                     </AnalyticsSection>
                 </div>
-                <div class="col-span-12 flex flex-col gap-3 xl:col-span-4">
+                <div class="col-span-4 flex-col gap-3 max-xl:contents xl:flex">
                     <AnalyticsSection
                         :title="t('platform.overview.needsYou')"
                         icon="i-lucide-bell-ring"
                         color="error"
                         flush
                         testid="platform-needs-you"
+                        class="max-xl:-order-1"
                     >
                         <ul class="divide-y divide-default">
                             <li v-for="tile in attentionTiles" :key="tile.key">
@@ -300,54 +305,10 @@
                         flush
                         testid="platform-servers"
                     >
-                        <ul
+                        <PlatformServerList
                             v-if="traffic"
-                            class="divide-y divide-default text-sm"
-                        >
-                            <li
-                                v-for="server in traffic.system.replicas"
-                                :key="server.name"
-                                class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5"
-                                :data-testid="`platform-server-${server.name}`"
-                            >
-                                <span
-                                    class="size-2 shrink-0 rounded-full"
-                                    :class="
-                                        server.online
-                                            ? 'bg-success'
-                                            : 'bg-error'
-                                    "
-                                    role="img"
-                                    :aria-label="
-                                        server.online
-                                            ? t(
-                                                  'platform.overview.servers.online',
-                                              )
-                                            : t(
-                                                  'platform.overview.servers.offline',
-                                              )
-                                    "
-                                />
-                                <span
-                                    class="min-w-0 flex-1 truncate font-mono text-highlighted"
-                                >
-                                    {{ server.name }}
-                                </span>
-                                <UBadge
-                                    color="neutral"
-                                    variant="outline"
-                                    size="sm"
-                                >
-                                    {{ server.version }} · {{ server.role }}
-                                </UBadge>
-                                <span
-                                    class="w-full pl-5 text-xs text-muted"
-                                    :class="{ 'text-error': !server.online }"
-                                >
-                                    {{ serverDetails(server) }}
-                                </span>
-                            </li>
-                        </ul>
+                            :servers="traffic.system.replicas"
+                        />
                     </AnalyticsSection>
                     <AnalyticsSection
                         :title="t('platform.overview.system.title')"
@@ -416,7 +377,7 @@
                     </AnalyticsSection>
                 </div>
             </div>
-        </template>
+        </div>
     </div>
 </template>
 
@@ -424,7 +385,6 @@
 import {
     getPlatformTraffic,
     listPlatformUsers,
-    type ServerReplica,
     type TrafficRange,
 } from '~/api/platform'
 import { formatBytes } from '~/utils/backups'
@@ -433,7 +393,6 @@ import {
     formatCompact,
     formatMs,
     formatPercent,
-    formatUptime,
     methodShares,
 } from '~/utils/platformTraffic'
 import { formatDate } from '#shared/utils/formatting'
@@ -644,23 +603,6 @@ const systemItems = computed(() => {
         },
     ]
 })
-
-function serverDetails(server: ServerReplica) {
-    if (!server.online)
-        return t('platform.overview.servers.lastSeen', {
-            time: formatDate(server.last_seen, {
-                locale: locale.value,
-                withTime: true,
-            }),
-        })
-    return [
-        t('platform.overview.servers.uptime', {
-            time: formatUptime(server.started, locale.value),
-        }),
-        t('platform.overview.servers.connections', server.realtime_clients),
-        formatBytes(server.memory_bytes, locale.value),
-    ].join(' · ')
-}
 
 function retry() {
     return Promise.all([refreshGyms(), refreshAdmins()])

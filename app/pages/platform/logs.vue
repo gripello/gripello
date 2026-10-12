@@ -34,7 +34,7 @@
         />
         <div v-else class="flex flex-col gap-4">
             <div
-                class="grid grid-cols-2 gap-3 lg:grid-cols-4"
+                class="grid grid-cols-2 gap-3 max-lg:hidden lg:grid-cols-4"
                 data-testid="platform-logs-counts"
             >
                 <button
@@ -67,7 +67,7 @@
             </div>
 
             <section
-                class="rounded-lg bg-default p-4 ring ring-default"
+                class="rounded-lg bg-default p-4 ring ring-default max-lg:hidden"
                 data-testid="platform-logs-histogram"
             >
                 <div class="mb-4 flex flex-wrap items-center gap-3">
@@ -141,7 +141,7 @@
                             data-testid="platform-logs-search"
                         >
                             <template #trailing>
-                                <UKbd value="/" />
+                                <UKbd value="/" class="max-lg:hidden" />
                             </template>
                         </UInput>
                         <SegmentedControl
@@ -161,7 +161,7 @@
                     />
                     <ul
                         v-else
-                        class="max-h-[70vh] divide-y divide-default overflow-y-auto"
+                        class="divide-y divide-default lg:max-h-[70vh] lg:overflow-y-auto"
                         data-testid="platform-logs-list"
                     >
                         <li
@@ -174,18 +174,20 @@
                         >
                             <button
                                 type="button"
-                                class="flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left font-mono text-xs outline-none hover:bg-elevated/60 focus-visible:bg-elevated"
+                                class="flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2 text-left font-mono text-xs outline-none hover:bg-elevated/60 focus-visible:bg-elevated max-md:py-3 md:flex-nowrap"
                                 :aria-expanded="expanded === entry.key"
                                 @click="toggle(entry.key)"
                             >
-                                <span class="w-16 shrink-0 text-muted">
+                                <span
+                                    class="w-16 shrink-0 text-muted max-md:w-auto"
+                                >
                                     {{ clock(entry.time) }}
                                 </span>
                                 <UBadge
                                     :color="logLevelColor(entry.level)"
                                     variant="subtle"
                                     size="sm"
-                                    class="w-14 shrink-0 justify-center font-semibold uppercase"
+                                    class="w-14 shrink-0 justify-center font-semibold uppercase max-md:-order-1"
                                 >
                                     {{ entry.severity }}
                                 </UBadge>
@@ -194,17 +196,18 @@
                                     color="neutral"
                                     variant="outline"
                                     size="sm"
-                                    class="hidden shrink-0 font-mono sm:inline-flex"
+                                    class="shrink-0 font-mono max-md:ml-auto"
                                 >
                                     {{ entry.module }}
                                 </UBadge>
                                 <span
-                                    class="min-w-0 flex-1 truncate text-highlighted"
+                                    class="min-w-0 flex-1 text-highlighted max-md:order-last max-md:basis-full max-md:font-sans max-md:text-sm max-md:break-words md:truncate"
                                 >
                                     {{ entry.message }}
                                 </span>
                                 <span
-                                    class="hidden shrink-0 text-muted md:inline"
+                                    class="shrink-0 text-muted"
+                                    :class="{ 'max-md:ml-auto': !entry.module }"
                                 >
                                     {{ entry.replica }}
                                 </span>
@@ -214,7 +217,7 @@
                                 class="flex flex-col gap-3 px-4 pb-4 sm:pl-[6.5rem]"
                             >
                                 <p
-                                    class="font-mono text-xs break-words whitespace-pre-wrap text-highlighted"
+                                    class="font-mono text-xs break-words whitespace-pre-wrap text-highlighted max-md:hidden"
                                 >
                                     {{ entry.message }}
                                 </p>
@@ -484,12 +487,23 @@ const countCards = computed(() => [
     },
 ])
 
-const filterItems = computed(() => [
-    { value: 'debug' as const, label: t('platform.logs.filterAll') },
-    { value: 'info' as const, label: t('platform.logs.filterInfo') },
-    { value: 'warn' as const, label: t('platform.logs.filterWarn') },
-    { value: 'error' as const, label: t('platform.logs.levels.error') },
-])
+const filterItems = computed(() =>
+    (
+        [
+            ['debug', 'platform.logs.filterAll'],
+            ['info', 'platform.logs.filterInfo'],
+            ['warn', 'platform.logs.filterWarn'],
+            ['error', 'platform.logs.levels.error'],
+        ] as const
+    ).map(([value, label]) => ({
+        value,
+        label: `${t(label)} · ${formatNumber(filterLogs(lines.value, value, '').length)}`,
+    })),
+)
+
+onMounted(() => {
+    if (window.matchMedia('(max-width: 1023px)').matches) filter.value = 'warn'
+})
 
 const runtimeItems = computed(() =>
     (['debug', 'info', 'warn', 'error'] as const).map((value) => ({

@@ -65,6 +65,7 @@
 
             <AdminGymSettingsForm
                 :gym="gym"
+                drill-down
                 edit-slug
                 :extra-sections="extraSections"
                 @saved="gym = $event"

@@ -846,7 +846,8 @@
         "staff": "Equipo",
         "more": "Más",
         "sections": "Secciones",
-        "noStaffTools": "No tienes herramientas del equipo en este rocódromo"
+        "noStaffTools": "No tienes herramientas del equipo en este rocódromo",
+        "inbox": "Bandeja"
     },
     "users": {
         "create": "Añadir usuario",
@@ -2023,7 +2024,8 @@
             "open": "Abrir rocódromo",
             "inactive": "Inactivo",
             "takeOffline": "Desconectar",
-            "takeOfflineConfirm": "{name} desaparece para los escaladores hasta que lo vuelvas a activar."
+            "takeOfflineConfirm": "{name} desaparece para los escaladores hasta que lo vuelvas a activar.",
+            "search": "Nombre o URL"
         },
         "settings": {
             "title": "Ajustes de la plataforma",
@@ -2318,6 +2320,9 @@
             "off": "Desactivado",
             "manualOnly": "Solo copias manuales",
             "freeSpace": "Espacio libre"
+        },
+        "more": {
+            "operations": "Operaciones"
         }
     },
     "mails": {

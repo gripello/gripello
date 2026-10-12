@@ -123,10 +123,16 @@ export const PLATFORM_LINKS: NavLink[] = [
     },
 ]
 
+export const PLATFORM_MORE = '/platform/more'
+
 export const PLATFORM_BOTTOM_NAV: NavLink[] = [
-    ...PLATFORM_LINKS.slice(0, 4),
-    YOU_TAB,
+    PLATFORM_LINKS[0]!,
+    { ...PLATFORM_LINKS[1]!, label: 'nav.inbox' },
+    ...PLATFORM_LINKS.slice(2, 4),
+    { to: PLATFORM_MORE, icon: 'i-lucide-menu', label: 'nav.more' },
 ]
+
+export const PLATFORM_MORE_LINKS = PLATFORM_LINKS.slice(4)
 
 export const NAV_ITEMS: NavItem[] = [
     {
@@ -467,16 +473,22 @@ export function bottomNavLinks(
     context: NavContext,
     can: Can = () => true,
 ) {
-    if (context === 'platform')
+    if (context === 'platform') {
+        const tabPath = PLATFORM_MORE_LINKS.some((link) =>
+            isWithin(path, link.to),
+        )
+            ? PLATFORM_MORE
+            : path
         return PLATFORM_BOTTOM_NAV.map((link) => ({
             ...link,
             path: link.to,
             active:
                 link.to ===
                 PLATFORM_BOTTOM_NAV.map((tab) => tab.to)
-                    .filter((to) => isWithin(path, to))
+                    .filter((to) => isWithin(tabPath, to))
                     .sort((a, b) => b.length - a.length)[0],
         }))
+    }
     if (context === 'staff') {
         const local = gymLocalPath(path) ?? ''
         const tabs = STAFF_TABS.filter(allowed(can))

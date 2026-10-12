@@ -494,11 +494,22 @@ describe('bottomNavLinks', () => {
             '/platform/moderation',
             '/platform/gyms',
             '/platform/users',
-            '/account',
+            '/platform/more',
         ])
         expect(activeAt('/platform', 'platform')).toBe('/platform')
         expect(activeAt('/platform/gyms/abc', 'platform')).toBe(
             '/platform/gyms',
         )
+    })
+
+    it('keeps More active on the ops pages it lists', () => {
+        for (const path of [
+            '/platform/more',
+            '/platform/audit',
+            '/platform/backups',
+            '/platform/logs',
+            '/platform/settings',
+        ])
+            expect(activeAt(path, 'platform')).toBe('/platform/more')
     })
 })

@@ -846,7 +846,8 @@
         "staff": "Team",
         "more": "Mehr",
         "sections": "Bereiche",
-        "noStaffTools": "Du hast in dieser Halle keine Team-Werkzeuge"
+        "noStaffTools": "Du hast in dieser Halle keine Team-Werkzeuge",
+        "inbox": "Eingang"
     },
     "users": {
         "create": "Benutzer hinzufügen",
@@ -2023,7 +2024,8 @@
             "open": "Halle öffnen",
             "inactive": "Inaktiv",
             "takeOffline": "Offline nehmen",
-            "takeOfflineConfirm": "{name} verschwindet für Kletternde, bis du die Halle wieder einschaltest."
+            "takeOfflineConfirm": "{name} verschwindet für Kletternde, bis du die Halle wieder einschaltest.",
+            "search": "Name oder URL"
         },
         "settings": {
             "title": "Plattform-Einstellungen",
@@ -2318,6 +2320,9 @@
             "off": "Aus",
             "manualOnly": "Nur manuelle Sicherungen",
             "freeSpace": "Freier Speicher"
+        },
+        "more": {
+            "operations": "Betrieb"
         }
     },
     "mails": {
