@@ -28,6 +28,13 @@
             >
                 {{ serverDetails(server) }}
             </span>
+            <span
+                v-if="serverStrain(server)"
+                class="w-full pl-5 text-xs text-warning"
+                :data-testid="`platform-server-strain-${server.name}`"
+            >
+                {{ serverStrain(server) }}
+            </span>
         </li>
     </ul>
 </template>
@@ -36,6 +43,7 @@
 import type { ServerReplica } from '~/api/platform'
 import { formatBytes } from '~/utils/backups'
 import { formatUptime } from '~/utils/platformTraffic'
+import { replicaStrain } from '~/utils/serverHealth'
 import { formatDate } from '#shared/utils/formatting'
 
 defineProps<{ servers: ServerReplica[] }>()
@@ -56,6 +64,27 @@ function serverDetails(server: ServerReplica) {
         }),
         t('platform.overview.servers.connections', server.realtime_clients),
         formatBytes(server.memory_bytes, locale.value),
+        t('platform.overview.servers.heap', {
+            size: formatBytes(server.heap_bytes, locale.value),
+        }),
+        t('platform.overview.servers.goroutines', server.goroutines),
+        t('platform.overview.servers.dbPool', {
+            used: server.db_conns_in_use,
+            max: server.db_conns_max,
+        }),
     ].join(' · ')
+}
+
+function serverStrain(server: ServerReplica) {
+    return replicaStrain(server)
+        .map((strain) =>
+            t(`platform.overview.servers.strain.${strain}`, {
+                waits: server.db_waits,
+                ms: Math.round(server.db_wait_ms),
+                dropped: server.realtime_dropped,
+                seconds: Math.round(server.bus_lag_ms / 1000),
+            }),
+        )
+        .join(' · ')
 }
 </script>

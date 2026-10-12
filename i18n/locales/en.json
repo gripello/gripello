@@ -544,7 +544,8 @@
                 "content_hidden": "Your content was hidden: {reason}",
                 "beta_approved": "Your beta video was approved",
                 "beta_rejected": "Your beta video was rejected: {reason}",
-                "wall_reset_planned": "{wall}: {count} routes come down on {date}"
+                "wall_reset_planned": "{wall}: {count} routes come down on {date}",
+                "platform_issue": "{level}: {summary} ({count}×)"
             }
         }
     },
@@ -1631,7 +1632,8 @@
                 "achievements": "Achievements",
                 "platform_reports": "Content reports from all gyms",
                 "content": "Moderation of my content",
-                "moderation": "Content to review"
+                "moderation": "Content to review",
+                "platform_issues": "Server errors and warnings"
             },
             "devices": "Devices",
             "thisDevice": "This device",
@@ -2145,7 +2147,16 @@
                 "offline": "Offline",
                 "uptime": "up {time}",
                 "connections": "{n} live connection | {n} live connections",
-                "lastSeen": "Offline · last seen {time}"
+                "lastSeen": "Offline · last seen {time}",
+                "heap": "heap {size}",
+                "goroutines": "{n} goroutine | {n} goroutines",
+                "dbPool": "DB {used}/{max}",
+                "strain": {
+                    "dbWaits": "waited {ms} ms for DB connections ({waits}×)",
+                    "dbFull": "DB pool full",
+                    "realtimeDropped": "{dropped} live events dropped",
+                    "busLag": "events {seconds} s behind"
+                }
             },
             "system": {
                 "title": "System",
@@ -2156,7 +2167,11 @@
                 "lastBackup": "Last backup",
                 "mail": "Mail",
                 "mailOn": "Configured",
-                "mailOff": "Not configured"
+                "mailOff": "Not configured",
+                "issues": "Errors (24 h)",
+                "issuesCount": "{n} issue | {n} issues",
+                "jobsRetrying": "{n} retrying | {n} retrying",
+                "jobsOldest": "oldest waits {minutes} min"
             },
             "platform": "Platform"
         },
@@ -2323,6 +2338,19 @@
         },
         "more": {
             "operations": "Operations"
+        },
+        "issues": {
+            "title": "Issues",
+            "empty": "No warnings or errors",
+            "new": "New",
+            "count": "{n} time | {n} times",
+            "users": "{n} user | {n} users",
+            "firstSeen": "First seen {time}",
+            "ranges": {
+                "1h": "1 h",
+                "24h": "24 h",
+                "7d": "7 days"
+            }
         }
     },
     "mails": {

@@ -1,8 +1,12 @@
 package platformadmin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,8 +16,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"gripello/internal/platform"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/logbuf"
 	"gripello/internal/platform/metrics"
 	"gripello/internal/platform/replicas"
 	"gripello/internal/platform/testapp"
@@ -505,9 +512,9 @@ func TestTrafficSumsRequestsPerEndpoint(t *testing.T) {
 	if out["visitors_per_day"] != 2.0 {
 		t.Errorf("visitors = %v", out["visitors_per_day"])
 	}
-	replicas.Beat(context.Background(), f.app.DB, replicas.Replica{Name: "app-1", Role: "all", Started: time.Now()}, 2)
-	replicas.Beat(context.Background(), f.app.DB, replicas.Replica{Name: "app-2", Role: "api", Started: time.Now()}, 3)
-	replicas.Beat(context.Background(), f.app.DB, replicas.Replica{Name: "app-gone", Role: "api", Started: time.Now()}, 5)
+	replicas.Beat(context.Background(), f.app.DB, replicas.Replica{Name: "app-1", Role: "all", Started: time.Now(), RealtimeClients: 2})
+	replicas.Beat(context.Background(), f.app.DB, replicas.Replica{Name: "app-2", Role: "api", Started: time.Now(), RealtimeClients: 3})
+	replicas.Beat(context.Background(), f.app.DB, replicas.Replica{Name: "app-gone", Role: "api", Started: time.Now(), RealtimeClients: 5})
 	f.exec(`UPDATE replicas SET last_seen = now() - interval '5 minutes' WHERE name = 'app-gone'`)
 	out = f.call("GET", "/platform/traffic?range=1h", "", f.operator, http.StatusOK)
 	if servers := out["system"].(map[string]any)["replicas"].([]any); len(servers) != 3 || servers[0].(map[string]any)["realtime_clients"] != 2.0 {
@@ -519,5 +526,147 @@ func TestTrafficSumsRequestsPerEndpoint(t *testing.T) {
 	f.call("GET", "/platform/system", "", f.climber, http.StatusForbidden)
 	if servers := f.call("GET", "/platform/system", "", f.operator, http.StatusOK)["replicas"].([]any); len(servers) != 3 {
 		t.Errorf("system replicas = %v", servers)
+	}
+}
+
+func TestIssuesGroupLogsAndAlertPlatformAdminsOnce(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	buf := logbuf.New(io.Discard)
+	log := slog.New(buf)
+	for _, id := range []string{"a1b2c3d4e5f6g7h", "z9y8x7w6v5u4t3s"} {
+		log.Error("request failed", "route", "GET /api/routes/{id}", "user", id, "error", fmt.Errorf("load route %s: boom", id))
+	}
+	log.Info("started")
+	buf.Flush(ctx, f.app.DB, "app-1")
+
+	f.call("GET", "/platform/issues", "", f.climber, http.StatusForbidden)
+	items := f.call("GET", "/platform/issues?range=1h", "", f.operator, http.StatusOK)["items"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("issues = %v, want both failures grouped into one", items)
+	}
+	issue := items[0].(map[string]any)
+	if issue["count"] != 2.0 || issue["users"] != 2.0 || issue["level"] != "ERROR" {
+		t.Errorf("issue = %v", issue)
+	}
+	occurrences := f.call("GET", "/platform/issues/"+issue["fingerprint"].(string), "", f.operator, http.StatusOK)["items"].([]any)
+	if len(occurrences) != 2 {
+		t.Errorf("occurrences = %v", occurrences)
+	}
+
+	m := &module{app: f.app}
+	for range 2 {
+		if err := m.alertIssues(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var alerts int
+	f.app.DB.QueryRow(ctx, `SELECT count(*) FROM events WHERE topic = 'notify' AND payload->>'type' = 'platform_issue'`).Scan(&alerts)
+	if alerts != 1 {
+		t.Errorf("%d platform_issue alerts, want one per issue and cooldown", alerts)
+	}
+}
+
+func TestBrowserErrorsAreLoggedWithoutTheQuery(t *testing.T) {
+	f := newFixture(t)
+	var out bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&out, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+	f.call("POST", "/client-errors", `{"kind":"vue","message":"x is undefined","stack":"at Foo.vue:3","route":"/e2e/routes?q=ada@example.com","version":"1.2.0"}`, "", http.StatusNoContent)
+	f.call("POST", "/client-errors", `{"kind":"other","message":"x"}`, "", http.StatusBadRequest)
+	line := out.String()
+	if !strings.Contains(line, `msg="client error"`) || !strings.Contains(line, "route=/e2e/routes") || strings.Contains(line, "ada@example.com") {
+		t.Errorf("client error log = %s", line)
+	}
+}
+
+func TestBrowserErrorsAlertOnlyAsABurstAcrossClimbers(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	buf := logbuf.New(io.Discard)
+	log := slog.New(buf)
+	for i := range 20 {
+		log.Error("client error", "source", "client", "kind", "window", "route", "/", "user", "", "error", fmt.Sprintf("spam %c", 'a'+i))
+	}
+	for range 12 {
+		log.Error("client error", "source", "client", "kind", "vue", "route", "/:gym/routes", "user", "u1", "error", "one climber only")
+	}
+	for i := range 12 {
+		log.Error("client error", "source", "client", "kind", "vue", "route", "/:gym/map", "user", fmt.Sprintf("u%d", i%3), "error", "x is undefined")
+	}
+	buf.Flush(ctx, f.app.DB, "app-1")
+	m := &module{app: f.app}
+	if err := m.alertIssues(ctx); err != nil {
+		t.Fatal(err)
+	}
+	rows, _ := f.app.DB.Query(ctx, `SELECT payload->'params'->>'summary' FROM events WHERE topic = 'notify' AND payload->>'type' = 'platform_issue'`)
+	summaries, _ := pgx.CollectRows(rows, pgx.RowTo[string])
+	if len(summaries) != 1 || !strings.Contains(summaries[0], "x is undefined") {
+		t.Errorf("alerts = %v, want only the burst seen by three climbers", summaries)
+	}
+}
+
+func TestIssueAlertsAreCappedPerRun(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	buf := logbuf.New(io.Discard)
+	for i := range 8 {
+		slog.New(buf).Error("job failed for good, dropped", "kind", fmt.Sprintf("kind%c", 'a'+i))
+	}
+	buf.Flush(ctx, f.app.DB, "app-1")
+	m := &module{app: f.app}
+	m.alertIssues(ctx)
+	var alerts int
+	f.app.DB.QueryRow(ctx, `SELECT count(*) FROM events WHERE topic = 'notify' AND payload->>'type' = 'platform_issue'`).Scan(&alerts)
+	if alerts != alertsPerRun {
+		t.Errorf("%d alerts in one run, want %d", alerts, alertsPerRun)
+	}
+}
+
+func TestAnAlertedIssueAlertsAgainOnlyWhenItGrowsTenfold(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	m := &module{app: f.app}
+	burst := func(n int) {
+		buf := logbuf.New(io.Discard)
+		for range n {
+			slog.New(buf).Error("request failed", "route", "GET /api/x", "error", "boom")
+		}
+		buf.Flush(ctx, f.app.DB, "app-1")
+		if err := m.alertIssues(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	alerts := func() (n int, escalated int) {
+		f.app.DB.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE (payload->'params'->>'escalated')::bool)
+			FROM events WHERE topic = 'notify' AND payload->>'type' = 'platform_issue'`).Scan(&n, &escalated)
+		return
+	}
+	burst(12)
+	if n, _ := alerts(); n != 1 {
+		t.Fatalf("first burst sent %d alerts", n)
+	}
+	burst(12)
+	if n, _ := alerts(); n != 1 {
+		t.Errorf("doubling within the cooldown alerted again: %d", n)
+	}
+	burst(220)
+	if n, escalated := alerts(); n != 2 || escalated != 1 {
+		t.Errorf("a tenfold rise sent %d alerts (%d escalated), want 2 (1)", n, escalated)
+	}
+}
+
+func TestIssueAlertsPastTheCooldownArePruned(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	f.exec(`INSERT INTO issue_alerts (fingerprint, alerted_at) VALUES ('old', now() - interval '7 hours'), ('recent', now() - interval '1 hour')`)
+	if err := PruneIssueAlerts(ctx, f.app.DB); err != nil {
+		t.Fatal(err)
+	}
+	rows, _ := f.app.DB.Query(ctx, `SELECT fingerprint FROM issue_alerts`)
+	left, _ := pgx.CollectRows(rows, pgx.RowTo[string])
+	if len(left) != 1 || left[0] != "recent" {
+		t.Errorf("issue_alerts = %v, want only the one still in its cooldown", left)
 	}
 }

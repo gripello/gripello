@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	_ "expvar"
 	"flag"
 	"fmt"
 	"gripello/internal/account"
@@ -23,6 +24,7 @@ import (
 	"gripello/internal/ticks"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
@@ -79,6 +81,10 @@ func connect(ctx context.Context) (config.Config, *platform.App, error) {
 	if err != nil {
 		return cfg, nil, err
 	}
+	if cfg.DBMaxConns > 0 {
+		db.MaxConns = int32(cfg.DBMaxConns)
+	}
+	db.SlowQuery, httpx.SlowRequest = cfg.SlowQuery, cfg.SlowRequest
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return cfg, nil, err
@@ -162,6 +168,15 @@ func serve(ctx context.Context, args []string) error {
 		app.Cfg.HTTPAddr = *addr
 	}
 
+	if cfg.DebugAddr != "" {
+		// pprof and expvar register on the default mux, which only this listener serves; keep it off the public network.
+		go func() {
+			slog.Info("debug listener", "addr", cfg.DebugAddr)
+			if err := http.ListenAndServe(cfg.DebugAddr, http.DefaultServeMux); err != nil {
+				slog.Error("debug listener stopped", "error", err)
+			}
+		}()
+	}
 	app.Handle("GET /health", httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		if err := app.DB.Ping(r.Context()); err != nil {
 			return err
@@ -238,7 +253,8 @@ func serve(ctx context.Context, args []string) error {
 	defer reporting.Wait()
 	reporting.Go(func() { app.Logs.Ship(ctx, app.DB, replica) })
 	reporting.Go(func() {
-		replicas.Run(ctx, app.DB, replicas.Replica{Name: replica, Version: config.Version, Role: cfg.Role, Started: time.Now()}, app.Realtime.Clients)
+		replicas.Run(ctx, app.DB, replicas.Replica{Name: replica, Version: config.Version, Role: cfg.Role, Started: time.Now()},
+			replicas.Probes{RealtimeClients: app.Realtime.Clients, RealtimeDropped: app.Realtime.Dropped, BusLag: app.Bus.Lag, BusQueueMax: app.Bus.QueueMax})
 	})
 	app.Cron.Add("requestStatsPrune", "17 3 * * *", func(ctx context.Context) error {
 		return metrics.Prune(ctx, app.DB)
@@ -247,7 +263,10 @@ func serve(ctx context.Context, args []string) error {
 		if err := replicas.Prune(ctx, app.DB); err != nil {
 			return err
 		}
-		return logbuf.Prune(ctx, app.DB, 7*24*time.Hour)
+		if err := logbuf.Prune(ctx, app.DB, 7*24*time.Hour); err != nil {
+			return err
+		}
+		return platformadmin.PruneIssueAlerts(ctx, app.DB)
 	})
 	if cfg.Role != "api" {
 		app.Cron.Start()

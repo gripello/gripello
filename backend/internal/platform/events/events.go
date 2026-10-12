@@ -3,10 +3,13 @@ package events
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"math/rand/v2"
+	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -107,6 +110,10 @@ type Bus struct {
 	onces    []onceSubscription
 	lastID   int64
 	gapSince time.Time
+	// delivered mirrors lastID for readers outside the listener goroutine.
+	delivered  atomic.Int64
+	started    atomic.Bool
+	warnedFull time.Time
 }
 
 func NewBus(pool *pgxpool.Pool) *Bus {
@@ -135,7 +142,7 @@ func (b *Bus) subscribe(prefix string, h Handler) subscription {
 func runSafely(h Handler, e Event) (ok bool) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error("events: handler panicked", "event", e.ID, "topic", e.Topic, "panic", r)
+			slog.Error("events: handler panicked", "event", e.ID, "topic", e.Topic, "kind", e.Kind, "panic", fmt.Sprint(r), "stack", string(debug.Stack()))
 			ok = false
 		}
 	}()
@@ -147,6 +154,8 @@ func runSafely(h Handler, e Event) (ok bool) {
 // Plain handlers start at the live head; SubscribeOnce handlers also get the unclaimed events still in the outbox.
 func (b *Bus) Run(ctx context.Context) {
 	b.pool.QueryRow(ctx, `SELECT COALESCE(MAX(id), 0) FROM events`).Scan(&b.lastID)
+	b.delivered.Store(b.lastID)
+	b.started.Store(true)
 	go b.sweepUnclaimed(ctx)
 	for ctx.Err() == nil {
 		if err := b.listen(ctx); err != nil && ctx.Err() == nil {
@@ -211,6 +220,7 @@ func (b *Bus) drain(ctx context.Context) (waitingOnGap bool, err error) {
 		b.gapSince = time.Time{}
 		json.Unmarshal(aud, &e.Audience)
 		b.lastID = e.ID
+		b.delivered.Store(e.ID)
 		b.dispatch(e)
 	}
 	return false, rows.Err()
@@ -221,9 +231,34 @@ func (b *Bus) dispatch(e Event) {
 	defer b.mu.RUnlock()
 	for _, sub := range b.subs {
 		if strings.HasPrefix(e.Topic, sub.prefix) {
+			if len(sub.queue) > handlerBacklog*8/10 && time.Since(b.warnedFull) > time.Minute {
+				b.warnedFull = time.Now()
+				slog.Warn("events: handler queue almost full, dispatch will stall", "prefix", sub.prefix, "queued", len(sub.queue))
+			}
 			sub.queue <- e
 		}
 	}
+}
+
+// Lag is how long the oldest event not yet dispatched on this replica has been waiting; 0 when caught up or before Run has read the head.
+func (b *Bus) Lag(ctx context.Context) (time.Duration, error) {
+	if !b.started.Load() {
+		return 0, nil
+	}
+	var seconds float64
+	err := b.pool.QueryRow(ctx, `SELECT COALESCE(EXTRACT(EPOCH FROM now() - MIN(created)), 0) FROM events WHERE id > $1`, b.delivered.Load()).Scan(&seconds)
+	return time.Duration(seconds * float64(time.Second)), err
+}
+
+// QueueMax is the fullest handler queue right now; near handlerBacklog a slow handler is about to stall dispatch.
+func (b *Bus) QueueMax() int {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	longest := 0
+	for _, sub := range b.subs {
+		longest = max(longest, len(sub.queue))
+	}
+	return longest
 }
 
 // Since returns events after id, for SSE Last-Event-ID replay.

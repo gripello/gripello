@@ -235,6 +235,7 @@ const TOPIC_ICONS: Record<string, string> = {
     tasks: 'i-lucide-clipboard-list',
     reports: 'i-lucide-flag',
     platform_reports: 'i-lucide-shield-alert',
+    platform_issues: 'i-lucide-bug',
     moderation: 'i-lucide-shield-check',
     content: 'i-lucide-eye-off',
     social: 'i-lucide-users',

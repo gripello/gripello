@@ -544,7 +544,8 @@
                 "content_hidden": "Dein Inhalt wurde ausgeblendet: {reason}",
                 "beta_approved": "Dein Beta-Video wurde freigegeben",
                 "beta_rejected": "Dein Beta-Video wurde abgelehnt: {reason}",
-                "wall_reset_planned": "{wall}: {count} Routen werden am {date} abgeschraubt"
+                "wall_reset_planned": "{wall}: {count} Routen werden am {date} abgeschraubt",
+                "platform_issue": "{level}: {summary} ({count}×)"
             }
         }
     },
@@ -1631,7 +1632,8 @@
                 "achievements": "Erfolge",
                 "platform_reports": "Inhaltsmeldungen aller Hallen",
                 "content": "Moderation meiner Inhalte",
-                "moderation": "Zu prüfende Inhalte"
+                "moderation": "Zu prüfende Inhalte",
+                "platform_issues": "Serverfehler und Warnungen"
             },
             "devices": "Geräte",
             "thisDevice": "Dieses Gerät",
@@ -2145,7 +2147,16 @@
                 "offline": "Offline",
                 "uptime": "läuft seit {time}",
                 "connections": "{n} Live-Verbindung | {n} Live-Verbindungen",
-                "lastSeen": "Offline · zuletzt gesehen {time}"
+                "lastSeen": "Offline · zuletzt gesehen {time}",
+                "heap": "Heap {size}",
+                "goroutines": "{n} Goroutine | {n} Goroutinen",
+                "dbPool": "DB {used}/{max}",
+                "strain": {
+                    "dbWaits": "{ms} ms auf DB-Verbindungen gewartet ({waits}×)",
+                    "dbFull": "DB-Pool voll",
+                    "realtimeDropped": "{dropped} Live-Ereignisse verworfen",
+                    "busLag": "Ereignisse {seconds} s im Rückstand"
+                }
             },
             "system": {
                 "title": "System",
@@ -2156,7 +2167,11 @@
                 "lastBackup": "Letzte Sicherung",
                 "mail": "E-Mail",
                 "mailOn": "Eingerichtet",
-                "mailOff": "Nicht eingerichtet"
+                "mailOff": "Nicht eingerichtet",
+                "issues": "Fehler (24 h)",
+                "issuesCount": "{n} Problem | {n} Probleme",
+                "jobsRetrying": "{n} im erneuten Versuch | {n} im erneuten Versuch",
+                "jobsOldest": "ältester wartet {minutes} min"
             },
             "platform": "Plattform"
         },
@@ -2323,6 +2338,19 @@
         },
         "more": {
             "operations": "Betrieb"
+        },
+        "issues": {
+            "title": "Probleme",
+            "empty": "Keine Warnungen oder Fehler",
+            "new": "Neu",
+            "count": "{n}-mal | {n}-mal",
+            "users": "{n} Person | {n} Personen",
+            "firstSeen": "Zuerst gesehen {time}",
+            "ranges": {
+                "1h": "1 h",
+                "24h": "24 h",
+                "7d": "7 Tage"
+            }
         }
     },
     "mails": {

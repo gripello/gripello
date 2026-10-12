@@ -23,12 +23,14 @@ import (
 var featureFlags = []string{"beta_videos"}
 
 type module struct {
-	app       *platform.App
-	testMails *ratelimit.Limiter
+	app          *platform.App
+	testMails    *ratelimit.Limiter
+	clientErrors *ratelimit.Limiter
+	clientIPs    *ratelimit.Limiter
 }
 
 func Register(app *platform.App) {
-	m := &module{app: app, testMails: ratelimit.New(5, time.Minute)}
+	m := &module{app: app, testMails: ratelimit.New(5, time.Minute), clientErrors: ratelimit.New(60, time.Minute), clientIPs: ratelimit.New(10, time.Minute)}
 	for pattern, handler := range map[string]httpx.Handler{
 		"GET /platform/users":                    m.listUsers,
 		"GET /platform/users/{id}":               m.getUser,
@@ -48,9 +50,13 @@ func Register(app *platform.App) {
 		"POST /platform/mail/test":               m.sendTestMail,
 		"GET /platform/logs":                     m.listLogs,
 		"PUT /platform/logs/level":               m.setLogLevel,
+		"GET /platform/issues":                   m.listIssues,
+		"GET /platform/issues/{fingerprint}":     m.issueOccurrences,
 	} {
 		app.Handle(pattern, onlyPlatformAdmins(handler))
 	}
+	app.Handle("POST /client-errors", httpx.Handler(m.reportClientError))
+	app.Cron.Add("issueAlerts", "*/5 * * * *", m.alertIssues)
 }
 
 func onlyPlatformAdmins(next httpx.Handler) httpx.Handler {

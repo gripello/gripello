@@ -24,6 +24,7 @@ var topics = []topic{
 	{Key: "content", Types: []string{"content_hidden", "beta_approved", "beta_rejected"}},
 	{Key: "moderation", Permission: "manage_comments", Types: []string{"moderation_pending"}},
 	{Key: "platform_reports", Permission: platformAdminTopicPermission, Types: []string{"report_filed_platform"}},
+	{Key: "platform_issues", Permission: platformAdminTopicPermission, Types: []string{"platform_issue"}},
 }
 
 func topicOf(notificationType string) string {

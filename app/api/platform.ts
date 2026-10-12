@@ -138,6 +138,16 @@ export interface ServerReplica {
     online: boolean
     realtime_clients: number
     memory_bytes: number
+    goroutines: number
+    heap_bytes: number
+    gc_pause_ms: number
+    db_conns_in_use: number
+    db_conns_max: number
+    db_waits: number
+    db_wait_ms: number
+    realtime_dropped: number
+    bus_lag_ms: number
+    bus_queue_max: number
 }
 
 export interface PlatformTraffic {
@@ -171,6 +181,9 @@ export interface PlatformSystem {
     database_connections: number
     jobs_waiting: number
     jobs_running: number
+    jobs_retrying: number
+    jobs_oldest_wait_s: number
+    issues_24h: number
     last_backup: string | null
     backup_error: string
     mail_configured?: boolean
@@ -292,6 +305,31 @@ export function setLogLevel(level: LogLevel) {
     })
 }
 
+export interface ServerIssue {
+    fingerprint: string
+    level: string
+    message: string
+    sample?: Record<string, unknown>
+    count: number
+    users: number
+    first_seen: string
+    last_seen: string
+}
+
+export type IssueRange = '1h' | '24h' | '7d'
+
+export function listIssues(range: IssueRange) {
+    return useApi()<{ items: ServerIssue[] }>('/platform/issues', {
+        query: { range },
+    })
+}
+
+export function listIssueOccurrences(fingerprint: string) {
+    return useApi()<{ items: ServerLogEntry[] }>(
+        `/platform/issues/${encodeURIComponent(fingerprint)}`,
+    )
+}
+
 export interface OAuthProviderSettings {
     provider: 'google' | 'apple' | 'microsoft' | 'oidc'
     enabled: boolean
@@ -333,4 +371,16 @@ export async function saveOAuthProviderSettings(
         { method: 'PUT', body: input },
     )
     return items
+}
+
+export interface ClientErrorReport {
+    kind: 'vue' | 'window' | 'promise' | 'chunk' | 'nuxt'
+    message: string
+    stack: string
+    route: string
+    version: string
+}
+
+export function reportClientError(report: ClientErrorReport) {
+    return useApi()('/client-errors', { method: 'POST', body: report })
 }

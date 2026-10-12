@@ -398,6 +398,56 @@ paths:
       responses:
         '200': { description: OK }
         '400': { $ref: '#/components/responses/Error' }
+  /platform/issues:
+    get:
+      operationId: listIssues
+      tags: [platform]
+      description: WARN and ERROR log records of every replica grouped by fingerprint (message, route, kind, error with ids and numbers masked), errors first, then newest.
+      parameters:
+        - { name: range, in: query, schema: { type: string, enum: [1h, 24h, 7d], default: 24h } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { type: object, properties: { fingerprint: { type: string }, level: { type: string }, message: { type: string }, sample: { type: object }, count: { type: integer }, users: { type: integer }, first_seen: { type: string, format: date-time }, last_seen: { type: string, format: date-time } } }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/issues/{fingerprint}:
+    get:
+      operationId: listIssueOccurrences
+      tags: [platform]
+      description: The newest 100 records of one issue.
+      parameters:
+        - { name: fingerprint, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: OK }
+        '403': { $ref: '#/components/responses/Error' }
+  /client-errors:
+    post:
+      operationId: reportClientError
+      tags: [platform]
+      description: A browser error, logged at ERROR with source=client so it joins the issues. No URL query or user input; capped per replica and per IP. Over the cap it still answers 204.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, message]
+              properties:
+                kind: { type: string, enum: [vue, window, promise, chunk, nuxt] }
+                message: { type: string, maxLength: 500 }
+                stack: { type: string, maxLength: 2000 }
+                route: { type: string, description: Matched route pattern, e.g. /:gym/routes }
+                version: { type: string }
+      responses:
+        '204': { description: Logged }
+        '400': { $ref: '#/components/responses/Error' }
   /platform/oauth2:
     get:
       operationId: listOAuthProviderSettings

@@ -53,8 +53,17 @@ func Fail(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, ErrNotFound) {
 		e = NewError(http.StatusNotFound, "The requested resource wasn't found.")
 	} else if !errors.As(err, &e) {
-		slog.Error("request failed", "error", err)
+		if ow := observed(w); ow != nil {
+			ow.failure = err
+		} else {
+			slog.Error("request failed", "error", err)
+		}
 		e = NewError(http.StatusInternalServerError, "Something went wrong.")
+	}
+	if ow := observed(w); ow != nil {
+		for _, f := range e.Data {
+			ow.codes = append(ow.codes, f.Code)
+		}
 	}
 	JSON(w, e.Status, e)
 }

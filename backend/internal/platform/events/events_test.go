@@ -359,3 +359,26 @@ func receive(t *testing.T, kinds <-chan string) string {
 		return ""
 	}
 }
+
+func TestLagIgnoresTheOutboxBeforeTheBusStarts(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool := testkit.Pool(t)
+	pool.Exec(ctx, `INSERT INTO events (topic, kind, payload, audience, created) VALUES ('gym:g1', 'old', '{}', '{}', now() - interval '30 minutes')`)
+	bus := NewBus(pool)
+	if lag, err := bus.Lag(ctx); err != nil || lag != 0 {
+		t.Fatalf("lag before Run = %v, %v; the outbox history is not a backlog", lag, err)
+	}
+	go bus.Run(ctx)
+	deadline := time.Now().Add(3 * time.Second)
+	for !bus.started.Load() && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if lag, err := bus.Lag(ctx); err != nil || lag != 0 {
+		t.Errorf("lag after Run = %v, %v", lag, err)
+	}
+	bus.delivered.Store(0)
+	if lag, _ := bus.Lag(ctx); lag < 29*time.Minute {
+		t.Errorf("an undelivered 30-minute-old event shows lag %v", lag)
+	}
+}
