@@ -1,6 +1,8 @@
-def runTestSuite(String target) {
+def runTestSuite(String target, boolean junitReport = true) {
     sh "docker buildx build --platform linux/amd64 --target ${target} --progress=plain --output type=local,dest=test-results/${target} ."
-    junit testResults: "test-results/${target}/junit.xml"
+    if (junitReport) {
+        junit testResults: "test-results/${target}/junit.xml"
+    }
     if (readFile("test-results/${target}/exit-code").trim() != '0') {
         error("${target} failed")
     }
@@ -83,6 +85,11 @@ pipeline {
                 stage('Vitest') {
                     steps {
                         script { runTestSuite('vitest-results') }
+                    }
+                }
+                stage('Typecheck') {
+                    steps {
+                        script { runTestSuite('typecheck-results', false) }
                     }
                 }
                 stage('Go Hooks') {
