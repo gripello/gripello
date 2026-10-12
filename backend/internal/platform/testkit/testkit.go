@@ -3,6 +3,7 @@ package testkit
 
 import (
 	"context"
+	"errors"
 	neturl "net/url"
 	"os"
 	"sync"
@@ -17,10 +18,13 @@ import (
 
 const templateLock = 7231002
 
+var errDatabaseUnreachable = errors.New("test database unreachable")
+
 var (
-	templateOnce sync.Once
-	templateErr  error
-	template     = "test_template_" + db.MigrationsChecksum()
+	setupOnce sync.Once
+	setupErr  error
+	admin     *pgxpool.Pool
+	template  = "test_template_" + db.MigrationsChecksum()
 )
 
 func Pool(t *testing.T) *pgxpool.Pool {
@@ -30,19 +34,23 @@ func Pool(t *testing.T) *pgxpool.Pool {
 		dsn = config.DevDatabaseURL
 	}
 	ctx := context.Background()
-	admin, err := pgxpool.New(ctx, dsn)
-	if err == nil {
-		err = admin.Ping(ctx)
-	}
-	if err != nil {
-		if os.Getenv("GRIPELLO_TEST_DSN") == "" {
-			t.Skip("dev database not reachable (start it with `yarn dev` or set GRIPELLO_TEST_DSN)")
+	setupOnce.Do(func() {
+		if admin, setupErr = pgxpool.New(ctx, dsn); setupErr == nil {
+			setupErr = admin.Ping(ctx)
 		}
-		t.Fatal(err)
+		if setupErr != nil {
+			if os.Getenv("GRIPELLO_TEST_DSN") == "" {
+				setupErr = errDatabaseUnreachable
+			}
+			return
+		}
+		setupErr = ensureTemplate(ctx, admin, dsn)
+	})
+	if setupErr == errDatabaseUnreachable {
+		t.Skip("dev database not reachable (start it with `yarn dev` or set GRIPELLO_TEST_DSN)")
 	}
-	templateOnce.Do(func() { templateErr = ensureTemplate(ctx, admin, dsn) })
-	if templateErr != nil {
-		t.Fatal(templateErr)
+	if setupErr != nil {
+		t.Fatal(setupErr)
 	}
 	name := "test_" + ids.New()
 	if _, err := admin.Exec(ctx, "CREATE DATABASE "+name+" TEMPLATE "+template); err != nil {
@@ -55,7 +63,6 @@ func Pool(t *testing.T) *pgxpool.Pool {
 	t.Cleanup(func() {
 		pool.Close()
 		admin.Exec(ctx, "DROP DATABASE "+name+" WITH (FORCE)")
-		admin.Close()
 	})
 	return pool
 }

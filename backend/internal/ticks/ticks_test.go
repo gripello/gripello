@@ -132,6 +132,7 @@ func (f *fixture) outbox(topic string) []events.Event {
 }
 
 func TestTickCreateCopiesTheRouteSnapshot(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "7A", 18.5)
 	tick := f.tick("climber", route, "flash", time.Now())
@@ -152,6 +153,7 @@ func TestTickCreateCopiesTheRouteSnapshot(t *testing.T) {
 }
 
 func TestTickDatesMayNotLieFarInTheFuture(t *testing.T) {
+	t.Parallel()
 	now := time.Now()
 	if tickDateInFuture(now.Add(35*time.Hour), now) || !tickDateInFuture(now.Add(37*time.Hour), now) {
 		t.Fatal("leeway is 36 h")
@@ -165,6 +167,7 @@ func TestTickDatesMayNotLieFarInTheFuture(t *testing.T) {
 }
 
 func TestTickClientIDsReplayAsDuplicates(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "6A", 15.7)
 	id := ids.New()
@@ -175,6 +178,7 @@ func TestTickClientIDsReplayAsDuplicates(t *testing.T) {
 }
 
 func TestTickUpdatesKeepTheLockedFields(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route, other := f.boulder(f.hallA, "6A", 15.7), f.boulder(f.hallA, "7A", 18.5)
 	tick := f.tick("climber", route, "top", time.Now())
@@ -190,6 +194,7 @@ func TestTickUpdatesKeepTheLockedFields(t *testing.T) {
 }
 
 func TestTickEventsReachOwnerFollowersAndListeners(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "6A", 15.7)
 	tick := f.tick("climber", route, "top", time.Now())
@@ -233,6 +238,7 @@ func TestTickEventsReachOwnerFollowersAndListeners(t *testing.T) {
 }
 
 func TestLogbookListsOwnTicksWithTheRoute(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route, gone := f.boulder(f.hallA, "6A", 15.7), f.boulder(f.hallA, "7A", 18.5)
 	f.tick("climber", route, "top", time.Now().Add(-time.Hour))
@@ -272,6 +278,7 @@ func TestLogbookListsOwnTicksWithTheRoute(t *testing.T) {
 }
 
 func TestFeedShowsAcceptedFollowsOnly(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.exec(`UPDATE users SET firstname = 'Cleo', name = 'Climber' WHERE id = $1 RETURNING id`, f.users["climber"])
 	routeA, routeB := f.boulder(f.hallA, "6A", 15.7), f.boulder(f.hallB, "7A", 18.5)
@@ -300,6 +307,7 @@ func TestFeedShowsAcceptedFollowsOnly(t *testing.T) {
 }
 
 func TestPagingCapsThePage(t *testing.T) {
+	t.Parallel()
 	page, _, tail := paging(httptest.NewRequest(http.MethodGet, "/?page=9223372036854775807&limit=1000", nil))
 	if page != maxPage || !strings.HasSuffix(tail, " OFFSET 999999000") {
 		t.Errorf("page %d, tail %q", page, tail)

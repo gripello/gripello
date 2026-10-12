@@ -132,12 +132,12 @@ func TestVerifiedTokensRefuseExpiredTokens(t *testing.T) {
 	pool := testkit.Pool(t)
 	pool.Exec(ctx, `INSERT INTO users (id, username, token_key) VALUES ('u1', 'u1', 'key1')`)
 	pool.Exec(ctx, `INSERT INTO sessions (id, "user") VALUES ('sid1', 'u1')`)
-	token, _ := Issuer{Secret: "s", Duration: time.Second}.Sign("u1", "key1", "sid1")
+	token, _ := Issuer{Secret: "s", Duration: 2 * time.Second}.Sign("u1", "key1", "sid1")
 	cache := NewVerifiedTokens()
 	if _, err := cache.Verify(ctx, pool, "s", token); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(1100 * time.Millisecond)
+	time.Sleep(2100 * time.Millisecond)
 	if _, err := cache.Verify(ctx, pool, "s", token); err == nil {
 		t.Error("expired token served from the cache")
 	}

@@ -29,7 +29,6 @@ pipeline {
         stage('Setup Buildx') {
             steps {
                 script {
-                    sh 'docker run --rm --privileged tonistiigi/binfmt --install all'
                     sh 'docker buildx inspect gripello >/dev/null 2>&1 || docker buildx create --name gripello --driver docker-container || docker buildx inspect gripello'
                     sh 'docker buildx inspect --bootstrap'
                     withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
@@ -109,7 +108,7 @@ pipeline {
 
         stage('E2E Tests') {
             steps {
-                sh '$E2E_COMPOSE up --attach e2e --abort-on-container-exit --exit-code-from e2e'
+                sh 'E2E_DEPS_INSTALLED=1 $E2E_COMPOSE up --attach e2e --abort-on-container-exit --exit-code-from e2e'
             }
             post {
                 failure {

@@ -142,6 +142,7 @@ func (f *fixture) enableTOTP(token string) ([]byte, []any) {
 }
 
 func TestTOTPMatchesRFC6238(t *testing.T) {
+	t.Parallel()
 	key := []byte("12345678901234567890")
 	vectors := map[int64]string{59: "94287082", 1111111109: "07081804", 1234567890: "89005924", 20000000000: "65353130"}
 	for unix, want := range vectors {
@@ -164,6 +165,7 @@ func TestTOTPMatchesRFC6238(t *testing.T) {
 }
 
 func TestPasswordLogin(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("plain@example.com")
 
@@ -193,6 +195,7 @@ func TestPasswordLogin(t *testing.T) {
 }
 
 func TestLoginEmitsAuditEvents(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("audited@example.com")
 	f.loginToken("audited@example.com")
@@ -211,6 +214,7 @@ func TestLoginEmitsAuditEvents(t *testing.T) {
 }
 
 func TestTOTPSecondFactor(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.user("totp@example.com")
 	key, recovery := f.enableTOTP(f.loginToken("totp@example.com"))
@@ -240,6 +244,7 @@ func TestTOTPSecondFactor(t *testing.T) {
 }
 
 func TestMFAChallengeExpires(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.user("slow@example.com")
 	key, _ := f.enableTOTP(f.loginToken("slow@example.com"))
@@ -252,6 +257,7 @@ func TestMFAChallengeExpires(t *testing.T) {
 }
 
 func TestRecoveryCodeIsSingleUse(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("recover@example.com")
 	_, recovery := f.enableTOTP(f.loginToken("recover@example.com"))
@@ -270,6 +276,7 @@ func TestRecoveryCodeIsSingleUse(t *testing.T) {
 }
 
 func TestRecoveryCodeKeptWhenSignInFails(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("kept@example.com")
 	_, recovery := f.enableTOTP(f.loginToken("kept@example.com"))
@@ -285,6 +292,7 @@ func TestRecoveryCodeKeptWhenSignInFails(t *testing.T) {
 }
 
 func TestDeletingLastFactorNeedsPasswordAndDropsRecoveryCodes(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("off@example.com")
 	token := f.loginToken("off@example.com")
@@ -306,6 +314,7 @@ func TestDeletingLastFactorNeedsPasswordAndDropsRecoveryCodes(t *testing.T) {
 }
 
 func TestListFactorsAndRegenerateRecoveryCodes(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.user("list@example.com")
 	token := f.loginToken("list@example.com")
@@ -327,6 +336,7 @@ func TestListFactorsAndRegenerateRecoveryCodes(t *testing.T) {
 }
 
 func TestSessionsTrackAndRevokeLogins(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("session@example.com")
 	first, second := f.loginToken("session@example.com"), f.loginToken("session@example.com")
@@ -392,6 +402,7 @@ func TestSessionsTrackAndRevokeLogins(t *testing.T) {
 }
 
 func TestRevokedSessionsReachTheBus(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.user("live@example.com")
 	first, second := f.loginToken("live@example.com"), f.loginToken("live@example.com")
@@ -413,6 +424,7 @@ func TestRevokedSessionsReachTheBus(t *testing.T) {
 }
 
 func TestLegacyTokenStartsSessionOnRefresh(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("legacy@example.com")
 	status, body := f.send(http.MethodPost, "/auth/refresh", f.legacyToken(id), nil)
@@ -422,6 +434,7 @@ func TestLegacyTokenStartsSessionOnRefresh(t *testing.T) {
 }
 
 func TestPasswordChangeEndsEverySession(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("change@example.com")
 	old, other := f.loginToken("change@example.com"), f.loginToken("change@example.com")
@@ -451,6 +464,7 @@ func TestPasswordChangeEndsEverySession(t *testing.T) {
 }
 
 func TestEveryPasswordConfirmationCountsTowardLockout(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.user("guesser@example.com")
 	token := f.loginToken("guesser@example.com")
@@ -474,6 +488,7 @@ func TestEveryPasswordConfirmationCountsTowardLockout(t *testing.T) {
 }
 
 func TestPasswordlessAccountsAreAskedToSetAPassword(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("oauth-only@example.com")
 	token := f.loginToken("oauth-only@example.com")
@@ -493,6 +508,7 @@ func TestPasswordlessAccountsAreAskedToSetAPassword(t *testing.T) {
 }
 
 func TestLoginLockoutPerAccount(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("locked@example.com")
 
@@ -522,6 +538,7 @@ func TestLoginLockoutPerAccount(t *testing.T) {
 }
 
 func TestTOTPFailuresCountTowardLockout(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.user("guess@example.com")
 	f.enableTOTP(f.loginToken("guess@example.com"))
@@ -537,6 +554,7 @@ func TestTOTPFailuresCountTowardLockout(t *testing.T) {
 }
 
 func TestParallelFailuresStillLock(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	var wg sync.WaitGroup
 	for range lockout.MaxFailures {
@@ -553,6 +571,7 @@ func TestParallelFailuresStillLock(t *testing.T) {
 }
 
 func TestTOTPStepClaimedOnce(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("replay@example.com")
 	f.enableTOTP(f.loginToken("replay@example.com"))
@@ -575,6 +594,7 @@ func TestTOTPStepClaimedOnce(t *testing.T) {
 }
 
 func TestPasskeysUnavailableWhenAppURLIsAnIPAddress(t *testing.T) {
+	t.Parallel()
 	app := testapp.App(t)
 	app.Cfg.AppURL = "https://192.168.1.10:8443"
 	Register(app)
@@ -586,6 +606,7 @@ func TestPasskeysUnavailableWhenAppURLIsAnIPAddress(t *testing.T) {
 }
 
 func TestPasskeyLoginRejectsUnknownCredential(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	status, options := f.send(http.MethodPost, "/auth/passkey/options", "", nil)
 	publicKey, _ := options["options"].(map[string]any)
@@ -602,6 +623,7 @@ func TestPasskeyLoginRejectsUnknownCredential(t *testing.T) {
 }
 
 func TestRenameOwnFactorOnly(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	owner := f.user("named@example.com")
 	f.user("stranger@example.com")
@@ -619,6 +641,7 @@ func TestRenameOwnFactorOnly(t *testing.T) {
 }
 
 func TestSecondFactorMethodsFollowTheAccount(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("methods@example.com")
 	ctx := context.Background()
@@ -634,6 +657,7 @@ func TestSecondFactorMethodsFollowTheAccount(t *testing.T) {
 }
 
 func TestAddingFactorsNeedsPassword(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.user("hijack@example.com")
 	token := f.loginToken("hijack@example.com")
@@ -648,6 +672,7 @@ func TestAddingFactorsNeedsPassword(t *testing.T) {
 }
 
 func TestDisplayIPCompressesIPv6(t *testing.T) {
+	t.Parallel()
 	for raw, want := range map[string]string{"0000:0000:0000:0000:0000:0000:0000:0001": "::1", "10.0.0.1": "10.0.0.1", "garbage": "garbage"} {
 		if got := displayIP(raw); got != want {
 			t.Errorf("displayIP(%q) = %q, want %q", raw, got, want)
@@ -656,6 +681,7 @@ func TestDisplayIPCompressesIPv6(t *testing.T) {
 }
 
 func TestTruncateRunes(t *testing.T) {
+	t.Parallel()
 	if got := truncateRunes("äöü", 2); got != "äö" {
 		t.Fatalf("truncateRunes() = %q", got)
 	}
@@ -714,6 +740,7 @@ func (f *fixture) lastMailToken(want int) (string, string) {
 }
 
 func TestPasswordResetFlow(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("reset@example.com")
 	f.exec(`UPDATE users SET language = 'es', firstname = 'Rita' WHERE id = $1`, id)
@@ -792,6 +819,7 @@ func TestVerificationFlow(t *testing.T) {
 }
 
 func TestUnknownIdentitiesCostABcryptRound(t *testing.T) {
+	t.Parallel()
 	if cost, err := bcrypt.Cost(unknownAccountHash()); err != nil || cost != 10 {
 		t.Fatalf("dummy hash cost = %d, %v", cost, err)
 	}
@@ -805,6 +833,7 @@ func TestUnknownIdentitiesCostABcryptRound(t *testing.T) {
 }
 
 func TestEmailChangeFlow(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	id := f.user("before@example.com")
 	f.user("taken@example.com")
@@ -893,6 +922,7 @@ func TestRegistration(t *testing.T) {
 }
 
 func TestCleanupJobsKeepLiveRows(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.exec(`INSERT INTO login_lockouts (id, key, failures, window_start) VALUES ($1, 'old', 3, now() - interval '1 hour'), ($2, 'fresh', 3, now())`, ids.New(), ids.New())
 	f.exec(`INSERT INTO login_lockouts (id, key, window_start, locked_until) VALUES ($1, 'locked', now() - interval '1 hour', now() + interval '5 minutes')`, ids.New())
@@ -919,6 +949,7 @@ func mustJSON(v any) string {
 }
 
 func TestAuthMethods(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	status, body := f.send(http.MethodGet, "/auth/methods", "", nil)
 	if status != http.StatusOK || mustJSON(body["password"]) != `{"enabled":true,"identityFields":["email","username"]}` || mustJSON(body["oauth2"]) != `{"enabled":false,"providers":[]}` {
@@ -944,6 +975,7 @@ func TestPasswordResetRequestNeedsCaptchaEvenWhenSignedIn(t *testing.T) {
 }
 
 func TestReauthenticateStampsTheSessionAndCountsFailures(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	userID := f.user("reauth@example.com")
 	token := f.loginToken("reauth@example.com")
@@ -987,6 +1019,7 @@ func (f *fixture) platformAdmin(email string, confirmed bool) string {
 }
 
 func TestAdminResetsTwoFactorAndEndsSessions(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	climber := f.user("climber@example.com")
 	climberToken := f.loginToken("climber@example.com")
@@ -1015,6 +1048,7 @@ func TestAdminResetsTwoFactorAndEndsSessions(t *testing.T) {
 }
 
 func TestAdminSetsPasswordRevokesSessionsAndUnlocks(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	climber := f.user("climber@example.com")
 	climberToken := f.loginToken("climber@example.com")
@@ -1075,6 +1109,7 @@ func TestAdminSetsPasswordRevokesSessionsAndUnlocks(t *testing.T) {
 }
 
 func TestAdminActionsRefuseSelfOtherAdminsAndClimbers(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	admin := f.platformAdmin("root@example.com", true)
 	f.platformAdmin("other@example.com", false)
