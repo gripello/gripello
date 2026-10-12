@@ -21,6 +21,7 @@
 !types
 !test
 !vitest.config.ts
+!.github/dependabot.yml
 !backend/go.mod
 !backend/go.sum
 !backend/tools/go.mod
