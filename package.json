@@ -15,6 +15,7 @@
         "format": "prettier --write \"**/*.{js,ts,vue,html,css,json}\"",
         "release": "release-it",
         "test": "vitest run",
+        "typecheck": "nuxi prepare && npx -y -p vue-tsc@3.3.11 -p typescript@5.9.3 vue-tsc --noEmit -p .nuxt/tsconfig.app.json",
         "test:watch": "vitest",
         "test:go": "cd backend && go test -parallel 4 ./...",
         "test:e2e": "playwright test",

@@ -19,6 +19,16 @@ describe('docker ui build', () => {
         }
     })
 
+    it('type-checks the app in CI', () => {
+        expect(read('Dockerfile')).toMatch(
+            /^FROM ui-deps AS typecheck\nCOPY \. \.\nRUN mkdir \/out && \{ yarn typecheck > \/out\/typecheck\.txt 2>&1; echo \$\? > \/out\/exit-code; \}; cat \/out\/typecheck\.txt$/m,
+        )
+        expect(read('Dockerfile')).toContain('AS typecheck-results')
+        expect(read('Jenkinsfile')).toContain(
+            "reportCheck('Typecheck', 'test-results/typecheck-results/typecheck.txt') { runTestSuite('typecheck-results', false) }",
+        )
+    })
+
     it('renders pages in a capped pool of worker processes', () => {
         expect(read('Dockerfile')).toContain('NITRO_PRESET=node-cluster')
         expect(read('.docker/docker-entrypoint.sh')).toContain(
