@@ -74,7 +74,7 @@
                     class="w-28"
                 >
                     <UInputNumber
-                        :model-value="compRoute.hold_count ?? undefined"
+                        :model-value="compRoute.hold_count || undefined"
                         :min="1"
                         :max="200"
                         size="sm"
