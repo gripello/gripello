@@ -106,7 +106,7 @@ const links = computed(() => {
                         })
                       : '—',
               }
-        if (!system.mail_configured)
+        if (system.mail_configured === false)
             status['/platform/settings'] = {
                 status: t('platform.overview.system.mailOff'),
                 tone: 'text-warning',

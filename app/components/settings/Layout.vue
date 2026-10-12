@@ -63,10 +63,7 @@
                 </nav>
             </aside>
 
-            <div
-                class="flex min-w-0 flex-1 flex-col gap-6"
-                :class="{ 'max-lg:hidden': drillDown && !sectionChosen }"
-            >
+            <div class="flex min-w-0 flex-1 flex-col gap-6">
                 <LayoutSaveBar
                     class="lg:-mb-6"
                     :show="hasChanges"
@@ -76,7 +73,12 @@
                     @save="emit('save')"
                     @cancel="emit('cancel')"
                 />
-                <slot :active-section="activeSection" />
+                <div
+                    class="contents"
+                    :class="{ 'max-lg:hidden': drillDown && !sectionChosen }"
+                >
+                    <slot :active-section="activeSection" />
+                </div>
             </div>
         </div>
 
