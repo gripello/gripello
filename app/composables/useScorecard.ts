@@ -35,6 +35,7 @@ export function useScorecard(competitionId: Ref<string>, entryId: Ref<string>) {
     const pending = ref<Record<string, ScoreState>>({})
     const offline = ref(false)
     let flushing = false
+    let edits = 0
 
     function persistPending() {
         const store = readStore()
@@ -47,9 +48,12 @@ export function useScorecard(competitionId: Ref<string>, entryId: Ref<string>) {
     }
 
     async function fetchSaved() {
+        const editsBefore = edits
         const records = await listScores(competitionId.value, {
             entry: entryId.value,
         })
+        // an edit during the request may already be saved and out of pending; its own live event reloads again
+        if (edits !== editsBefore) return
         const loaded: Record<string, ScoreState> = {}
         for (const record of records) {
             loaded[record.comp_route] = scoreFromRecord(record)
@@ -111,6 +115,7 @@ export function useScorecard(competitionId: Ref<string>, entryId: Ref<string>) {
         const current = scores.value[compRoute.id] ?? EMPTY_SCORE
         const next = applyScoreAction(current, action, compRoute.zone)
         if (next === current) return
+        edits++
         scores.value = { ...scores.value, [compRoute.id]: next }
         pending.value = { ...pending.value, [compRoute.id]: next }
         persistPending()
