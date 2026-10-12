@@ -56,7 +56,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     GOOS= GOARCH= go run github.com/google/go-licenses/v2@v2.0.1 report ./... \
       --ignore gripello --template /go-licenses.tpl > /out/third-party-notices-go.txt
 
-FROM node:26.10.0-trixie@sha256:9965105b7a4e201d7f07268402bb4971670592b46c9b9058cc643961199a1ab6 AS ui-deps
+FROM node:26.11.1-trixie@sha256:32fa97f3363975684b08bf4e8a68a47c7905175cc20275b50b974bbd02aba731 AS ui-deps
 WORKDIR /app
 RUN npm install -g corepack --force && corepack enable
 COPY .yarnrc.yml package.json yarn.lock ./
@@ -87,7 +87,7 @@ COPY --from=go-build /out/third-party-notices-go.txt /tmp/
 RUN { node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.txt; } \
       > .output/public/third-party-notices.txt
 
-FROM node:26.10.0-trixie-slim@sha256:930557a230abacbc3f4fd9b8648abf8f4bee1e17cb72195dcdfb2f709bc85b33
+FROM node:26.11.1-trixie-slim@sha256:193fe51b64e77981119c98c2002c9e32a70e2f006fb4d25068ce0558998917f0
 # pg_dump/pg_restore must match the PostgreSQL 18 server; trixie ships 17, so the client comes from PGDG.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends nginx openssl ca-certificates libcap2-bin libvips-tools postgresql-common \
