@@ -18,11 +18,21 @@ test('the route list filters by wall and shows the wall column', async ({
     testPrefix,
 }) => {
     await gotoSettled(page, '/routes')
-    await page.getByTestId('index-filter-location').click()
-    await page
-        .getByRole('option', { name: `${testPrefix} Map Hall`, exact: true })
-        .click()
-    await expect(page.getByRole('listbox')).toBeHidden()
+    const locationFilter = page.getByTestId('index-filter-location')
+    // Other workers add locations to the shared gym, shifting the open list under the click.
+    await expect(async () => {
+        await locationFilter.click()
+        await page
+            .getByRole('option', {
+                name: `${testPrefix} Map Hall`,
+                exact: true,
+            })
+            .click()
+        await expect(page.getByRole('listbox')).toBeHidden()
+        await expect(locationFilter).toContainText(`${testPrefix} Map Hall`, {
+            timeout: 1000,
+        })
+    }).toPass()
     await page.getByTestId('index-filter-wall').click()
     await page
         .getByRole('option', { name: `${testPrefix} Island`, exact: true })
