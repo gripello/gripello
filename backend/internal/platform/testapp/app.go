@@ -11,7 +11,6 @@ import (
 	"gripello/internal/platform"
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/blob"
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/jobs"
 	"gripello/internal/platform/locales"
@@ -28,9 +27,6 @@ func App(t *testing.T) *platform.App {
 	pool := testkit.Pool(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	bus := events.NewBus(pool)
 	go bus.Run(ctx)
 	blobDir := t.TempDir()

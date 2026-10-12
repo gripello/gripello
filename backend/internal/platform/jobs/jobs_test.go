@@ -6,16 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/testkit"
 )
 
 func TestEnqueueDuringRunKeepsTheJob(t *testing.T) {
 	ctx := context.Background()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	if err := Enqueue(ctx, pool, "k", "user1", nil, 0); err != nil {
 		t.Fatal(err)
 	}
@@ -51,9 +47,6 @@ func TestEnqueueDuringRunKeepsTheJob(t *testing.T) {
 func TestRunningJobRenewsItsLease(t *testing.T) {
 	ctx := context.Background()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	defer func(previous time.Duration) { lease = previous }(lease)
 	lease = 600 * time.Millisecond
 	Enqueue(ctx, pool, "slow", "k", nil, 0)
@@ -93,9 +86,6 @@ func TestQueueClaimsOnlyWithAFreeSlot(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	Enqueue(ctx, pool, "busy", "a", nil, 0)
 	Enqueue(ctx, pool, "busy", "b", nil, 0)
 	started, release := make(chan struct{}, 2), make(chan struct{})

@@ -9,16 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/testkit"
 )
 
 func TestRecordsOfEveryReplicaAreShippedAndFilteredByLevel(t *testing.T) {
 	pool := testkit.Pool(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	var out bytes.Buffer
 	first, second := New(&out), New(&bytes.Buffer{})
 	log := slog.New(first).With("module", "a")
@@ -59,9 +55,6 @@ func TestAFailedShipKeepsTheRecords(t *testing.T) {
 	b := New(&bytes.Buffer{})
 	slog.New(b).Error("before the table exists")
 	b.Flush(ctx, pool, "replica-1")
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	b.Flush(ctx, pool, "replica-1")
 	if got, _ := Recent(ctx, pool, slog.LevelDebug, 10); len(got) != 1 {
 		t.Errorf("records = %+v", got)
@@ -71,9 +64,6 @@ func TestAFailedShipKeepsTheRecords(t *testing.T) {
 func TestBinaryJunkDoesNotBlockShipping(t *testing.T) {
 	pool := testkit.Pool(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	b := New(&bytes.Buffer{})
 	slog.New(b).Warn("upload \x00name\xff", "file", "a\x00b\xfe", "parts", []string{"x\x00y", `lit\u0000eral`})
 	b.Flush(ctx, pool, "replica-1")

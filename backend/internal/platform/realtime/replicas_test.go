@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/testkit"
@@ -39,9 +38,6 @@ func TestSubscriptionsReachTheStreamOnAnotherReplica(t *testing.T) {
 	pool := testkit.Pool(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	busA, busB := events.NewBus(pool), events.NewBus(pool)
 	hubA, hubB := NewHub(busA, fakePerms{}), NewHub(busB, fakePerms{})
 	go busA.Run(ctx)

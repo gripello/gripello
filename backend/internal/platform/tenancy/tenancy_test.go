@@ -5,16 +5,12 @@ import (
 	"slices"
 	"testing"
 
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/testkit"
 )
 
 func TestAudienceSetsMatchTheSingleQuestions(t *testing.T) {
 	pool := testkit.Pool(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	seed := []string{
 		`INSERT INTO users (id, token_key, username) VALUES ('setter', 'k1', 'setter'), ('climber', 'k2', 'climber'), ('friend', 'k3', 'friend'), ('asking', 'k4', 'asking')`,
 		`INSERT INTO gyms (id, slug, name) VALUES ('g1', 'g1', 'G1'), ('g2', 'g2', 'G2')`,

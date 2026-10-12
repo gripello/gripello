@@ -2,9 +2,12 @@ package db
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"embed"
+	"encoding/hex"
 	"fmt"
+	"io/fs"
 	neturl "net/url"
 	"strconv"
 
@@ -18,6 +21,19 @@ import (
 var migrations embed.FS
 
 const migrateLock = 7231001
+
+func MigrationsChecksum() string {
+	hash := sha256.New()
+	fs.WalkDir(migrations, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err == nil && !entry.IsDir() {
+			content, _ := migrations.ReadFile(path)
+			hash.Write([]byte(path))
+			hash.Write(content)
+		}
+		return nil
+	})
+	return hex.EncodeToString(hash.Sum(nil))[:12]
+}
 
 func Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(url)
