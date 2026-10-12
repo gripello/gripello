@@ -30,12 +30,12 @@
             </LayoutListGroup>
         </section>
 
-        <section v-if="traffic?.system.replicas.length">
+        <section v-if="system?.replicas.length">
             <LayoutEyebrow>
                 {{ t('platform.overview.servers.title') }}
             </LayoutEyebrow>
             <PlatformServerList
-                :servers="traffic.system.replicas"
+                :servers="system.replicas"
                 class="overflow-hidden rounded-lg bg-default ring ring-default"
             />
         </section>
@@ -70,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { getPlatformTraffic } from '~/api/platform'
+import { getPlatformSystem } from '~/api/platform'
 import { formatDate } from '#shared/utils/formatting'
 import { PLATFORM_MORE_LINKS } from '~/utils/navigation'
 
@@ -86,27 +86,25 @@ const climbingPath = computed(() =>
 )
 const { appVersionLabel } = useVersionCheck()
 
-const { data: traffic } = useAsyncData(
-    'platform-more-traffic',
-    () => getPlatformTraffic('1h'),
-    { server: false },
-)
+const { data: system } = useAsyncData('platform-system', getPlatformSystem, {
+    server: false,
+})
 
 const links = computed(() => {
-    const system = traffic.value?.system
+    const state = system.value
     const status: Record<string, { status: string; tone?: string }> = {}
-    if (system) {
-        status['/platform/backups'] = system.backup_error
+    if (state) {
+        status['/platform/backups'] = state.backup_error
             ? { status: t('platform.backups.failed'), tone: 'text-error' }
             : {
-                  status: system.last_backup
-                      ? formatDate(system.last_backup, {
+                  status: state.last_backup
+                      ? formatDate(state.last_backup, {
                             locale: locale.value,
                             withTime: true,
                         })
                       : '—',
               }
-        if (system.mail_configured === false)
+        if (state.mail_configured === false)
             status['/platform/settings'] = {
                 status: t('platform.overview.system.mailOff'),
                 tone: 'text-warning',

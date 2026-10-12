@@ -77,7 +77,6 @@
                     </AnalyticsSection>
                     <PlatformEndpointTable
                         :endpoints="traffic?.endpoints ?? []"
-                        class="max-lg:hidden"
                     />
                     <AnalyticsSection
                         :title="t('platform.gyms.title')"

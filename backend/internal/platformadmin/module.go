@@ -38,6 +38,7 @@ func Register(app *platform.App) {
 		"DELETE /platform/users/{id}/suspension": m.liftSuspension,
 		"GET /platform/stats":                    m.stats,
 		"GET /platform/traffic":                  m.traffic,
+		"GET /platform/system":                   m.system,
 		"GET /platform/features":                 m.features,
 		"PUT /platform/gyms/{id}/features":       m.setFeatures,
 		"POST /platform/admins":                  m.addAdmin,

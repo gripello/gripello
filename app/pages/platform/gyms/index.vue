@@ -139,7 +139,7 @@
                     <PlatformGymIdentity :gym="gym" class="flex-1" />
                     <UBadge
                         v-if="openCases(gym.id)"
-                        color="warning"
+                        color="error"
                         variant="soft"
                         size="sm"
                         class="shrink-0"

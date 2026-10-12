@@ -159,6 +159,19 @@ paths:
                   people: { type: object, additionalProperties: true }
                   system: { type: object, additionalProperties: true, description: 'Database, jobs, backup and mail state plus replicas: every server seen within 15 minutes (name, version, role, started, last_seen, online, realtime_clients, memory_bytes).' }
         '403': { $ref: '#/components/responses/Error' }
+  /platform/system:
+    get:
+      operationId: getPlatformSystem
+      tags: [platform]
+      description: Database, jobs, backup and mail state plus the replicas, without traffic. Platform admins only.
+      responses:
+        '200':
+          description: The same object as `system` in /platform/traffic
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
   /platform/stats:
     get:
       operationId: platformStats

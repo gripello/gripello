@@ -516,4 +516,8 @@ func TestTrafficSumsRequestsPerEndpoint(t *testing.T) {
 	if online := out["people"].(map[string]any)["online"]; online != 5.0 {
 		t.Errorf("online = %v, want the clients of every online replica", online)
 	}
+	f.call("GET", "/platform/system", "", f.climber, http.StatusForbidden)
+	if servers := f.call("GET", "/platform/system", "", f.operator, http.StatusOK)["replicas"].([]any); len(servers) != 3 {
+		t.Errorf("system replicas = %v", servers)
+	}
 }

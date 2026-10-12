@@ -228,6 +228,15 @@ func (m *module) traffic(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func (m *module) system(w http.ResponseWriter, r *http.Request) error {
+	state, err := m.systemState(r.Context())
+	if err != nil {
+		return err
+	}
+	httpx.JSON(w, http.StatusOK, state)
+	return nil
+}
+
 func (m *module) systemState(ctx context.Context) (map[string]any, error) {
 	var dbSize int64
 	var connections, jobsWaiting, jobsRunning int

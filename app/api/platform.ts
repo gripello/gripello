@@ -161,21 +161,27 @@ export interface PlatformTraffic {
         failed_logins: number
         sign_in_methods: Record<string, number>
     }
-    system: {
-        version: string
-        replicas: ServerReplica[]
-        database_bytes: number
-        database_connections: number
-        jobs_waiting: number
-        jobs_running: number
-        last_backup: string | null
-        backup_error: string
-        mail_configured?: boolean
-    }
+    system: PlatformSystem
+}
+
+export interface PlatformSystem {
+    version: string
+    replicas: ServerReplica[]
+    database_bytes: number
+    database_connections: number
+    jobs_waiting: number
+    jobs_running: number
+    last_backup: string | null
+    backup_error: string
+    mail_configured?: boolean
 }
 
 export function getPlatformTraffic(range: TrafficRange) {
     return useApi()<PlatformTraffic>('/platform/traffic', { query: { range } })
+}
+
+export function getPlatformSystem() {
+    return useApi()<PlatformSystem>('/platform/system')
 }
 
 export function listFeatureFlags() {
