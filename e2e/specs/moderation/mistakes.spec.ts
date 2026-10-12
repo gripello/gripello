@@ -2,28 +2,8 @@ import { test, expect } from '../../support/fixtures'
 import { apiOf, gotoSettled, gymPath, reloadSettled } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
-import { decide, openCase } from '../../support/moderation'
-import {
-    decideModerationCase,
-    findReport,
-    listModerationCases,
-    type Api,
-} from '../../support/api'
-
-async function caseFor(api: Api, text: string) {
-    let item:
-        Awaited<ReturnType<typeof listModerationCases>>[number] | undefined
-    await expect
-        .poll(
-            async () => {
-                ;[item] = await listModerationCases(api, { q: text })
-                return item
-            },
-            { message: `no moderation case for ${text}` },
-        )
-        .toBeTruthy()
-    return item!
-}
+import { caseFor, decide, openCase } from '../../support/moderation'
+import { decideModerationCase, findReport } from '../../support/api'
 
 test('hiding needs a real reason', async ({
     adminPage,
