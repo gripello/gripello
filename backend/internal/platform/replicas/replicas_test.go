@@ -5,16 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/testkit"
 )
 
 func TestReplicasReportThemselvesAndGoOfflineWhenSilent(t *testing.T) {
 	pool := testkit.Pool(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	started := time.Now().Add(-time.Hour).Truncate(time.Second)
 	for _, name := range []string{"app-1", "app-2", "app-3"} {
 		if err := Beat(ctx, pool, Replica{Name: name, Version: "1.4.0", Role: "all", Started: started}, 3); err != nil {

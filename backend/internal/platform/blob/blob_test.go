@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"gripello/internal/platform/auth"
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/tenancy"
 	"gripello/internal/platform/testkit"
 )
@@ -210,9 +209,6 @@ func TestProtectedFilesNeedATokenForThatRecord(t *testing.T) {
 func TestStaffViewFollowsTaskAndModerationPermissions(t *testing.T) {
 	ctx := context.Background()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	for _, sql := range []string{
 		`INSERT INTO users (id, username, token_key) VALUES ('setter', 'setter', 'k1'), ('mod', 'mod', 'k2'), ('climber', 'climber', 'k3')`,
 		`INSERT INTO gyms (id, slug, name) VALUES ('g1', 'g1', 'G1')`,

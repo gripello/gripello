@@ -18,6 +18,9 @@ RUN apt-get update \
  && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
  && apt-get install -y --no-install-recommends postgresql-18 \
  && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOOS= GOARCH= go install gotest.tools/gotestsum@v1.13.0
 COPY backend/testdata ./testdata
 COPY i18n/locales/*.json /src/i18n/locales/
 COPY shared /src/shared
@@ -26,10 +29,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=tmpfs,target=/var/lib/postgresql/test \
     chown postgres /var/lib/postgresql/test \
- && su postgres -c '/usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/test -U postgres -A trust >/dev/null' \
+ && su postgres -c '/usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/test -U postgres -A trust -E UTF8 --locale=C.UTF-8 >/dev/null' \
  && su postgres -c "/usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/test -w -l /tmp/postgres.log \
       -o '-c listen_addresses=127.0.0.1 -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300' start" \
- && mkdir /out && { go run gotest.tools/gotestsum@v1.13.0 --junitfile /out/junit.xml -- -timeout 30m ./...; echo $? > /out/exit-code; }
+ && mkdir /out && { gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 ./...; echo $? > /out/exit-code; }
 
 FROM scratch AS go-results
 COPY --from=go-test /out /
@@ -75,14 +78,14 @@ COPY i18n ./i18n
 COPY shared ./shared
 COPY server ./server
 COPY public ./public
-COPY .docker/third-party-notices.mts ./.docker/
-COPY --from=go-build /out/third-party-notices-go.txt /tmp/
-RUN { node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.txt; } \
-      > public/third-party-notices.txt
 COPY app ./app
 ARG APP_VERSION
 ENV NODE_ENV=production NITRO_PRESET=node-cluster APP_VERSION=${APP_VERSION}
 RUN yarn build
+COPY .docker/third-party-notices.mts ./.docker/
+COPY --from=go-build /out/third-party-notices-go.txt /tmp/
+RUN { node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.txt; } \
+      > .output/public/third-party-notices.txt
 
 FROM node:26.10.0-trixie-slim@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1
 # pg_dump/pg_restore must match the PostgreSQL 18 server; trixie ships 17, so the client comes from PGDG.

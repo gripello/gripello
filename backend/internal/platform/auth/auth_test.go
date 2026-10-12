@@ -9,7 +9,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
 
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/testkit"
 )
@@ -43,9 +42,6 @@ func TestTokenFromPocketBaseCookie(t *testing.T) {
 func TestVerifyRejectsWrongTypeMissingExpiryAndExpiredLegacyTokens(t *testing.T) {
 	ctx := context.Background()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	pool.Exec(ctx, `INSERT INTO users (id, username, token_key) VALUES ('u1', 'u1', 'key1')`)
 	sign := func(claims Claims) string {
 		token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte("key1s"))
@@ -76,9 +72,6 @@ func TestVerifyRejectsWrongTypeMissingExpiryAndExpiredLegacyTokens(t *testing.T)
 func TestVerifiedTokensSkipTheDatabaseUntilAnEventDropsThem(t *testing.T) {
 	ctx := context.Background()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	pool.Exec(ctx, `INSERT INTO users (id, username, token_key) VALUES ('u1', 'u1', 'key1'), ('u2', 'u2', 'key2')`)
 	token, _ := Issuer{Secret: "s", Duration: time.Hour}.Sign("u1", "key1", "sid1")
 	otherToken, _ := Issuer{Secret: "s", Duration: time.Hour}.Sign("u2", "key2", "sid2")
@@ -137,17 +130,14 @@ func TestVerifiedTokensSkipTheDatabaseUntilAnEventDropsThem(t *testing.T) {
 func TestVerifiedTokensRefuseExpiredTokens(t *testing.T) {
 	ctx := context.Background()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	pool.Exec(ctx, `INSERT INTO users (id, username, token_key) VALUES ('u1', 'u1', 'key1')`)
 	pool.Exec(ctx, `INSERT INTO sessions (id, "user") VALUES ('sid1', 'u1')`)
-	token, _ := Issuer{Secret: "s", Duration: time.Second}.Sign("u1", "key1", "sid1")
+	token, _ := Issuer{Secret: "s", Duration: 2 * time.Second}.Sign("u1", "key1", "sid1")
 	cache := NewVerifiedTokens()
 	if _, err := cache.Verify(ctx, pool, "s", token); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(1100 * time.Millisecond)
+	time.Sleep(2100 * time.Millisecond)
 	if _, err := cache.Verify(ctx, pool, "s", token); err == nil {
 		t.Error("expired token served from the cache")
 	}

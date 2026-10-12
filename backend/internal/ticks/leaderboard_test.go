@@ -20,6 +20,7 @@ import (
 )
 
 func TestRankLeaderboard(t *testing.T) {
+	t.Parallel()
 	sends := []leaderboardSend{
 		{User: "a", Grade: "7A", GradeIndex: 18.5},
 		{User: "b", Grade: "7A", GradeIndex: 18.5, Flash: true},
@@ -50,6 +51,7 @@ func TestRankLeaderboard(t *testing.T) {
 }
 
 func TestSummarizeSends(t *testing.T) {
+	t.Parallel()
 	sends := []leaderboardSend{
 		{User: "a", Route: "r1", Grade: "7A", GradeIndex: 18.5, Flash: true},
 		{User: "b", Route: "r1", Grade: "7A", GradeIndex: 18.5},
@@ -79,6 +81,7 @@ func TestSummarizeSends(t *testing.T) {
 }
 
 func TestLeaderboardEndpoint(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	hard, easy, foreign := f.boulder(f.hallA, "7A", 18.5), f.boulder(f.hallA, "6A", 15.7), f.boulder(f.hallB, "8A", 23)
 	rope := f.exec(`INSERT INTO routes (id, gym, name, grade, grade_system, grade_index, type, location)
@@ -112,6 +115,7 @@ func TestLeaderboardEndpoint(t *testing.T) {
 }
 
 func TestPrivateTicksStayOffTheLeaderboard(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "7A", 18.5)
 	f.tick("climber", route, "top", time.Now())
@@ -124,6 +128,7 @@ func TestPrivateTicksStayOffTheLeaderboard(t *testing.T) {
 }
 
 func TestSeasonsAreManagedPerGym(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	body := func(starts, ends string) string {
 		return `{"name":"Winter","starts_at":"` + starts + ` 00:00:00.000Z","ends_at":"` + ends + ` 00:00:00.000Z"}`
@@ -151,6 +156,7 @@ func TestSeasonsAreManagedPerGym(t *testing.T) {
 }
 
 func TestLeaderboardKeepsTheGradeOfTheBestRepeat(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "7A", 18.5)
 	now := time.Now()
@@ -216,6 +222,7 @@ func (f *fixture) waitForRow(kind, user string, matches func(*leaderboardRow) bo
 }
 
 func TestASendShowsWithoutReloadingTheBoard(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "7A", 18.5)
 	f.tick("setterA", route, "top", time.Now())
@@ -230,6 +237,7 @@ func TestASendShowsWithoutReloadingTheBoard(t *testing.T) {
 }
 
 func TestUpdatingOrDeletingATickRefreshesItsPair(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "7A", 18.5)
 	hard := f.tick("climber", route, "top", time.Now().AddDate(0, 0, -1))
@@ -248,6 +256,7 @@ func TestUpdatingOrDeletingATickRefreshesItsPair(t *testing.T) {
 }
 
 func TestChangesDuringALoadAreReplayed(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "7A", 18.5)
 	f.liveBoard("boulder")
@@ -272,6 +281,7 @@ func TestChangesDuringALoadAreReplayed(t *testing.T) {
 }
 
 func TestOptOutsAndDeletedClimbersLeaveLiveBoards(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "7A", 18.5)
 	f.tick("climber", route, "top", time.Now())
@@ -321,6 +331,7 @@ func comparable(board leaderboardBoard) comparableBoard {
 }
 
 func TestLiveBoardsMatchAFreshBuildAfterRandomChanges(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	random := rand.New(rand.NewPCG(1, 2))
 	routes := []string{
@@ -373,6 +384,7 @@ func (f *fixture) nameOf(user string) string {
 }
 
 func TestConcurrentLeaderboardMissesShareOneBoard(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "7A", 18.5)
 	f.tick("climber", route, "flash", time.Now())
@@ -408,6 +420,7 @@ func publishUserUpdate(t *testing.T, f *fixture, user string, changed []string) 
 }
 
 func TestProfileChangesWithoutAFieldListForgetBoards(t *testing.T) {
+	t.Parallel()
 	if !touchesLeaderboard(nil) || touchesLeaderboard([]string{"followed_walls"}) || !touchesLeaderboard([]string{"avatar"}) {
 		t.Fatal("touchesLeaderboard")
 	}

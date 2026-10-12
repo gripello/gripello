@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"gripello/internal/platform/config"
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/locales"
 	"gripello/internal/platform/secretbox"
 	"gripello/internal/platform/testkit"
@@ -191,9 +190,6 @@ func TestConfiguredFollowsTheSMTPHost(t *testing.T) {
 func TestReloadPrefersStoredSettingsOverTheEnvironment(t *testing.T) {
 	pool := testkit.Pool(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	env := config.Config{SMTPHost: "env.example.com", SMTPPort: "587", SenderName: "Env"}
 	c := New(config.Config{})
 	if err := c.Reload(ctx, pool, env, "secret"); err != nil || !c.Configured() || c.current.Load().senderName != "Env" {

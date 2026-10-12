@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/testkit"
 )
 
@@ -14,9 +13,6 @@ func TestPublishReachesListener(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	bus := NewBus(pool)
 	got := make(chan Event, 1)
 	bus.Subscribe("gym_changes:", func(e Event) { got <- e })
@@ -51,9 +47,6 @@ func TestSubscribeOnceClaimsPerHandler(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	first, second := NewBus(pool), NewBus(pool)
 	runs := make(chan string, 4)
 	for _, bus := range []*Bus{first, second} {
@@ -88,9 +81,6 @@ func TestSlowerTransactionsEventIsNotSkipped(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	seed, _ := pool.Begin(ctx)
 	Publish(ctx, seed, "t", "seed", nil, Audience{})
 	seed.Commit(ctx)
@@ -153,9 +143,6 @@ func TestFailedOnceHandlerReleasesItsClaimAndRetries(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	onceRetryDelay = time.Millisecond
 	bus := NewBus(pool)
 	runs := make(chan int, 4)
@@ -199,9 +186,6 @@ func TestOnceHandlerGetsEventsCommittedWhileNoBusRan(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	sweepOften(t)
 	tx, _ := pool.Begin(ctx)
 	Publish(ctx, tx, "audit", "while down", nil, Audience{})
@@ -231,9 +215,6 @@ func TestOnceHandlerGetsEventSkippedBehindAGap(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	sweepOften(t)
 	seed, _ := pool.Begin(ctx)
 	Publish(ctx, seed, "t", "seed", nil, Audience{})
@@ -242,7 +223,7 @@ func TestOnceHandlerGetsEventSkippedBehindAGap(t *testing.T) {
 	once := make(chan string, 4)
 	bus.SubscribeOnce("t", "t.once", func(e Event) { once <- e.Kind })
 	go bus.Run(ctx)
-	if kind := <-once; kind != "seed" {
+	if kind := receive(t, once); kind != "seed" {
 		t.Fatalf("got %q", kind)
 	}
 
@@ -251,7 +232,7 @@ func TestOnceHandlerGetsEventSkippedBehindAGap(t *testing.T) {
 	fast, _ := pool.Begin(ctx)
 	Publish(ctx, fast, "t", "fast", nil, Audience{})
 	fast.Commit(ctx)
-	if kind := <-once; kind != "fast" {
+	if kind := receive(t, once); kind != "fast" {
 		t.Fatalf("got %q", kind)
 	}
 	slow.Commit(ctx)
@@ -269,9 +250,6 @@ func TestSweepReadsOnlyIdsPastTheCursorUntilAFullPass(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	sweepOften(t)
 	bus := NewBus(pool)
 	once := make(chan string, 4)
@@ -317,9 +295,6 @@ func TestFullPassDeliversAnEventWhoseRetriesAllFailed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	sweepOften(t)
 	retryDelay, fullEvery := onceRetryDelay, onceFullSweepEvery
 	onceRetryDelay, onceFullSweepEvery = time.Millisecond, 500*time.Millisecond
@@ -371,5 +346,16 @@ func TestTopicPrefixRangeMatchesStartsWith(t *testing.T) {
 		if len(mismatches) > 0 {
 			t.Errorf("prefix %q: range and starts_with disagree on %q", prefix, mismatches)
 		}
+	}
+}
+
+func receive(t *testing.T, kinds <-chan string) string {
+	t.Helper()
+	select {
+	case kind := <-kinds:
+		return kind
+	case <-time.After(5 * time.Second):
+		t.Fatal("no event reached the handler")
+		return ""
 	}
 }

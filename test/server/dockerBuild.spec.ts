@@ -68,8 +68,11 @@ describe('docker ui build', () => {
             'node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.txt',
         )
         expect(
-            dockerfile.indexOf('public/third-party-notices.txt'),
-        ).toBeLessThan(dockerfile.indexOf('RUN yarn build'))
+            dockerfile.indexOf('> .output/public/third-party-notices.txt'),
+        ).toBeGreaterThan(dockerfile.indexOf('RUN yarn build'))
+        expect(read('.docker/nginx.conf')).toContain(
+            'location = /third-party-notices.txt {',
+        )
     })
 
     it('gives the go tests the locales they check against', () => {
@@ -80,7 +83,7 @@ describe('docker ui build', () => {
 
     it('gives the go hook tests more than the default ten minutes', () => {
         expect(read('Dockerfile')).toContain(
-            'gotestsum@v1.13.0 --junitfile /out/junit.xml -- -timeout 30m ./...',
+            'gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 ./...',
         )
     })
 

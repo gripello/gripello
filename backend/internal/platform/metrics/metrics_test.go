@@ -7,16 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/testkit"
 )
 
 func TestRecordedRequestsAddUpAcrossReplicas(t *testing.T) {
 	pool := testkit.Pool(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/gyms/{gym}", func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("gym") == "broken" {
@@ -70,14 +66,13 @@ func TestRecordedRequestsAddUpAcrossReplicas(t *testing.T) {
 
 func TestAFailedFlushKeepsTheCounts(t *testing.T) {
 	pool := testkit.Pool(t)
+	pool.Exec(context.Background(), `ALTER TABLE request_stats RENAME TO request_stats_away`)
 	rec := New(pool)
 	rec.Record("GET", "GET /api/gyms", http.StatusOK, time.Millisecond, "203.0.113.7")
 	if err := rec.Flush(context.Background()); err == nil {
 		t.Fatal("flush without the request_stats table succeeded")
 	}
-	if err := db.Migrate(context.Background(), pool); err != nil {
-		t.Fatal(err)
-	}
+	pool.Exec(context.Background(), `ALTER TABLE request_stats_away RENAME TO request_stats`)
 	if err := rec.Flush(context.Background()); err != nil {
 		t.Fatal(err)
 	}

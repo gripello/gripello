@@ -123,6 +123,7 @@ func (f *fixture) finish(ticket string, cookie *http.Cookie) (int, map[string]an
 }
 
 func TestOAuth2LinksAVerifiedAccountByVerifiedEmail(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	idp := newFakeIdP(t)
 	f.enableOIDC(idp)
@@ -158,6 +159,7 @@ func TestOAuth2LinksAVerifiedAccountByVerifiedEmail(t *testing.T) {
 }
 
 func TestOAuth2NeverLinksUnverifiedAddresses(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	idp := newFakeIdP(t)
 	f.enableOIDC(idp)
@@ -178,6 +180,7 @@ func TestOAuth2NeverLinksUnverifiedAddresses(t *testing.T) {
 }
 
 func TestOAuth2CreatesAccountsOnlyWhenRegistrationIsOpen(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	idp := newFakeIdP(t)
 	f.enableOIDC(idp)
@@ -202,6 +205,7 @@ func TestOAuth2CreatesAccountsOnlyWhenRegistrationIsOpen(t *testing.T) {
 }
 
 func TestOAuth2RespectsSecondFactorAndSuspension(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	idp := newFakeIdP(t)
 	f.enableOIDC(idp)
@@ -219,6 +223,7 @@ func TestOAuth2RespectsSecondFactorAndSuspension(t *testing.T) {
 }
 
 func TestOAuth2LinkingAndUnlinking(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	idp := newFakeIdP(t)
 	f.enableOIDC(idp)
@@ -273,6 +278,7 @@ func TestOAuth2LinkingAndUnlinking(t *testing.T) {
 }
 
 func TestOAuth2DropsUnsafeRedirectsAndHiddenProviders(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	idp := newFakeIdP(t)
 	f.enableOIDC(idp)
@@ -292,6 +298,7 @@ func TestOAuth2DropsUnsafeRedirectsAndHiddenProviders(t *testing.T) {
 }
 
 func TestProviderSettingsKeepSecretsAndListEnabledProviders(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	admin := f.platformAdmin("root@example.com", true)
 	settings := map[string]any{"enabled": true, "client_id": "g-client", "client_secret": "g-secret"}
@@ -320,6 +327,7 @@ func TestProviderSettingsKeepSecretsAndListEnabledProviders(t *testing.T) {
 }
 
 func TestAppleClientSecretAndMicrosoftIssuer(t *testing.T) {
+	t.Parallel()
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	der, _ := x509.MarshalPKCS8PrivateKey(key)
 	c := providerConfig{Provider: "apple", ClientID: "app.gripello", TeamID: "TEAM", KeyID: "KEY", PrivateKey: string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}))}
@@ -366,6 +374,7 @@ func TestOAuth2CopiesTheProviderPictureIntoNewAccounts(t *testing.T) {
 }
 
 func TestAvatarDownloadsStayOffTheInternalNetwork(t *testing.T) {
+	t.Parallel()
 	for address, allowed := range map[string]bool{"142.250.185.65:443": true, "127.0.0.1:443": false, "10.0.0.5:443": false, "192.168.178.100:443": false,
 		"169.254.169.254:80": false, "[::1]:443": false, "[::ffff:127.0.0.1]:443": false, "[fd00::1]:443": false} {
 		if err := publicHostsOnly("tcp", address, nil); (err == nil) != allowed {
@@ -375,6 +384,7 @@ func TestAvatarDownloadsStayOffTheInternalNetwork(t *testing.T) {
 }
 
 func TestMicrosoftAddressesOnlyBecomeAccountsWhenTrusted(t *testing.T) {
+	t.Parallel()
 	single := providerConfig{Provider: "microsoft", Tenant: "c00762ff-ede4-460b-b5d2-842f353c10f6"}
 	common := providerConfig{Provider: "microsoft", Tenant: "common"}
 	for name, tc := range map[string]struct {

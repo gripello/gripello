@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"gripello/internal/platform/auth"
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/secretbox"
 	"gripello/internal/platform/testkit"
 )
@@ -23,9 +22,6 @@ func TestImportDevDatabase(t *testing.T) {
 	}
 	ctx := context.Background()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	report, err := Run(ctx, pbData, pool, t.TempDir(), "")
 	if err != nil {
 		t.Fatal(err)
@@ -62,9 +58,6 @@ func TestImportDevDatabase(t *testing.T) {
 func TestImportOAuth2ProvidersAndIdentities(t *testing.T) {
 	ctx := context.Background()
 	pool := testkit.Pool(t)
-	if err := db.Migrate(ctx, pool); err != nil {
-		t.Fatal(err)
-	}
 	if _, err := pool.Exec(ctx, `INSERT INTO users (id, username, token_key) VALUES ('u1', 'u1', 'k')`); err != nil {
 		t.Fatal(err)
 	}

@@ -17,7 +17,7 @@
         "release": "release-it",
         "test": "vitest run",
         "test:watch": "vitest",
-        "test:go": "cd backend && go test ./...",
+        "test:go": "cd backend && go test -parallel 4 ./...",
         "test:e2e": "playwright test",
         "test:e2e:ui": "playwright test --ui",
         "e2e:up": "./e2e/scripts/app-up.sh",
