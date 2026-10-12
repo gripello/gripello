@@ -145,6 +145,73 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/routes/removal:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    put:
+      operationId: planRouteRemoval
+      tags: [routes]
+      description: manage_routes. Sets or clears the planned strip date of active routes; followers of a wall are notified once per new date.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids, planned_for]
+              properties:
+                ids: { type: array, items: { type: string } }
+                planned_for: { type: [string, 'null'], format: date }
+      responses:
+        '200':
+          description: Updated routes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Route' } }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /gyms/{gym}/routes/reset-stats:
+    parameters:
+      - $ref: '#/components/parameters/Gym'
+    get:
+      operationId: listResetStats
+      tags: [routes]
+      description: manage_routes. Traffic, stars, grade feedback and open defects of every active route, for planning resets.
+      parameters:
+        - { name: location, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: One entry per active route
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [route, ticks, recent_ticks, climbers, last_tick, average_rating, ratings, grade_deviation, open_defects]
+                      properties:
+                        route: { type: string }
+                        ticks: { type: integer }
+                        recent_ticks: { type: integer, description: ticks in the last 30 days }
+                        climbers: { type: integer }
+                        last_tick: { $ref: '#/components/schemas/OptionalDateTime' }
+                        average_rating: { type: [number, 'null'] }
+                        ratings: { type: integer }
+                        grade_deviation: { type: [number, 'null'], description: voted minus set grade index, from 3 votes }
+                        open_defects: { type: integer }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /gyms/{gym}/map/placements:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -594,7 +661,7 @@ components:
         permanent: { type: boolean }
     Route:
       type: object
-      required: [id, created, updated, gym, name, anchor_point, type, comment, creator, archived, archived_at, color, screw_date, location, wall, wall_position, grade, grade_system, grade_index, permanent, average_rating, ratings_count]
+      required: [id, created, updated, gym, name, anchor_point, type, comment, creator, archived, archived_at, color, screw_date, location, wall, wall_position, grade, grade_system, grade_index, permanent, removal_planned_for, average_rating, ratings_count]
       properties:
         id: { type: string }
         created: { $ref: '#/components/schemas/DateTime' }
@@ -616,6 +683,7 @@ components:
         grade_system: { type: string }
         grade_index: { type: number }
         permanent: { type: boolean }
+        removal_planned_for: { type: [string, 'null'], format: date, description: planned strip date, cleared on archive }
         average_rating: { type: [number, 'null'] }
         ratings_count: { type: integer }
         expand:

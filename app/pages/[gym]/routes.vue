@@ -140,6 +140,18 @@
                             v-if="row.original.has_ratings"
                             class="ml-2 shrink-0"
                         />
+                        <UTooltip
+                            v-if="row.original.removal_planned_for"
+                            :text="outSoonLabel(row.original)"
+                        >
+                            <UIcon
+                                name="i-lucide-calendar-clock"
+                                role="img"
+                                :aria-label="outSoonLabel(row.original)"
+                                class="ml-2 shrink-0 text-warning"
+                                data-testid="index-row-out-soon"
+                            />
+                        </UTooltip>
                     </div>
                 </template>
                 <template #difficulty-cell="{ row }">
@@ -272,6 +284,10 @@ import { toSortParam, type SortOption } from '~/utils/sorting'
 import { cacheKeys, unlessQueryChanged } from '~/utils/realtimeCache'
 
 const { t, locale } = useI18n()
+const outSoonLabel = (route: { removal_planned_for?: string | null }) =>
+    t('routes.outSoon', {
+        date: formatDate(route.removal_planned_for, { locale: locale.value }),
+    })
 const gymId = useCurrentGymId()
 const { lgAndUp } = useDisplay()
 

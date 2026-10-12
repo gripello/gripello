@@ -124,7 +124,7 @@ func publishItem(ctx context.Context, tx pgx.Tx, action string, it Item) error {
 
 const routeColumns = `id, created, updated, gym, name, anchor_point, type, comment, creator, archived, archived_at, color,
 	screw_date, COALESCE(location, '') AS location, COALESCE(wall, '') AS wall, wall_position, grade, grade_system,
-	grade_index, permanent, average_rating, ratings_count`
+	grade_index, permanent, removal_planned_for::text AS removal_planned_for, average_rating, ratings_count`
 
 // publishGymChange sends the gym_changes events the owning module would have sent for this change.
 func (m *module) publishGymChange(ctx context.Context, tx pgx.Tx, kindName, action string, record map[string]any) error {

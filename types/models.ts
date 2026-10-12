@@ -49,6 +49,7 @@ export interface RouteRecord extends BaseRecord {
     archived?: boolean
     archived_at?: string | null
     permanent?: boolean
+    removal_planned_for?: string | null
     color?: string | null
     screw_date?: string | null
     wall?: RecordId | null

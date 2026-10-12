@@ -237,7 +237,9 @@
         "leaderboard": "Leaderboard",
         "friends": "Friends",
         "feed": "Feed",
-        "info": "Info"
+        "info": "Info",
+        "outSoon": "Out {date}",
+        "mapWork": "Routes & resets"
     },
     "dashboard": {
         "online": "{0} online"
@@ -541,7 +543,8 @@
                 "moderation_pending": "A beta video is waiting for approval",
                 "content_hidden": "Your content was hidden: {reason}",
                 "beta_approved": "Your beta video was approved",
-                "beta_rejected": "Your beta video was rejected: {reason}"
+                "beta_rejected": "Your beta video was rejected: {reason}",
+                "wall_reset_planned": "{wall}: {count} routes come down on {date}"
             }
         }
     },
@@ -1539,7 +1542,7 @@
         "save": "Save ({n})",
         "saved": "Route positions saved.",
         "wallRoutes": "{n} routes on this wall",
-        "distribute": "Spread evenly by anchor",
+        "distribute": "Space routes evenly along the wall",
         "unplaced": "Not placed ({n})",
         "placed": "On the map ({n})",
         "remove": "Remove from map",
@@ -1555,9 +1558,9 @@
         "auto": "Auto-place ({n})",
         "keepGoing": "Continue with next route",
         "checked": "{n} route selected | {n} routes selected",
-        "wallAge": "Oldest {oldest} d · avg. {average} d",
-        "lastReset": "last reset {date}",
-        "resetWall": "Reset wall",
+        "wallAge": "Oldest route {oldest} · average {average}",
+        "lastReset": "last stripped {date}",
+        "resetWall": "Strip all routes now",
         "resetNeedsSave": "Save or discard your changes first.",
         "resetConfirm": "Archive all {n} routes on {wall}? They disappear from the map and the route list.",
         "resetDone": "{n} route archived. | {n} routes archived.",
@@ -2804,5 +2807,60 @@
                 "email_unverified": "The provider did not confirm an email address, so no account can be created."
             }
         }
+    },
+    "resets": {
+        "title": "Wall resets",
+        "empty": "No walls yet.",
+        "routes": "{n} route | {n} routes",
+        "averageAge": "Ø {n} day | Ø {n} days",
+        "done": "Reset {wall}",
+        "date": "Strip on",
+        "clear": "Remove plan",
+        "doneConfirm": "Archive {n} route and clear the plan. | Archive {n} routes and clear the plan.",
+        "doneAction": "Reset done",
+        "doneSuccess": "{wall} reset",
+        "pickWall": "Pick a wall",
+        "inWeeks": "In {n} week | In {n} weeks",
+        "select": {
+            "flagged": "Flagged",
+            "oldest": "Oldest half",
+            "all": "All",
+            "none": "None"
+        },
+        "days": "{n} day | {n} days",
+        "planAction": "Plan {n} route | Plan {n} routes",
+        "flags": {
+            "defect": "Defect",
+            "old": "Oldest",
+            "stale": "No ticks",
+            "disliked": "Low stars",
+            "quiet": "Little traffic",
+            "gradeOff": "Grade off"
+        },
+        "recentTicks": "{n} tick/30 d | {n} ticks/30 d",
+        "flaggedOf": "{flagged} of {total} routes flagged",
+        "selectedOf": "{selected} of {total} routes selected",
+        "selectLabel": "Select",
+        "urgency": {
+            "high": "Most urgent",
+            "medium": "Medium urgency",
+            "low": "Least urgent"
+        },
+        "facts": {
+            "age": "Age",
+            "recent": "Ticks 30 d",
+            "ticks": "Ticks total",
+            "climbers": "Climbers",
+            "stars": "Stars",
+            "grade": "Grade votes"
+        },
+        "gradeFeedback": {
+            "fits": "Fits",
+            "harder": "Voted harder",
+            "easier": "Voted easier"
+        },
+        "months": "{n} month | {n} months",
+        "years": "{n} year | {n} years",
+        "openDefects": "{n} open defect | {n} open defects"
     }
 }

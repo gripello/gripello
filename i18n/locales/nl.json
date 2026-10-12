@@ -237,7 +237,9 @@
         "leaderboard": "Ranglijst",
         "friends": "Vrienden",
         "feed": "Feed",
-        "info": "Info"
+        "info": "Info",
+        "outSoon": "Eruit op {date}",
+        "mapWork": "Routes & resets"
     },
     "dashboard": {
         "online": "{0} online"
@@ -541,7 +543,8 @@
                 "moderation_pending": "Een beta-video wacht op goedkeuring",
                 "content_hidden": "Je inhoud is verborgen: {reason}",
                 "beta_approved": "Je beta-video is goedgekeurd",
-                "beta_rejected": "Je beta-video is afgewezen: {reason}"
+                "beta_rejected": "Je beta-video is afgewezen: {reason}",
+                "wall_reset_planned": "{wall}: {count} routes worden op {date} weggehaald"
             }
         }
     },
@@ -1539,7 +1542,7 @@
         "save": "Opslaan ({n})",
         "saved": "Routeposities opgeslagen.",
         "wallRoutes": "{n} routes op deze wand",
-        "distribute": "Gelijkmatig verdelen op lijnnummer",
+        "distribute": "Routes gelijkmatig over de wand verdelen",
         "unplaced": "Niet geplaatst ({n})",
         "placed": "Op de plattegrond ({n})",
         "remove": "Van plattegrond verwijderen",
@@ -1555,9 +1558,9 @@
         "auto": "Automatisch plaatsen ({n})",
         "keepGoing": "Verder met volgende route",
         "checked": "{n} route geselecteerd | {n} routes geselecteerd",
-        "wallAge": "Oudste {oldest} d · gem. {average} d",
-        "lastReset": "laatst omgebouwd {date}",
-        "resetWall": "Wand ombouwen",
+        "wallAge": "Oudste route {oldest} · gemiddeld {average}",
+        "lastReset": "laatst weggehaald {date}",
+        "resetWall": "Alle routes nu weghalen",
         "resetNeedsSave": "Sla je wijzigingen eerst op of verwerp ze.",
         "resetConfirm": "Alle {n} routes op {wall} archiveren? Ze verdwijnen van de plattegrond en uit de routelijst.",
         "resetDone": "{n} route gearchiveerd. | {n} routes gearchiveerd.",
@@ -2804,5 +2807,60 @@
                 "email_unverified": "De provider heeft geen e-mailadres bevestigd, dus er kan geen account worden aangemaakt."
             }
         }
+    },
+    "resets": {
+        "title": "Wandresets",
+        "empty": "Nog geen wanden.",
+        "routes": "{n} route | {n} routes",
+        "averageAge": "Ø {n} dag | Ø {n} dagen",
+        "done": "{wall} resetten",
+        "date": "Weghalen op",
+        "clear": "Planning verwijderen",
+        "doneConfirm": "{n} route archiveren en planning verwijderen. | {n} routes archiveren en planning verwijderen.",
+        "doneAction": "Reset klaar",
+        "doneSuccess": "{wall} gereset",
+        "pickWall": "Kies een wand",
+        "inWeeks": "Over {n} week | Over {n} weken",
+        "select": {
+            "flagged": "Gemarkeerd",
+            "oldest": "Oudste helft",
+            "all": "Alle",
+            "none": "Geen"
+        },
+        "days": "{n} dag | {n} dagen",
+        "planAction": "{n} route plannen | {n} routes plannen",
+        "flags": {
+            "defect": "Defect",
+            "old": "Oudste",
+            "stale": "Geen beklimmingen",
+            "disliked": "Weinig sterren",
+            "quiet": "Weinig gebruikt",
+            "gradeOff": "Graad klopt niet"
+        },
+        "recentTicks": "{n} beklimming/30 d | {n} beklimmingen/30 d",
+        "flaggedOf": "{flagged} van {total} routes gemarkeerd",
+        "selectedOf": "{selected} van {total} routes geselecteerd",
+        "selectLabel": "Selecteer",
+        "urgency": {
+            "high": "Meest dringend",
+            "medium": "Middelmatig dringend",
+            "low": "Minst dringend"
+        },
+        "facts": {
+            "age": "Leeftijd",
+            "recent": "Beklimmingen 30 d",
+            "ticks": "Beklimmingen totaal",
+            "climbers": "Klimmers",
+            "stars": "Sterren",
+            "grade": "Graadstemmen"
+        },
+        "gradeFeedback": {
+            "fits": "Klopt",
+            "harder": "Zwaarder gestemd",
+            "easier": "Lichter gestemd"
+        },
+        "months": "{n} maand | {n} maanden",
+        "years": "{n} jaar | {n} jaar",
+        "openDefects": "{n} open defect | {n} open defecten"
     }
 }

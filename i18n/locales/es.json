@@ -237,7 +237,9 @@
         "leaderboard": "Clasificación",
         "friends": "Amigos",
         "feed": "Novedades",
-        "info": "Info"
+        "info": "Info",
+        "outSoon": "Se retira el {date}",
+        "mapWork": "Vías y reequipamiento"
     },
     "dashboard": {
         "online": "{0} en línea"
@@ -541,7 +543,8 @@
                 "moderation_pending": "Un vídeo beta espera aprobación",
                 "content_hidden": "Tu contenido se ha ocultado: {reason}",
                 "beta_approved": "Tu vídeo beta ha sido aprobado",
-                "beta_rejected": "Tu vídeo beta ha sido rechazado: {reason}"
+                "beta_rejected": "Tu vídeo beta ha sido rechazado: {reason}",
+                "wall_reset_planned": "{wall}: {count} vías se retiran el {date}"
             }
         }
     },
@@ -1539,7 +1542,7 @@
         "save": "Guardar ({n})",
         "saved": "Posiciones de las vías guardadas.",
         "wallRoutes": "{n} vías en esta pared",
-        "distribute": "Repartir según la reunión",
+        "distribute": "Repartir las vías por igual en el muro",
         "unplaced": "Sin colocar ({n})",
         "placed": "En el plano ({n})",
         "remove": "Quitar del plano",
@@ -1555,9 +1558,9 @@
         "auto": "Colocar automáticamente ({n})",
         "keepGoing": "Seguir con la siguiente vía",
         "checked": "{n} vía seleccionada | {n} vías seleccionadas",
-        "wallAge": "Más antigua {oldest} d · media {average} d",
-        "lastReset": "último reequipamiento {date}",
-        "resetWall": "Reequipar pared",
+        "wallAge": "Vía más antigua {oldest} · media {average}",
+        "lastReset": "última retirada {date}",
+        "resetWall": "Retirar todas las vías ahora",
         "resetNeedsSave": "Primero guarda o descarta tus cambios.",
         "resetConfirm": "¿Archivar las {n} vías de {wall}? Desaparecerán del plano y de la lista de vías.",
         "resetDone": "{n} vía archivada. | {n} vías archivadas.",
@@ -2804,5 +2807,60 @@
                 "email_unverified": "El proveedor no confirmó ninguna dirección de correo, así que no se puede crear una cuenta."
             }
         }
+    },
+    "resets": {
+        "title": "Reequipamiento de muros",
+        "empty": "Aún no hay muros.",
+        "routes": "{n} vía | {n} vías",
+        "averageAge": "Ø {n} día | Ø {n} días",
+        "done": "Reequipar {wall}",
+        "date": "Retirar el",
+        "clear": "Quitar plan",
+        "doneConfirm": "Archivar {n} vía y quitar el plan. | Archivar {n} vías y quitar el plan.",
+        "doneAction": "Reequipamiento hecho",
+        "doneSuccess": "{wall} reequipado",
+        "pickWall": "Elige un muro",
+        "inWeeks": "En {n} semana | En {n} semanas",
+        "select": {
+            "flagged": "Marcadas",
+            "oldest": "Mitad más antigua",
+            "all": "Todas",
+            "none": "Ninguna"
+        },
+        "days": "{n} día | {n} días",
+        "planAction": "Planificar {n} vía | Planificar {n} vías",
+        "flags": {
+            "defect": "Defecto",
+            "old": "Las más antiguas",
+            "stale": "Sin ascensos",
+            "disliked": "Pocas estrellas",
+            "quiet": "Poco escalada",
+            "gradeOff": "Grado discutido"
+        },
+        "recentTicks": "{n} ascenso/30 d | {n} ascensos/30 d",
+        "flaggedOf": "{flagged} de {total} vías marcadas",
+        "selectedOf": "{selected} de {total} vías seleccionadas",
+        "selectLabel": "Seleccionar",
+        "urgency": {
+            "high": "Más urgente",
+            "medium": "Urgencia media",
+            "low": "Menos urgente"
+        },
+        "facts": {
+            "age": "Edad",
+            "recent": "Ascensos 30 d",
+            "ticks": "Ascensos totales",
+            "climbers": "Escaladores",
+            "stars": "Estrellas",
+            "grade": "Votos de grado"
+        },
+        "gradeFeedback": {
+            "fits": "Correcto",
+            "harder": "Votada más dura",
+            "easier": "Votada más fácil"
+        },
+        "months": "{n} mes | {n} meses",
+        "years": "{n} año | {n} años",
+        "openDefects": "{n} defecto abierto | {n} defectos abiertos"
     }
 }

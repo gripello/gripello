@@ -130,7 +130,7 @@ test('dragging a dot onto another wall moves the route there', async ({
     expect(saved.wall).toBe(seeded.northWallId)
 })
 
-test('selecting a dot on the map shows its route in the placed list', async ({
+test('selecting a dot on the map shows the route details and marks it in the placed list', async ({
     setterPage: page,
     testPrefix,
 }) => {
@@ -148,11 +148,12 @@ test('selecting a dot on the map shows its route in the placed list', async ({
     await expect(page.getByTestId('placement-selected')).toContainText(
         `${testPrefix}-map-route-3`,
     )
+    await expect(page.getByTestId('route-reset')).toBeInViewport()
     await expect(
         page.locator(
             `[data-testid="placement-route"][data-route-id="${routeId}"]`,
         ),
-    ).toBeInViewport()
+    ).toHaveClass(/placement-route--active/)
 })
 
 test('a placed dot can be dragged along its wall', async ({

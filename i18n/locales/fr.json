@@ -237,7 +237,9 @@
         "leaderboard": "Classement",
         "friends": "Amis",
         "feed": "Fil d’actu",
-        "info": "Infos"
+        "info": "Infos",
+        "outSoon": "Démontée le {date}",
+        "mapWork": "Voies & réouvertures"
     },
     "dashboard": {
         "online": "{0} en ligne"
@@ -541,7 +543,8 @@
                 "moderation_pending": "Une vidéo bêta attend une approbation",
                 "content_hidden": "Ton contenu a été masqué : {reason}",
                 "beta_approved": "Ta vidéo bêta a été approuvée",
-                "beta_rejected": "Ta vidéo bêta a été refusée : {reason}"
+                "beta_rejected": "Ta vidéo bêta a été refusée : {reason}",
+                "wall_reset_planned": "{wall} : {count} voies démontées le {date}"
             }
         }
     },
@@ -1539,7 +1542,7 @@
         "save": "Enregistrer ({n})",
         "saved": "Positions des voies enregistrées.",
         "wallRoutes": "{n} voies sur ce mur",
-        "distribute": "Répartir selon les relais",
+        "distribute": "Répartir les voies régulièrement sur le mur",
         "unplaced": "Non placées ({n})",
         "placed": "Sur le plan ({n})",
         "remove": "Retirer du plan",
@@ -1555,9 +1558,9 @@
         "auto": "Placement auto ({n})",
         "keepGoing": "Continuer avec la voie suivante",
         "checked": "{n} voie sélectionnée | {n} voies sélectionnées",
-        "wallAge": "Plus ancienne {oldest} j · moy. {average} j",
-        "lastReset": "dernière ouverture {date}",
-        "resetWall": "Réouvrir le mur",
+        "wallAge": "Voie la plus ancienne {oldest} · moyenne {average}",
+        "lastReset": "dernier démontage {date}",
+        "resetWall": "Démonter toutes les voies maintenant",
         "resetNeedsSave": "Enregistrez ou abandonnez d'abord vos modifications.",
         "resetConfirm": "Archiver les {n} voies de {wall} ? Elles disparaissent du plan et de la liste des voies.",
         "resetDone": "{n} voie archivée. | {n} voies archivées.",
@@ -2804,5 +2807,60 @@
                 "email_unverified": "Le fournisseur n’a confirmé aucune adresse e-mail, aucun compte ne peut donc être créé."
             }
         }
+    },
+    "resets": {
+        "title": "Réouvertures de murs",
+        "empty": "Aucun mur pour l’instant.",
+        "routes": "{n} voie | {n} voies",
+        "averageAge": "Ø {n} jour | Ø {n} jours",
+        "done": "Réouvrir {wall}",
+        "date": "Démontage le",
+        "clear": "Supprimer le planning",
+        "doneConfirm": "Archiver {n} voie et supprimer le planning. | Archiver {n} voies et supprimer le planning.",
+        "doneAction": "Réouverture faite",
+        "doneSuccess": "{wall} réouvert",
+        "pickWall": "Choisir un mur",
+        "inWeeks": "Dans {n} semaine | Dans {n} semaines",
+        "select": {
+            "flagged": "Signalées",
+            "oldest": "Moitié la plus ancienne",
+            "all": "Toutes",
+            "none": "Aucune"
+        },
+        "days": "{n} jour | {n} jours",
+        "planAction": "Planifier {n} voie | Planifier {n} voies",
+        "flags": {
+            "defect": "Défaut",
+            "old": "Les plus anciennes",
+            "stale": "Aucune ascension",
+            "disliked": "Peu d’étoiles",
+            "quiet": "Peu grimpée",
+            "gradeOff": "Cotation discutée"
+        },
+        "recentTicks": "{n} ascension/30 j | {n} ascensions/30 j",
+        "flaggedOf": "{flagged} voies signalées sur {total}",
+        "selectedOf": "{selected} voies sélectionnées sur {total}",
+        "selectLabel": "Sélectionner",
+        "urgency": {
+            "high": "Le plus urgent",
+            "medium": "Moyennement urgent",
+            "low": "Le moins urgent"
+        },
+        "facts": {
+            "age": "Âge",
+            "recent": "Ascensions 30 j",
+            "ticks": "Ascensions totales",
+            "climbers": "Grimpeurs",
+            "stars": "Étoiles",
+            "grade": "Votes de cotation"
+        },
+        "gradeFeedback": {
+            "fits": "Juste",
+            "harder": "Jugée plus dure",
+            "easier": "Jugée plus facile"
+        },
+        "months": "{n} mois | {n} mois",
+        "years": "{n} an | {n} ans",
+        "openDefects": "{n} défaut ouvert | {n} défauts ouverts"
     }
 }
