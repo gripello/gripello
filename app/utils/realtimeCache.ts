@@ -324,8 +324,13 @@ export async function unlessQueryChanged<T>(
     current: () => T,
 ): Promise<T> {
     const before = query()
-    const result = await fetch()
-    return query() === before ? result : current()
+    for (let attempt = 1; ; attempt++) {
+        const seen = current()
+        const result = await fetch()
+        if (query() !== before) return current()
+        // a live patch during the request is newer than its answer, so ask again
+        if (current() === seen || attempt === 3) return result
+    }
 }
 
 const RECORD_ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
