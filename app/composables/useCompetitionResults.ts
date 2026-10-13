@@ -1,4 +1,5 @@
 import { getCompetitionStandings } from '~/api/competitions'
+import { keepWhenOffline } from '~/utils/errors'
 
 const RESULT_KINDS = ['competition', 'routes', 'entries', 'scores', 'resync']
 // Later than nginx's shared 1 s standings cache can live (up to 2 s), so a refetch never gets the pre-change copy.
@@ -12,13 +13,16 @@ export function useCompetitionResults(
         pollMs = 60_000,
     }: { staff?: boolean; pollMs?: number } = {},
 ) {
+    const key = () =>
+        `competition-results:${staff ? 'staff' : 'public'}:${competitionId.value}`
     const result = useAsyncData(
-        () =>
-            `competition-results:${staff ? 'staff' : 'public'}:${competitionId.value}`,
-        () =>
-            getCompetitionStandings(
-                competitionId.value,
-                staff ? {} : { view: 'public' },
+        key,
+        (nuxtApp) =>
+            keepWhenOffline(nuxtApp, key(), () =>
+                getCompetitionStandings(
+                    competitionId.value,
+                    staff ? {} : { view: 'public' },
+                ),
             ),
         { enabled: () => !!competitionId.value },
     )
@@ -37,7 +41,8 @@ export function useCompetitionResults(
 
     let timer: ReturnType<typeof setInterval> | undefined
     const poll = () => {
-        if (document.visibilityState === 'visible') void result.refresh()
+        if (document.visibilityState === 'visible' && navigator.onLine)
+            void result.refresh()
     }
     onMounted(() => {
         timer = setInterval(poll, pollMs)

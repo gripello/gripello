@@ -176,6 +176,7 @@
 
 <script setup lang="ts">
 import { createEntry, listCategories, updateEntry } from '~/api/competitions'
+import { keepWhenOffline } from '~/utils/errors'
 import {
     required,
     validateRules,
@@ -240,9 +241,14 @@ const formRules = computed(() => ({
         : [],
 }))
 
+const categoriesKey = () =>
+    `competition-public-categories:${props.competition.id}`
 const { data: categories } = useAsyncData(
-    () => `competition-public-categories:${props.competition.id}`,
-    () => listCategories(props.competition.id),
+    categoriesKey,
+    (nuxtApp) =>
+        keepWhenOffline(nuxtApp, categoriesKey(), () =>
+            listCategories(props.competition.id),
+        ),
     { default: () => [] },
 )
 

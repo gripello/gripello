@@ -1,4 +1,5 @@
 import { listWalls } from '~/api/routes'
+import { keepWhenOffline } from '~/utils/errors'
 import { sanitizeGymMap } from '#shared/utils/mapGeometry'
 import { toMapWalls } from '~/utils/gymMap'
 import { cacheKeys } from '~/utils/realtimeCache'
@@ -50,14 +51,23 @@ export function useGymMapLocation(
     useLiveLocation([wallsKey], locationId)
     const wallsRequest = useAsyncData(
         wallsKey,
-        async () => {
-            await locationsRequest
-            return locationId.value
-                ? nuxtApp.runWithContext(() =>
-                      listWalls(gymId.value, { location: locationId.value }),
-                  )
-                : []
-        },
+        () =>
+            keepWhenOffline(
+                nuxtApp,
+                wallsKey,
+                async () => {
+                    await locationsRequest
+                    return locationId.value
+                        ? nuxtApp.runWithContext(() =>
+                              listWalls(gymId.value, {
+                                  location: locationId.value,
+                              }),
+                          )
+                        : []
+                },
+                (rows) =>
+                    rows.every((row) => row.location === locationId.value),
+            ),
         { watch: [locationId], default: () => [] },
     )
     const walls = wallsRequest.data

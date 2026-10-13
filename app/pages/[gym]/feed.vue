@@ -163,6 +163,7 @@
 
 <script setup lang="ts">
 import { deleteBeta, listGymBetas } from '~/api/ratings'
+import { keepWhenOffline } from '~/utils/errors'
 import { listFeed } from '~/api/ticks'
 import { listRoutes } from '~/api/routes'
 import { timeAgo } from '#shared/utils/formatting'
@@ -186,32 +187,34 @@ useHead({ title: t('page.title.feed') })
 
 const { data, error, refresh } = await useAsyncData(
     cacheKeys.communityFeed,
-    async () => {
-        const gym = gymId.value
-        const since = new Date(Date.now() - NEW_ROUTE_DAYS * 86_400_000)
-        const [routes, betas, ticks] = await Promise.all([
-            listRoutes<FeedRoute>(gym, {
-                since,
-                sort: '-created',
-                include: ['wall'],
-            }).then((list) => list.items),
-            listGymBetas<FeedBeta>(gym, {
-                page: 1,
-                limit: BETA_LIMIT,
-                include: ['route'],
-            }),
-            signedIn
-                ? listFeed({
-                      gym,
-                      sort: '-created',
-                      page: 1,
-                      limit: SEND_LIMIT,
-                  })
-                : { items: [] as FeedTick[] },
-        ])
-        return { routes, betas: betas.items, ticks: ticks.items }
-    },
+    (nuxtApp) => keepWhenOffline(nuxtApp, cacheKeys.communityFeed, loadFeed),
 )
+
+async function loadFeed() {
+    const gym = gymId.value
+    const since = new Date(Date.now() - NEW_ROUTE_DAYS * 86_400_000)
+    const [routes, betas, ticks] = await Promise.all([
+        listRoutes<FeedRoute>(gym, {
+            since,
+            sort: '-created',
+            include: ['wall'],
+        }).then((list) => list.items),
+        listGymBetas<FeedBeta>(gym, {
+            page: 1,
+            limit: BETA_LIMIT,
+            include: ['route'],
+        }),
+        signedIn
+            ? listFeed({
+                  gym,
+                  sort: '-created',
+                  page: 1,
+                  limit: SEND_LIMIT,
+              })
+            : { items: [] as FeedTick[] },
+    ])
+    return { routes, betas: betas.items, ticks: ticks.items }
+}
 
 const { isBlocked } = useBlocks()
 const visibleBetas = computed(() =>

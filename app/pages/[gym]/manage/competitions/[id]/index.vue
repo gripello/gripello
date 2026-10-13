@@ -160,6 +160,7 @@ import {
     publishCompetition,
     updateCompetition,
 } from '~/api/competitions'
+import { keepWhenOffline } from '~/utils/errors'
 import type { LocaleCode } from '~/utils/locales'
 import type {
     CompetitionExportFormat,
@@ -198,7 +199,12 @@ const {
     refresh,
 } = await useAsyncData(
     () => `manage-competition:${competitionId.value}`,
-    () => getCompetition(competitionId.value),
+    (nuxtApp) =>
+        keepWhenOffline(
+            nuxtApp,
+            `manage-competition:${competitionId.value}`,
+            () => getCompetition(competitionId.value),
+        ),
     { enabled: () => !!competitionId.value },
 )
 
@@ -207,13 +213,18 @@ if (competition.value && competition.value.gym !== useCurrentGymId().value)
 
 const { data: setup, refresh: refreshSetup } = useAsyncData(
     () => `manage-competition-setup:${competitionId.value}`,
-    async () => {
-        const [categories, routes] = await Promise.all([
-            listCategories(competitionId.value),
-            listCompetitionRoutes(competitionId.value),
-        ])
-        return { categoryCount: categories.length, routes }
-    },
+    (nuxtApp) =>
+        keepWhenOffline(
+            nuxtApp,
+            `manage-competition-setup:${competitionId.value}`,
+            async () => {
+                const [categories, routes] = await Promise.all([
+                    listCategories(competitionId.value),
+                    listCompetitionRoutes(competitionId.value),
+                ])
+                return { categoryCount: categories.length, routes }
+            },
+        ),
     { enabled: () => !!competitionId.value },
 )
 

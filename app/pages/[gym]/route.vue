@@ -451,7 +451,7 @@
 import { deleteRating, listRouteRatings } from '~/api/ratings'
 import { getRoute } from '~/api/routes'
 import { listRouteDefects } from '~/api/tasks'
-import { isAbortError } from '~/utils/errors'
+import { isAbortError, keepWhenOffline } from '~/utils/errors'
 import type { RatingRecord, RouteListItem } from '~/types/models'
 import {
     formatDate,
@@ -466,6 +466,7 @@ import { sanitizeGymMap } from '#shared/utils/mapGeometry'
 import { reportContentUrl } from '~/utils/reports'
 import { isLightColor, shadeColor } from '~/utils/color'
 import { cacheKeys } from '~/utils/realtimeCache'
+import { isOfflineError } from '~/utils/tickOutbox'
 import { hasFeature } from '#shared/utils/featureFlags'
 
 const gymPath = useGymPath()
@@ -500,42 +501,64 @@ const { error: notifyError } = useNotification()
 
 const routeDetail = useAsyncData(
     cacheKeys.route(route_id.value ?? ''),
-    async (): Promise<RouteListItem | null> => {
-        if (!route_id.value) return null
-        try {
-            const record = await getRoute(route_id.value, ['location', 'wall'])
-            return { ...record, creator: normalizeCreators(record.creator) }
-        } catch (err: unknown) {
+    (nuxtApp) =>
+        keepWhenOffline(
+            nuxtApp,
+            cacheKeys.route(route_id.value ?? ''),
+            async (): Promise<RouteListItem | null> => {
+                if (!route_id.value) return null
+                const record = await getRoute(route_id.value, [
+                    'location',
+                    'wall',
+                ])
+                return { ...record, creator: normalizeCreators(record.creator) }
+            },
+        ).catch((err: unknown) => {
             const status = (err as { status?: number }).status ?? 0
             if (status !== 404) throw createError({ status: status || 503 })
             return null
-        }
-    },
+        }),
 )
 
 const routeRatings = useAsyncData(
     cacheKeys.ratings(route_id.value ?? ''),
-    async () => {
-        if (!route_id.value) return []
-        try {
-            return (await listRouteRatings(route_id.value)).items
-        } catch (err: unknown) {
-            if (!isAbortError(err)) {
-                console.error('Error fetching ratings:', err)
-                notifyError(t('ratings.loadError'))
-            }
-            return []
-        }
-    },
+    (nuxtApp) =>
+        keepWhenOffline(
+            nuxtApp,
+            cacheKeys.ratings(route_id.value ?? ''),
+            loadRatings,
+        ),
     { default: () => [] },
 )
 
+async function loadRatings() {
+    if (!route_id.value) return []
+    try {
+        return (await listRouteRatings(route_id.value)).items
+    } catch (err: unknown) {
+        if (isOfflineError(err)) throw err
+        if (!isAbortError(err)) {
+            console.error('Error fetching ratings:', err)
+            notifyError(t('ratings.loadError'))
+        }
+        return []
+    }
+}
+
 const routeDefects = useAsyncData(
     cacheKeys.routeDefects(route_id.value ?? ''),
-    () =>
-        route_id.value
-            ? listRouteDefects(route_id.value).catch(() => [])
-            : Promise.resolve([]),
+    (nuxtApp) =>
+        keepWhenOffline(
+            nuxtApp,
+            cacheKeys.routeDefects(route_id.value ?? ''),
+            () =>
+                route_id.value
+                    ? listRouteDefects(route_id.value).catch((err) => {
+                          if (isOfflineError(err)) throw err
+                          return []
+                      })
+                    : Promise.resolve([]),
+        ),
     { default: () => [] },
 )
 

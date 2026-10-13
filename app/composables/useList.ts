@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import { isAbortError } from '~/utils/errors'
+import { isOfflineError } from '~/utils/tickOutbox'
 
 export type ListFetch<TRecord> = (
     page: number,
@@ -49,6 +50,8 @@ export function useList<
             totalItems.value = result.total ?? 0
         } catch (err) {
             if (isAbortError(err)) return
+            if (target === 1 && items.value.length && isOfflineError(err))
+                return
             error.value = err
             console.error(`Failed to fetch ${options.requestKey}:`, err)
             notifyError(t('notifications.error.generic'))
