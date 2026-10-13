@@ -507,24 +507,17 @@ const routeDetail = useAsyncData(
             cacheKeys.route(route_id.value ?? ''),
             async (): Promise<RouteListItem | null> => {
                 if (!route_id.value) return null
-                try {
-                    const record = await getRoute(route_id.value, [
-                        'location',
-                        'wall',
-                    ])
-                    return {
-                        ...record,
-                        creator: normalizeCreators(record.creator),
-                    }
-                } catch (err: unknown) {
-                    if (isOfflineError(err)) throw err
-                    const status = (err as { status?: number }).status ?? 0
-                    if (status !== 404)
-                        throw createError({ status: status || 503 })
-                    return null
-                }
+                const record = await getRoute(route_id.value, [
+                    'location',
+                    'wall',
+                ])
+                return { ...record, creator: normalizeCreators(record.creator) }
             },
-        ),
+        ).catch((err: unknown) => {
+            const status = (err as { status?: number }).status ?? 0
+            if (status !== 404) throw createError({ status: status || 503 })
+            return null
+        }),
 )
 
 const routeRatings = useAsyncData(

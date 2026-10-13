@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { keepWhenOffline } from '~/utils/errors'
 
-const store = (value: unknown) => ({
-    _asyncData: { key: { data: { value } } },
+const store = (
+    value: unknown,
+    { fetched = value != null, error = undefined as unknown } = {},
+) => ({
+    _asyncData: { key: { data: { value }, error: { value: error } } },
+    payload: { data: fetched ? { key: value } : {} },
 })
 const offline = Object.assign(new Error('Failed to fetch'), { status: 0 })
 const notFound = Object.assign(new Error('Not found'), { status: 404 })
@@ -25,6 +29,19 @@ describe('keepWhenOffline', () => {
                 Promise.reject(notFound),
             ),
         ).rejects.toBe(notFound)
+    })
+
+    it('does not mistake the default or data after a failure for loaded data', async () => {
+        await expect(
+            keepWhenOffline(store([], { fetched: false }), 'key', () =>
+                Promise.reject(offline),
+            ),
+        ).rejects.toBe(offline)
+        await expect(
+            keepWhenOffline(store([], { error: notFound }), 'key', () =>
+                Promise.reject(offline),
+            ),
+        ).rejects.toBe(offline)
     })
 
     it('returns fresh data when the refresh succeeds', async () => {
