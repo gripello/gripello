@@ -11,6 +11,7 @@ import (
 
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/captcha"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 )
 
@@ -76,9 +77,9 @@ func taskFilter(gym string, query map[string][]string) (*conditions, error) {
 		}
 	}
 	if q := strings.TrimSpace(get("q")); q != "" {
-		pattern := "%" + strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(q) + "%"
-		where.add(`(title ILIKE ? OR description ILIKE ? OR EXISTS (SELECT 1 FROM routes WHERE routes.id = tasks.route AND routes.name ILIKE ?)
-			OR EXISTS (SELECT 1 FROM walls WHERE walls.id = tasks.wall AND walls.name ILIKE ?))`, pattern)
+		where.add(`NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (title ILIKE w OR description ILIKE w
+			OR EXISTS (SELECT 1 FROM routes WHERE routes.id = tasks.route AND routes.name ILIKE w)
+			OR EXISTS (SELECT 1 FROM walls WHERE walls.id = tasks.wall AND walls.name ILIKE w)))`, db.WordPatterns(q))
 	}
 	if get("urgent") == "true" {
 		where.add("priority = ?", urgentTaskPriority)

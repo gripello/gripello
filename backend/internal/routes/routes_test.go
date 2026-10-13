@@ -214,6 +214,8 @@ func TestRouteListFilters(t *testing.T) {
 		"grade=6b&grade=7a&sort=-grade_index,name": {annex, placed},
 		"q=anna":                                   {loose},
 		"q=pin":                                    {placed},
+		"q=crimp+anna":                             {loose},
+		"q=crimp+nobody":                           {},
 		"ids=" + placed + "," + annex + "&sort=name": {annex, placed},
 		"sort=name&limit=1&page=2":                   {loose},
 	}

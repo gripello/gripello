@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
@@ -84,9 +85,9 @@ func (m *module) listUsers(w http.ResponseWriter, r *http.Request) error {
 	params := r.URL.Query()
 	where, args := []string{"TRUE"}, []any{}
 	if term := strings.TrimSpace(params.Get("q")); term != "" {
-		args = append(args, term)
-		where = append(where, `(strpos(lower(u.email), lower($1)) > 0 OR strpos(lower(u.username), lower($1)) > 0
-			OR strpos(lower(u.firstname), lower($1)) > 0 OR strpos(lower(u.name), lower($1)) > 0)`)
+		args = append(args, db.WordPatterns(term))
+		where = append(where, `NOT EXISTS (SELECT 1 FROM unnest($1::text[]) w
+			WHERE NOT (u.email ILIKE w OR u.username ILIKE w OR u.firstname ILIKE w OR u.name ILIKE w))`)
 	}
 	switch params.Get("filter") {
 	case "":

@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 )
@@ -96,9 +97,7 @@ func routeFilter(gym string, query map[string][]string) (*conditions, error) {
 		where.add("grade = ANY (?)", grades)
 	}
 	if q := strings.TrimSpace(get("q")); q != "" {
-		pattern := "%" + strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(q) + "%"
-		placeholder := where.next(pattern)
-		where.clauses = append(where.clauses, "(name ILIKE "+placeholder+" OR creator::text ILIKE "+placeholder+")")
+		where.add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (name ILIKE w OR creator::text ILIKE w))", db.WordPatterns(q))
 	}
 	if since := get("since"); since != "" {
 		at, ok := parseTime(since)
