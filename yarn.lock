@@ -5585,16 +5585,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"capjs-core@npm:^0.1.3":
-  version: 0.1.3
-  resolution: "capjs-core@npm:0.1.3"
+"capjs-core@npm:^0.1.4":
+  version: 0.1.4
+  resolution: "capjs-core@npm:0.1.4"
   dependencies:
     esbuild: "npm:^0.28.0"
     javascript-obfuscator: "npm:^4.2.2"
   dependenciesMeta:
     javascript-obfuscator:
       optional: true
-  checksum: 10c0/8d38dc551d8755112438a8d988bd3263d7a0e608dcb9ed98119a45d47180e3fdf35c761ce39af4c1a26389046247352cd7c2b9bad0767dcef9e2ecf9625bf1da
+  checksum: 10c0/bcea005f374bff1402edb3bb032e5a2c5f0781ee33012d3b9627334d2e2a262607cfb3ac5e55a34effebc3a72de29e21bf74db2724958d71ee8d42283f494502
   languageName: node
   linkType: hard
 
@@ -7673,7 +7673,7 @@ __metadata:
     "@vitejs/plugin-vue": "npm:6.0.9"
     "@vue/test-utils": "npm:2.5.1"
     cap-widget: "npm:^0.1.58"
-    capjs-core: "npm:^0.1.3"
+    capjs-core: "npm:^0.1.4"
     concurrently: "npm:10.0.6"
     echarts: "npm:6.1.0"
     h3: "npm:1.15.11"
