@@ -7,7 +7,7 @@
     "scripts": {
         "build": "nuxt build",
         "dev": "CAP_SECRET=${CAP_SECRET:-dev-only-cap-secret-not-for-production} concurrently \"nuxt dev\" \"yarn dev:db\"",
-        "dev:db": "docker compose -f docker-compose.dev.yml up -d --wait && cd backend && GRIPELLO_ENV=dev go run github.com/air-verse/air@v1.67.4",
+        "dev:db": "docker compose -f docker-compose.dev.yml up -d --wait && cd backend && GRIPELLO_ENV=dev go tool -modfile=tools/go.mod air",
         "start:db": "cd backend && GRIPELLO_ENV=dev go run ./cmd/gripello serve --http=:8099",
         "generate": "nuxt generate",
         "preview": "nuxt preview",

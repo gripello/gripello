@@ -16,6 +16,10 @@ updates:
       - "/e2e"
     schedule:
       interval: "weekly"
+    ignore:
+      # A new PostgreSQL major needs a dump and restore, and the image's pg_dump has to follow it.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "gomod"
     directories:
@@ -23,3 +27,11 @@ updates:
       - "/loadtest"
     schedule:
       interval: "weekly"
+
+  - package-ecosystem: "gomod"
+    directory: "/backend/tools"
+    schedule:
+      interval: "weekly"
+    groups:
+      go-tools:
+        patterns: ["*"]

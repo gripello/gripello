@@ -277,6 +277,6 @@ func serve(ctx context.Context, args []string) error {
 		<-ctx.Done()
 		return nil
 	}
-	slog.Info("listening", "addr", cfg.HTTPAddr, "role", cfg.Role)
+	slog.Info("listening", "addr", cfg.HTTPAddr, "role", cfg.Role, "version", config.Version)
 	return app.Serve(ctx)
 }
