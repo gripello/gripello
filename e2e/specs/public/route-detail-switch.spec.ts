@@ -15,7 +15,7 @@ test('switching to another route via the command palette shows that route', asyn
     const input = page.getByTestId('command-palette-input')
     await input.fill(second.name)
     await expect(
-        page.getByTestId('command-palette-result').first(),
+        page.getByTestId('command-palette').getByRole('option').first(),
     ).toContainText(second.name)
     await input.press('Enter')
 
