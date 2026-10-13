@@ -15,6 +15,7 @@ import (
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/climbers"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 )
@@ -461,7 +462,8 @@ func (m *module) listCases(w http.ResponseWriter, r *http.Request) error {
 		arg("content_type = ?", contentType)
 	}
 	if q := strings.TrimSpace(query.Get("q")); q != "" {
-		arg("snapshot::text ILIKE ?", "%"+strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(q)+"%")
+		arg(`NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT EXISTS (
+			SELECT 1 FROM jsonb_path_query(snapshot, '$.**') v WHERE jsonb_typeof(v) = 'string' AND v #>> '{}' ILIKE w))`, db.WordPatterns(q))
 	}
 	if query.Get("queue") == "platform" {
 		where = append(where, "(reports_count > 0 OR gym IS NULL)")

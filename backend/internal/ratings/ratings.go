@@ -12,6 +12,7 @@ import (
 
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/captcha"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
@@ -150,8 +151,7 @@ func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 		where.add("created >= ?", at)
 	}
 	if q := strings.TrimSpace(query.Get("q")); q != "" {
-		pattern := "%" + strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(q) + "%"
-		where.add("(comment ILIKE ? OR route_id IN (SELECT id FROM routes WHERE name ILIKE $"+strconv.Itoa(len(where.args)+1)+"))", pattern)
+		where.add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (comment ILIKE w OR route_id IN (SELECT routes.id FROM routes WHERE routes.name ILIKE w)))", db.WordPatterns(q))
 	}
 	sort := query.Get("sort")
 	if sort == "" {

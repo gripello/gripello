@@ -302,6 +302,7 @@ func TestListingScopesAndFilters(t *testing.T) {
 		"from=2026-02-01T00:00:00Z":     3,
 		"q=AUDITOR":                     1,
 		"q=tas":                         1,
+		"q=auditor+nobody":              0,
 		"limit=3&page=2":                4,
 	} {
 		body := f.get("/gyms/north/audit?"+query, auditor, http.StatusOK)

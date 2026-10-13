@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/ids"
 )
 
@@ -160,7 +161,8 @@ var memberSorts = map[string]string{
 
 const memberFrom = ` FROM memberships m JOIN users u ON u.id = m."user" JOIN roles r ON r.id = m.role
 	WHERE m.gym = $1 AND ($2 = '' OR m.role = $2)
-	AND ($3 = '' OR u.username ILIKE $3 OR u.firstname ILIKE $3 OR u.name ILIKE $3 OR (u.email_visibility AND u.email ILIKE $3))`
+	AND NOT EXISTS (SELECT 1 FROM unnest($3::text[]) w
+		WHERE NOT (u.username ILIKE w OR u.firstname ILIKE w OR u.name ILIKE w OR (u.email_visibility AND u.email ILIKE w)))`
 
 func likePattern(search string) string {
 	if search == "" {
@@ -173,7 +175,7 @@ func listMembers(ctx context.Context, q querier, gymID string, query memberQuery
 	sql := `SELECT m.id, m.gym, m.created, m.updated,
 			u.id, u.username, u.firstname, u.name, u.avatar, CASE WHEN u.email_visibility THEN u.email ELSE '' END,
 			` + roleColumns + memberFrom + ` ORDER BY ` + memberSorts[query.Sort]
-	args := []any{gymID, query.Role, likePattern(query.Search)}
+	args := []any{gymID, query.Role, db.WordPatterns(query.Search)}
 	if query.Limit > 0 {
 		sql += ` LIMIT $4 OFFSET $5`
 		args = append(args, query.Limit, (query.Page-1)*query.Limit)
@@ -192,7 +194,7 @@ func listMembers(ctx context.Context, q querier, gymID string, query memberQuery
 
 func countMembers(ctx context.Context, q querier, gymID string, query memberQuery) (int, error) {
 	var n int
-	err := q.QueryRow(ctx, `SELECT count(*)`+memberFrom, gymID, query.Role, likePattern(query.Search)).Scan(&n)
+	err := q.QueryRow(ctx, `SELECT count(*)`+memberFrom, gymID, query.Role, db.WordPatterns(query.Search)).Scan(&n)
 	return n, err
 }
 

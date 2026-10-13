@@ -11,7 +11,7 @@ test('opens with the keyboard shortcut and jumps to a route', async ({
     await expect(input).toBeFocused()
     await input.fill('e2e-route-1')
 
-    const results = page.getByTestId('command-palette-result')
+    const results = page.getByTestId('command-palette').getByRole('option')
     await expect(results.first()).toContainText('e2e-route-1')
     await input.press('Enter')
     await page.waitForURL(/\/route\?id=/)
@@ -25,7 +25,11 @@ test('lists permitted pages for signed-in users', async ({
     const input = page.getByTestId('command-palette-input')
     await expect(input).toBeFocused()
     await input.fill('Users')
-    await page.getByTestId('command-palette-result').first().click()
+    await page
+        .getByTestId('command-palette')
+        .getByRole('option')
+        .first()
+        .click()
     await page.waitForURL('**/admin/users')
 })
 
@@ -44,7 +48,7 @@ test('finds routes by setter and shows grade and setter', async ({ page }) => {
     await page.getByTestId('command-palette-input').fill('Setter 2')
     await expect(page.getByTestId('command-palette-group-routes')).toBeVisible()
     await expect(
-        page.getByTestId('command-palette-result').first(),
+        page.getByTestId('command-palette').getByRole('option').first(),
     ).toContainText('Setter 2')
 })
 
@@ -53,11 +57,11 @@ test('moves the selection with the arrow keys', async ({ page }) => {
     await page.keyboard.press('ControlOrMeta+k')
     const input = page.getByTestId('command-palette-input')
     await input.fill('e2e-route-1')
-    const results = page.getByTestId('command-palette-result')
+    const results = page.getByTestId('command-palette').getByRole('option')
     await expect(results.nth(1)).toBeVisible()
     await input.press('ArrowDown')
-    await expect(results.nth(1)).toHaveAttribute('aria-current', 'true')
-    await expect(results.first()).not.toHaveAttribute('aria-current', 'true')
+    await expect(results.nth(1)).toHaveAttribute('data-highlighted', '')
+    await expect(results.first()).not.toHaveAttribute('data-highlighted')
 })
 
 async function paletteSearch(
@@ -77,7 +81,8 @@ test.describe('admin search across the app', () => {
         const group = page.getByTestId('command-palette-group-users')
         await expect(group).toBeVisible()
         await page
-            .getByTestId('command-palette-result')
+            .getByTestId('command-palette')
+            .getByRole('option')
             .filter({ hasText: 'e2e-routesetter@gripello.test' })
             .first()
             .click()
@@ -107,7 +112,8 @@ test.describe('admin search across the app', () => {
             page.getByTestId('command-palette-group-settings'),
         ).toBeVisible()
         await page
-            .getByTestId('command-palette-result')
+            .getByTestId('command-palette')
+            .getByRole('option')
             .filter({ hasText: 'Privacy URL' })
             .click()
         await page.waitForURL(/\/admin\/settings\?section=urls/)

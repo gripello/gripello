@@ -154,11 +154,14 @@ func TestListAndGetUsers(t *testing.T) {
 	f.adminOf(f.climber)
 	f.exec(`UPDATE users SET verified = true WHERE id <> $1`, f.climber)
 	f.exec(`UPDATE users SET suspended_until = now() + interval '1 day' WHERE id = $1`, f.climber)
+	f.exec(`UPDATE users SET firstname = 'Kira', name = 'Stone' WHERE id = $1`, f.climber)
 	total := func(body map[string]any) int { return int(body["total"].(float64)) }
 	for query, want := range map[string]int{
 		"":                       3,
 		"q=CLIMBER":              1,
 		"q=example.com":          3,
+		"q=kira+stone":           1,
+		"q=kira+nobody":          0,
 		"filter=platform_admins": 2,
 		"filter=unverified":      1,
 		"filter=suspended":       1,

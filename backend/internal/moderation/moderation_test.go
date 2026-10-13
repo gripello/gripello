@@ -264,7 +264,15 @@ func (f *fixture) exists(key string) bool {
 func TestModerationOfProfilesIsPlatformOnly(t *testing.T) {
 	f := newFixture(t)
 	f.editProfile("climber", "Rude")
-	url := "/moderation/" + f.item("profile", f.users["climber"]).ID
+	item := f.item("profile", f.users["climber"])
+	url := "/moderation/" + item.ID
+	f.call("operator", "GET", "/moderation/cases?q=rude+climber", "", http.StatusOK, item.ID)
+	if items := f.call("operator", "GET", "/moderation/cases?q=rude+nobody", "", http.StatusOK)["items"].([]any); len(items) != 0 {
+		t.Errorf("every word must match, got %d cases", len(items))
+	}
+	if items := f.call("operator", "GET", "/moderation/cases?q=firstname", "", http.StatusOK)["items"].([]any); len(items) != 0 {
+		t.Errorf("snapshot keys matched %d cases", len(items))
+	}
 
 	f.call("adminA", "POST", url, action("hide"), http.StatusNotFound)
 	f.call("operator", "POST", url, action("hide"), http.StatusOK)

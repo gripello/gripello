@@ -618,6 +618,15 @@ func TestListMembersQuery(t *testing.T) {
 	if len(list.Items) != 1 || list.Items[0].User.ID != f.setterA || *list.Total != 1 {
 		t.Errorf("search by name = %+v", list)
 	}
+	f.exec(`UPDATE users SET name = 'Berg' WHERE id = $1`, f.setterA)
+	get("q=ann+berg")
+	if len(list.Items) != 1 || list.Items[0].User.ID != f.setterA {
+		t.Errorf("search by full name = %+v", list.Items)
+	}
+	get("q=ann+nobody")
+	if len(list.Items) != 0 {
+		t.Errorf("every word must match, got %d", len(list.Items))
+	}
 	get("q=setter-a%40example")
 	if len(list.Items) != 1 {
 		t.Errorf("search by visible e-mail = %d", len(list.Items))

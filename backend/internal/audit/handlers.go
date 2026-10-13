@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 )
 
@@ -134,7 +135,7 @@ func (m *module) list(w http.ResponseWriter, r *http.Request, p auth.Principal, 
 		}
 	}
 	if term := strings.TrimSpace(params.Get("q")); term != "" {
-		q.add("(strpos(lower(a.actor_label), lower(?)) > 0 OR strpos(lower(a.record_id), lower(?)) > 0 OR strpos(lower(a.collection_name), lower(?)) > 0)", term, term, term)
+		q.add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (a.actor_label ILIKE w OR a.record_id ILIKE w OR a.collection_name ILIKE w))", db.WordPatterns(term))
 	}
 	page := max(1, atoi(params.Get("page"), 1))
 	limit := min(maxPageSize, max(1, atoi(params.Get("limit"), defaultPageSize)))

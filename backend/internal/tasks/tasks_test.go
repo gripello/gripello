@@ -477,6 +477,9 @@ func TestListFilters(t *testing.T) {
 	if got := list("q=nort"); len(got) != 2 {
 		t.Errorf("search by wall name = %v", got)
 	}
+	if got := list("q=crimp+nort"); len(got) != 1 || got[0].(map[string]any)["id"] != defect {
+		t.Errorf("search across route and wall = %v", got)
+	}
 	if got := list("urgent=true"); len(got) != 0 {
 		t.Errorf("urgent = %v", got)
 	}

@@ -194,6 +194,9 @@ func TestGymRatingsForModerators(t *testing.T) {
 	if got := items(f.call("moderator", "GET", "/gyms/alpha/ratings?q=Crimp&max_rating=1", "", http.StatusOK)); len(got) != 1 {
 		t.Errorf("route name search = %v", got)
 	}
+	if got := items(f.call("moderator", "GET", "/gyms/alpha/ratings?q=meh+crimp", "", http.StatusOK)); len(got) != 1 || got[0]["comment"] != "meh" {
+		t.Errorf("search across comment and route = %v", got)
+	}
 	shy := f.rate("shy", `{"rating":3}`)
 	page := f.call("moderator", "GET", "/gyms/alpha/ratings?total=true&limit=1&since=2026-01-01%2000:00:00.000Z&route="+f.route+",other", "", http.StatusOK)
 	if page["total"] != float64(3) || len(items(page)) != 1 {
