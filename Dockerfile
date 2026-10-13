@@ -95,7 +95,7 @@ COPY --from=go-build /out/third-party-notices-go.txt /tmp/
 RUN { node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.txt; } \
       > .output/public/third-party-notices.txt
 
-FROM debian:trixie-slim@sha256:918311b7b6c4c6f68b232ba516584925f6c78ad82b6fd534b98979df6438e483 AS pg-client
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f AS pg-client
 # pg_dump/pg_restore must match the PostgreSQL 18 server; trixie ships 17, so the client comes from PGDG.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates postgresql-common \
@@ -106,7 +106,7 @@ RUN apt-get update \
  && cp -L /usr/lib/*-linux-gnu/libpq.so.5 /out/lib/
 
 # Only the binaries of node and the PostgreSQL client: their packages bring npm, perl and gnupg along.
-FROM debian:trixie-slim@sha256:918311b7b6c4c6f68b232ba516584925f6c78ad82b6fd534b98979df6438e483
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
 COPY --from=ui-deps /usr/local/bin/node /usr/local/bin/node
 COPY --from=pg-client /out/bin/ /usr/local/bin/
 COPY --from=pg-client /out/lib/ /usr/local/lib/
