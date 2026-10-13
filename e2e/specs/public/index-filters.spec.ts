@@ -34,16 +34,22 @@ test('filters by grade, and every visible row actually matches', async ({
     await expect(table.getByTestId(`index-row-${six.id}`)).toHaveCount(0)
 })
 
-test('searches by setter name', async ({ page }) => {
+test('matches every search word against name or setter', async ({
+    page,
+    createRoute,
+    testPrefix,
+}) => {
+    const setter = `${testPrefix}-setter`
+    const match = await createRoute({ creator: [setter] })
+    const otherSetter = await createRoute({ creator: ['E2E'] })
     await gotoSettled(page, '/routes')
-    await page.getByTestId('filter-search').fill('Setter 3')
-    const rows = page
-        .getByTestId('index-table')
-        .getByRole('row')
-        .filter({ has: page.getByTestId('index-row-name') })
-    await expect(rows.first()).toContainText('Setter 3')
-    for (const row of await rows.all())
-        await expect(row).toContainText('Setter 3')
+    await page.getByTestId('filter-search').fill(`${setter} ${match.name}`)
+
+    const table = page.getByTestId('index-table')
+    await expect(table.getByTestId(`index-row-${match.id}`)).toBeVisible()
+    await expect(table.getByTestId(`index-row-${otherSetter.id}`)).toHaveCount(
+        0,
+    )
 })
 
 test('combines a route name with a signed grade', async ({
