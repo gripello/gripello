@@ -30,34 +30,25 @@ export function useRouteFilters() {
         selectedWall.value = ''
     })
 
-    const walls = computed(() => [
-        { text: t('filter.all'), value: '' },
-        ...wallRecords.value.map((wall) => ({
-            text: wall.name,
-            value: wall.id,
-        })),
-    ])
+    const walls = computed(() =>
+        wallRecords.value.map((wall) => ({ text: wall.name, value: wall.id })),
+    )
 
-    const difficulties = computed(() => [
-        { text: t('filter.all'), value: '' },
-        ...gradeFilterItems.value,
-    ])
+    const difficulties = gradeFilterItems
 
-    const types = computed(() => [
-        { text: t('filter.all'), value: '' },
-        ...ROUTE_TYPES.map((value) => ({
+    const types = computed(() =>
+        ROUTE_TYPES.map((value) => ({
             text: t(`routes.types.${value.toLowerCase()}`),
             value,
         })),
-    ])
+    )
 
-    const locations = computed(() => [
-        { text: t('filter.all'), value: '' },
-        ...locationRecords.value.map((location) => ({
+    const locations = computed(() =>
+        locationRecords.value.map((location) => ({
             text: location.name,
             value: location.id,
         })),
-    ])
+    )
 
     const activeFilterCount = computed(
         () =>

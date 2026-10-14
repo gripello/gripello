@@ -32,6 +32,12 @@ test('filters by grade, and every visible row actually matches', async ({
         .fill(five.name.replace(/-\d+$/, '-'))
     await expect(table.getByTestId(`index-row-${five.id}`)).toBeVisible()
     await expect(table.getByTestId(`index-row-${six.id}`)).toHaveCount(0)
+
+    await page
+        .getByTestId('index-filter-difficulty')
+        .locator('[data-slot="trailingClear"]')
+        .click()
+    await expect(table.getByTestId(`index-row-${six.id}`)).toBeVisible()
 })
 
 test('matches every search word against name or setter', async ({

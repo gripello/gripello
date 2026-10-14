@@ -379,9 +379,7 @@ const colorOptions = computed(() => [
     ...new Set(routes.value.map((item) => toHex6(item.color)).filter(Boolean)),
 ])
 const gradeItems = computed(() =>
-    difficulties.value
-        .filter((item) => item.value)
-        .map((item) => ({ title: item.text, value: String(item.value) })),
+    difficulties.value.map((item) => ({ title: item.text, value: item.value })),
 )
 const gradeFilter = computed({
     get: () => selectedDifficulty.value || null,

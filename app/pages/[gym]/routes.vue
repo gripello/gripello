@@ -58,6 +58,9 @@
                     <FilterSelect
                         :label="gradeColumnTitle"
                         v-model="selectedDifficulty"
+                        :placeholder="$t('filter.all')"
+                        clear
+                        @clear="selectedDifficulty = ''"
                         :items="difficulties"
                         label-key="text"
                         value-key="value"
@@ -66,6 +69,9 @@
                     <FilterSelect
                         :label="$t('climbing.type')"
                         v-model="selectedType"
+                        :placeholder="$t('filter.all')"
+                        clear
+                        @clear="selectedType = ''"
                         :items="types"
                         label-key="text"
                         value-key="value"
@@ -74,15 +80,21 @@
                     <FilterSelect
                         :label="$t('climbing.location')"
                         v-model="selectedLocation"
+                        :placeholder="$t('filter.all')"
+                        clear
+                        @clear="selectedLocation = ''"
                         :items="locations"
                         label-key="text"
                         value-key="value"
                         data-testid="index-filter-location"
                     />
                     <FilterSelect
-                        v-if="walls.length > 1"
+                        v-if="walls.length"
                         :label="$t('map.wall')"
                         v-model="selectedWall"
+                        :placeholder="$t('filter.all')"
+                        clear
+                        @clear="selectedWall = ''"
                         :items="walls"
                         label-key="text"
                         value-key="value"
@@ -263,7 +275,7 @@
             :location-id="selectedLocation"
             :wall-id="selectedWall"
             :route-type="selectedType"
-            :grade="selectedDifficulty.split(':')[1]"
+            :grade="selectedDifficulty?.split(':')[1]"
         />
     </div>
 </template>
