@@ -33,6 +33,18 @@ describe('createReporter', () => {
             new Error('Unable to preload CSS for https://x.test/_nuxt/a.css'),
             context,
         )
+        report(
+            'chunk',
+            new TypeError('Importing a module script failed.'),
+            context,
+        )
+        report(
+            'chunk',
+            new TypeError(
+                'error loading dynamically imported module: https://x.test/_nuxt/a.js',
+            ),
+            context,
+        )
         report('window', 'ResizeObserver loop limit exceeded', context)
         report('window', 'Script error.', context)
         report(
