@@ -5,6 +5,7 @@
         :title="viewTitle"
         :subtitle="viewSubtitle"
         :heading-key="view"
+        :back-to="backTo"
     >
         <template #brand-headline>
             {{ $t('account.brandHeadline.login.l1') }}<br />
@@ -23,6 +24,7 @@
                     :state="loginState"
                     :validate="validateLogin"
                     :validate-on="[]"
+                    :loading-auto="false"
                     data-testid="login-form"
                     @submit="submitLogin"
                 >
@@ -42,23 +44,16 @@
                             "
                             :name="identityAutocomplete"
                             :disabled="loading"
+                            size="xl"
                             color="success"
                             class="w-full"
+                            autocapitalize="none"
+                            autocorrect="off"
+                            spellcheck="false"
+                            enterkeyhint="next"
                             data-testid="login-identity"
-                            autofocus
-                            @keydown.enter.prevent="submitLogin"
-                        >
-                            <template v-if="identity" #trailing>
-                                <UButton
-                                    icon="i-lucide-x"
-                                    color="neutral"
-                                    variant="link"
-                                    size="sm"
-                                    :aria-label="$t('actions.clear')"
-                                    @click="identity = ''"
-                                />
-                            </template>
-                        </UInput>
+                            @keydown.enter.prevent="nextFromIdentity"
+                        />
                     </UFormField>
 
                     <UserPasswordField
@@ -68,8 +63,10 @@
                         name="password"
                         data-testid="login-password"
                         :disabled="loading"
+                        size="xl"
                         color="success"
-                        class="mb-4"
+                        enterkeyhint="go"
+                        class="mb-2"
                         @keydown="detectCapsLock"
                         @keydown.enter.prevent="submitLogin"
                     />
@@ -96,7 +93,6 @@
                             <UButton
                                 color="warning"
                                 variant="link"
-                                size="sm"
                                 class="px-0 mt-1 block"
                                 data-testid="login-resend-verification"
                                 @click="openResendVerification"
@@ -106,20 +102,20 @@
                         </template>
                     </UAlert>
 
-                    <div class="flex items-center justify-between mb-5">
+                    <div class="flex items-center justify-between mb-4">
                         <UCheckbox
                             v-model="rememberMe"
                             :label="$t('account.remember_me')"
                             color="success"
+                            class="min-h-11 items-center"
                             data-testid="login-remember-me"
                         />
                         <UButton
                             variant="link"
                             color="primary"
-                            size="sm"
-                            class="px-0"
+                            class="min-h-11 px-0"
                             data-testid="login-goto-reset"
-                            @click="view = 'requestReset'"
+                            @click="openView('requestReset')"
                         >
                             {{ $t('account.reset_password') }}
                         </UButton>
@@ -129,7 +125,7 @@
                         type="submit"
                         color="primary"
                         block
-                        size="lg"
+                        size="xl"
                         :disabled="loading"
                         class="mb-3 font-semibold"
                         data-testid="login-submit"
@@ -150,6 +146,7 @@
                         color="neutral"
                         variant="outline"
                         block
+                        size="xl"
                         icon="i-lucide-key-round"
                         class="mb-3"
                         :disabled="loading"
@@ -165,6 +162,7 @@
                         color="neutral"
                         variant="outline"
                         block
+                        size="xl"
                         :icon="oauth2ProviderIcon(provider.name)"
                         class="mb-3"
                         :disabled="loading"
@@ -178,30 +176,22 @@
                         }}
                     </UButton>
 
-                    <UButton
+                    <p
                         v-if="canRegister"
-                        color="neutral"
-                        variant="soft"
-                        block
-                        class="mb-3"
-                        :disabled="loading"
-                        data-testid="login-goto-register"
-                        @click="view = 'register'"
+                        class="mt-4 flex items-center justify-center gap-1 text-sm text-muted"
                     >
-                        {{ $t('account.createAccount') }}
-                    </UButton>
-
-                    <UButton
-                        color="neutral"
-                        variant="ghost"
-                        block
-                        class="mb-1"
-                        icon="i-lucide-arrow-left"
-                        :disabled="loading"
-                        @click="navigateTo('/')"
-                    >
-                        {{ $t('actions.back_to_home') }}
-                    </UButton>
+                        {{ $t('account.noAccount') }}
+                        <UButton
+                            variant="link"
+                            color="primary"
+                            class="min-h-11 px-1 font-semibold"
+                            :disabled="loading"
+                            data-testid="login-goto-register"
+                            @click="openView('register')"
+                        >
+                            {{ $t('account.createAccount') }}
+                        </UButton>
+                    </p>
                 </UForm>
 
                 <UForm
@@ -223,11 +213,15 @@
                             v-model="registerUsername"
                             icon="i-lucide-user"
                             autocomplete="username"
+                            autocapitalize="none"
+                            autocorrect="off"
+                            spellcheck="false"
+                            enterkeyhint="next"
                             :disabled="loading"
+                            size="xl"
                             color="success"
                             class="w-full"
                             data-testid="register-username"
-                            autofocus
                         />
                     </UFormField>
                     <UFormField
@@ -240,7 +234,9 @@
                             icon="i-lucide-mail"
                             type="email"
                             autocomplete="email"
+                            enterkeyhint="next"
                             :disabled="loading"
+                            size="xl"
                             color="success"
                             class="w-full"
                             data-testid="register-email"
@@ -250,6 +246,7 @@
                         v-model:password="registerPassword"
                         v-model:password-confirm="registerPasswordConfirm"
                         :require-old-password="false"
+                        size="xl"
                         @validity="registerPasswordValid = $event"
                     />
 
@@ -257,26 +254,15 @@
                         type="submit"
                         color="primary"
                         block
-                        size="lg"
+                        size="xl"
                         :disabled="loading"
-                        class="mt-6 mb-3 font-semibold"
+                        class="mt-6 font-semibold"
                         data-testid="register-submit"
                     >
                         <CaptchaLoader v-if="loading" />
                         <template v-else>{{
                             $t('account.createAccount')
                         }}</template>
-                    </UButton>
-
-                    <UButton
-                        color="neutral"
-                        variant="ghost"
-                        block
-                        :disabled="loading"
-                        class="text-muted"
-                        @click="view = 'login'"
-                    >
-                        {{ $t('actions.cancel') }}
                     </UButton>
                 </UForm>
 
@@ -290,18 +276,6 @@
                     data-testid="reset-form"
                     @submit="submitEmailRequest"
                 >
-                    <UAlert
-                        color="success"
-                        variant="soft"
-                        icon="i-lucide-mail"
-                        class="mb-6"
-                        :description="
-                            view === 'requestReset'
-                                ? $t('account.resetInfo')
-                                : $t('account.resendVerificationInfo')
-                        "
-                    />
-
                     <UFormField
                         :label="$t('account.email')"
                         name="email"
@@ -312,47 +286,26 @@
                             icon="i-lucide-mail"
                             type="email"
                             autocomplete="email"
+                            enterkeyhint="send"
                             :disabled="loading"
+                            size="xl"
                             color="success"
                             class="w-full"
                             data-testid="reset-email"
-                            autofocus
-                        >
-                            <template v-if="resetEmail" #trailing>
-                                <UButton
-                                    icon="i-lucide-x"
-                                    color="neutral"
-                                    variant="link"
-                                    size="sm"
-                                    :aria-label="$t('actions.clear')"
-                                    @click="resetEmail = ''"
-                                />
-                            </template>
-                        </UInput>
+                        />
                     </UFormField>
 
                     <UButton
                         type="submit"
                         color="primary"
                         block
-                        size="lg"
+                        size="xl"
                         :disabled="loading"
-                        class="mb-3 font-semibold"
+                        class="font-semibold"
                         data-testid="reset-submit"
                     >
                         <CaptchaLoader v-if="loading" />
                         <template v-else>{{ $t('actions.submit') }}</template>
-                    </UButton>
-
-                    <UButton
-                        color="neutral"
-                        variant="ghost"
-                        block
-                        :disabled="loading"
-                        class="text-muted"
-                        @click="view = 'login'"
-                    >
-                        {{ $t('actions.cancel') }}
                     </UButton>
                 </UForm>
 
@@ -384,6 +337,7 @@ import {
 import { safeRedirect, staffLandingPath } from '~/utils/nav'
 import { isPasskeyCancel } from '~/utils/webauthn'
 import { isInvalidCredentials } from '~/utils/authErrors'
+import { authView, authViewQuery, type AuthView } from '~/utils/authView'
 import {
     oauth2ErrorKey,
     oauth2ProviderIcon,
@@ -409,6 +363,7 @@ const { t, locale } = useI18n()
 const auth = useAuthState()
 const { capHeaders } = useCapToken()
 const route = useRoute()
+const router = useRouter()
 const requestedRedirect = safeRedirect(route.query.redirect)
 const { memberships, ensureLoaded } = usePermissions()
 
@@ -438,7 +393,29 @@ const canRegister = allowRegistration
 
 // ── State ──────────────────────────────────────────────────────────
 const { notify, error: notifyError } = useNotification()
-const view = ref(route.query.view === 'register' ? 'register' : 'login')
+const twoFactorOpen = ref(false)
+const view = computed(() =>
+    twoFactorOpen.value ? 'twoFactor' : authView(route.query.view),
+)
+const loginUrl = computed(
+    () => router.resolve({ query: authViewQuery(route.query) }).fullPath,
+)
+const backTo = computed(() =>
+    view.value === 'twoFactor'
+        ? ''
+        : view.value === 'login'
+          ? '/'
+          : loginUrl.value,
+)
+
+function openView(next: AuthView) {
+    void router.push({ query: authViewQuery(route.query, next) })
+}
+
+function returnToLogin() {
+    if (window.history.state?.back === loginUrl.value) return router.back()
+    void router.replace(loginUrl.value)
+}
 const oauth2Ticket = route.query.oauth2
 const loading = ref(typeof oauth2Ticket === 'string' && !!oauth2Ticket)
 const identity = ref('')
@@ -515,7 +492,7 @@ const viewTitle = computed(
 const viewSubtitle = computed(
     () =>
         ({
-            login: t('account.login_hint'),
+            login: '',
             requestReset: t('account.reset_hint'),
             register: t('account.register_hint'),
             resendVerification: t('account.reset_hint'),
@@ -565,11 +542,24 @@ function detectCapsLock(ev: KeyboardEvent) {
 }
 
 async function focusFirstInput() {
+    if (!window.matchMedia('(pointer: fine)').matches) return
     await nextTick()
     document.querySelector('input')?.focus()
 }
 
+function focusPassword() {
+    document
+        .querySelector<HTMLInputElement>('[data-testid="login-password"]')
+        ?.focus()
+}
+
+function nextFromIdentity() {
+    if (password.value) return submitLogin()
+    focusPassword()
+}
+
 watch(view, focusFirstInput)
+watch([identity, password], () => loginForm.value?.clear())
 onMounted(focusFirstInput)
 onNuxtReady(() =>
     preloadRouteComponents(requestedRedirect ?? '/gym/manage/routes'),
@@ -596,6 +586,15 @@ function isUnverifiedError(err: unknown) {
         !isSuspendedError(err) &&
         ((err as { status?: number })?.status === 403 ||
             /not verified/i.test(authErrorMessage(err)))
+    )
+}
+
+function isCredentialError(err: unknown) {
+    const msg = authErrorMessage(err)
+    return (
+        isSuspendedError(err) ||
+        isInvalidCredentials(msg) ||
+        /locked|too many/i.test(msg)
     )
 }
 
@@ -628,11 +627,18 @@ async function submitLogin() {
             mfaId.value = pendingMfa.mfaId
             secondFactorMethods.value = pendingMfa.methods
             secondFactorMethod.value = secondFactorMethods.value[0]!
-            view.value = 'twoFactor'
+            twoFactorOpen.value = true
             return
         }
         unverified.value = isUnverifiedError(err)
-        notifyError(resolveAuthError(err))
+        if (unverified.value) return
+        if (!isCredentialError(err)) return notifyError(resolveAuthError(err))
+        loginForm.value?.setErrors([
+            { name: 'password', message: resolveAuthError(err) },
+        ])
+        loading.value = false
+        await nextTick()
+        focusPassword()
     } finally {
         loading.value = false
     }
@@ -683,7 +689,7 @@ async function completeOAuth2() {
             mfaId.value = pendingMfa.mfaId
             secondFactorMethods.value = pendingMfa.methods
             secondFactorMethod.value = secondFactorMethods.value[0]!
-            view.value = 'twoFactor'
+            twoFactorOpen.value = true
             return
         }
         notifyError(resolveAuthError(err))
@@ -699,7 +705,7 @@ async function finishLogin(result: AuthResult) {
 
 function leaveSecondFactor() {
     mfaId.value = ''
-    view.value = 'login'
+    twoFactorOpen.value = false
     offerPasskeyAutofill()
 }
 
@@ -743,7 +749,7 @@ async function loginWithPasskey() {
 
 function openResendVerification() {
     resetEmail.value = identity.value.includes('@') ? identity.value : ''
-    view.value = 'resendVerification'
+    openView('resendVerification')
 }
 
 function submitEmailRequest() {
@@ -762,7 +768,7 @@ async function submitResendVerification() {
         )
         notify(t('notifications.success.verificationSent'))
         unverified.value = false
-        view.value = 'login'
+        returnToLogin()
         resetEmail.value = ''
     } catch (err) {
         notifyError(resolveAuthError(err))
@@ -780,7 +786,7 @@ async function submitReset() {
             await capHeaders('password-reset'),
         )
         notify(t('notifications.success.resetPassword'))
-        view.value = 'login'
+        returnToLogin()
         resetEmail.value = ''
     } catch (err) {
         notifyError(resolveAuthError(err))
@@ -789,14 +795,15 @@ async function submitReset() {
     }
 }
 
-function resolveRegisterError(err: unknown) {
+function registerFieldError(err: unknown) {
     const fields = (
         err as { data?: { data?: Record<string, { code?: string }> } }
     )?.data?.data
     if (fields?.username?.code === 'validation_not_unique')
-        return t('users.usernameTaken')
-    if (fields?.email) return t('account.emailTaken')
-    return resolveAuthError(err)
+        return { name: 'username', message: t('users.usernameTaken') }
+    if (fields?.email)
+        return { name: 'email', message: t('account.emailTaken') }
+    return null
 }
 
 async function submitRegister() {
@@ -817,9 +824,11 @@ async function submitRegister() {
         else notifyError(t('notifications.error.verificationMail'))
         identity.value = registerUsername.value
         registerPassword.value = registerPasswordConfirm.value = ''
-        view.value = 'login'
+        returnToLogin()
     } catch (err) {
-        notifyError(resolveRegisterError(err))
+        const fieldError = registerFieldError(err)
+        if (fieldError) registerForm.value?.setErrors([fieldError])
+        else notifyError(resolveAuthError(err))
     } finally {
         loading.value = false
     }

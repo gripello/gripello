@@ -186,27 +186,18 @@
             />
         </template>
 
-        <LayoutInfoList v-if="!lgAndUp" :settings="settings" :gym="gym" />
-        <div v-if="user" class="native-group mt-6 mb-4">
+        <div v-if="user" class="native-group mt-6">
             <button
                 type="button"
                 class="native-row justify-center font-semibold text-error"
-                :disabled="loggingOut"
                 data-testid="me-logout"
-                @click="logout"
+                @click="signOut()"
             >
-                <UIcon
-                    :name="
-                        loggingOut
-                            ? 'i-lucide-loader-circle'
-                            : 'i-lucide-log-out'
-                    "
-                    class="size-5"
-                    :class="{ 'animate-spin': loggingOut }"
-                />
+                <UIcon name="i-lucide-log-out" class="size-5" />
                 {{ $t('account.logout') }}
             </button>
         </div>
+        <LayoutInfoList v-if="!lgAndUp" :settings="settings" :gym="gym" />
     </div>
 </template>
 
@@ -219,7 +210,6 @@ import { gymTitle } from '~/utils/gymNames'
 import { staffSections } from '~/utils/navigation'
 
 const { t } = useI18n()
-const router = useRouter()
 const {
     can,
     gymMemberships: memberships,
@@ -231,7 +221,6 @@ const { data: settings } = useNuxtData<SettingsRecord>('settings')
 useSeoMeta({ title: () => t('page.title.me') })
 
 const user = useAuthRecord()
-const loggingOut = ref(false)
 
 const displayName = computed(
     () =>
@@ -277,15 +266,5 @@ async function leaveGym() {
                     : t('notifications.error.generic'),
         },
     )
-}
-
-async function logout() {
-    loggingOut.value = true
-    try {
-        signOut()
-        await router.push('/auth/login')
-    } finally {
-        loggingOut.value = false
-    }
 }
 </script>

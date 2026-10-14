@@ -27,6 +27,7 @@
                     name="password"
                     :label="$t('account.password')"
                     icon="i-lucide-lock"
+                    size="xl"
                     class="mb-2"
                     data-testid="email-change-password"
                 />
@@ -35,7 +36,7 @@
             <UButton
                 color="success"
                 block
-                size="lg"
+                size="xl"
                 :loading="loading"
                 :disabled="loading || !valid"
                 class="mb-3 font-semibold"

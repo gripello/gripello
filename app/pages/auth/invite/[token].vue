@@ -12,6 +12,7 @@
         "
         :subtitle="subtitle"
         :heading-key="step"
+        back-to="/"
     >
         <template #brand-headline>
             {{ $t('account.brandHeadline.login.l1') }}<br />
@@ -24,13 +25,13 @@
         <div v-if="step === 'invalid'" data-testid="invite-invalid">
             <UButton
                 color="neutral"
-                variant="ghost"
-                icon="i-lucide-arrow-left"
+                variant="soft"
                 block
+                size="xl"
                 to="/auth/login"
                 data-testid="invite-back"
             >
-                {{ $t('actions.back_to_home') }}
+                {{ $t('account.login') }}
             </UButton>
         </div>
 
@@ -38,7 +39,7 @@
             v-else-if="step === 'join'"
             color="success"
             block
-            size="lg"
+            size="xl"
             class="font-semibold"
             :loading="accepting"
             data-testid="invite-join"
@@ -52,7 +53,7 @@
             color="neutral"
             variant="soft"
             block
-            size="lg"
+            size="xl"
             data-testid="invite-sign-out"
             @click="signOut"
         >
@@ -63,7 +64,7 @@
             v-else-if="step === 'signIn'"
             color="success"
             block
-            size="lg"
+            size="xl"
             class="font-semibold"
             :to="loginPath"
             data-testid="invite-sign-in"
@@ -82,6 +83,7 @@
                     <UInput
                         v-model="registration.firstname"
                         autocomplete="given-name"
+                        size="xl"
                         class="w-full"
                         data-testid="invite-firstname"
                     />
@@ -90,6 +92,7 @@
                     <UInput
                         v-model="registration.name"
                         autocomplete="family-name"
+                        size="xl"
                         class="w-full"
                         data-testid="invite-lastname"
                     />
@@ -99,13 +102,14 @@
                 v-model:password="registration.password"
                 v-model:password-confirm="registration.passwordConfirm"
                 :require-old-password="false"
+                size="xl"
                 @validity="passwordValid = $event"
             />
             <UButton
                 type="submit"
                 color="success"
                 block
-                size="lg"
+                size="xl"
                 class="font-semibold"
                 :loading="accepting"
                 :disabled="accepting || !passwordValid"

@@ -21,7 +21,11 @@ test.describe('login', () => {
         await gotoSettled(page, '/auth/login')
         await fillLogin(page, 'e2e-admin@gripello.test', 'wrong-password')
         await page.getByTestId('login-submit').click()
-        await expect(page.getByTestId('global-snackbar').last()).toBeVisible()
+        await expect(page.getByTestId('login-password')).toHaveAttribute(
+            'aria-invalid',
+            'true',
+        )
+        await expect(page.getByTestId('login-password')).toBeFocused()
         await expect(page).toHaveURL(/\/auth\/login/)
     })
 
@@ -46,5 +50,19 @@ test.describe('login', () => {
         await page.getByTestId('login-goto-reset').click()
         await expect(page.getByTestId('reset-form')).toBeVisible()
         await expect(page.getByTestId('reset-email')).toBeVisible()
+    })
+
+    test('back from a sub-view returns to the sign-in form', async ({
+        page,
+    }) => {
+        await gotoSettled(page, '/auth/login')
+        await page.getByTestId('login-goto-reset').click()
+        await expect(page.getByTestId('reset-form')).toBeVisible()
+        await page.goBack()
+        await expect(page.getByTestId('login-form')).toBeVisible()
+
+        await page.getByTestId('login-goto-reset').click()
+        await page.getByTestId('auth-back').click()
+        await expect(page.getByTestId('login-form')).toBeVisible()
     })
 })

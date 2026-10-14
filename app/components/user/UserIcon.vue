@@ -52,10 +52,11 @@ import { fileUrl } from '~/api/client'
 import { logout as signOut, useAuthState } from '~/api/auth'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { avatarColor, nameInitials } from '~/utils/avatar'
+import { requiresSignIn } from '~/utils/authView'
 
 defineProps<{ collapsed?: boolean }>()
 
-const router = useRouter()
+const route = useRoute()
 const { currentUser } = useAuthState()
 const { t } = useI18n()
 
@@ -126,7 +127,8 @@ async function logout() {
     try {
         isLoggingOut.value = true
         signOut()
-        await router.push('/auth/login')
+        if (requiresSignIn(route.meta.middleware))
+            await navigateTo('/', { replace: true })
     } finally {
         isLoggingOut.value = false
     }

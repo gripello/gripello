@@ -41,7 +41,6 @@
         "newPassword": "New password",
         "email": "Email",
         "username_or_email": "Username or email",
-        "login_hint": "Enter your username or email.",
         "reset_password": "Reset password",
         "reset_hint": "Enter the email address of your account.",
         "userProfile": "User profile",
@@ -85,7 +84,6 @@
             "special": "Special character (!{'@'}#...)"
         },
         "capsLockOn": "Caps Lock is on",
-        "resetInfo": "We'll send a password reset link to your email address.",
         "eyebrowWelcomeBack": "WELCOME BACK",
         "eyebrowAccountRecovery": "ACCOUNT RECOVERY",
         "eyebrowAllDone": "ALL DONE",
@@ -130,7 +128,6 @@
         "usernameInvalid": "Use letters, numbers, dots, dashes or underscores.",
         "emailTaken": "This email address can't be used.",
         "resendVerification": "Resend verification email",
-        "resendVerificationInfo": "We'll send a new verification link to your email address.",
         "confirmPassword": "Confirm password",
         "showPassword": "Show password",
         "hidePassword": "Hide password",
@@ -200,7 +197,8 @@
             "lastMethod": "This is the only way into your account. Set a password first.",
             "linked": "Sign-in linked",
             "linkConfirm": "A linked sign-in opens your account even after a password change. Confirm with your password."
-        }
+        },
+        "noAccount": "No account?"
     },
     "routes": {
         "home": "Overview",

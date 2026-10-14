@@ -2,6 +2,7 @@
     <div class="pcf-root flex flex-col gap-4">
         <UserPasswordField
             v-if="requireOldPassword"
+            :size="size"
             :model-value="oldPassword"
             :label="$t('account.oldPassword')"
             :placeholder="$t('account.placeholders.oldPassword')"
@@ -13,6 +14,7 @@
 
         <UserPasswordField
             :model-value="password"
+            :size="size"
             :label="$t('account.password')"
             :placeholder="$t('account.placeholders.newPassword')"
             autocomplete="new-password"
@@ -80,6 +82,7 @@
 
         <UserPasswordField
             :model-value="passwordConfirm"
+            :size="size"
             :label="$t('account.confirmPassword')"
             :placeholder="$t('account.placeholders.confirmPassword')"
             autocomplete="new-password"
@@ -102,6 +105,7 @@
 </template>
 
 <script setup lang="ts">
+import type { InputProps } from '@nuxt/ui'
 import {
     required,
     minLength,
@@ -114,6 +118,7 @@ const props = withDefaults(
         oldPassword?: string
         password?: string
         passwordConfirm?: string
+        size?: InputProps['size']
     }>(),
     {
         requireOldPassword: true,

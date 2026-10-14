@@ -65,7 +65,7 @@
                 type="submit"
                 color="primary"
                 block
-                size="lg"
+                size="xl"
                 :loading="pending"
                 :disabled="!ready"
                 class="font-semibold"
@@ -91,7 +91,7 @@
             <UButton
                 color="primary"
                 block
-                size="lg"
+                size="xl"
                 icon="i-lucide-key-round"
                 :loading="pending"
                 class="font-semibold"

@@ -5,6 +5,7 @@
         :title="heading.title"
         :subtitle="heading.subtitle"
         :heading-key="step"
+        back-to="/auth/login"
     >
         <template #brand-headline>
             {{ $t(`account.brandHeadline.${brandHeadline}.l1`) }}<br />
@@ -30,17 +31,6 @@
 
                 <div v-else-if="step === 'form'" key="form">
                     <slot :submit="submit" :loading="loading" />
-
-                    <UButton
-                        color="neutral"
-                        variant="ghost"
-                        block
-                        icon="i-lucide-arrow-left"
-                        :disabled="loading"
-                        @click="navigateTo('/auth/login')"
-                    >
-                        {{ $t('actions.back_to_home') }}
-                    </UButton>
                 </div>
 
                 <div
@@ -59,7 +49,7 @@
                     <UButton
                         color="success"
                         block
-                        size="lg"
+                        size="xl"
                         class="font-semibold"
                         :data-testid="`${testidPrefix}-goto-login`"
                         @click="navigateTo('/auth/login')"
@@ -76,18 +66,17 @@
                 >
                     <UIcon
                         name="i-lucide-link-2-off"
-                        class="mb-4 size-[48px] text-error"
+                        class="mb-6 size-[48px] text-error"
                     />
                     <UButton
                         color="neutral"
-                        variant="ghost"
-                        icon="i-lucide-arrow-left"
+                        variant="soft"
                         block
-                        class="mt-4"
+                        size="xl"
                         :data-testid="`${testidPrefix}-back`"
                         @click="navigateTo('/auth/login')"
                     >
-                        {{ $t('actions.back_to_home') }}
+                        {{ $t('account.login') }}
                     </UButton>
                 </div>
             </Transition>

@@ -6,9 +6,14 @@ test('shows the public route list unauthenticated', async ({ page }) => {
     await expect(page.getByTestId('index-table')).toBeVisible()
 })
 
-test('nav shows a login button when logged out', async ({ page }) => {
+test('shows a sign-in button when logged out', async ({ page }) => {
     await gotoSettled(page, '/routes')
-    await expect(page.getByTestId('nav-login')).toBeVisible()
+    await expect(
+        page
+            .getByTestId('nav-login')
+            .or(page.getByTestId('sidebar-login'))
+            .filter({ visible: true }),
+    ).toBeVisible()
 })
 
 test('the view action opens the route page', async ({ page, route }) => {

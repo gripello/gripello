@@ -17,7 +17,7 @@ test('lets a user delete their own account', async ({
     await page.getByTestId('profile-delete-password').fill(user.password)
     await page.getByTestId('confirm-dialog-confirm').click()
 
-    await page.waitForURL(/\/auth\/login/)
+    await page.waitForURL((url) => url.pathname === '/')
 
     await expect(getPlatformUser(api, user.id)).rejects.toThrow()
 })
