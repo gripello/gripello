@@ -14,6 +14,8 @@ import {
     bottomNavLinks,
     navContext,
     requestedSection,
+    parentPath,
+    navDirection,
 } from '~/utils/navigation'
 
 const allowing =
@@ -511,5 +513,60 @@ describe('bottomNavLinks', () => {
             '/platform/settings',
         ])
             expect(activeAt(path, 'platform')).toBe('/platform/more')
+    })
+})
+
+describe('parentPath', () => {
+    it('gives tab roots no parent', () => {
+        for (const path of [
+            '/',
+            '/e2e',
+            '/e2e/routes',
+            '/e2e/map',
+            '/e2e/info',
+            '/e2e/feed',
+            '/e2e/leaderboard',
+            '/e2e/competitions',
+            '/friends',
+            '/logbook',
+            '/scan',
+            '/account',
+            '/auth/login',
+            '/e2e/manage',
+            '/e2e/manage/routes',
+            '/e2e/manage/tasks',
+            '/platform',
+            '/platform/gyms',
+            '/platform/more',
+        ])
+            expect(parentPath(path), path).toBeNull()
+    })
+
+    it('leads nested pages to their parent', () => {
+        expect(parentPath('/e2e/route')).toBe('/e2e/routes')
+        expect(parentPath('/climber')).toBe('/friends')
+        expect(parentPath('/account/settings')).toBe('/account')
+        expect(parentPath('/e2e/competitions/abc')).toBe('/e2e/competitions')
+        expect(parentPath('/e2e/competitions/abc/rules')).toBe(
+            '/e2e/competitions/abc',
+        )
+        expect(parentPath('/e2e/manage/analytics')).toBe('/e2e/manage')
+        expect(parentPath('/e2e/admin/settings')).toBe('/e2e/manage')
+        expect(parentPath('/e2e/manage/competitions/abc')).toBe(
+            '/e2e/manage/competitions',
+        )
+        expect(parentPath('/e2e/imprint')).toBe('/e2e')
+        expect(parentPath('/platform/logs')).toBe('/platform/more')
+        expect(parentPath('/platform/gyms/abc')).toBe('/platform/gyms')
+    })
+})
+
+describe('navDirection', () => {
+    it('slides only into and out of nested pages', () => {
+        expect(navDirection(3, 4, '/e2e/routes', '/e2e/route')).toBe('push')
+        expect(navDirection(4, 3, '/e2e/route', '/e2e/routes')).toBe('pop')
+        expect(navDirection(3, 4, '/e2e/routes', '/e2e/feed')).toBeNull()
+        expect(navDirection(4, 3, '/e2e/feed', '/e2e/routes')).toBeNull()
+        expect(navDirection(undefined, 1, '/', '/e2e/route')).toBeNull()
     })
 })

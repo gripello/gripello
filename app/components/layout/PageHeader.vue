@@ -1,11 +1,28 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
     title: string
     subtitle?: string
     inlineActions?: boolean
     backTo?: string
     backLabel?: string
 }>()
+
+const pageBackTo = usePageBackTo()
+const owner = ++pageBackOwners
+watch(
+    () => props.backTo,
+    (to) => {
+        pageBackTo.value = to ? { owner, to } : null
+    },
+    { immediate: true },
+)
+onUnmounted(() => {
+    if (pageBackTo.value?.owner === owner) pageBackTo.value = null
+})
+</script>
+
+<script lang="ts">
+let pageBackOwners = 0
 </script>
 
 <template>
@@ -15,7 +32,7 @@ defineProps<{
         variant="link"
         color="neutral"
         icon="i-lucide-arrow-left"
-        class="mb-2 px-0"
+        class="mb-2 px-0 max-lg:hidden"
         data-testid="page-back"
     >
         {{ backLabel }}

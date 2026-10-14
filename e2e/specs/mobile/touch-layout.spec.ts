@@ -34,7 +34,7 @@ test('route hero chips wrap instead of being clipped', async ({
 
 test('icon buttons have a 44px touch target', async ({ page, route }) => {
     await gotoSettled(page, `/route?id=${route.id}`)
-    const back = page.getByTestId('route-back')
+    const back = page.getByTestId('nav-back')
     await expect(back).toBeVisible()
 
     await expect
@@ -48,7 +48,7 @@ test('icon buttons have a 44px touch target', async ({ page, route }) => {
                         ([x, y]) =>
                             !!document
                                 .elementFromPoint(x!, y!)
-                                ?.closest('[data-testid="route-back"]'),
+                                ?.closest('[data-testid="nav-back"]'),
                     ),
                 [
                     [centerX - 21, centerY],

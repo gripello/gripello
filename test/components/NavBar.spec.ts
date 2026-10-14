@@ -14,6 +14,8 @@ const route = { path: '/e2e/routes', params: { gym: 'e2e' } }
 vi.stubGlobal('useRoute', () => route)
 vi.stubGlobal('routeGymSlug', (params: { gym?: string }) => params.gym ?? '')
 vi.stubGlobal('useFollows', () => ({ requests: ref([]) }))
+const parent = ref<string | null>(null)
+vi.stubGlobal('useGoBack', () => ({ parent, goBack: vi.fn() }))
 
 const UHeader = defineComponent({
     props: { ui: { type: Object, default: () => ({}) } },
@@ -116,5 +118,32 @@ describe('NavBar', () => {
         expect(tabs.classes()).toEqual(
             expect.arrayContaining(['border-t', 'border-default']),
         )
+    })
+
+    it('shows a back arrow instead of the gym switcher on nested pages', () => {
+        expect(
+            mountNavBar(true).find('[data-testid="nav-back"]').exists(),
+        ).toBe(false)
+        parent.value = '/e2e/routes'
+        const nested = mountNavBar(true)
+        expect(nested.find('[data-testid="nav-back"]').exists()).toBe(true)
+        expect(
+            nested.findComponent({ name: 'LayoutGymSwitcher' }).classes(),
+        ).toContain('max-lg:hidden')
+        parent.value = null
+    })
+
+    it('labels nested staff pages instead of offering a second way out', () => {
+        route.path = '/e2e/manage/analytics'
+        parent.value = '/e2e/manage'
+        const nested = mountNavBar(true)
+        expect(nested.find('[data-testid="nav-staff-context"]').exists()).toBe(
+            true,
+        )
+        expect(
+            nested.find('[data-testid="nav-back-to-climbing-mobile"]').exists(),
+        ).toBe(false)
+        route.path = '/e2e/routes'
+        parent.value = null
     })
 })

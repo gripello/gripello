@@ -14,7 +14,10 @@ test('staff get their own bottom bar and a way back to climbing', async ({
     await page.waitForURL(/\/manage$/)
     await page.getByTestId('staff-hub-link-manage-comments').click()
     await page.waitForURL('**/manage/comments')
+    await expect(page.getByTestId('nav-back-to-climbing-mobile')).toHaveCount(0)
 
+    await page.getByTestId('nav-back').click()
+    await page.waitForURL(/\/manage$/)
     await page.getByTestId('nav-back-to-climbing-mobile').click()
     await page.waitForURL(/\/routes$/)
     await expect(page.getByTestId('bottom-nav-feed')).toBeVisible()

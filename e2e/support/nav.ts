@@ -18,6 +18,16 @@ export async function gotoSettled(
     if (expectPath) await page.waitForURL(expectPath)
 }
 
+export function pageBack(page: Page) {
+    return page
+        .locator(
+            ['nav-back', 'route-back', 'page-back']
+                .map((id) => `[data-testid="${id}"]:visible`)
+                .join(', '),
+        )
+        .first()
+}
+
 export async function reloadSettled(page: Page) {
     await page.reload()
     await page

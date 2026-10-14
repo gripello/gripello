@@ -1,7 +1,7 @@
 import { test, expect } from '../../support/fixtures'
 import { createRoute } from '../../support/api'
 import { uiaa } from '../../support/seed'
-import { gotoSettled, gymPath } from '../../support/nav'
+import { gotoSettled, gymPath, pageBack } from '../../support/nav'
 import { seedMap, type SeededMap } from '../../support/map'
 
 let seeded: SeededMap
@@ -138,7 +138,7 @@ test('the route page leads back to where it was opened', async ({
     await expect(page.getByTestId('route-view')).toHaveCount(1)
     await page.getByTestId('route-view').first().click()
     await page.waitForURL(/\/route\?id=/)
-    await page.getByTestId('route-back').click()
+    await pageBack(page).click()
     await page.waitForURL(/\/routes$/)
 })
 
@@ -146,6 +146,6 @@ test('a directly opened route page leads back to the route list', async ({
     page,
 }) => {
     await gotoSettled(page, `/route?id=${freshRouteId}`)
-    await page.getByTestId('route-back').click()
+    await pageBack(page).click()
     await page.waitForURL(/\/routes$/)
 })
