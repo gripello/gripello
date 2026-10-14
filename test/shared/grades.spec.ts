@@ -8,6 +8,7 @@ import {
     compareGradeKeys,
     gradeIndex,
     gradeLabels,
+    gradesAround,
     nearestGrade,
     resolveImportedGrading,
 } from '#shared/utils/grades'
@@ -164,5 +165,25 @@ describe('resolveImportedGrading', () => {
             grade_system: 'uiaa',
             grade_index: null,
         })
+    })
+})
+
+describe('gradesAround', () => {
+    it('offers two grades below and above the route grade', () => {
+        expect(gradesAround('uiaa', '5', 2)).toEqual([
+            '4+',
+            '5-',
+            '5',
+            '5+',
+            '6-',
+        ])
+    })
+
+    it('clamps at the ends of the scale', () => {
+        expect(gradesAround('uiaa', '1', 2)).toEqual(['1', '2', '3'])
+    })
+
+    it('falls back to every grade when the route grade is unknown', () => {
+        expect(gradesAround('uiaa', null, 2)).toEqual(gradeLabels('uiaa'))
     })
 })

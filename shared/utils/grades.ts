@@ -181,6 +181,17 @@ export function gradeLabels(system: GradeSystem): string[] {
     return GRADE_TABLES[system].map(([label]) => label)
 }
 
+export function gradesAround(
+    system: GradeSystem,
+    grade: string | null | undefined,
+    steps: number,
+): string[] {
+    const labels = gradeLabels(system)
+    const center = labels.indexOf(canonicalGrade(system, grade) ?? '')
+    if (center < 0) return labels
+    return labels.slice(Math.max(0, center - steps), center + steps + 1)
+}
+
 function findGrade(
     system: string | null | undefined,
     grade: string | null | undefined,

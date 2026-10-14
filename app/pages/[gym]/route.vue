@@ -347,6 +347,7 @@
                                 v-model="reviewDialog"
                                 :route-id="route_id"
                                 :grade-system="metadata?.grade_system"
+                                :route-grade="metadata?.grade"
                             />
                         </div>
                     </div>

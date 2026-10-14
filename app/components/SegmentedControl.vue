@@ -6,16 +6,20 @@
         variant="pill"
         :size="size ?? 'sm'"
         :orientation="orientation"
-        class="w-auto max-w-full"
+        :class="block ? 'w-full' : 'w-auto max-w-full'"
         :ui="{
             list:
                 orientation === 'vertical'
                     ? 'w-full'
-                    : 'w-auto max-w-full overflow-x-auto overflow-y-hidden',
+                    : block
+                      ? 'w-full'
+                      : 'w-auto max-w-full overflow-x-auto overflow-y-hidden',
             trigger:
                 orientation === 'vertical'
                     ? 'flex-col gap-1 py-2'
-                    : 'flex-none',
+                    : block
+                      ? 'flex-1'
+                      : 'flex-none',
             label: 'overflow-visible whitespace-nowrap',
         }"
         :data-testid="testId"
@@ -45,6 +49,7 @@ defineProps<{
     size?: 'xs' | 'sm' | 'md'
     orientation?: 'horizontal' | 'vertical'
     testId?: string
+    block?: boolean
 }>()
 const model = defineModel<T>({ required: true })
 </script>
