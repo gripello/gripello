@@ -64,6 +64,12 @@ describe('docker ui build', () => {
         )
     })
 
+    it('lets the e2e runner trust the self-signed certificate instead of skipping TLS checks', () => {
+        const compose = read('e2e/docker-compose.e2e.yml')
+        expect(compose).toContain('NODE_EXTRA_CA_CERTS: /ssl/cert.pem')
+        expect(compose).not.toContain('NODE_TLS_REJECT_UNAUTHORIZED')
+    })
+
     it('drops the esbuild binary nitro traces for an unused capjs-core path', () => {
         expect(read('Dockerfile')).toContain(
             'rm -r .output/server/node_modules/esbuild .output/server/node_modules/@esbuild',
