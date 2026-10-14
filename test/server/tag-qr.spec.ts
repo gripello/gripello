@@ -1,7 +1,19 @@
+import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 import QRCode from 'qrcode'
-import { readBarcodes } from 'zxing-wasm/reader'
+import { prepareZXingModule, readBarcodes } from 'zxing-wasm/reader'
 import { TAG_QR_ERROR_CORRECTION } from '../../server/utils/export'
+
+prepareZXingModule({
+    overrides: {
+        wasmBinary: readFileSync(
+            createRequire(import.meta.url).resolve(
+                'zxing-wasm/reader/zxing_reader.wasm',
+            ),
+        ),
+    },
+})
 
 const TAG_URL =
     'https://routes.example-climbing-gym.de/route?id=k3m9x2q7p1z8r4t'
