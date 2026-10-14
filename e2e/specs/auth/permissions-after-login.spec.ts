@@ -19,7 +19,8 @@ async function logOut(page: Page) {
         await page.getByTestId('bottom-nav-account').click()
         await page.getByTestId('me-logout').click()
     }
-    await page.waitForURL('**/auth/login**')
+    await expect(page).not.toHaveURL(/\/manage\//)
+    await gotoSettled(page, '/auth/login')
 }
 
 test('a guest who signs in keeps the redirect to a permission-guarded page', async ({

@@ -41,7 +41,6 @@
         "newPassword": "Neues Passwort",
         "email": "E-Mail",
         "username_or_email": "Benutzername oder E-Mail",
-        "login_hint": "Benutzername oder E-Mail eingeben.",
         "reset_password": "Passwort zurücksetzen",
         "reset_hint": "Gib die E-Mail-Adresse deines Kontos ein.",
         "userProfile": "Benutzerprofil",
@@ -85,7 +84,6 @@
             "special": "Sonderzeichen (!{'@'}#...)"
         },
         "capsLockOn": "Feststelltaste ist aktiv",
-        "resetInfo": "Wir senden dir einen Link zum Zurücksetzen des Passworts per E-Mail.",
         "eyebrowWelcomeBack": "WILLKOMMEN ZURÜCK",
         "eyebrowAccountRecovery": "KONTO-WIEDERHERSTELLUNG",
         "eyebrowAllDone": "FERTIG",
@@ -130,7 +128,6 @@
         "usernameInvalid": "Nur Buchstaben, Zahlen, Punkte, Binde- oder Unterstriche.",
         "emailTaken": "Diese E-Mail-Adresse kann nicht verwendet werden.",
         "resendVerification": "Bestätigungs-E-Mail erneut senden",
-        "resendVerificationInfo": "Wir senden dir einen neuen Bestätigungslink an deine E-Mail-Adresse.",
         "confirmPassword": "Passwort bestätigen",
         "showPassword": "Passwort anzeigen",
         "hidePassword": "Passwort verbergen",
@@ -200,7 +197,8 @@
             "lastMethod": "Das ist der einzige Zugang zu deinem Konto. Lege zuerst ein Passwort fest.",
             "linked": "Anmeldung verknüpft",
             "linkConfirm": "Eine verknüpfte Anmeldung öffnet dein Konto auch nach einer Passwortänderung. Bestätige mit deinem Passwort."
-        }
+        },
+        "noAccount": "Noch kein Konto?"
     },
     "routes": {
         "home": "Übersicht",

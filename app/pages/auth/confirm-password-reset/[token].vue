@@ -18,13 +18,14 @@
                 v-model:password="newPassword"
                 v-model:password-confirm="confirmPassword"
                 :require-old-password="false"
+                size="xl"
                 @validity="fieldsValid = $event"
             />
 
             <UButton
                 color="success"
                 block
-                size="lg"
+                size="xl"
                 :loading="loading"
                 :disabled="loading || !fieldsValid"
                 class="mt-4 mb-3 font-semibold"

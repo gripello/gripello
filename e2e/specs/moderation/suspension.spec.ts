@@ -33,9 +33,7 @@ test('a platform admin suspends a person for good and lifts it again', async ({
     await gotoSettled(page, '/auth/login')
     await fillLogin(page, person.email, person.password)
     await page.getByTestId('login-submit').click()
-    await expect(
-        page.getByTestId('global-snackbar-message').last(),
-    ).toContainText(/suspended/i)
+    await expect(page.getByTestId('login-form')).toContainText(/suspended/i)
 
     await row.getByTestId('platform-user-suspend').click()
     await platformPage.getByTestId('platform-suspend-lift').click()

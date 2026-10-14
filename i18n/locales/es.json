@@ -41,7 +41,6 @@
         "newPassword": "Nueva contraseña",
         "email": "Correo electrónico",
         "username_or_email": "Usuario o correo electrónico",
-        "login_hint": "Introduce tu nombre de usuario o correo electrónico.",
         "reset_password": "Restablecer contraseña",
         "reset_hint": "Introduce el correo electrónico de tu cuenta.",
         "userProfile": "Perfil de usuario",
@@ -85,7 +84,6 @@
             "special": "Carácter especial (!{'@'}#...)"
         },
         "capsLockOn": "Bloq Mayús está activado",
-        "resetInfo": "Te enviaremos un enlace para restablecer la contraseña a tu correo electrónico.",
         "eyebrowWelcomeBack": "BIENVENIDO DE NUEVO",
         "eyebrowAccountRecovery": "RECUPERACIÓN DE CUENTA",
         "eyebrowAllDone": "LISTO",
@@ -130,7 +128,6 @@
         "usernameInvalid": "Usa letras, números, puntos, guiones o guiones bajos.",
         "emailTaken": "Este correo electrónico no se puede usar.",
         "resendVerification": "Reenviar correo de verificación",
-        "resendVerificationInfo": "Te enviaremos un nuevo enlace de verificación a tu correo electrónico.",
         "confirmPassword": "Confirmar contraseña",
         "showPassword": "Mostrar contraseña",
         "hidePassword": "Ocultar contraseña",
@@ -200,7 +197,8 @@
             "lastMethod": "Es el único acceso a tu cuenta. Primero establece una contraseña.",
             "linked": "Inicio de sesión vinculado",
             "linkConfirm": "Un inicio de sesión vinculado abre tu cuenta incluso tras cambiar la contraseña. Confirma con tu contraseña."
-        }
+        },
+        "noAccount": "¿No tienes cuenta?"
     },
     "routes": {
         "home": "Resumen",

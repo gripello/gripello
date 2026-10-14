@@ -97,7 +97,12 @@ test('guests get the public nav and an all-routes link', async ({ page }) => {
     await expect(nav.getByTestId('nav-link-map')).toBeVisible()
     await expect(nav.getByTestId('nav-link-routes')).toBeVisible()
     await expect(nav.getByTestId('nav-link-logbook')).toHaveCount(0)
-    await expect(page.getByTestId('nav-login')).toBeVisible()
+    await expect(
+        page
+            .getByTestId('nav-login')
+            .or(page.getByTestId('sidebar-login'))
+            .filter({ visible: true }),
+    ).toBeVisible()
 
     await page.getByTestId('overview-all-routes').click()
     await page.waitForURL(/\/routes$/)

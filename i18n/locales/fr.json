@@ -41,7 +41,6 @@
         "newPassword": "Nouveau mot de passe",
         "email": "E-mail",
         "username_or_email": "Nom d'utilisateur ou e-mail",
-        "login_hint": "Saisissez votre nom d'utilisateur ou votre e-mail.",
         "reset_password": "Réinitialiser le mot de passe",
         "reset_hint": "Saisissez l'adresse e-mail de votre compte.",
         "userProfile": "Profil utilisateur",
@@ -85,7 +84,6 @@
             "special": "Caractère spécial (!{'@'}#...)"
         },
         "capsLockOn": "Verr. Maj est activé",
-        "resetInfo": "Nous vous enverrons un lien de réinitialisation du mot de passe par e-mail.",
         "eyebrowWelcomeBack": "BON RETOUR",
         "eyebrowAccountRecovery": "RÉCUPÉRATION DU COMPTE",
         "eyebrowAllDone": "TERMINÉ",
@@ -130,7 +128,6 @@
         "usernameInvalid": "Utilisez des lettres, chiffres, points, tirets ou tirets bas.",
         "emailTaken": "Cette adresse e-mail ne peut pas être utilisée.",
         "resendVerification": "Renvoyer l'e-mail de vérification",
-        "resendVerificationInfo": "Nous vous enverrons un nouveau lien de vérification par e-mail.",
         "confirmPassword": "Confirmer le mot de passe",
         "showPassword": "Afficher le mot de passe",
         "hidePassword": "Masquer le mot de passe",
@@ -200,7 +197,8 @@
             "lastMethod": "C’est le seul accès à ton compte. Définis d’abord un mot de passe.",
             "linked": "Connexion associée",
             "linkConfirm": "Une connexion associée ouvre votre compte même après un changement de mot de passe. Confirmez avec votre mot de passe."
-        }
+        },
+        "noAccount": "Pas encore de compte ?"
     },
     "routes": {
         "home": "Aperçu",

@@ -1,12 +1,15 @@
 import { test, expect } from '../../support/fixtures'
-import { fillLogin } from '../../support/auth'
 import { gotoSettled } from '../../support/nav'
 
 test('stacks snackbars instead of replacing them', async ({ page }) => {
     await gotoSettled(page, '/auth/login')
-    await fillLogin(page, 'nobody@gripello.test', 'wrong-password')
+    await page.getByTestId('login-goto-reset').click()
+    await page.route('**/api/auth/password-reset/request', (route) =>
+        route.abort('failed'),
+    )
+    await page.getByTestId('reset-email').fill('nobody@gripello.test')
 
-    const submit = page.getByTestId('login-submit')
+    const submit = page.getByTestId('reset-submit')
     const messages = page.getByTestId('global-snackbar-message')
     await submit.click()
     await expect(messages).toHaveCount(1)

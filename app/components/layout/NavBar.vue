@@ -98,10 +98,13 @@
             <NotificationsBell v-if="loggedIn" />
             <UButton
                 v-else
-                to="/auth/login"
+                :to="{
+                    path: '/auth/login',
+                    query: { redirect: route.fullPath },
+                }"
                 variant="soft"
                 icon="i-lucide-log-in"
-                class="icon-btn whitespace-nowrap max-sm:px-1.5"
+                class="icon-btn whitespace-nowrap max-sm:px-1.5 lg:hidden"
                 :aria-label="$t('routes.login')"
                 data-testid="nav-login"
             >

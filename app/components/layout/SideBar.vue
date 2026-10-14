@@ -86,6 +86,22 @@
                     :collapsed="!open"
                 />
                 <UserIcon v-if="loggedIn" :collapsed="!open" />
+                <UButton
+                    v-else
+                    :to="{
+                        path: '/auth/login',
+                        query: { redirect: route.fullPath },
+                    }"
+                    color="primary"
+                    variant="soft"
+                    icon="i-lucide-log-in"
+                    :block="open"
+                    :square="!open"
+                    :aria-label="$t('routes.login')"
+                    data-testid="sidebar-login"
+                >
+                    <span v-if="open">{{ $t('routes.login') }}</span>
+                </UButton>
             </div>
         </template>
     </USidebar>

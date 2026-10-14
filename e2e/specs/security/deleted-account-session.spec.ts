@@ -20,5 +20,10 @@ test('a leftover session of a deleted account still renders the site', async ({
 
     const response = await page.goto(gymPath('/'))
     expect(response?.status()).toBe(200)
-    await expect(page.getByTestId('nav-login')).toBeVisible()
+    await expect(
+        page
+            .getByTestId('nav-login')
+            .or(page.getByTestId('sidebar-login'))
+            .filter({ visible: true }),
+    ).toBeVisible()
 })

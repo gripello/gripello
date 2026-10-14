@@ -77,7 +77,11 @@ describe('NavBar', () => {
 
         expect(login.attributes('aria-label')).toBe('routes.login')
         expect(login.classes()).toEqual(
-            expect.arrayContaining(['icon-btn', 'whitespace-nowrap']),
+            expect.arrayContaining([
+                'icon-btn',
+                'whitespace-nowrap',
+                'lg:hidden',
+            ]),
         )
         expect(login.get('span').classes()).toContain('max-sm:hidden')
     })

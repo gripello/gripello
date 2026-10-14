@@ -638,7 +638,7 @@ async function deleteAccount() {
         auth.clearAuth()
         deleteDialog.value = false
         resetAll()
-        await navigateTo('/auth/login')
+        await navigateTo('/', { replace: true })
     } catch (err) {
         const code = (err as ApiError)?.response?.data?.password?.code
         if (code === 'validation_invalid_password') {

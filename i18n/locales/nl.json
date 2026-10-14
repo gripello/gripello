@@ -41,7 +41,6 @@
         "newPassword": "Nieuw wachtwoord",
         "email": "E-mail",
         "username_or_email": "Gebruikersnaam of e-mail",
-        "login_hint": "Voer je gebruikersnaam of e-mailadres in.",
         "reset_password": "Wachtwoord herstellen",
         "reset_hint": "Voer het e-mailadres van je account in.",
         "userProfile": "Gebruikersprofiel",
@@ -85,7 +84,6 @@
             "special": "Speciaal teken (!{'@'}#...)"
         },
         "capsLockOn": "Caps Lock staat aan",
-        "resetInfo": "We sturen een link om je wachtwoord te herstellen naar je e-mailadres.",
         "eyebrowWelcomeBack": "WELKOM TERUG",
         "eyebrowAccountRecovery": "ACCOUNTHERSTEL",
         "eyebrowAllDone": "KLAAR",
@@ -130,7 +128,6 @@
         "usernameInvalid": "Gebruik letters, cijfers, punten, streepjes of underscores.",
         "emailTaken": "Dit e-mailadres kan niet worden gebruikt.",
         "resendVerification": "Bevestigingsmail opnieuw sturen",
-        "resendVerificationInfo": "We sturen een nieuwe bevestigingslink naar je e-mailadres.",
         "confirmPassword": "Wachtwoord bevestigen",
         "showPassword": "Wachtwoord tonen",
         "hidePassword": "Wachtwoord verbergen",
@@ -200,7 +197,8 @@
             "lastMethod": "Dit is de enige toegang tot je account. Stel eerst een wachtwoord in.",
             "linked": "Aanmelding gekoppeld",
             "linkConfirm": "Een gekoppelde aanmelding opent je account ook na een wachtwoordwijziging. Bevestig met je wachtwoord."
-        }
+        },
+        "noAccount": "Nog geen account?"
     },
     "routes": {
         "home": "Overzicht",
