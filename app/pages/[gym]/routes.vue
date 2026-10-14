@@ -519,11 +519,16 @@ async function loadRoutes(
         tableOptions.itemsPerPage = options.itemsPerPage
     if (options.sortBy) tableOptions.sortBy = options.sortBy
 
+    const loadedQuery = () =>
+        JSON.stringify([routeQueryKey.value, tableOptions])
+    const before = loadedQuery()
     try {
-        const res = await fetchRoutes(
-            tableOptions.page,
-            tableOptions.itemsPerPage,
+        const res = await unlessQueryChanged(
+            loadedQuery,
+            () => fetchRoutes(tableOptions.page, tableOptions.itemsPerPage),
+            () => routePage.value,
         )
+        if (loadedQuery() !== before) return
         routePage.value = {
             items: meta.append
                 ? routePage.value.items.concat(res.items)
