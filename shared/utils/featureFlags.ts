@@ -1,5 +1,5 @@
 // Mirrored in backend/internal/platformadmin/module.go.
-export const FEATURE_FLAGS = ['beta_videos'] as const
+export const FEATURE_FLAGS = ['beta_links', 'beta_uploads'] as const
 
 export type FeatureFlag = (typeof FEATURE_FLAGS)[number]
 

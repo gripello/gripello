@@ -358,14 +358,14 @@ func TestSetFeatures(t *testing.T) {
 		t.Errorf("flags = %v", flags)
 	}
 	f.call(http.MethodPut, "/platform/gyms/"+f.gym+"/features", `{"teleport": true}`, f.operator, http.StatusBadRequest)
-	f.call(http.MethodPut, "/platform/gyms/"+f.gym+"/features", `{"beta_videos": 1}`, f.operator, http.StatusBadRequest)
-	f.call(http.MethodPut, "/platform/gyms/missing/features", `{"beta_videos": true}`, f.operator, http.StatusNotFound)
-	gym := f.call(http.MethodPut, "/platform/gyms/"+f.gym+"/features", `{"beta_videos": true}`, f.operator, http.StatusOK)
-	if gym["features"].(map[string]any)["beta_videos"] != true {
+	f.call(http.MethodPut, "/platform/gyms/"+f.gym+"/features", `{"beta_links": 1}`, f.operator, http.StatusBadRequest)
+	f.call(http.MethodPut, "/platform/gyms/missing/features", `{"beta_links": true}`, f.operator, http.StatusNotFound)
+	gym := f.call(http.MethodPut, "/platform/gyms/"+f.gym+"/features", `{"beta_links": true}`, f.operator, http.StatusOK)
+	if gym["features"].(map[string]any)["beta_links"] != true {
 		t.Errorf("gym = %v", gym)
 	}
 	e := f.lastEvent("gym.updated")
-	if record := e["record"].(map[string]any); record["id"] != f.gym || record["features"].(map[string]any)["beta_videos"] != true || e["changed"].([]any)[0] != "features" {
+	if record := e["record"].(map[string]any); record["id"] != f.gym || record["features"].(map[string]any)["beta_links"] != true || e["changed"].([]any)[0] != "features" {
 		t.Errorf("gym.updated = %v", e)
 	}
 	f.assertActors(f.operator)

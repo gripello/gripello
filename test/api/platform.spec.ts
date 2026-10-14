@@ -252,18 +252,18 @@ describe('platform stats and features', () => {
     })
 
     it('lists the flag registry', async () => {
-        api.respond({ flags: ['beta_videos'] })
-        expect(await listFeatureFlags()).toEqual({ flags: ['beta_videos'] })
+        api.respond({ flags: ['beta_links'] })
+        expect(await listFeatureFlags()).toEqual({ flags: ['beta_links'] })
         expect(api.request().url).toBe('/api/platform/features')
     })
 
     it('replaces the flags of a gym', async () => {
-        api.respond({ id: 'g1', features: { beta_videos: true } })
-        await setGymFeatures('g1', { beta_videos: true })
+        api.respond({ id: 'g1', features: { beta_links: true } })
+        await setGymFeatures('g1', { beta_links: true })
         expect(api.request()).toMatchObject({
             url: '/api/platform/gyms/g1/features',
             method: 'PUT',
-            body: { beta_videos: true },
+            body: { beta_links: true },
         })
     })
 })

@@ -86,7 +86,10 @@ export async function createModerationGym(
         name: `${prefix} Gym`,
         active: true,
     })
-    await setGymFeatures(platform, gym.id, { beta_videos: true })
+    await setGymFeatures(platform, gym.id, {
+        beta_links: true,
+        beta_uploads: true,
+    })
     const staff = await ensureUser(undefined, 'user', `${prefix}-staff`)
     gripelloAdmin(
         'add-membership',

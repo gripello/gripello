@@ -43,7 +43,7 @@ export function ensureGym() {
         '--name',
         'E2E Gym',
         '--features',
-        JSON.stringify({ beta_videos: true }),
+        JSON.stringify({ beta_links: true, beta_uploads: true }),
     )
 }
 

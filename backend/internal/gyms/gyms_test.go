@@ -347,17 +347,17 @@ func TestOnlyPlatformAdminsChangeSlugsAndActivation(t *testing.T) {
 func TestOnlyPlatformAdminsChangeFeatureFlags(t *testing.T) {
 	f := newFixture(t)
 	gym := f.createGym("gym-a", "Gym A", true)
-	f.call(f.operator, "PATCH", "/gyms/"+gym, `{"features":{"beta_videos":true}}`, http.StatusOK)
+	f.call(f.operator, "PATCH", "/gyms/"+gym, `{"features":{"beta_links":true}}`, http.StatusOK)
 	admin := f.user("admin-a")
 	f.member(admin, gym, "admin")
 	path := "/gyms/" + gym
 
-	f.call(admin, "PATCH", path, `{"features":{"beta_videos":false}}`, http.StatusForbidden, "feature flags")
-	f.call(admin, "PATCH", path, `{"name":"Renamed","features":{"beta_videos":true}}`, http.StatusOK)
-	f.call(f.operator, "PATCH", path, `{"features":{"beta_videos":false}}`, http.StatusOK, `"beta_videos":false`)
-	f.call(admin, "PATCH", path, `{"features":{"beta_videos":1}}`, http.StatusForbidden)
+	f.call(admin, "PATCH", path, `{"features":{"beta_links":false}}`, http.StatusForbidden, "feature flags")
+	f.call(admin, "PATCH", path, `{"name":"Renamed","features":{"beta_links":true}}`, http.StatusOK)
+	f.call(f.operator, "PATCH", path, `{"features":{"beta_links":false}}`, http.StatusOK, `"beta_links":false`)
+	f.call(admin, "PATCH", path, `{"features":{"beta_links":1}}`, http.StatusForbidden)
 	f.call(admin, "PATCH", path, `{"features":{}}`, http.StatusForbidden)
-	f.call(f.operator, "PATCH", path, `{"features":{"beta_videos":1}}`, http.StatusBadRequest, "true/false")
+	f.call(f.operator, "PATCH", path, `{"features":{"beta_links":1}}`, http.StatusBadRequest, "true/false")
 }
 
 func TestGymAdminsSaveGymInfo(t *testing.T) {

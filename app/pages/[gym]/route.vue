@@ -361,6 +361,8 @@
                         v-if="route_id"
                         ref="betaVideos"
                         :route-id="route_id"
+                        :links="betaLinks"
+                        :uploads="betaUploads"
                     />
 
                     <div class="mb-3 flex items-center gap-2">
@@ -472,7 +474,9 @@ import { hasFeature } from '#shared/utils/featureFlags'
 
 const gymPath = useGymPath()
 const { gym } = useGym()
-const betasEnabled = computed(() => hasFeature(gym.value, 'beta_videos'))
+const betaLinks = computed(() => hasFeature(gym.value, 'beta_links'))
+const betaUploads = computed(() => hasFeature(gym.value, 'beta_uploads'))
+const betasEnabled = computed(() => betaLinks.value || betaUploads.value)
 const gymId = useCurrentGymId()
 
 definePageMeta({ key: (route) => String(route.query.id ?? '') })

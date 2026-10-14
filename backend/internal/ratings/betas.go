@@ -120,6 +120,20 @@ func (m *module) postBeta(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	route, err := findRoute(ctx, m.app.DB, r.PathValue("id"))
+	if err != nil {
+		return err
+	}
+	if route.Archived {
+		return httpx.NewError(http.StatusBadRequest, "Archived routes take no beta videos.")
+	}
+	links, uploads, premoderate, err := gymBetaSettings(ctx, m.app.DB, route.Gym)
+	if err != nil {
+		return err
+	}
+	if !uploads && isMultipart(r) {
+		return httpx.NewError(http.StatusForbidden, "Beta video uploads are not enabled for this gym.")
+	}
 	link, file, err := betaSubmission(w, r)
 	if err != nil {
 		return err
@@ -133,19 +147,8 @@ func (m *module) postBeta(w http.ResponseWriter, r *http.Request) error {
 	if link != "" && !isBetaVideoLink(link) {
 		return invalid("url", "Only YouTube Shorts, Instagram and TikTok links are allowed.")
 	}
-	route, err := findRoute(ctx, m.app.DB, r.PathValue("id"))
-	if err != nil {
-		return err
-	}
-	if route.Archived {
-		return httpx.NewError(http.StatusBadRequest, "Archived routes take no beta videos.")
-	}
-	enabled, premoderate, err := gymBetaSettings(ctx, m.app.DB, route.Gym)
-	if err != nil {
-		return err
-	}
-	if !enabled {
-		return httpx.NewError(http.StatusForbidden, "Beta videos are not enabled for this gym.")
+	if link != "" && !links {
+		return httpx.NewError(http.StatusForbidden, "Beta video links are not enabled for this gym.")
 	}
 	beta := BetaVideo{ID: ids.New(), Gym: route.Gym, Route: route.ID, User: viewer.UserID, URL: link}
 	if premoderate && !m.can(ctx, route.Gym, permManageComments) {
@@ -204,9 +207,13 @@ type namedFile struct {
 	name string
 }
 
+func isMultipart(r *http.Request) bool {
+	return strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/")
+}
+
 // betaSubmission reads JSON {url} or a multipart form with `file` (and optionally `url`, which then fails the either-or check).
 func betaSubmission(w http.ResponseWriter, r *http.Request) (string, *namedFile, error) {
-	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/") {
+	if !isMultipart(r) {
 		var body struct {
 			URL string `json:"url"`
 		}

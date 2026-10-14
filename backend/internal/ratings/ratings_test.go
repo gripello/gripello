@@ -37,8 +37,8 @@ func newFixture(t *testing.T) *fixture {
 	app := testapp.App(t)
 	Register(app)
 	f := &fixture{t: t, app: app, handler: testapp.Handler(app), users: map[string]string{}, tokens: map[string]string{}}
-	f.gymA = f.exec(`INSERT INTO gyms (id, slug, name, active, features) VALUES ($1, 'alpha', 'Alpha', true, '{"beta_videos":true}') RETURNING id`, ids.New())
-	f.gymB = f.exec(`INSERT INTO gyms (id, slug, name, active, features) VALUES ($1, 'beta', 'Beta', true, '{"beta_videos":true}') RETURNING id`, ids.New())
+	f.gymA = f.exec(`INSERT INTO gyms (id, slug, name, active, features) VALUES ($1, 'alpha', 'Alpha', true, '{"beta_links":true,"beta_uploads":true}') RETURNING id`, ids.New())
+	f.gymB = f.exec(`INSERT INTO gyms (id, slug, name, active, features) VALUES ($1, 'beta', 'Beta', true, '{"beta_links":true,"beta_uploads":true}') RETURNING id`, ids.New())
 	f.user("climber", "", "Anna", "Muster")
 	f.user("shy", "", "Shy", "Person")
 	f.exec(`UPDATE users SET reviews_anonymous = true WHERE username = 'shy' RETURNING id`)
@@ -398,6 +398,39 @@ func TestBetaUploads(t *testing.T) {
 	if f.blobExists(key) {
 		t.Error("file survived the delete")
 	}
+}
+
+type readCounter struct {
+	io.Reader
+	read int
+}
+
+func (r *readCounter) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	r.read += n
+	return n, err
+}
+
+func TestBetaFlagsGateEachKind(t *testing.T) {
+	f := newFixture(t)
+	path := "/routes/" + f.route + "/betas"
+	link := `{"url":"https://youtube.com/shorts/123"}`
+	f.exec(`UPDATE gyms SET features = '{"beta_links":true}', premoderate_betas = true WHERE id = $1 RETURNING id`, f.gymA)
+	body := &readCounter{Reader: bytes.NewReader(mp4Bytes())}
+	request := httptest.NewRequest("POST", "/api/routes/"+f.route+"/betas", body)
+	request.Header.Set("Content-Type", "multipart/form-data; boundary=x")
+	f.send("climber", request, http.StatusForbidden)
+	if body.read > 0 {
+		t.Errorf("a disabled upload read %d bytes", body.read)
+	}
+	if staged := f.exec(`SELECT count(*)::text FROM events WHERE kind = 'beta.pending'`); staged != "0" {
+		t.Errorf("a disabled upload was staged (%s events)", staged)
+	}
+	f.call("climber", "POST", path, link, http.StatusAccepted)
+
+	f.exec(`UPDATE gyms SET features = '{"beta_uploads":true}', premoderate_betas = false WHERE id = $1 RETURNING id`, f.gymA)
+	f.call("climber", "POST", path, link, http.StatusForbidden)
+	f.upload("climber", f.route, mp4Bytes(), nil, http.StatusCreated)
 }
 
 func TestBetaPremoderation(t *testing.T) {
