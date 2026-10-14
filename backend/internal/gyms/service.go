@@ -93,7 +93,7 @@ var gymFields = map[string]field{
 	"legal_representatives": {kind: "json", max: 20000},
 	"imprint_url":           {kind: "url"},
 	"privacy_url":           {kind: "url"},
-	"privacy_extra":         {kind: "text", max: 10000},
+	"privacy_doc":           {kind: "privacy"},
 	"previous_slugs":        {kind: "slugs"},
 	"language":              {kind: "language"},
 	"features":              {kind: "features"},
@@ -120,6 +120,7 @@ var settingsFields = map[string]field{
 	"legal_editorial":       {kind: "text", max: 500},
 	"legal_representatives": {kind: "json", max: 20000},
 	"allow_registration":    {kind: "bool"},
+	"privacy_doc":           {kind: "privacy"},
 }
 
 func validateGymSlug(slug string) string {
@@ -229,6 +230,14 @@ func validateValue(spec field, raw json.RawMessage) (any, string) {
 	case "json":
 		if len(raw) > int(spec.max) {
 			return nil, "Too large."
+		}
+		if isNull(raw) {
+			return nil, ""
+		}
+		return raw, ""
+	case "privacy":
+		if !isValidPrivacyDoc(raw) {
+			return nil, "The privacy page must be an editor document that keeps the controller and rights sections and lists every section once."
 		}
 		if isNull(raw) {
 			return nil, ""

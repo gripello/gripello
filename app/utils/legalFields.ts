@@ -1,4 +1,9 @@
 import type { LegalFields } from '~/types/models'
+import {
+    privacyDocOrDefault,
+    privacyDocPayload,
+    type RichTextDoc,
+} from '#shared/utils/privacyDoc'
 
 export function legalFieldsFrom(rec: LegalFields) {
     return {
@@ -13,6 +18,9 @@ export function legalFieldsFrom(rec: LegalFields) {
                 role: person.role ?? '',
             }),
         ),
+        privacy_doc: JSON.parse(
+            JSON.stringify(privacyDocOrDefault(rec.privacy_doc)),
+        ) as RichTextDoc,
     }
 }
 
@@ -26,5 +34,8 @@ export function legalPayload(state: LegalFields) {
             role: person.role.trim(),
         }))
         .filter((person) => person.name)
-    return fields
+    return {
+        ...fields,
+        privacy_doc: privacyDocPayload(fields.privacy_doc),
+    }
 }

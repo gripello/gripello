@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { reactive } from 'vue'
 import { legalFieldsFrom, legalPayload } from '~/utils/legalFields'
+import {
+    DEFAULT_PRIVACY_DOC,
+    richTextFromPlain,
+} from '#shared/utils/privacyDoc'
 
 describe('legal fields', () => {
     it('fills missing fields with empty values', () => {
@@ -10,7 +15,26 @@ describe('legal fields', () => {
             legal_vat_id: '',
             legal_editorial: '',
             legal_representatives: [],
+            privacy_doc: DEFAULT_PRIVACY_DOC,
         })
+    })
+
+    it('sends no privacy page while it is the default', () => {
+        expect(legalPayload({}).privacy_doc).toBeNull()
+        const doc = structuredClone(DEFAULT_PRIVACY_DOC)
+        doc.content.push(...richTextFromPlain('Cameras at the door'))
+        expect(legalPayload({ privacy_doc: doc }).privacy_doc).toEqual(doc)
+    })
+
+    it('copies the privacy page out of reactive form state', () => {
+        const state = reactive(legalFieldsFrom({}))
+        expect(legalFieldsFrom(state).privacy_doc).toEqual(DEFAULT_PRIVACY_DOC)
+    })
+
+    it('copies the privacy page instead of sharing it', () => {
+        const fields = legalFieldsFrom({})
+        fields.privacy_doc.content.pop()
+        expect(legalFieldsFrom({}).privacy_doc).toEqual(DEFAULT_PRIVACY_DOC)
     })
 
     it('copies representatives instead of sharing them', () => {

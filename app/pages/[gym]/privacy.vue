@@ -10,10 +10,6 @@
             :imprint-path="path('/imprint')"
             :audit-retention-days="settings?.audit_retention_days ?? 90"
         >
-            <section v-if="gym?.privacy_extra" data-testid="gym-privacy-extra">
-                <h2>{{ $t('legal.gymPage.extraTitle') }}</h2>
-                <p class="multiline">{{ gym.privacy_extra }}</p>
-            </section>
             <section data-testid="gym-privacy-platform">
                 <h2>{{ $t('legal.gymPage.platformTitle') }}</h2>
                 <p>{{ $t('legal.gymPage.platformBody') }}</p>

@@ -210,6 +210,29 @@ components:
           minItems: 2
           maxItems: 2
           items: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+    PrivacyDoc:
+      type: [object, 'null']
+      description: 'Editor document of the privacy page; null = default page. A top-level paragraph holding only a mention ({type: paragraph, content: [{type: mention, attrs: {id}}]}) places a built-in section, each id at most once, controller and rights required; other nodes (heading, paragraph, bulletList, orderedList, listItem, text with bold/italic/strike/code/link marks, hardBreak) are the gym''s own text, a level-2 heading starts a section. At most 100000 characters serialised.'
+      required: [type, content]
+      properties:
+        type: { const: doc }
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/PrivacyDocNode' }
+    PrivacyDocNode:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string }
+        text: { type: string }
+        attrs:
+          type: object
+          properties:
+            id:
+              type: string
+              enum: [controller, contact, storage, rights, scope, serverLogs, accounts, privacySettings, logbook, friends, profiles, leaderboards, ratings, betaVideos, achievements, competitions, defects, reports, notifications, push, dataExport, deletion, auditLog, captcha, map, thirdParties]
+        marks: { type: array, items: { type: object } }
+        content: { type: array, items: { $ref: '#/components/schemas/PrivacyDocNode' } }
     Amenity:
       type: string
       enum: [toilets, showers, changing_rooms, lockers, cafe, shop, rental, parking, bike_parking, public_transport, kids_area, training_area, outdoor_area, yoga, sauna, wheelchair, wifi]
@@ -235,7 +258,7 @@ components:
         legal_representatives: {}
         imprint_url: { type: string, format: uri }
         privacy_url: { type: string, format: uri }
-        privacy_extra: { type: string, maxLength: 10000 }
+        privacy_doc: { $ref: '#/components/schemas/PrivacyDoc' }
         previous_slugs: { type: array, items: { type: string } }
         language: { $ref: '#/components/schemas/Language' }
         features:
@@ -299,6 +322,7 @@ components:
         legal_editorial: { type: string, maxLength: 500 }
         legal_representatives: {}
         allow_registration: { type: boolean }
+        privacy_doc: { $ref: '#/components/schemas/PrivacyDoc' }
     SettingsInput:
       $ref: '#/components/schemas/SettingsFields'
     Settings:

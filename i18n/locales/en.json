@@ -725,8 +725,7 @@
             "platformImprint": "Platform legal notice",
             "platformPrivacy": "Platform privacy policy",
             "platformTitle": "Platform operator",
-            "platformBody": "The gym runs this page on Gripello. The platform operator processes data on behalf of the gym and is the controller for your account and logbook across all gyms.",
-            "extraTitle": "Additional information from the gym"
+            "platformBody": "The gym runs this page on Gripello. The platform operator processes data on behalf of the gym and is the controller for your account and logbook across all gyms."
         }
     },
     "page": {
@@ -1006,7 +1005,33 @@
         "bandBoundary": "Boundary between {from} and {to}",
         "defaultLanguage": "Default language",
         "defaultLanguageHelp": "Used by default for e-mails, exports and other system output.",
-        "premoderateBetas": "Approve beta videos before they are shown"
+        "premoderateBetas": "Approve beta videos before they are shown",
+        "privacy": {
+            "title": "Privacy page",
+            "editMode": "Edit",
+            "preview": "Preview",
+            "placeholder": "Write your own text or type {'@'} to place a section",
+            "sectionTitle": "Section title",
+            "subheading": "Subheading",
+            "bold": "Bold",
+            "italic": "Italic",
+            "bulletList": "Bullet list",
+            "orderedList": "Numbered list",
+            "add": "Add section",
+            "asText": "As editable text",
+            "insert": "Insert",
+            "required": "The page needs the Controller and Your rights sections.",
+            "placeholders": {
+                "gym": "Gym name",
+                "address": "Address",
+                "email": "E-mail",
+                "phone": "Phone",
+                "auditDays": "Activity log retention (days)"
+            },
+            "moveBlock": "Move block",
+            "remove": "Remove",
+            "tooLong": "The privacy page is too long. Shorten your own text."
+        }
     },
     "errors": {
         "notFound": {

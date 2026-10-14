@@ -725,8 +725,7 @@
             "platformImprint": "Mentions légales de la plateforme",
             "platformPrivacy": "Politique de confidentialité de la plateforme",
             "platformTitle": "Exploitant de la plateforme",
-            "platformBody": "La salle exploite cette page sur Gripello. L’exploitant de la plateforme traite les données en tant que sous-traitant pour le compte de la salle et est responsable du traitement pour votre compte et votre carnet dans toutes les salles.",
-            "extraTitle": "Informations complémentaires de la salle"
+            "platformBody": "La salle exploite cette page sur Gripello. L’exploitant de la plateforme traite les données en tant que sous-traitant pour le compte de la salle et est responsable du traitement pour votre compte et votre carnet dans toutes les salles."
         }
     },
     "page": {
@@ -1006,7 +1005,33 @@
         "bandBoundary": "Limite entre {from} et {to}",
         "defaultLanguage": "Langue par défaut",
         "defaultLanguageHelp": "Utilisée par défaut pour les e-mails, les exports et les autres sorties du système.",
-        "premoderateBetas": "Approuver les vidéos bêta avant leur affichage"
+        "premoderateBetas": "Approuver les vidéos bêta avant leur affichage",
+        "privacy": {
+            "title": "Page de confidentialité",
+            "editMode": "Modifier",
+            "preview": "Aperçu",
+            "placeholder": "Écrivez votre texte ou tapez {'@'} pour placer une section",
+            "sectionTitle": "Titre de section",
+            "subheading": "Sous-titre",
+            "bold": "Gras",
+            "italic": "Italique",
+            "bulletList": "Liste à puces",
+            "orderedList": "Liste numérotée",
+            "add": "Insérer une section",
+            "asText": "Comme texte modifiable",
+            "insert": "Insérer",
+            "required": "La page doit contenir les sections Responsable du traitement et Vos droits.",
+            "placeholders": {
+                "gym": "Nom de la salle",
+                "address": "Adresse",
+                "email": "E-mail",
+                "phone": "Téléphone",
+                "auditDays": "Conservation du journal d'activité (jours)"
+            },
+            "moveBlock": "Déplacer le bloc",
+            "remove": "Retirer",
+            "tooLong": "La page de confidentialité est trop longue. Raccourcissez votre texte."
+        }
     },
     "errors": {
         "notFound": {
