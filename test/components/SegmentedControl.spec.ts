@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import SegmentedControl from '~/components/SegmentedControl.vue'
 
 const tabsStub = defineComponent({
-    props: ['modelValue', 'items', 'content', 'variant', 'size'],
+    props: ['modelValue', 'items', 'content', 'variant', 'size', 'ui'],
     emits: ['update:modelValue'],
     setup(props, { slots, emit, attrs }) {
         return () =>
@@ -12,6 +12,7 @@ const tabsStub = defineComponent({
                 {
                     'data-testid': attrs['data-testid'],
                     'data-size': props.size,
+                    'data-trigger': props.ui?.trigger,
                 },
                 props.items.map((item: { value: string }) =>
                     h(
@@ -74,5 +75,13 @@ describe('SegmentedControl', () => {
 
         expect(wrapper.find('[data-testid="tool-boulder"]').exists()).toBe(true)
         expect(wrapper.find('[data-testid="kind-route"]').exists()).toBe(true)
+    })
+
+    it('stretches its options across the full width as a block', () => {
+        const wrapper = createWrapper({ block: true })
+
+        const tabs = wrapper.get('[data-testid="kind"]')
+        expect(tabs.attributes('data-trigger')).toBe('flex-1')
+        expect(tabs.classes()).toContain('w-full')
     })
 })

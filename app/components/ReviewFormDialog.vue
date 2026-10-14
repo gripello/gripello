@@ -99,7 +99,21 @@
                     name="grade"
                     class="col-span-12 sm:col-span-6"
                 >
+                    <SegmentedControl
+                        v-if="nearbyGrades"
+                        v-model="selectedGrade"
+                        :items="
+                            nearbyGrades.map((grade) => ({
+                                value: grade,
+                                label: grade,
+                            }))
+                        "
+                        size="md"
+                        block
+                        test-id="review-form-difficulty"
+                    />
                     <USelectMenu
+                        v-else
                         v-model="form.grade"
                         :items="gradeLabels(gradeSystem)"
                         clear
@@ -161,8 +175,10 @@ import {
 } from '~/utils/validation'
 import {
     DEFAULT_ROUTE_GRADE_SYSTEM,
+    canonicalGrade,
     gradeIndex,
     gradeLabels,
+    gradesAround,
     isGradeSystem,
 } from '#shared/utils/grades'
 import type { RatingRecord } from '~/types/models'
@@ -175,6 +191,7 @@ const props = withDefaults(
         modelValue?: boolean
         routeId?: string | null
         gradeSystem?: string | null
+        routeGrade?: string | null
         review?: EditableReview | null
         callToAction?: boolean
     }>(),
@@ -182,6 +199,7 @@ const props = withDefaults(
         modelValue: undefined,
         routeId: null,
         gradeSystem: null,
+        routeGrade: null,
         review: null,
         callToAction: false,
     },
@@ -202,6 +220,23 @@ const isEditMode = computed(() => !!props.review)
 const gradeSystem = computed(() => {
     const system = props.review?.grade_system || props.gradeSystem
     return isGradeSystem(system) ? system : DEFAULT_ROUTE_GRADE_SYSTEM
+})
+
+const routeGradeLabel = computed(() =>
+    canonicalGrade(gradeSystem.value, props.routeGrade),
+)
+
+const nearbyGrades = computed(() =>
+    routeGradeLabel.value
+        ? gradesAround(gradeSystem.value, routeGradeLabel.value, 2)
+        : null,
+)
+
+const selectedGrade = computed({
+    get: () => form.grade ?? routeGradeLabel.value ?? '',
+    set: (grade: string) => {
+        form.grade = grade
+    },
 })
 
 // ── Open state ─────────────────────────────────────────────────────────────
@@ -283,7 +318,7 @@ watch(sheetOpen, (open) => {
 
 function resetForm() {
     form.rating = undefined
-    form.grade = null
+    form.grade = routeGradeLabel.value
     form.comment = ''
 }
 
