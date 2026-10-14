@@ -725,8 +725,7 @@
             "platformImprint": "Impressum der Plattform",
             "platformPrivacy": "Datenschutzerklärung der Plattform",
             "platformTitle": "Plattformbetreiber",
-            "platformBody": "Die Halle betreibt diese Seite auf Gripello. Der Plattformbetreiber verarbeitet Daten im Auftrag der Halle und ist für dein Konto und dein Logbuch hallenübergreifend Verantwortlicher.",
-            "extraTitle": "Weitere Hinweise der Halle"
+            "platformBody": "Die Halle betreibt diese Seite auf Gripello. Der Plattformbetreiber verarbeitet Daten im Auftrag der Halle und ist für dein Konto und dein Logbuch hallenübergreifend Verantwortlicher."
         }
     },
     "page": {
@@ -1006,7 +1005,33 @@
         "bandBoundary": "Grenze zwischen {from} und {to}",
         "defaultLanguage": "Standardsprache",
         "defaultLanguageHelp": "Wird standardmäßig für E-Mails, Exporte und andere Systemausgaben verwendet.",
-        "premoderateBetas": "Beta-Videos vor dem Anzeigen freigeben"
+        "premoderateBetas": "Beta-Videos vor dem Anzeigen freigeben",
+        "privacy": {
+            "title": "Datenschutzseite",
+            "editMode": "Bearbeiten",
+            "preview": "Vorschau",
+            "placeholder": "Eigenen Text schreiben oder {'@'} tippen, um einen Abschnitt einzufügen",
+            "sectionTitle": "Abschnittstitel",
+            "subheading": "Zwischenüberschrift",
+            "bold": "Fett",
+            "italic": "Kursiv",
+            "bulletList": "Aufzählung",
+            "orderedList": "Nummerierte Liste",
+            "add": "Abschnitt einfügen",
+            "asText": "Als bearbeitbaren Text",
+            "insert": "Einfügen",
+            "required": "Die Seite braucht die Abschnitte Verantwortlicher und Deine Rechte.",
+            "placeholders": {
+                "gym": "Name der Halle",
+                "address": "Anschrift",
+                "email": "E-Mail",
+                "phone": "Telefon",
+                "auditDays": "Aufbewahrung Aktivitätsprotokoll (Tage)"
+            },
+            "moveBlock": "Block verschieben",
+            "remove": "Entfernen",
+            "tooLong": "Die Datenschutzseite ist zu lang. Kürze deinen eigenen Text."
+        }
     },
     "errors": {
         "notFound": {

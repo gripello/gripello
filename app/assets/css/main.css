@@ -494,6 +494,26 @@
         margin-top: 6px;
     }
 
+    .legal-doc h3,
+    .legal-doc h4 {
+        font-weight: 600;
+        margin: 12px 0 4px;
+    }
+
+    .legal-doc ul,
+    .legal-doc ol {
+        margin: 6px 0;
+        padding-inline-start: 20px;
+    }
+
+    .legal-doc ul {
+        list-style: disc;
+    }
+
+    .legal-doc ol {
+        list-style: decimal;
+    }
+
     .legal-doc address {
         font-style: normal;
     }

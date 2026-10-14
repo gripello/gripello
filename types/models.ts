@@ -8,6 +8,7 @@ import type {
     TASK_PRIORITIES,
     TASK_STATUSES,
 } from '../app/utils/tasks'
+import type { RichTextDoc } from '../shared/utils/privacyDoc'
 import type { TickType } from '../shared/utils/ticks'
 import type {
     ClimbStyle,
@@ -225,6 +226,7 @@ export interface LegalFields {
     legal_vat_id?: string | null
     legal_editorial?: string | null
     legal_representatives?: LegalPerson[] | null
+    privacy_doc?: RichTextDoc | null
 }
 
 export interface SettingsRecord extends BaseRecord, LegalFields {
@@ -244,7 +246,6 @@ export interface GymRecord extends BaseRecord, LegalFields {
     route_grade_system?: string | null
     boulder_grade_system?: string | null
     boulder_bands?: BoulderBandSetting[] | null
-    privacy_extra?: string | null
     language?: string | null
     features?: GymFeatures | null
     premoderate_betas?: boolean

@@ -505,6 +505,24 @@
             >
                 <SettingsLegalFields :legal="copySettings" />
             </UPageCard>
+            <UPageCard
+                v-if="activeSection === 'privacy'"
+                id="settings-privacy"
+                :ui="formCardUi"
+                :title="$t('settings.privacy.title')"
+                variant="outline"
+            >
+                <UFormField
+                    name="privacy_doc"
+                    class="w-full min-w-0 lg:col-span-2"
+                >
+                    <SettingsPrivacyEditor
+                        v-model:doc="copySettings.privacy_doc"
+                        :controller="copySettings"
+                        :imprint-path="gymLink('/imprint', original.slug)"
+                    />
+                </UFormField>
+            </UPageCard>
         </UForm>
 
         <template v-for="section in extraSections" :key="section.id">
@@ -527,6 +545,9 @@ import { geocodeAddress, hasLocation, reverseGeocode } from '~/utils/gymInfo'
 import type { Form } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { isValidGymSlug } from '#shared/utils/gymSlug'
+import { type RichTextDoc } from '#shared/utils/privacyDoc'
+import { gymLink } from '~/utils/navigation'
+import { privacyDocProblem } from '~/utils/privacyEditor'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import { SETTINGS_CARD_UI, SETTINGS_FIELD_UI } from '~/utils/settingsUi'
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '~/utils/locales'
@@ -629,6 +650,9 @@ function validateSettings(state: typeof copySettings) {
             (hours) =>
                 isValidOpeningHours(hours) ||
                 t('gymInfo.settings.invalidHours'),
+        ],
+        privacy_doc: [
+            (doc) => privacyDocProblem(doc as RichTextDoc, t) || true,
         ],
         ...(props.editSlug && {
             slug: [
@@ -913,6 +937,11 @@ const formSections = computed(() => [
         id: 'legal',
         label: t('settings.legalTitle'),
         icon: 'i-lucide-scale',
+    },
+    {
+        id: 'privacy',
+        label: t('settings.privacy.title'),
+        icon: 'i-lucide-shield-user',
     },
 ])
 

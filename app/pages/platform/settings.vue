@@ -152,6 +152,25 @@
                         test-id-prefix="platform-settings"
                     />
                 </UPageCard>
+
+                <UPageCard
+                    v-if="activeSection === 'privacy'"
+                    :title="t('settings.privacy.title')"
+                    variant="outline"
+                    :ui="formCardUi"
+                >
+                    <UFormField
+                        name="privacy_doc"
+                        class="w-full min-w-0 lg:col-span-2"
+                    >
+                        <SettingsPrivacyEditor
+                            v-model:doc="form.privacy_doc"
+                            :controller="form"
+                            imprint-path="/imprint"
+                            test-id-prefix="platform-settings"
+                        />
+                    </UFormField>
+                </UPageCard>
             </UForm>
         </SettingsLayout>
     </div>
@@ -161,6 +180,8 @@
 import { updateSettings } from '~/api/gyms'
 import type { Form } from '@nuxt/ui'
 import type { SettingsRecord } from '~/types/models'
+import { privacyDocProblem } from '~/utils/privacyEditor'
+import { type RichTextDoc } from '#shared/utils/privacyDoc'
 import { requestedSection } from '~/utils/navigation'
 import { SETTINGS_CARD_UI, SETTINGS_FIELD_UI } from '~/utils/settingsUi'
 import { integerBetween, validEmail, validateRules } from '~/utils/validation'
@@ -201,6 +222,11 @@ const sections = computed(() => [
     { id: 'links', label: t('platform.settings.links'), icon: 'i-lucide-link' },
     { id: 'legal', label: t('settings.legalTitle'), icon: 'i-lucide-scale' },
     {
+        id: 'privacy',
+        label: t('settings.privacy.title'),
+        icon: 'i-lucide-shield-user',
+    },
+    {
         id: 'mail',
         label: t('platform.settings.mail.title'),
         icon: 'i-lucide-mail',
@@ -233,6 +259,9 @@ function validateSettings(state: SettingsForm) {
     return validateRules(state, {
         audit_retention_days: [integerBetween(t, 1, 3650)],
         contact_email: [(email) => !email || validEmail(t)(email)],
+        privacy_doc: [
+            (doc) => privacyDocProblem(doc as RichTextDoc, t) || true,
+        ],
     })
 }
 

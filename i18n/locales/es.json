@@ -725,8 +725,7 @@
             "platformImprint": "Aviso legal de la plataforma",
             "platformPrivacy": "Política de privacidad de la plataforma",
             "platformTitle": "Operador de la plataforma",
-            "platformBody": "El rocódromo gestiona esta página en Gripello. El operador de la plataforma trata los datos como encargado del tratamiento por cuenta del rocódromo y es responsable del tratamiento de tu cuenta y tu libreta en todos los rocódromos.",
-            "extraTitle": "Información adicional del rocódromo"
+            "platformBody": "El rocódromo gestiona esta página en Gripello. El operador de la plataforma trata los datos como encargado del tratamiento por cuenta del rocódromo y es responsable del tratamiento de tu cuenta y tu libreta en todos los rocódromos."
         }
     },
     "page": {
@@ -1006,7 +1005,33 @@
         "bandBoundary": "Límite entre {from} y {to}",
         "defaultLanguage": "Idioma predeterminado",
         "defaultLanguageHelp": "Se usa por defecto para correos, exportaciones y otras salidas del sistema.",
-        "premoderateBetas": "Aprobar los vídeos beta antes de mostrarlos"
+        "premoderateBetas": "Aprobar los vídeos beta antes de mostrarlos",
+        "privacy": {
+            "title": "Página de privacidad",
+            "editMode": "Editar",
+            "preview": "Vista previa",
+            "placeholder": "Escribe tu propio texto o teclea {'@'} para colocar una sección",
+            "sectionTitle": "Título de sección",
+            "subheading": "Subtítulo",
+            "bold": "Negrita",
+            "italic": "Cursiva",
+            "bulletList": "Lista con viñetas",
+            "orderedList": "Lista numerada",
+            "add": "Insertar sección",
+            "asText": "Como texto editable",
+            "insert": "Insertar",
+            "required": "La página necesita las secciones Responsable del tratamiento y Tus derechos.",
+            "placeholders": {
+                "gym": "Nombre del rocódromo",
+                "address": "Dirección",
+                "email": "Correo electrónico",
+                "phone": "Teléfono",
+                "auditDays": "Conservación del registro de actividad (días)"
+            },
+            "moveBlock": "Mover bloque",
+            "remove": "Quitar",
+            "tooLong": "La página de privacidad es demasiado larga. Acorta tu propio texto."
+        }
     },
     "errors": {
         "notFound": {

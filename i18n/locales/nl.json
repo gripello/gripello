@@ -725,8 +725,7 @@
             "platformImprint": "Colofon van het platform",
             "platformPrivacy": "Privacyverklaring van het platform",
             "platformTitle": "Platformbeheerder",
-            "platformBody": "De hal beheert deze pagina op Gripello. De platformbeheerder verwerkt gegevens als verwerker namens de hal en is verwerkingsverantwoordelijke voor je account en logboek in alle hallen.",
-            "extraTitle": "Aanvullende informatie van de hal"
+            "platformBody": "De hal beheert deze pagina op Gripello. De platformbeheerder verwerkt gegevens als verwerker namens de hal en is verwerkingsverantwoordelijke voor je account en logboek in alle hallen."
         }
     },
     "page": {
@@ -1006,7 +1005,33 @@
         "bandBoundary": "Grens tussen {from} en {to}",
         "defaultLanguage": "Standaardtaal",
         "defaultLanguageHelp": "Wordt standaard gebruikt voor e-mails, exports en andere systeemuitvoer.",
-        "premoderateBetas": "Beta-video’s goedkeuren voordat ze zichtbaar zijn"
+        "premoderateBetas": "Beta-video’s goedkeuren voordat ze zichtbaar zijn",
+        "privacy": {
+            "title": "Privacypagina",
+            "editMode": "Bewerken",
+            "preview": "Voorbeeld",
+            "placeholder": "Schrijf eigen tekst of typ {'@'} om een sectie te plaatsen",
+            "sectionTitle": "Sectietitel",
+            "subheading": "Tussenkop",
+            "bold": "Vet",
+            "italic": "Cursief",
+            "bulletList": "Opsomming",
+            "orderedList": "Genummerde lijst",
+            "add": "Sectie invoegen",
+            "asText": "Als bewerkbare tekst",
+            "insert": "Invoegen",
+            "required": "De pagina heeft de secties Verwerkingsverantwoordelijke en Jouw rechten nodig.",
+            "placeholders": {
+                "gym": "Naam van de hal",
+                "address": "Adres",
+                "email": "E-mail",
+                "phone": "Telefoon",
+                "auditDays": "Bewaartermijn activiteitenlog (dagen)"
+            },
+            "moveBlock": "Blok verplaatsen",
+            "remove": "Verwijderen",
+            "tooLong": "De privacypagina is te lang. Kort je eigen tekst in."
+        }
     },
     "errors": {
         "notFound": {
