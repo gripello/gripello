@@ -49,7 +49,7 @@ var gymAmenities = []string{
 }
 
 // Mirrored in shared/utils/featureFlags.ts and the platformadmin module.
-var featureFlags = []string{"beta_videos"}
+var featureFlags = []string{"beta_links", "beta_uploads"}
 
 var languages = []string{"", "en", "de", "nl", "fr", "es"}
 

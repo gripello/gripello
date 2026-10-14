@@ -43,6 +43,7 @@
         >
             <div class="flex flex-col gap-4">
                 <SegmentedControl
+                    v-if="links && uploads"
                     v-model="source"
                     :items="sourceItems"
                     size="sm"
@@ -181,7 +182,11 @@ import {
 } from '#shared/utils/betaVideos'
 import { reportContentUrl } from '~/utils/reports'
 
-const props = defineProps<{ routeId: string }>()
+const props = defineProps<{
+    routeId: string
+    links: boolean
+    uploads: boolean
+}>()
 
 defineExpose({ openAdd })
 
@@ -277,7 +282,7 @@ function openAdd() {
     }
     link.value = ''
     file.value = null
-    source.value = 'link'
+    source.value = props.links ? 'link' : 'file'
     addOpen.value = true
 }
 

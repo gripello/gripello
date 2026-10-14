@@ -15,7 +15,7 @@ func TestAdminSeedsGymUserAndMembershipIdempotently(t *testing.T) {
 	if err := db.Migrate(ctx, pool); err != nil {
 		t.Fatal(err)
 	}
-	gym, err := adminCreateGym(ctx, pool, []string{"--slug", "e2e", "--name", "E2E Gym", "--features", `{"beta_videos":true}`})
+	gym, err := adminCreateGym(ctx, pool, []string{"--slug", "e2e", "--name", "E2E Gym", "--features", `{"beta_links":true}`})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestAdminSeedsGymUserAndMembershipIdempotently(t *testing.T) {
 	}
 	var role string
 	var active, betas, platformAdmin bool
-	pool.QueryRow(ctx, `SELECT r.name, g.active, (g.features->>'beta_videos')::bool, u.platform_admin
+	pool.QueryRow(ctx, `SELECT r.name, g.active, (g.features->>'beta_links')::bool, u.platform_admin
 		FROM memberships m JOIN roles r ON r.id = m.role JOIN gyms g ON g.id = m.gym JOIN users u ON u.id = m."user"
 		WHERE m."user" = $1`, user).Scan(&role, &active, &betas, &platformAdmin)
 	if role != "admin" || !active || !betas || !platformAdmin {

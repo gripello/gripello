@@ -20,7 +20,7 @@ import (
 )
 
 // Mirrored in shared/utils/featureFlags.ts; the gyms module only checks that flags are booleans.
-var featureFlags = []string{"beta_videos"}
+var featureFlags = []string{"beta_links", "beta_uploads"}
 
 type module struct {
 	app          *platform.App

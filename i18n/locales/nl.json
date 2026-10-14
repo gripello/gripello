@@ -2317,7 +2317,8 @@
         "features": {
             "title": "Feature flags",
             "flags": {
-                "beta_videos": "Beta-video's"
+                "beta_links": "Beta-links",
+                "beta_uploads": "Beta-uploads"
             }
         },
         "retiredSlugs": {

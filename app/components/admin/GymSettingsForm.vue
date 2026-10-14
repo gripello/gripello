@@ -919,7 +919,8 @@ const formSections = computed(() => [
         label: t('settings.grading'),
         icon: 'i-lucide-trending-up',
     },
-    ...(hasFeature(settings.value, 'beta_videos')
+    ...(hasFeature(settings.value, 'beta_links') ||
+    hasFeature(settings.value, 'beta_uploads')
         ? [
               {
                   id: 'moderation',

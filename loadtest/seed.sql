@@ -29,7 +29,7 @@ INSERT INTO route_grades VALUES (0, '5', 9), (1, '5+', 10), (2, '6a', 11), (3, '
 
 INSERT INTO gyms (id, slug, name, active, features, boulder_grade_system, route_grade_system, description, address,
   latitude, longitude, website_url, opening_hours, amenities, contact_email)
-SELECT pg_temp.lid('gym' || g), 'loadtest-' || g, 'Loadtest Gym ' || g, true, '{"beta_videos": true}', 'font', 'french',
+SELECT pg_temp.lid('gym' || g), 'loadtest-' || g, 'Loadtest Gym ' || g, true, '{"beta_links": true, "beta_uploads": true}', 'font', 'french',
   'Synthetic gym for load tests.', 'Teststrasse ' || g || ', 10115 Berlin', 52.52 + g / 100.0, 13.40 + g / 100.0,
   'https://example.com', '{"mon": [["07:00", "23:00"]], "tue": [["07:00", "23:00"]], "wed": [["07:00", "23:00"]],
   "thu": [["07:00", "23:00"]], "fri": [["07:00", "23:00"]], "sat": [["09:00", "22:00"]], "sun": [["09:00", "22:00"]]}',

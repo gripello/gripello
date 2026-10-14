@@ -184,7 +184,7 @@ paths:
     post:
       operationId: createBeta
       tags: [betas]
-      description: Signed in; the gym needs the `beta_videos` feature flag; archived routes take none. Exactly one of a link (YouTube Shorts, Instagram, TikTok) or a video file (mp4/webm/quicktime, ≤ 30 MB). When the gym premoderates betas and the caller lacks manage_comments, the submission is held for moderation and answers 202.
+      description: Signed in; links need the gym's `beta_links` feature flag, files `beta_uploads` (a multipart request is refused before its body is read); archived routes take none. Exactly one of a link (YouTube Shorts, Instagram, TikTok) or a video file (mp4/webm/quicktime, ≤ 30 MB). When the gym premoderates betas and the caller lacks manage_comments, the submission is held for moderation and answers 202.
       requestBody:
         required: true
         content:

@@ -2317,7 +2317,8 @@
         "features": {
             "title": "Funciones",
             "flags": {
-                "beta_videos": "Vídeos beta"
+                "beta_links": "Enlaces beta",
+                "beta_uploads": "Vídeos beta subidos"
             }
         },
         "retiredSlugs": {
