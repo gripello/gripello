@@ -1,5 +1,5 @@
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, pageBack } from '../../support/nav'
 import { createCompetition, createCompetitionCategory } from '../../support/api'
 import type { CompetitionEntryRecord } from '../../../types/models'
 
@@ -34,7 +34,7 @@ test('a climber signs up and the desk checks them in', async ({
     await expect(
         userPage.getByTestId('competition-rule-boulder.dynamicTop'),
     ).toBeVisible()
-    await userPage.getByTestId('page-back').click()
+    await pageBack(userPage).click()
     await userPage.getByTestId('competition-register-name').fill(displayName)
     await userPage.getByTestId('competition-register-birth-year').fill('1990')
     await userPage.getByTestId('competition-register-birth-year').blur()

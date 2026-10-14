@@ -91,6 +91,16 @@
         color: var(--ui-text);
     }
 
+    html {
+        overscroll-behavior-y: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    a,
+    button {
+        touch-action: manipulation;
+    }
+
     .app-root {
         display: flex;
         flex-direction: column;
@@ -617,6 +627,42 @@
         mix-blend-mode: normal;
     }
 
+    @variant max-lg {
+        @media (prefers-reduced-motion: no-preference) {
+            :root[data-nav] .nav-bar {
+                view-transition-name: app-top;
+            }
+
+            :root[data-nav] .bottom-nav {
+                view-transition-name: app-bottom;
+            }
+
+            :root[data-nav]::view-transition-old(root),
+            :root[data-nav]::view-transition-new(root) {
+                animation-duration: 0.28s;
+                animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+                mix-blend-mode: normal;
+            }
+
+            :root[data-nav='push']::view-transition-old(root) {
+                animation-name: page-out-left;
+            }
+
+            :root[data-nav='push']::view-transition-new(root) {
+                animation-name: page-in-right;
+            }
+
+            :root[data-nav='pop']::view-transition-old(root) {
+                animation-name: page-out-right;
+                z-index: 1;
+            }
+
+            :root[data-nav='pop']::view-transition-new(root) {
+                animation-name: page-in-left;
+            }
+        }
+    }
+
     @media (display-mode: standalone) {
         :root {
             --app-top-inset: env(safe-area-inset-top, 0px);
@@ -635,5 +681,31 @@
 
     .dark .logo-mono {
         filter: brightness(0) invert(1);
+    }
+}
+
+@keyframes page-in-right {
+    from {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes page-out-left {
+    to {
+        transform: translateX(-30%);
+        opacity: 0.6;
+    }
+}
+
+@keyframes page-in-left {
+    from {
+        transform: translateX(-30%);
+        opacity: 0.6;
+    }
+}
+
+@keyframes page-out-right {
+    to {
+        transform: translateX(100%);
     }
 }

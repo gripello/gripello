@@ -621,3 +621,45 @@ export function sidebarSections(
         staffEntry: slug && staff.length ? `/${slug}/manage` : null,
     }
 }
+
+const ROOT_PAGES = [
+    '/logbook',
+    '/scan',
+    '/account',
+    '/friends',
+    '/platform/more',
+]
+
+export function parentPath(path: string): string | null {
+    const clean = path.replace(/\/$/, '') || '/'
+    if (clean === '/' || ROOT_PAGES.includes(clean)) return null
+    if (isWithin(clean, '/auth')) return null
+    if (PLATFORM_BOTTOM_NAV.some((link) => link.to === clean)) return null
+    if (PLATFORM_MORE_LINKS.some((link) => isWithin(clean, link.to)))
+        return PLATFORM_MORE
+    if (isWithin(clean, '/climber')) return '/friends'
+    if (['/route', '/imprint', '/privacy'].includes(clean)) return '/'
+    const local = gymLocalPath(clean)
+    if (local === null) return clean.replace(/\/[^/]+$/, '') || '/'
+    const slug = clean.split('/')[1]!
+    const zone = zoneOfPath(clean)
+    const staffRoots = STAFF_TABS.map((tab) => tab.to)
+    if (zone && SECTION_TABS[zone].includes(local)) return null
+    if (staffRoots.includes(local)) return null
+    if (local === '/route') return gymLink('/routes', slug)
+    if (/^\/(manage|admin)\/[^/]+$/.test(local)) return gymLink('/manage', slug)
+    return gymLink(local.replace(/\/[^/]+$/, '') || '/', slug)
+}
+
+export type NavDirection = 'push' | 'pop' | null
+
+export function navDirection(
+    fromPosition: number | undefined,
+    toPosition: number | undefined,
+    fromPath: string,
+    toPath: string,
+): NavDirection {
+    if (fromPosition === undefined || toPosition === undefined) return null
+    if (toPosition < fromPosition) return parentPath(fromPath) ? 'pop' : null
+    return parentPath(toPath) ? 'push' : null
+}

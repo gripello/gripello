@@ -11,8 +11,32 @@
         }"
     >
         <template #left>
+            <UButton
+                v-if="parent"
+                icon="i-lucide-arrow-left"
+                color="neutral"
+                variant="ghost"
+                size="xl"
+                class="icon-btn -ms-2 lg:hidden"
+                :aria-label="$t('errors.goBack')"
+                data-testid="nav-back"
+                @click="goBack"
+            />
+            <div
+                v-if="context === 'staff' && parent"
+                class="flex min-w-0 flex-col leading-tight lg:hidden"
+                data-testid="nav-staff-context"
+            >
+                <span
+                    class="text-[0.6875rem] font-semibold tracking-wide text-muted uppercase"
+                    >{{ $t('nav.staff') }}</span
+                >
+                <span class="truncate text-sm font-bold text-highlighted">{{
+                    gymName
+                }}</span>
+            </div>
             <NuxtLink
-                v-if="context === 'staff'"
+                v-else-if="context === 'staff'"
                 :to="`/${slug}/routes`"
                 class="flex min-h-11 min-w-0 items-center gap-2 rounded-full bg-elevated py-1 ps-3 pe-4 lg:hidden"
                 :aria-label="`${$t('nav.backToClimbing')}: ${gymName}`"
@@ -29,7 +53,11 @@
                     }}</span>
                 </span>
             </NuxtLink>
-            <LayoutGymSwitcher v-else class="w-auto min-w-0 lg:hidden" />
+            <LayoutGymSwitcher
+                v-else
+                class="w-auto min-w-0 lg:hidden"
+                :class="{ 'max-lg:hidden': parent }"
+            />
             <UButton
                 :icon="
                     sidebarOpen
@@ -174,6 +202,7 @@ const context = computed(() =>
 const gymName = computed(() => (gym.value ? gymTitle(gym.value) : ''))
 const tabs = computed(() => sectionTabs(route.path, slug.value, props.loggedIn))
 const { requests } = useFollows()
+const { parent, goBack } = useGoBack()
 const { open: sidebarOpen, toggle: toggleSidebar } = useSidebar()
 
 const paletteLinks = computed(() =>

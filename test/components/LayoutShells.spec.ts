@@ -1,8 +1,14 @@
 import { mount } from '@vue/test-utils'
+import { onUnmounted, watch } from 'vue'
 import PageHeader from '~/components/layout/PageHeader.vue'
 import Panel from '~/components/layout/Panel.vue'
 import ListRow from '~/components/layout/ListRow.vue'
+import { usePageBackTo } from '~/composables/useGoBack'
 import Eyebrow from '~/components/layout/Eyebrow.vue'
+
+vi.stubGlobal('usePageBackTo', usePageBackTo)
+vi.stubGlobal('watch', watch)
+vi.stubGlobal('onUnmounted', onUnmounted)
 
 const stubs = {
     UButton: {
@@ -32,6 +38,16 @@ describe('layout shells', () => {
             '/list',
         )
         expect(back.text()).toContain('Back')
+    })
+
+    it('PageHeader hands its back target to the top bar while mounted', () => {
+        const back = mount(PageHeader, {
+            props: { title: 'T', backTo: '/judge' },
+            global: { stubs },
+        })
+        expect(usePageBackTo().value?.to).toBe('/judge')
+        back.unmount()
+        expect(usePageBackTo().value).toBeNull()
     })
 
     it('Panel shows a header only with a title', () => {

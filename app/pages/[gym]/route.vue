@@ -14,7 +14,7 @@
                         <UButton
                             icon="i-lucide-arrow-left"
                             color="neutral"
-                            class="icon-btn route-hero__back bg-(--hero-tint) text-(--hero-ink) hover:bg-(--hero-tint)/80 rounded-full"
+                            class="icon-btn route-hero__back max-lg:hidden bg-(--hero-tint) text-(--hero-ink) hover:bg-(--hero-tint)/80 rounded-full"
                             :aria-label="t('errors.goBack')"
                             data-testid="route-back"
                             @click="goBack"
@@ -644,12 +644,7 @@ const heroColor = computed(
 
 const heroIsLight = computed(() => isLightColor(heroColor.value))
 
-const router = useRouter()
-
-function goBack() {
-    if (window.history.state?.back) router.back()
-    else void navigateTo(gymPath('/routes'))
-}
+const { goBack } = useGoBack()
 
 const heroStyle = computed(() => {
     const color = heroColor.value
