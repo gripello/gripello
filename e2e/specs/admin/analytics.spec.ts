@@ -326,8 +326,13 @@ test('heatmap switches years and shows day counts', async ({
     await expect(cell).not.toHaveClass(/heatmap-level-0/)
     await expect(days).toHaveCount(365)
 
-    await cell.hover()
-    await expect(page.getByTestId('analytics-heatmap-tooltip')).toBeVisible()
+    const tooltip = page.getByTestId('analytics-heatmap-tooltip')
+    // The year switch scrolls the heatmap and live updates shift the page; either scroll closes it.
+    await expect(async () => {
+        await page.mouse.move(0, 0)
+        await cell.hover()
+        await expect(tooltip).toBeVisible({ timeout: 1_000 })
+    }).toPass()
 })
 
 test('reports routes whose grade votes are harder than the set grade', async ({
