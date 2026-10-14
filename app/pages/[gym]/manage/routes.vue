@@ -83,6 +83,9 @@
                     <FilterSelect
                         :label="gradeColumnTitle"
                         v-model="selectedDifficulty"
+                        :placeholder="$t('filter.all')"
+                        clear
+                        @clear="selectedDifficulty = ''"
                         :items="difficulties"
                         label-key="text"
                         value-key="value"
@@ -91,6 +94,9 @@
                     <FilterSelect
                         :label="$t('climbing.type')"
                         v-model="selectedType"
+                        :placeholder="$t('filter.all')"
+                        clear
+                        @clear="selectedType = ''"
                         :items="types"
                         label-key="text"
                         value-key="value"
@@ -99,6 +105,9 @@
                     <FilterSelect
                         :label="$t('climbing.location')"
                         v-model="selectedLocation"
+                        :placeholder="$t('filter.all')"
+                        clear
+                        @clear="selectedLocation = ''"
                         :items="locations"
                         label-key="text"
                         value-key="value"

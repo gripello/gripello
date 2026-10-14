@@ -28,6 +28,11 @@ describe('createReporter', () => {
         report('promise', apiError, context)
         report('promise', new DOMException('aborted', 'AbortError'), context)
         report('promise', new TypeError('Failed to fetch'), context)
+        report(
+            'chunk',
+            new Error('Unable to preload CSS for https://x.test/_nuxt/a.css'),
+            context,
+        )
         report('window', 'ResizeObserver loop limit exceeded', context)
         report('window', 'Script error.', context)
         report(

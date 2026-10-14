@@ -8,7 +8,7 @@ const IGNORED = [
     /chrome-extension:|moz-extension:|safari-extension:/,
 ]
 
-// The server logs API failures itself; aborts, network drops and Nuxt errors below 500 (unknown gym or route) are not bugs.
+// The server logs API failures itself; aborts, network drops (Nuxt also treats a failed CSS preload as non-fatal) and Nuxt errors below 500 (unknown gym or route) are not bugs.
 function isExpected(error: unknown) {
     if (!error || typeof error !== 'object') return false
     const { name, message, statusCode } = error as {
@@ -20,7 +20,9 @@ function isExpected(error: unknown) {
         name === 'ApiError' ||
         name === 'AbortError' ||
         (typeof statusCode === 'number' && statusCode < 500) ||
-        /Failed to fetch|NetworkError|Load failed/.test(message ?? '')
+        /Failed to fetch|NetworkError|Load failed|Unable to preload CSS/.test(
+            message ?? '',
+        )
     )
 }
 
