@@ -1029,6 +1029,37 @@
             "moveBlock": "Move block",
             "remove": "Remove",
             "tooLong": "The privacy page is too long. Shorten your own text."
+        },
+        "tv": {
+            "title": "TV screen",
+            "slidesTitle": "Slides",
+            "slides": {
+                "new_routes": "New routes",
+                "leaderboard": "Leaderboard",
+                "resets": "Coming resets",
+                "info": "Opening hours and QR code",
+                "announcements": "Announcements"
+            },
+            "seconds": "Seconds per slide",
+            "secondsValue": "{n} s",
+            "announcements": "Announcements",
+            "announcementText": "Announcement text",
+            "until": "Until",
+            "removeAnnouncement": "Remove announcement",
+            "addAnnouncement": "Add announcement",
+            "screenLink": "Screen link",
+            "location": "Location",
+            "allLocations": "All locations",
+            "takeover": "Show running competitions",
+            "copy": "Copy link",
+            "open": "Open screen",
+            "copied": "Link copied",
+            "invalid": "Every announcement needs text of up to 120 characters.",
+            "screens": "Screens",
+            "addScreen": "Add screen",
+            "removeScreen": "Remove screen",
+            "screenName": "Name",
+            "screenNumber": "Screen {n}"
         }
     },
     "errors": {
@@ -2950,5 +2981,13 @@
         "months": "{n} month | {n} months",
         "years": "{n} year | {n} years",
         "openDefects": "{n} open defect | {n} open defects"
+    },
+    "tv": {
+        "title": "TV screen",
+        "newRoutes": "New routes",
+        "resets": "Coming resets",
+        "newToday": "New today",
+        "routeCount": "{n} route | {n} routes",
+        "scanToOpen": "Scan to log your sends"
     }
 }

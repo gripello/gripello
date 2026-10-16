@@ -108,7 +108,7 @@ func findGym(ctx context.Context, q queryer, key string) (*foundGym, error) {
 
 func listGyms(ctx context.Context, q queryer, includeInactive bool) (json.RawMessage, error) {
 	var items json.RawMessage
-	err := q.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(to_jsonb(g) - 'privacy_doc' ORDER BY g.name), '[]') FROM gyms g WHERE active OR $1`,
+	err := q.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(to_jsonb(g) - 'privacy_doc' - 'tv_settings' ORDER BY g.name), '[]') FROM gyms g WHERE active OR $1`,
 		includeInactive).Scan(&items)
 	return items, err
 }

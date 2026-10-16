@@ -379,6 +379,19 @@
             </UPageCard>
 
             <UPageCard
+                v-if="activeSection === 'tv'"
+                id="settings-tv"
+                :title="$t('settings.tv.title')"
+                variant="outline"
+                :ui="formCardUi"
+            >
+                <AdminTvSettings
+                    v-model="copySettings.tv_settings"
+                    :gym="settings"
+                />
+            </UPageCard>
+
+            <UPageCard
                 v-if="activeSection === 'moderation'"
                 id="settings-moderation"
                 :title="$t('moderation.title')"
@@ -535,6 +548,12 @@
 import { fileUrl } from '~/api/client'
 import { updateGym, type GymFiles, type GymInput } from '~/api/gyms'
 import { hasFeature } from '#shared/utils/featureFlags'
+import {
+    isValidTvSettings,
+    tvSettingsOf,
+    type ResolvedTvSettings,
+} from '#shared/utils/tvSettings'
+import { tvSettingsPayload } from '~/utils/tvScreen'
 import { GYM_AMENITY_KEYS, type GymAmenity } from '#shared/utils/gymAmenities'
 import {
     HOURS_DAYS,
@@ -604,6 +623,7 @@ const original = reactive({
     opening_hours: hoursFrom(null),
     hours_note: '',
     amenities: [] as GymAmenity[],
+    tv_settings: tvSettingsFrom(null),
     ...legalFieldsFrom({}),
     ...bandFieldsFrom({}),
 })
@@ -629,12 +649,27 @@ function hoursFrom(hours: GymOpeningHours | null | undefined) {
     ) as GymOpeningHours
 }
 
+function tvSettingsFrom(rec: Partial<GymRecord> | null): ResolvedTvSettings {
+    const settings = tvSettingsOf(rec)
+    return {
+        screens: settings.screens.map((screen) => ({
+            ...screen,
+            slides: [...screen.slides],
+        })),
+        announcements: settings.announcements.map((announcement) => ({
+            text: announcement.text,
+            until: announcement.until ?? '',
+        })),
+    }
+}
+
 function freshCopy() {
     return {
         ...original,
         previous_slugs: [...original.previous_slugs],
         opening_hours: hoursFrom(original.opening_hours),
         amenities: [...original.amenities],
+        tv_settings: tvSettingsFrom({ tv_settings: original.tv_settings }),
         ...legalFieldsFrom(original),
         ...bandFieldsFrom(original),
     }
@@ -653,6 +688,12 @@ function validateSettings(state: typeof copySettings) {
         ],
         privacy_doc: [
             (doc) => privacyDocProblem(doc as RichTextDoc, t) || true,
+        ],
+        tv_settings: [
+            (tv) =>
+                isValidTvSettings(
+                    tvSettingsPayload(tv as ResolvedTvSettings),
+                ) || t('settings.tv.invalid'),
         ],
         ...(props.editSlug && {
             slug: [
@@ -719,6 +760,7 @@ function fieldsPayload(state: EditableSettings) {
         opening_hours: state.opening_hours,
         hours_note: state.hours_note,
         amenities: state.amenities,
+        tv_settings: tvSettingsPayload(state.tv_settings),
         ...legalPayload(state),
         boulder_bands: state.boulder_bands.map((band) => ({
             ...band,
@@ -758,6 +800,7 @@ function adoptOriginal(rec: GymRecord) {
     original.opening_hours = hoursFrom(rec.opening_hours)
     original.hours_note = rec.hours_note ?? ''
     original.amenities = [...(rec.amenities ?? [])]
+    original.tv_settings = tvSettingsFrom(rec)
     Object.assign(original, legalFieldsFrom(rec), bandFieldsFrom(rec))
 }
 
@@ -913,6 +956,11 @@ const formSections = computed(() => [
         id: 'info',
         label: t('gymInfo.settings.title'),
         icon: 'i-lucide-info',
+    },
+    {
+        id: 'tv',
+        label: t('settings.tv.title'),
+        icon: 'i-lucide-tv',
     },
     {
         id: 'grading',

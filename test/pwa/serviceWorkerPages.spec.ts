@@ -67,4 +67,9 @@ describe('service worker page cache', () => {
             expect(put, path).not.toHaveBeenCalled()
         }
     })
+
+    it('never keeps the TV screen, which reloads only when online', async () => {
+        const { put } = await navigate('public, max-age=0', '/e2e/tv')
+        expect(put).not.toHaveBeenCalled()
+    })
 })

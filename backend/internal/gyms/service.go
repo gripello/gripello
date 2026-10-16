@@ -106,6 +106,7 @@ var gymFields = map[string]field{
 	"opening_hours":         {kind: "hours", max: 4000},
 	"hours_note":            {kind: "text", max: 300},
 	"amenities":             {kind: "amenities"},
+	"tv_settings":           {kind: "tv", max: 16000},
 }
 
 var settingsFields = map[string]field{
@@ -246,6 +247,14 @@ func validateValue(spec field, raw json.RawMessage) (any, string) {
 	case "hours":
 		if len(raw) > int(spec.max) || !isValidOpeningHours(raw) {
 			return nil, "Opening hours must map weekdays to HH:MM intervals."
+		}
+		if isNull(raw) {
+			return nil, ""
+		}
+		return raw, ""
+	case "tv":
+		if len(raw) > int(spec.max) || !isValidTvSettings(raw) {
+			return nil, "TV settings are invalid."
 		}
 		if isNull(raw) {
 			return nil, ""

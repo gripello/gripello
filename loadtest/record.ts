@@ -154,6 +154,7 @@ const journeys: Record<string, (page: Page) => Promise<Step[]>> = {
     tv: async () => [
         `/${gym}/competitions/${competition}/tv`,
         `/${gym}/leaderboard/tv`,
+        `/${gym}/tv`,
     ],
 }
 

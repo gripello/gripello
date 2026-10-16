@@ -324,6 +324,27 @@ describe('sidebarSections', () => {
         )
     })
 
+    it('marks only the TV screen link on the TV section of the settings', () => {
+        const current = (path: string) =>
+            sidebarSections(
+                allowing('manage_settings'),
+                true,
+                'gym-a',
+                path,
+                t,
+                'staff',
+            )
+                .sections.flatMap((section) => section.items)
+                .filter((item) => item.active)
+                .map((item) => item.to)
+        expect(current('/gym-a/admin/settings?section=tv')).toEqual([
+            '/gym-a/admin/settings?section=tv',
+        ])
+        expect(current('/gym-a/admin/settings?section=info')).toEqual([
+            '/gym-a/admin/settings',
+        ])
+    })
+
     it('shows only the platform links on platform pages', () => {
         const { sections } = sidebarSections(
             allowing(PLATFORM_ADMIN, 'manage_routes'),

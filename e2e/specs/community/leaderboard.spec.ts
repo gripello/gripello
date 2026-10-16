@@ -119,7 +119,7 @@ test('staff manage seasons and the TV view shows the board', async ({
     await dialog.getByTestId('season-save').click()
     await expect(dialog.getByText(`${testPrefix} spring`)).toBeVisible()
 
-    await page.goto('/e2e/leaderboard/tv')
+    await gotoSettled(page, '/e2e/leaderboard/tv')
     await expect(page.getByTestId('leaderboard-tv')).toBeVisible()
 })
 

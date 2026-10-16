@@ -5,6 +5,7 @@ const baseURL = process.env.E2E_BASE_URL || 'https://localhost'
 const SETTINGS_WRITERS = [
     '**/admin/settings.spec.ts',
     '**/admin/gym-info.spec.ts',
+    '**/admin/tv-screen.spec.ts',
     '**/admin/platform-settings.spec.ts',
     '**/admin/platform-operations.spec.ts',
     '**/auth/guest-register-link.spec.ts',
