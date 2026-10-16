@@ -92,22 +92,36 @@ const router = useRouter()
 
 const status = computed(() => props.error.status ?? 500)
 const isNotFound = computed(() => status.value === 404)
-const title = computed(() =>
-    isNotFound.value ? t('errors.notFound.title') : t('errors.server.title'),
-)
+const offline = ref(false)
+const title = computed(() => {
+    if (isNotFound.value) return t('errors.notFound.title')
+    return offline.value ? t('errors.offline.title') : t('errors.server.title')
+})
 const unknownGym = computed(
     () =>
         (props.error.data as { reason?: string } | undefined)?.reason === 'gym',
 )
 const subtitle = computed(() => {
     if (unknownGym.value) return t('gym.notFound')
-    return isNotFound.value
-        ? t('errors.notFound.subtitle')
+    if (isNotFound.value) return t('errors.notFound.subtitle')
+    return offline.value
+        ? t('errors.offline.subtitle')
         : t('errors.server.subtitle')
 })
 
 const goHome = () => clearError({ redirect: '/' })
 const retry = () => reloadNuxtApp()
+const markOffline = () => (offline.value = true)
+
+onMounted(() => {
+    offline.value = !navigator.onLine
+    window.addEventListener('offline', markOffline)
+    if (!isNotFound.value) window.addEventListener('online', retry)
+})
+onBeforeUnmount(() => {
+    window.removeEventListener('offline', markOffline)
+    window.removeEventListener('online', retry)
+})
 const goBack = () =>
     window.history.length > 1
         ? clearError().then(() => router.back())

@@ -177,13 +177,7 @@ func serve(ctx context.Context, args []string) error {
 			}
 		}()
 	}
-	app.Handle("GET /health", httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
-		if err := app.DB.Ping(r.Context()); err != nil {
-			return err
-		}
-		httpx.JSON(w, 200, map[string]string{"version": config.Version})
-		return nil
-	}))
+	app.Handle("GET /health", healthHandler(app.DB))
 	mailer := app.Mail.(*mail.Client)
 	reloadMail := func() {
 		if err := mailer.Reload(ctx, app.DB, cfg, app.Tokens.Secret); err != nil {

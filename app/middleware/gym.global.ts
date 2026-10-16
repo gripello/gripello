@@ -21,7 +21,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
             window.location.assign(to.fullPath)
             return abortNavigation()
         }
-        const found = await getGym(routeSlug)
+        const found = await getGym(routeSlug).catch((error) => {
+            throw createError({
+                status: (error as { status?: number }).status || 503,
+                fatal: true,
+            })
+        })
         if (!found)
             return abortNavigation(
                 createError({
@@ -36,9 +41,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
                 redirectCode: 301,
             })
     } else if (!routeSlug && !gym.value && cookie.value) {
-        gym.value = await getGym(cookie.value)
-        const currentSlug = gym.value?.slug ?? null
-        if (cookie.value !== currentSlug) cookie.value = currentSlug
+        const found = await getGym(cookie.value).catch(() => undefined)
+        if (found !== undefined) {
+            gym.value = found
+            if (cookie.value !== (found?.slug ?? null))
+                cookie.value = found?.slug ?? null
+        }
     }
 
     if (!routeSlug) return

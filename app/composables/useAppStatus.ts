@@ -8,8 +8,8 @@ export function useAppStatus() {
     const { data: healthy } = useAsyncData(
         'footer:health',
         () =>
-            api('/health').then(
-                () => true,
+            api<{ status?: string }>('/health').then(
+                (health) => health.status === 'ok',
                 () => false,
             ),
         { default: () => false, lazy: true, server: false },

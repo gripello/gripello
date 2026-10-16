@@ -1068,6 +1068,10 @@
             "subtitle": "De gevraagde pagina kon niet worden gevonden.",
             "accent": "Van de route af"
         },
+        "offline": {
+            "title": "Je bent offline",
+            "subtitle": "Controleer je verbinding. De pagina laadt opnieuw zodra je weer online bent."
+        },
         "eyebrow": "Fout {code}",
         "goBack": "Terug",
         "retry": "Opnieuw proberen",

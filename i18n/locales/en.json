@@ -1068,6 +1068,10 @@
             "subtitle": "The requested page could not be found.",
             "accent": "Off route"
         },
+        "offline": {
+            "title": "You are offline",
+            "subtitle": "Check your connection. The page reloads once you are back online."
+        },
         "eyebrow": "Error {code}",
         "goBack": "Go back",
         "retry": "Try again",

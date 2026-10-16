@@ -51,6 +51,18 @@ describe('error page', () => {
         expect(reloadNuxtApp).toHaveBeenCalled()
     })
 
+    it('says the climber is offline and retries once the connection is back', async () => {
+        vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+        const wrapper = createWrapper(500)
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.text()).toContain('errors.offline.title')
+        window.dispatchEvent(new Event('online'))
+        expect(reloadNuxtApp).toHaveBeenCalled()
+        wrapper.unmount()
+        vi.restoreAllMocks()
+    })
+
     it('clears the error and redirects home', async () => {
         const wrapper = createWrapper(404)
 

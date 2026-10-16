@@ -34,6 +34,13 @@ describe('gyms', () => {
         expect(api.fetchMock).toHaveBeenCalledTimes(1)
     })
 
+    it('fails instead of answering not found when the API is unreachable', async () => {
+        api.fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'))
+        await expect(getGym('first')).rejects.toMatchObject({ status: 0 })
+        api.respond({ status: 502, message: 'Bad gateway.', data: {} }, 502)
+        await expect(getGym('first')).rejects.toMatchObject({ status: 502 })
+    })
+
     it('answers null for an inactive gym its managers can still load', async () => {
         api.respond({ id: 'g1', slug: 'closed', active: false })
         expect(await getGym('closed')).toBeNull()

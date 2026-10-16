@@ -50,8 +50,10 @@ test.describe('service worker', () => {
         await page.reload()
         await expect(page.getByTestId('offline-page')).toBeVisible()
 
+        await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible()
         await context.setOffline(false)
-        await page.getByRole('button', { name: 'Retry' }).click()
-        await expect(page.getByTestId('offline-page')).toBeHidden()
+        await expect(page.getByTestId('offline-page')).toBeHidden({
+            timeout: 15_000,
+        })
     })
 })

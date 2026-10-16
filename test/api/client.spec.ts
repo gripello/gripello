@@ -45,6 +45,27 @@ describe('useApi', () => {
         expect(callHook).toHaveBeenCalledWith('app:manifest:update')
     })
 
+    it('reloads at once when the server no longer supports this version, and on the next navigation should that reload be skipped', async () => {
+        vi.resetModules()
+        const { useApi: freshApi } = await import('~/api/client')
+        globalThis.__NUXT_RUNTIME_CONFIG__ = { public: { appVersion: '1.4.9' } }
+        const callHook = vi.fn(async () => {})
+        const reloadNuxtApp = vi.fn()
+        vi.stubGlobal('useNuxtApp', () => ({ hooks: { callHook } }))
+        vi.stubGlobal('reloadNuxtApp', reloadNuxtApp)
+        const response = jsonResponse({ status: 400, data: {} }, 400)
+        response.headers.set('X-Gripello-Api-Version', '2.0.0')
+        api.fetchMock.mockResolvedValueOnce(response)
+
+        await expect(freshApi()('/settings')).rejects.toMatchObject({
+            status: 400,
+        })
+        expect(reloadNuxtApp).toHaveBeenCalledWith(
+            expect.objectContaining({ persistState: true }),
+        )
+        expect(callHook).toHaveBeenCalledWith('app:manifest:update')
+    })
+
     it('maps network failures and aborts to status 0', async () => {
         api.fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'))
         await expect(useApi()('/me')).rejects.toMatchObject({
