@@ -494,6 +494,26 @@ func tv(p *phone) {
 	p.watch(24 * time.Hour)
 }
 
+// gymTv is the gym's hall screen: rendered once, then polls the gym, both boards and open competitions every minute.
+func gymTv(p *phone) {
+	p.entry("GET /{gym}/tv", p.page("/tv"))
+	p.subscribe()
+	poll := func() {
+		p.get("GET /gyms/{slug}", "/api/gyms/"+p.gym.slug)
+		p.get("GET /gyms/{gym}/seasons", p.gymAPI("/seasons"))
+		season := ""
+		if p.gym.season != "" {
+			season = "&season=" + p.gym.season
+		}
+		for _, kind := range []string{"boulder", "route"} {
+			p.get("GET /gyms/{gym}/leaderboard", p.gymAPI("/leaderboard?kind="+kind+season))
+		}
+		p.get("GET /gyms/{gym}/competitions", p.gymAPI("/competitions?status=open"))
+	}
+	p.loaded("results", poll)
+	p.watch(24 * time.Hour)
+}
+
 // setter works the staff pages: sets routes (form data, create, edit, archive the ones they made) and the task board.
 func setter(p *phone) {
 	p.entry("GET /{gym}/manage/routes", p.page("/manage/routes"))

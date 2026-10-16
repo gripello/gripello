@@ -1029,6 +1029,37 @@
             "moveBlock": "Blok verplaatsen",
             "remove": "Verwijderen",
             "tooLong": "De privacypagina is te lang. Kort je eigen tekst in."
+        },
+        "tv": {
+            "title": "Tv-scherm",
+            "slidesTitle": "Dia's",
+            "slides": {
+                "new_routes": "Nieuwe routes",
+                "leaderboard": "Ranglijst",
+                "resets": "Komende ombouw",
+                "info": "Openingstijden en QR-code",
+                "announcements": "Mededelingen"
+            },
+            "seconds": "Seconden per dia",
+            "secondsValue": "{n} s",
+            "announcements": "Mededelingen",
+            "announcementText": "Tekst van de mededeling",
+            "until": "Tot",
+            "removeAnnouncement": "Mededeling verwijderen",
+            "addAnnouncement": "Mededeling toevoegen",
+            "screenLink": "Schermlink",
+            "location": "Locatie",
+            "allLocations": "Alle locaties",
+            "takeover": "Lopende wedstrijden tonen",
+            "copy": "Link kopiëren",
+            "open": "Scherm openen",
+            "copied": "Link gekopieerd",
+            "invalid": "Elke aankondiging heeft een tekst van maximaal 120 tekens nodig.",
+            "screens": "Schermen",
+            "addScreen": "Scherm toevoegen",
+            "removeScreen": "Scherm verwijderen",
+            "screenName": "Naam",
+            "screenNumber": "Scherm {n}"
         }
     },
     "errors": {
@@ -2950,5 +2981,13 @@
         "months": "{n} maand | {n} maanden",
         "years": "{n} jaar | {n} jaar",
         "openDefects": "{n} open defect | {n} open defecten"
+    },
+    "tv": {
+        "title": "Tv-scherm",
+        "newRoutes": "Nieuwe routes",
+        "resets": "Komende ombouw",
+        "newToday": "Vandaag nieuw",
+        "routeCount": "{n} route | {n} routes",
+        "scanToOpen": "Scan om je beklimmingen te loggen"
     }
 }

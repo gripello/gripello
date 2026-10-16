@@ -1029,6 +1029,37 @@
             "moveBlock": "Déplacer le bloc",
             "remove": "Retirer",
             "tooLong": "La page de confidentialité est trop longue. Raccourcissez votre texte."
+        },
+        "tv": {
+            "title": "Écran TV",
+            "slidesTitle": "Diapositives",
+            "slides": {
+                "new_routes": "Nouvelles voies",
+                "leaderboard": "Classement",
+                "resets": "Prochains démontages",
+                "info": "Horaires et QR code",
+                "announcements": "Annonces"
+            },
+            "seconds": "Secondes par diapositive",
+            "secondsValue": "{n} s",
+            "announcements": "Annonces",
+            "announcementText": "Texte de l'annonce",
+            "until": "Jusqu'au",
+            "removeAnnouncement": "Supprimer l'annonce",
+            "addAnnouncement": "Ajouter une annonce",
+            "screenLink": "Lien de l'écran",
+            "location": "Site",
+            "allLocations": "Tous les sites",
+            "takeover": "Afficher les compétitions en cours",
+            "copy": "Copier le lien",
+            "open": "Ouvrir l'écran",
+            "copied": "Lien copié",
+            "invalid": "Chaque annonce doit avoir un texte de 120 caractères maximum.",
+            "screens": "Écrans",
+            "addScreen": "Ajouter un écran",
+            "removeScreen": "Supprimer l’écran",
+            "screenName": "Nom",
+            "screenNumber": "Écran {n}"
         }
     },
     "errors": {
@@ -2950,5 +2981,13 @@
         "months": "{n} mois | {n} mois",
         "years": "{n} an | {n} ans",
         "openDefects": "{n} défaut ouvert | {n} défauts ouverts"
+    },
+    "tv": {
+        "title": "Écran TV",
+        "newRoutes": "Nouvelles voies",
+        "resets": "Prochains démontages",
+        "newToday": "Nouveau aujourd'hui",
+        "routeCount": "{n} voie | {n} voies",
+        "scanToOpen": "Scannez pour noter vos réussites"
     }
 }

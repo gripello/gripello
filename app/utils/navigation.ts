@@ -292,6 +292,12 @@ export const NAV_ITEMS: NavItem[] = [
                 label: 'routes.settings',
                 permission: 'manage_settings',
             },
+            {
+                to: '/admin/settings?section=tv',
+                icon: 'i-lucide-tv',
+                label: 'settings.tv.title',
+                permission: 'manage_settings',
+            },
         ],
     },
 ]
@@ -409,6 +415,7 @@ export interface SidebarItem {
     to?: string
     testid: string
     current?: boolean
+    active?: boolean
     badge?: string
     defaultOpen?: boolean
     'aria-label'?: string
@@ -546,6 +553,25 @@ export function sectionTabs(path: string, slug: string, signedIn = true) {
 
 const isPage = (item: NavItem) => !item.children && !item.permission
 
+const hasQueryOf = (query: URLSearchParams, to: string) =>
+    [...new URLSearchParams(to.split('?')[1])].every(
+        ([key, value]) => query.get(key) === value,
+    )
+
+function staffLinkCurrent(currentPath: string, to: string, links: NavLink[]) {
+    const [path = '', search = ''] = currentPath.split('?')
+    const query = new URLSearchParams(search)
+    const [toPath = ''] = to.split('?')
+    if (to.includes('?')) return path === toPath && hasQueryOf(query, to)
+    return (
+        isWithin(path, toPath) &&
+        !links.some(
+            (other) =>
+                other.to.startsWith(`${to}?`) && hasQueryOf(query, other.to),
+        )
+    )
+}
+
 export function sidebarSections(
     can: Can,
     signedIn: boolean,
@@ -583,10 +609,14 @@ export function sidebarSections(
             sections: staff.map((section) => ({
                 key: section.key,
                 label: t(section.label),
-                items: section.links.map((link) => ({
-                    ...toItem(link),
-                    current: isWithin(currentPath, link.to),
-                })),
+                items: section.links.map((link) => {
+                    const current = staffLinkCurrent(
+                        currentPath,
+                        link.to,
+                        section.links,
+                    )
+                    return { ...toItem(link), current, active: current }
+                }),
             })),
             staffEntry: null,
         }

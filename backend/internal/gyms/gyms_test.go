@@ -195,6 +195,30 @@ func TestIsValidOpeningHours(t *testing.T) {
 	}
 }
 
+func TestIsValidTvSettings(t *testing.T) {
+	raw, err := os.ReadFile("../../testdata/tvSettings.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixtures struct {
+		Valid   []json.RawMessage `json:"valid"`
+		Invalid []json.RawMessage `json:"invalid"`
+	}
+	if err := json.Unmarshal(raw, &fixtures); err != nil {
+		t.Fatal(err)
+	}
+	for _, settings := range fixtures.Valid {
+		if !isValidTvSettings(settings) {
+			t.Errorf("isValidTvSettings(%s) rejected", settings)
+		}
+	}
+	for _, settings := range fixtures.Invalid {
+		if isValidTvSettings(settings) {
+			t.Errorf("isValidTvSettings(%s) accepted", settings)
+		}
+	}
+}
+
 func TestAmenitiesMirrorTheRegistry(t *testing.T) {
 	raw, err := os.ReadFile("../../../shared/utils/gymAmenities.ts")
 	if err != nil {
@@ -378,6 +402,27 @@ func TestGymAdminsSaveGymInfo(t *testing.T) {
 	f.call(admin, "PATCH", path, `{"language":"it"}`, http.StatusBadRequest)
 	f.call(admin, "PATCH", path, `{"opening_hours":null,"boulder_bands":[{"from":0}],"description":"Hi","premoderate_betas":true}`,
 		http.StatusOK, `"opening_hours":null`, `"premoderate_betas":true`)
+}
+
+func TestGymAdminsSaveTvSettings(t *testing.T) {
+	f := newFixture(t)
+	gym := f.createGym("gym-a", "Gym A", true)
+	admin := f.user("admin-a")
+	f.member(admin, gym, "admin")
+	setter := f.user("setter-a")
+	f.member(setter, gym, "routesetter")
+	path := "/gyms/" + gym
+
+	f.call(admin, "PATCH", path, `{"tv_settings":{"screens":[{"id":"entrance","name":"Entrance","slides":["announcements"],"seconds":20}],"announcements":[{"text":"Comp night"}]}}`,
+		http.StatusOK, `"slides":["announcements"]`, `"Comp night"`)
+	f.call("", "GET", path, ``, http.StatusOK, `"Comp night"`)
+	f.call(admin, "PATCH", path, `{"tv_settings":{"screens":[{"id":"main","seconds":4}]}}`, http.StatusBadRequest, `"tv_settings"`)
+	f.call(setter, "PATCH", path, `{"tv_settings":null}`, http.StatusForbidden)
+	f.call(admin, "PATCH", path, `{"tv_settings":null}`, http.StatusOK, `"tv_settings":null`)
+	f.call(f.operator, "PATCH", path, `{"tv_settings":{"screens":[{"id":"main","seconds":8}]}}`, http.StatusOK)
+	if body := f.call("", "GET", "/gyms", ``, http.StatusOK).Body; strings.Contains(body, "tv_settings") {
+		t.Errorf("gym list carries tv_settings: %s", body)
+	}
 }
 
 func TestGymFiles(t *testing.T) {

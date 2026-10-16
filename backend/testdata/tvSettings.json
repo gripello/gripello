@@ -1,0 +1,450 @@
+{
+    "valid": [
+        null,
+        {},
+        {
+            "screens": []
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "name": "Entrance",
+                    "slides": [
+                        "new_routes",
+                        "leaderboard",
+                        "resets",
+                        "info",
+                        "announcements"
+                    ],
+                    "seconds": 12,
+                    "location": "",
+                    "takeover": true
+                }
+            ],
+            "announcements": []
+        },
+        {
+            "screens": [
+                {
+                    "id": "main"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "slides": []
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "seconds": 5
+                },
+                {
+                    "id": "b2",
+                    "seconds": 120
+                },
+                {
+                    "id": "c",
+                    "seconds": 45,
+                    "location": "abc123def456ghi",
+                    "takeover": false
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "name": "ÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜÜ"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "0"
+                },
+                {
+                    "id": "1"
+                },
+                {
+                    "id": "2"
+                },
+                {
+                    "id": "3"
+                },
+                {
+                    "id": "4"
+                },
+                {
+                    "id": "5"
+                },
+                {
+                    "id": "6"
+                },
+                {
+                    "id": "7"
+                },
+                {
+                    "id": "8"
+                },
+                {
+                    "id": "9"
+                }
+            ]
+        },
+        {
+            "announcements": [
+                {
+                    "text": "Comp night Friday!"
+                },
+                {
+                    "text": "Ünïcödé 🧗",
+                    "until": "2026-11-01"
+                }
+            ]
+        },
+        {
+            "announcements": [
+                {
+                    "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "seconds": 12.0
+                }
+            ]
+        }
+    ],
+    "invalid": [
+        [],
+        "tv",
+        {
+            "slides": ["info"]
+        },
+        {
+            "seconds": 12
+        },
+        {
+            "screens": {}
+        },
+        {
+            "screens": [{}]
+        },
+        {
+            "screens": [
+                {
+                    "id": ""
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "Main"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "a234567890123456"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "a"
+                },
+                {
+                    "id": "a"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "0"
+                },
+                {
+                    "id": "1"
+                },
+                {
+                    "id": "2"
+                },
+                {
+                    "id": "3"
+                },
+                {
+                    "id": "4"
+                },
+                {
+                    "id": "5"
+                },
+                {
+                    "id": "6"
+                },
+                {
+                    "id": "7"
+                },
+                {
+                    "id": "8"
+                },
+                {
+                    "id": "9"
+                },
+                {
+                    "id": "10"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "slides": ["weather"]
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "slides": ["info", "info"]
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "slides": "info"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "seconds": 4
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "seconds": 121
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "seconds": 12.5
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "seconds": "12"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "location": "Hall-1"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "takeover": "no"
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "theme": "dark"
+                }
+            ]
+        },
+        {
+            "announcements": [
+                {
+                    "text": ""
+                }
+            ]
+        },
+        {
+            "announcements": [
+                {
+                    "text": "   "
+                }
+            ]
+        },
+        {
+            "announcements": [
+                {
+                    "text": "Hi",
+                    "until": "tomorrow"
+                }
+            ]
+        },
+        {
+            "announcements": [
+                {
+                    "text": "Hi",
+                    "until": "2026-02-30"
+                }
+            ]
+        },
+        {
+            "announcements": [
+                {
+                    "text": "Hi",
+                    "colour": "red"
+                }
+            ]
+        },
+        {
+            "announcements": [
+                {
+                    "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                }
+            ]
+        },
+        {
+            "announcements": [
+                {
+                    "text": "1"
+                },
+                {
+                    "text": "2"
+                },
+                {
+                    "text": "3"
+                },
+                {
+                    "text": "4"
+                },
+                {
+                    "text": "5"
+                },
+                {
+                    "text": "6"
+                },
+                {
+                    "text": "7"
+                },
+                {
+                    "text": "8"
+                },
+                {
+                    "text": "9"
+                },
+                {
+                    "text": "10"
+                },
+                {
+                    "text": "11"
+                }
+            ]
+        },
+        {
+            "theme": "dark"
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "name": null
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "seconds": null
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "slides": null
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "location": null
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": "main",
+                    "takeover": null
+                }
+            ]
+        },
+        {
+            "screens": [
+                {
+                    "id": null
+                }
+            ]
+        },
+        {
+            "screens": null
+        },
+        {
+            "announcements": null
+        },
+        {
+            "announcements": [
+                {
+                    "text": "Hi",
+                    "until": null
+                }
+            ]
+        },
+        {
+            "screens": [null]
+        }
+    ]
+}

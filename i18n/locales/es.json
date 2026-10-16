@@ -1029,6 +1029,37 @@
             "moveBlock": "Mover bloque",
             "remove": "Quitar",
             "tooLong": "La página de privacidad es demasiado larga. Acorta tu propio texto."
+        },
+        "tv": {
+            "title": "Pantalla TV",
+            "slidesTitle": "Diapositivas",
+            "slides": {
+                "new_routes": "Vías nuevas",
+                "leaderboard": "Clasificación",
+                "resets": "Próximos desmontajes",
+                "info": "Horario y código QR",
+                "announcements": "Anuncios"
+            },
+            "seconds": "Segundos por diapositiva",
+            "secondsValue": "{n} s",
+            "announcements": "Anuncios",
+            "announcementText": "Texto del anuncio",
+            "until": "Hasta",
+            "removeAnnouncement": "Quitar anuncio",
+            "addAnnouncement": "Añadir anuncio",
+            "screenLink": "Enlace de la pantalla",
+            "location": "Sede",
+            "allLocations": "Todas las sedes",
+            "takeover": "Mostrar competiciones en curso",
+            "copy": "Copiar enlace",
+            "open": "Abrir pantalla",
+            "copied": "Enlace copiado",
+            "invalid": "Cada anuncio necesita un texto de hasta 120 caracteres.",
+            "screens": "Pantallas",
+            "addScreen": "Añadir pantalla",
+            "removeScreen": "Quitar pantalla",
+            "screenName": "Nombre",
+            "screenNumber": "Pantalla {n}"
         }
     },
     "errors": {
@@ -2950,5 +2981,13 @@
         "months": "{n} mes | {n} meses",
         "years": "{n} año | {n} años",
         "openDefects": "{n} defecto abierto | {n} defectos abiertos"
+    },
+    "tv": {
+        "title": "Pantalla TV",
+        "newRoutes": "Vías nuevas",
+        "resets": "Próximos desmontajes",
+        "newToday": "Nueva hoy",
+        "routeCount": "{n} vía | {n} vías",
+        "scanToOpen": "Escanea para registrar tus encadenamientos"
     }
 }

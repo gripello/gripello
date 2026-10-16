@@ -21,6 +21,7 @@ import type { BoulderBandSetting } from '../shared/utils/gradeReference'
 import type { GymFeatures } from '../shared/utils/featureFlags'
 import type { GymAmenity } from '../shared/utils/gymAmenities'
 import type { GymOpeningHours } from '../shared/utils/openingHours'
+import type { TvSettings } from '../shared/utils/tvSettings'
 
 export type RecordId = string
 
@@ -258,6 +259,7 @@ export interface GymRecord extends BaseRecord, LegalFields {
     opening_hours?: GymOpeningHours | null
     hours_note?: string | null
     amenities?: GymAmenity[] | null
+    tv_settings?: TvSettings | null
 }
 
 export interface GymStatsRecord extends BaseRecord {

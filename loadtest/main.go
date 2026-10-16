@@ -45,7 +45,7 @@ var (
 	thinkScale = flag.Float64("think-scale", 1, "multiplies every think time (0.1 for a quick smoke run)")
 	setters    = flag.Int("setters", 2, "routesetters on the staff pages, per gym, for the whole run")
 	judges     = flag.Int("judges", 2, "judges entering scores, per gym with an open competition")
-	tvs        = flag.Int("tvs", 1, "competition result screens per gym with an open competition")
+	tvs        = flag.Int("tvs", 1, "hall screens per gym, plus as many result screens per open competition")
 	scoreEvery = flag.Duration("score-every", 30*time.Second, "median pause between a judge's score bursts")
 	sloArg     = flag.String("slo", "ssr.p95<1s,static.p95<300ms,api.p95<400ms,thumbs.p95<500ms,writes.p95<600ms,sse-connect.p95<500ms,sse-event.p95<2s,all.errors<1%", "thresholds; any failure exits 1")
 	insecure   = flag.Bool("insecure", false, "skip TLS verification (self-signed certificates)")
@@ -116,6 +116,9 @@ func main() {
 		})
 	}
 	for _, g := range gyms {
+		for range *tvs {
+			launch(g, nil, gymTv)
+		}
 		for i := range *setters * min(1, len(g.staff)) {
 			launch(g, g.staff[i%len(g.staff)], setter)
 		}

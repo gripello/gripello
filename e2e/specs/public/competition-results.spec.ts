@@ -86,7 +86,7 @@ test('live results rank climbers, hide names on request and freeze before the en
         standings.getByTestId(`standing-${ben.bib}`),
     ).not.toContainText(`${testPrefix} ben`)
 
-    await page.goto(`/competitions/${competition.id}/tv`)
+    await gotoSettled(page, `/competitions/${competition.id}/tv`, /\/tv/)
     await expect(
         page.getByTestId('competition-tv').getByTestId(`standing-${anna.bib}`),
     ).toContainText(`${testPrefix} anna`)

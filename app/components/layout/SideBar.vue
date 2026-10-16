@@ -147,7 +147,7 @@ const nav = computed(() =>
         can,
         props.loggedIn,
         slug.value,
-        route.path,
+        route.fullPath,
         t,
         context.value,
         authStore.record?.id,

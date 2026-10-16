@@ -1029,6 +1029,37 @@
             "moveBlock": "Block verschieben",
             "remove": "Entfernen",
             "tooLong": "Die Datenschutzseite ist zu lang. Kürze deinen eigenen Text."
+        },
+        "tv": {
+            "title": "TV-Bildschirm",
+            "slidesTitle": "Folien",
+            "slides": {
+                "new_routes": "Neue Routen",
+                "leaderboard": "Bestenliste",
+                "resets": "Kommende Umschraubungen",
+                "info": "Öffnungszeiten und QR-Code",
+                "announcements": "Ankündigungen"
+            },
+            "seconds": "Sekunden pro Folie",
+            "secondsValue": "{n} s",
+            "announcements": "Ankündigungen",
+            "announcementText": "Ankündigungstext",
+            "until": "Bis",
+            "removeAnnouncement": "Ankündigung entfernen",
+            "addAnnouncement": "Ankündigung hinzufügen",
+            "screenLink": "Bildschirm-Link",
+            "location": "Standort",
+            "allLocations": "Alle Standorte",
+            "takeover": "Laufende Wettkämpfe zeigen",
+            "copy": "Link kopieren",
+            "open": "Bildschirm öffnen",
+            "copied": "Link kopiert",
+            "invalid": "Jede Ankündigung braucht einen Text mit bis zu 120 Zeichen.",
+            "screens": "Bildschirme",
+            "addScreen": "Bildschirm hinzufügen",
+            "removeScreen": "Bildschirm entfernen",
+            "screenName": "Name",
+            "screenNumber": "Bildschirm {n}"
         }
     },
     "errors": {
@@ -2950,5 +2981,13 @@
         "months": "{n} Monat | {n} Monate",
         "years": "{n} Jahr | {n} Jahre",
         "openDefects": "{n} offener Defekt | {n} offene Defekte"
+    },
+    "tv": {
+        "title": "TV-Bildschirm",
+        "newRoutes": "Neue Routen",
+        "resets": "Kommende Umschraubungen",
+        "newToday": "Heute neu",
+        "routeCount": "{n} Route | {n} Routen",
+        "scanToOpen": "Scannen und Begehungen eintragen"
     }
 }

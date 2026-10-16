@@ -33,7 +33,8 @@ export function useCompetitionLive(
     onBeforeUnmount(() => stopResync?.())
 
     useRealtime(
-        () => competitionTopic(competitionId.value),
+        () =>
+            competitionId.value ? competitionTopic(competitionId.value) : null,
         (change: CompetitionChange) => {
             if (change.competition === competitionId.value) onChange(change)
         },

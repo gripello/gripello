@@ -210,6 +210,40 @@ components:
           minItems: 2
           maxItems: 2
           items: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+    TvSettings:
+      type: [object, 'null']
+      description: 'In-gym TV screens (/{gym}/tv?screen={id}); null = one screen with every slide, 12 s'
+      additionalProperties: false
+      properties:
+        screens:
+          type: array
+          maxItems: 10
+          description: 'Screen ids are unique; an unknown or missing ?screen= shows the first'
+          items:
+            type: object
+            required: [id]
+            additionalProperties: false
+            properties:
+              id: { type: string, pattern: '^[a-z0-9]{1,15}$' }
+              name: { type: string, maxLength: 50 }
+              slides:
+                type: array
+                uniqueItems: true
+                items: { type: string, enum: [new_routes, leaderboard, resets, info, announcements] }
+              seconds: { type: integer, minimum: 5, maximum: 120 }
+              location: { type: string, pattern: '^[a-z0-9]{0,15}$', description: 'Empty = every location' }
+              takeover: { type: boolean, description: 'A running competition takes over the screen' }
+        announcements:
+          type: array
+          maxItems: 10
+          description: 'Shared by every screen that shows the announcements slide'
+          items:
+            type: object
+            required: [text]
+            additionalProperties: false
+            properties:
+              text: { type: string, minLength: 1, maxLength: 120, description: 'Counted after trimming whitespace' }
+              until: { type: string, description: 'Last day the announcement is shown (YYYY-MM-DD); empty = no end' }
     PrivacyDoc:
       type: [object, 'null']
       description: 'Editor document of the privacy page; null = default page. A top-level paragraph holding only a mention ({type: paragraph, content: [{type: mention, attrs: {id}}]}) places a built-in section, each id at most once, controller and rights required; other nodes (heading, paragraph, bulletList, orderedList, listItem, text with bold/italic/strike/code/link marks, hardBreak) are the gym''s own text, a level-2 heading starts a section. At most 100000 characters serialised.'
@@ -275,6 +309,7 @@ components:
         amenities:
           type: array
           items: { $ref: '#/components/schemas/Amenity' }
+        tv_settings: { $ref: '#/components/schemas/TvSettings' }
     GymInput:
       description: Any subset of the fields; file fields only accept null or "" (clear), uploads go through multipart.
       allOf:
