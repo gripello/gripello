@@ -20,24 +20,40 @@ self.addEventListener('install', (event) => {
     )
 })
 
+// Open tabs of the previous build still load its chunks, so its caches stay until the next update.
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches
             .keys()
-            .then((keys) =>
-                Promise.all(
+            .then((keys) => {
+                const builds = keys.filter(
+                    (key) => key !== CACHE && !key.endsWith('-pages'),
+                )
+                const previous = builds.at(-1)
+                const keep = [CACHE, PAGES, previous, `${previous}-pages`]
+                return Promise.all(
                     keys
-                        .filter((key) => key !== CACHE && key !== PAGES)
+                        .filter((key) => !keep.includes(key))
                         .map((key) => caches.delete(key)),
-                ),
-            )
+                )
+            })
             .then(() => self.clients.claim()),
     )
 })
 
 self.addEventListener('message', (event) => {
     if (event.data?.type === 'clear-pages')
-        event.waitUntil(caches.delete(PAGES))
+        event.waitUntil(
+            caches
+                .keys()
+                .then((keys) =>
+                    Promise.all(
+                        keys
+                            .filter((key) => key.endsWith('-pages'))
+                            .map((key) => caches.delete(key)),
+                    ),
+                ),
+        )
 })
 
 self.addEventListener('push', (event) => {
@@ -175,15 +191,21 @@ function networkFirst(request, cacheName, canStore = storable) {
             settled = true
             resolve(response)
         }
-        const cached = () => caches.match(request)
+        const cached = () =>
+            caches
+                .open(cacheName)
+                .then((cache) => cache.match(request))
+                .then((response) => response || caches.match(request))
         const timer = setTimeout(async () => {
             const response = await cached()
             if (response) settle(response)
         }, NETWORK_TIMEOUT_MS)
 
         fetch(request)
-            .then((response) => {
+            .then(async (response) => {
                 clearTimeout(timer)
+                if (response.status >= 500)
+                    return settle((await cached()) || response)
                 if (canStore && canStore(response))
                     store(cacheName, request, response)
                 settle(response)

@@ -72,20 +72,20 @@
                     'Prüfe deine Verbindung und versuche es erneut.',
                     'Erneut versuchen',
                 ],
-                ru: [
-                    'Нет подключения',
-                    'Проверьте соединение и попробуйте снова.',
-                    'Повторить',
+                nl: [
+                    'Je bent offline',
+                    'Controleer je verbinding en probeer het opnieuw.',
+                    'Opnieuw proberen',
                 ],
-                tr: [
-                    'Çevrimdışısınız',
-                    'Bağlantınızı kontrol edip tekrar deneyin.',
-                    'Tekrar dene',
+                fr: [
+                    'Vous êtes hors ligne',
+                    'Vérifiez votre connexion et réessayez.',
+                    'Réessayer',
                 ],
-                uk: [
-                    'Немає з’єднання',
-                    'Перевірте з’єднання та спробуйте ще раз.',
-                    'Повторити',
+                es: [
+                    'Estás sin conexión',
+                    'Comprueba tu conexión e inténtalo de nuevo.',
+                    'Reintentar',
                 ],
             }
             const language = navigator.language.slice(0, 2)
@@ -96,6 +96,23 @@
                 document.getElementById('offline-text').textContent = texts[1]
                 document.getElementById('offline-retry').textContent = texts[2]
             }
+
+            const healthy = () =>
+                fetch('/api/health', { cache: 'no-store' })
+                    .then((response) => response.json())
+                    .then((health) => health.status === 'ok')
+            const pageLoads = () =>
+                fetch(location.href, { cache: 'no-store' }).then(
+                    (response) => response.ok,
+                )
+            const reloadWhenReachable = () =>
+                Promise.all([healthy(), pageLoads()])
+                    .then(
+                        (checks) => checks.every(Boolean) && location.reload(),
+                    )
+                    .catch(() => {})
+            window.addEventListener('online', reloadWhenReachable)
+            setInterval(reloadWhenReachable, 10000)
         </script>
     </body>
 </html>

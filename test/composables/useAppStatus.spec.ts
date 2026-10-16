@@ -25,4 +25,22 @@ describe('useAppStatus', () => {
         store.isValid = true
         expect(enabled['footer:online']?.()).toBe(true)
     })
+
+    it('counts the server as healthy only when it reports ok', async () => {
+        const handlers: Record<string, () => Promise<unknown>> = {}
+        vi.stubGlobal('useAsyncData', (key: string, handler: () => any) => {
+            handlers[key] = handler
+            return { data: { value: null } }
+        })
+        const health = vi.fn()
+        routeApi(health)
+        useAppStatus()
+
+        health.mockResolvedValueOnce({ status: 'ok', database: 'ok' })
+        expect(await handlers['footer:health']!()).toBe(true)
+        health.mockResolvedValueOnce({ status: 'degraded' })
+        expect(await handlers['footer:health']!()).toBe(false)
+        health.mockRejectedValueOnce({ status: 503 })
+        expect(await handlers['footer:health']!()).toBe(false)
+    })
 })

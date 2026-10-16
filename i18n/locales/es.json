@@ -1037,6 +1037,10 @@
             "subtitle": "No se encontró la página solicitada.",
             "accent": "Fuera de vía"
         },
+        "offline": {
+            "title": "Estás sin conexión",
+            "subtitle": "Comprueba tu conexión. La página se recargará cuando vuelvas a estar en línea."
+        },
         "eyebrow": "Error {code}",
         "goBack": "Volver",
         "retry": "Reintentar",

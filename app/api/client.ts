@@ -64,9 +64,12 @@ export function useApi() {
         onResponse({ response }) {
             if (import.meta.server || manifestUpdateRequested) return
             const serverVersion = response.headers.get(API_VERSION_HEADER)
-            if (checkApiVersion(appVersion, serverVersion) === 'ok') return
+            const status = checkApiVersion(appVersion, serverVersion)
+            if (status === 'ok') return
             manifestUpdateRequested = true
             void useNuxtApp().hooks.callHook('app:manifest:update')
+            if (status === 'unsupported')
+                reloadNuxtApp({ persistState: true, ttl: 60_000 })
         },
         onRequestError(context) {
             throw new ApiError(context)

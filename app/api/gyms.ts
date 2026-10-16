@@ -21,8 +21,9 @@ export async function getGym(slug: string): Promise<GymRecord | null> {
             GymRecord & { redirect_to?: string }
         >(`/gyms/${encodeURIComponent(slug)}`)
         return gym.active === false ? null : gym
-    } catch {
-        return null
+    } catch (error) {
+        if ((error as { status?: number }).status === 404) return null
+        throw error
     }
 }
 
