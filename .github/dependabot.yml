@@ -4,6 +4,21 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      # Core, CLI and the native platforms must stay on the same version.
+      capacitor:
+        patterns: ["@capacitor/*"]
+
+  - package-ecosystem: "gradle"
+    directory: "/mobile/android"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Gradle 9.6+ drops an internal API that AGP 8 uses; both move with Capacitor 9 (`npx cap migrate`).
+      - dependency-name: "gradle-wrapper"
+        versions: [">= 9.6"]
+      - dependency-name: "com.android.tools.build:gradle"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directory: "/"

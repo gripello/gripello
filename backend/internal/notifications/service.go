@@ -193,20 +193,23 @@ type subscription struct {
 }
 
 func (m *module) subscriptionsOf(ctx context.Context, user, endpoint string) ([]subscription, error) {
-	rows, err := m.app.DB.Query(ctx, `SELECT id, endpoint, p256dh, auth FROM push_subscriptions
+	rows, err := m.app.DB.Query(ctx, `SELECT id, kind, endpoint, p256dh, auth FROM push_subscriptions
 		WHERE "user" = $1 AND ($2 = '' OR endpoint = $2)`, user, endpoint)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (subscription, error) {
 		var s subscription
-		return s, row.Scan(&s.id, &s.Endpoint, &s.P256dh, &s.Auth)
+		return s, row.Scan(&s.id, &s.Kind, &s.Endpoint, &s.P256dh, &s.Auth)
 	})
 }
 
 // A failed device must not re-push the others, so errors are logged, not retried.
 func (m *module) sendAll(ctx context.Context, subscriptions []subscription, body []byte) {
 	for _, s := range subscriptions {
+		if !m.app.Push.Delivers(s.Kind) {
+			continue
+		}
 		gone, err := m.app.Push.Send(ctx, s.Subscription, body)
 		if err != nil {
 			slog.Warn("push: send failed", "subscription", s.id, "error", err)

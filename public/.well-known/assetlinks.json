@@ -1,0 +1,13 @@
+[
+    {
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "app.gripello",
+            "sha256_cert_fingerprints": [
+                "6F:F0:E3:CE:57:3D:92:8D:62:24:23:35:E0:FA:AA:8B:D3:4C:7D:BD:BB:9A:9A:43:41:50:96:11:9F:09:A4:E3",
+                "28:BF:8F:C6:FF:18:C8:BB:94:56:8B:AC:8E:A8:39:77:70:58:D0:56:29:90:68:32:0C:86:88:F5:70:57:32:AD"
+            ]
+        }
+    }
+]

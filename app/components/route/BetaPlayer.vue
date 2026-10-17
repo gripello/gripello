@@ -33,7 +33,7 @@
         </button>
 
         <div
-            class="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-linear-to-t from-black/80 to-transparent px-3 pt-8 pb-2 text-white transition-opacity"
+            class="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-linear-to-t from-black/80 to-transparent px-2 pt-10 pb-1 text-white transition-opacity in-[:fullscreen]:px-[max(0.5rem,env(safe-area-inset-left))] in-[:fullscreen]:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
             :class="
                 playing
                     ? 'opacity-0 group-hover/player:opacity-100 group-focus-within/player:opacity-100 pointer-coarse:opacity-100'
@@ -46,20 +46,20 @@
                 min="0"
                 :max="duration || 0"
                 step="0.1"
-                class="beta-player__progress w-full"
+                class="beta-player__progress mx-1"
                 :style="{ '--progress': `${progress}%` }"
                 :aria-label="t('beta.seek')"
             />
-            <div class="flex items-center gap-1 text-xs tabular-nums">
+            <div class="flex items-center gap-1 text-sm tabular-nums">
                 <button
                     type="button"
-                    class="beta-player__button"
+                    class="beta-player__button icon-btn"
                     :aria-label="playing ? t('beta.pause') : t('beta.play')"
                     @click="toggle"
                 >
                     <UIcon
                         :name="playing ? 'i-lucide-pause' : 'i-lucide-play'"
-                        class="size-4"
+                        class="size-5"
                     />
                 </button>
                 <span class="flex-1 opacity-90">
@@ -67,7 +67,7 @@
                 </span>
                 <button
                     type="button"
-                    class="beta-player__button"
+                    class="beta-player__button icon-btn"
                     :aria-label="muted ? t('beta.unmute') : t('beta.mute')"
                     @click="muted = !muted"
                 >
@@ -75,17 +75,28 @@
                         :name="
                             muted ? 'i-lucide-volume-x' : 'i-lucide-volume-2'
                         "
-                        class="size-4"
+                        class="size-5"
                     />
                 </button>
                 <button
                     type="button"
-                    class="beta-player__button"
-                    :aria-label="t('beta.fullscreen')"
+                    class="beta-player__button icon-btn"
+                    :aria-label="
+                        fullscreen
+                            ? t('beta.exitFullscreen')
+                            : t('beta.fullscreen')
+                    "
                     data-testid="beta-fullscreen"
-                    @click="enterFullscreen"
+                    @click="fullscreen ? exitFullscreen() : enterFullscreen()"
                 >
-                    <UIcon name="i-lucide-maximize" class="size-4" />
+                    <UIcon
+                        :name="
+                            fullscreen
+                                ? 'i-lucide-minimize'
+                                : 'i-lucide-maximize'
+                        "
+                        class="size-5"
+                    />
                 </button>
             </div>
         </div>
@@ -105,6 +116,7 @@ const playing = ref(false)
 const current = ref(0)
 const duration = ref(0)
 const muted = ref(false)
+const fullscreen = ref(false)
 
 const progress = computed(() =>
     duration.value ? (current.value / duration.value) * 100 : 0,
@@ -138,10 +150,23 @@ function enterFullscreen() {
         )?.webkitEnterFullscreen?.()
 }
 
+function exitFullscreen() {
+    void document.exitFullscreen?.().catch(() => null)
+}
+
+const onFullscreenChange = () =>
+    (fullscreen.value =
+        !!frame.value && document.fullscreenElement === frame.value)
+
 onMounted(() => {
     if (video.value && video.value.readyState >= HTMLMediaElement.HAVE_METADATA)
         onMetadata()
+    document.addEventListener('fullscreenchange', onFullscreenChange)
 })
+
+onBeforeUnmount(() =>
+    document.removeEventListener('fullscreenchange', onFullscreenChange),
+)
 
 function onMetadata() {
     if (!video.value) return
@@ -156,20 +181,38 @@ function onMetadata() {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 9999px;
 }
 
-.beta-player__button:hover {
-    background: rgb(255 255 255 / 0.15);
+@media (hover: hover) {
+    .beta-player__button:hover {
+        background: rgb(255 255 255 / 0.15);
+    }
 }
 
+/* The input is a 24px touch strip; the visible track is drawn inside it. */
 .beta-player__progress {
     appearance: none;
-    height: 4px;
-    border-radius: 9999px;
+    height: 24px;
     cursor: pointer;
+    background: transparent;
+}
+
+.beta-player__progress::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: linear-gradient(
+        to right,
+        var(--ui-primary) var(--progress),
+        rgb(255 255 255 / 0.3) var(--progress)
+    );
+}
+
+.beta-player__progress::-moz-range-track {
+    height: 6px;
+    border-radius: 9999px;
     background: linear-gradient(
         to right,
         var(--ui-primary) var(--progress),
@@ -179,17 +222,20 @@ function onMetadata() {
 
 .beta-player__progress::-webkit-slider-thumb {
     appearance: none;
-    width: 12px;
-    height: 12px;
+    width: 16px;
+    height: 16px;
+    margin-top: -5px;
     border-radius: 9999px;
     background: white;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
 }
 
 .beta-player__progress::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
+    width: 16px;
+    height: 16px;
     border: 0;
     border-radius: 9999px;
     background: white;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
 }
 </style>

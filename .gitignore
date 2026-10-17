@@ -49,3 +49,7 @@ CLAUDE.md
 backend/data/
 backend/tmp/
 /backend/gripello
+
+# Native app: copied from public/ by the capacitor:copy:before script
+/mobile/www/offline.html
+/mobile/www/icon-192.png

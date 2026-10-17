@@ -8,7 +8,7 @@ export function useAccountExport() {
     function download() {
         return run(
             async () => {
-                saveBlob(
+                await saveBlob(
                     await exportMyData(),
                     `gripello-data-${new Date().toISOString().slice(0, 10)}.zip`,
                 )

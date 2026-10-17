@@ -1,4 +1,6 @@
 import type { PushSubscriptionRecord } from '~/types/models'
+import type { NotificationSettings } from '~/api/notifications'
+import { isNativeApp } from './native'
 
 export type PushSupport = 'ok' | 'install' | 'unsupported'
 
@@ -13,6 +15,7 @@ export function pushSupport(env: {
 }
 
 export function browserPushSupport(): PushSupport {
+    if (isNativeApp()) return 'ok'
     return pushSupport({
         hasPushManager: 'PushManager' in window,
         hasNotification: 'Notification' in window,
@@ -24,7 +27,13 @@ export function browserPushSupport(): PushSupport {
     })
 }
 
+export const pushReady = (
+    settings: Pick<NotificationSettings, 'enabled' | 'native' | 'publicKey'>,
+    native = isNativeApp(),
+) => (native ? settings.native : settings.enabled && !!settings.publicKey)
+
 const BROWSERS: [RegExp, string][] = [
+    [/GripelloApp/, 'Gripello app'],
     [/Edg\//, 'Edge'],
     [/OPR\/|Opera/, 'Opera'],
     [/SamsungBrowser/, 'Samsung Internet'],

@@ -75,7 +75,7 @@ export function useCompetitionExport() {
             })
             if (!response.ok)
                 throw new Error(`Export failed: ${response.status}`)
-            saveBlob(
+            await saveBlob(
                 await response.blob(),
                 `${competition.name}-${exportLabels.title}.${format}`,
             )

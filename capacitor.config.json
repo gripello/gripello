@@ -1,0 +1,13 @@
+{
+    "appId": "app.gripello",
+    "appName": "Gripello",
+    "webDir": "mobile/www",
+    "appendUserAgent": "GripelloApp",
+    "server": { "url": "https://gripello.app" },
+    "android": { "path": "mobile/android" },
+    "ios": { "path": "mobile/ios" },
+    "plugins": {
+        "SystemBars": { "initialViewportFitValueHint": "cover" },
+        "SplashScreen": { "launchShowDuration": 3000 }
+    }
+}

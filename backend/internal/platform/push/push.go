@@ -2,6 +2,7 @@ package push
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,6 +27,7 @@ var serviceHosts = []string{
 }
 
 type Subscription struct {
+	Kind     string
 	Endpoint string
 	P256dh   string
 	Auth     string
@@ -43,6 +45,7 @@ type Sender struct {
 	privateKey string
 	subscriber atomic.Pointer[string]
 	client     *http.Client
+	fcm        *FCM
 }
 
 func New(publicKey, privateKey, senderAddress, appURL string) *Sender {
@@ -63,12 +66,43 @@ func (s *Sender) UseSubject(senderAddress, appURL string) {
 
 func (s *Sender) subject() string { return *s.subscriber.Load() }
 
-func (s *Sender) Enabled() bool { return s.publicKey != "" && s.privateKey != "" }
+// UseFCM turns on delivery to the native apps.
+func (s *Sender) UseFCM(credentials []byte) error {
+	fcm, err := NewFCM(credentials, s.client)
+	if err != nil {
+		return err
+	}
+	s.fcm = fcm
+	return nil
+}
+
+func (s *Sender) WebPushEnabled() bool { return s.publicKey != "" && s.privateKey != "" }
+
+func (s *Sender) NativeEnabled() bool { return s.fcm != nil }
+
+func (s *Sender) Enabled() bool { return s.WebPushEnabled() || s.NativeEnabled() }
+
+// Delivers reports whether the channel of a subscription kind is configured.
+func (s *Sender) Delivers(kind string) bool {
+	if kind == KindFCM {
+		return s.NativeEnabled()
+	}
+	return s.WebPushEnabled()
+}
 
 func (s *Sender) PublicKey() string { return s.publicKey }
 
 // Send delivers one encrypted payload; gone means the subscription is dead (404/410) and should be deleted.
 func (s *Sender) Send(ctx context.Context, sub Subscription, payload []byte) (gone bool, err error) {
+	if sub.Kind == KindFCM {
+		if s.fcm == nil {
+			return false, errors.New("fcm is not configured")
+		}
+		return s.fcm.send(ctx, sub.Endpoint, payload)
+	}
+	if !s.WebPushEnabled() {
+		return false, errors.New("web push is not configured")
+	}
 	response, err := webpush.SendNotificationWithContext(ctx, payload, &webpush.Subscription{
 		Endpoint: sub.Endpoint,
 		Keys:     webpush.Keys{P256dh: sub.P256dh, Auth: sub.Auth},

@@ -7,12 +7,13 @@ import {
     browserPushSupport,
     deviceLabel,
     pushDeclinedBy,
+    pushReady,
     setPushDeclined,
     shouldOfferPush,
-    subscriptionKeys,
-    urlBase64ToUint8Array,
     type PushSupport,
 } from '~/utils/push'
+import { isNativeApp } from '~/utils/native'
+import { pushDevice } from '~/utils/pushDevice'
 
 const subscribedHere = ref(false)
 
@@ -20,21 +21,15 @@ export async function subscribeThisDevice(
     userId: string | undefined,
     publicKey: string,
 ) {
-    if ((await Notification.requestPermission()) !== 'granted') return null
-    const registration = await navigator.serviceWorker.ready
-    const subscription =
-        (await registration.pushManager.getSubscription()) ??
-        (await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey),
-        }))
+    const subscription = await pushDevice().subscribe(publicKey)
+    if (!subscription) return null
     const device = await createPushSubscription({
         device: deviceLabel(navigator.userAgent),
-        ...subscriptionKeys(subscription),
+        ...subscription,
     })
     setPushDeclined(userId, false)
     subscribedHere.value = true
-    return { device, subscription }
+    return { device, endpoint: subscription.endpoint }
 }
 
 export function usePushOffer() {
@@ -42,6 +37,7 @@ export function usePushOffer() {
     const support = ref<PushSupport>('unsupported')
     const permission = ref<NotificationPermission>()
     const pushKey = ref('')
+    const ready = ref(false)
     const hasDevices = ref(false)
     const declined = ref(false)
 
@@ -50,7 +46,7 @@ export function usePushOffer() {
             signedIn: authStore.isValid,
             support: support.value,
             permission: permission.value,
-            hasKey: !!pushKey.value,
+            hasKey: ready.value,
             declined: declined.value,
             subscribedHere: subscribedHere.value,
             hasDevices: hasDevices.value,
@@ -59,25 +55,39 @@ export function usePushOffer() {
 
     async function load() {
         support.value = browserPushSupport()
-        permission.value = window.Notification?.permission
         declined.value = pushDeclinedBy(authStore.record?.id)
         if (support.value !== 'ok' || declined.value) return
+        permission.value = await pushDevice().permission()
         if (permission.value === 'denied') return
-        const registration = await navigator.serviceWorker?.getRegistration()
-        subscribedHere.value =
-            !!(await registration?.pushManager.getSubscription())
-        if (subscribedHere.value) return
+        const native = isNativeApp()
+        // A browser subscription means this device is set up; the app always has an FCM token, so it asks the server.
+        if (
+            !native &&
+            permission.value === 'granted' &&
+            (await pushDevice().currentEndpoint())
+        ) {
+            subscribedHere.value = true
+            return
+        }
         const [settings, devices] = await Promise.all([
             getNotificationSettings(),
             permission.value === 'granted' ? listPushSubscriptions() : null,
         ])
+        if (native && devices?.items.length && pushReady(settings)) {
+            const endpoint = await pushDevice().currentEndpoint()
+            subscribedHere.value = devices.items.some(
+                (device) => device.endpoint === endpoint,
+            )
+            if (subscribedHere.value) return
+        }
         pushKey.value = settings.publicKey
+        ready.value = pushReady(settings)
         hasDevices.value = !!devices?.items.length
     }
 
     async function turnOn() {
         await subscribeThisDevice(authStore.record?.id, pushKey.value)
-        permission.value = Notification.permission
+        permission.value = await pushDevice().permission()
     }
 
     onMounted(() => {

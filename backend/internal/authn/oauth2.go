@@ -37,6 +37,10 @@ var oauth2Providers = []string{"google", "apple", "microsoft", "oidc"}
 
 const flowCookie = "gripello_oauth2"
 
+// The native apps run the provider round trip in the system browser (Google blocks embedded WebViews); the callback
+// hands the ticket back through the app's URL scheme and the app's WebView, which holds the flow cookie, redeems it.
+const nativeAppScheme = "app.gripello:"
+
 // safeRedirect allows same-origin paths only; "//host" and "/\host" would leave the site.
 var safeRedirect = regexp.MustCompile(`^/[^/\\]`)
 
@@ -174,6 +178,7 @@ type oauthState struct {
 	Link     bool   `json:"link"`
 	// SessionOnly carries an unchecked "Remember me" across the provider redirect.
 	SessionOnly bool `json:"session_only,omitempty"`
+	Native      bool `json:"native,omitempty"`
 }
 
 func randomToken() string {
@@ -193,6 +198,7 @@ func (m *module) oauth2Start(w http.ResponseWriter, r *http.Request) error {
 		Redirect   string `json:"redirect"`
 		Link       bool   `json:"link"`
 		Persistent *bool  `json:"persistent"`
+		Native     bool   `json:"native"`
 	}
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
@@ -233,7 +239,7 @@ func (m *module) oauth2Start(w http.ResponseWriter, r *http.Request) error {
 	}
 	flow := randomToken()
 	state := oauthState{Verifier: oauth2.GenerateVerifier(), Nonce: randomToken(), FlowHash: hashFlow(flow), Redirect: body.Redirect, Link: body.Link,
-		SessionOnly: body.Persistent != nil && !*body.Persistent}
+		SessionOnly: body.Persistent != nil && !*body.Persistent, Native: body.Native}
 	data, _ := json.Marshal(state)
 	stateID, err := insertChallenge(ctx, m.db, "oauth2_state", linkUser, c.Provider, data)
 	if err != nil {
@@ -294,7 +300,8 @@ func (e oauthError) Error() string { return string(e) }
 func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	provider := r.PathValue("provider")
-	errorPage := m.appURL + "/auth/login?"
+	appURL := m.appURL
+	errorPage := appURL + "/auth/login?"
 	fail := func(code string, err error) error {
 		if err != nil {
 			slog.Warn("authn: OAuth2 sign-in failed", "provider", provider, "code", code, "error", err)
@@ -306,13 +313,17 @@ func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 	if err != nil || state.Method != provider {
 		return fail("failed", err)
 	}
-	if r.FormValue("error") != "" {
-		return fail("failed", nil)
-	}
 	var s oauthState
 	json.Unmarshal(state.Data, &s)
+	if s.Native {
+		appURL = nativeAppScheme
+	}
+	errorPage = appURL + "/auth/login?"
 	if s.Link {
-		errorPage = m.appURL + "/account/settings?tab=security&"
+		errorPage = appURL + "/account/settings?tab=security&"
+	}
+	if r.FormValue("error") != "" {
+		return fail("failed", nil)
 	}
 	c, err := loadProvider(ctx, m.db, m.tokens.Secret, provider)
 	if err != nil || !c.Enabled {
@@ -340,7 +351,7 @@ func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return fail("failed", err)
 		}
-		http.Redirect(w, r, m.appURL+"/account/settings?tab=security&oauth2Link="+url.QueryEscape(ticket), http.StatusFound)
+		http.Redirect(w, r, appURL+"/account/settings?tab=security&oauth2Link="+url.QueryEscape(ticket), http.StatusFound)
 		return nil
 	}
 	userID, err := m.resolveIdentity(r, c, claims)
@@ -356,7 +367,7 @@ func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return fail("failed", err)
 	}
-	target := m.appURL + "/auth/login?oauth2=" + url.QueryEscape(ticket)
+	target := appURL + "/auth/login?oauth2=" + url.QueryEscape(ticket)
 	if s.Redirect != "" {
 		target += "&redirect=" + url.QueryEscape(s.Redirect)
 	}

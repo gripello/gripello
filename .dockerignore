@@ -21,6 +21,8 @@
 !types
 !test
 !vitest.config.ts
+!capacitor.config.json
+!mobile
 !.github/dependabot.yml
 !backend/go.mod
 !backend/go.sum
@@ -30,3 +32,8 @@
 !backend/internal
 !backend/testdata
 **/node_modules
+mobile/android/.gradle
+mobile/android/**/build
+mobile/android/local.properties
+mobile/android/capacitor-cordova-android-plugins
+mobile/android/app/src/main/assets

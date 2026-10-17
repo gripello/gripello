@@ -663,14 +663,13 @@
         }
     }
 
-    @media (display-mode: standalone) {
-        :root {
-            --app-top-inset: env(safe-area-inset-top, 0px);
-        }
+    /* Non-zero only where the page runs under the status bar (installed PWA, native app), like the bottom inset. */
+    :root {
+        --app-top-inset: env(safe-area-inset-top, 0px);
+    }
 
-        .dialog-fullscreen {
-            padding-top: var(--app-top-inset);
-        }
+    .dialog-fullscreen {
+        padding-top: var(--app-top-inset);
     }
 }
 

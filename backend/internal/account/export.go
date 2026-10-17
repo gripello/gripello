@@ -31,7 +31,7 @@ var exportQueries = []exportFile{
 	{"competition_entries.json", `SELECT to_jsonb(e) - 'user' || jsonb_build_object('competition', c.name, 'competition_starts_at', c.starts_at, 'category', cat.name)
 		FROM competition_entries e JOIN competitions c ON c.id = e.competition LEFT JOIN competition_categories cat ON cat.id = e.category
 		WHERE e."user" = $1 ORDER BY e.created`},
-	{"devices.json", `SELECT jsonb_build_object('device', device, 'created', created) FROM push_subscriptions WHERE "user" = $1 ORDER BY created`},
+	{"devices.json", `SELECT jsonb_build_object('device', device, 'kind', kind, 'created', created) FROM push_subscriptions WHERE "user" = $1 ORDER BY created`},
 	{"sessions.json", `SELECT to_jsonb(s) - 'user' FROM sessions s WHERE "user" = $1 ORDER BY created`},
 	{"linked_accounts.json", `SELECT jsonb_build_object('provider', provider, 'email', email, 'subject', subject, 'linked', created) FROM user_identities WHERE "user" = $1 ORDER BY created`},
 	{"two_factor.json", `SELECT jsonb_build_object('id', id, 'kind', kind, 'name', name, 'created', created, 'last_used', last_used) FROM mfa_factors WHERE "user" = $1 ORDER BY created`},

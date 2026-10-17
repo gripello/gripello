@@ -37,6 +37,7 @@ type Config struct {
 	SenderName        string
 	VAPIDPublicKey    string
 	VAPIDPrivateKey   string
+	FCMCredentials    string
 	DBMaxConns        int
 	SlowRequest       time.Duration
 	SlowQuery         time.Duration
@@ -66,6 +67,7 @@ func Load() (Config, error) {
 		SenderName:        env("SENDER_NAME", "Gripello"),
 		VAPIDPublicKey:    env("VAPID_PUBLIC_KEY", ""),
 		VAPIDPrivateKey:   env("VAPID_PRIVATE_KEY", ""),
+		FCMCredentials:    env("FCM_CREDENTIALS", ""),
 		DBMaxConns:        number("DB_MAX_CONNS", 20),
 		SlowRequest:       time.Duration(number("SLOW_REQUEST_MS", 2000)) * time.Millisecond,
 		SlowQuery:         time.Duration(number("SLOW_QUERY_MS", 500)) * time.Millisecond,

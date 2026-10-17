@@ -19,14 +19,16 @@ export type MarkReadRequest = { ids: string[] } | { all: true }
 
 export interface NotificationSettings {
     enabled: boolean
+    native: boolean
     publicKey: string
     topics: NotificationTopic[]
 }
 
 export interface PushSubscriptionInput {
+    kind?: 'webpush' | 'fcm'
     endpoint: string
-    p256dh: string
-    auth: string
+    p256dh?: string
+    auth?: string
     device?: string
 }
 

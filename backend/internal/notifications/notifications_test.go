@@ -372,6 +372,25 @@ func TestSubscriptionsAllowOnlyPushServicesAndMoveToTheLatestUser(t *testing.T) 
 	}
 }
 
+func TestNativeAppsSubscribeWithTheirFCMToken(t *testing.T) {
+	f := newFixture(t, false)
+	token := "dQw4w9WgXcQ:APA91bHun4MxP5egoKMwt2KZFBaFUH-1RYqx"
+	f.call("climber", "POST", "/me/push-subscriptions", `{"kind":"fcm","endpoint":"not a token"}`, http.StatusBadRequest)
+	f.call("climber", "POST", "/me/push-subscriptions", `{"kind":"apns","endpoint":"`+token+`"}`, http.StatusBadRequest)
+	created := f.call("climber", "POST", "/me/push-subscriptions", `{"kind":"fcm","endpoint":"`+token+`","device":"Pixel"}`, http.StatusCreated)
+	if created["kind"] != "fcm" || created["endpoint"] != token {
+		t.Errorf("created = %v", created)
+	}
+	moved := f.call("other", "POST", "/me/push-subscriptions", `{"kind":"fcm","endpoint":"`+token+`"}`, http.StatusCreated)
+	if moved["id"] != created["id"] || moved["user"] != f.users["other"] {
+		t.Errorf("token did not move to the signed-in user: %v", moved)
+	}
+	settings := f.call("", "GET", "/notifications/settings", "", http.StatusOK)
+	if settings["native"] != false || settings["enabled"] != false {
+		t.Errorf("settings = %v", settings)
+	}
+}
+
 func TestTestPushOnlyReachesTheCallersOwnDeviceAndIsLimited(t *testing.T) {
 	f := newFixture(t, true)
 	var pushed atomic.Int32

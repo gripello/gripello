@@ -161,7 +161,7 @@ func (m *module) delete(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) settings(w http.ResponseWriter, r *http.Request) error {
-	httpx.JSON(w, http.StatusOK, map[string]any{"enabled": m.app.Push.Enabled(), "publicKey": m.app.Push.PublicKey(), "topics": topics})
+	httpx.JSON(w, http.StatusOK, map[string]any{"enabled": m.app.Push.WebPushEnabled(), "native": m.app.Push.NativeEnabled(), "publicKey": m.app.Push.PublicKey(), "topics": topics})
 	return nil
 }
 
@@ -224,15 +224,16 @@ type PushSubscription struct {
 	Created  time.Time `json:"created"`
 	Updated  time.Time `json:"updated"`
 	User     string    `json:"user"`
+	Kind     string    `json:"kind"`
 	Endpoint string    `json:"endpoint"`
 	Device   string    `json:"device"`
 }
 
-const subscriptionColumns = `id, created, updated, "user", endpoint, device`
+const subscriptionColumns = `id, created, updated, "user", kind, endpoint, device`
 
 func scanSubscription(row pgx.CollectableRow) (PushSubscription, error) {
 	var s PushSubscription
-	return s, row.Scan(&s.ID, &s.Created, &s.Updated, &s.User, &s.Endpoint, &s.Device)
+	return s, row.Scan(&s.ID, &s.Created, &s.Updated, &s.User, &s.Kind, &s.Endpoint, &s.Device)
 }
 
 func (m *module) listSubscriptions(w http.ResponseWriter, r *http.Request) error {
@@ -261,6 +262,7 @@ func (m *module) subscribe(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var body struct {
+		Kind     string `json:"kind"`
 		Endpoint string `json:"endpoint"`
 		P256dh   string `json:"p256dh"`
 		Auth     string `json:"auth"`
@@ -269,11 +271,23 @@ func (m *module) subscribe(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
 	}
-	if !push.AllowedEndpoint(body.Endpoint) {
-		return httpx.NewError(http.StatusBadRequest, "Unknown push service.")
-	}
-	if body.P256dh == "" || body.Auth == "" || len(body.P256dh) > 200 || len(body.Auth) > 100 {
-		return invalid("p256dh", "Missing or invalid subscription keys.")
+	switch body.Kind {
+	case push.KindFCM:
+		// A native app subscribes with its FCM registration token; the token itself is the device secret.
+		if !push.ValidFCMToken(body.Endpoint) {
+			return invalid("endpoint", "Invalid registration token.")
+		}
+		body.P256dh, body.Auth = "", ""
+	case "", push.KindWebPush:
+		body.Kind = push.KindWebPush
+		if !push.AllowedEndpoint(body.Endpoint) {
+			return httpx.NewError(http.StatusBadRequest, "Unknown push service.")
+		}
+		if body.P256dh == "" || body.Auth == "" || len(body.P256dh) > 200 || len(body.Auth) > 100 {
+			return invalid("p256dh", "Missing or invalid subscription keys.")
+		}
+	default:
+		return invalid("kind", "Unknown kind.")
 	}
 	if len(body.Device) > 200 {
 		return invalid("device", "Too long.")
@@ -289,11 +303,11 @@ func (m *module) subscribe(w http.ResponseWriter, r *http.Request) error {
 		if previous != "" && previous != p.UserID && (p256dh != body.P256dh || authSecret != body.Auth) {
 			return httpx.NewError(http.StatusConflict, "This push endpoint belongs to another device.")
 		}
-		rows, err := tx.Query(r.Context(), `INSERT INTO push_subscriptions (id, "user", endpoint, p256dh, auth, device)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (endpoint) DO UPDATE SET "user" = EXCLUDED."user", p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth,
-				device = EXCLUDED.device, updated = now()
-			RETURNING `+subscriptionColumns, ids.New(), p.UserID, body.Endpoint, body.P256dh, body.Auth, strings.TrimSpace(body.Device))
+		rows, err := tx.Query(r.Context(), `INSERT INTO push_subscriptions (id, "user", kind, endpoint, p256dh, auth, device)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			ON CONFLICT (endpoint) DO UPDATE SET "user" = EXCLUDED."user", kind = EXCLUDED.kind, p256dh = EXCLUDED.p256dh,
+				auth = EXCLUDED.auth, device = EXCLUDED.device, updated = now()
+			RETURNING `+subscriptionColumns, ids.New(), p.UserID, body.Kind, body.Endpoint, body.P256dh, body.Auth, strings.TrimSpace(body.Device))
 		if err != nil {
 			return err
 		}

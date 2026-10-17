@@ -65,7 +65,7 @@ export function useRouteExport() {
                 throw new Error(`Export failed with status ${response.status}`)
             }
 
-            saveBlob(
+            await saveBlob(
                 await responseToBlob(response, format),
                 `${t('export.fileName')}-${exportTimestamp()}.${format}`,
             )

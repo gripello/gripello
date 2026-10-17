@@ -250,11 +250,11 @@ paths:
     post:
       operationId: startOAuth2
       tags: [authn]
-      description: Stores state, PKCE verifier and nonce (single use, 10 minutes), sets the HttpOnly gripello_oauth2 flow cookie and returns the provider URL. link=true needs sign-in and links the identity to the caller. redirect must be a same-origin path. 404 for unknown or disabled providers.
+      description: Stores state, PKCE verifier and nonce (single use, 10 minutes), sets the HttpOnly gripello_oauth2 flow cookie and returns the provider URL. link=true needs sign-in and links the identity to the caller. redirect must be a same-origin path. native=true (native apps, which open the URL in the system browser) makes the callback return to the app scheme `app.gripello:` instead of the app URL; the app's WebView holds the flow cookie and redeems the ticket. 404 for unknown or disabled providers.
       requestBody:
         content:
           application/json:
-            schema: { type: object, properties: { redirect: { type: string }, link: { type: boolean } } }
+            schema: { type: object, properties: { redirect: { type: string }, link: { type: boolean }, persistent: { type: boolean }, native: { type: boolean } } }
       responses:
         '200':
           description: OK
@@ -270,7 +270,7 @@ paths:
     get:
       operationId: oauth2Callback
       tags: [authn]
-      description: Provider redirect target (Apple posts the same fields as a form). Verifies the id_token and redirects to /auth/login?oauth2=<ticket>[&redirect=], to /account/settings?tab=security after linking, or to /auth/login?oauth2Error=failed|registration_disabled|account_exists|already_linked|email_unverified. Accounts are linked by email only for provider-verified addresses on verified accounts, never for Microsoft.
+      description: Provider redirect target (Apple posts the same fields as a form). Verifies the id_token and redirects to /auth/login?oauth2=<ticket>[&redirect=], to /account/settings?tab=security after linking, or to /auth/login?oauth2Error=failed|registration_disabled|account_exists|already_linked|email_unverified (errors of a link flow go to /account/settings?tab=security). Native flows use `app.gripello:` in place of the app URL. Accounts are linked by email only for provider-verified addresses on verified accounts, never for Microsoft.
       responses:
         '302': { description: Redirect back to the app }
   /auth/oauth2/finish:
