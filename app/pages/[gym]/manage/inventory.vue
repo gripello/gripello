@@ -905,7 +905,7 @@ const undoScan = (route: RouteRecord) => {
 }
 
 const loadRoutes = async () => {
-    loadingRoutes.value = true
+    loadingRoutes.value = allRoutes.value.length === 0
     try {
         const { items } = await listRoutes<RouteRecord>(gymId.value, {
             archived: 'all',

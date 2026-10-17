@@ -18,6 +18,7 @@ test('admins add, rename and delete locations used by the route form', async ({
     await page.getByTestId('settings-location-new').fill(name)
     await page.getByTestId('settings-location-add').click()
     await expect(locationRow(page, name)).toHaveCount(1)
+    await expect(page.getByTestId('settings-location-new')).toHaveValue('')
 
     const renameSaved = page.waitForResponse(
         (response) =>
