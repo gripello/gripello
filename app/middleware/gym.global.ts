@@ -1,4 +1,5 @@
 import { getGym } from '~/api/gyms'
+import type { ApiError } from '~/api/client'
 import { isValidGymSlug } from '#shared/utils/gymSlug'
 import { legacyGymRedirect } from '#shared/utils/legacyGymPaths'
 
@@ -22,11 +23,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
             return abortNavigation()
         }
         const found = await getGym(routeSlug).catch((error) => {
+            if ((error as Partial<ApiError>).isAbort) return undefined
             throw createError({
                 status: (error as { status?: number }).status || 503,
                 fatal: true,
             })
         })
+        if (found === undefined) return abortNavigation()
         if (!found)
             return abortNavigation(
                 createError({
