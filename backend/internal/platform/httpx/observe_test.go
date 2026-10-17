@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func captureLogs(t *testing.T) *bytes.Buffer {
@@ -98,5 +99,20 @@ func TestClientAbortsAreLoggedAtDebugNot500(t *testing.T) {
 	line := logs.String()
 	if rec.Code != 499 || strings.Contains(line, "level=ERROR") || !strings.Contains(line, `level=DEBUG msg="request rejected"`) {
 		t.Errorf("abort answered %d, log = %s", rec.Code, line)
+	}
+}
+
+func TestSlowRequestsWarnExceptStreamsAndTheTestMail(t *testing.T) {
+	logs := captureLogs(t)
+	previous := SlowRequest
+	SlowRequest = time.Millisecond
+	t.Cleanup(func() { SlowRequest = previous })
+	slow := func(w http.ResponseWriter, r *http.Request) { time.Sleep(5 * time.Millisecond) }
+	server := observedServer(map[string]http.HandlerFunc{"GET /api/routes": slow, "POST /api/platform/mail/test": slow})
+	server.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/api/routes", nil))
+	server.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/api/platform/mail/test", nil))
+	line := logs.String()
+	if strings.Count(line, `msg="slow request"`) != 1 || strings.Contains(line, "mail/test") {
+		t.Errorf("slow request log = %s", line)
 	}
 }
