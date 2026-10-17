@@ -59,6 +59,16 @@ describe('NavBar', () => {
         )
     })
 
+    it('keeps the header opaque on touch devices, translucent only with a mouse', () => {
+        const classes = mountNavBar(true).find('header').classes()
+
+        expect(classes).toEqual(
+            expect.arrayContaining(['bg-default', 'backdrop-blur-none']),
+        )
+        expect(classes).toContain('lg:pointer-fine:backdrop-blur-md')
+        expect(classes).not.toContain('lg:backdrop-blur-md')
+    })
+
     it('lets the gym switcher shrink while the actions keep their width', () => {
         const wrapper = mountNavBar(false)
         const [left, right] = wrapper.findAll('header > div')
