@@ -1212,12 +1212,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@iconify-json/lucide@npm:^1.2.142":
-  version: 1.2.142
-  resolution: "@iconify-json/lucide@npm:1.2.142"
+"@iconify-json/lucide@npm:^1.2.144":
+  version: 1.2.144
+  resolution: "@iconify-json/lucide@npm:1.2.144"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/32d8fb711cedf9b9b2fc2b348d882639dffd2d9e6fb605b4583b5dc38bbca290536b2a6ce4e3ebff9c642f1e15344ea4eff5708e8de4aebbd596578d289b529a
+  checksum: 10c0/e2873609a1a7006cc9ce01ad97103792683f77f4e7b68591c9bc979af82bf9a6ffbae88e3a5821be3d2bfbc8533ae18d4861f7c299a68a32858353187c0ff4f0
   languageName: node
   linkType: hard
 
@@ -8020,7 +8020,7 @@ __metadata:
     "@capacitor/share": "npm:8.0.3"
     "@capacitor/splash-screen": "npm:8.0.2"
     "@cj-tech-master/excelts": "npm:10.2.0"
-    "@iconify-json/lucide": "npm:^1.2.142"
+    "@iconify-json/lucide": "npm:^1.2.144"
     "@iconify-json/simple-icons": "npm:^1.2.100"
     "@nuxt/ui": "npm:^4.11.3"
     "@nuxtjs/i18n": "npm:10.6.0"
