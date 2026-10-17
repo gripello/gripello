@@ -351,21 +351,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@capacitor/android@npm:8.5.2":
-  version: 8.5.2
-  resolution: "@capacitor/android@npm:8.5.2"
+"@capacitor/android@npm:8.5.3":
+  version: 8.5.3
+  resolution: "@capacitor/android@npm:8.5.3"
   peerDependencies:
     "@capacitor/core": ^8.5.0
-  checksum: 10c0/339e79cb00e3cdce6c91dfa647a269bd20f88c524d75b7d267f797130a37a0425722e15c283b707d4530dd8494f50c3cc1a7fedc842f702a55a530a90ed49e54
+  checksum: 10c0/25bfc9a76920e49ccb96e4dcb34a1861f54e8541cdb2f6a2d85d51bff8b8b9f24823a159e55d63417895d12211b66178d87decfbcd22270d7d2edd9156df3121
   languageName: node
   linkType: hard
 
-"@capacitor/app@npm:8.1.1":
-  version: 8.1.1
-  resolution: "@capacitor/app@npm:8.1.1"
+"@capacitor/app@npm:8.1.2":
+  version: 8.1.2
+  resolution: "@capacitor/app@npm:8.1.2"
   peerDependencies:
     "@capacitor/core": ">=8.0.0"
-  checksum: 10c0/11d246e22bd3e2409d2c7e8fcfa690be7f977e8dff44f2934b9fa24d074ca8fa980b156cc027ad652755a9d1de04a2c00750570a6c3a79cd530d04b7e97b5d3d
+  checksum: 10c0/4c92a23b0ce0b4c7272d6c3cd0443ff3102309c07e7e494a86ca00984d14f9bed333f7908ae0bc184a536435b487d8e36850382ff8e60b46e29a614de4e075da
   languageName: node
   linkType: hard
 
@@ -378,9 +378,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@capacitor/cli@npm:8.5.2":
-  version: 8.5.2
-  resolution: "@capacitor/cli@npm:8.5.2"
+"@capacitor/cli@npm:8.5.3":
+  version: 8.5.3
+  resolution: "@capacitor/cli@npm:8.5.3"
   dependencies:
     "@ionic/cli-framework-output": "npm:^2.2.8"
     "@ionic/utils-subprocess": "npm:^3.0.1"
@@ -403,16 +403,16 @@ __metadata:
   bin:
     cap: bin/capacitor
     capacitor: bin/capacitor
-  checksum: 10c0/1c9b457d0e28e7c3402dd9783cbfa9cad799b5d4ef69c8a6a7679acfb2c718908c45e851a30b18c5be9a1f257cdd4b8b0e7c3fb921c2266deb0547825c8eeb3a
+  checksum: 10c0/0a95f8c110b7f0a321bac57a40054d603733a85e358e1cb915900aa1f5ece4b54463aa85bda0d165adae08f7520841de25a5b34824a0a35e00693191b411465a
   languageName: node
   linkType: hard
 
-"@capacitor/core@npm:8.5.2":
-  version: 8.5.2
-  resolution: "@capacitor/core@npm:8.5.2"
+"@capacitor/core@npm:8.5.3":
+  version: 8.5.3
+  resolution: "@capacitor/core@npm:8.5.3"
   dependencies:
     tslib: "npm:^2.1.0"
-  checksum: 10c0/266f084b124ecbaeece8d763ce5bea1aac234e950b08b137782b94b5b898e248a9bcdfbc5a6ba57a8f8fe35f8bbbaf80ea1d2ce8cd744d7c55010176d5823d0d
+  checksum: 10c0/d6ea860b1ab19c2121e06d673f35a55b8e04732881eff7657baa762ef8fa263db04246ed0a80c0ede6c8d22e4075561db785837435fe1677820d25dc377e09b3
   languageName: node
   linkType: hard
 
@@ -8009,11 +8009,11 @@ __metadata:
   resolution: "gripello@workspace:."
   dependencies:
     "@cap.js/wasm": "npm:0.0.8"
-    "@capacitor/android": "npm:8.5.2"
-    "@capacitor/app": "npm:8.1.1"
+    "@capacitor/android": "npm:8.5.3"
+    "@capacitor/app": "npm:8.1.2"
     "@capacitor/browser": "npm:8.0.5"
-    "@capacitor/cli": "npm:8.5.2"
-    "@capacitor/core": "npm:8.5.2"
+    "@capacitor/cli": "npm:8.5.3"
+    "@capacitor/core": "npm:8.5.3"
     "@capacitor/filesystem": "npm:8.1.4"
     "@capacitor/haptics": "npm:8.0.2"
     "@capacitor/push-notifications": "npm:8.1.3"
