@@ -121,14 +121,14 @@ RUN { node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.tx
       > .output/public/third-party-notices.txt
 
 FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f AS pg-client
-# pg_dump/pg_restore must match the PostgreSQL 18 server; trixie ships 17, so the client comes from PGDG.
+# pg_dump/pg_restore/psql must match the PostgreSQL 18 server; trixie ships 17, so the client comes from PGDG.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates postgresql-common \
  && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
  && apt-get install -y --no-install-recommends postgresql-client-18 \
  && mkdir -p /out/bin /out/lib \
- && cp /usr/lib/postgresql/18/bin/pg_dump /usr/lib/postgresql/18/bin/pg_restore /out/bin/ \
- && cp -L /usr/lib/*-linux-gnu/libpq.so.5 /out/lib/
+ && cp /usr/lib/postgresql/18/bin/pg_dump /usr/lib/postgresql/18/bin/pg_restore /usr/lib/postgresql/18/bin/psql /out/bin/ \
+ && cp -L /usr/lib/*-linux-gnu/libpq.so.5 /usr/lib/*-linux-gnu/libreadline.so.8 /out/lib/
 
 # Only the binaries of node and the PostgreSQL client: their packages bring npm, perl and gnupg along.
 FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
@@ -147,7 +147,7 @@ RUN apt-get update \
  && mkdir -p /data/storage /data/backups /etc/nginx/ssl \
  && touch /etc/nginx/real-ip.conf /etc/nginx/rate-limit.conf \
  && chown node:node /data /data/storage /data/backups /etc/nginx/ssl /etc/nginx/real-ip.conf /etc/nginx/rate-limit.conf \
- && pg_dump --version && vips --version && node --version
+ && pg_dump --version && psql --version && vips --version && node --version
 
 COPY .docker/nginx.conf /etc/nginx/nginx.conf
 COPY --chmod=755 .docker/docker-entrypoint.sh /app/entrypoint.sh

@@ -2,9 +2,15 @@ package main
 
 import (
 	"archive/tar"
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
+
+	"gripello/internal/platform/config"
 )
 
 func writeTar(t *testing.T, path string, files map[string]string) {
@@ -57,5 +63,67 @@ func TestExtractBackupRefusesEscapesAndArchivesWithoutADump(t *testing.T) {
 	writeTar(t, empty, map[string]string{"storage/a.png": "x"})
 	if err := extractBackup(empty, filepath.Join(dir, "d2"), filepath.Join(dir, "s2"), true); err == nil {
 		t.Error("archive without database.dump accepted")
+	}
+}
+
+// fakeRestoreTools puts a pg_restore that writes more SQL than a pipe buffers (then exits with restoreExit)
+// and, unless withoutPsql, a psql that reads its input to EOF and only then marks the restore committed.
+func fakeRestoreTools(t *testing.T, restoreExit int, withoutPsql bool) (archive, committed string) {
+	t.Helper()
+	dir := t.TempDir()
+	archive, committed = filepath.Join(dir, "b.tar"), filepath.Join(dir, "committed")
+	writeTar(t, archive, map[string]string{"database.dump": "dump"})
+	tools := map[string]string{"pg_restore": fmt.Sprintf(`#!/bin/sh
+i=0; while [ $i -lt 20000 ]; do echo 'select 1;'; i=$((i+1)); done
+exit %d
+`, restoreExit)}
+	if !withoutPsql {
+		tools["psql"] = "#!/bin/sh\nwhile read -r line; do :; done\n: > \"$RESTORE_COMMITTED\"\n"
+	}
+	for name, script := range tools {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(script), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", dir)
+	t.Setenv("RESTORE_COMMITTED", committed)
+	return archive, committed
+}
+
+func runAdminRestore(t *testing.T, archive string) error {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err := adminRestore(ctx, config.Config{DatabaseURL: "postgres://gripello@127.0.0.1:1/gripello"}, []string{"--file", archive, "--yes"})
+	if ctx.Err() != nil {
+		t.Fatal("restore hung until the deadline")
+	}
+	return err
+}
+
+func TestAdminRestoreFailsWithoutPsqlInsteadOfHanging(t *testing.T) {
+	archive, _ := fakeRestoreTools(t, 0, true)
+	if err := runAdminRestore(t, archive); err == nil || !strings.Contains(err.Error(), "psql") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestAdminRestoreStreamsTheDumpIntoPsql(t *testing.T) {
+	archive, committed := fakeRestoreTools(t, 0, false)
+	if err := runAdminRestore(t, archive); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(committed); err != nil {
+		t.Error("psql did not read the whole dump")
+	}
+}
+
+func TestAdminRestoreNeverCommitsAFailedPgRestore(t *testing.T) {
+	archive, committed := fakeRestoreTools(t, 1, false)
+	if err := runAdminRestore(t, archive); err == nil || !strings.Contains(err.Error(), "pg_restore") {
+		t.Fatalf("err = %v", err)
+	}
+	if _, err := os.Stat(committed); !os.IsNotExist(err) {
+		t.Error("psql committed a partial restore")
 	}
 }
