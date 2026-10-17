@@ -65,8 +65,12 @@
                     <UIcon name="i-lucide-hard-hat" class="size-[13px]" />
                     {{ route.creator.join(', ') }}
                 </span>
-                <span v-if="anchorPoint !== '—'" class="list-card__pill">
-                    {{ $t('climbing.anchor_point') }} {{ anchorPoint }}
+                <span
+                    v-if="Number(route.anchor_point) > 0"
+                    class="list-card__pill"
+                    data-testid="route-card-anchor"
+                >
+                    {{ $t('climbing.anchor_point') }} {{ route.anchor_point }}
                 </span>
                 <span v-if="screwDate" class="list-card__pill">
                     <UIcon name="i-lucide-calendar-days" class="size-[13px]" />
@@ -112,7 +116,6 @@
 import type { RouteListItem } from '~/types/models'
 import type { DefectSeverity } from '~/utils/tasks'
 import {
-    formatAnchorPoint,
     formatScore,
     formatDate,
     locationName,
@@ -142,9 +145,6 @@ defineEmits<{
 const { locale } = useI18n()
 
 const difficulty = computed(() => formatGrade(props.route))
-const anchorPoint = computed(() =>
-    String(formatAnchorPoint(props.route.anchor_point)),
-)
 const screwDate = computed(() =>
     formatDate(props.route.screw_date, { locale: locale.value }),
 )
