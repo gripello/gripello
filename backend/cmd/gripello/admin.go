@@ -329,21 +329,28 @@ func adminRestore(ctx context.Context, cfg config.Config, args []string) error {
 	apply := exec.CommandContext(ctx, "psql", "-X", "-q", "--single-transaction", "-v", "ON_ERROR_STOP=1", "--dbname="+parsed.Database,
 		"-c", "DROP SCHEMA public CASCADE", "-c", "CREATE SCHEMA public", "-f", "-")
 	restore.Env, apply.Env = append(os.Environ(), env...), append(os.Environ(), env...)
-	sql, err := restore.StdoutPipe()
+	restore.Stderr, apply.Stdout, apply.Stderr = os.Stderr, os.Stdout, os.Stderr
+	sql, sqlWriter, err := os.Pipe()
 	if err != nil {
 		return err
 	}
-	apply.Stdin, apply.Stdout = sql, os.Stdout
-	restore.Stderr, apply.Stderr = os.Stderr, os.Stderr
-	if err := restore.Start(); err != nil {
-		return err
+	apply.Stdin, restore.Stdout = sql, sqlWriter
+	if err := apply.Start(); err != nil {
+		sql.Close()
+		sqlWriter.Close()
+		return fmt.Errorf("psql: %w (the database is unchanged)", err)
 	}
-	applyErr := apply.Run()
-	if err := restore.Wait(); err != nil {
-		return fmt.Errorf("pg_restore: %w", err)
+	sql.Close()
+	// Our write end stays open until pg_restore succeeded: on failure psql is killed before it reads EOF and commits.
+	if err := restore.Run(); err != nil {
+		apply.Process.Kill()
+		sqlWriter.Close()
+		apply.Wait()
+		return fmt.Errorf("pg_restore: %w (the database is unchanged)", err)
 	}
-	if applyErr != nil {
-		return fmt.Errorf("psql: %w (the database is unchanged)", applyErr)
+	sqlWriter.Close()
+	if err := apply.Wait(); err != nil {
+		return fmt.Errorf("psql: %w (the database is unchanged)", err)
 	}
 	if *storage {
 		return extractBackup(*file, "", cfg.BlobDir, true)

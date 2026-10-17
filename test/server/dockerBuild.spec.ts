@@ -45,7 +45,7 @@ describe('docker ui build', () => {
             /apt-get install .*(postgresql-common|libvips-tools)/,
         )
         expect(runtime).toContain(
-            'pg_dump --version && vips --version && node --version',
+            'pg_dump --version && psql --version && vips --version && node --version',
         )
     })
 
@@ -163,12 +163,14 @@ describe('docker ui build', () => {
         expect(read('Dockerfile')).toContain('LOCALES_DIR=/app/locales')
     })
 
-    it('ships a pg_dump that matches the postgres server and a shared backup dir', () => {
+    it('ships pg_dump and psql matching the postgres server and a shared backup dir', () => {
         const server = read('docker-compose.yml').match(
             /image: postgres:(\d+)-alpine/,
         )?.[1]
         const dockerfile = read('Dockerfile')
         expect(dockerfile).toContain(`postgresql-client-${server}`)
+        expect(dockerfile).toMatch(/\/bin\/psql \/out\/bin\//)
+        expect(dockerfile).toContain('libreadline.so.8 /out/lib/')
         expect(dockerfile).toContain('BACKUP_DIR=/data/backups')
         expect(read('docker-compose.yml')).toContain('./backups:/data/backups')
     })
