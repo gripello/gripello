@@ -10,6 +10,17 @@
             imprint-path="/imprint"
             :audit-retention-days="auditRetentionDays"
         />
+
+        <UButton
+            to="/privacy/account-deletion"
+            variant="link"
+            color="primary"
+            icon="i-lucide-user-x"
+            class="mt-3 px-0"
+            data-testid="privacy-account-deletion-link"
+        >
+            {{ $t('legal.accountDeletionPage.title') }}
+        </UButton>
     </div>
 </template>
 

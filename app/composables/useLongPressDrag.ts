@@ -1,3 +1,5 @@
+import { haptic } from '~/utils/haptics'
+
 export interface DragPoint {
     x: number
     y: number
@@ -36,7 +38,7 @@ export function useLongPressDrag<T>(options: LongPressDragOptions<T>) {
             if (!pending) return
             dragged.value = pending.item
             position.value = pending.origin
-            if (typeof navigator !== 'undefined') navigator.vibrate?.(15)
+            void haptic('press')
         }, delay)
     }
 

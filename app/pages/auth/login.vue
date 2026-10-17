@@ -344,6 +344,7 @@ import {
     oauth2ProviderIcon,
     oauth2ProviderName,
 } from '~/utils/oauth2'
+import { openSignInPage } from '~/utils/native'
 import {
     finishOAuth2,
     listOAuth2Providers,
@@ -660,7 +661,8 @@ async function loginWithOAuth2(provider: string) {
             redirect: requestedRedirect || undefined,
             persistent: rememberMe.value,
         })
-        window.location.assign(url)
+        await openSignInPage(url)
+        loading.value = false
     } catch {
         loading.value = false
         notifyError(t(oauth2ErrorKey('failed')))

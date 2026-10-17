@@ -30,6 +30,8 @@ services:
             # Web Push, keys from `npx web-push generate-vapid-keys`. Unset = off.
             #VAPID_PUBLIC_KEY: change-me
             #VAPID_PRIVATE_KEY: change-me
+            # Push to the native apps: Firebase service account key (Project settings › Service accounts), mounted below. Unset = off.
+            #FCM_CREDENTIALS: /run/secrets/fcm.json
             # Reverse proxies in front of this container whose X-Forwarded-For is trusted.
             #TRUSTED_PROXIES: 172.18.0.0/16
         depends_on:
@@ -39,6 +41,7 @@ services:
             - ./storage:/data/storage
             # Backup archives (Platform › Backups); every app container must share it.
             - ./backups:/data/backups
+            #- ./fcm-service-account.json:/run/secrets/fcm.json:ro
             # Custom TLS certificates, replacing the auto-generated self-signed ones:
 #      - ./ssl/cert.pem:/etc/nginx/ssl/cert.pem:ro
 #      - ./ssl/key.pem:/etc/nginx/ssl/key.pem:ro

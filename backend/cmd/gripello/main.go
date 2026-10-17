@@ -131,6 +131,15 @@ func connect(ctx context.Context) (config.Config, *platform.App, error) {
 		Logs:          logs,
 		Metrics:       metrics.New(pool),
 	}
+	if cfg.FCMCredentials != "" {
+		credentials, err := os.ReadFile(cfg.FCMCredentials)
+		if err == nil {
+			err = app.Push.UseFCM(credentials)
+		}
+		if err != nil {
+			slog.Error("push: native push disabled", "error", err)
+		}
+	}
 	app.Verified.Listen(bus)
 	app.Handle("GET /files/{table}/{id}/{name}", store.ServeFile(cfg.TokenSecret))
 	app.Handle("POST /files/token", store.IssueToken(cfg.TokenSecret))

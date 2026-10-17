@@ -682,6 +682,37 @@
                 "body": "Kaarten op halpagina’s worden pas geladen als je Kaart tonen kiest. Je browser vraagt dan kaarttegels op bij de OpenStreetMap Foundation (VK), die je IP-adres en browsergegevens ontvangt (art. 6 lid 1 sub a AVG, je toestemming). We onthouden de keuze op je apparaat; wis de sitegegevens om haar in te trekken. Medewerkers die in de instellingen een haladres opzoeken of de kaartspeld verplaatsen, sturen dat adres of de coördinaten naar OpenStreetMap Nominatim."
             }
         },
+        "accountDeletionPage": {
+            "title": "Je Gripello-account verwijderen",
+            "subtitle": "Hoe je je Gripello-account verwijdert, welke gegevens worden verwijderd en wat hoe lang bewaard blijft.",
+            "stepsTitle": "Zo verwijder je je account",
+            "steps": {
+                "signIn": "Log in bij Gripello in de app of op gripello.app.",
+                "open": "Ga naar „Jij”, tik op je profiel en open het tabblad „Beveiliging”.",
+                "confirm": "Kies „Account verwijderen” en bevestig met je wachtwoord. Log je alleen in met Google, Apple of Microsoft, stel daar dan eerst een wachtwoord in.",
+                "admins": "Ben je de enige beheerder van een hal, maak dan eerst een ander lid beheerder."
+            },
+            "openSettings": "Accountinstellingen openen",
+            "deletedTitle": "Direct verwijderd",
+            "deleted": {
+                "profile": "Je profiel: naam, gebruikersnaam, e-mailadres, profielfoto en banner.",
+                "security": "Je wachtwoord, tweestapsmethoden, passkeys, gekoppelde aanmeldingen met Google, Apple of Microsoft, sessies en apparaten voor pushmeldingen.",
+                "logbook": "Je logboek met alle beklimmingen, je prestaties en je meldingen.",
+                "betas": "Je beta-video’s en wedstrijdinschrijvingen.",
+                "social": "Wie je volgt, wie jou volgt en wie je hebt geblokkeerd.",
+                "memberships": "Je lidmaatschappen en rollen in hallen."
+            },
+            "keptTitle": "Bewaard zonder je naam of voor beperkte tijd",
+            "kept": {
+                "reviews": "Beoordelingen en graadstemmen blijven zonder je naam bij de route.",
+                "reports": "Gemelde gebreken blijven zonder je naam bij de hal, zodat ze verholpen kunnen worden.",
+                "activity": "Items in het activiteitenlogboek blijven tot {days} dagen bewaard zonder je naam; items over je account zelf (zoals aanmeldingen) houden tot dan je e-mailadres.",
+                "logs": "Serverlogs bevatten je account-ID tot 7 dagen.",
+                "backups": "Dagelijkse back-ups bevatten je gegevens tot ze worden vervangen, standaard na 7 dagen."
+            },
+            "noAccessTitle": "Kun je niet meer inloggen?",
+            "noAccess": "Schrijf ons vanaf het e-mailadres van je account, dan verwijderen we het binnen een maand:"
+        },
         "storage": {
             "name": "Naam",
             "type": "Type",
@@ -2698,6 +2729,7 @@
         "mute": "Dempen",
         "unmute": "Geluid aan",
         "fullscreen": "Volledig scherm",
+        "exitFullscreen": "Volledig scherm sluiten",
         "seek": "Afspeelpositie",
         "drop": "Sleep een video hierheen of kies er een",
         "chooseOther": "Andere kiezen",

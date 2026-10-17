@@ -682,6 +682,37 @@
                 "body": "Los mapas de las páginas de rocódromos solo se cargan después de elegir Mostrar mapa. Tu navegador solicita entonces teselas a la OpenStreetMap Foundation (Reino Unido), que recibe tu dirección IP y datos del navegador (art. 6.1.a RGPD, tu consentimiento). Guardamos la elección en tu dispositivo; borra los datos del sitio para retirarla. El personal que busca la dirección de un rocódromo o mueve el marcador del mapa en los ajustes envía esa dirección o las coordenadas a OpenStreetMap Nominatim."
             }
         },
+        "accountDeletionPage": {
+            "title": "Eliminar tu cuenta de Gripello",
+            "subtitle": "Cómo eliminar tu cuenta de Gripello, qué datos se eliminan y qué se conserva y durante cuánto tiempo.",
+            "stepsTitle": "Cómo eliminar tu cuenta",
+            "steps": {
+                "signIn": "Inicia sesión en Gripello en la app o en gripello.app.",
+                "open": "Ve a «Tú», toca tu perfil y abre la pestaña «Seguridad».",
+                "confirm": "Elige «Eliminar cuenta» y confirma con tu contraseña. Si solo inicias sesión con Google, Apple o Microsoft, establece primero una contraseña allí.",
+                "admins": "Si eres el único administrador de un rocódromo, haz administrador a otro miembro primero."
+            },
+            "openSettings": "Abrir ajustes de la cuenta",
+            "deletedTitle": "Se elimina de inmediato",
+            "deleted": {
+                "profile": "Tu perfil: nombre, nombre de usuario, correo electrónico, foto de perfil y banner.",
+                "security": "Tu contraseña, métodos de doble factor, passkeys, inicios de sesión vinculados con Google, Apple o Microsoft, sesiones y dispositivos para notificaciones push.",
+                "logbook": "Tu libro de vías con todos tus encadenes, tus logros y tus notificaciones.",
+                "betas": "Tus vídeos de beta y tus inscripciones en competiciones.",
+                "social": "A quién sigues, quién te sigue y a quién has bloqueado.",
+                "memberships": "Tus membresías y roles en rocódromos."
+            },
+            "keptTitle": "Se conserva sin tu nombre o por un tiempo limitado",
+            "kept": {
+                "reviews": "Las valoraciones y votos de grado se quedan en la vía sin tu nombre.",
+                "reports": "Los defectos que comunicaste se quedan en el rocódromo sin tu nombre para poder repararlos.",
+                "activity": "Las entradas del registro de actividad se conservan sin tu nombre hasta {days} días; las que se refieren a tu propia cuenta (como inicios de sesión) mantienen tu correo hasta entonces.",
+                "logs": "Los registros del servidor contienen el ID de tu cuenta hasta 7 días.",
+                "backups": "Las copias de seguridad diarias contienen tus datos hasta que se sustituyen, por defecto a los 7 días."
+            },
+            "noAccessTitle": "¿Ya no puedes iniciar sesión?",
+            "noAccess": "Escríbenos desde el correo electrónico de tu cuenta y la eliminaremos en el plazo de un mes:"
+        },
         "storage": {
             "name": "Nombre",
             "type": "Tipo",
@@ -2698,6 +2729,7 @@
         "mute": "Silenciar",
         "unmute": "Activar sonido",
         "fullscreen": "Pantalla completa",
+        "exitFullscreen": "Salir de pantalla completa",
         "seek": "Posición de reproducción",
         "drop": "Suelta un vídeo o elige uno",
         "chooseOther": "Elegir otro",

@@ -1,3 +1,4 @@
+import { haptic } from '~/utils/haptics'
 import type { Ref } from 'vue'
 
 interface CameraError {
@@ -51,24 +52,18 @@ export function useQrScanner(
         } catch {}
     }
 
-    const vibrate = (pattern: number | number[]) => {
-        try {
-            navigator.vibrate?.(pattern)
-        } catch {}
-    }
-
     const signalAccepted = () => {
-        vibrate(60)
+        void haptic('success')
         beep(880)
     }
 
     const signalDuplicate = () => {
-        vibrate(30)
+        void haptic('warning')
         beep(520)
     }
 
     const signalRejected = () => {
-        vibrate([40, 60, 40])
+        void haptic('error')
         beep(220, 0.2)
     }
 

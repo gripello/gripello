@@ -117,6 +117,7 @@ export default defineNuxtConfig({
                 'cap-widget',
                 'leaflet',
                 'qrcode',
+                'zxing-wasm/reader',
             ],
         },
     },

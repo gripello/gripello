@@ -334,6 +334,7 @@
 import { formatDate } from '#shared/utils/formatting'
 import { OTP_LENGTH, otpCode, otpDigits } from '~/utils/otp'
 import { deviceLabel } from '~/utils/push'
+import { saveBlob } from '~/utils/download'
 import { needsPasswordFirst } from '~/utils/reauth'
 import {
     createPasskey,
@@ -608,14 +609,10 @@ async function copyCodes() {
 }
 
 function downloadCodes() {
-    const url = URL.createObjectURL(
+    void saveBlob(
         new Blob([codesText.value + '\n'], { type: 'text/plain' }),
-    )
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'gripello-recovery-codes.txt'
-    link.click()
-    URL.revokeObjectURL(url)
+        'gripello-recovery-codes.txt',
+    ).catch(() => notifyError(t('notifications.error.generic')))
 }
 </script>
 

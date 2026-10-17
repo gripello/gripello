@@ -129,6 +129,16 @@ pipeline {
                         }
                     }
                 }
+                stage('Android') {
+                    steps {
+                        script {
+                            reportCheck('Android') {
+                                runTestSuite('android-results', false)
+                            }
+                            archiveArtifacts artifacts: 'test-results/android-results/gripello*', allowEmptyArchive: true
+                        }
+                    }
+                }
                 stage('E2E Install') {
                     steps {
                         sh '''

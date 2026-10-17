@@ -465,6 +465,7 @@ export interface SessionRecord extends BaseRecord {
 
 export interface PushSubscriptionRecord extends BaseRecord {
     user: RecordId
+    kind?: 'webpush' | 'fcm'
     endpoint: string
     device?: string | null
 }

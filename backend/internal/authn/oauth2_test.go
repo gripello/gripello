@@ -204,6 +204,33 @@ func TestOAuth2CreatesAccountsOnlyWhenRegistrationIsOpen(t *testing.T) {
 	}
 }
 
+func TestOAuth2HandsTheNativeAppItsTicketThroughTheAppScheme(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	idp := newFakeIdP(t)
+	f.enableOIDC(idp)
+	f.exec(`INSERT INTO settings (id, allow_registration) VALUES ('platformsetting', true) ON CONFLICT (id) DO UPDATE SET allow_registration = true`)
+	idp.claims["email"] = "app@example.com"
+	flow := f.startOAuth("", map[string]any{"native": true})
+	target := f.callback(flow)
+	if target.Scheme != "app.gripello" || target.Path != "/auth/login" || target.Query().Get("oauth2") == "" {
+		t.Fatalf("native callback target = %s", target)
+	}
+	// Whoever catches the app scheme still lacks the flow cookie of the app's WebView.
+	if status, _ := f.finish(target.Query().Get("oauth2"), &http.Cookie{Name: flowCookie, Value: "guess"}); status == http.StatusOK {
+		t.Fatal("ticket redeemed without the flow cookie")
+	}
+	flow = f.startOAuth("", map[string]any{"native": true})
+	if status, body := f.finish(f.callback(flow).Query().Get("oauth2"), flow.cookie); status != http.StatusOK {
+		t.Fatalf("finish = %d %v", status, body)
+	}
+	flow = f.startOAuth("", map[string]any{"native": true})
+	rec := f.raw(http.MethodGet, "/auth/oauth2/oidc/callback?state="+url.QueryEscape(flow.state)+"&error=access_denied", "", nil)
+	if target, _ := url.Parse(rec.Header().Get("Location")); target.Scheme != "app.gripello" || target.Query().Get("oauth2Error") != "failed" {
+		t.Errorf("a cancelled native sign-in must return to the app: %s", target)
+	}
+}
+
 func TestOAuth2RespectsSecondFactorAndSuspension(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t)

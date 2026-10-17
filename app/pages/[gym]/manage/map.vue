@@ -493,6 +493,7 @@
 </template>
 
 <script setup lang="ts">
+import { haptic } from '~/utils/haptics'
 import {
     archiveRoutes,
     listResetStats,
@@ -804,7 +805,7 @@ function onItemPointerDown(item: RouteRecord, event: PointerEvent) {
         window.addEventListener('touchmove', preventScroll, { passive: false })
         pressTimer = window.setTimeout(() => {
             longPressed = true
-            navigator.vibrate?.(10)
+            void haptic('press')
             revealMap()
             startDrag(start.x, start.y)
         }, LONG_PRESS_MS)

@@ -58,7 +58,9 @@ paths:
     get:
       operationId: getNotificationSettings
       tags: [notifications]
-      description: Public. VAPID key and the mutable topics; `permission` limits who is offered a topic (`platform_admin` = platform admins).
+      description: >
+        Public. VAPID key and the mutable topics; `permission` limits who is offered a topic (`platform_admin` = platform admins).
+        `enabled` = Web Push is configured, `native` = FCM for the native apps is configured.
       responses:
         '200':
           description: Push settings
@@ -66,9 +68,10 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [enabled, publicKey, topics]
+                required: [enabled, native, publicKey, topics]
                 properties:
                   enabled: { type: boolean }
+                  native: { type: boolean }
                   publicKey: { type: string }
                   topics:
                     type: array
@@ -117,16 +120,19 @@ paths:
       operationId: createPushSubscription
       tags: [notifications]
       description: >
-        The endpoint must be https on a known push service (FCM, Apple, Mozilla, WNS). An existing endpoint of the caller
-        is updated; one of another user moves to the caller (same id) only when p256dh and auth match, else 409.
+        Web Push (`kind` webpush, the default): the endpoint must be https on a known push service (FCM, Apple, Mozilla, WNS).
+        An existing endpoint of the caller is updated; one of another user moves to the caller (same id) only when p256dh
+        and auth match, else 409. Native apps (`kind` fcm) send their FCM registration token as `endpoint` and no keys;
+        the token moves to whoever signs in on that device.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [endpoint, p256dh, auth]
+              required: [endpoint]
               properties:
+                kind: { type: string, enum: [webpush, fcm], default: webpush }
                 endpoint: { type: string }
                 p256dh: { type: string, maxLength: 200 }
                 auth: { type: string, maxLength: 100 }
@@ -224,11 +230,12 @@ components:
         additionalProperties: { type: boolean }
     PushSubscription:
       type: object
-      required: [id, created, updated, user, endpoint, device]
+      required: [id, created, updated, user, kind, endpoint, device]
       properties:
         id: { type: string }
         created: { type: string, format: date-time }
         updated: { type: string, format: date-time }
         user: { type: string }
+        kind: { type: string, enum: [webpush, fcm] }
         endpoint: { type: string }
         device: { type: string }

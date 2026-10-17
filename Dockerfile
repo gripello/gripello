@@ -75,6 +75,31 @@ RUN mkdir /out && { yarn typecheck > /out/typecheck.txt 2>&1; echo $? > /out/exi
 FROM scratch AS typecheck-results
 COPY --from=typecheck /out /
 
+# Native Android app (Capacitor): debug APK on every build.
+FROM ui-deps AS android
+ARG ANDROID_CMDLINE_TOOLS=commandlinetools-linux-16111833_latest.zip
+ARG ANDROID_CMDLINE_TOOLS_SHA1=e025545c62a8e64c7559119566a569fb1dec5f60
+ENV ANDROID_HOME=/opt/android-sdk
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openjdk-21-jdk-headless unzip \
+ && rm -rf /var/lib/apt/lists/* \
+ && curl -fsSLo /tmp/tools.zip https://dl.google.com/android/repository/$ANDROID_CMDLINE_TOOLS \
+ && echo "$ANDROID_CMDLINE_TOOLS_SHA1  /tmp/tools.zip" | sha1sum -c - \
+ && mkdir -p $ANDROID_HOME/cmdline-tools \
+ && unzip -q /tmp/tools.zip -d /tmp/tools && mv /tmp/tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest && rm -rf /tmp/tools /tmp/tools.zip \
+ && yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null \
+ && $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools" >/dev/null
+COPY capacitor.config.json ./
+COPY public/offline.html public/icon-192.png ./public/
+COPY mobile ./mobile
+RUN --mount=type=cache,target=/root/.gradle \
+    mkdir /out && npx cap sync android && cd mobile/android \
+ && { ./gradlew --no-daemon -q assembleDebug; echo $? > /out/exit-code; } \
+ && cp app/build/outputs/apk/debug/app-debug.apk /out/gripello-debug.apk 2>/dev/null; true
+
+FROM scratch AS android-results
+COPY --from=android /out /
+
 FROM ui-deps AS ui-build
 COPY nuxt.config.ts ./
 COPY postcss ./postcss

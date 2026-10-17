@@ -43,4 +43,39 @@ describe('RouteBetaPlayer', () => {
                 ?.parentElement?.className,
         ).toContain('pointer-coarse:opacity-100')
     })
+
+    it('turns the fullscreen button into an exit button while fullscreen', async () => {
+        const wrapper = mountPlayer()
+        const button = () => wrapper.get('[data-testid="beta-fullscreen"]')
+        const exit = vi.fn().mockResolvedValue(undefined)
+        Object.defineProperty(document, 'exitFullscreen', {
+            configurable: true,
+            value: exit,
+        })
+        Object.defineProperty(document, 'fullscreenElement', {
+            configurable: true,
+            get: () => wrapper.element,
+        })
+        document.dispatchEvent(new Event('fullscreenchange'))
+        await wrapper.vm.$nextTick()
+
+        expect(button().attributes('aria-label')).toBe('beta.exitFullscreen')
+        await button().trigger('click')
+        expect(exit).toHaveBeenCalled()
+
+        Object.defineProperty(document, 'fullscreenElement', {
+            configurable: true,
+            get: () => null,
+        })
+        document.dispatchEvent(new Event('fullscreenchange'))
+        await wrapper.vm.$nextTick()
+        expect(button().attributes('aria-label')).toBe('beta.fullscreen')
+        wrapper.unmount()
+    })
+
+    it('gives every control a full touch target', () => {
+        const wrapper = mountPlayer()
+        for (const button of wrapper.findAll('.beta-player__button'))
+            expect(button.classes()).toContain('icon-btn')
+    })
 })

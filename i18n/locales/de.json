@@ -682,6 +682,37 @@
                 "body": "Karten auf Hallenseiten werden erst geladen, wenn du „Karte anzeigen“ wählst. Dein Browser lädt dann Kartenkacheln von der OpenStreetMap Foundation (Vereinigtes Königreich), die deine IP-Adresse und Browserangaben erhält (Art. 6 Abs. 1 lit. a DSGVO, deine Einwilligung). Die Auswahl wird auf deinem Gerät gespeichert; lösche die Websitedaten, um sie zu widerrufen. Wenn Mitarbeitende in den Einstellungen eine Hallenadresse suchen oder die Stecknadel verschieben, werden diese Adresse bzw. die Koordinaten an OpenStreetMap Nominatim gesendet."
             }
         },
+        "accountDeletionPage": {
+            "title": "Gripello-Konto löschen",
+            "subtitle": "Wie du dein Gripello-Konto löschst, welche Daten gelöscht werden und was wie lange erhalten bleibt.",
+            "stepsTitle": "So löschst du dein Konto",
+            "steps": {
+                "signIn": "Melde dich in der App oder auf gripello.app bei Gripello an.",
+                "open": "Öffne „Du“, tippe auf dein Profil und wähle den Reiter „Sicherheit“.",
+                "confirm": "Wähle „Konto löschen“ und bestätige mit deinem Passwort. Meldest du dich nur mit Google, Apple oder Microsoft an, lege dort zuerst ein Passwort fest.",
+                "admins": "Bist du der einzige Admin einer Halle, mache zuerst ein anderes Mitglied zum Admin."
+            },
+            "openSettings": "Kontoeinstellungen öffnen",
+            "deletedTitle": "Sofort gelöscht",
+            "deleted": {
+                "profile": "Dein Profil: Name, Benutzername, E-Mail-Adresse, Profilbild und Banner.",
+                "security": "Dein Passwort, Zwei-Faktor-Methoden, Passkeys, verknüpfte Anmeldungen mit Google, Apple oder Microsoft, Sitzungen und Geräte für Push-Benachrichtigungen.",
+                "logbook": "Dein Logbuch mit allen Begehungen, deine Erfolge und deine Benachrichtigungen.",
+                "betas": "Deine Beta-Videos und Wettkampfanmeldungen.",
+                "social": "Wem du folgst, wer dir folgt und wen du blockiert hast.",
+                "memberships": "Deine Mitgliedschaften und Rollen in Hallen."
+            },
+            "keptTitle": "Ohne deinen Namen oder befristet erhalten",
+            "kept": {
+                "reviews": "Bewertungen und Grad-Stimmen bleiben ohne deinen Namen an der Route.",
+                "reports": "Gemeldete Mängel bleiben ohne deinen Namen bei der Halle, damit sie behoben werden können.",
+                "activity": "Einträge im Aktivitätsprotokoll bleiben bis zu {days} Tage ohne deinen Namen erhalten; Einträge zu deinem Konto selbst (etwa Anmeldungen) behalten bis dahin deine E-Mail-Adresse.",
+                "logs": "Server-Logs enthalten deine Konto-ID bis zu 7 Tage lang.",
+                "backups": "Tägliche Sicherungen enthalten deine Daten, bis sie ersetzt werden, standardmäßig nach 7 Tagen."
+            },
+            "noAccessTitle": "Du kannst dich nicht mehr anmelden?",
+            "noAccess": "Schreib uns von der E-Mail-Adresse deines Kontos, dann löschen wir es innerhalb eines Monats:"
+        },
         "storage": {
             "name": "Name",
             "type": "Art",
@@ -2698,6 +2729,7 @@
         "mute": "Stumm",
         "unmute": "Ton an",
         "fullscreen": "Vollbild",
+        "exitFullscreen": "Vollbild beenden",
         "seek": "Wiedergabeposition",
         "drop": "Video hierher ziehen oder auswählen",
         "chooseOther": "Anderes wählen",

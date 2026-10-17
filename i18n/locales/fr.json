@@ -682,6 +682,37 @@
                 "body": "Les cartes des pages de salle ne sont chargées qu’après avoir choisi Afficher la carte. Votre navigateur demande alors des tuiles à l’OpenStreetMap Foundation (Royaume-Uni), qui reçoit votre adresse IP et des informations sur votre navigateur (art. 6, par. 1, point a) RGPD, votre consentement). Nous mémorisons ce choix sur votre appareil ; effacez les données du site pour le retirer. Le personnel qui recherche l’adresse d’une salle ou déplace le repère de la carte dans les paramètres envoie cette adresse ou les coordonnées à OpenStreetMap Nominatim."
             }
         },
+        "accountDeletionPage": {
+            "title": "Supprimer votre compte Gripello",
+            "subtitle": "Comment supprimer votre compte Gripello, quelles données sont supprimées et ce qui est conservé et combien de temps.",
+            "stepsTitle": "Comment supprimer votre compte",
+            "steps": {
+                "signIn": "Connectez-vous à Gripello dans l’app ou sur gripello.app.",
+                "open": "Allez dans « Moi », touchez votre profil et ouvrez l’onglet « Sécurité ».",
+                "confirm": "Choisissez « Supprimer le compte » et confirmez avec votre mot de passe. Si vous vous connectez uniquement avec Google, Apple ou Microsoft, définissez d’abord un mot de passe à cet endroit.",
+                "admins": "Si vous êtes le seul administrateur d’une salle, nommez d’abord un autre membre administrateur."
+            },
+            "openSettings": "Ouvrir les paramètres du compte",
+            "deletedTitle": "Supprimé immédiatement",
+            "deleted": {
+                "profile": "Votre profil : nom, nom d’utilisateur, adresse e-mail, photo de profil et bannière.",
+                "security": "Votre mot de passe, vos méthodes à deux facteurs, vos passkeys, vos connexions liées à Google, Apple ou Microsoft, vos sessions et vos appareils pour les notifications push.",
+                "logbook": "Votre carnet avec toutes vos réussites, vos succès et vos notifications.",
+                "betas": "Vos vidéos de bêta et vos inscriptions aux compétitions.",
+                "social": "Les personnes que vous suivez, celles qui vous suivent et celles que vous avez bloquées.",
+                "memberships": "Vos adhésions et rôles dans les salles."
+            },
+            "keptTitle": "Conservé sans votre nom ou pour une durée limitée",
+            "kept": {
+                "reviews": "Les avis et votes de cotation restent sur la voie sans votre nom.",
+                "reports": "Les défauts que vous avez signalés restent à la salle sans votre nom, pour pouvoir être réparés.",
+                "activity": "Les entrées du journal d’activité restent sans votre nom jusqu’à {days} jours ; celles qui concernent votre compte lui-même (comme les connexions) gardent votre adresse e-mail jusque-là.",
+                "logs": "Les journaux du serveur contiennent l’identifiant de votre compte jusqu’à 7 jours.",
+                "backups": "Les sauvegardes quotidiennes contiennent vos données jusqu’à leur remplacement, par défaut après 7 jours."
+            },
+            "noAccessTitle": "Vous ne pouvez plus vous connecter ?",
+            "noAccess": "Écrivez-nous depuis l’adresse e-mail de votre compte et nous le supprimerons dans un délai d’un mois :"
+        },
         "storage": {
             "name": "Nom",
             "type": "Type",
@@ -2698,6 +2729,7 @@
         "mute": "Couper le son",
         "unmute": "Activer le son",
         "fullscreen": "Plein écran",
+        "exitFullscreen": "Quitter le plein écran",
         "seek": "Position de lecture",
         "drop": "Dépose une vidéo ou choisis-en une",
         "chooseOther": "Choisir une autre",

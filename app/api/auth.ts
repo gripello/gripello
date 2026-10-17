@@ -1,5 +1,6 @@
 import type { ApiRecord, AuthRecord, AuthStore } from '~/composables/authStore'
 import { useApi } from './client'
+import { isNativeApp } from '~/utils/native'
 
 export type AuthResult = { token: string; record: ApiRecord }
 export type SecondFactorMethod = 'totp' | 'passkey' | 'recovery'
@@ -118,7 +119,10 @@ export function startOAuth2(
     provider: string,
     options: { redirect?: string; link?: boolean; persistent?: boolean } = {},
 ) {
-    return post<{ url: string }>(`/auth/oauth2/${provider}/start`, options)
+    return post<{ url: string }>(`/auth/oauth2/${provider}/start`, {
+        ...options,
+        native: isNativeApp() || undefined,
+    })
 }
 
 export function finishOAuth2(ticket: string) {

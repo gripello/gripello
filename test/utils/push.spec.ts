@@ -158,3 +158,23 @@ describe('applyDeviceEvent', () => {
         ).toEqual([laptop])
     })
 })
+
+describe('pushReady', () => {
+    it('needs Web Push in the browser and FCM in the app', async () => {
+        const { pushReady } = await import('~/utils/push')
+        const settings = { enabled: true, native: false, publicKey: 'key' }
+        expect(pushReady(settings, false)).toBe(true)
+        expect(pushReady(settings, true)).toBe(false)
+        expect(pushReady({ ...settings, native: true }, true)).toBe(true)
+        expect(pushReady({ ...settings, publicKey: '' }, false)).toBe(false)
+    })
+
+    it('labels the native app as its own device', async () => {
+        const { deviceLabel } = await import('~/utils/push')
+        expect(
+            deviceLabel(
+                'Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/149.0 Mobile Safari/537.36 GripelloApp',
+            ),
+        ).toBe('Gripello app · Android')
+    })
+})

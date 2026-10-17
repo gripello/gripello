@@ -682,6 +682,37 @@
                 "body": "Maps on gym pages are only loaded after you select Show map. Your browser then requests map tiles from the OpenStreetMap Foundation (UK), which receives your IP address and browser details (Art. 6(1)(a) GDPR, your consent). We remember the choice on your device; clear the site data to withdraw it. Staff who look up a gym address or move the map pin in the settings send that address or the pin coordinates to OpenStreetMap Nominatim."
             }
         },
+        "accountDeletionPage": {
+            "title": "Delete your Gripello account",
+            "subtitle": "How to delete your Gripello account, which data is deleted and what is kept for how long.",
+            "stepsTitle": "How to delete your account",
+            "steps": {
+                "signIn": "Sign in to Gripello in the app or at gripello.app.",
+                "open": "Go to “You”, tap your profile and open the “Security” tab.",
+                "confirm": "Choose “Delete account” and confirm with your password. If you only sign in with Google, Apple or Microsoft, set a password there first.",
+                "admins": "If you are the only admin of a gym, make another member admin first."
+            },
+            "openSettings": "Open account settings",
+            "deletedTitle": "Deleted immediately",
+            "deleted": {
+                "profile": "Your profile: name, username, e-mail address, profile picture and banner.",
+                "security": "Your password, two-factor methods, passkeys, linked Google, Apple or Microsoft sign-ins, sessions and devices for push notifications.",
+                "logbook": "Your logbook with all sends, your achievements and your notifications.",
+                "betas": "Your beta videos and competition entries.",
+                "social": "Who you follow, who follows you and whom you blocked.",
+                "memberships": "Your memberships and roles in gyms."
+            },
+            "keptTitle": "Kept without your name, or for a limited time",
+            "kept": {
+                "reviews": "Reviews and grade votes stay on the route without your name.",
+                "reports": "Defects you reported stay with the gym without your name, so they can be fixed.",
+                "activity": "Activity log entries stay without your name for up to {days} days; entries about your account itself (such as sign-ins) keep your e-mail address until then.",
+                "logs": "Server logs contain your account ID for up to 7 days.",
+                "backups": "Daily backups still contain your data until they are replaced, by default after 7 days."
+            },
+            "noAccessTitle": "Cannot sign in any more?",
+            "noAccess": "Write to us from the e-mail address of your account and we will delete it within one month:"
+        },
         "storage": {
             "name": "Name",
             "type": "Type",
@@ -2698,6 +2729,7 @@
         "mute": "Mute",
         "unmute": "Unmute",
         "fullscreen": "Full screen",
+        "exitFullscreen": "Exit full screen",
         "seek": "Playback position",
         "drop": "Drop a video or choose one",
         "chooseOther": "Choose another",

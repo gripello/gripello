@@ -110,6 +110,7 @@ import {
     oauth2ProviderIcon,
     oauth2ProviderName,
 } from '~/utils/oauth2'
+import { openSignInPage } from '~/utils/native'
 
 const LIST = 'min-w-0 p-0 sm:p-0 gap-y-0 divide-y divide-default'
 
@@ -181,7 +182,8 @@ async function startLink(provider: string) {
     try {
         if (confirmLink.value) await reauthenticate(password.value)
         const { url } = await startOAuth2(provider, { link: true })
-        window.location.assign(url)
+        await openSignInPage(url)
+        linking.value = ''
     } catch (err) {
         linking.value = ''
         notifyError(
