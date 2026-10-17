@@ -201,6 +201,7 @@
         "noAccount": "Pas encore de compte ?"
     },
     "routes": {
+        "generate_name": "Générer un nom",
         "home": "Aperçu",
         "dashboard": "Gérer les voies",
         "inventory": "Inventaire",
@@ -3028,5 +3029,43 @@
         "newToday": "Nouveau aujourd'hui",
         "routeCount": "{n} voie | {n} voies",
         "scanToOpen": "Scannez pour noter vos réussites"
+    },
+    "routeNames": {
+        "mood": {
+            "easy": "doux/douce endormi/endormie paresseux/paresseuse petit/petite joyeux/joyeuse ensoleillé/ensoleillée gentil/gentille mignon/mignonne tranquille câlin/câline",
+            "mid": "silencieux/silencieuse caché/cachée tordu/tordue secret/secrète cosmique électrique rouillé/rouillée salé/salée rusé/rusée têtu/têtue doré/dorée rapide",
+            "hard": "sauvage furieux/furieuse brutal/brutale puissant/puissante infini/infinie géant/géante enragé/enragée féroce impitoyable sombre"
+        },
+        "colors": {
+            "red": "rouge",
+            "orange": "orange",
+            "yellow": "jaune",
+            "green": "vert/verte",
+            "blue": "bleu/bleue",
+            "purple": "violet/violette",
+            "pink": "rose",
+            "black": "noir/noire",
+            "white": "blanc/blanche",
+            "grey": "gris/grise",
+            "brown": "brun/brune"
+        },
+        "nouns": {
+            "boulder": "réglette.f pince.f plat.m jeté.m bac.m caillou.m énigme.f nœud.m cube.m bloc.m saut.m puzzle.m",
+            "route": "ligne.f tour.f autoroute.f cheminée.f voyage.m crête.f pilier.m échelle.f escalier.m arête.f fissure.f sentier.m",
+            "any": "faucon.m gecko.m araignée.f chèvre.f panda.m comète.f tempête.f dragon.m cactus.m bretzel.m sorcier.m pirate.m fusée.f poulpe.m"
+        },
+        "colorNouns": {
+            "red": "lave.f braise.f piment.m cerise.f flamme.f",
+            "orange": "renard.m tigre.m citrouille.f mandarine.f",
+            "yellow": "banane.f citron.m soleil.m miel.m abeille.f",
+            "green": "grenouille.f mousse.f jungle.f cornichon.m",
+            "blue": "océan.m glacier.m vague.f lagune.f",
+            "purple": "prune.f améthyste.f violette.f aubergine.f",
+            "pink": "flamant.m bonbon.m porcelet.m axolotl.m",
+            "black": "corbeau.m ombre.f nuit.f panthère.f",
+            "white": "fantôme.m neige.f nuage.m yéti.m",
+            "grey": "granit.m brouillard.m éléphant.m loup.m",
+            "brown": "blaireau.m ours.m boue.f chocolat.m"
+        }
     }
 }

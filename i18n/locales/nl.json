@@ -201,6 +201,7 @@
         "noAccount": "Nog geen account?"
     },
     "routes": {
+        "generate_name": "Naam genereren",
         "home": "Overzicht",
         "dashboard": "Routes beheren",
         "inventory": "Inventaris",
@@ -3028,5 +3029,43 @@
         "newToday": "Vandaag nieuw",
         "routeCount": "{n} route | {n} routes",
         "scanToOpen": "Scan om je beklimmingen te loggen"
+    },
+    "routeNames": {
+        "mood": {
+            "easy": "zachte/zacht slaperige/slaperig luie/lui kleine/klein vrolijke/vrolijk zonnige/zonnig vriendelijke/vriendelijk lieve/lief knusse/knus gezellige/gezellig",
+            "mid": "stille/stil geheime/geheim scheve/scheef kosmische/kosmisch elektrische/elektrisch roestige/roestig zoute/zout sluwe/sluw koppige/koppig gouden snelle/snel verborgen",
+            "hard": "woeste/woest boze/boos brute/bruut machtige/machtig eindeloze/eindeloos reusachtige/reusachtig razende/razend felle/fel genadeloze/genadeloos duistere/duister"
+        },
+        "colors": {
+            "red": "rode/rood",
+            "orange": "oranje",
+            "yellow": "gele/geel",
+            "green": "groene/groen",
+            "blue": "blauwe/blauw",
+            "purple": "paarse/paars",
+            "pink": "roze",
+            "black": "zwarte/zwart",
+            "white": "witte/wit",
+            "grey": "grijze/grijs",
+            "brown": "bruine/bruin"
+        },
+        "nouns": {
+            "boulder": "richel.d knijper.d sloper.d dyno.d bak.d kiezel.d raadsel.h knoop.d kubus.d blok.h sprong.d puzzel.d",
+            "route": "lijn.d toren.d snelweg.d schoorsteen.d reis.d graat.d pilaar.d ladder.d trap.d kam.d scheur.d pad.h",
+            "any": "valk.d gekko.d spin.d geit.d panda.d komeet.d storm.d draak.d cactus.d krakeling.d tovenaar.d piraat.d raket.d inktvis.d"
+        },
+        "colorNouns": {
+            "red": "lava.d gloed.d peper.d kers.d vlam.d",
+            "orange": "vos.d tijger.d pompoen.d mandarijn.d",
+            "yellow": "banaan.d citroen.d zon.d honing.d bij.d",
+            "green": "kikker.d mos.h jungle.d augurk.d",
+            "blue": "oceaan.d gletsjer.d golf.d lagune.d",
+            "purple": "pruim.d amethist.d viooltje.h aubergine.d",
+            "pink": "flamingo.d kauwgom.d big.d axolotl.d",
+            "black": "raaf.d schaduw.d nacht.d panter.d",
+            "white": "spook.h sneeuw.d wolk.d yeti.d",
+            "grey": "graniet.h mist.d olifant.d wolf.d",
+            "brown": "das.d beer.d modder.d chocolade.d"
+        }
     }
 }

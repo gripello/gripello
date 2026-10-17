@@ -25,7 +25,20 @@
                     maxlength="30"
                     class="w-full"
                     data-testid="route-form-name"
-                />
+                >
+                    <template #trailing>
+                        <UButton
+                            icon="i-lucide-dices"
+                            color="neutral"
+                            variant="link"
+                            size="sm"
+                            class="icon-btn"
+                            :aria-label="$t('routes.generate_name')"
+                            data-testid="route-form-generate-name"
+                            @click="generateName"
+                        />
+                    </template>
+                </UInput>
             </UFormField>
 
             <div class="grid grid-cols-2 gap-4">
@@ -310,8 +323,9 @@ import {
     isGradeSystem,
     type GradeSystem,
 } from '#shared/utils/grades'
+import { generateRouteName } from '#shared/utils/routeNames'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { error: notifyError } = useNotification()
 const gymId = useCurrentGymId()
 
@@ -554,6 +568,20 @@ const gradeFieldLabel = computed(
     () =>
         `${t('climbing.difficulty')} (${t(`gradeSystems.${gradeSystem.value}`)})`,
 )
+
+function generateName() {
+    form.name = generateRouteName(
+        locale.value,
+        (key) => t(`routeNames.${key}`),
+        {
+            type: form.type,
+            gradeIndex: gradeIndex(gradeSystem.value, form.grade),
+            color: form.color,
+        },
+        Math.random,
+        form.name,
+    )
+}
 
 watch(gradeSystem, (system) => {
     if (form.grade && !gradeLabels(system).includes(form.grade))
