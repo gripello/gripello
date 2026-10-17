@@ -15,12 +15,13 @@ import (
 // SlowRequest is the duration above which a request is logged at WARN; 0 disables it.
 var SlowRequest = 2 * time.Second
 
-// Streams and downloads take as long as the connection, so their duration is no sign of a slow server.
+// Streams and downloads take as long as the connection and the test mail as long as the SMTP server, so their duration is no sign of a slow server.
 var streaming = map[string]bool{
 	"GET /api/realtime":                  true,
 	"GET /api/files/{table}/{id}/{name}": true,
 	"GET /api/me/export":                 true,
 	"GET /api/platform/backups/{name}":   true,
+	"POST /api/platform/mail/test":       true,
 }
 
 type requestIDKey struct{}

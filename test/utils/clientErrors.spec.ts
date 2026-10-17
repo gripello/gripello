@@ -48,6 +48,11 @@ describe('createReporter', () => {
         report('window', 'ResizeObserver loop limit exceeded', context)
         report('window', 'Script error.', context)
         report(
+            'promise',
+            'Object Not Found Matching Id:1, MethodName:update, ParamCount:4',
+            context,
+        )
+        report(
             'nuxt',
             Object.assign(new Error('Gym not found'), { statusCode: 404 }),
             context,

@@ -6,6 +6,8 @@ const IGNORED = [
     /ResizeObserver loop/,
     /^Script error\.?$/,
     /chrome-extension:|moz-extension:|safari-extension:/,
+    // Outlook Safe Links scanners opening mailed links in a headless browser.
+    /^Object Not Found Matching Id:\d+, MethodName:\w+, ParamCount:\d+$/,
 ]
 
 const NETWORK_FAILURE =
