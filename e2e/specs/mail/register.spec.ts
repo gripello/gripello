@@ -76,6 +76,8 @@ test('a climber signs up, verifies the email and signs in', async ({
 
     await gotoSettled(page, '/auth/login')
     await page.getByTestId('login-goto-register').click()
+    await page.getByTestId('register-firstname').fill('Jane')
+    await page.getByTestId('register-lastname').fill('Doe')
     await page.getByTestId('register-username').fill(username)
     await page.getByTestId('register-email').fill(email)
     await page.getByTestId('password-new').fill(PASSWORD)
@@ -91,6 +93,7 @@ test('a climber signs up, verifies the email and signs in', async ({
 
     const created = await platformUser(api, email)
     expect(created?.verified).toBe(false)
+    expect(created).toMatchObject({ firstname: 'Jane', name: 'Doe' })
     expect(created?.memberships).toHaveLength(0)
 
     const mail = await waitForMail(page, email, { subject: /verify/i })
