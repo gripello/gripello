@@ -16,7 +16,7 @@ func TestPublishReachesListener(t *testing.T) {
 	bus := NewBus(pool)
 	got := make(chan Event, 1)
 	bus.Subscribe("gym_changes:", func(e Event) { got <- e })
-	go bus.Run(ctx)
+	bus.Start(ctx)
 	time.Sleep(200 * time.Millisecond)
 
 	tx, _ := pool.Begin(ctx)
@@ -43,6 +43,27 @@ func TestPublishReachesListener(t *testing.T) {
 	}
 }
 
+func TestStartDeliversEventsPublishedRightAfter(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool := testkit.Pool(t)
+	bus := NewBus(pool)
+	got := make(chan Event, 1)
+	bus.Subscribe("gym_changes:", func(e Event) { got <- e })
+	bus.Start(ctx)
+
+	tx, _ := pool.Begin(ctx)
+	if err := Publish(ctx, tx, "gym_changes:g1", "route.created", map[string]string{"id": "r1"}, Audience{}); err != nil {
+		t.Fatal(err)
+	}
+	tx.Commit(ctx)
+	select {
+	case <-got:
+	case <-time.After(3 * time.Second):
+		t.Fatal("event published right after Start was skipped")
+	}
+}
+
 func TestSubscribeOnceClaimsPerHandler(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -52,7 +73,7 @@ func TestSubscribeOnceClaimsPerHandler(t *testing.T) {
 	for _, bus := range []*Bus{first, second} {
 		bus.SubscribeOnce("audit", "audit.write", func(Event) { runs <- "once" })
 		bus.Subscribe("audit", func(Event) { runs <- "each" })
-		go bus.Run(ctx)
+		bus.Start(ctx)
 	}
 	time.Sleep(200 * time.Millisecond)
 	tx, _ := pool.Begin(ctx)
@@ -87,7 +108,7 @@ func TestSlowerTransactionsEventIsNotSkipped(t *testing.T) {
 	bus := NewBus(pool)
 	got := make(chan string, 4)
 	bus.Subscribe("t", func(e Event) { got <- e.Kind })
-	go bus.Run(ctx)
+	bus.Start(ctx)
 	time.Sleep(200 * time.Millisecond)
 
 	slow, _ := pool.Begin(ctx)
@@ -154,7 +175,7 @@ func TestFailedOnceHandlerReleasesItsClaimAndRetries(t *testing.T) {
 			panic("first attempt fails")
 		}
 	})
-	go bus.Run(ctx)
+	bus.Start(ctx)
 	time.Sleep(200 * time.Millisecond)
 	tx, _ := pool.Begin(ctx)
 	Publish(ctx, tx, "audit", "x", nil, Audience{})
@@ -195,7 +216,7 @@ func TestOnceHandlerGetsEventsCommittedWhileNoBusRan(t *testing.T) {
 	runs := make(chan string, 4)
 	bus.SubscribeOnce("audit", "audit.write", func(e Event) { runs <- "once " + e.Kind })
 	bus.Subscribe("audit", func(e Event) { runs <- "each " + e.Kind })
-	go bus.Run(ctx)
+	bus.Start(ctx)
 	select {
 	case r := <-runs:
 		if r != "once while down" {
@@ -222,7 +243,7 @@ func TestOnceHandlerGetsEventSkippedBehindAGap(t *testing.T) {
 	bus := NewBus(pool)
 	once := make(chan string, 4)
 	bus.SubscribeOnce("t", "t.once", func(e Event) { once <- e.Kind })
-	go bus.Run(ctx)
+	bus.Start(ctx)
 	if kind := receive(t, once); kind != "seed" {
 		t.Fatalf("got %q", kind)
 	}
@@ -311,7 +332,7 @@ func TestFullPassDeliversAnEventWhoseRetriesAllFailed(t *testing.T) {
 		}
 		delivered <- struct{}{}
 	})
-	go bus.Run(ctx)
+	bus.Start(ctx)
 	time.Sleep(200 * time.Millisecond)
 	tx, _ := pool.Begin(ctx)
 	Publish(ctx, tx, "audit", "x", nil, Audience{})
@@ -369,7 +390,7 @@ func TestLagIgnoresTheOutboxBeforeTheBusStarts(t *testing.T) {
 	if lag, err := bus.Lag(ctx); err != nil || lag != 0 {
 		t.Fatalf("lag before Run = %v, %v; the outbox history is not a backlog", lag, err)
 	}
-	go bus.Run(ctx)
+	bus.Start(ctx)
 	deadline := time.Now().Add(3 * time.Second)
 	for !bus.started.Load() && time.Now().Before(deadline) {
 		time.Sleep(10 * time.Millisecond)

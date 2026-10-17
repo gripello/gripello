@@ -150,13 +150,18 @@ func runSafely(h Handler, e Event) (ok bool) {
 	return true
 }
 
-// Run blocks until ctx is done; it reconnects on errors and reads by id, not by notification payload.
+// Start reads the live head before returning, so every event published afterwards is dispatched, then runs until ctx is done;
+// it reconnects on errors and reads by id, not by notification payload.
 // Plain handlers start at the live head; SubscribeOnce handlers also get the unclaimed events still in the outbox.
-func (b *Bus) Run(ctx context.Context) {
+func (b *Bus) Start(ctx context.Context) {
 	b.pool.QueryRow(ctx, `SELECT COALESCE(MAX(id), 0) FROM events`).Scan(&b.lastID)
 	b.delivered.Store(b.lastID)
 	b.started.Store(true)
 	go b.sweepUnclaimed(ctx)
+	go b.run(ctx)
+}
+
+func (b *Bus) run(ctx context.Context) {
 	for ctx.Err() == nil {
 		if err := b.listen(ctx); err != nil && ctx.Err() == nil {
 			slog.Error("events: listener stopped", "error", err)

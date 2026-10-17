@@ -239,7 +239,7 @@ func serve(ctx context.Context, args []string) error {
 		return app.Bus.Prune(ctx, time.Hour)
 	})
 
-	go app.Bus.Run(ctx)
+	app.Bus.Start(ctx)
 	go app.Metrics.Run(ctx)
 	replica, _ := os.Hostname()
 	// Both write once more after ctx ends (last logs, removing this replica); returning waits for that.

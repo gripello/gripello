@@ -40,8 +40,8 @@ func TestSubscriptionsReachTheStreamOnAnotherReplica(t *testing.T) {
 	t.Cleanup(cancel)
 	busA, busB := events.NewBus(pool), events.NewBus(pool)
 	hubA, hubB := NewHub(busA, fakePerms{}), NewHub(busB, fakePerms{})
-	go busA.Run(ctx)
-	go busB.Run(ctx)
+	busA.Start(ctx)
+	busB.Start(ctx)
 
 	before := publishPublic(t, pool, "gym:x")
 	missed := publishPublic(t, pool, "gym:x")

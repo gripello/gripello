@@ -29,7 +29,7 @@ func App(t *testing.T) *platform.App {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	bus := events.NewBus(pool)
-	go bus.Run(ctx)
+	bus.Start(ctx)
 	blobDir := t.TempDir()
 	store, err := blob.NewFS(blobDir)
 	if err != nil {
