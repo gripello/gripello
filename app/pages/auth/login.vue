@@ -204,6 +204,35 @@
                     data-testid="register-form"
                     @submit="submitRegister"
                 >
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <UFormField
+                            :label="$t('account.firstname')"
+                            name="firstname"
+                        >
+                            <UInput
+                                v-model="registerFirstname"
+                                autocomplete="given-name"
+                                enterkeyhint="next"
+                                :disabled="loading"
+                                size="xl"
+                                color="success"
+                                class="w-full"
+                                data-testid="register-firstname"
+                            />
+                        </UFormField>
+                        <UFormField :label="$t('account.lastname')" name="name">
+                            <UInput
+                                v-model="registerLastname"
+                                autocomplete="family-name"
+                                enterkeyhint="next"
+                                :disabled="loading"
+                                size="xl"
+                                color="success"
+                                class="w-full"
+                                data-testid="register-lastname"
+                            />
+                        </UFormField>
+                    </div>
                     <UFormField
                         :label="$t('account.username')"
                         name="username"
@@ -422,6 +451,8 @@ const loading = ref(typeof oauth2Ticket === 'string' && !!oauth2Ticket)
 const identity = ref('')
 const password = ref('')
 const resetEmail = ref('')
+const registerFirstname = ref('')
+const registerLastname = ref('')
 const registerUsername = ref('')
 const registerEmail = ref('')
 const registerPassword = ref('')
@@ -802,7 +833,7 @@ function registerFieldError(err: unknown) {
     )?.data?.data
     if (fields?.username?.code === 'validation_not_unique')
         return { name: 'username', message: t('users.usernameTaken') }
-    const blocked = blockedFieldError(err, ['email', 'username'])
+    const blocked = blockedFieldError(err, ['email', 'username', 'name'])
     if (blocked) return { name: blocked.name, message: t(blocked.key) }
     if (fields?.email)
         return { name: 'email', message: t('account.emailTaken') }
@@ -815,6 +846,8 @@ async function submitRegister() {
     try {
         const { verificationSent } = await register(
             {
+                firstname: registerFirstname.value,
+                name: registerLastname.value,
                 username: registerUsername.value,
                 email: registerEmail.value,
                 password: registerPassword.value,
