@@ -43,7 +43,7 @@
         "concurrently": "10.0.6",
         "echarts": "6.1.0",
         "h3": "1.15.11",
-        "happy-dom": "20.14.6",
+        "happy-dom": "21.0.1",
         "leaflet": "^1.9.4",
         "nuxt": "^4.6.1",
         "pako": "^3.0.2",
