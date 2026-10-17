@@ -177,6 +177,7 @@
 <script setup lang="ts">
 import { createEntry, listCategories, updateEntry } from '~/api/competitions'
 import { keepWhenOffline } from '~/utils/errors'
+import { blockedFieldError } from '~/utils/fieldErrors'
 import {
     required,
     validateRules,
@@ -288,7 +289,14 @@ async function register() {
             })
             emit('changed')
         },
-        { success: t('competitions.register.done') },
+        {
+            success: t('competitions.register.done'),
+            error: (err) =>
+                t(
+                    blockedFieldError(err, ['display_name'])?.key ??
+                        'notifications.error.generic',
+                ),
+        },
     )
 }
 

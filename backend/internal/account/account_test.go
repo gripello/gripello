@@ -537,3 +537,12 @@ func TestFollowAndUnfollowWall(t *testing.T) {
 		t.Errorf("events = %v", changes)
 	}
 }
+
+func TestProtectedNamesOnlyBlockChangedNames(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`UPDATE users SET firstname = 'Gripello', name = 'Fan' WHERE id = $1`, f.climber)
+	f.call(f.climber, http.MethodPatch, "/me", `{"firstname":"Gripello","language":"de"}`, http.StatusOK)
+	f.call(f.climber, http.MethodPatch, "/me", `{"firstname":"Ad","name":"min"}`, http.StatusBadRequest, `"name":{"code":"validation_name_protected"`)
+	f.call(f.climber, http.MethodPatch, "/me", `{"username":"the_admin"}`, http.StatusBadRequest, `"username":{"code":"validation_name_protected"`)
+	f.call(f.climber, http.MethodPatch, "/me", `{"firstname":"Cleo","name":"Climber"}`, http.StatusOK)
+}

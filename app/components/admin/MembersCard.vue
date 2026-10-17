@@ -219,6 +219,7 @@
 import type { GymEvent } from '~/composables/useRealtime'
 import type { Form, TableColumn } from '@nuxt/ui'
 import { required, validEmail, validateRules } from '~/utils/validation'
+import { blockedFieldError } from '~/utils/fieldErrors'
 import { canGrantRole, membershipIn } from '#shared/utils/memberships'
 import { coalesce } from '~/utils/realtimeCache'
 import {
@@ -397,7 +398,8 @@ function openInvite() {
 function inviteErrorMessage(error: unknown) {
     const status = (error as { status?: number })?.status
     if (status === 409) return t('members.alreadyMember')
-    return t('notifications.error.generic')
+    const blocked = blockedFieldError(error, ['email', 'name'])
+    return t(blocked?.key ?? 'notifications.error.generic')
 }
 
 async function sendInvite() {

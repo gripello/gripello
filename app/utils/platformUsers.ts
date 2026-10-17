@@ -4,6 +4,7 @@ import type {
     RoleRecord,
     UserRecord,
 } from '~/types/models'
+import type { BlockSuggestions } from '~/api/platform'
 import { gymTitle } from '~/utils/gymNames'
 
 export type PlatformUserFilter = 'platform_admins' | 'unverified' | 'suspended'
@@ -128,4 +129,13 @@ export function suspensionEnd(
     return new Date(now.getTime() + days * DAY_MS)
         .toISOString()
         .replace('T', ' ')
+}
+
+// What the suspend dialog offers to block: the address unless already blocked, the domain only off public providers.
+export function blockChoices(suggestions: BlockSuggestions | null | undefined) {
+    if (!suggestions?.domain) return { email: false, domain: false }
+    return {
+        email: !suggestions.email_blocked && !suggestions.domain_blocked,
+        domain: !suggestions.freemail && !suggestions.domain_blocked,
+    }
 }

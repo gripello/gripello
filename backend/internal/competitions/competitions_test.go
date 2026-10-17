@@ -873,3 +873,13 @@ func TestHiddenEntryNameStaysHidden(t *testing.T) {
 	f.call("manager", "PATCH", "/competition-entries/"+entry, `{"display_name":"Rude"}`, http.StatusForbidden)
 	f.call("climber", "PATCH", "/competition-entries/"+entry, `{"status":"withdrawn"}`, http.StatusOK)
 }
+
+func TestEntryNamesCannotBeProtected(t *testing.T) {
+	f := newFixture(t)
+	id, category, _, _ := f.competition("")
+	f.call("climber", "POST", "/competitions/"+id+"/entries", `{"category":"`+category+`","display_name":"Gripello Team","birth_year":1990}`, http.StatusBadRequest)
+	entry := f.call("manager", "POST", "/competitions/"+id+"/entries",
+		`{"category":"`+category+`","display_name":"Gripello Team","birth_year":1990,"user":"`+f.users["climber"]+`"}`, http.StatusCreated)["id"].(string)
+	f.call("climber", "PATCH", "/competition-entries/"+entry, `{"display_name":"Admin"}`, http.StatusBadRequest)
+	f.call("climber", "PATCH", "/competition-entries/"+entry, `{"display_name":"Cleo"}`, http.StatusOK)
+}

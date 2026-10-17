@@ -15,10 +15,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform"
+	"gripello/internal/platform/blocklist"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/logbuf"
 	"gripello/internal/platform/metrics"
@@ -142,6 +144,7 @@ func TestEverythingNeedsAPlatformAdmin(t *testing.T) {
 		"GET /platform/users", "GET /platform/users/" + f.climber, "PATCH /platform/users/" + f.climber, "DELETE /platform/users/" + f.climber,
 		"POST /platform/users/" + f.climber + "/suspension", "DELETE /platform/users/" + f.climber + "/suspension",
 		"GET /platform/stats", "GET /platform/features", "PUT /platform/gyms/" + f.gym + "/features", "POST /platform/admins", "DELETE /platform/admins/" + f.climber,
+		"GET /platform/blocklists", "PUT /platform/blocklists", "POST /platform/blocklists/emails", "GET /platform/users/" + f.climber + "/block-suggestions", "PUT /platform/blocklists/sources/mailchecker", "POST /platform/blocklists/sources/mailchecker/sync", "GET /platform/blocklists/sources/mailchecker/domains", "POST /platform/blocklists/check",
 	} {
 		method, url, _ := strings.Cut(route, " ")
 		f.call(method, url, `{}`, "", http.StatusUnauthorized)
@@ -671,5 +674,177 @@ func TestIssueAlertsPastTheCooldownArePruned(t *testing.T) {
 	left, _ := pgx.CollectRows(rows, pgx.RowTo[string])
 	if len(left) != 1 || left[0] != "recent" {
 		t.Errorf("issue_alerts = %v, want only the one still in its cooldown", left)
+	}
+}
+
+func TestBlocklistsAreCleanedStoredAndAnnounced(t *testing.T) {
+	f := newFixture(t)
+	f.call(http.MethodGet, "/platform/blocklists", "", f.climber, http.StatusForbidden)
+	f.call(http.MethodPut, "/platform/blocklists", `{"blocked_emails": ["ok.test", "a b"], "protected_names": ["ab"]}`, f.operator, http.StatusBadRequest)
+	got := f.call(http.MethodPut, "/platform/blocklists",
+		`{"blocked_emails": [" Spam.Test ", "*.trash.test", "spam.test"], "protected_names": ["Gripello", "crew"]}`, f.operator, http.StatusOK)
+	if fmt.Sprint(got["blocked_emails"], got["protected_names"]) != "[*.trash.test spam.test] [crew gripello]" {
+		t.Errorf("lists = %v", got)
+	}
+	if e := f.lastEvent("platform_config.updated"); fmt.Sprint(e["changed"]) != "[blocked_emails protected_names]" || f.lastActor("platform_config.updated") != f.operator {
+		t.Errorf("event = %v", e)
+	}
+	got = f.call(http.MethodPost, "/platform/blocklists/emails", `{"patterns": ["bad@example.com", "spam.test"]}`, f.operator, http.StatusOK)
+	if fmt.Sprint(got["blocked_emails"]) != "[*.trash.test bad@example.com spam.test]" {
+		t.Errorf("after add = %v", got)
+	}
+}
+
+func TestBlockSuggestionsCountTheDomain(t *testing.T) {
+	f := newFixture(t)
+	spammer := f.user("one@spam.test", false)
+	f.user("two@spam.test", false)
+	other := f.user("three@spam.test", false)
+	f.exec(`UPDATE users SET suspended_until = '9999-12-31' WHERE id = $1`, other)
+	f.exec(`UPDATE platform_config SET blocked_emails = '{one@spam.test}'`)
+	got := f.call(http.MethodGet, "/platform/users/"+spammer+"/block-suggestions", "", f.operator, http.StatusOK)
+	if got["domain"] != "spam.test" || got["freemail"] != false || got["domain_accounts"] != 2.0 || got["domain_suspended"] != 1.0 ||
+		got["email_blocked"] != true || got["domain_blocked"] != false {
+		t.Errorf("suggestions = %v", got)
+	}
+	gmail := f.user("someone@gmail.com", false)
+	if got := f.call(http.MethodGet, "/platform/users/"+gmail+"/block-suggestions", "", f.operator, http.StatusOK); got["freemail"] != true {
+		t.Errorf("gmail = %v", got)
+	}
+	f.call(http.MethodGet, "/platform/users/nobody/block-suggestions", "", f.operator, http.StatusNotFound)
+}
+
+func TestParseSourceDomains(t *testing.T) {
+	got, err := parseSourceDomains(strings.NewReader("# comment\nB.test\n\n a.test \nnot a domain\nlocalhost\nb.test\n-bad.test\n"))
+	if err != nil || fmt.Sprint(got) != "[a.test b.test]" {
+		t.Errorf("parse = %v %v", got, err)
+	}
+}
+
+func TestEmailSourcesSyncToggleAndAllowlist(t *testing.T) {
+	f := newFixture(t)
+	lines := []string{"spam.test"}
+	for i := range emailSourceMinDomains {
+		lines = append(lines, fmt.Sprintf("trash%d.test", i))
+	}
+	body := strings.Join(lines, "\n")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/LICENSE" {
+			io.WriteString(w, "Copyright (c) 2013 Francois-Guillaume Ribreau")
+			return
+		}
+		io.WriteString(w, body)
+	}))
+	defer server.Close()
+	original := emailSources
+	emailSources = slices.Clone(original)
+	emailSources[0].url = server.URL
+	emailSources[1].url, emailSources[1].licenseURL = server.URL, server.URL+"/LICENSE"
+	defer func() { emailSources = original }()
+	ctx := context.Background()
+	blocked := func(email string) bool {
+		t.Helper()
+		ok, err := blocklist.EmailBlocked(ctx, f.app.DB, email)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ok
+	}
+
+	f.call(http.MethodPut, "/platform/blocklists/sources/nope", `{"enabled": true}`, f.operator, http.StatusNotFound)
+	got := f.call(http.MethodPut, "/platform/blocklists/sources/disposable-email-domains", `{"enabled": true}`, f.operator, http.StatusOK)
+	source := got["sources"].([]any)[0].(map[string]any)
+	if source["enabled"] != true || source["domain_count"] != float64(emailSourceMinDomains+1) || source["synced_at"] == nil || source["license"] != "CC0-1.0" {
+		t.Errorf("source = %v", source)
+	}
+	got = f.call(http.MethodPut, "/platform/blocklists/sources/mailchecker", `{"enabled": true}`, f.operator, http.StatusOK)
+	if notice := got["sources"].([]any)[1].(map[string]any)["notice"]; !strings.Contains(fmt.Sprint(notice), "Francois-Guillaume Ribreau") {
+		t.Errorf("mailchecker notice = %v", notice)
+	}
+	f.call(http.MethodPut, "/platform/blocklists/sources/mailchecker", `{"enabled": false}`, f.operator, http.StatusOK)
+	listed := f.call(http.MethodGet, "/platform/blocklists/sources/disposable-email-domains/domains?q=SPAM&page=1", "", f.operator, http.StatusOK)
+	if fmt.Sprint(listed["items"], listed["total"]) != "[spam.test] 1" {
+		t.Errorf("filtered domains = %v", listed)
+	}
+	listed = f.call(http.MethodGet, "/platform/blocklists/sources/disposable-email-domains/domains?page=2", "", f.operator, http.StatusOK)
+	if items := listed["items"].([]any); len(items) != 1 || listed["total"] != float64(emailSourceMinDomains+1) {
+		t.Errorf("page 2 = %v", listed)
+	}
+	if listed := f.call(http.MethodGet, "/platform/blocklists/sources/disposable-email-domains/domains?q=%25", "", f.operator, http.StatusOK); listed["total"] != 0.0 {
+		t.Errorf("%% matched as a wildcard: %v", listed)
+	}
+	if f.lastActor("platform_config.updated") != f.operator {
+		t.Error("toggle not audited")
+	}
+	if !blocked("x@spam.test") || !blocked("x@mx.spam.test") || blocked("x@example.com") {
+		t.Error("synced domains not applied")
+	}
+
+	f.call(http.MethodPut, "/platform/blocklists", `{"blocked_emails": [], "allowed_emails": ["vip@spam.test"], "protected_names": ["gripello"]}`, f.operator, http.StatusOK)
+	if blocked("vip@spam.test") || !blocked("other@spam.test") {
+		t.Error("allowlist does not override")
+	}
+
+	body = "spam.test"
+	got = f.call(http.MethodPost, "/platform/blocklists/sources/disposable-email-domains/sync", "", f.operator, http.StatusOK)
+	source = got["sources"].([]any)[0].(map[string]any)
+	if source["domain_count"] != float64(emailSourceMinDomains+1) || !strings.Contains(fmt.Sprint(source["last_error"]), "keeping the previous list") {
+		t.Errorf("a short download replaced the list: %v", source)
+	}
+
+	f.call(http.MethodPut, "/platform/blocklists/sources/disposable-email-domains", `{"enabled": false}`, f.operator, http.StatusOK)
+	if blocked("other@spam.test") {
+		t.Error("disabled source still blocks")
+	}
+}
+
+func TestBlocklistCheckNamesTheRule(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`UPDATE email_blocklist_sources SET enabled = true WHERE id = 'mailchecker'`)
+	f.exec(`INSERT INTO disposable_domains (domain, source) VALUES ('trash.test', 'mailchecker')`)
+	lists := `"blocked_emails": ["Spam.test"], "allowed_emails": ["vip@trash.test"], "protected_names": ["gripello"]`
+	for email, want := range map[string]string{
+		"x@spam.test":     "map[blocked:true match:spam.test rule:blocked]",
+		"x@mx.trash.test": "map[blocked:true match:mailchecker rule:source]",
+		"vip@trash.test":  "map[blocked:false match:vip@trash.test rule:allowed]",
+		"x@example.com":   "map[blocked:false match: rule:]",
+	} {
+		got := f.call(http.MethodPost, "/platform/blocklists/check", `{"email": "`+email+`", `+lists+`}`, f.operator, http.StatusOK)
+		if fmt.Sprint(got["email"]) != want || got["name"] != nil {
+			t.Errorf("check %s = %v", email, got)
+		}
+	}
+	got := f.call(http.MethodPost, "/platform/blocklists/check", `{"name": "Team North", `+lists+`}`, f.operator, http.StatusOK)
+	if fmt.Sprint(got["name"]) != "map[match: protected:false]" {
+		t.Errorf("free name = %v", got)
+	}
+	got = f.call(http.MethodPost, "/platform/blocklists/check", `{"name": "north", `+lists+`}`, f.operator, http.StatusOK)
+	if fmt.Sprint(got["name"]) != "map[match:North protected:true]" {
+		t.Errorf("gym name = %v", got)
+	}
+}
+
+func TestEmailSourceErrorsAreStoredWhole(t *testing.T) {
+	f := newFixture(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, strings.Repeat("ü", 600))
+	}))
+	defer server.Close()
+	original := emailSources
+	emailSources = slices.Clone(original)
+	emailSources[0].url = server.URL
+	defer func() { emailSources = original }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	request := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(ctx)
+	cancel()
+	(&module{app: f.app}).syncForRequest(request, emailSources[0])
+	var lastError string
+	f.app.DB.QueryRow(context.Background(), `SELECT last_error FROM email_blocklist_sources WHERE id = 'disposable-email-domains'`).Scan(&lastError)
+	if !strings.Contains(lastError, "only 0 domains") {
+		t.Errorf("a cancelled request aborted the sync: %q", lastError)
+	}
+	if got := truncate(strings.Repeat("ü", 600), 500); !utf8.ValidString(got) {
+		t.Errorf("truncate split a rune: %q", got)
 	}
 }

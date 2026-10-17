@@ -3,6 +3,7 @@ package authn
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 
@@ -1125,5 +1126,50 @@ func TestAdminActionsRefuseSelfOtherAdminsAndClimbers(t *testing.T) {
 	}
 	if status, _ := f.send(http.MethodDelete, "/platform/users/missing/lockout", admin, nil); status != http.StatusNotFound {
 		t.Errorf("missing user = %d", status)
+	}
+}
+
+func TestBlockedEmailsAndProtectedNames(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	f.exec(`INSERT INTO settings (id, allow_registration) VALUES ('platformsetting', true)`)
+	f.exec(`UPDATE platform_config SET blocked_emails = '{spam.test}'`)
+	f.exec(`INSERT INTO gyms (id, slug, name) VALUES ('gym', 'north', 'North Walls')`)
+	register := func(fields map[string]string) (int, string) {
+		body := map[string]string{"email": "new@example.com", "password": testPassword, "passwordConfirm": testPassword}
+		maps.Copy(body, fields)
+		status, res := f.send(http.MethodPost, "/auth/register", "", body)
+		return status, mustJSON(res)
+	}
+	for fields, code := range map[*map[string]string]string{
+		{"email": "x@SPAM.test"}:                      `"email":{"code":"validation_email_blocked"`,
+		{"username": "Gr1pello"}:                      `"username":{"code":"validation_name_protected"`,
+		{"firstname": "North", "name": "Walls"}:       `"name":{"code":"validation_name_protected"`,
+		{"firstname": "Official", "name": "Gripello"}: `"name":{"code":"validation_name_protected"`,
+	} {
+		if status, res := register(*fields); status != http.StatusBadRequest || !strings.Contains(res, code) {
+			t.Errorf("register %v = %d %s", *fields, status, res)
+		}
+	}
+	if status, res := register(map[string]string{"firstname": "North"}); status != http.StatusAccepted {
+		t.Errorf("a gym-like first name alone = %d %s", status, res)
+	}
+
+	f.user("before@example.com")
+	token := f.loginToken("before@example.com")
+	if status, res := f.send(http.MethodPost, "/auth/email-change/request", token, map[string]string{"newEmail": "me@spam.test"}); status != http.StatusBadRequest ||
+		!strings.Contains(mustJSON(res), "validation_email_blocked") {
+		t.Errorf("blocked email change = %d %v", status, res)
+	}
+}
+
+func TestBlocklistReadFailuresAreServerErrors(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	f.exec(`INSERT INTO settings (id, allow_registration) VALUES ('platformsetting', true)`)
+	f.exec(`DELETE FROM platform_config`)
+	body := map[string]string{"email": "new@example.com", "username": "newbie", "password": testPassword, "passwordConfirm": testPassword}
+	if status, res := f.send(http.MethodPost, "/auth/register", "", body); status != http.StatusInternalServerError {
+		t.Errorf("register without platform_config = %d %v", status, res)
 	}
 }

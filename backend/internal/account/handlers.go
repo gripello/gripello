@@ -18,6 +18,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/blocklist"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/lockout"
 )
@@ -181,10 +182,45 @@ func (m *module) validateProfile(r *http.Request, userID string, body map[string
 			changes[field] = ""
 		}
 	}
+	if err := m.checkProtectedNames(ctx, userID, changes, invalid); err != nil {
+		return nil, err
+	}
 	if len(invalid.Data) > 0 {
 		return nil, invalid
 	}
 	return changes, nil
+}
+
+// checkProtectedNames only looks at names that change, so a name that predates the list doesn't block other edits.
+func (m *module) checkProtectedNames(ctx context.Context, userID string, changes map[string]any, invalid *httpx.Error) error {
+	if !slices.ContainsFunc([]string{"username", "firstname", "name"}, func(field string) bool { _, ok := changes[field]; return ok }) {
+		return nil
+	}
+	var username, firstname, name string
+	if err := m.db.QueryRow(ctx, `SELECT username, firstname, name FROM users WHERE id = $1`, userID).Scan(&username, &firstname, &name); err != nil {
+		return err
+	}
+	next := map[string]string{"username": username, "firstname": firstname, "name": name}
+	for field := range next {
+		if value, ok := changes[field].(string); ok {
+			next[field] = value
+		}
+	}
+	if next["username"] != username {
+		if protected, err := blocklist.NameProtected(ctx, m.db, next["username"]); err != nil {
+			return err
+		} else if protected {
+			invalid.Field("username", blocklist.CodeNameProtected, "This name is reserved.")
+		}
+	}
+	if next["firstname"] != firstname || next["name"] != name {
+		if protected, err := blocklist.NameProtected(ctx, m.db, next["firstname"]+" "+next["name"]); err != nil {
+			return err
+		} else if protected {
+			invalid.Field("name", blocklist.CodeNameProtected, "This name is reserved.")
+		}
+	}
+	return nil
 }
 
 // saveProfile stores uploads first, writes the row with the user.updated event, then drops replaced files.

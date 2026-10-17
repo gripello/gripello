@@ -1079,7 +1079,9 @@
             "title": "Etwas ist schiefgelaufen",
             "subtitle": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es gleich noch einmal."
         },
-        "loadFailed": "Die Inhalte konnten nicht geladen werden."
+        "loadFailed": "Die Inhalte konnten nicht geladen werden.",
+        "emailBlocked": "Diese E-Mail-Adresse kann nicht verwendet werden.",
+        "nameProtected": "Dieser Name ist reserviert. Bitte wähle einen anderen."
     },
     "export": {
         "title": "Als Excel exportieren",
@@ -2187,6 +2189,34 @@
                 "auditDays": "Audit-Log {n} Tag aufbewahrt | Audit-Log {n} Tage aufbewahrt",
                 "configured": "{n} eingerichtet",
                 "live": "{n} aktiv"
+            },
+            "blocklists": {
+                "title": "Sperrlisten",
+                "emails": "Gesperrt",
+                "names": "Geschützte Namen",
+                "invalid": "Nicht akzeptiert: {entries}",
+                "allowed": "Immer erlaubt",
+                "sources": "Listen für Wegwerf-E-Mails",
+                "neverSynced": "Noch nie synchronisiert",
+                "domainCount": "{n} Domain | {n} Domains",
+                "syncedAgo": "letzte Synchronisierung: {ago}",
+                "syncNow": "Jetzt synchronisieren",
+                "viewList": "Liste ansehen",
+                "searchDomains": "Domains suchen",
+                "noDomains": "Keine passenden Domains",
+                "emailsTitle": "E-Mail-Adressen",
+                "namesField": "Reservierte Begriffe",
+                "test": {
+                    "email": "E-Mail-Adresse testen",
+                    "name": "Namen testen"
+                },
+                "verdict": {
+                    "blocked": "Gesperrt durch deine Liste: {match}",
+                    "source": "Gesperrt durch {match}",
+                    "exception": "Erlaubt als Ausnahme: {match}",
+                    "allowed": "Erlaubt",
+                    "reserved": "Reserviert: {match}"
+                }
             }
         },
         "overview": {
@@ -2345,7 +2375,11 @@
                     "confirm": "Entfernen",
                     "done": "Plattform-Admin entfernt"
                 }
-            }
+            },
+            "blockEmail": "{email} sperren",
+            "blockDomain": "Alle Adressen bei {domain} sperren",
+            "blockDomainShared": "{accounts} weiteres Konto, {suspended} gesperrt | {accounts} weitere Konten, {suspended} gesperrt",
+            "blockFailed": "Gesperrt, aber die E-Mail-Sperre konnte nicht gespeichert werden. Trage sie unter Einstellungen › Sperrlisten ein."
         },
         "features": {
             "title": "Feature-Flags",
@@ -2927,7 +2961,8 @@
                 "registration_disabled": "Für diese Anmeldung gibt es kein Konto und neue Registrierungen sind geschlossen.",
                 "account_exists": "Ein Konto mit dieser E-Mail-Adresse existiert bereits. Melde dich mit deinem Passwort an und verknüpfe den Anbieter in den Kontoeinstellungen.",
                 "already_linked": "Diese Anmeldung ist bereits mit einem anderen Konto verknüpft.",
-                "email_unverified": "Der Anbieter hat keine E-Mail-Adresse bestätigt, daher kann kein Konto angelegt werden."
+                "email_unverified": "Der Anbieter hat keine E-Mail-Adresse bestätigt, daher kann kein Konto angelegt werden.",
+                "email_blocked": "Diese E-Mail-Adresse kann nicht für ein neues Konto verwendet werden."
             }
         }
     },

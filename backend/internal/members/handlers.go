@@ -21,6 +21,7 @@ import (
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/blocklist"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/tenancy"
@@ -612,6 +613,11 @@ func (h *handlers) inviteMember(w http.ResponseWriter, r *http.Request) error {
 	if address, err := mail.ParseAddress(pending.Email); err != nil || address.Address != pending.Email {
 		return httpx.NewError(http.StatusBadRequest, "Invalid invitation.").Field("email", "validation_is_email", "Must be a valid email address.")
 	}
+	if blocked, err := blocklist.EmailBlocked(ctx, h.app.DB, pending.Email); err != nil {
+		return err
+	} else if blocked {
+		return httpx.NewError(http.StatusBadRequest, "Invalid invitation.").Field("email", blocklist.CodeEmailBlocked, "This e-mail address can't be used.")
+	}
 	if len(pending.Firstname) > 100 || len(pending.Name) > 100 {
 		return httpx.NewError(http.StatusBadRequest, "Invalid invitation.").Field("name", "validation_length_out_of_range", "Must be at most 100 characters.")
 	}
@@ -774,6 +780,20 @@ func newAccountFrom(r *http.Request, accepted invite) (*newAccount, error) {
 	return account, nil
 }
 
+func checkNewAccount(ctx context.Context, q blocklist.Querier, account *newAccount) error {
+	if blocked, err := blocklist.EmailBlocked(ctx, q, account.Email); err != nil {
+		return err
+	} else if blocked {
+		return httpx.NewError(http.StatusForbidden, "This e-mail address can't be used.").Field("email", blocklist.CodeEmailBlocked, "This e-mail address can't be used.")
+	}
+	if protected, err := blocklist.NameProtected(ctx, q, account.Firstname+" "+account.Name); err != nil {
+		return err
+	} else if protected {
+		return httpx.NewError(http.StatusBadRequest, "The invitation could not be accepted.").Field("name", blocklist.CodeNameProtected, "This name is reserved.")
+	}
+	return nil
+}
+
 func (h *handlers) acceptInvite(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	accepted, err := findInviteByTokenHash(ctx, h.app.DB, hashToken(r.PathValue("token")))
@@ -792,6 +812,9 @@ func (h *handlers) acceptInvite(w http.ResponseWriter, r *http.Request) error {
 			return httpx.NewError(http.StatusConflict, "Sign in to accept this invitation.")
 		}
 		if account, err = newAccountFrom(r, accepted); err != nil {
+			return err
+		}
+		if err := checkNewAccount(ctx, h.app.DB, account); err != nil {
 			return err
 		}
 		hash, err := bcrypt.GenerateFromPassword([]byte(account.password), bcrypt.DefaultCost)

@@ -1,5 +1,6 @@
 import type { GymRecord, RoleRecord } from '~/types/models'
 import {
+    blockChoices,
     isPermanentlySuspended,
     isSuspended,
     suspensionEnd,
@@ -179,5 +180,40 @@ describe('userSecurityState', () => {
         expect(
             userSecurityState({ id: 'u2' } as PlatformUser, 'admin'),
         ).toMatchObject({ mfa: false, sessions: 0, locked: false })
+    })
+})
+
+describe('blockChoices', () => {
+    const base = {
+        email: 'x@spam.test',
+        domain: 'spam.test',
+        freemail: false,
+        domain_accounts: 2,
+        domain_suspended: 1,
+        email_blocked: false,
+        domain_blocked: false,
+    }
+
+    it('offers the address and a custom domain', () => {
+        expect(blockChoices(base)).toEqual({ email: true, domain: true })
+    })
+
+    it('never offers a public provider', () => {
+        expect(blockChoices({ ...base, freemail: true })).toEqual({
+            email: true,
+            domain: false,
+        })
+    })
+
+    it('skips what is already blocked', () => {
+        expect(blockChoices({ ...base, email_blocked: true })).toEqual({
+            email: false,
+            domain: true,
+        })
+        expect(blockChoices({ ...base, domain_blocked: true })).toEqual({
+            email: false,
+            domain: false,
+        })
+        expect(blockChoices(null)).toEqual({ email: false, domain: false })
     })
 })

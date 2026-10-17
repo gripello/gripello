@@ -1079,7 +1079,9 @@
             "title": "Something went wrong",
             "subtitle": "An unexpected error occurred. Please try again in a moment."
         },
-        "loadFailed": "Could not load this content."
+        "loadFailed": "Could not load this content.",
+        "emailBlocked": "This e-mail address can't be used.",
+        "nameProtected": "This name is reserved. Please choose another one."
     },
     "export": {
         "title": "Export as Excel",
@@ -2187,6 +2189,34 @@
                 "auditDays": "Audit log kept {n} day | Audit log kept {n} days",
                 "configured": "{n} configured",
                 "live": "{n} live"
+            },
+            "blocklists": {
+                "title": "Blocklists",
+                "emails": "Blocked",
+                "names": "Protected names",
+                "invalid": "Not accepted: {entries}",
+                "allowed": "Always allowed",
+                "sources": "Disposable e-mail lists",
+                "neverSynced": "Never synced",
+                "domainCount": "{n} domain | {n} domains",
+                "syncedAgo": "last sync: {ago}",
+                "syncNow": "Sync now",
+                "viewList": "View list",
+                "searchDomains": "Search domains",
+                "noDomains": "No matching domains",
+                "emailsTitle": "E-mail addresses",
+                "namesField": "Reserved words",
+                "test": {
+                    "email": "Test an e-mail address",
+                    "name": "Test a name"
+                },
+                "verdict": {
+                    "blocked": "Blocked by your list: {match}",
+                    "source": "Blocked by {match}",
+                    "exception": "Allowed by exception: {match}",
+                    "allowed": "Allowed",
+                    "reserved": "Reserved: {match}"
+                }
             }
         },
         "overview": {
@@ -2345,7 +2375,11 @@
                     "confirm": "Remove",
                     "done": "Platform admin removed"
                 }
-            }
+            },
+            "blockEmail": "Block {email}",
+            "blockDomain": "Block all addresses at {domain}",
+            "blockDomainShared": "{accounts} other account, {suspended} suspended | {accounts} other accounts, {suspended} suspended",
+            "blockFailed": "Suspended, but the e-mail block could not be saved. Add it under Settings › Blocklists."
         },
         "features": {
             "title": "Feature flags",
@@ -2927,7 +2961,8 @@
                 "registration_disabled": "There is no account for this login and new sign-ups are closed.",
                 "account_exists": "An account with this email already exists. Sign in with your password and link the provider in your account settings.",
                 "already_linked": "This login is already linked to another account.",
-                "email_unverified": "The provider did not confirm an email address, so no account can be created."
+                "email_unverified": "The provider did not confirm an email address, so no account can be created.",
+                "email_blocked": "This e-mail address can't be used for a new account."
             }
         }
     },

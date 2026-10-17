@@ -253,6 +253,7 @@ import { isValidGymSlug, slugifyGymName } from '#shared/utils/gymSlug'
 import { formatDate } from '#shared/utils/formatting'
 import { filterPlatformGyms, type PlatformGym } from '~/utils/platformGyms'
 import { required, validEmail, validateRules } from '~/utils/validation'
+import { blockedFieldError } from '~/utils/fieldErrors'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
@@ -358,7 +359,11 @@ async function createGym() {
         },
         {
             success: t('platform.gyms.created'),
-            error: t('platform.gyms.inviteFailed'),
+            error: (err) =>
+                t(
+                    blockedFieldError(err, ['email'])?.key ??
+                        'platform.gyms.inviteFailed',
+                ),
         },
     )
     if (!invited) await navigateTo(detailPath(gym))

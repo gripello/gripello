@@ -125,6 +125,7 @@
 import { acceptInvite, showInvite } from '~/api/members'
 import { useAuthState } from '~/api/auth'
 import { inviteStep } from '~/utils/invites'
+import { blockedFieldError } from '~/utils/fieldErrors'
 
 defineOptions({ name: 'InvitePage' })
 definePageMeta({ layout: 'blank' })
@@ -198,7 +199,13 @@ async function accept(body: Record<string, string> = {}) {
         const code = (error as { status?: number })?.status
         if (code === 409 && currentEmail.value) signOut()
         if (code === 404 || code === 409) await refresh()
-        else notifyError(t('notifications.error.generic'))
+        else
+            notifyError(
+                t(
+                    blockedFieldError(error, ['email', 'name'])?.key ??
+                        'notifications.error.generic',
+                ),
+            )
     } finally {
         accepting.value = false
     }

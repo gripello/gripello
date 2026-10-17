@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/blocklist"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 )
@@ -571,6 +572,15 @@ func categoryFits(c Category, birthYear int) bool {
 	return (c.MinBirthYear == 0 || birthYear >= c.MinBirthYear) && (c.MaxBirthYear == 0 || birthYear <= c.MaxBirthYear)
 }
 
+func checkEntryName(ctx context.Context, q querier, name string) error {
+	if protected, err := blocklist.NameProtected(ctx, q, name); err != nil {
+		return err
+	} else if protected {
+		return badRequest("This name is reserved.").Field("display_name", blocklist.CodeNameProtected, "This name is reserved.")
+	}
+	return nil
+}
+
 func validateEntry(ctx context.Context, q querier, e Entry, currentYear int, enforceCategoryAge bool) error {
 	if e.DisplayName == "" {
 		return required("display_name")
@@ -626,6 +636,11 @@ func (m *module) createEntry(ctx context.Context, competitionID string, raw json
 	}
 	if err := validateEntry(ctx, m.app.DB, e, now.Year(), !v.manager); err != nil {
 		return Entry{}, err
+	}
+	if !v.manager {
+		if err := checkEntryName(ctx, m.app.DB, e.DisplayName); err != nil {
+			return Entry{}, err
+		}
 	}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SELECT 1 FROM competitions WHERE id = $1 FOR UPDATE`, c.ID); err != nil {
@@ -718,6 +733,11 @@ func (m *module) updateEntry(ctx context.Context, id string, raw json.RawMessage
 	e.ID, e.Expand = before.ID, nil
 	if err := validateEntry(ctx, m.app.DB, e, now.Year(), !v.manager); err != nil {
 		return Entry{}, err
+	}
+	if !v.manager && e.DisplayName != before.DisplayName {
+		if err := checkEntryName(ctx, m.app.DB, e.DisplayName); err != nil {
+			return Entry{}, err
+		}
 	}
 	if e.DisplayName != before.DisplayName || e.Hidden != before.Hidden {
 		if err := refuseWhileHidden(ctx, m.app.DB, "competition_entry", id); err != nil {

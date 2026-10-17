@@ -32,31 +32,40 @@ type module struct {
 func Register(app *platform.App) {
 	m := &module{app: app, testMails: ratelimit.New(5, time.Minute), clientErrors: ratelimit.New(60, time.Minute), clientIPs: ratelimit.New(10, time.Minute)}
 	for pattern, handler := range map[string]httpx.Handler{
-		"GET /platform/users":                    m.listUsers,
-		"GET /platform/users/{id}":               m.getUser,
-		"PATCH /platform/users/{id}":             m.updateUser,
-		"DELETE /platform/users/{id}":            m.deleteUser,
-		"POST /platform/users/{id}/suspension":   m.suspend,
-		"DELETE /platform/users/{id}/suspension": m.liftSuspension,
-		"GET /platform/stats":                    m.stats,
-		"GET /platform/traffic":                  m.traffic,
-		"GET /platform/system":                   m.system,
-		"GET /platform/features":                 m.features,
-		"PUT /platform/gyms/{id}/features":       m.setFeatures,
-		"POST /platform/admins":                  m.addAdmin,
-		"DELETE /platform/admins/{user}":         m.removeAdmin,
-		"GET /platform/mail":                     m.getMail,
-		"PUT /platform/mail":                     m.putMail,
-		"POST /platform/mail/test":               m.sendTestMail,
-		"GET /platform/logs":                     m.listLogs,
-		"PUT /platform/logs/level":               m.setLogLevel,
-		"GET /platform/issues":                   m.listIssues,
-		"GET /platform/issues/{fingerprint}":     m.issueOccurrences,
+		"GET /platform/users":                           m.listUsers,
+		"GET /platform/users/{id}":                      m.getUser,
+		"PATCH /platform/users/{id}":                    m.updateUser,
+		"DELETE /platform/users/{id}":                   m.deleteUser,
+		"POST /platform/users/{id}/suspension":          m.suspend,
+		"DELETE /platform/users/{id}/suspension":        m.liftSuspension,
+		"GET /platform/stats":                           m.stats,
+		"GET /platform/traffic":                         m.traffic,
+		"GET /platform/system":                          m.system,
+		"GET /platform/features":                        m.features,
+		"PUT /platform/gyms/{id}/features":              m.setFeatures,
+		"POST /platform/admins":                         m.addAdmin,
+		"DELETE /platform/admins/{user}":                m.removeAdmin,
+		"GET /platform/users/{id}/block-suggestions":    m.blockSuggestions,
+		"GET /platform/blocklists":                      m.getBlocklists,
+		"PUT /platform/blocklists":                      m.putBlocklists,
+		"POST /platform/blocklists/check":               m.checkBlocklists,
+		"POST /platform/blocklists/emails":              m.addBlockedEmails,
+		"PUT /platform/blocklists/sources/{id}":         m.setEmailSource,
+		"POST /platform/blocklists/sources/{id}/sync":   m.syncEmailSourceNow,
+		"GET /platform/blocklists/sources/{id}/domains": m.listEmailSourceDomains,
+		"GET /platform/mail":                            m.getMail,
+		"PUT /platform/mail":                            m.putMail,
+		"POST /platform/mail/test":                      m.sendTestMail,
+		"GET /platform/logs":                            m.listLogs,
+		"PUT /platform/logs/level":                      m.setLogLevel,
+		"GET /platform/issues":                          m.listIssues,
+		"GET /platform/issues/{fingerprint}":            m.issueOccurrences,
 	} {
 		app.Handle(pattern, onlyPlatformAdmins(handler))
 	}
 	app.Handle("POST /client-errors", httpx.Handler(m.reportClientError))
 	app.Cron.Add("issueAlerts", "*/5 * * * *", m.alertIssues)
+	app.Cron.Add("emailSourcesSync", "37 3 * * *", m.syncEnabledEmailSources)
 }
 
 func onlyPlatformAdmins(next httpx.Handler) httpx.Handler {

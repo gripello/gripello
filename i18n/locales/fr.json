@@ -1079,7 +1079,9 @@
             "title": "Une erreur s'est produite",
             "subtitle": "Une erreur inattendue s'est produite. Veuillez réessayer dans un instant."
         },
-        "loadFailed": "Impossible de charger ce contenu."
+        "loadFailed": "Impossible de charger ce contenu.",
+        "emailBlocked": "Cette adresse e-mail ne peut pas être utilisée.",
+        "nameProtected": "Ce nom est réservé. Choisis-en un autre."
     },
     "export": {
         "title": "Exporter en Excel",
@@ -2187,6 +2189,34 @@
                 "auditDays": "Journal d’audit conservé {n} jour | Journal d’audit conservé {n} jours",
                 "configured": "{n} configuré(s)",
                 "live": "{n} actif(s)"
+            },
+            "blocklists": {
+                "title": "Listes de blocage",
+                "emails": "Bloquées",
+                "names": "Noms protégés",
+                "invalid": "Non accepté : {entries}",
+                "allowed": "Toujours autorisées",
+                "sources": "Listes d'e-mails jetables",
+                "neverSynced": "Jamais synchronisé",
+                "domainCount": "{n} domaine | {n} domaines",
+                "syncedAgo": "dernière synchronisation : {ago}",
+                "syncNow": "Synchroniser maintenant",
+                "viewList": "Voir la liste",
+                "searchDomains": "Rechercher des domaines",
+                "noDomains": "Aucun domaine correspondant",
+                "emailsTitle": "Adresses e-mail",
+                "namesField": "Mots réservés",
+                "test": {
+                    "email": "Tester une adresse e-mail",
+                    "name": "Tester un nom"
+                },
+                "verdict": {
+                    "blocked": "Bloquée par ta liste : {match}",
+                    "source": "Bloquée par {match}",
+                    "exception": "Autorisée par exception : {match}",
+                    "allowed": "Autorisée",
+                    "reserved": "Réservé : {match}"
+                }
             }
         },
         "overview": {
@@ -2345,7 +2375,11 @@
                     "confirm": "Retirer",
                     "done": "Administrateur·rice retiré·e"
                 }
-            }
+            },
+            "blockEmail": "Bloquer {email}",
+            "blockDomain": "Bloquer toutes les adresses de {domain}",
+            "blockDomainShared": "{accounts} autre compte, {suspended} suspendu(s) | {accounts} autres comptes, {suspended} suspendu(s)",
+            "blockFailed": "Suspendu, mais le blocage de l'e-mail n'a pas pu être enregistré. Ajoute-le dans Paramètres › Listes de blocage."
         },
         "features": {
             "title": "Fonctionnalités",
@@ -2927,7 +2961,8 @@
                 "registration_disabled": "Aucun compte ne correspond à cette connexion et les inscriptions sont fermées.",
                 "account_exists": "Un compte existe déjà avec cet e-mail. Connecte-toi avec ton mot de passe et lie le fournisseur dans les paramètres du compte.",
                 "already_linked": "Cette connexion est déjà liée à un autre compte.",
-                "email_unverified": "Le fournisseur n’a confirmé aucune adresse e-mail, aucun compte ne peut donc être créé."
+                "email_unverified": "Le fournisseur n’a confirmé aucune adresse e-mail, aucun compte ne peut donc être créé.",
+                "email_blocked": "Cette adresse e-mail ne peut pas être utilisée pour un nouveau compte."
             }
         }
     },

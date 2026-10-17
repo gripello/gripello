@@ -53,6 +53,7 @@
 import type { Form } from '@nuxt/ui'
 import { required, validateRules } from '~/utils/validation'
 import { needsPasswordFirst } from '~/utils/reauth'
+import { blockedFieldError } from '~/utils/fieldErrors'
 import { confirmEmailChange as confirmChange, useAuthState } from '~/api/auth'
 
 defineOptions({ name: 'ConfirmEmailChangePage' })
@@ -79,10 +80,11 @@ async function confirmEmailChange(token: string) {
     clearAuth()
 }
 
-const passwordError = (error: unknown) =>
-    needsPasswordFirst(error)
-        ? t('account.passwordRequired')
-        : t('account.wrongOldPassword')
+function passwordError(error: unknown) {
+    if (needsPasswordFirst(error)) return t('account.passwordRequired')
+    const blocked = blockedFieldError(error, ['newEmail'])
+    return t(blocked?.key ?? 'account.wrongOldPassword')
+}
 
 const isInvalidToken = (error: unknown) =>
     !!(error as { data?: { data?: { token?: unknown } } })?.data?.data?.token

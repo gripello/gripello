@@ -760,3 +760,17 @@ func TestRoleGuards(t *testing.T) {
 		t.Errorf("invite.changed deleted = %v", deleted)
 	}
 }
+
+func TestInvitesRejectBlockedEmailsAndProtectedNames(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`UPDATE platform_config SET blocked_emails = '{spam.test}'`)
+	f.call(http.MethodPost, "/gyms/"+f.gymA+"/members", `{"email":"x@spam.test","role":"`+f.setterRoleA+`"}`, f.adminA, http.StatusBadRequest, "validation_email_blocked")
+
+	token := f.invite(f.adminA, f.gymA, "late@later.test", f.setterRoleA)
+	f.call(http.MethodPost, "/invites/"+token+"/accept", `{"password":"1234567890","passwordConfirm":"1234567890","firstname":"Gripello"}`, "", http.StatusBadRequest, "validation_name_protected")
+	f.exec(`UPDATE platform_config SET blocked_emails = '{later.test}'`)
+	f.call(http.MethodPost, "/invites/"+token+"/accept", `{"password":"1234567890","passwordConfirm":"1234567890"}`, "", http.StatusForbidden, "{")
+	if n := f.count(`SELECT count(*) FROM users WHERE email = 'late@later.test'`); n != 0 {
+		t.Error("account created for a blocked address")
+	}
+}

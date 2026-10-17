@@ -56,6 +56,38 @@
                 :label="t('platform.users.suspendHideContent')"
                 data-testid="platform-suspend-hide-content"
             />
+            <UCheckbox
+                v-if="choices.email"
+                v-model="blockEmail"
+                :label="
+                    t('platform.users.blockEmail', {
+                        email: suggestions?.email,
+                    })
+                "
+                data-testid="platform-suspend-block-email"
+            />
+            <UCheckbox
+                v-if="choices.domain"
+                v-model="blockDomain"
+                :label="
+                    t('platform.users.blockDomain', {
+                        domain: suggestions?.domain,
+                    })
+                "
+                :description="
+                    suggestions?.domain_accounts
+                        ? t(
+                              'platform.users.blockDomainShared',
+                              {
+                                  accounts: suggestions.domain_accounts,
+                                  suspended: suggestions.domain_suspended,
+                              },
+                              suggestions.domain_accounts,
+                          )
+                        : undefined
+                "
+                data-testid="platform-suspend-block-domain"
+            />
             <UserPasswordField
                 v-model="adminPassword"
                 :label="t('platform.users.adminPassword')"
@@ -109,9 +141,17 @@
 <script setup lang="ts">
 import { reauthenticate } from '~/api/account'
 import { hideAuthor } from '~/api/moderation'
-import { liftSuspension, suspendUser, type Suspension } from '~/api/platform'
+import {
+    addBlockedEmails,
+    getBlockSuggestions,
+    liftSuspension,
+    suspendUser,
+    type BlockSuggestions,
+    type Suspension,
+} from '~/api/platform'
 import type { UserRecord } from '~/types/models'
 import {
+    blockChoices,
     isPermanentlySuspended,
     isSuspended,
     suspensionEnd,
@@ -129,6 +169,7 @@ const emit = defineEmits<{ changed: [] }>()
 
 const { t } = useI18n()
 const { pending, run } = useAsyncAction()
+const { error: notifyError } = useNotification()
 
 const tomorrow = localDateYYYYMMDD(new Date(Date.now() + 86_400_000))
 const duration = ref<SuspensionDuration>('week')
@@ -136,6 +177,10 @@ const until = ref('')
 const reason = ref('')
 const hideContent = ref(false)
 const adminPassword = ref('')
+const suggestions = ref<BlockSuggestions | null>(null)
+const choices = computed(() => blockChoices(suggestions.value))
+const blockEmail = ref(false)
+const blockDomain = ref(false)
 const displayName = computed(() =>
     props.user ? userDisplayName(props.user) || props.user.username : '',
 )
@@ -160,7 +205,25 @@ watch(open, (isOpen) => {
     reason.value = props.user?.suspension_reason ?? ''
     hideContent.value = false
     adminPassword.value = ''
+    blockEmail.value = blockDomain.value = false
+    suggestions.value = null
+    if (user)
+        getBlockSuggestions(user.id)
+            .then((found) => {
+                if (open.value && props.user?.id === user.id)
+                    suggestions.value = found
+            })
+            .catch(() => (suggestions.value = null))
 })
+
+function blockedPatterns() {
+    const patterns: string[] = []
+    if (choices.value.email && blockEmail.value)
+        patterns.push(suggestions.value!.email)
+    if (choices.value.domain && blockDomain.value)
+        patterns.push(suggestions.value!.domain)
+    return patterns
+}
 
 async function send(suspension?: Suspension) {
     const done = await run(
@@ -172,6 +235,12 @@ async function send(suspension?: Suspension) {
             } else await liftSuspension(id)
             if (suspension && hideContent.value)
                 await hideAuthor(id, reason.value.trim())
+            const patterns = suspension ? blockedPatterns() : []
+            if (patterns.length)
+                await addBlockedEmails(patterns).catch((error) => {
+                    console.error(error)
+                    notifyError(t('platform.users.blockFailed'))
+                })
             return true
         },
         {

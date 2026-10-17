@@ -316,6 +316,181 @@ paths:
         '400': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /platform/blocklists:
+    get:
+      operationId: getBlocklists
+      tags: [platform]
+      description: Blocked and allowed e-mail patterns (address, domain, *.domain for subdomains), protected name terms and the synced disposable-domain sources. The allowlist overrides the blocked list and the sources.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Blocklists' }
+        '403': { $ref: '#/components/responses/Error' }
+    put:
+      operationId: updateBlocklists
+      tags: [platform]
+      description: Replaces the three lists (trimmed, lowercased, deduplicated, sorted; sources are ignored). Invalid entries come back as blocked_emails.{i} / allowed_emails.{i} / protected_names.{i}; protected terms need 3 letters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Blocklists' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Blocklists' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/blocklists/check:
+    post:
+      operationId: checkBlocklists
+      tags: [platform]
+      description: How the given (possibly unsaved) lists plus the enabled sources treat an e-mail address and/or a name, and which rule decided (allowed exception first, then the blocked list, then sources).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: '#/components/schemas/Blocklists' }
+                - type: object
+                  properties:
+                    email: { type: string }
+                    name: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: object
+                    nullable: true
+                    properties:
+                      blocked: { type: boolean }
+                      rule: { type: string, enum: ['', allowed, blocked, source] }
+                      match: { type: string }
+                  name:
+                    type: object
+                    nullable: true
+                    properties:
+                      protected: { type: boolean }
+                      match: { type: string }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/blocklists/emails:
+    post:
+      operationId: addBlockedEmails
+      tags: [platform]
+      description: Appends e-mail patterns to the stored list.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patterns]
+              properties:
+                patterns: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Blocklists' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/blocklists/sources/{id}:
+    put:
+      operationId: setEmailSource
+      tags: [platform]
+      description: Turns a disposable-domain source on or off; turning on a source that never synced downloads it first.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, enum: [disposable-email-domains, mailchecker] } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Blocklists' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/blocklists/sources/{id}/sync:
+    post:
+      operationId: syncEmailSource
+      tags: [platform]
+      description: Downloads the source now (also runs daily for enabled sources). A failed or suspiciously short download keeps the stored list and lands in last_error.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, enum: [disposable-email-domains, mailchecker] } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Blocklists' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/blocklists/sources/{id}/domains:
+    get:
+      operationId: listEmailSourceDomains
+      tags: [platform]
+      description: The source's stored domains, 100 per page, sorted; q filters by substring.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, enum: [disposable-email-domains, mailchecker] } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { type: string } }
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/users/{id}/block-suggestions:
+    get:
+      operationId: getBlockSuggestions
+      tags: [platform]
+      description: What blocking the user's address or domain would cover; counts leave the user out, freemail marks public providers.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email: { type: string }
+                  domain: { type: string }
+                  freemail: { type: boolean }
+                  domain_accounts: { type: integer }
+                  domain_suspended: { type: integer }
+                  email_blocked: { type: boolean }
+                  domain_blocked: { type: boolean }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /platform/mail:
     get:
       operationId: getMailSettings
@@ -525,6 +700,28 @@ components:
         client_errors: { type: integer }
         server_errors: { type: integer }
         p95_ms: { type: number }
+    Blocklists:
+      type: object
+      properties:
+        blocked_emails: { type: array, items: { type: string } }
+        allowed_emails: { type: array, items: { type: string } }
+        protected_names: { type: array, items: { type: string } }
+        sources:
+          type: array
+          readOnly: true
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              homepage: { type: string, format: uri }
+              license: { type: string }
+              notice: { type: string, description: Upstream license notice downloaded with the list (MIT), empty for CC0. }
+              enabled: { type: boolean }
+              synced_at: { type: string, format: date-time, nullable: true }
+              attempted_at: { type: string, format: date-time, nullable: true }
+              domain_count: { type: integer }
+              last_error: { type: string }
     MailSettings:
       type: object
       properties:

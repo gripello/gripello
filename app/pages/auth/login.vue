@@ -337,6 +337,7 @@ import {
 import { safeRedirect, staffLandingPath } from '~/utils/nav'
 import { isPasskeyCancel } from '~/utils/webauthn'
 import { isInvalidCredentials } from '~/utils/authErrors'
+import { blockedFieldError } from '~/utils/fieldErrors'
 import { authView, authViewQuery, type AuthView } from '~/utils/authView'
 import {
     oauth2ErrorKey,
@@ -801,6 +802,8 @@ function registerFieldError(err: unknown) {
     )?.data?.data
     if (fields?.username?.code === 'validation_not_unique')
         return { name: 'username', message: t('users.usernameTaken') }
+    const blocked = blockedFieldError(err, ['email', 'username'])
+    if (blocked) return { name: blocked.name, message: t(blocked.key) }
     if (fields?.email)
         return { name: 'email', message: t('account.emailTaken') }
     return null
