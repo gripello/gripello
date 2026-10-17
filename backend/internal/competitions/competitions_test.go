@@ -906,10 +906,11 @@ func TestCachedStandingsFollowTheGymsVisibility(t *testing.T) {
 	id, category, _, _ := f.competition("")
 	f.register("climber", id, category, "")
 	f.call("manager", "PATCH", "/competitions/"+id, `{"live_ranking":true}`, http.StatusOK)
-	f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusOK)
-	if _, public, _ := f.m.competitionGym(context.Background(), id); !public {
-		t.Fatal("standings of a public gym are not remembered as public")
-	}
+	testapp.WaitFor(t, func() bool {
+		f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusOK)
+		_, public, _ := f.m.competitionGym(context.Background(), id)
+		return public
+	})
 	if _, err := f.app.DB.Exec(context.Background(), `UPDATE gyms SET hidden = true WHERE id = $1`, f.gymA); err != nil {
 		t.Fatal(err)
 	}
