@@ -15,6 +15,7 @@
             </main>
         </div>
     </div>
+    <LayoutTopEdge />
     <LayoutBottomNav />
     <div v-if="hydrated" data-testid="page-hydrated" hidden />
 </template>
