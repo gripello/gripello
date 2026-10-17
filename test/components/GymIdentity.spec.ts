@@ -33,6 +33,23 @@ describe('GymIdentity', () => {
         expect(logo.element.parentElement?.classList).toContain('bg-elevated')
     })
 
+    it('marks inactive and invisible gyms', () => {
+        expect(
+            mountWith(gym({ active: false, hidden: true }))
+                .find('[data-testid="platform-gym-inactive-dav"]')
+                .exists(),
+        ).toBe(true)
+        const hidden = mountWith(gym({ hidden: true }))
+        expect(
+            hidden.find('[data-testid="platform-gym-hidden-dav"]').exists(),
+        ).toBe(true)
+        expect(
+            mountWith(gym())
+                .find('[data-testid="platform-gym-hidden-dav"]')
+                .exists(),
+        ).toBe(false)
+    })
+
     it('falls back to initials without a logo', () => {
         const wrapper = mountWith(gym())
 

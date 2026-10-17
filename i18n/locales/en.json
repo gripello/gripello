@@ -2149,6 +2149,9 @@
             "open": "Open gym",
             "inactive": "Inactive",
             "takeOffline": "Take offline",
+            "invisible": "Invisible",
+            "makeInvisible": "Make invisible",
+            "makeInvisibleConfirm": "{name} disappears for everyone except its members and platform admins.",
             "takeOfflineConfirm": "{name} disappears for climbers until you switch it back on.",
             "search": "Name or URL"
         },

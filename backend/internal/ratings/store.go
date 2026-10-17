@@ -145,15 +145,6 @@ func findRoute(ctx context.Context, q querier, id string) (routeRef, error) {
 	return r, err
 }
 
-func resolveGym(ctx context.Context, q querier, idOrSlug string) (string, error) {
-	var id string
-	err := q.QueryRow(ctx, `SELECT id FROM gyms WHERE id = $1 OR slug = $1 LIMIT 1`, idOrSlug).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", httpx.ErrNotFound
-	}
-	return id, err
-}
-
 func gymBetaSettings(ctx context.Context, q querier, gym string) (links, uploads, premoderate bool, err error) {
 	err = q.QueryRow(ctx, `SELECT COALESCE((features->>'beta_links')::boolean, false), COALESCE((features->>'beta_uploads')::boolean, false),
 		premoderate_betas FROM gyms WHERE id = $1`, gym).

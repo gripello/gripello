@@ -2149,6 +2149,9 @@
             "open": "Hal openen",
             "inactive": "Inactief",
             "takeOffline": "Offline halen",
+            "invisible": "Onzichtbaar",
+            "makeInvisible": "Onzichtbaar maken",
+            "makeInvisibleConfirm": "{name} verdwijnt voor iedereen behalve de leden en platformbeheerders.",
             "takeOfflineConfirm": "{name} verdwijnt voor klimmers tot je de hal weer inschakelt.",
             "search": "Naam of URL"
         },

@@ -522,3 +522,23 @@ func TestPageParamsCapThePage(t *testing.T) {
 		t.Errorf("page %d, tail %q", page, tail)
 	}
 }
+
+func TestHiddenGymReviewsReachOnlyMembers(t *testing.T) {
+	f := newFixture(t)
+	f.rate("climber", `{"rating":4}`)
+	f.exec(`UPDATE gyms SET hidden = true WHERE id = $1 RETURNING id`, f.gymA)
+
+	for _, user := range []string{"", "climber", "moderatorB"} {
+		if got := f.call(user, "GET", "/routes/"+f.route+"/ratings", "", http.StatusOK)["items"].([]any); len(got) != 0 {
+			t.Errorf("reviews for %q = %v", user, got)
+		}
+		if got := f.call(user, "GET", "/routes/"+f.route+"/betas", "", http.StatusOK)["items"].([]any); len(got) != 0 {
+			t.Errorf("betas for %q = %v", user, got)
+		}
+	}
+	f.call("climber", "POST", "/routes/"+f.route+"/ratings", `{"rating":5}`, http.StatusNotFound)
+	f.call("climber", "POST", "/routes/"+f.route+"/betas", `{"url":"https://www.youtube.com/shorts/abcdefghijk"}`, http.StatusNotFound)
+	if got := f.call("setter", "GET", "/routes/"+f.route+"/ratings", "", http.StatusOK)["items"].([]any); len(got) != 1 {
+		t.Errorf("member sees reviews %v", got)
+	}
+}

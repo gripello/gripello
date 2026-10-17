@@ -17,6 +17,7 @@ func Register(app *platform.App) { register(app) }
 func register(app *platform.App) *module {
 	m := &module{app: app, perms: tenancy.New(app.DB), standingsCache: newStandingsCache()}
 	app.Bus.Subscribe("competition_changes:", m.onCompetitionChange)
+	app.Bus.Subscribe("gym:", m.onGymChange)
 	for pattern, handler := range map[string]httpx.Handler{
 		"GET /gyms/{gym}/competitions":        m.listCompetitions,
 		"POST /gyms/{gym}/competitions":       m.postCompetition,

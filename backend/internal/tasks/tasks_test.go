@@ -777,3 +777,16 @@ func TestUpdateKeepsAConcurrentHide(t *testing.T) {
 		t.Errorf("task = %+v", task)
 	}
 }
+
+func TestHiddenGymDefectsReachOnlyMembers(t *testing.T) {
+	f := newFixture(t)
+	f.defect("climber", "loose_hold")
+	f.exec(`UPDATE gyms SET hidden = true WHERE id = $1 RETURNING id`, f.gymA)
+	for _, user := range []string{"", "climber", "setterB"} {
+		f.call(user, "GET", "/routes/"+f.route+"/defects", "", http.StatusNotFound)
+		f.call(user, "GET", "/gyms/alpha/defects/open", "", http.StatusNotFound)
+	}
+	if got := items(f.call("member", "GET", "/routes/"+f.route+"/defects", "", http.StatusOK)); len(got) != 1 {
+		t.Errorf("member sees defects %v", got)
+	}
+}

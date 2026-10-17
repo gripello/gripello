@@ -32,6 +32,17 @@
                 >
                     {{ $t('platform.gyms.inactive') }}
                 </UBadge>
+                <UBadge
+                    v-else-if="gym.hidden"
+                    color="neutral"
+                    variant="soft"
+                    size="sm"
+                    icon="i-lucide-eye-off"
+                    class="shrink-0"
+                    :data-testid="`platform-gym-hidden-${gym.slug}`"
+                >
+                    {{ $t('platform.gyms.invisible') }}
+                </UBadge>
             </div>
             <div class="truncate font-mono text-xs text-muted">
                 /{{ gym.slug }}

@@ -27,6 +27,7 @@ type gymState struct {
 	Slug          string
 	Name          string
 	Active        bool
+	Hidden        bool
 	Features      map[string]any
 	PreviousSlugs []string
 	Files         map[string]string
@@ -71,9 +72,9 @@ var gymDeletionOrder = []string{
 func loadGym(ctx context.Context, q queryer, id string) (*gymState, error) {
 	g := gymState{Files: map[string]string{}}
 	var logo, icon, sign, cover string
-	err := q.QueryRow(ctx, `SELECT id, slug, name, active, features, previous_slugs, page_logo, page_icon, sign_image, cover_image
+	err := q.QueryRow(ctx, `SELECT id, slug, name, active, hidden, features, previous_slugs, page_logo, page_icon, sign_image, cover_image
 		FROM gyms WHERE id = $1`, id).
-		Scan(&g.ID, &g.Slug, &g.Name, &g.Active, &g.Features, &g.PreviousSlugs, &logo, &icon, &sign, &cover)
+		Scan(&g.ID, &g.Slug, &g.Name, &g.Active, &g.Hidden, &g.Features, &g.PreviousSlugs, &logo, &icon, &sign, &cover)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -87,29 +88,23 @@ func loadGym(ctx context.Context, q queryer, id string) (*gymState, error) {
 	return &g, nil
 }
 
-type foundGym struct {
-	ID     string
-	Active bool
-	JSON   json.RawMessage
-}
-
-// findGym resolves a slug, a previous slug (answer carries redirect_to) or an id.
-func findGym(ctx context.Context, q queryer, key string) (*foundGym, error) {
-	var g foundGym
-	err := q.QueryRow(ctx, `SELECT id, active, to_jsonb(g) || CASE WHEN slug <> $1 AND id <> $1
+// findGym resolves a slug, a previous slug (answer carries redirect_to) or an id the viewer may see.
+func findGym(ctx context.Context, q queryer, key, viewer string) (json.RawMessage, error) {
+	var gym json.RawMessage
+	err := q.QueryRow(ctx, `SELECT to_jsonb(g) || CASE WHEN slug <> $1 AND id <> $1
 			THEN jsonb_build_object('redirect_to', slug) ELSE '{}'::jsonb END
-		FROM gyms g WHERE slug = $1 OR id = $1 OR previous_slugs ? $1
-		ORDER BY (slug = $1) DESC, (id = $1) DESC LIMIT 1`, key).Scan(&g.ID, &g.Active, &g.JSON)
+		FROM gyms g WHERE (slug = $1 OR id = $1 OR previous_slugs ? $1) AND gym_visible(id, $2)
+		ORDER BY (slug = $1) DESC, (id = $1) DESC LIMIT 1`, key, viewer).Scan(&gym)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
-	return &g, err
+	return gym, err
 }
 
-func listGyms(ctx context.Context, q queryer, includeInactive bool) (json.RawMessage, error) {
+func listGyms(ctx context.Context, q queryer, includeAll bool, viewer string) (json.RawMessage, error) {
 	var items json.RawMessage
-	err := q.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(to_jsonb(g) - 'privacy_doc' - 'tv_settings' ORDER BY g.name), '[]') FROM gyms g WHERE active OR $1`,
-		includeInactive).Scan(&items)
+	err := q.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(to_jsonb(g) - 'privacy_doc' - 'tv_settings' ORDER BY g.name), '[]') FROM gyms g
+		WHERE $1 OR (active AND gym_visible(id, $2))`, includeAll, viewer).Scan(&items)
 	return items, err
 }
 

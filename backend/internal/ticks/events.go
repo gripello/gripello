@@ -43,14 +43,14 @@ func publishTick(ctx context.Context, tx pgx.Tx, action string, tick Tick, days 
 	if err != nil {
 		return err
 	}
+	gym := routeGym(ctx, tx, tick.Route)
 	if !private {
 		shared := tick
 		shared.Note = ""
-		if err := events.PublishAs(ctx, tx, actor, TopicFollowedTicks, kind, TickChange{Action: action, Record: shared}, events.Audience{FollowersOf: tick.User}); err != nil {
+		if err := events.PublishAs(ctx, tx, actor, TopicFollowedTicks, kind, TickChange{Action: action, Record: shared}, events.Audience{FollowersOf: tick.User, Gym: gym}); err != nil {
 			return err
 		}
 	}
-	gym := routeGym(ctx, tx, tick.Route)
 	for i, day := range days {
 		if i > 0 && day.Equal(days[0]) {
 			continue

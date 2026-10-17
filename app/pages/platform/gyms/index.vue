@@ -251,7 +251,11 @@ import type { Form, TableColumn } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { isValidGymSlug, slugifyGymName } from '#shared/utils/gymSlug'
 import { formatDate } from '#shared/utils/formatting'
-import { filterPlatformGyms, type PlatformGym } from '~/utils/platformGyms'
+import {
+    filterPlatformGyms,
+    type PlatformGym,
+    type PlatformGymStatus,
+} from '~/utils/platformGyms'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import { blockedFieldError } from '~/utils/fieldErrors'
 
@@ -266,14 +270,19 @@ const { mdAndUp } = useDisplay()
 const { summary } = useModerationSummary()
 
 const search = ref('')
-const status = ref<'all' | 'active' | 'offline'>('all')
+const status = ref<PlatformGymStatus>('all')
 const statusItems = computed(() => {
     const active = gyms.value.filter((gym) => gym.active).length
+    const hidden = filterPlatformGyms(gyms.value, '', 'hidden').length
     return [
         { value: 'all' as const, label: t('filter.all') },
         {
             value: 'active' as const,
             label: `${t('platform.gyms.active')} · ${active}`,
+        },
+        {
+            value: 'hidden' as const,
+            label: `${t('platform.gyms.invisible')} · ${hidden}`,
         },
         {
             value: 'offline' as const,

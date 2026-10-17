@@ -310,3 +310,30 @@ func TestPagingCapsThePage(t *testing.T) {
 		t.Errorf("page %d, tail %q", page, tail)
 	}
 }
+
+func TestHiddenGymTicksStayWithItsMembers(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	f.user("memberA", f.gymA, "view_analytics")
+	routeA, routeB := f.boulder(f.hallA, "6A", 15.7), f.boulder(f.hallB, "7A", 18.5)
+	f.tick("climber", routeA, "top", time.Now().Add(-time.Hour))
+	f.tick("climber", routeB, "top", time.Now())
+	f.follow("friend", "climber", "accepted")
+	f.follow("memberA", "climber", "accepted")
+	f.exec(`UPDATE gyms SET hidden = true WHERE id = $1 RETURNING id`, f.gymA)
+
+	f.call("friend", "GET", "/me/feed?total=true", "", http.StatusOK, `"total":1`, `"route":"`+routeB+`"`)
+	f.call("memberA", "GET", "/me/feed?total=true", "", http.StatusOK, `"total":2`)
+	if strings.Contains(f.call("friend", "GET", "/climbers/"+f.users["climber"]+"/ticks", "", http.StatusOK), routeA) {
+		t.Error("climber ticks show a hidden gym's route to a non-member")
+	}
+	f.call("climber", "GET", "/me/ticks", "", http.StatusOK, `"route":"`+routeA+`"`)
+	f.call("friend", "GET", "/gyms/alpha/leaderboard", "", http.StatusNotFound)
+	f.call("friend", "POST", "/me/ticks", `{"route":"`+routeA+`","type":"top","attempts":1,"date":"`+time.Now().UTC().Format(time.RFC3339)+`"}`, http.StatusBadRequest, "Unknown route.")
+
+	f.tick("memberA", routeA, "top", time.Now())
+	followed := f.outbox(TopicFollowedTicks)
+	if last := followed[len(followed)-1].Audience; last.Gym != f.gymA {
+		t.Errorf("followed tick in a hidden gym without its gym: %+v", last)
+	}
+}

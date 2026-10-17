@@ -227,7 +227,7 @@ func (m *module) sendAll(ctx context.Context, subscriptions []subscription, body
 func (m *module) notifyWallNewRoutes(ctx context.Context, now time.Time) error {
 	end := now.UTC().Truncate(wallDigestEvery)
 	rows, err := m.app.DB.Query(ctx, `SELECT r.wall, r.gym, w.name, g.slug, COUNT(*),
-			ARRAY(SELECT id FROM users WHERE r.wall = ANY (followed_walls))
+			ARRAY(SELECT id FROM users WHERE r.wall = ANY (followed_walls) AND gym_visible(r.gym, users.id))
 		FROM routes r JOIN walls w ON w.id = r.wall JOIN gyms g ON g.id = r.gym
 		WHERE NOT r.archived AND r.created >= $1 AND r.created < $2
 		GROUP BY r.wall, r.gym, w.name, g.slug`, end.Add(-wallDigestEvery), end)

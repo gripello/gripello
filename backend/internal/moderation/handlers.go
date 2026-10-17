@@ -19,6 +19,7 @@ import (
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
@@ -148,6 +149,11 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 	if report.Gym, report.ContentSnapshot, report.ContentURL, err = reported(ctx, m.app.DB, in.ContentType, in.ContentID); err != nil {
 		return err
 	}
+	if report.Gym != "" {
+		if err := tenancy.RequireGym(ctx, m.app.DB, report.Gym); err != nil {
+			return err
+		}
+	}
 	err = m.inTx(ctx, func(w *work) error {
 		if _, err := w.tx.Exec(ctx, `INSERT INTO reports (id, gym, content_type, content_id, content_url, content_snapshot, reason, explanation,
 			notifier_name, notifier_email, good_faith, status, language) VALUES ($1, NULLIF($2, ''), $3, $4, $5, $6, $7, $8, $9, $10, true, 'open', $11)`,
@@ -224,7 +230,7 @@ func (m *module) listGymReports(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	gym, err := resolveGym(ctx, m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(ctx, m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -435,7 +441,7 @@ func (m *module) listCases(w http.ResponseWriter, r *http.Request) error {
 		where = append(where, strings.ReplaceAll(clause, "?", "$"+strconv.Itoa(len(args))))
 	}
 	if value := query.Get("gym"); value != "" {
-		gym, err := resolveGym(ctx, m.app.DB, value)
+		gym, err := tenancy.ResolveGym(ctx, m.app.DB, value)
 		if errors.Is(err, httpx.ErrNotFound) && p.PlatformAdmin {
 			gym, err = value, nil
 		}
@@ -515,7 +521,7 @@ func (m *module) summary(w http.ResponseWriter, r *http.Request) error {
 		return n
 	}
 	if value := r.URL.Query().Get("gym"); value != "" {
-		gym, err := resolveGym(ctx, m.app.DB, value)
+		gym, err := tenancy.ResolveGym(ctx, m.app.DB, value)
 		if err != nil {
 			return err
 		}

@@ -32,6 +32,13 @@
                             data-testid="platform-gym-active"
                             @update:model-value="requestActive"
                         />
+                        <USwitch
+                            :model-value="!!gym.hidden"
+                            :label="t('platform.gyms.invisible')"
+                            :disabled="!gym.active"
+                            data-testid="platform-gym-hidden"
+                            @update:model-value="requestHidden"
+                        />
                         <UButton
                             :to="`/platform/moderation?gym=${gym.id}`"
                             color="neutral"
@@ -133,7 +140,20 @@
                 "
                 :confirm-text="t('platform.gyms.takeOffline')"
                 data-testid="platform-gym-offline-dialog"
-                @confirm="setActive(false)"
+                @confirm="setFlags({ active: false })"
+            />
+
+            <ConfirmDialog
+                v-model="hiddenDialogOpen"
+                :title="t('platform.gyms.makeInvisible')"
+                :message="
+                    t('platform.gyms.makeInvisibleConfirm', {
+                        name: gymTitle(gym),
+                    })
+                "
+                :confirm-text="t('platform.gyms.makeInvisible')"
+                data-testid="platform-gym-hidden-dialog"
+                @confirm="setFlags({ hidden: true })"
             />
 
             <ConfirmDialog
@@ -155,6 +175,7 @@ import type { FeatureFlag } from '#shared/utils/featureFlags'
 import { FEATURE_FLAGS, hasFeature } from '#shared/utils/featureFlags'
 import { setGymFeatures } from '~/api/platform'
 import { gymTitle } from '~/utils/gymNames'
+import type { GymRecord } from '~/types/models'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
@@ -189,16 +210,23 @@ const extraSections = computed(() => [
 
 const { run: runToggle } = useAsyncAction()
 const offlineDialogOpen = ref(false)
+const hiddenDialogOpen = ref(false)
 
 function requestActive(active: boolean) {
-    if (active) return setActive(true)
+    if (active) return setFlags({ active: true })
     offlineDialogOpen.value = true
 }
 
-async function setActive(active: boolean) {
+function requestHidden(hidden: boolean) {
+    if (!hidden) return setFlags({ hidden: false })
+    hiddenDialogOpen.value = true
+}
+
+async function setFlags(flags: Pick<GymRecord, 'active' | 'hidden'>) {
     offlineDialogOpen.value = false
+    hiddenDialogOpen.value = false
     await runToggle(async () => {
-        gym.value = await updateGym(gymId, { active })
+        gym.value = await updateGym(gymId, flags)
     })
 }
 

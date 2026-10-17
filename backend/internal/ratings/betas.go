@@ -15,6 +15,7 @@ import (
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 )
 
 const maxBetaBytes = 30 << 20
@@ -46,6 +47,7 @@ func stagedKey(id, file string) string { return "moderation_items/" + id + "/" +
 func (m *module) listBetas(w http.ResponseWriter, r *http.Request) error {
 	where := &conditions{}
 	where.add("route = ?", r.PathValue("id"))
+	where.add("gym_visible(gym, ?)", tenancy.Viewer(r.Context()))
 	items, err := queryBetas(r.Context(), m.app.DB, where, "")
 	if err != nil {
 		return err
@@ -59,7 +61,7 @@ func (m *module) listBetas(w http.ResponseWriter, r *http.Request) error {
 
 func (m *module) listGymBetas(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	gym, err := resolveGym(ctx, m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(ctx, m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -122,6 +124,9 @@ func (m *module) postBeta(w http.ResponseWriter, r *http.Request) error {
 	}
 	route, err := findRoute(ctx, m.app.DB, r.PathValue("id"))
 	if err != nil {
+		return err
+	}
+	if err := tenancy.RequireGym(ctx, m.app.DB, route.Gym); err != nil {
 		return err
 	}
 	if route.Archived {

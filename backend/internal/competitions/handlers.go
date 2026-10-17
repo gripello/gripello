@@ -16,6 +16,7 @@ import (
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/tenancy"
 )
 
 func readBody(r *http.Request) (json.RawMessage, error) {
@@ -102,7 +103,7 @@ func (m *module) expandLocations(ctx context.Context, r *http.Request, items []C
 }
 
 func (m *module) listCompetitions(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -148,7 +149,7 @@ func (m *module) withExpandedCompetition(w http.ResponseWriter, r *http.Request,
 }
 
 func (m *module) postCompetition(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -281,7 +282,7 @@ func (m *module) deleteRouteHandler(w http.ResponseWriter, r *http.Request) erro
 // listEntries: staff and judges see every entry; others their own plus visible ones of a non-draft competition,
 // without user id, birth year, consent and payment of other climbers.
 func (m *module) listEntries(w http.ResponseWriter, r *http.Request) error {
-	c, err := findCompetition(r.Context(), m.app.DB, r.PathValue("id"))
+	c, err := findVisibleCompetition(r.Context(), m.app.DB, r.PathValue("id"))
 	if err != nil {
 		return err
 	}
@@ -345,7 +346,7 @@ func scoresPublic(c Competition, now time.Time) bool {
 
 // listScores: staff and judges see all; others their own entry's scores, everyone's once published or while live ranking runs.
 func (m *module) listScores(w http.ResponseWriter, r *http.Request) error {
-	c, err := findCompetition(r.Context(), m.app.DB, r.PathValue("id"))
+	c, err := findVisibleCompetition(r.Context(), m.app.DB, r.PathValue("id"))
 	if err != nil {
 		return err
 	}
@@ -407,11 +408,16 @@ type Standings struct {
 // else the cached view resultsVisibility allows.
 func (m *module) getStandings(w http.ResponseWriter, r *http.Request) error {
 	ctx, id := r.Context(), r.PathValue("id")
-	if p, ok := auth.From(ctx); ok && r.URL.Query().Get("view") != "public" {
-		gym, err := m.competitionGym(ctx, id)
-		if err != nil {
+	gym, public, err := m.competitionGym(ctx, id)
+	if err != nil {
+		return err
+	}
+	if !public {
+		if err := tenancy.RequireGym(ctx, m.app.DB, gym); err != nil {
 			return err
 		}
+	}
+	if p, ok := auth.From(ctx); ok && r.URL.Query().Get("view") != "public" {
 		if m.perms.Can(ctx, p.UserID, gym, permManage) {
 			c, err := findCompetition(ctx, m.app.DB, id)
 			if err != nil {
@@ -461,6 +467,7 @@ const standingsCacheTTL = time.Minute
 
 type cachedStandings struct {
 	gym       string
+	public    bool // gym_visible for guests when built; gym: events drop the entry
 	standings Standings
 	expires   time.Time
 }
@@ -484,8 +491,19 @@ func (c *standingsCache) forget(id string) {
 	c.generations[id]++
 }
 
+func (c *standingsCache) forgetGym(gym string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for id, cached := range c.entries {
+		if cached.gym == gym {
+			delete(c.entries, id)
+			c.generations[id]++
+		}
+	}
+}
+
 // store skips results whose build started before the latest change, so they can't outlive it.
-func (c *standingsCache) store(id string, generation int, comp Competition, standings Standings) {
+func (c *standingsCache) store(id string, generation int, comp Competition, public bool, standings Standings) {
 	expires := time.Now().Add(standingsCacheTTL)
 	if standings.Visibility == "live" && comp.FreezeAt != nil && comp.FreezeAt.Before(expires) {
 		expires = *comp.FreezeAt
@@ -498,7 +516,7 @@ func (c *standingsCache) store(id string, generation int, comp Competition, stan
 		}
 	}
 	if c.generations[id] == generation {
-		c.entries[id] = cachedStandings{gym: comp.Gym, standings: standings, expires: expires}
+		c.entries[id] = cachedStandings{gym: comp.Gym, public: public, standings: standings, expires: expires}
 	}
 }
 
@@ -506,15 +524,20 @@ func (m *module) onCompetitionChange(e events.Event) {
 	m.standingsCache.forget(strings.TrimPrefix(e.Topic, "competition_changes:"))
 }
 
-func (m *module) competitionGym(ctx context.Context, id string) (string, error) {
+func (m *module) onGymChange(e events.Event) {
+	m.standingsCache.forgetGym(strings.TrimPrefix(e.Topic, "gym:"))
+}
+
+// competitionGym answers from the standings cache when it can; public reports a gym everyone may see.
+func (m *module) competitionGym(ctx context.Context, id string) (gym string, public bool, err error) {
 	m.standingsCache.mu.Lock()
 	cached, ok := m.standingsCache.entries[id]
 	m.standingsCache.mu.Unlock()
-	if ok {
-		return cached.gym, nil
+	if ok && time.Now().Before(cached.expires) {
+		return cached.gym, cached.public, nil
 	}
 	c, err := findCompetition(ctx, m.app.DB, id)
-	return c.Gym, err
+	return c.Gym, false, err
 }
 
 func (m *module) publicStandings(ctx context.Context, id string) (Standings, error) {
@@ -536,9 +559,14 @@ func (m *module) publicStandings(ctx context.Context, id string) (Standings, err
 			return Standings{}, httpx.ErrNotFound
 		}
 		standings, err := m.computeStandings(ctx, c, false)
-		if err == nil {
-			cache.store(id, generation, c, standings)
+		if err != nil {
+			return standings, err
 		}
+		var public bool
+		if err := m.app.DB.QueryRow(ctx, `SELECT gym_visible($1, '')`, c.Gym).Scan(&public); err != nil {
+			return standings, err
+		}
+		cache.store(id, generation, c, public, standings)
 		return standings, err
 	})
 	return standings.(Standings), err

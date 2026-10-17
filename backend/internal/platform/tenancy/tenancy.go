@@ -2,8 +2,13 @@ package tenancy
 
 import (
 	"context"
+	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"gripello/internal/platform/auth"
+	"gripello/internal/platform/httpx"
 )
 
 // Platform admins hold these on every gym without a membership; other staff pages still need one.
@@ -75,4 +80,40 @@ func (p *Permissions) Memberships(ctx context.Context, userID string) (map[strin
 		out[gym] = perms
 	}
 	return out, rows.Err()
+}
+
+type Querier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+func Viewer(ctx context.Context) string {
+	p, _ := auth.From(ctx)
+	return p.UserID
+}
+
+// ResolveGym finds a gym by id or slug; gyms the caller may not see (gym_visible) answer 404.
+func ResolveGym(ctx context.Context, q Querier, key string) (string, error) {
+	var id string
+	err := q.QueryRow(ctx, `SELECT id FROM gyms WHERE (id = $1 OR slug = $1) AND gym_visible(id, $2) LIMIT 1`, key, Viewer(ctx)).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", httpx.ErrNotFound
+	}
+	return id, err
+}
+
+func RequireGym(ctx context.Context, q Querier, gymID string) error {
+	var ok bool
+	if err := q.QueryRow(ctx, `SELECT gym_visible($1, $2)`, gymID, Viewer(ctx)).Scan(&ok); err != nil {
+		return err
+	}
+	if !ok {
+		return httpx.ErrNotFound
+	}
+	return nil
+}
+
+// GymViewers answers ["*"] for a gym everyone may see, else the members allowed to see it.
+func (p *Permissions) GymViewers(ctx context.Context, gym string) ([]string, error) {
+	return p.userIDs(ctx, `SELECT '*' WHERE gym_visible($1, '')
+		UNION ALL SELECT m."user" FROM memberships m WHERE NOT gym_visible($1, '') AND m.gym = $1 AND gym_visible($1, m."user")`, gym)
 }

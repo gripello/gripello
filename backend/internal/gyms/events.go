@@ -19,9 +19,10 @@ type gymDeleted struct {
 	Slug string `json:"slug"`
 }
 
-func publishGym(ctx context.Context, tx pgx.Tx, actor, kind, gymID string, active bool, payload any) error {
+// A gone gym passes the hub's visibility gate, so events of a gym the public must not see carry a closed audience themselves.
+func publishGym(ctx context.Context, tx pgx.Tx, actor, kind, gymID string, public bool, payload any) error {
 	audience := events.Audience{Public: true}
-	if !active {
+	if !public {
 		audience = events.Audience{GymPerm: gymID + ":manage_settings"}
 	}
 	return events.PublishAs(ctx, tx, actor, "gym:"+gymID, kind, payload, audience)

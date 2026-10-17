@@ -605,3 +605,35 @@ func TestRoutesAnswerWithTheServerVersion(t *testing.T) {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestHiddenGymIsSeenOnlyByMembers(t *testing.T) {
+	f := newFixture(t)
+	gym := f.createGym("secret", "Secret", true)
+	admin, helper, stranger := f.user("admin"), f.user("helper"), f.user("stranger")
+	f.member(admin, gym, "admin")
+	f.member(helper, gym, "routesetter")
+
+	f.call(admin, "PATCH", "/gyms/"+gym, `{"hidden":true}`, http.StatusForbidden)
+	f.call(f.operator, "PATCH", "/gyms/"+gym, `{"hidden":true}`, http.StatusOK, `"hidden":true`)
+	f.call(f.operator, "PATCH", "/gyms/"+gym, `{"slug":"secret-hall"}`, http.StatusOK)
+	f.call(admin, "PATCH", "/gyms/"+gym, `{"name":"Secret Hall","hidden":true}`, http.StatusOK)
+
+	for _, key := range []string{"secret-hall", "secret", gym} {
+		f.call("", "GET", "/gyms/"+key, "", http.StatusNotFound)
+		f.call(stranger, "GET", "/gyms/"+key, "", http.StatusNotFound)
+		f.call(helper, "GET", "/gyms/"+key, "", http.StatusOK, `"id":"`+gym)
+		f.call(f.operator, "GET", "/gyms/"+key, "", http.StatusOK)
+	}
+	for user, sees := range map[string]bool{"": false, stranger: false, helper: true, admin: true} {
+		if got := strings.Contains(f.call(user, "GET", "/gyms", "", http.StatusOK).Body, `"secret-hall"`); got != sees {
+			t.Errorf("list for %q shows the hidden gym: %v", user, got)
+		}
+	}
+
+	f.call(f.operator, "DELETE", "/gyms/"+gym, "", http.StatusNoContent)
+	var leaked int
+	f.scalar(`SELECT count(*) FROM events WHERE topic = 'gym:' || $1 AND kind = 'gym.deleted' AND audience->>'public' = 'true'`, &leaked, gym)
+	if leaked != 0 {
+		t.Error("deleting a hidden gym announced its slug publicly")
+	}
+}

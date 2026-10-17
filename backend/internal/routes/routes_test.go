@@ -388,3 +388,28 @@ func TestMovingAWallTakesItsRoutes(t *testing.T) {
 		t.Errorf("route after wall move = %v", got)
 	}
 }
+
+func TestHiddenGymRoutesReachOnlyMembers(t *testing.T) {
+	f := newFixture(t)
+	wall := f.wall(f.hall, "Slab")
+	route := f.route(`,"wall":"` + wall + `"`)
+	f.exec(`UPDATE gyms SET hidden = true WHERE id = $1 RETURNING id`, f.gymA)
+
+	for _, user := range []string{"", "climber", "setterB"} {
+		f.call(user, "GET", "/routes/"+route, "", http.StatusNotFound)
+		f.call(user, "GET", "/gyms/alpha/routes", "", http.StatusNotFound)
+		if got := items(f.call(user, "GET", "/routes?ids="+route, "", http.StatusOK)); len(got) != 0 {
+			t.Errorf("routes by id for %q = %v", user, got)
+		}
+		if got := items(f.call(user, "GET", "/walls?ids="+wall, "", http.StatusOK)); len(got) != 0 {
+			t.Errorf("walls by id for %q = %v", user, got)
+		}
+	}
+	for _, user := range []string{"inventory", "operator"} {
+		f.call(user, "GET", "/routes/"+route, "", http.StatusOK)
+		f.call(user, "GET", "/gyms/alpha/routes", "", http.StatusOK)
+		if got := items(f.call(user, "GET", "/walls?ids="+wall, "", http.StatusOK)); len(got) != 1 {
+			t.Errorf("walls by id for %q = %v", user, got)
+		}
+	}
+}

@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -182,15 +181,6 @@ func findLocationGym(ctx context.Context, q querier, id string) (string, error) 
 	var gym string
 	err := q.QueryRow(ctx, `SELECT gym FROM locations WHERE id = $1`, id).Scan(&gym)
 	return gym, err
-}
-
-func resolveGym(ctx context.Context, q querier, idOrSlug string) (string, error) {
-	var id string
-	err := q.QueryRow(ctx, `SELECT id FROM gyms WHERE id = $1 OR slug = $1 LIMIT 1`, idOrSlug).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", httpx.ErrNotFound
-	}
-	return id, err
 }
 
 type gymInfo struct {

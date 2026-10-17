@@ -696,20 +696,20 @@ func TestStandingsCacheDropsBuildsOlderThanAChange(t *testing.T) {
 	cache := newStandingsCache()
 	freezeAt := time.Now().Add(10 * time.Second)
 	comp := Competition{Gym: "g", FreezeAt: &freezeAt}
-	cache.store("c", 0, comp, Standings{Visibility: "live"})
+	cache.store("c", 0, comp, true, Standings{Visibility: "live"})
 	if got := cache.entries["c"].expires; !got.Equal(freezeAt) {
 		t.Errorf("live standings should expire at the freeze, got %s", got)
 	}
-	cache.store("f", 0, comp, Standings{Visibility: "frozen"})
+	cache.store("f", 0, comp, true, Standings{Visibility: "frozen"})
 	if got := cache.entries["f"].expires; !got.After(freezeAt) {
 		t.Errorf("frozen standings should keep the regular ttl, got %s", got)
 	}
 	cache.forget("c")
-	cache.store("c", 0, comp, Standings{Visibility: "live"})
+	cache.store("c", 0, comp, true, Standings{Visibility: "live"})
 	if _, ok := cache.entries["c"]; ok {
 		t.Error("a build that started before the change must not be cached")
 	}
-	cache.store("c", 1, comp, Standings{Visibility: "live"})
+	cache.store("c", 1, comp, true, Standings{Visibility: "live"})
 	if _, ok := cache.entries["c"]; !ok {
 		t.Error("a build after the change should be cached")
 	}
@@ -882,4 +882,42 @@ func TestEntryNamesCannotBeProtected(t *testing.T) {
 		`{"category":"`+category+`","display_name":"Gripello Team","birth_year":1990,"user":"`+f.users["climber"]+`"}`, http.StatusCreated)["id"].(string)
 	f.call("climber", "PATCH", "/competition-entries/"+entry, `{"display_name":"Admin"}`, http.StatusBadRequest)
 	f.call("climber", "PATCH", "/competition-entries/"+entry, `{"display_name":"Cleo"}`, http.StatusOK)
+}
+
+func TestHiddenGymCompetitionsReachOnlyMembers(t *testing.T) {
+	f := newFixture(t)
+	id, category, _, _ := f.competition("")
+	f.register("climber", id, category, "")
+	f.call("manager", "PATCH", "/competitions/"+id, `{"live_ranking":true}`, http.StatusOK)
+	if _, err := f.app.DB.Exec(context.Background(), `UPDATE gyms SET hidden = true WHERE id = $1`, f.gymA); err != nil {
+		t.Fatal(err)
+	}
+	f.call("judge", "GET", "/competitions/"+id+"/standings?view=public", "", http.StatusOK)
+	for _, user := range []string{"", "other"} {
+		for _, path := range []string{"", "/standings", "/entries", "/scores", "/routes", "/categories"} {
+			f.call(user, "GET", "/competitions/"+id+path, "", http.StatusNotFound)
+		}
+	}
+	f.call("judge", "GET", "/competitions/"+id+"/entries", "", http.StatusOK)
+}
+
+func TestCachedStandingsFollowTheGymsVisibility(t *testing.T) {
+	f := newFixture(t)
+	id, category, _, _ := f.competition("")
+	f.register("climber", id, category, "")
+	f.call("manager", "PATCH", "/competitions/"+id, `{"live_ranking":true}`, http.StatusOK)
+	f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusOK)
+	if _, public, _ := f.m.competitionGym(context.Background(), id); !public {
+		t.Fatal("standings of a public gym are not remembered as public")
+	}
+	if _, err := f.app.DB.Exec(context.Background(), `UPDATE gyms SET hidden = true WHERE id = $1`, f.gymA); err != nil {
+		t.Fatal(err)
+	}
+	f.m.onGymChange(events.Event{Topic: "gym:" + f.gymA})
+	f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusNotFound)
+	f.call("judge", "GET", "/competitions/"+id+"/standings?view=public", "", http.StatusOK)
+	if _, public, _ := f.m.competitionGym(context.Background(), id); public {
+		t.Fatal("a hidden gym's standings are cached as public")
+	}
+	f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusNotFound)
 }

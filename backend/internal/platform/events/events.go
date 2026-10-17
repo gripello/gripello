@@ -32,6 +32,7 @@ type Audience struct {
 	SignedIn    bool     `json:"signed_in,omitempty"`
 	GymPerm     string   `json:"gym_perm,omitempty"` // "<gym>:<permission>"
 	FollowersOf string   `json:"followers_of,omitempty"`
+	Gym         string   `json:"gym,omitempty"` // only viewers who may see this gym, for topics that don't name it
 }
 
 // Event is the outbox row. Actor (the user id behind the change) travels in the envelope, never in the

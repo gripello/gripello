@@ -8,6 +8,7 @@ import (
 
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
@@ -241,7 +242,7 @@ func (m *module) listClimberTicks(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (m *module) getLeaderboard(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -272,7 +273,7 @@ func (m *module) getLeaderboard(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) listSeasons(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -288,7 +289,7 @@ func (m *module) listSeasons(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) postSeason(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
