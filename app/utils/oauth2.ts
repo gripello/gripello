@@ -30,6 +30,7 @@ export const OAUTH2_ERRORS = [
     'account_exists',
     'already_linked',
     'email_unverified',
+    'email_blocked',
 ] as const
 
 export function oauth2ErrorKey(code: unknown) {

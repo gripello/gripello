@@ -26,6 +26,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/blocklist"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/lockout"
@@ -438,12 +439,20 @@ func (m *module) resolveIdentity(r *http.Request, c providerConfig, claims ident
 	if email == "" || !newAccountEmailVerified(c, claims) {
 		return "", oauthError("email_unverified")
 	}
+	if blocked, err := blocklist.EmailBlocked(ctx, m.db, email); err != nil || blocked {
+		return "", oauthError("email_blocked")
+	}
 	if taken, err := emailTaken(ctx, m.db, email, ""); err != nil || taken {
 		return "", oauthError("account_exists")
 	}
 	firstname, name := claims.GivenName, claims.FamilyName
 	if firstname == "" && name == "" {
 		firstname = claims.Name
+	}
+	if protected, err := blocklist.NameProtected(ctx, m.db, firstname+" "+name); err != nil {
+		return "", err
+	} else if protected {
+		firstname, name = "", ""
 	}
 	userID := ids.New()
 	err = pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {

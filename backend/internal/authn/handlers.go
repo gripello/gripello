@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/blocklist"
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
@@ -214,14 +215,19 @@ func (m *module) register(w http.ResponseWriter, r *http.Request) error {
 	}
 	invalid := httpx.NewError(http.StatusBadRequest, "Failed to create record.")
 	body.Email = strings.TrimSpace(body.Email)
-	code, message := m.validateNewEmail(r, body.Email, "")
+	code, message, err := m.validateNewEmail(r, body.Email, "")
+	if err != nil {
+		return err
+	}
 	taken := code == codeNotUnique
 	if code != "" && !taken {
 		invalid.Field("email", code, message)
 	}
 	if body.Username == "" {
 		body.Username = m.generateUsername(r)
-	} else if code, message := m.validateUsername(r, body.Username); code != "" {
+	} else if code, message, err := m.validateUsername(r, body.Username); err != nil {
+		return err
+	} else if code != "" {
 		invalid.Field("username", code, message)
 	}
 	validatePassword(invalid, "password", body.Password, body.PasswordConfirm)
@@ -229,6 +235,11 @@ func (m *module) register(w http.ResponseWriter, r *http.Request) error {
 		if utf8.RuneCountInString(value) > nameMax {
 			invalid.Field(field, "validation_max_text_constraint", fmt.Sprintf("Must be no more than %d character(s).", nameMax))
 		}
+	}
+	if protected, err := blocklist.NameProtected(ctx, m.db, body.Firstname+" "+body.Name); err != nil {
+		return err
+	} else if protected {
+		invalid.Field("name", blocklist.CodeNameProtected, "This name is reserved.")
 	}
 	if !slices.Contains(languages, body.Language) {
 		invalid.Field("language", "validation_invalid_value", "Invalid value "+body.Language+".")
@@ -268,30 +279,36 @@ func (m *module) notifyAccountExists(ctx context.Context, email string) {
 	}
 }
 
-func (m *module) validateNewEmail(r *http.Request, email, exceptID string) (string, string) {
+func (m *module) validateNewEmail(r *http.Request, email, exceptID string) (string, string, error) {
 	if email == "" {
-		return "validation_required", "Cannot be blank."
+		return "validation_required", "Cannot be blank.", nil
 	}
 	if address, err := mail.ParseAddress(email); err != nil || address.Address != email {
-		return "validation_is_email", "Must be a valid email address."
+		return "validation_is_email", "Must be a valid email address.", nil
+	}
+	if blocked, err := blocklist.EmailBlocked(r.Context(), m.db, email); err != nil || blocked {
+		return blocklist.CodeEmailBlocked, "This e-mail address can't be used.", err
 	}
 	if taken, err := emailTaken(r.Context(), m.db, email, exceptID); err != nil || taken {
-		return codeNotUnique, "Value must be unique."
+		return codeNotUnique, "Value must be unique.", err
 	}
-	return "", ""
+	return "", "", nil
 }
 
-func (m *module) validateUsername(r *http.Request, username string) (string, string) {
+func (m *module) validateUsername(r *http.Request, username string) (string, string, error) {
 	if length := utf8.RuneCountInString(username); length < 3 || length > 150 {
-		return "validation_length_out_of_range", "The length must be between 3 and 150."
+		return "validation_length_out_of_range", "The length must be between 3 and 150.", nil
 	}
 	if !usernamePattern.MatchString(username) {
-		return "validation_invalid_format", "Invalid value format."
+		return "validation_invalid_format", "Invalid value format.", nil
+	}
+	if protected, err := blocklist.NameProtected(r.Context(), m.db, username); err != nil || protected {
+		return blocklist.CodeNameProtected, "This name is reserved.", err
 	}
 	if taken, err := usernameTaken(r.Context(), m.db, username); err != nil || taken {
-		return "validation_not_unique", "Value must be unique."
+		return "validation_not_unique", "Value must be unique.", err
 	}
-	return "", ""
+	return "", "", nil
 }
 
 func (m *module) generateUsername(r *http.Request) string {
@@ -459,7 +476,9 @@ func (m *module) requestEmailChange(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 	newEmail := strings.TrimSpace(body.NewEmail)
-	if code, message := m.validateNewEmail(r, newEmail, ""); code == codeNotUnique {
+	if code, message, err := m.validateNewEmail(r, newEmail, ""); err != nil {
+		return err
+	} else if code == codeNotUnique {
 		if !strings.EqualFold(newEmail, user.Email) {
 			m.notifyAccountExists(ctx, newEmail)
 		}
@@ -494,7 +513,9 @@ func (m *module) confirmEmailChange(w http.ResponseWriter, r *http.Request) erro
 	if err := m.confirmPassword(r, user, "password", body.Password, "validation_invalid_password"); err != nil {
 		return err
 	}
-	if code, message := m.validateNewEmail(r, claims.NewEmail, user.ID); code != "" {
+	if code, message, err := m.validateNewEmail(r, claims.NewEmail, user.ID); err != nil {
+		return err
+	} else if code != "" {
 		return httpx.NewError(http.StatusBadRequest, "Failed to validate.").Field("newEmail", code, message)
 	}
 	err := pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {

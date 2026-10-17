@@ -1079,7 +1079,9 @@
             "title": "Er is iets misgegaan",
             "subtitle": "Er is een onverwachte fout opgetreden. Probeer het zo opnieuw."
         },
-        "loadFailed": "Deze inhoud kon niet worden geladen."
+        "loadFailed": "Deze inhoud kon niet worden geladen.",
+        "emailBlocked": "Dit e-mailadres kan niet worden gebruikt.",
+        "nameProtected": "Deze naam is gereserveerd. Kies een andere."
     },
     "export": {
         "title": "Exporteren als Excel",
@@ -2187,6 +2189,34 @@
                 "auditDays": "Auditlog {n} dag bewaard | Auditlog {n} dagen bewaard",
                 "configured": "{n} ingesteld",
                 "live": "{n} actief"
+            },
+            "blocklists": {
+                "title": "Blokkeerlijsten",
+                "emails": "Geblokkeerd",
+                "names": "Beschermde namen",
+                "invalid": "Niet geaccepteerd: {entries}",
+                "allowed": "Altijd toegestaan",
+                "sources": "Lijsten met wegwerpadressen",
+                "neverSynced": "Nog nooit gesynchroniseerd",
+                "domainCount": "{n} domein | {n} domeinen",
+                "syncedAgo": "laatste synchronisatie: {ago}",
+                "syncNow": "Nu synchroniseren",
+                "viewList": "Lijst bekijken",
+                "searchDomains": "Domeinen zoeken",
+                "noDomains": "Geen overeenkomende domeinen",
+                "emailsTitle": "E-mailadressen",
+                "namesField": "Gereserveerde woorden",
+                "test": {
+                    "email": "E-mailadres testen",
+                    "name": "Naam testen"
+                },
+                "verdict": {
+                    "blocked": "Geblokkeerd door je lijst: {match}",
+                    "source": "Geblokkeerd door {match}",
+                    "exception": "Toegestaan als uitzondering: {match}",
+                    "allowed": "Toegestaan",
+                    "reserved": "Gereserveerd: {match}"
+                }
             }
         },
         "overview": {
@@ -2345,7 +2375,11 @@
                     "confirm": "Verwijderen",
                     "done": "Platformbeheerder verwijderd"
                 }
-            }
+            },
+            "blockEmail": "{email} blokkeren",
+            "blockDomain": "Alle adressen bij {domain} blokkeren",
+            "blockDomainShared": "{accounts} ander account, {suspended} geschorst | {accounts} andere accounts, {suspended} geschorst",
+            "blockFailed": "Geschorst, maar de e-mailblokkade kon niet worden opgeslagen. Voeg die toe onder Instellingen › Blokkeerlijsten."
         },
         "features": {
             "title": "Feature flags",
@@ -2927,7 +2961,8 @@
                 "registration_disabled": "Er is geen account voor deze login en nieuwe registraties zijn gesloten.",
                 "account_exists": "Er bestaat al een account met dit e-mailadres. Log in met je wachtwoord en koppel de provider in je accountinstellingen.",
                 "already_linked": "Deze login is al aan een ander account gekoppeld.",
-                "email_unverified": "De provider heeft geen e-mailadres bevestigd, dus er kan geen account worden aangemaakt."
+                "email_unverified": "De provider heeft geen e-mailadres bevestigd, dus er kan geen account worden aangemaakt.",
+                "email_blocked": "Dit e-mailadres kan niet worden gebruikt voor een nieuw account."
             }
         }
     },

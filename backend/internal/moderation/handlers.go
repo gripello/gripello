@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/blocklist"
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/db"
@@ -130,6 +131,11 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err := in.validate(); err != nil {
 		return err
+	}
+	if blocked, err := blocklist.EmailBlocked(ctx, m.app.DB, in.NotifierEmail); err != nil {
+		return err
+	} else if blocked {
+		return badRequest("This e-mail address can't be used.").Field("notifier_email", blocklist.CodeEmailBlocked, "This e-mail address can't be used.")
 	}
 	if err := captcha.Request(ctx, m.app.DB, r, "report"); err != nil {
 		return err

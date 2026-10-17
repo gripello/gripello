@@ -122,6 +122,7 @@ import {
     validateRules,
 } from '~/utils/validation'
 import { REPORT_REASONS } from '~/utils/reports'
+import { blockedFieldError } from '~/utils/fieldErrors'
 import { legalLinkProps } from '~/utils/legal'
 import type { ReportContentType, ReportReason } from '~/types/models'
 
@@ -234,7 +235,12 @@ async function submit() {
         close()
     } catch (err) {
         console.error('Failed to submit report:', err)
-        notifyError(t('notifications.error.generic'))
+        notifyError(
+            t(
+                blockedFieldError(err, ['notifier_email'])?.key ??
+                    'notifications.error.generic',
+            ),
+        )
     } finally {
         saving.value = false
     }

@@ -110,6 +110,59 @@ export function liftSuspension(id: string) {
     return useApi()(`/platform/users/${id}/suspension`, { method: 'DELETE' })
 }
 
+export interface BlockSuggestions {
+    email: string
+    domain: string
+    freemail: boolean
+    domain_accounts: number
+    domain_suspended: number
+    email_blocked: boolean
+    domain_blocked: boolean
+}
+
+export function getBlockSuggestions(id: string) {
+    return useApi()<BlockSuggestions>(`/platform/users/${id}/block-suggestions`)
+}
+
+export interface Blocklists {
+    blocked_emails: string[]
+    allowed_emails: string[]
+    protected_names: string[]
+}
+
+export interface EmailSource {
+    id: string
+    name: string
+    homepage: string
+    license: string
+    notice?: string
+    enabled: boolean
+    synced_at: string | null
+    attempted_at: string | null
+    domain_count: number
+    last_error: string
+}
+
+export type BlocklistSettings = Blocklists & { sources: EmailSource[] }
+
+export function getBlocklists() {
+    return useApi()<BlocklistSettings>('/platform/blocklists')
+}
+
+export function updateBlocklists(lists: Blocklists) {
+    return useApi()<BlocklistSettings>('/platform/blocklists', {
+        method: 'PUT',
+        body: lists,
+    })
+}
+
+export function addBlockedEmails(patterns: string[]) {
+    return useApi()<BlocklistSettings>('/platform/blocklists/emails', {
+        method: 'POST',
+        body: { patterns },
+    })
+}
+
 export function getPlatformStats() {
     return useApi()<PlatformStats>('/platform/stats')
 }
@@ -383,4 +436,43 @@ export interface ClientErrorReport {
 
 export function reportClientError(report: ClientErrorReport) {
     return useApi()('/client-errors', { method: 'POST', body: report })
+}
+
+export function setEmailSource(id: string, enabled: boolean) {
+    return useApi()<BlocklistSettings>(`/platform/blocklists/sources/${id}`, {
+        method: 'PUT',
+        body: { enabled },
+    })
+}
+
+export function syncEmailSource(id: string) {
+    return useApi()<BlocklistSettings>(
+        `/platform/blocklists/sources/${id}/sync`,
+        { method: 'POST' },
+    )
+}
+
+export function listEmailSourceDomains(id: string, q: string, page: number) {
+    return useApi()<RouteList<string> & { total: number }>(
+        `/platform/blocklists/sources/${id}/domains`,
+        { query: { q, page } },
+    )
+}
+
+export interface BlocklistCheckResult {
+    email: {
+        blocked: boolean
+        rule: '' | 'allowed' | 'blocked' | 'source'
+        match: string
+    } | null
+    name: { protected: boolean; match: string } | null
+}
+
+export function checkBlocklists(
+    input: Blocklists & { email?: string; name?: string },
+) {
+    return useApi()<BlocklistCheckResult>('/platform/blocklists/check', {
+        method: 'POST',
+        body: input,
+    })
 }

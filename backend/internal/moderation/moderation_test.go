@@ -334,6 +334,8 @@ func TestReportsAreValidatedAndAcknowledged(t *testing.T) {
 	f.call("", "POST", "/reports", `{"content_type":"rating","content_id":"`+rating+`","reason":"spam_fraud","explanation":"x","notifier_name":"N","notifier_email":"nope","good_faith":true}`, http.StatusBadRequest, "notifier_email")
 	f.call("", "POST", "/reports", `{"content_type":"rating","content_id":"`+rating+`","reason":"spam_fraud","explanation":"x","notifier_name":"N","notifier_email":"n@example.com"}`, http.StatusBadRequest, "good_faith")
 	f.call("", "POST", "/reports", `{"content_type":"task","content_id":"`+rating+`","reason":"spam_fraud","explanation":"x","notifier_name":"N","notifier_email":"n@example.com","good_faith":true}`, http.StatusBadRequest)
+	f.exec(`UPDATE platform_config SET blocked_emails = '{spam.test}' RETURNING id`)
+	f.call("", "POST", "/reports", `{"content_type":"rating","content_id":"`+rating+`","reason":"spam_fraud","explanation":"x","notifier_name":"N","notifier_email":"n@spam.test","good_faith":true}`, http.StatusBadRequest, "validation_email_blocked")
 
 	report := f.report("rating", rating, "harassment")
 	testapp.WaitFor(t, func() bool {

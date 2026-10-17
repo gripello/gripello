@@ -263,6 +263,7 @@
 <script setup lang="ts">
 import { required, validEmail, validateRules } from '~/utils/validation'
 import { needsPasswordFirst } from '~/utils/reauth'
+import { blockedFieldError } from '~/utils/fieldErrors'
 import { fileUrl, type ApiError } from '~/api/client'
 import type { Form } from '@nuxt/ui'
 import { SUPPORTED_LOCALES, isLocaleCode } from '~/utils/locales'
@@ -603,7 +604,12 @@ async function saveUser(section: Section) {
                 notify(t('account.emailChangeSent'))
             } catch (mailError) {
                 console.error('Error requesting email change:', mailError)
-                notifyError(t('account.emailChangeFailed'))
+                notifyError(
+                    t(
+                        blockedFieldError(mailError, ['newEmail'])?.key ??
+                            'account.emailChangeFailed',
+                    ),
+                )
             }
             user.email = original.email
         } else {
@@ -615,6 +621,8 @@ async function saveUser(section: Section) {
             notifyError(t('account.wrongOldPassword'))
         } else if (needsPasswordFirst(err)) {
             notifyError(t('account.passwordRequired'))
+        } else if (blockedFieldError(err, ['username', 'name'])) {
+            notifyError(t('errors.nameProtected'))
         } else {
             notifyError(t('notifications.error.edit'))
         }

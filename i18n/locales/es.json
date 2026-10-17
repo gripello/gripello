@@ -1079,7 +1079,9 @@
             "title": "Algo ha salido mal",
             "subtitle": "Se ha producido un error inesperado. Inténtalo de nuevo en un momento."
         },
-        "loadFailed": "No se pudo cargar este contenido."
+        "loadFailed": "No se pudo cargar este contenido.",
+        "emailBlocked": "Esta dirección de correo no se puede usar.",
+        "nameProtected": "Este nombre está reservado. Elige otro."
     },
     "export": {
         "title": "Exportar a Excel",
@@ -2187,6 +2189,34 @@
                 "auditDays": "Registro de auditoría {n} día | Registro de auditoría {n} días",
                 "configured": "{n} configurados",
                 "live": "{n} activos"
+            },
+            "blocklists": {
+                "title": "Listas de bloqueo",
+                "emails": "Bloqueadas",
+                "names": "Nombres protegidos",
+                "invalid": "No aceptado: {entries}",
+                "allowed": "Siempre permitidas",
+                "sources": "Listas de correos desechables",
+                "neverSynced": "Nunca sincronizado",
+                "domainCount": "{n} dominio | {n} dominios",
+                "syncedAgo": "última sincronización: {ago}",
+                "syncNow": "Sincronizar ahora",
+                "viewList": "Ver la lista",
+                "searchDomains": "Buscar dominios",
+                "noDomains": "Ningún dominio coincide",
+                "emailsTitle": "Direcciones de correo",
+                "namesField": "Palabras reservadas",
+                "test": {
+                    "email": "Probar una dirección de correo",
+                    "name": "Probar un nombre"
+                },
+                "verdict": {
+                    "blocked": "Bloqueada por tu lista: {match}",
+                    "source": "Bloqueada por {match}",
+                    "exception": "Permitida por excepción: {match}",
+                    "allowed": "Permitida",
+                    "reserved": "Reservado: {match}"
+                }
             }
         },
         "overview": {
@@ -2345,7 +2375,11 @@
                     "confirm": "Quitar",
                     "done": "Administrador eliminado"
                 }
-            }
+            },
+            "blockEmail": "Bloquear {email}",
+            "blockDomain": "Bloquear todas las direcciones de {domain}",
+            "blockDomainShared": "{accounts} cuenta más, {suspended} suspendida(s) | {accounts} cuentas más, {suspended} suspendida(s)",
+            "blockFailed": "Suspendida, pero no se pudo guardar el bloqueo del correo. Añádelo en Ajustes › Listas de bloqueo."
         },
         "features": {
             "title": "Funciones",
@@ -2927,7 +2961,8 @@
                 "registration_disabled": "No hay ninguna cuenta para este acceso y los registros están cerrados.",
                 "account_exists": "Ya existe una cuenta con este correo. Inicia sesión con tu contraseña y vincula el proveedor en los ajustes de tu cuenta.",
                 "already_linked": "Este acceso ya está vinculado a otra cuenta.",
-                "email_unverified": "El proveedor no confirmó ninguna dirección de correo, así que no se puede crear una cuenta."
+                "email_unverified": "El proveedor no confirmó ninguna dirección de correo, así que no se puede crear una cuenta.",
+                "email_blocked": "Esta dirección de correo no se puede usar para una cuenta nueva."
             }
         }
     },

@@ -32,24 +32,34 @@
             :sections="sections"
             drill-down
             :has-changes="
-                activeSection === 'mail'
-                    ? !!mailSettings?.hasChanges
+                EDITOR_SECTIONS.includes(activeSection)
+                    ? !!sectionEditor(activeSection)?.hasChanges
                     : activeSection !== 'signIn' && hasChanges
             "
-            :saving="activeSection === 'mail' ? !!mailSettings?.saving : saving"
+            :saving="
+                EDITOR_SECTIONS.includes(activeSection)
+                    ? !!sectionEditor(activeSection)?.saving
+                    : saving
+            "
             test-id-prefix="platform-settings"
             @save="
-                activeSection === 'mail'
-                    ? mailSettings?.submit()
+                EDITOR_SECTIONS.includes(activeSection)
+                    ? sectionEditor(activeSection)?.submit()
                     : settingsForm?.submit()
             "
             @cancel="
-                activeSection === 'mail' ? mailSettings?.reset() : resetForm()
+                EDITOR_SECTIONS.includes(activeSection)
+                    ? sectionEditor(activeSection)?.reset()
+                    : resetForm()
             "
         >
             <PlatformMailSettings
                 v-if="activeSection === 'mail'"
                 ref="mailSettings"
+            />
+            <PlatformBlocklistSettings
+                v-else-if="activeSection === 'blocklists'"
+                ref="blocklistSettings"
             />
             <PlatformOAuthSettings v-else-if="activeSection === 'signIn'" />
             <UForm
@@ -227,6 +237,11 @@ const sections = computed(() => [
         icon: 'i-lucide-shield-user',
     },
     {
+        id: 'blocklists',
+        label: t('platform.settings.blocklists.title'),
+        icon: 'i-lucide-ban',
+    },
+    {
         id: 'mail',
         label: t('platform.settings.mail.title'),
         icon: 'i-lucide-mail',
@@ -245,12 +260,21 @@ const activeSection = computed(() =>
         sections.value.map((section) => section.id),
     ),
 )
-const mailSettings = ref<{
+type SectionEditor = {
     submit: () => void
     reset: () => void
     hasChanges: boolean
     saving: boolean
-} | null>(null)
+}
+const mailSettings = ref<SectionEditor | null>(null)
+const blocklistSettings = ref<SectionEditor | null>(null)
+const EDITOR_SECTIONS = ['mail', 'blocklists']
+
+function sectionEditor(section: string) {
+    if (section === 'mail') return mailSettings.value
+    if (section === 'blocklists') return blocklistSettings.value
+    return null
+}
 
 const fieldUi = SETTINGS_FIELD_UI
 const formCardUi = SETTINGS_CARD_UI
