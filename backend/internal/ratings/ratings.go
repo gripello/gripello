@@ -16,6 +16,7 @@ import (
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
@@ -90,6 +91,7 @@ func (m *module) listRouteRatings(w http.ResponseWriter, r *http.Request) error 
 	page, limit, tail := pageParams(r)
 	where := &conditions{}
 	where.add("route_id = ?", r.PathValue("id"))
+	where.add("gym_visible(gym, ?)", tenancy.Viewer(r.Context()))
 	items, err := queryRatings(r.Context(), m.app.DB, where, " ORDER BY created DESC, id"+tail)
 	if err != nil {
 		return err
@@ -107,7 +109,7 @@ var gymRatingSorts = map[string]string{
 
 func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	gym, err := resolveGym(ctx, m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(ctx, m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -216,7 +218,7 @@ func (m *module) expandRoutes(ctx context.Context, items []Rating) error {
 }
 
 func (m *module) getStats(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -236,6 +238,9 @@ func (m *module) postRating(w http.ResponseWriter, r *http.Request) error {
 	}
 	route, err := findRoute(ctx, m.app.DB, r.PathValue("id"))
 	if err != nil {
+		return err
+	}
+	if err := tenancy.RequireGym(ctx, m.app.DB, route.Gym); err != nil {
 		return err
 	}
 	rating := Rating{ID: ids.New(), Gym: route.Gym, RouteID: route.ID, Created: time.Now()}
@@ -344,7 +349,7 @@ type importedRating struct {
 
 func (m *module) importRatings(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	gym, err := resolveGym(ctx, m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(ctx, m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}

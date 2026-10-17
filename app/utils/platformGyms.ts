@@ -23,15 +23,20 @@ export function platformTotals(gyms: PlatformGym[]) {
     }
 }
 
+export type PlatformGymStatus = 'all' | 'active' | 'hidden' | 'offline'
+
 export function filterPlatformGyms(
     gyms: PlatformGym[],
     query: string,
-    status: 'all' | 'active' | 'offline',
+    status: PlatformGymStatus,
 ) {
     const needle = query.trim().toLowerCase()
     return gyms.filter(
         (gym) =>
-            (status === 'all' || !!gym.active === (status === 'active')) &&
+            (status === 'all' ||
+                (status === 'hidden'
+                    ? !!gym.active && !!gym.hidden
+                    : !!gym.active === (status === 'active'))) &&
             (!needle ||
                 [gym.name, gym.slug].some((text) =>
                     text?.toLowerCase().includes(needle),

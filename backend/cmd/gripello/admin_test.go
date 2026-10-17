@@ -22,6 +22,13 @@ func TestAdminSeedsGymUserAndMembershipIdempotently(t *testing.T) {
 	if again, err := adminCreateGym(ctx, pool, []string{"--slug", "e2e", "--name", "E2E Gym"}); err != nil || again != gym {
 		t.Fatalf("second create-gym = %q, %v", again, err)
 	}
+	if _, err := adminCreateGym(ctx, pool, []string{"--slug", "e2e", "--name", "E2E Gym", "--hidden"}); err != nil {
+		t.Fatal(err)
+	}
+	var hidden bool
+	if pool.QueryRow(ctx, `SELECT hidden FROM gyms WHERE id = $1`, gym).Scan(&hidden); !hidden {
+		t.Fatal("create-gym --hidden left the gym visible")
+	}
 	user, err := adminCreateUser(ctx, pool, []string{"--email", "a@gripello.test", "--password", "E2ePassw0rd!", "--username", "e2ea", "--verified"})
 	if err != nil {
 		t.Fatal(err)

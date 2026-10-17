@@ -12,6 +12,7 @@ import (
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
@@ -128,6 +129,9 @@ func (m *module) createTick(ctx context.Context, p patch) (Tick, error) {
 	}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		route, err := findRouteSnapshot(ctx, tx, tick.Route)
+		if err == nil {
+			err = tenancy.RequireGym(ctx, tx, route.Gym)
+		}
 		if err != nil {
 			return invalid("route", "Unknown route.")
 		}

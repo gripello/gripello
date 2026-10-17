@@ -241,6 +241,7 @@ export interface GymRecord extends BaseRecord, LegalFields {
     name: string
     unit_name?: string | null
     active?: boolean
+    hidden?: boolean
     page_logo?: string | null
     page_icon?: string | null
     sign_image?: string | null

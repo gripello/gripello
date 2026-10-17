@@ -78,20 +78,20 @@ func publishChange(ctx context.Context, tx pgx.Tx, c Competition, kind, user, en
 	change := Change{Competition: c.ID, Gym: c.Gym, Kind: kind, User: user, Entry: entry, At: time.Now().UnixMilli()}
 	topic := "competition_changes:" + c.ID
 	if c.Status == "draft" {
-		return publish(ctx, tx, topic, KindChanged, change, events.Audience{GymPerm: c.Gym + ":" + permManage})
+		return publish(ctx, tx, topic, KindChanged, change, events.Audience{GymPerm: c.Gym + ":" + permManage, Gym: c.Gym})
 	}
 	if user == "" {
-		return publish(ctx, tx, topic, KindChanged, change, events.Audience{Public: true})
+		return publish(ctx, tx, topic, KindChanged, change, events.Audience{Public: true, Gym: c.Gym})
 	}
-	if err := publish(ctx, tx, topic, KindChanged, change, events.Audience{Users: []string{user}}); err != nil {
+	if err := publish(ctx, tx, topic, KindChanged, change, events.Audience{Users: []string{user}, Gym: c.Gym}); err != nil {
 		return err
 	}
 	stripped := change
 	stripped.User, stripped.Entry = "", ""
-	if err := publish(ctx, tx, topic, KindChanged, stripped, events.Audience{GuestsOnly: true}); err != nil {
+	if err := publish(ctx, tx, topic, KindChanged, stripped, events.Audience{GuestsOnly: true, Gym: c.Gym}); err != nil {
 		return err
 	}
-	return publish(ctx, tx, topic, KindChanged, stripped, events.Audience{SignedIn: true, NotUsers: []string{user}})
+	return publish(ctx, tx, topic, KindChanged, stripped, events.Audience{SignedIn: true, NotUsers: []string{user}, Gym: c.Gym})
 }
 
 func publishTick(ctx context.Context, tx pgx.Tx, tick Tick, gym string, private bool) error {
@@ -102,7 +102,7 @@ func publishTick(ctx context.Context, tx pgx.Tx, tick Tick, gym string, private 
 	if !private {
 		shared := change
 		shared.Record.Note = ""
-		if err := publish(ctx, tx, TopicFollowedTicks, "tick.created", shared, events.Audience{FollowersOf: tick.User}); err != nil {
+		if err := publish(ctx, tx, TopicFollowedTicks, "tick.created", shared, events.Audience{FollowersOf: tick.User, Gym: gym}); err != nil {
 			return err
 		}
 	}

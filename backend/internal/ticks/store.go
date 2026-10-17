@@ -184,15 +184,6 @@ func isUniqueViolation(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
-func resolveGym(ctx context.Context, q querier, idOrSlug string) (string, error) {
-	var id string
-	err := q.QueryRow(ctx, `SELECT id FROM gyms WHERE id = $1 OR slug = $1 LIMIT 1`, idOrSlug).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", httpx.ErrNotFound
-	}
-	return id, err
-}
-
 const seasonColumns = `id, created, updated, gym, name, starts_at, ends_at`
 
 func querySeasons(ctx context.Context, q querier, sql string, args ...any) ([]Season, error) {

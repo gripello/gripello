@@ -3,6 +3,7 @@ import {
     filterPlatformGyms,
     platformTotals,
     withGymStats,
+    type PlatformGymStatus,
 } from '~/utils/platformGyms'
 
 describe('withGymStats', () => {
@@ -32,20 +33,23 @@ describe('filterPlatformGyms', () => {
         [
             { id: 'a', slug: 'boulderwelt', name: 'Boulderwelt', active: true },
             { id: 'b', slug: 'kh-nord', name: 'Kletterhalle', active: false },
+            { id: 'c', slug: 'demo', name: 'Demo', active: true, hidden: true },
+            { id: 'd', slug: 'old', name: 'Old', active: false, hidden: true },
         ],
         [],
     )
-    const ids = (query: string, status: 'all' | 'active' | 'offline') =>
+    const ids = (query: string, status: PlatformGymStatus) =>
         filterPlatformGyms(gyms, query, status).map((gym) => gym.id)
 
     it('matches name or slug, case-insensitive', () => {
         expect(ids('BOULDER', 'all')).toEqual(['a'])
         expect(ids('nord', 'all')).toEqual(['b'])
-        expect(ids('  ', 'all')).toEqual(['a', 'b'])
+        expect(ids('  ', 'all')).toEqual(['a', 'b', 'c', 'd'])
     })
 
     it('filters by status', () => {
-        expect(ids('', 'active')).toEqual(['a'])
-        expect(ids('', 'offline')).toEqual(['b'])
+        expect(ids('', 'active')).toEqual(['a', 'c'])
+        expect(ids('', 'offline')).toEqual(['b', 'd'])
+        expect(ids('', 'hidden')).toEqual(['c'])
     })
 })

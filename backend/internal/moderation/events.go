@@ -216,17 +216,17 @@ func publishEntryChange(ctx context.Context, tx pgx.Tx, entryID string) error {
 	}
 	topic := "competition_changes:" + change.Competition
 	if status == "draft" {
-		return publish(ctx, tx, topic, kindCompetitionChanged, change, events.Audience{GymPerm: change.Gym + ":manage_competitions"})
+		return publish(ctx, tx, topic, kindCompetitionChanged, change, events.Audience{GymPerm: change.Gym + ":manage_competitions", Gym: change.Gym})
 	}
-	if err := publish(ctx, tx, topic, kindCompetitionChanged, change, events.Audience{Users: []string{change.User}}); err != nil {
+	if err := publish(ctx, tx, topic, kindCompetitionChanged, change, events.Audience{Users: []string{change.User}, Gym: change.Gym}); err != nil {
 		return err
 	}
 	stripped := change
 	stripped.User, stripped.Entry = "", ""
-	if err := publish(ctx, tx, topic, kindCompetitionChanged, stripped, events.Audience{GuestsOnly: true}); err != nil {
+	if err := publish(ctx, tx, topic, kindCompetitionChanged, stripped, events.Audience{GuestsOnly: true, Gym: change.Gym}); err != nil {
 		return err
 	}
-	return publish(ctx, tx, topic, kindCompetitionChanged, stripped, events.Audience{SignedIn: true, NotUsers: []string{change.User}})
+	return publish(ctx, tx, topic, kindCompetitionChanged, stripped, events.Audience{SignedIn: true, NotUsers: []string{change.User}, Gym: change.Gym})
 }
 
 const taskColumns = `id, created, updated, gym, kind, title, category, priority, status, COALESCE(route, '') AS route,

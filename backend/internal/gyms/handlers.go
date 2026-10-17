@@ -19,7 +19,7 @@ import (
 
 func (m *module) listGyms(w http.ResponseWriter, r *http.Request) error {
 	p, _ := auth.From(r.Context())
-	items, err := listGyms(r.Context(), m.db, r.URL.Query().Get("all") == "1" && p.PlatformAdmin)
+	items, err := listGyms(r.Context(), m.db, r.URL.Query().Get("all") == "1" && p.PlatformAdmin, p.UserID)
 	if err != nil {
 		return err
 	}
@@ -28,14 +28,12 @@ func (m *module) listGyms(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) getGym(w http.ResponseWriter, r *http.Request) error {
-	gym, err := findGym(r.Context(), m.db, r.PathValue("gym"))
+	p, _ := auth.From(r.Context())
+	gym, err := findGym(r.Context(), m.db, r.PathValue("gym"), p.UserID)
 	if err != nil {
 		return err
 	}
-	if !canSeeGym(r.Context(), m.perms, gym.ID, gym.Active) {
-		return httpx.ErrNotFound
-	}
-	httpx.JSON(w, http.StatusOK, gym.JSON)
+	httpx.JSON(w, http.StatusOK, gym)
 	return nil
 }
 
@@ -110,7 +108,7 @@ func (m *module) deleteGym(w http.ResponseWriter, r *http.Request) error {
 		if err := deleteGym(r.Context(), tx, gym); err != nil {
 			return err
 		}
-		return publishGym(r.Context(), tx, p.UserID, kindGymDeleted, gym.ID, gym.Active, gymDeleted{ID: gym.ID, Slug: gym.Slug})
+		return publishGym(r.Context(), tx, p.UserID, kindGymDeleted, gym.ID, gym.Active && !gym.Hidden, gymDeleted{ID: gym.ID, Slug: gym.Slug})
 	})
 	if err != nil {
 		return err

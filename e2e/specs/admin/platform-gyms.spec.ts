@@ -217,6 +217,47 @@ test('inactive gyms drop out of every gym picker', async ({
     }
 })
 
+test('an invisible gym stays in its members’ pickers and is gone for everyone else', async ({
+    platformPage: adminPage,
+    userPage,
+    api,
+    createUser,
+    pageAs,
+}) => {
+    const slug = `e2e-hidden-${Date.now()}`
+    const gym = await createGym(api, {
+        slug,
+        name: 'E2E Hidden Gym',
+        active: true,
+    })
+    try {
+        const role = await findRole(api, 'admin', gym.id)
+        const member = await createUser('user', 'hidden-member')
+        await addMembership(api, member.id, role.id, gym.id)
+
+        await gotoSettled(adminPage, `/platform/gyms/${gym.id}`)
+        await adminPage.getByTestId('platform-gym-hidden').click()
+        await adminPage.getByTestId('confirm-dialog-confirm').click()
+        await expect
+            .poll(async () => (await gymBySlug(api, slug))?.hidden)
+            .toBe(true)
+
+        expect((await userPage.request.get(`/${slug}`)).status()).toBe(404)
+
+        const page = await pageAs(member)
+        await gotoSettled(page, `/${slug}`)
+        await page.locator('[data-testid="gym-switcher"]:visible').click()
+        await expect(page.getByTestId(`gym-switcher-item-${slug}`)).toHaveCount(
+            1,
+        )
+        await page.keyboard.press('Escape')
+        await gotoSettled(page, '/account')
+        await expect(page.getByTestId(`me-gym-${slug}`)).toHaveCount(1)
+    } finally {
+        await deleteGym(api, gym.id).catch(() => {})
+    }
+})
+
 test('climbers and gym admins are sent away from the platform page', async ({
     userPage,
     adminPage,

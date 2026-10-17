@@ -94,10 +94,11 @@ func (m *module) stats(w http.ResponseWriter, r *http.Request) error {
 		Slug    string `json:"slug"`
 		Name    string `json:"name"`
 		Active  bool   `json:"active"`
+		Hidden  bool   `json:"hidden"`
 		Members int    `json:"members"`
 		Routes  int    `json:"routes"`
 	}
-	rows, err := m.app.DB.Query(r.Context(), `SELECT g.id, g.slug, g.name, g.active, s.members, s.routes
+	rows, err := m.app.DB.Query(r.Context(), `SELECT g.id, g.slug, g.name, g.active, g.hidden, s.members, s.routes
 		FROM gyms g JOIN gym_stats s ON s.id = g.id ORDER BY g.name`)
 	if err != nil {
 		return err

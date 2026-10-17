@@ -18,6 +18,7 @@ import (
 	"golang.org/x/text/language"
 
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
@@ -195,7 +196,7 @@ type analyticsResponse struct {
 
 func (m *module) getAnalytics(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	gym, err := resolveGym(ctx, m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(ctx, m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}

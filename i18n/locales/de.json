@@ -2149,6 +2149,9 @@
             "open": "Halle öffnen",
             "inactive": "Inaktiv",
             "takeOffline": "Offline nehmen",
+            "invisible": "Unsichtbar",
+            "makeInvisible": "Unsichtbar machen",
+            "makeInvisibleConfirm": "{name} verschwindet für alle außer ihren Mitgliedern und Plattform-Admins.",
             "takeOfflineConfirm": "{name} verschwindet für Kletternde, bis du die Halle wieder einschaltest.",
             "search": "Name oder URL"
         },

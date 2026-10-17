@@ -855,3 +855,12 @@ func TestDeletedContentDropsHiddenFieldCases(t *testing.T) {
 		t.Error("a hidden review lost its quarantine")
 	}
 }
+
+func TestHiddenGymContentCannotBeReportedByOutsiders(t *testing.T) {
+	f := newFixture(t)
+	rating := f.rating("climber", "rude")
+	f.exec(`UPDATE gyms SET hidden = true WHERE id = $1 RETURNING id`, f.gymA)
+	body := `{"content_type":"rating","content_id":"` + rating + `","reason":"spam_fraud","explanation":"x","notifier_name":"N","notifier_email":"n@example.com","good_faith":true}`
+	f.call("", "POST", "/reports", body, http.StatusNotFound)
+	f.call("setterA", "POST", "/reports", body, http.StatusCreated)
+}

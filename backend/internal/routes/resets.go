@@ -10,6 +10,7 @@ import (
 
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/tenancy"
 )
 
 type removalBody struct {
@@ -26,7 +27,7 @@ type Notify struct {
 }
 
 func (m *module) planRemovalHandler(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -86,7 +87,7 @@ func (m *module) planRemoval(ctx context.Context, gym string, body removalBody) 
 func notifyWallFollowers(ctx context.Context, tx pgx.Tx, gym, wall, date string, count int) error {
 	n := Notify{Type: "wall_reset_planned", Gym: gym}
 	var slug, wallName string
-	err := tx.QueryRow(ctx, `SELECT g.slug, w.name, ARRAY(SELECT id FROM users WHERE w.id = ANY (followed_walls))
+	err := tx.QueryRow(ctx, `SELECT g.slug, w.name, ARRAY(SELECT id FROM users WHERE w.id = ANY (followed_walls) AND gym_visible(w.gym, users.id))
 		FROM walls w JOIN gyms g ON g.id = w.gym WHERE w.id = $1`, wall).Scan(&slug, &wallName, &n.Users)
 	if err != nil || len(n.Users) == 0 {
 		return err
@@ -111,7 +112,7 @@ type resetStat struct {
 const recentTickWindow = 30 * day
 
 func (m *module) resetStatsHandler(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}

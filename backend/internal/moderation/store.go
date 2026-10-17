@@ -240,15 +240,6 @@ func platformAdmins(ctx context.Context, q querier) ([]string, error) {
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
-func resolveGym(ctx context.Context, q querier, idOrSlug string) (string, error) {
-	var id string
-	err := q.QueryRow(ctx, `SELECT id FROM gyms WHERE id = $1 OR slug = $1 LIMIT 1`, idOrSlug).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", httpx.ErrNotFound
-	}
-	return id, err
-}
-
 func gymPath(ctx context.Context, q querier, gym, path string) string {
 	var slug string
 	q.QueryRow(ctx, `SELECT slug FROM gyms WHERE id = $1`, gym).Scan(&slug)

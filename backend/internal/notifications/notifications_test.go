@@ -472,3 +472,19 @@ func TestDeliveryRetriesWithBackoff(t *testing.T) {
 		t.Errorf("gave up = %v after %d calls, want 3", err, calls+10)
 	}
 }
+
+func TestWallDigestSkipsFollowersWhoCannotSeeTheGym(t *testing.T) {
+	f := newFixture(t, false)
+	hall := f.exec(`INSERT INTO locations (id, gym, name) VALUES ($1, $2, 'Hall') RETURNING id`, ids.New(), f.gym)
+	wall := f.exec(`INSERT INTO walls (id, gym, location, name, outline, edge) VALUES ($1, $2, $3, 'North', '[]', '[]') RETURNING id`, ids.New(), f.gym, hall)
+	f.exec(`INSERT INTO routes (id, gym, name, grade, location, wall) VALUES ($1, $2, 'One', '6a', $3, $4) RETURNING id`, ids.New(), f.gym, hall, wall)
+	f.exec(`UPDATE users SET followed_walls = ARRAY[$1] WHERE id = $2 RETURNING id`, wall, f.users["climber"])
+	f.exec(`UPDATE gyms SET hidden = true WHERE id = $1 RETURNING id`, f.gym)
+
+	if err := f.m.notifyWallNewRoutes(context.Background(), time.Now().Add(wallDigestEvery)); err != nil {
+		t.Fatal(err)
+	}
+	if n := f.count(`SELECT COUNT(*) FROM events WHERE topic = $1`, TopicNotify); n != 0 {
+		t.Errorf("a hidden gym's digest reached a non-member: %d", n)
+	}
+}

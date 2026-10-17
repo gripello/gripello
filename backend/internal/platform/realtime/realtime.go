@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"slices"
 	"strconv"
@@ -34,6 +35,7 @@ const (
 type Permissions interface {
 	UsersWith(ctx context.Context, gym, permission string) ([]string, error)
 	Followers(ctx context.Context, followeeID string) ([]string, error)
+	GymViewers(ctx context.Context, gym string) ([]string, error)
 }
 
 type client struct {
@@ -43,6 +45,15 @@ type client struct {
 	send       chan events.Event
 	replayFrom int64 // Last-Event-ID, replayed once the client has told us its topics
 	mu         sync.Mutex
+	stale      atomic.Bool
+	gone       chan struct{}
+	goneOnce   sync.Once
+}
+
+// reconnect ends the stream before it sends anything newer, so the client resumes through Last-Event-ID.
+func (c *client) reconnect() {
+	c.stale.Store(true)
+	c.goneOnce.Do(func() { close(c.gone) })
 }
 
 // Hub holds this replica's SSE clients; cross-replica delivery comes through the events bus.
@@ -137,13 +148,20 @@ func (h *Hub) deliver(e events.Event) {
 		h.cache = nil
 		h.cacheMu.Unlock()
 	}
-	accepts := h.audience(e.Audience)
+	accepts := h.accepts(e)
 	for _, c := range h.snapshot() {
 		c.mu.Lock()
 		subscribed := slices.Contains(c.topics, e.Topic)
 		p := c.principal
 		c.mu.Unlock()
-		if !subscribed || !accepts(p) {
+		if !subscribed || c.stale.Load() {
+			continue
+		}
+		ok, retry := accepts(p)
+		if retry {
+			c.reconnect()
+		}
+		if !ok {
 			continue
 		}
 		select {
@@ -205,6 +223,51 @@ func (h *Hub) refreshPlatformAdmin(e events.Event) {
 	}
 }
 
+var gymTopics = []string{"gym_changes:", "open_route_defects:", "tasks:", "gym:", "moderation:"}
+
+func gymOf(e events.Event) string {
+	if e.Audience.Gym != "" {
+		return e.Audience.Gym
+	}
+	for _, prefix := range gymTopics {
+		if gym, ok := strings.CutPrefix(e.Topic, prefix); ok && gym != "platform" {
+			return gym
+		}
+	}
+	return ""
+}
+
+// accepts adds the gym gate to the audience: events of a gym reach only those who may see it (gym_visible), unless addressed by user.
+// retry reports a failed visibility lookup: the client must reconnect and get the event through replay.
+func (h *Hub) accepts(e events.Event) func(*auth.Principal) (ok, retry bool) {
+	audience := h.audience(e.Audience)
+	gym := gymOf(e)
+	if gym == "" || h.perms == nil {
+		return func(p *auth.Principal) (bool, bool) { return audience(p), false }
+	}
+	var viewers map[string]bool
+	var lookupFailed bool
+	return func(p *auth.Principal) (bool, bool) {
+		if !audience(p) {
+			return false, false
+		}
+		if p != nil && (p.PlatformAdmin || slices.Contains(e.Audience.Users, p.UserID)) {
+			return true, false
+		}
+		if viewers == nil {
+			viewers = h.usersFor("sees\x00"+gym, func(ctx context.Context) ([]string, error) {
+				ids, err := h.perms.GymViewers(ctx, gym)
+				lookupFailed = err != nil
+				return ids, err
+			})
+		}
+		if lookupFailed {
+			return false, true
+		}
+		return viewers["*"] || p != nil && viewers[p.UserID], false
+	}
+}
+
 // audience ORs every criterion set on a; NotUsers always excludes. Permission and follower sets load once, on the first client that needs them.
 func (h *Hub) audience(a events.Audience) func(*auth.Principal) bool {
 	var gymPermUsers, followers map[string]bool
@@ -262,7 +325,7 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 	if !ok {
 		return httpx.NewError(http.StatusInternalServerError, "Streaming unsupported.")
 	}
-	c := &client{id: ids.New(), send: make(chan events.Event, 64)}
+	c := &client{id: ids.New(), send: make(chan events.Event, 64), gone: make(chan struct{})}
 	if p, ok := auth.From(r.Context()); ok {
 		c.principal = &p
 	}
@@ -294,6 +357,9 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 			return nil
 		case <-h.closing:
 			return nil
+		case <-c.gone:
+			sendRetryLater(w, flusher)
+			return nil
 		case <-ping.C:
 			fmt.Fprint(w, ":ping\n\n")
 			flusher.Flush()
@@ -301,6 +367,10 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 			c.mu.Lock()
 			subscribed := slices.Contains(c.topics, e.Topic)
 			c.mu.Unlock()
+			if c.stale.Load() {
+				sendRetryLater(w, flusher)
+				return nil
+			}
 			if !subscribed {
 				continue
 			}
@@ -308,6 +378,12 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 			flusher.Flush()
 		}
 	}
+}
+
+// sendRetryLater spreads the reconnects of streams closed together (one failed lookup closes all of a gym's) over a few seconds.
+func sendRetryLater(w http.ResponseWriter, flusher http.Flusher) {
+	fmt.Fprintf(w, "retry:%d\n\n", 2000+rand.IntN(8000))
+	flusher.Flush()
 }
 
 // Subscriptions is PUT /realtime/{clientId}/subscriptions {"topics": [...]}; the auth of this request becomes the stream's principal.
@@ -358,12 +434,20 @@ func (h *Hub) applySubscription(e events.Event) {
 	}
 	missed, _ := h.bus.Since(context.Background(), replayFrom, replayLimit)
 	for _, missedEvent := range missed {
-		accepts := h.audience(missedEvent.Audience)
+		accepts := h.accepts(missedEvent)
 		// Events after this one still pass through deliver; replaying them too would send them twice.
 		if missedEvent.ID >= e.ID {
 			break
 		}
-		if slices.Contains(change.Topics, missedEvent.Topic) && accepts(change.Principal) {
+		if !slices.Contains(change.Topics, missedEvent.Topic) {
+			continue
+		}
+		ok, retry := accepts(change.Principal)
+		if retry {
+			c.reconnect()
+			return
+		}
+		if ok {
 			select {
 			case c.send <- missedEvent:
 			default:

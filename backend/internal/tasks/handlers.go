@@ -13,6 +13,7 @@ import (
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
@@ -98,7 +99,7 @@ func atoi(value string, fallback int) int {
 }
 
 func (m *module) listTasks(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -193,7 +194,7 @@ func (m *module) getTask(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) postTask(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -271,7 +272,7 @@ func (m *module) deleteTaskHandler(w http.ResponseWriter, r *http.Request) error
 }
 
 func (m *module) listAssignees(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -290,7 +291,7 @@ func (m *module) listAssignees(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) listGymDefects(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -305,6 +306,9 @@ func (m *module) listRouteDefects(w http.ResponseWriter, r *http.Request) error 
 	var gym string
 	if err := m.app.DB.QueryRow(r.Context(), `SELECT gym FROM routes WHERE id = $1`, r.PathValue("id")).Scan(&gym); err != nil {
 		return httpx.ErrNotFound
+	}
+	if err := tenancy.RequireGym(r.Context(), m.app.DB, gym); err != nil {
+		return err
 	}
 	return m.respondDefects(r.Context(), w, gym, []string{r.PathValue("id")})
 }

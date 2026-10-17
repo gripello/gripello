@@ -86,7 +86,7 @@ func visible(c Competition, v viewer) bool { return c.Status != "draft" || v.man
 
 // loadVisible returns the competition unless it is a draft the caller may not manage (404).
 func (m *module) loadVisible(ctx context.Context, id string) (Competition, viewer, error) {
-	c, err := findCompetition(ctx, m.app.DB, id)
+	c, err := findVisibleCompetition(ctx, m.app.DB, id)
 	if err != nil {
 		return c, viewer{}, err
 	}
@@ -692,7 +692,7 @@ func (m *module) loadOwnedEntry(ctx context.Context, id string) (Entry, Competit
 	if err != nil {
 		return e, Competition{}, viewer{}, err
 	}
-	c, err := findCompetition(ctx, m.app.DB, e.Competition)
+	c, err := findVisibleCompetition(ctx, m.app.DB, e.Competition)
 	if err != nil {
 		return e, c, viewer{}, err
 	}
@@ -872,7 +872,7 @@ func (m *module) upsertScores(ctx context.Context, competitionID string, inputs 
 	if _, err := auth.Require(ctx); err != nil {
 		return nil, err
 	}
-	c, err := findCompetition(ctx, m.app.DB, competitionID)
+	c, err := findVisibleCompetition(ctx, m.app.DB, competitionID)
 	if err != nil {
 		return nil, err
 	}

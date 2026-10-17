@@ -2149,6 +2149,9 @@
             "open": "Ouvrir la salle",
             "inactive": "Inactif",
             "takeOffline": "Mettre hors ligne",
+            "invisible": "Invisible",
+            "makeInvisible": "Rendre invisible",
+            "makeInvisibleConfirm": "{name} disparaît pour tous sauf ses membres et les admins de la plateforme.",
             "takeOfflineConfirm": "{name} disparaît pour les grimpeurs jusqu’à ce que tu la réactives.",
             "search": "Nom ou URL"
         },

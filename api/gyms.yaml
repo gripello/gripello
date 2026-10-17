@@ -11,7 +11,7 @@ paths:
       parameters:
         - name: all
           in: query
-          description: '1 includes inactive gyms (platform admins only, ignored otherwise)'
+          description: '1 includes inactive and hidden gyms (platform admins only, ignored otherwise); without it hidden gyms are listed only for their members'
           schema: { type: string, enum: ['1'] }
       responses:
         '200':
@@ -59,7 +59,7 @@ paths:
     get:
       operationId: getGym
       tags: [gyms]
-      description: Inactive gyms are only found by their managers (manage_settings) and platform admins.
+      description: Inactive and hidden gyms are only found by their members and platform admins.
       responses:
         '200':
           description: The gym; `redirect_to` is set when it was found by a previous slug
@@ -75,7 +75,7 @@ paths:
     patch:
       operationId: updateGym
       tags: [gyms]
-      description: manage_settings members or platform admins; slug, previous_slugs, features and active only by platform admins.
+      description: manage_settings members or platform admins; slug, previous_slugs, features, active and hidden only by platform admins.
       requestBody:
         required: true
         content:
@@ -280,6 +280,7 @@ components:
         name: { type: string, maxLength: 100 }
         unit_name: { type: string, maxLength: 100 }
         active: { type: boolean }
+        hidden: { type: boolean }
         contact_email: { type: string, format: email }
         route_grade_system: { type: string, maxLength: 50 }
         boulder_grade_system: { type: string, maxLength: 50 }
@@ -334,7 +335,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/GymFields'
         - type: object
-          required: [id, created, updated, slug, name, active, features, previous_slugs, amenities]
+          required: [id, created, updated, slug, name, active, hidden, features, previous_slugs, amenities]
           properties:
             id: { type: string }
             created: { type: string, format: date-time }

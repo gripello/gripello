@@ -2149,6 +2149,9 @@
             "open": "Abrir rocódromo",
             "inactive": "Inactivo",
             "takeOffline": "Desconectar",
+            "invisible": "Invisible",
+            "makeInvisible": "Hacer invisible",
+            "makeInvisibleConfirm": "{name} desaparece para todos excepto sus miembros y los administradores de la plataforma.",
             "takeOfflineConfirm": "{name} desaparece para los escaladores hasta que lo vuelvas a activar.",
             "search": "Nombre o URL"
         },

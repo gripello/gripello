@@ -77,6 +77,7 @@ var gymFields = map[string]field{
 	"name":                  {kind: "text", max: 100, required: true},
 	"unit_name":             {kind: "text", max: 100},
 	"active":                {kind: "bool"},
+	"hidden":                {kind: "bool"},
 	"page_logo":             {kind: "file"},
 	"page_icon":             {kind: "file"},
 	"sign_image":            {kind: "file"},
@@ -355,6 +356,12 @@ func platformOnlyChange(body map[string]json.RawMessage, current *gymState) stri
 		var active bool
 		if json.Unmarshal(raw, &active) != nil || active != current.Active {
 			return "Only platform admins may activate or deactivate gyms."
+		}
+	}
+	if raw, ok := body["hidden"]; ok {
+		var hidden bool
+		if json.Unmarshal(raw, &hidden) != nil || hidden != current.Hidden {
+			return "Only platform admins may hide gyms."
 		}
 	}
 	return ""

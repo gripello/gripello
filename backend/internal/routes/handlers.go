@@ -15,6 +15,7 @@ import (
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
@@ -113,7 +114,7 @@ func routeFilter(gym string, query map[string][]string) (*conditions, error) {
 }
 
 func (m *module) listRoutes(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -243,6 +244,7 @@ func (m *module) listRoutesByID(w http.ResponseWriter, r *http.Request) error {
 	}
 	where := &conditions{}
 	where.add("id = ANY (?)", list)
+	where.add("gym_visible(gym, ?)", tenancy.Viewer(r.Context()))
 	items, err := queryRoutes(r.Context(), m.app.DB, where, " ORDER BY created DESC, id")
 	if err != nil {
 		return err
@@ -259,7 +261,7 @@ func (m *module) listWallsByID(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	walls, err := wallsWithLocation(r.Context(), m.app.DB, list)
+	walls, err := wallsWithLocation(r.Context(), m.app.DB, list, tenancy.Viewer(r.Context()))
 	if err != nil {
 		return err
 	}
@@ -270,6 +272,9 @@ func (m *module) listWallsByID(w http.ResponseWriter, r *http.Request) error {
 func (m *module) getRoute(w http.ResponseWriter, r *http.Request) error {
 	route, err := findRoute(r.Context(), m.app.DB, r.PathValue("id"))
 	if err != nil {
+		return err
+	}
+	if err := tenancy.RequireGym(r.Context(), m.app.DB, route.Gym); err != nil {
 		return err
 	}
 	items := []Route{route}
@@ -320,7 +325,7 @@ func (m *module) archiveRoute(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) archiveGymRoutes(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -345,7 +350,7 @@ func (m *module) deleteRouteHandler(w http.ResponseWriter, r *http.Request) erro
 }
 
 func (m *module) listColors(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -358,7 +363,7 @@ func (m *module) listColors(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) putPlacements(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -377,7 +382,7 @@ func (m *module) putPlacements(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) listLocations(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -496,7 +501,7 @@ func (m *module) replaceMapTrace(ctx context.Context, location Location, file st
 }
 
 func (m *module) listWalls(w http.ResponseWriter, r *http.Request) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}
@@ -530,7 +535,7 @@ func (m *module) deleteWallHandler(w http.ResponseWriter, r *http.Request) error
 }
 
 func (m *module) createInGym(w http.ResponseWriter, r *http.Request, create func(context.Context, string, patch) (any, error)) error {
-	gym, err := resolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
+	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {
 		return err
 	}

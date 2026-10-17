@@ -106,6 +106,7 @@ func adminCreateGym(ctx context.Context, pool *pgxpool.Pool, args []string) (str
 	slug := fs.String("slug", "", "path slug")
 	name := fs.String("name", "", "display name")
 	inactive := fs.Bool("inactive", false, "create the gym inactive")
+	hidden := fs.Bool("hidden", false, "only members and platform admins see the gym")
 	features := fs.String("features", "{}", `feature flags merged into gyms.features, e.g. {"beta_links":true}`)
 	fs.Parse(args)
 	if *slug == "" || *name == "" {
@@ -115,7 +116,8 @@ func adminCreateGym(ctx context.Context, pool *pgxpool.Pool, args []string) (str
 	if err != nil {
 		return "", err
 	}
-	_, err = pool.Exec(ctx, `UPDATE gyms SET active = $2, features = features || $3::jsonb, updated = now() WHERE id = $1`, id, !*inactive, *features)
+	_, err = pool.Exec(ctx, `UPDATE gyms SET active = $2, hidden = $4, features = features || $3::jsonb, updated = now() WHERE id = $1`,
+		id, !*inactive, *features, *hidden)
 	return id, err
 }
 

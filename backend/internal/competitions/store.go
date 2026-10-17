@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/tenancy"
 )
 
 type querier interface {
@@ -162,6 +163,14 @@ func findCompetition(ctx context.Context, q querier, id string) (Competition, er
 	return one[Competition](ctx, q, `SELECT `+competitionColumns+` FROM competitions WHERE id = $1`, id)
 }
 
+func findVisibleCompetition(ctx context.Context, q querier, id string) (Competition, error) {
+	c, err := findCompetition(ctx, q, id)
+	if err != nil {
+		return c, err
+	}
+	return c, tenancy.RequireGym(ctx, q, c.Gym)
+}
+
 func findCategory(ctx context.Context, q querier, id string) (Category, error) {
 	return one[Category](ctx, q, `SELECT `+categoryColumns+` FROM competition_categories WHERE id = $1`, id)
 }
@@ -176,15 +185,6 @@ func findEntry(ctx context.Context, q querier, id string) (Entry, error) {
 
 func findScore(ctx context.Context, q querier, id string) (Score, error) {
 	return one[Score](ctx, q, `SELECT `+scoreColumns+` FROM competition_scores WHERE id = $1`, id)
-}
-
-func resolveGym(ctx context.Context, q querier, idOrSlug string) (string, error) {
-	var id string
-	err := q.QueryRow(ctx, `SELECT id FROM gyms WHERE id = $1 OR slug = $1 LIMIT 1`, idOrSlug).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", httpx.ErrNotFound
-	}
-	return id, err
 }
 
 func locationGym(ctx context.Context, q querier, id string) (string, error) {

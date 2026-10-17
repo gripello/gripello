@@ -2,9 +2,12 @@ package tenancy
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
 
+	"gripello/internal/platform/auth"
+	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/testkit"
 )
 
@@ -42,6 +45,74 @@ func TestAudienceSetsMatchTheSingleQuestions(t *testing.T) {
 	for _, user := range []string{"friend", "asking", "setter"} {
 		if perms.Follows(ctx, user, "climber") != slices.Contains(followers, user) {
 			t.Errorf("Follows and Followers disagree for %s", user)
+		}
+	}
+}
+
+func TestGymVisibility(t *testing.T) {
+	pool := testkit.Pool(t)
+	ctx := context.Background()
+	seed := []string{
+		`INSERT INTO users (id, token_key, username, platform_admin) VALUES ('member', 'k1', 'member', false), ('manager', 'k2', 'manager', false),
+			('stranger', 'k3', 'stranger', false), ('operator', 'k4', 'operator', true)`,
+		`INSERT INTO gyms (id, slug, name, active, hidden) VALUES ('open', 'open', 'Open', true, false), ('closed', 'closed', 'Closed', false, false),
+			('hidden', 'hidden', 'Hidden', true, true)`,
+		`INSERT INTO roles (id, gym, name, permissions) VALUES ('ro', 'open', 'helpers', '{}'), ('rc', 'closed', 'helpers', '{}'), ('rcm', 'closed', 'admins', '{manage_settings}'),
+			('rh', 'hidden', 'helpers', '{}'), ('rhm', 'hidden', 'admins', '{manage_settings}')`,
+		`INSERT INTO memberships (id, "user", gym, role) VALUES ('m1', 'member', 'closed', 'rc'), ('m2', 'member', 'hidden', 'rh'),
+			('m3', 'manager', 'closed', 'rcm'), ('m4', 'manager', 'hidden', 'rhm')`,
+	}
+	for _, statement := range seed {
+		if _, err := pool.Exec(ctx, statement); err != nil {
+			t.Fatal(err)
+		}
+	}
+	visible := map[string][]string{
+		"open":    {"", "member", "manager", "stranger", "operator"},
+		"closed":  {"member", "manager", "operator"},
+		"hidden":  {"member", "manager", "operator"},
+		"unknown": {"", "member", "manager", "stranger", "operator"},
+	}
+	perms := New(pool)
+	for gym, viewers := range visible {
+		for _, viewer := range []string{"", "member", "manager", "stranger", "operator"} {
+			var got bool
+			if err := pool.QueryRow(ctx, `SELECT gym_visible($1, $2)`, gym, viewer).Scan(&got); err != nil {
+				t.Fatal(err)
+			}
+			if got != slices.Contains(viewers, viewer) {
+				t.Errorf("gym_visible(%s, %q) = %v", gym, viewer, got)
+			}
+			if gym == "unknown" {
+				continue
+			}
+			viewerCtx := auth.WithPrincipal(ctx, auth.Principal{UserID: viewer})
+			if viewer == "" {
+				viewerCtx = ctx
+			}
+			id, err := ResolveGym(viewerCtx, pool, gym)
+			if got != (err == nil && id == gym) || !got && !errors.Is(err, httpx.ErrNotFound) {
+				t.Errorf("ResolveGym(%s) as %q = %q, %v", gym, viewer, id, err)
+			}
+			if err := RequireGym(viewerCtx, pool, gym); got != (err == nil) {
+				t.Errorf("RequireGym(%s) as %q = %v", gym, viewer, err)
+			}
+		}
+		if gym == "unknown" {
+			continue
+		}
+		members, err := perms.GymViewers(ctx, gym)
+		if err != nil {
+			t.Fatal(err)
+		}
+		slices.Sort(members)
+		want := []string{"*"}
+		if !slices.Contains(viewers, "") {
+			want = slices.DeleteFunc(slices.Clone(viewers), func(v string) bool { return v == "operator" })
+			slices.Sort(want)
+		}
+		if !slices.Equal(members, want) {
+			t.Errorf("GymViewers(%s) = %v, want %v", gym, members, want)
 		}
 	}
 }

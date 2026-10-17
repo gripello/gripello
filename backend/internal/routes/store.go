@@ -169,15 +169,6 @@ func one[T any](items []T, err error) (T, error) {
 	return items[0], nil
 }
 
-func resolveGym(ctx context.Context, q querier, idOrSlug string) (string, error) {
-	var id string
-	err := q.QueryRow(ctx, `SELECT id FROM gyms WHERE id = $1 OR slug = $1 LIMIT 1`, idOrSlug).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", httpx.ErrNotFound
-	}
-	return id, err
-}
-
 func gymRefs(ctx context.Context, q querier, ids []string) (map[string]GymRef, error) {
 	rows, err := q.Query(ctx, `SELECT id, slug, name FROM gyms WHERE id = ANY ($1)`, ids)
 	if err != nil {
@@ -308,10 +299,10 @@ type WallWithLocation struct {
 	LocationName string `db:"location_name" json:"location_name"`
 }
 
-func wallsWithLocation(ctx context.Context, q querier, wallIDs []string) ([]WallWithLocation, error) {
+func wallsWithLocation(ctx context.Context, q querier, wallIDs []string, viewer string) ([]WallWithLocation, error) {
 	rows, err := q.Query(ctx, `SELECT w.id, w.created, w.updated, w.gym, w.location, w.name, w.outline, w.edge, w.label,
 		w.sort, w.anchor_from, w.anchor_to, l.name AS location_name
-		FROM walls w JOIN locations l ON l.id = w.location WHERE w.id = ANY ($1) ORDER BY l.name, w.sort, w.name, w.id`, wallIDs)
+		FROM walls w JOIN locations l ON l.id = w.location WHERE w.id = ANY ($1) AND gym_visible(w.gym, $2) ORDER BY l.name, w.sort, w.name, w.id`, wallIDs, viewer)
 	if err != nil {
 		return nil, err
 	}
