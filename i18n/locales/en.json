@@ -201,6 +201,7 @@
         "noAccount": "No account?"
     },
     "routes": {
+        "generate_name": "Generate name",
         "home": "Overview",
         "dashboard": "Manage routes",
         "inventory": "Inventory",
@@ -3028,5 +3029,43 @@
         "newToday": "New today",
         "routeCount": "{n} route | {n} routes",
         "scanToOpen": "Scan to log your sends"
+    },
+    "routeNames": {
+        "mood": {
+            "easy": "gentle sleepy lazy tiny happy sunny friendly little soft cozy",
+            "mid": "silent hidden crooked secret cosmic electric rusty salty sneaky stubborn golden rapid",
+            "hard": "savage angry wicked brutal mighty endless giant furious raging fierce merciless"
+        },
+        "colors": {
+            "red": "red",
+            "orange": "orange",
+            "yellow": "yellow",
+            "green": "green",
+            "blue": "blue",
+            "purple": "purple",
+            "pink": "pink",
+            "black": "black",
+            "white": "white",
+            "grey": "grey",
+            "brown": "brown"
+        },
+        "nouns": {
+            "boulder": "crimp pinch sloper dyno jug pebble riddle knot cube block jump puzzle",
+            "route": "line tower highway chimney journey ridge pillar ladder staircase arête crack path",
+            "any": "falcon gecko spider goat panda comet storm dragon cactus pretzel wizard pirate rocket octopus"
+        },
+        "colorNouns": {
+            "red": "lava ember chili cherry flame",
+            "orange": "fox tiger pumpkin tangerine",
+            "yellow": "banana lemon sun honey bee",
+            "green": "frog moss jungle pickle",
+            "blue": "ocean glacier wave lagoon",
+            "purple": "plum amethyst violet eggplant",
+            "pink": "flamingo bubblegum piglet axolotl",
+            "black": "raven shadow night panther",
+            "white": "ghost snow cloud yeti",
+            "grey": "granite fog elephant wolf",
+            "brown": "badger bear mud chocolate"
+        }
     }
 }

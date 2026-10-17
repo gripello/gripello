@@ -201,6 +201,7 @@
         "noAccount": "¿No tienes cuenta?"
     },
     "routes": {
+        "generate_name": "Generar nombre",
         "home": "Resumen",
         "dashboard": "Gestionar vías",
         "inventory": "Inventario",
@@ -3028,5 +3029,43 @@
         "newToday": "Nueva hoy",
         "routeCount": "{n} vía | {n} vías",
         "scanToOpen": "Escanea para registrar tus encadenamientos"
+    },
+    "routeNames": {
+        "mood": {
+            "easy": "suave dormido/dormida perezoso/perezosa pequeño/pequeña alegre soleado/soleada amable tierno/tierna tranquilo/tranquila mimoso/mimosa",
+            "mid": "silencioso/silenciosa oculto/oculta torcido/torcida secreto/secreta cósmico/cósmica eléctrico/eléctrica oxidado/oxidada salado/salada astuto/astuta terco/terca dorado/dorada rápido/rápida",
+            "hard": "salvaje furioso/furiosa brutal poderoso/poderosa infinito/infinita gigante rabioso/rabiosa feroz implacable sombrío/sombría"
+        },
+        "colors": {
+            "red": "rojo/roja",
+            "orange": "naranja",
+            "yellow": "amarillo/amarilla",
+            "green": "verde",
+            "blue": "azul",
+            "purple": "morado/morada",
+            "pink": "rosa",
+            "black": "negro/negra",
+            "white": "blanco/blanca",
+            "grey": "gris",
+            "brown": "marrón"
+        },
+        "nouns": {
+            "boulder": "regleta.f pinza.f romo.m lance.m cazo.m guijarro.m enigma.m nudo.m cubo.m bloque.m salto.m puzle.m",
+            "route": "línea.f torre.f autopista.f chimenea.f viaje.m cresta.f pilar.m escalera.f arista.f grieta.f sendero.m camino.m",
+            "any": "halcón.m gecko.m araña.f cabra.f panda.m cometa.m tormenta.f dragón.m cactus.m rosquilla.f brujo.m pirata.m cohete.m pulpo.m"
+        },
+        "colorNouns": {
+            "red": "lava.f brasa.f guindilla.f cereza.f llama.f",
+            "orange": "zorro.m tigre.m calabaza.f mandarina.f",
+            "yellow": "plátano.m limón.m sol.m miel.f abeja.f",
+            "green": "rana.f musgo.m selva.f pepinillo.m",
+            "blue": "océano.m glaciar.m ola.f laguna.f",
+            "purple": "ciruela.f amatista.f violeta.f berenjena.f",
+            "pink": "flamenco.m chicle.m cerdito.m ajolote.m",
+            "black": "cuervo.m sombra.f noche.f pantera.f",
+            "white": "fantasma.m nieve.f nube.f yeti.m",
+            "grey": "granito.m niebla.f elefante.m lobo.m",
+            "brown": "tejón.m oso.m barro.m chocolate.m"
+        }
     }
 }

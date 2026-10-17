@@ -201,6 +201,7 @@
         "noAccount": "Noch kein Konto?"
     },
     "routes": {
+        "generate_name": "Namen generieren",
         "home": "Übersicht",
         "dashboard": "Routen verwalten",
         "inventory": "Inventur",
@@ -3028,5 +3029,43 @@
         "newToday": "Heute neu",
         "routeCount": "{n} Route | {n} Routen",
         "scanToOpen": "Scannen und Begehungen eintragen"
+    },
+    "routeNames": {
+        "mood": {
+            "easy": "sanft müd faul winzig fröhlich sonnig freundlich klein weich gemütlich lustig",
+            "mid": "still geheim schief kosmisch elektrisch rostig salzig schlau stur wild golden flink",
+            "hard": "wütend bös brutal mächtig endlos riesig grimmig rasend gnadenlos finster gewaltig"
+        },
+        "colors": {
+            "red": "rot",
+            "orange": "orang",
+            "yellow": "gelb",
+            "green": "grün",
+            "blue": "blau",
+            "purple": "lila/lila/lila",
+            "pink": "pink",
+            "black": "schwarz",
+            "white": "weiß",
+            "grey": "grau",
+            "brown": "braun"
+        },
+        "nouns": {
+            "boulder": "Leiste.f Zange.f Sloper.m Dyno.m Henkel.m Kiesel.m Rätsel.n Knoten.m Würfel.m Block.m Sprung.m Puzzle.n",
+            "route": "Linie.f Turm.m Weg.m Kamin.m Reise.f Grat.m Pfeiler.m Leiter.f Treppe.f Kante.f Riss.m Pfad.m",
+            "any": "Falke.m Gecko.m Spinne.f Ziege.f Panda.m Komet.m Sturm.m Drache.m Kaktus.m Brezel.f Zauberer.m Pirat.m Rakete.f Krake.f"
+        },
+        "colorNouns": {
+            "red": "Lava.f Glut.f Chili.m Kirsche.f Flamme.f",
+            "orange": "Fuchs.m Tiger.m Kürbis.m Mandarine.f",
+            "yellow": "Banane.f Zitrone.f Sonne.f Honig.m Biene.f",
+            "green": "Frosch.m Moos.n Dschungel.m Gurke.f",
+            "blue": "Ozean.m Gletscher.m Welle.f Lagune.f",
+            "purple": "Pflaume.f Amethyst.m Veilchen.n Aubergine.f",
+            "pink": "Flamingo.m Kaugummi.m Ferkel.n Axolotl.m",
+            "black": "Rabe.m Schatten.m Nacht.f Panther.m",
+            "white": "Geist.m Schnee.m Wolke.f Yeti.m",
+            "grey": "Granit.m Nebel.m Elefant.m Wolf.m",
+            "brown": "Dachs.m Bär.m Schlamm.m Schokolade.f"
+        }
     }
 }
