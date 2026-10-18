@@ -30,6 +30,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // App-local plugins register before the bridge starts in super.onCreate.
+        registerPlugin(GripelloWidgetPlugin.class);
         super.onCreate(savedInstanceState);
         WebView webView = bridge.getWebView();
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);

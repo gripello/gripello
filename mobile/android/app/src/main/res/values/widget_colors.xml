@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home-screen widget, matching the site's light theme (dark variant in values-night). -->
+    <color name="widget_background">#FFFFFF</color>
+    <color name="widget_text">#1A1C18</color>
+    <color name="widget_muted">#6B6F68</color>
+    <color name="widget_brand">#4A9B2F</color>
+    <color name="widget_streak">#F57C00</color>
+</resources>

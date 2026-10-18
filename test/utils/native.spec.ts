@@ -18,6 +18,7 @@ import {
     backAction,
     externalUrl,
     openSignInPage,
+    systemAppUrl,
 } from '~/utils/native'
 
 describe('backAction', () => {
@@ -108,5 +109,27 @@ describe('externalUrl', () => {
         expect(externalUrl('mailto:hi@gripello.app', origin)).toBeNull()
         expect(externalUrl('tel:+4912345', origin)).toBeNull()
         expect(externalUrl('geo:50.1,8.9', origin)).toBeNull()
+    })
+})
+
+describe('systemAppUrl', () => {
+    it('sends directions to the Maps app', () => {
+        expect(
+            systemAppUrl('https://maps.apple.com/?daddr=50.1,8.9&q=Gym'),
+        ).toBe(true)
+        expect(
+            systemAppUrl(
+                'https://www.google.com/maps/dir/?api=1&destination=50.1,8.9',
+            ),
+        ).toBe(true)
+        expect(systemAppUrl('https://maps.google.com/?q=50.1,8.9')).toBe(true)
+    })
+
+    it('keeps other sites in the in-app browser tab', () => {
+        expect(
+            systemAppUrl('https://www.openstreetmap.org/?mlat=50.1&mlon=8.9'),
+        ).toBe(false)
+        expect(systemAppUrl('https://www.google.com/search?q=maps')).toBe(false)
+        expect(systemAppUrl('https://github.com/gripello')).toBe(false)
     })
 })

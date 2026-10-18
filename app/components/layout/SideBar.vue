@@ -1,11 +1,12 @@
 <template>
+    <!-- The header clears the status bar like the nav bar (iPad app, installed PWA), so both dividers stay level. -->
     <USidebar
         :open="open"
         collapsible="icon"
         @update:open="keepOpenControlled"
         :ui="{
             container: staff ? 'z-40 bg-muted' : 'z-40 bg-default',
-            header: 'flex-col items-stretch justify-center gap-2 px-3 py-2',
+            header: 'flex-col items-stretch justify-center gap-2 px-3 pb-2 pt-[calc(0.5rem+var(--app-top-inset,0px))] min-h-[calc(var(--ui-header-height)+var(--app-top-inset,0px))]',
             body: 'p-0 overflow-hidden group-data-[state=collapsed]/sidebar:overflow-hidden',
             footer: 'p-3',
         }"

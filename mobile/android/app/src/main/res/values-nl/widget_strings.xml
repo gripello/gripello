@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget (ClimbingWidget.java); wording follows i18n/locales. -->
+<resources>
+    <string name="widget_name">Mijn klimmen</string>
+    <string name="widget_description">Je tops van deze week, je reeks en je laatste routes.</string>
+    <string name="widget_this_week">Deze week</string>
+    <string name="widget_sends">Tops</string>
+    <string name="widget_flashes">Flashes: %1$d</string>
+    <string name="widget_hardest">Zwaarste %1$s</string>
+    <string name="widget_latest">Laatste tops</string>
+    <string name="widget_empty">Nog geen tops deze week</string>
+    <string name="widget_sign_in">Log in bij Gripello om je klimmen te zien.</string>
+    <string name="widget_all_gyms">Alle hallen</string>
+    <string name="widget_choose_gym">Hal</string>
+    <plurals name="widget_streak">
+        <item quantity="one">%1$d week op rij</item>
+        <item quantity="other">%1$d weken op rij</item>
+    </plurals>
+</resources>

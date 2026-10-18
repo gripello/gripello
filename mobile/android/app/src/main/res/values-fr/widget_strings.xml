@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget (ClimbingWidget.java); wording follows i18n/locales. -->
+<resources>
+    <string name="widget_name">Mon escalade</string>
+    <string name="widget_description">Tes réussites de la semaine, ta série et tes dernières voies.</string>
+    <string name="widget_this_week">Cette semaine</string>
+    <string name="widget_sends">Réussites</string>
+    <string name="widget_flashes">Flashs : %1$d</string>
+    <string name="widget_hardest">Max %1$s</string>
+    <string name="widget_latest">Dernières réussites</string>
+    <string name="widget_empty">Pas encore de réussite cette semaine</string>
+    <string name="widget_sign_in">Connecte-toi à Gripello pour voir ton escalade.</string>
+    <string name="widget_all_gyms">Toutes les salles</string>
+    <string name="widget_choose_gym">Salle</string>
+    <plurals name="widget_streak">
+        <item quantity="many">%1$d semaines d’affilée</item>
+        <item quantity="one">%1$d semaine d’affilée</item>
+        <item quantity="other">%1$d semaines d’affilée</item>
+    </plurals>
+</resources>

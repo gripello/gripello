@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget (ClimbingWidget.java); wording follows i18n/locales. -->
+<resources>
+    <string name="widget_name">Mein Klettern</string>
+    <string name="widget_description">Deine Durchstiege dieser Woche, deine Serie und deine letzten Routen.</string>
+    <string name="widget_this_week">Diese Woche</string>
+    <string name="widget_sends">Durchstiege</string>
+    <string name="widget_flashes">Flashes: %1$d</string>
+    <string name="widget_hardest">Schwerste %1$s</string>
+    <string name="widget_latest">Letzte Durchstiege</string>
+    <string name="widget_empty">Diese Woche noch keine Durchstiege</string>
+    <string name="widget_sign_in">Melde dich in Gripello an, um dein Klettern zu sehen.</string>
+    <string name="widget_all_gyms">Alle Hallen</string>
+    <string name="widget_choose_gym">Halle</string>
+    <plurals name="widget_streak">
+        <item quantity="one">%1$d Woche in Folge</item>
+        <item quantity="other">%1$d Wochen in Folge</item>
+    </plurals>
+</resources>

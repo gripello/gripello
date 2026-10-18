@@ -26,6 +26,8 @@
         "e2e:down": "./e2e/scripts/app-down.sh",
         "cap:android": "cap run android",
         "cap:dev": "cap run android --live-reload --port 3000 --host",
+        "cap:ios": "cap run ios",
+        "cap:dev:ios": "cap run ios --live-reload --port 3000 --host localhost",
         "cap:sync": "cap sync",
         "capacitor:copy:before": "cp public/offline.html public/icon-192.png mobile/www/"
     },
@@ -38,6 +40,7 @@
         "@capacitor/core": "8.5.3",
         "@capacitor/filesystem": "8.1.4",
         "@capacitor/haptics": "8.0.2",
+        "@capacitor/ios": "8.5.3",
         "@capacitor/push-notifications": "8.1.3",
         "@capacitor/share": "8.0.3",
         "@capacitor/splash-screen": "8.0.2",

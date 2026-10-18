@@ -1,0 +1,13 @@
+{
+    "applinks": {
+        "details": [
+            {
+                "appIDs": ["TEAMID.app.gripello"],
+                "components": [{ "/": "*" }]
+            }
+        ]
+    },
+    "webcredentials": {
+        "apps": ["TEAMID.app.gripello"]
+    }
+}
