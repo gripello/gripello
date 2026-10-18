@@ -21,14 +21,18 @@ export function useCompetitionLive(
     onChange: (change: CompetitionChange) => void,
 ) {
     let stopResync: (() => void) | undefined
+    let connectedBefore = false
     onMounted(() => {
-        stopResync = onConnect(() =>
+        stopResync = onConnect((afterDrop) => {
+            // the first connect covers what changed since the page rendered
+            if (connectedBefore && !afterDrop) return
+            connectedBefore = true
             onChange({
                 competition: competitionId.value,
                 kind: 'resync',
                 at: Date.now(),
-            }),
-        )
+            })
+        })
     })
     onBeforeUnmount(() => stopResync?.())
 

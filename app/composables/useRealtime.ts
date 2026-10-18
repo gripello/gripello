@@ -11,6 +11,7 @@ import type { ApiRecord } from '~/composables/authStore'
 import type { GymRecord } from '~/types/models'
 import { apiUrl, useApi } from '~/api/client'
 import { useAuthState } from '~/api/auth'
+import { coalesce } from '~/utils/realtimeCache'
 
 export type RealtimeHandler<T = any> = (payload: T) => unknown
 
@@ -45,9 +46,13 @@ let syncedTopics: string | null = null
 let syncTimer: ReturnType<typeof setTimeout> | undefined
 let streamToken: string | undefined
 let watchedClient: unknown
+let lastEventId = ''
+let replaySince = ''
 
 function dispatch(event: Event) {
     const { type, data } = event as MessageEvent<string>
+    if ((event as MessageEvent).lastEventId)
+        lastEventId = (event as MessageEvent).lastEventId
     let payload: unknown
     try {
         payload = JSON.parse(data)
@@ -67,26 +72,48 @@ function scheduleSync() {
 }
 
 async function syncTopics() {
-    if (!handlers.size && !connectCallbacks.size) return close()
+    if (!handlers.size && !connectCallbacks.size) {
+        lastEventId = ''
+        return close()
+    }
     const key = topicKey()
     const target = clientId
     if (!target || key === syncedTopics) return
     syncedTopics = key
+    const since = replaySince
+    replaySince = ''
     try {
         await useApi()(`/realtime/${target}/subscriptions`, {
             method: 'PUT',
-            body: { topics: key ? key.split('\n') : [] },
+            body: {
+                topics: key ? key.split('\n') : [],
+                ...(since ? { since: Number(since) } : {}),
+            },
         })
     } catch (error) {
         if (target === clientId) syncedTopics = null
+        replaySince ||= since
         console.error('Realtime subscription failed:', error)
         return
     }
     if (target !== clientId || connected) return
     connected = true
-    const afterDrop = droppedSinceConnect
+    // the server replays a dropped stream after its last event id; only a stream that never got one has a gap
+    const afterDrop = droppedSinceConnect && !lastEventId
     droppedSinceConnect = false
+    notifyConnect(afterDrop)
+}
+
+function notifyConnect(afterDrop: boolean) {
     for (const callback of [...connectCallbacks]) callback(afterDrop)
+}
+
+// The stream's principal comes from the subscription request, so a new token only needs a new one;
+// since replays what the previous principal wasn't allowed to receive.
+function resubscribe() {
+    syncedTopics = null
+    replaySince = lastEventId
+    scheduleSync()
 }
 
 function open() {
@@ -96,11 +123,16 @@ function open() {
     if (watchedClient !== client) {
         watchedClient = client
         auth.onAuthChange((token) => {
-            if (source && token !== streamToken) reopen()
+            if (!source || token === streamToken) return
+            streamToken = token
+            resubscribe()
         })
     }
     streamToken = auth.token()
-    const stream = new EventSource(apiUrl('/realtime'), {
+    const query = lastEventId
+        ? `?lastEventId=${encodeURIComponent(lastEventId)}`
+        : ''
+    const stream = new EventSource(apiUrl('/realtime') + query, {
         withCredentials: true,
     })
     source = stream
@@ -109,6 +141,12 @@ function open() {
         connected = false
         syncedTopics = null
         void syncTopics()
+    })
+    // the replay couldn't cover the gap: everything live reloads
+    stream.addEventListener('resync', (event) => {
+        if ((event as MessageEvent).lastEventId)
+            lastEventId = (event as MessageEvent).lastEventId
+        notifyConnect(true)
     })
     stream.addEventListener('error', () => {
         if (clientId) droppedSinceConnect = true
@@ -175,16 +213,25 @@ export function isRealtimeConnected() {
     return connected
 }
 
+// resync reloads what the handler patches, after events it couldn't see: while kept alive, or lost in a gap the server couldn't replay
 export function useRealtime<T = any>(
     topic: MaybeRefOrGetter<string | null | undefined>,
     handler: RealtimeHandler<T>,
-    options: { onReactivate?: () => void } = {},
+    options: { resync?: () => void } = {},
 ) {
     let active = true
     let missedWhileInactive = false
     let stop: (() => void) | undefined
+    let stopResync: (() => void) | undefined
 
     onMounted(() => {
+        const { resync } = options
+        if (resync)
+            stopResync = onConnect((afterDrop) => {
+                if (!afterDrop) return
+                if (active) resync()
+                else missedWhileInactive = true
+            })
         watch(
             () => toValue(topic),
             (next) => {
@@ -208,11 +255,29 @@ export function useRealtime<T = any>(
         active = true
         if (!missedWhileInactive) return
         missedWhileInactive = false
-        options.onReactivate?.()
+        options.resync?.()
     })
 
     onBeforeUnmount(() => {
         stop?.()
         stop = undefined
+        stopResync?.()
     })
+}
+
+// Reloads through refresh, coalesced, on matching events and after a gap the server couldn't replay.
+export function useLiveRefresh<T = any>(
+    topic: MaybeRefOrGetter<string | null | undefined>,
+    refresh: () => Promise<unknown>,
+    options: { when?: (payload: T) => boolean; delayMs?: number } = {},
+) {
+    const soon = coalesce(refresh, options.delayMs)
+    useRealtime<T>(
+        topic,
+        (payload) => {
+            if (!options.when || options.when(payload)) soon()
+        },
+        { resync: soon },
+    )
+    return soon
 }

@@ -152,9 +152,17 @@ export function replaceRouteDefects<
     ]
 }
 
+const RESYNCED_KEYS: string[] = [
+    cacheKeys.unplacedRoutes,
+    cacheKeys.tickedRoutes,
+    cacheKeys.logbook,
+    cacheKeys.locations,
+    cacheKeys.blocks,
+]
+
 export function isLiveKey(key: string, keyLocations: KeyLocations = {}) {
     return (
-        key === cacheKeys.unplacedRoutes ||
+        RESYNCED_KEYS.includes(key) ||
         isFollowKey(key) ||
         !!defectsScope(key) ||
         !!routeRowsScope(key, keyLocations) ||
@@ -312,14 +320,25 @@ export function servedStaleFromSsrCache(ageAttribute: string | undefined) {
     return Number(ageAttribute || 0) >= STALE_SSR_AGE_MS
 }
 
+// A hidden tab runs the task once when it becomes visible again, not per burst while hidden.
 export function coalesce(task: () => Promise<unknown>, delayMs = 1000) {
     let timer: ReturnType<typeof setTimeout> | undefined
+    let waitingForVisible = false
+    const run = () => void task().catch(() => {})
+    const runWhenVisible = () => {
+        if (document.visibilityState === 'hidden') return
+        document.removeEventListener('visibilitychange', runWhenVisible)
+        waitingForVisible = false
+        run()
+    }
     return () => {
-        if (timer) return
+        if (timer || waitingForVisible) return
         timer = setTimeout(
             () => {
                 timer = undefined
-                task().catch(() => {})
+                if (document.visibilityState !== 'hidden') return run()
+                waitingForVisible = true
+                document.addEventListener('visibilitychange', runWhenVisible)
             },
             delayMs + Math.random() * delayMs,
         )

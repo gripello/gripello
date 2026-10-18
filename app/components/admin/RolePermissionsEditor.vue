@@ -552,6 +552,6 @@ useRealtime(
         )
             fetchDataSoon()
     },
-    { onReactivate: fetchDataSoon },
+    { resync: fetchDataSoon },
 )
 </script>

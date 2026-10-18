@@ -101,7 +101,7 @@ export function usePushSubscription() {
         (event: RecordChange<PushSubscriptionRecord>) => {
             devices.value = applyDeviceEvent(devices.value, event)
         },
-        { onReactivate: refresh },
+        { resync: refresh },
     )
 
     onMounted(() => void refresh())

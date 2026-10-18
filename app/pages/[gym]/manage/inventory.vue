@@ -1006,7 +1006,7 @@ useRealtime(
     (change: GymChange) => {
         if (change.collection === 'routes') loadRoutesSoon()
     },
-    { onReactivate: loadRoutesSoon },
+    { resync: loadRoutesSoon },
 )
 
 onMounted(() => {

@@ -413,7 +413,7 @@ useRealtime(
             ? 'moderation:platform'
             : props.gymId && `moderation:${props.gymId}`,
     reloadSoon,
-    { onReactivate: reloadSoon },
+    { resync: reloadSoon },
 )
 onMounted(() => {
     seenBefore.value = readSeen()[seenScope.value]

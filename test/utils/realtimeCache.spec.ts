@@ -254,6 +254,13 @@ describe('cache keys', () => {
         expect(isLiveKey(cacheKeys.follows)).toBe(true)
         expect(isLiveKey(cacheKeys.friendsFeed)).toBe(true)
         expect(isLiveKey('climber-ticks:u1')).toBe(true)
+        for (const key of [
+            cacheKeys.tickedRoutes,
+            cacheKeys.logbook,
+            cacheKeys.locations,
+            cacheKeys.blocks,
+        ])
+            expect(isLiveKey(key)).toBe(true)
         expect(isLiveKey('cap-status')).toBe(false)
     })
 })
@@ -469,5 +476,30 @@ describe('liveTopics', () => {
 describe('gymDefectsTopic', () => {
     it('keeps open defects within their gym', () => {
         expect(gymDefectsTopic('g1')).toBe('open_route_defects:g1')
+    })
+})
+
+describe('coalesce in a hidden tab', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => {
+        vi.useRealTimers()
+        vi.restoreAllMocks()
+    })
+
+    it('waits for a hidden tab to become visible', async () => {
+        const visibility = vi
+            .spyOn(document, 'visibilityState', 'get')
+            .mockReturnValue('hidden')
+        const task = vi.fn(async () => {})
+        const soon = coalesce(task, 100)
+        soon()
+        await vi.advanceTimersByTimeAsync(250)
+        soon()
+        await vi.advanceTimersByTimeAsync(250)
+        expect(task).not.toHaveBeenCalled()
+
+        visibility.mockReturnValue('visible')
+        document.dispatchEvent(new Event('visibilitychange'))
+        expect(task).toHaveBeenCalledTimes(1)
     })
 })

@@ -155,23 +155,47 @@ describe('subscribeRealtime', () => {
         )
     })
 
-    it('reopens the stream when the token changes, not on profile saves', async () => {
+    it('resubscribes with the new token and replays what it missed, not on profile saves', async () => {
         const auth = useAuthState()
         auth.saveAuth({ token, record: { id: 'u1' } as never })
         track(subscribeRealtime('own_ticks', vi.fn()))
         await connect()
+        stream().dispatchEvent(
+            new MessageEvent('own_ticks', { data: '{}', lastEventId: '41' }),
+        )
         auth.saveUser({ id: 'u1', name: 'Ann' } as never)
-        expect(FakeEventSource.instances).toHaveLength(1)
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        expect(subscriptionCalls()).toHaveLength(1)
 
         auth.clearAuth()
-        expect(FakeEventSource.instances).toHaveLength(2)
-        expect(FakeEventSource.instances[0]!.readyState).toBe(
-            FakeEventSource.CLOSED,
+        await vi.waitFor(() => expect(subscriptionCalls()).toHaveLength(2))
+        expect(FakeEventSource.instances).toHaveLength(1)
+        const put = subscriptionCalls().at(-1)!
+        expect(put.headers.has('Authorization')).toBe(false)
+        expect(put.body).toEqual({ topics: ['own_ticks'], since: 41 })
+    })
+
+    it('reopens a closed stream after its last event and reloads only on resync', async () => {
+        const connected = vi.fn()
+        track(onConnect(connected))
+        track(subscribeRealtime('own_ticks', vi.fn()))
+        await connect('c1')
+        stream().dispatchEvent(
+            new MessageEvent('own_ticks', { data: '{}', lastEventId: '7' }),
         )
+        vi.useFakeTimers()
+        stream().readyState = FakeEventSource.CLOSED
+        stream().dispatchEvent(new Event('error'))
+        await vi.advanceTimersByTimeAsync(6000)
+        vi.useRealTimers()
+        expect(stream().url).toBe('/api/realtime?lastEventId=7')
+
         await connect('c2')
-        expect(subscriptionCalls().at(-1)!.headers.has('Authorization')).toBe(
-            false,
-        )
+        await vi.waitFor(() => expect(connected).toHaveBeenCalledTimes(2))
+        expect(connected).toHaveBeenLastCalledWith(false)
+
+        stream().dispatchEvent(new MessageEvent('resync', { data: '{}' }))
+        expect(connected).toHaveBeenLastCalledWith(true)
     })
 })
 
@@ -203,11 +227,11 @@ describe('useRealtime', () => {
 
     it('drops events while deactivated and reloads once on activate', async () => {
         const onEvent = vi.fn()
-        const onReactivate = vi.fn()
+        const resync = vi.fn()
         const show = ref(true)
         const Child = defineComponent({
             setup() {
-                useRealtime('gym_changes:g1', onEvent, { onReactivate })
+                useRealtime('gym_changes:g1', onEvent, { resync })
                 return () => h('div')
             },
         })
@@ -225,17 +249,17 @@ describe('useRealtime', () => {
         await nextTick()
         stream().emit('gym_changes:g1', { action: 'update' })
         expect(onEvent).toHaveBeenCalledTimes(1)
-        expect(onReactivate).not.toHaveBeenCalled()
+        expect(resync).not.toHaveBeenCalled()
 
         show.value = true
         await nextTick()
-        expect(onReactivate).toHaveBeenCalledTimes(1)
+        expect(resync).toHaveBeenCalledTimes(1)
 
         show.value = false
         await nextTick()
         show.value = true
         await nextTick()
-        expect(onReactivate).toHaveBeenCalledTimes(1)
+        expect(resync).toHaveBeenCalledTimes(1)
         wrapper.unmount()
     })
 })

@@ -1,6 +1,10 @@
 import { labelAnalytics, type AnalyticsQuery } from '#shared/utils/analytics'
 import { getAnalytics } from '~/api/routes'
-import { gymChangesTopic, type GymChange } from '~/utils/realtimeCache'
+import {
+    coalesce,
+    gymChangesTopic,
+    type GymChange,
+} from '~/utils/realtimeCache'
 
 const QUERY_KEYS = [
     'range',
@@ -10,7 +14,7 @@ const QUERY_KEYS = [
     'type',
     'archived',
 ] as const
-const LIVE_DEBOUNCE_MS = 2000
+const LIVE_DEBOUNCE_MS = 1000
 
 export function useClimbingAnalytics() {
     const route = useRoute()
@@ -46,26 +50,7 @@ export function useClimbingAnalytics() {
         () => status.value === 'pending' && !data.value,
     )
 
-    let refreshTimer: ReturnType<typeof setTimeout> | undefined
-    let staleWhileHidden = false
-
-    function scheduleRefresh() {
-        if (refreshTimer) return
-        refreshTimer = setTimeout(() => {
-            refreshTimer = undefined
-            if (document.visibilityState === 'hidden') {
-                staleWhileHidden = true
-                return
-            }
-            void refresh()
-        }, LIVE_DEBOUNCE_MS)
-    }
-
-    function refreshIfStale() {
-        if (document.visibilityState !== 'visible' || !staleWhileHidden) return
-        staleWhileHidden = false
-        void refresh()
-    }
+    const scheduleRefresh = coalesce(() => refresh(), LIVE_DEBOUNCE_MS)
 
     useRealtime(
         () => gymId.value && gymChangesTopic(gymId.value),
@@ -77,15 +62,6 @@ export function useClimbingAnalytics() {
                 scheduleRefresh()
         },
     )
-
-    onMounted(() =>
-        document.addEventListener('visibilitychange', refreshIfStale),
-    )
-
-    onBeforeUnmount(() => {
-        clearTimeout(refreshTimer)
-        document.removeEventListener('visibilitychange', refreshIfStale)
-    })
 
     return {
         query,
