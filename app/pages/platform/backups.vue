@@ -297,7 +297,12 @@ import {
     saveBackupSettings,
     type BackupArchive,
 } from '~/api/backups'
-import { backupHourOptions, formatBytes, nextBackupRun } from '~/utils/backups'
+import {
+    backupHourOptions,
+    formatBytes,
+    nextBackupRun,
+    syncCleanForm,
+} from '~/utils/backups'
 import { isWrongPassword } from '~/utils/reauth'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
@@ -317,7 +322,7 @@ const form = reactive({ keep: 7, include_storage: true, hour: 2 })
 const hourOptions = computed(() => backupHourOptions(locale.value))
 watch(
     () => data.value?.settings,
-    (settings) => settings && Object.assign(form, settings),
+    (settings, previous) => syncCleanForm(form, settings, previous),
     { immediate: true },
 )
 const settingsChanged = computed(

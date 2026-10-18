@@ -42,3 +42,17 @@ export function nextBackupRun(hour: number, now = new Date()) {
     if (next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1)
     return next
 }
+
+export function syncCleanForm<T extends object>(
+    form: T,
+    next: T | undefined,
+    previous: T | undefined,
+) {
+    if (!next) return
+    const untouched =
+        !previous ||
+        (Object.keys(previous) as (keyof T)[]).every(
+            (key) => form[key] === previous[key],
+        )
+    if (untouched) Object.assign(form, next)
+}
