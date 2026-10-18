@@ -108,6 +108,16 @@ export default defineNuxtConfig({
         },
         optimizeDeps: {
             include: [
+                '@capacitor/app',
+                '@capacitor/browser',
+                '@capacitor/core',
+                '@capacitor/filesystem',
+                '@capacitor/haptics',
+                '@capacitor/push-notifications',
+                '@capacitor/share',
+                '@capacitor/splash-screen',
+                '@cj-tech-master/excelts',
+                '@cj-tech-master/excelts/csv',
                 'echarts/core',
                 'echarts/charts',
                 'echarts/components',

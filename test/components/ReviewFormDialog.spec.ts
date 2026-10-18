@@ -35,6 +35,11 @@ async function openDialog(routeGrade: string | null) {
                     props: ['modelValue', 'items'],
                     template: '<div />',
                 },
+                UInputRating: {
+                    name: 'UInputRating',
+                    props: ['modelValue'],
+                    template: '<div />',
+                },
                 USelectMenu: {
                     name: 'USelectMenu',
                     props: ['modelValue', 'items'],
@@ -77,5 +82,28 @@ describe('ReviewFormDialog', () => {
         const select = wrapper.getComponent({ name: 'USelectMenu' })
         expect(select.props('items')).toContain('9+')
         expect(select.props('modelValue')).toBeNull()
+    })
+
+    it('treats a cleared star rating as no rating', async () => {
+        const wrapper = await openDialog('5')
+
+        const stars = wrapper.getComponent({ name: 'UInputRating' })
+        stars.vm.$emit('update:modelValue', 4)
+        await wrapper.vm.$nextTick()
+        expect(stars.props('modelValue')).toBe(4)
+
+        stars.vm.$emit('update:modelValue', 0)
+        await wrapper.vm.$nextTick()
+        expect(stars.props('modelValue')).toBeUndefined()
+    })
+
+    it('names the star picker', async () => {
+        const wrapper = await openDialog('5')
+
+        expect(
+            wrapper
+                .getComponent({ name: 'UInputRating' })
+                .attributes('aria-label'),
+        ).toBe('ratings.stars')
     })
 })
