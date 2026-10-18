@@ -20,6 +20,7 @@ import {
     applyRatingChange,
     cacheKeys,
     isFollowKey,
+    isOwnTickKey,
     coalesce,
     defectsScope,
     detailRouteId,
@@ -331,6 +332,8 @@ export default defineNuxtPlugin((nuxtApp) => {
             )
             if (next !== data) write(key, next)
         }
+        if (loadedKeys().includes(cacheKeys.unplacedRoutes))
+            refreshUnplacedSoon()
         if (action !== 'delete') patchExpandedEverywhere('wall', record)
     }
 
@@ -341,6 +344,8 @@ export default defineNuxtPlugin((nuxtApp) => {
             const next = patchList(data, record, action !== 'delete')
             if (next !== data) write(cacheKeys.locations, next)
         }
+        if (loadedKeys().includes(cacheKeys.unplacedRoutes))
+            refreshUnplacedSoon()
         if (action !== 'delete') patchExpandedEverywhere('location', record)
     }
 
@@ -360,15 +365,30 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
 
     const refreshOwnTicksSoon = coalesce(() => {
-        const keys = loadedKeys().filter(
-            (key) =>
-                key === cacheKeys.tickedRoutes || key === cacheKeys.logbook,
-        )
+        const keys = loadedKeys().filter(isOwnTickKey)
         return keys.length ? refreshNuxtData(keys) : Promise.resolve()
     }, 300)
 
+    // the achievements job runs a moment after the tick, so wait past its coalescing
+    const refreshOwnAchievementsSoon = coalesce(() => {
+        const key = cacheKeys.achievements(authStore.record?.id ?? '')
+        return loadedKeys().includes(key)
+            ? refreshNuxtData(key)
+            : Promise.resolve()
+    }, 3000)
+
     function onOwnTick({ record }: RecordChange<TickRecord>) {
-        if (record.user === authStore.record?.id) refreshOwnTicksSoon()
+        if (record.user !== authStore.record?.id) return
+        refreshOwnTicksSoon()
+        refreshOwnAchievementsSoon()
+    }
+
+    function onOwnNotification({
+        action,
+        record,
+    }: RecordChange<{ type?: string }>) {
+        if (action === 'create' && record.type === 'achievement_earned')
+            refreshOwnAchievementsSoon()
     }
 
     const refreshFollowsSoon = coalesce(async () => {
@@ -431,6 +451,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         )
         onRealtimeConnect(onConnect)
         subscribeRealtime(liveTopics.ownTicks, onOwnTick)
+        subscribeRealtime(liveTopics.ownNotifications, onOwnNotification)
         subscribeRealtime(liveTopics.followChanges, refreshFollowsSoon)
         subscribeRealtime(liveTopics.followedTicks, refreshFollowsSoon)
     })

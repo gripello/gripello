@@ -116,6 +116,7 @@
 
 <script setup lang="ts">
 import { listContributions } from '~/api/ratings'
+import { gymChangesTopic, type GymChange } from '~/utils/realtimeCache'
 import { timeAgo } from '#shared/utils/formatting'
 import { activityDayLabel } from '~/utils/feed'
 import { TICK_TYPE_COLORS } from '~/utils/ticks'
@@ -158,6 +159,20 @@ const {
     server: false,
     default: () => ({ reviews: [], betas: [] }),
 })
+
+const authStore = useAuthStore()
+const liveGymId = useCurrentGymId()
+const isOwnContribution = ({
+    collection,
+    record,
+}: GymChange<{ mine?: boolean; user?: string }>) =>
+    (collection === 'ratings' && record.mine === true) ||
+    (collection === 'beta_videos' && record.user === authStore.record?.id)
+useLiveRefresh(
+    () => liveGymId.value && gymChangesTopic(liveGymId.value),
+    refreshContributions,
+    { when: isOwnContribution },
+)
 
 let activated = false
 onActivated(() => {

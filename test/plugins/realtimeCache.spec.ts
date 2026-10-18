@@ -155,4 +155,20 @@ describe('realtime cache plugin', () => {
         })
         expect(app.payload.data['map-matching']).toEqual([{ id: 'r2' }])
     })
+
+    it('reloads own achievements after a tick and an earned badge', async () => {
+        await startPlugin({ 'achievements:me': [], logbook: [] })
+        emit('own_ticks', { action: 'create', record: { user: 'me' } })
+        await vi.runAllTimersAsync()
+        expect(refreshNuxtData).toHaveBeenCalledWith(['logbook'])
+        expect(refreshNuxtData).toHaveBeenCalledWith('achievements:me')
+
+        refreshNuxtData.mockClear()
+        emit('own_notifications', {
+            action: 'create',
+            record: { type: 'achievement_earned' },
+        })
+        await vi.runAllTimersAsync()
+        expect(refreshNuxtData).toHaveBeenCalledWith('achievements:me')
+    })
 })

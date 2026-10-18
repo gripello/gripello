@@ -28,6 +28,7 @@ describe('useFollowedWalls', () => {
                 token: 't',
                 record: { id: 'u1', followed_walls: ['w1'] },
                 save: vi.fn(),
+                onChange: vi.fn(),
             },
         }
     })
@@ -56,5 +57,12 @@ describe('useFollowedWalls', () => {
         const walls = await load()
         await expect(walls.setFollowing('w2', true)).rejects.toThrow()
         expect(walls.followed.value).toEqual(['w1'])
+    })
+
+    it('follows the walls of the auth record when it changes', async () => {
+        const walls = await load()
+        const [onChange] = apiMock.authStore.onChange.mock.calls[0]
+        onChange('t', { id: 'u1', followed_walls: ['w1', 'w3'] })
+        expect(walls.isFollowing('w3')).toBe(true)
     })
 })

@@ -31,6 +31,7 @@ export const cacheKeys = {
     routeDefects: (routeId: string) => `route-defects:${routeId}`,
     tickedRoutes: 'ticked-routes',
     logbook: 'logbook',
+    achievements: (userId: string) => `achievements:${userId}`,
     follows: 'follows',
     blocks: 'blocks',
     friendsFeed: 'friends-feed',
@@ -43,6 +44,11 @@ export const isFollowKey = (key: string) =>
     key === cacheKeys.communityFeed ||
     key.startsWith('climber:') ||
     key.startsWith('climber-ticks:')
+
+export const isOwnTickKey = (key: string) =>
+    key === cacheKeys.tickedRoutes ||
+    key === cacheKeys.logbook ||
+    key.startsWith('climber-compare-mine:')
 
 // climber-ticks:* reads the follow state and the profile while it loads
 export function splitFollowRefresh(keys: string[]) {

@@ -116,6 +116,7 @@
 
 <script setup lang="ts">
 import { listClimberAchievements } from '~/api/social'
+import { cacheKeys } from '~/utils/realtimeCache'
 import { formatDate } from '#shared/utils/formatting'
 import { tickDate } from '#shared/utils/ticks'
 import {
@@ -140,7 +141,7 @@ const {
     pending,
     error,
 } = useAsyncData(
-    `achievements:${props.userId}`,
+    cacheKeys.achievements(props.userId),
     () => listClimberAchievements(props.userId),
     { default: () => [] },
 )
