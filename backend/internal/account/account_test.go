@@ -546,3 +546,24 @@ func TestProtectedNamesOnlyBlockChangedNames(t *testing.T) {
 	f.call(f.climber, http.MethodPatch, "/me", `{"username":"the_admin"}`, http.StatusBadRequest, `"username":{"code":"validation_name_protected"`)
 	f.call(f.climber, http.MethodPatch, "/me", `{"firstname":"Cleo","name":"Climber"}`, http.StatusOK)
 }
+
+func TestDeleteMeAnnouncesWhatTheCascadeRemoves(t *testing.T) {
+	f := newFixture(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("right-password"), bcrypt.MinCost)
+	f.exec(`UPDATE users SET password_hash = $1`, string(hash))
+	route := f.id(`INSERT INTO routes (id, gym, name, grade) VALUES ($1, $2, 'Crimp', '6a') RETURNING id`, ids.New(), f.gym)
+	f.exec(`INSERT INTO beta_videos (id, gym, route, "user", url) VALUES ('beta1', $1, $2, $3, 'https://youtu.be/x')`, f.gym, route, f.setter)
+	f.exec(`INSERT INTO follows (id, follower, followee, status) VALUES ('follow1', $1, $2, 'accepted')`, f.climber, f.setter)
+
+	f.call(f.setter, http.MethodDelete, "/me", `{"password":"right-password"}`, http.StatusNoContent)
+
+	for _, want := range []struct{ topic, kind, audience string }{
+		{"gym_changes:" + f.gym, "beta.deleted", `{"public": true}`},
+		{"follow_changes", "follow.deleted", `{"users": ["` + f.climber + `"]}`},
+		{"gym:" + f.gym, "membership.changed", `{"gym_perm": "` + f.gym + `:manage_users"}`},
+	} {
+		if n := f.count(`SELECT count(*) FROM events WHERE topic = $1 AND kind = $2 AND audience = $3::jsonb`, want.topic, want.kind, want.audience); n != 1 {
+			t.Errorf("%s %s reached others %d times", want.topic, want.kind, n)
+		}
+	}
+}

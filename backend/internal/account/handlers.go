@@ -19,6 +19,7 @@ import (
 
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/blocklist"
+	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/lockout"
 )
@@ -421,7 +422,14 @@ func (m *module) deleteMe(w http.ResponseWriter, r *http.Request) error {
 		if moderated, err = idsOf(ctx, tx, `SELECT id FROM moderation_items WHERE author = $1 AND cardinality(files) > 0`, p.UserID); err != nil {
 			return err
 		}
+		announceRemoved, err := climbers.AnnounceDeletion(ctx, tx, p.UserID, p.UserID)
+		if err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, p.UserID); err != nil {
+			return err
+		}
+		if err := announceRemoved(); err != nil {
 			return err
 		}
 		if err := publishSessionsRevoked(ctx, tx, p.UserID, sessions); err != nil {
