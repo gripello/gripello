@@ -834,6 +834,9 @@ func validateScoreNumbers(s Score) error {
 	return nil
 }
 
+// Judges may still correct a closed competition; published results are already in the logbooks.
+func scoringOpen(c Competition) bool { return c.Status == "open" || c.Status == "closed" }
+
 // guardScore: entry and route must share the competition; climbers score only their own
 // active entry, on open competitions inside the window, never voided routes or judge-only formats.
 func guardScore(s *Score, e Entry, r CompRoute, c Competition, v viewer, now time.Time) error {
@@ -842,6 +845,9 @@ func guardScore(s *Score, e Entry, r CompRoute, c Competition, v viewer, now tim
 	}
 	if r.Competition != c.ID {
 		return invalid("comp_route", "Route is not part of this competition.")
+	}
+	if v.staff && !scoringOpen(c) {
+		return badRequest("Scoring is closed.")
 	}
 	if !v.staff {
 		if e.User != v.user {
@@ -922,6 +928,9 @@ func (m *module) deleteScore(ctx context.Context, id string) error {
 	c, err := m.loadManaged(ctx, s.Competition)
 	if err != nil {
 		return err
+	}
+	if !scoringOpen(c) {
+		return badRequest("Scoring is closed.")
 	}
 	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `DELETE FROM competition_scores WHERE id = $1`, id); err != nil {

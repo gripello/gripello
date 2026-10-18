@@ -12,6 +12,7 @@ import {
     copiedCompetition,
     defaultCategories,
     fromDateTimeInput,
+    judgesMayScore,
     nextRouteNumber,
     scoringSettingsOf,
     toDateTimeInput,
@@ -326,5 +327,15 @@ describe('COMPETITION_PHASE_COLORS', () => {
         expect(Object.keys(COMPETITION_PHASE_COLORS).sort()).toEqual(
             [...COMPETITION_PHASES].sort(),
         )
+    })
+})
+
+describe('judgesMayScore', () => {
+    it('lets judges score open and closed competitions only', () => {
+        expect(judgesMayScore('open')).toBe(true)
+        expect(judgesMayScore('closed')).toBe(true)
+        expect(judgesMayScore('published')).toBe(false)
+        expect(judgesMayScore('draft')).toBe(false)
+        expect(judgesMayScore(undefined)).toBe(false)
     })
 })

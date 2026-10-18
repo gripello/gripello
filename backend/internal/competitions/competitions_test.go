@@ -922,3 +922,18 @@ func TestCachedStandingsFollowTheGymsVisibility(t *testing.T) {
 	}
 	f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusNotFound)
 }
+
+func TestStaffScoringStopsOncePublished(t *testing.T) {
+	f := newFixture(t)
+	id, category, route1, _ := f.competition("")
+	entry := f.register("climber", id, category, "")
+	score := `{"scores":[{"entry":"` + entry + `","comp_route":"` + route1 + `","top_attempt":1}]}`
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
+	saved := items(f.call("judge", "PUT", "/competitions/"+id+"/scores", score, http.StatusOK))
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"draft"}`, http.StatusOK)
+	f.call("manager", "PUT", "/competitions/"+id+"/scores", score, http.StatusBadRequest)
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
+	f.call("manager", "POST", "/competitions/"+id+"/publish", "", http.StatusOK)
+	f.call("judge", "PUT", "/competitions/"+id+"/scores", score, http.StatusBadRequest)
+	f.call("manager", "DELETE", "/competition-scores/"+saved[0].(map[string]any)["id"].(string), "", http.StatusBadRequest)
+}

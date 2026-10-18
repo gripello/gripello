@@ -140,6 +140,10 @@ export function competitionPhase(
     return 'ended'
 }
 
+export function judgesMayScore(status: CompetitionStatus | undefined) {
+    return status === 'open' || status === 'closed'
+}
+
 export function acceptsRegistrations(
     competition: Pick<CompetitionRecord, 'status' | 'ends_at'>,
     now: Date,
