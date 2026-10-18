@@ -96,4 +96,14 @@ describe('ReviewFormDialog', () => {
         await wrapper.vm.$nextTick()
         expect(stars.props('modelValue')).toBeUndefined()
     })
+
+    it('names the star picker', async () => {
+        const wrapper = await openDialog('5')
+
+        expect(
+            wrapper
+                .getComponent({ name: 'UInputRating' })
+                .attributes('aria-label'),
+        ).toBe('ratings.stars')
+    })
 })

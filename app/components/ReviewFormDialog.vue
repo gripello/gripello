@@ -63,6 +63,7 @@
                         clearable
                         hoverable
                         size="lg"
+                        :aria-label="$t('ratings.stars')"
                         :ui="{
                             root: 'gap-2',
                             indicator: 'data-[state=active]:text-amber-500',
