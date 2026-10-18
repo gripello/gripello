@@ -39,6 +39,14 @@ export const isFollowKey = (key: string) =>
     key.startsWith('climber:') ||
     key.startsWith('climber-ticks:')
 
+// climber-ticks:* reads the follow state and the profile while it loads
+export function splitFollowRefresh(keys: string[]) {
+    const first = keys.filter(
+        (key) => key === cacheKeys.follows || key.startsWith('climber:'),
+    )
+    return [first, keys.filter((key) => !first.includes(key))] as const
+}
+
 export const liveTopics = {
     openDefects: 'open_route_defects',
     ownTicks: 'own_ticks',

@@ -26,6 +26,7 @@ import {
     gymDefectsTopic,
     liveTopics,
     servedStaleFromSsrCache,
+    splitFollowRefresh,
     isLiveKey,
     mapRows,
     NEW_ROUTE_SCORE,
@@ -321,9 +322,11 @@ export default defineNuxtPlugin((nuxtApp) => {
         if (record.user === authStore.record?.id) refreshOwnTicksSoon()
     }
 
-    const refreshFollowsSoon = coalesce(() => {
+    const refreshFollowsSoon = coalesce(async () => {
         const keys = loadedKeys().filter(isFollowKey)
-        return keys.length ? refreshNuxtData(keys) : Promise.resolve()
+        const [first, then] = splitFollowRefresh(keys)
+        if (first.length) await refreshNuxtData(first)
+        if (then.length) await refreshNuxtData(then)
     }, 300)
 
     const hydratedFromStaleCache = servedStaleFromSsrCache(

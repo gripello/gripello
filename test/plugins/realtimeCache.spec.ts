@@ -69,4 +69,18 @@ describe('realtime cache plugin', () => {
             refreshNuxtData.mock.calls.filter(([key]) => key === 'route:r1'),
         ).toHaveLength(1)
     })
+
+    it('reloads follows before the views that read them', async () => {
+        await startPlugin({
+            follows: [],
+            'climber:c1': {},
+            'climber-ticks:c1': [],
+        })
+        emit('follow_changes', { action: 'update', record: {} })
+        await vi.runAllTimersAsync()
+        expect(refreshNuxtData.mock.calls).toEqual([
+            [['follows', 'climber:c1']],
+            [['climber-ticks:c1']],
+        ])
+    })
 })
