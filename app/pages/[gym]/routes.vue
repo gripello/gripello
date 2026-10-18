@@ -321,7 +321,7 @@ const {
     activeFilterCount,
     routeQuery: baseQuery,
     clearFilters,
-} = useRouteFilters()
+} = useRouteFilters('routes')
 
 useSeoMeta({
     title: () => t('page.title.index'),

@@ -216,8 +216,11 @@ describe('cache keys', () => {
     })
 
     it('ignores location lists without a location yet', () => {
-        const locations = { [cacheKeys.routeFilterWalls]: '' }
-        const walls = wallsScope(cacheKeys.routeFilterWalls, locations)!
+        const locations = { [cacheKeys.routeFilterWalls('routes')]: '' }
+        const walls = wallsScope(
+            cacheKeys.routeFilterWalls('routes'),
+            locations,
+        )!
         expect(walls({ location: '' } as WallRecord)).toBe(false)
         expect(routeRowsScope(cacheKeys.placementRoutes)).toBeUndefined()
         expect(routeRowsScope(cacheKeys.unplacedRoutes, locations)).toBe(

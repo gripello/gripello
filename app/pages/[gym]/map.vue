@@ -295,7 +295,7 @@ const {
     difficulties,
     routeQuery,
     clearFilters,
-} = useRouteFilters()
+} = useRouteFilters('map')
 const mapType = ref<RouteTypeFilter>('')
 
 useSeoMeta({

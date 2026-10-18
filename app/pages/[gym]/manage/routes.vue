@@ -515,7 +515,7 @@ const {
     activeFilterCount: routeFilterCount,
     routeQuery: baseQuery,
     clearFilters: clearRouteFilters,
-} = useRouteFilters()
+} = useRouteFilters('manage-routes')
 
 const displayArchived = ref(false)
 

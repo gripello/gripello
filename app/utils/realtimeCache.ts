@@ -21,7 +21,7 @@ export const cacheKeys = {
     gymWalls: (scope: string) => `${scope}-walls`,
     placementRoutes: 'placement-routes',
     mapEditorRoutes: 'map-editor-routes',
-    routeFilterWalls: 'route-filter-walls',
+    routeFilterWalls: (scope: string) => `${scope}-filter-walls`,
     openDefects: 'open-route-defects',
     routeDefects: (routeId: string) => `route-defects:${routeId}`,
     tickedRoutes: 'ticked-routes',
