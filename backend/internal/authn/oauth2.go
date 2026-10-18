@@ -584,6 +584,7 @@ func (m *module) oauth2FinishLink(w http.ResponseWriter, r *http.Request) error 
 	} else if err != nil {
 		return err
 	}
+	m.announceAccount(ctx, p.UserID, "identities")
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

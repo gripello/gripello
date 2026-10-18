@@ -160,6 +160,7 @@ async function load() {
 }
 
 onMounted(load)
+useAccountChanges('sessions', load)
 
 async function revoke(session: SessionRecord) {
     revoking.value = session.id

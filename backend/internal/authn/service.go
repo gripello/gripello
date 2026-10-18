@@ -149,6 +149,7 @@ func (m *module) signIn(w http.ResponseWriter, r *http.Request, user account, me
 	if err != nil {
 		return err
 	}
+	m.announceAccount(ctx, user.ID, "sessions")
 	return m.respondWithToken(w, r, user, sessionID)
 }
 

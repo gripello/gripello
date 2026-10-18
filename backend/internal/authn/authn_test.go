@@ -382,6 +382,10 @@ func TestSessionsTrackAndRevokeLogins(t *testing.T) {
 	if n := f.count(`SELECT count(*) FROM sessions WHERE "user" = $1`, id); n != 1 {
 		t.Errorf("%d sessions left", n)
 	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = $1 AND kind = 'account.changed'
+		AND payload->'changed' ? 'sessions' AND audience->'users' = jsonb_build_array($2::text)`, "user:"+id, id); n < 2 {
+		t.Errorf("other devices heard of %d session changes, want logins, the revoke and signing out the others", n)
+	}
 	if status, _ := f.send(http.MethodGet, "/me/sessions", legacy, nil); status != http.StatusUnauthorized {
 		t.Errorf("token without a session survived signing out the others: %d", status)
 	}

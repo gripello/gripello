@@ -675,6 +675,7 @@ func (m *module) renameMFAFactor(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	m.announceAccount(r.Context(), p.UserID, "mfa")
 	httpx.JSON(w, http.StatusOK, f)
 	return nil
 }
@@ -708,6 +709,7 @@ func (m *module) deleteMFAFactor(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	m.announceAccount(ctx, user.ID, "mfa")
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -787,6 +789,7 @@ func (m *module) saveFactor(w http.ResponseWriter, r *http.Request, user account
 	if err != nil {
 		return err
 	}
+	m.announceAccount(ctx, user.ID, "mfa")
 	httpx.JSON(w, http.StatusOK, result)
 	return nil
 }
@@ -807,6 +810,7 @@ func (m *module) regenerateRecoveryCodes(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		return err
 	}
+	m.announceAccount(r.Context(), user.ID, "mfa")
 	httpx.JSON(w, http.StatusOK, map[string]any{"recoveryCodes": codes})
 	return nil
 }
@@ -862,6 +866,7 @@ func (m *module) revokeSession(w http.ResponseWriter, r *http.Request) error {
 	if !found {
 		return httpx.ErrNotFound
 	}
+	m.announceAccount(ctx, p.UserID, "sessions")
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -882,6 +887,7 @@ func (m *module) signOutOtherSessions(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
+	m.announceAccount(ctx, p.UserID, "sessions")
 	user, err := findAccount(ctx, m.db, p.UserID)
 	if err != nil {
 		return err

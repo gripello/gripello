@@ -145,6 +145,7 @@ const { data: linked, refresh } = useAsyncData(
     listLinkedAccounts,
     { server: false },
 )
+useAccountChanges('identities', refresh)
 const { data: providers } = useAsyncData(
     'oauth2-providers',
     listOAuth2Providers,

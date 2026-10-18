@@ -12,6 +12,7 @@ import type { GymRecord } from '~/types/models'
 import { apiUrl, useApi } from '~/api/client'
 import { useAuthState } from '~/api/auth'
 import { coalesce } from '~/utils/realtimeCache'
+import { useAuthRecord } from '~/composables/useAuthRecord'
 
 export type RealtimeHandler<T = any> = (payload: T) => unknown
 
@@ -32,9 +33,12 @@ export interface GymMemberChange {
 export type GymEvent =
     GymMemberChange | { kind: 'gym.updated'; record: GymRecord }
 
+export type AccountPart = 'mfa' | 'sessions' | 'identities'
+
 export type UserEvent =
     | { kind: 'user.updated'; record: ApiRecord; changed?: string[] }
     | { kind: 'user.deleted'; id: string }
+    | { kind: 'account.changed'; changed: AccountPart[] }
 
 const handlers = new Map<string, Set<(payload: unknown) => void>>()
 const connectCallbacks = new Set<(afterDrop: boolean) => void>()
@@ -280,4 +284,22 @@ export function useLiveRefresh<T = any>(
         { resync: soon },
     )
     return soon
+}
+
+// Security lists (2FA, sessions, linked accounts) reload when another device of the user changes them.
+export function useAccountChanges(
+    part: AccountPart,
+    reload: () => Promise<unknown>,
+) {
+    const authRecord = useAuthRecord()
+    return useLiveRefresh(
+        () => authRecord.value?.id && `user:${authRecord.value.id}`,
+        reload,
+        {
+            when: (event: UserEvent) =>
+                event.kind === 'account.changed' &&
+                event.changed.includes(part),
+            delayMs: 300,
+        },
+    )
 }

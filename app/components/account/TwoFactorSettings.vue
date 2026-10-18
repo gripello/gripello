@@ -397,6 +397,7 @@ onMounted(() => {
     canAddPasskey.value = passkeysSupported()
     load()
 })
+useAccountChanges('mfa', load)
 
 function iconTone(active: boolean) {
     return active ? 'bg-primary/10 text-primary' : 'bg-elevated text-muted'

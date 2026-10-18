@@ -63,6 +63,7 @@ describe('TwoFactorSettings', () => {
         send.mockReset()
         globalThis.__AUTH_STORE__ = { record: { email: 'me@example.com' } }
         routeApi(send)
+        vi.stubGlobal('useAccountChanges', vi.fn())
         vi.stubGlobal('useNotification', () => ({
             success: vi.fn(),
             error: vi.fn(),

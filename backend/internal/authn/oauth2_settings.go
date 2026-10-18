@@ -100,6 +100,7 @@ func (m *module) unlinkIdentity(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	m.announceAccount(ctx, p.UserID, "identities")
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
