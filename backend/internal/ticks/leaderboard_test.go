@@ -154,6 +154,18 @@ func TestSeasonsAreManagedPerGym(t *testing.T) {
 	f.call("setterB", "DELETE", "/seasons/"+id, "", http.StatusForbidden)
 	f.call("setterA", "DELETE", "/seasons/"+id, "", http.StatusNoContent)
 	f.call("setterA", "DELETE", "/seasons/"+id, "", http.StatusNotFound)
+
+	kinds := []string{}
+	for _, e := range f.outbox("gym_changes:" + f.gymA) {
+		var change struct{ Collection, Action string }
+		json.Unmarshal(e.Payload, &change)
+		if change.Collection == "seasons" && e.Audience.Public {
+			kinds = append(kinds, e.Kind+"/"+change.Action)
+		}
+	}
+	if want := []string{"season.created/create", "season.updated/update", "season.deleted/delete"}; !slices.Equal(kinds, want) {
+		t.Fatalf("season events = %v, want %v", kinds, want)
+	}
 }
 
 func TestLeaderboardKeepsTheGradeOfTheBestRepeat(t *testing.T) {

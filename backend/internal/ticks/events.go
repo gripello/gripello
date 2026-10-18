@@ -66,3 +66,13 @@ func publishTick(ctx context.Context, tx pgx.Tx, action string, tick Tick, days 
 	}
 	return nil
 }
+
+// Seasons ride gym_changes like the other gym content: pickers patch them in place.
+func publishSeason(ctx context.Context, tx pgx.Tx, action string, season Season) error {
+	actor := ""
+	if p, ok := auth.From(ctx); ok {
+		actor = p.UserID
+	}
+	payload := map[string]any{"collection": "seasons", "action": action, "record": season}
+	return events.PublishAs(ctx, tx, actor, "gym_changes:"+season.Gym, "season."+action+"d", payload, events.Audience{Public: true})
+}

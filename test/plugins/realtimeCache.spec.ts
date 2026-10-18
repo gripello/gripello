@@ -171,4 +171,22 @@ describe('realtime cache plugin', () => {
         await vi.runAllTimersAsync()
         expect(refreshNuxtData).toHaveBeenCalledWith('achievements:me')
     })
+
+    it('patches the season picker and reloads the shown board', async () => {
+        const winter = { id: 's1', gym: 'g1', name: 'Winter' }
+        const app = await startPlugin({
+            'leaderboard-seasons': [winter],
+            leaderboard: {},
+        })
+        emit('gym_changes:g1', {
+            collection: 'seasons',
+            action: 'update',
+            record: { ...winter, name: 'Spring' },
+        })
+        expect(app.payload.data['leaderboard-seasons']).toEqual([
+            { ...winter, name: 'Spring' },
+        ])
+        await vi.runAllTimersAsync()
+        expect(refreshNuxtData).toHaveBeenCalledWith('leaderboard')
+    })
 })

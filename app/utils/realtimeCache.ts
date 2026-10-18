@@ -31,6 +31,8 @@ export const cacheKeys = {
     routeDefects: (routeId: string) => `route-defects:${routeId}`,
     tickedRoutes: 'ticked-routes',
     logbook: 'logbook',
+    seasons: 'leaderboard-seasons',
+    leaderboard: 'leaderboard',
     achievements: (userId: string) => `achievements:${userId}`,
     follows: 'follows',
     blocks: 'blocks',
@@ -72,7 +74,7 @@ export const gymDefectsTopic = (gymId: string) =>
     `${liveTopics.openDefects}:${gymId}`
 
 export type GymChangeCollection =
-    'routes' | 'walls' | 'locations' | 'ratings' | 'beta_videos'
+    'routes' | 'walls' | 'locations' | 'ratings' | 'beta_videos' | 'seasons'
 
 export interface GymChange<T = Record<string, unknown>> {
     collection: GymChangeCollection

@@ -149,6 +149,7 @@ import {
     leaderboardTopic,
     selectableSeasons,
 } from '~/utils/leaderboard'
+import { cacheKeys } from '~/utils/realtimeCache'
 
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
@@ -162,7 +163,7 @@ const hidden = !!authStore.record?.leaderboard_hidden
 useHead({ title: t('page.title.leaderboard') })
 
 const { data: seasons, refresh: refreshSeasons } = await useAsyncData(
-    'leaderboard-seasons',
+    cacheKeys.seasons,
     () => listSeasons(gymId.value),
     { default: () => [] },
 )
@@ -195,7 +196,7 @@ const {
     error,
     refresh,
 } = await useAsyncData(
-    'leaderboard',
+    cacheKeys.leaderboard,
     () =>
         getLeaderboard(gymId.value, { kind: kind.value, season: season.value }),
     { watch: [kind, season] },

@@ -13,6 +13,7 @@ import type {
     RatingRecord,
     RouteRecord,
     RouteScoreRecord,
+    SeasonRecord,
     TickRecord,
     WallRecord,
 } from '~/types/models'
@@ -319,6 +320,23 @@ export default defineNuxtPlugin((nuxtApp) => {
             refreshCommunityFeedSoon()
     }
 
+    const refreshLeaderboardSoon = coalesce(() =>
+        refreshNuxtData(cacheKeys.leaderboard),
+    )
+
+    function onSeason({ action, record }: GymChange<SeasonRecord>) {
+        if (!inLiveGym(record)) return
+        const seasons = read<SeasonRecord[] | undefined>(cacheKeys.seasons)
+        if (seasons)
+            write(
+                cacheKeys.seasons,
+                patchList(seasons, record, action !== 'delete'),
+            )
+        // the shown board may cover the season whose dates changed
+        if (loadedKeys().includes(cacheKeys.leaderboard))
+            refreshLeaderboardSoon()
+    }
+
     function onWall({ action, record }: GymChange<WallRecord>) {
         if (!inLiveGym(record)) return
         for (const key of loadedKeys()) {
@@ -430,6 +448,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         walls: onWall,
         locations: onLocation,
         beta_videos: onBetaVideo,
+        seasons: onSeason,
     }
 
     function onGymChange(change: GymChange) {
