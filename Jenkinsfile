@@ -1,5 +1,15 @@
+// Main writes the layer cache into a private GHCR package (one tag per target, parallel builds would overwrite one shared tag); every branch reads it.
+def buildCache(String name) {
+    def ref = "${env.CACHE_IMAGE}:${name}"
+    def args = "--cache-from type=registry,ref=${ref}"
+    if (env.BRANCH_NAME == 'main') {
+        args += " --cache-to type=registry,ref=${ref},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true"
+    }
+    args
+}
+
 def runTestSuite(String target, boolean junitReport = true) {
-    sh "docker buildx build --platform linux/amd64 --target ${target} --progress=plain --output type=local,dest=test-results/${target} ."
+    sh "docker buildx build --platform linux/amd64 --target ${target} ${buildCache(target)} --progress=plain --output type=local,dest=test-results/${target} ."
     if (junitReport) {
         junit testResults: "test-results/${target}/junit.xml"
     }
@@ -39,6 +49,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = "ghcr.io/gripello/gripello"
+        CACHE_IMAGE = "ghcr.io/gripello/gripello-cache"
         GHCR_CREDENTIALS_ID = "ghcr"
         DOCKER_BUILDKIT = 1
         CI_ID = "${JOB_NAME}-${BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9]+/, '-').toLowerCase()
@@ -142,7 +153,7 @@ pipeline {
                     steps {
                         script {
                             reportCheck('Build Image') {
-                                sh "docker buildx build --platform linux/amd64 --load --build-arg APP_VERSION=${env.APP_VERSION} -t ${env.E2E_IMAGE} ."
+                                sh "docker buildx build --platform linux/amd64 --load ${buildCache('app')} --build-arg APP_VERSION=${env.APP_VERSION} -t ${env.E2E_IMAGE} ."
                             }
                         }
                     }
@@ -199,7 +210,7 @@ pipeline {
             steps {
                 script {
                     reportCheck('Push Image') {
-                        sh "docker buildx build --platform linux/amd64 --provenance=true --sbom=true --build-arg APP_VERSION=${env.APP_VERSION} ${env.RELEASE_TAGS} --push ."
+                        sh "docker buildx build --platform linux/amd64 --provenance=true --sbom=true ${buildCache('app')} --build-arg APP_VERSION=${env.APP_VERSION} ${env.RELEASE_TAGS} --push ."
                     }
                 }
             }
