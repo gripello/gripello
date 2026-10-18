@@ -28,6 +28,7 @@ pnpm-debug.log*
 # Editor directories and files
 .vscode/
 .idea/
+/tsconfig.json
 *.sublime-project
 *.sublime-workspace
 
