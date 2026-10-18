@@ -445,3 +445,38 @@ export function defaultDisplayName(
         .join(' ')
     return fullName || user?.username || ''
 }
+
+export interface CategoryRow {
+    id?: string
+    name: string
+    gender: string
+    min_birth_year?: number
+    max_birth_year?: number
+}
+
+const sameCategoryRow = (a: CategoryRow, b: CategoryRow) =>
+    a.name === b.name &&
+    a.gender === b.gender &&
+    a.min_birth_year === b.min_birth_year &&
+    a.max_birth_year === b.max_birth_year
+
+// A live update replaces untouched rows; rows being edited and unsaved new ones stay as they are.
+export function mergeCategoryRows(
+    next: CategoryRow[],
+    local: CategoryRow[],
+    previous: CategoryRow[],
+): CategoryRow[] {
+    const before = new Map(previous.map((row) => [row.id, row]))
+    const edited = new Map(
+        local
+            .filter((row) => {
+                const saved = row.id && before.get(row.id)
+                return saved && !sameCategoryRow(row, saved)
+            })
+            .map((row) => [row.id, row]),
+    )
+    return [
+        ...next.map((row) => edited.get(row.id) ?? row),
+        ...local.filter((row) => !row.id),
+    ]
+}

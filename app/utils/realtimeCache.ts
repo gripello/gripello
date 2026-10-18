@@ -366,6 +366,24 @@ export function coalesce(task: () => Promise<unknown>, delayMs = 1000) {
     }
 }
 
+// coalesce that remembers which ids changed; an id-less call asks for everything (null).
+export function coalesceIds(
+    task: (ids: Set<string> | null) => Promise<unknown>,
+    delayMs = 1000,
+) {
+    let ids: Set<string> | null = new Set()
+    const soon = coalesce(() => {
+        const changed = ids
+        ids = new Set()
+        return task(changed)
+    }, delayMs)
+    return (id?: string) => {
+        if (!id) ids = null
+        else ids?.add(id)
+        soon()
+    }
+}
+
 export async function unlessQueryChanged<T>(
     query: () => string,
     fetch: () => Promise<T>,

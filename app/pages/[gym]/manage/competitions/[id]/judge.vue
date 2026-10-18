@@ -337,6 +337,7 @@ import {
     EMPTY_SCORE,
     flagEntries,
     isFlash,
+    replaceEntryScores,
     scoreBody,
     scoreFromRecord,
     type ScoreAction,
@@ -441,13 +442,24 @@ const refreshCompetitionSoon = coalesce(() => refreshCompetition(), 400)
 const refreshCategoriesSoon = coalesce(() => refreshCategories(), 400)
 const refreshRoutesSoon = coalesce(() => refreshRoutes(), 400)
 const refreshEntriesSoon = coalesce(() => refreshEntries(), 400)
-const refreshScoresSoon = coalesce(() => refreshScores(), 400)
-useCompetitionLive(competitionId, ({ kind }) => {
+// every judge sees every score: fetch only the entries that changed
+const MAX_ENTRY_REFRESH = 8
+const refreshScoresSoon = coalesceIds(async (entryIds) => {
+    if (!entryIds || entryIds.size > MAX_ENTRY_REFRESH) return refreshScores()
+    const fresh = await Promise.all(
+        [...entryIds].map((entry) =>
+            listScores(competitionId.value, { entry }),
+        ),
+    )
+    scores.value = replaceEntryScores(scores.value, entryIds, fresh.flat())
+}, 400)
+useCompetitionLive(competitionId, ({ kind, entry }) => {
     if (kind === 'competition' || kind === 'resync') refreshCompetitionSoon()
     if (kind === 'categories' || kind === 'resync') refreshCategoriesSoon()
     if (kind === 'routes' || kind === 'resync') refreshRoutesSoon()
     if (kind === 'entries' || kind === 'resync') refreshEntriesSoon()
-    if (kind === 'scores' || kind === 'resync') refreshScoresSoon()
+    if (kind === 'scores') refreshScoresSoon(entry)
+    if (kind === 'resync') refreshScoresSoon()
 })
 
 const { data: categories, refresh: refreshCategories } = useAsyncData(

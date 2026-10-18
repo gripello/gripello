@@ -128,6 +128,7 @@ import {
 } from '~/api/competitions'
 import { listRoutes } from '~/api/routes'
 import { nextRouteNumber } from '~/utils/competitions'
+import { gymChangesTopic, type GymChange } from '~/utils/realtimeCache'
 import type {
     CompetitionRecord,
     CompetitionRouteRecord,
@@ -162,7 +163,14 @@ const { data: compRoutes, refresh } = useAsyncData(
     { deep: true },
 )
 
-const { data: routes } = useAsyncData(
+useCompetitionLive(
+    computed(() => props.competition.id),
+    ({ kind }) => {
+        if (kind === 'routes') void refresh()
+    },
+)
+
+const { data: routes, refresh: refreshCandidates } = useAsyncData(
     () =>
         `competition-candidates:${props.competition.location}:${props.competition.discipline}`,
     () =>
@@ -172,6 +180,12 @@ const { data: routes } = useAsyncData(
             sort: 'grade_index,name',
         }).then((list) => list.items),
     { default: () => [] },
+)
+
+useLiveRefresh(
+    () => props.competition.gym && gymChangesTopic(props.competition.gym),
+    refreshCandidates,
+    { when: (change: GymChange) => change.collection === 'routes' },
 )
 
 const usedRouteIds = computed(

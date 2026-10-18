@@ -4,6 +4,7 @@ import {
     flagEntries,
     EMPTY_SCORE,
     isFlash,
+    replaceEntryScores,
     scoreFromRecord,
     type ScoreAction,
 } from '~/utils/scorecard'
@@ -121,5 +122,20 @@ describe('flagEntries', () => {
         expect(flagEntries(scores, 5).get('ben')).toEqual(['uniqueTop'])
         expect(flagEntries(scores, 5).get('anna')).toBeUndefined()
         expect(flagEntries(scores, 3).size).toBe(0)
+    })
+})
+
+describe('replaceEntryScores', () => {
+    it('swaps the scores of changed entries only', () => {
+        const scores = [
+            { id: '1', entry: 'a' },
+            { id: '2', entry: 'b' },
+        ]
+        expect(
+            replaceEntryScores(scores, ['a'], [{ id: '3', entry: 'a' }]),
+        ).toEqual([
+            { id: '2', entry: 'b' },
+            { id: '3', entry: 'a' },
+        ])
     })
 })

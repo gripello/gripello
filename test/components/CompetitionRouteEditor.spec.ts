@@ -7,6 +7,8 @@ beforeEach(() => {
     vi.stubGlobal('computed', computed)
     vi.stubGlobal('ref', ref)
     vi.stubGlobal('useI18n', () => ({ t: (key: string) => key }))
+    vi.stubGlobal('useCompetitionLive', vi.fn())
+    vi.stubGlobal('useLiveRefresh', vi.fn())
     vi.stubGlobal('useAsyncAction', () => ({
         pending: ref(false),
         run: vi.fn(),

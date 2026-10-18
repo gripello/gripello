@@ -3,6 +3,7 @@ import {
     applyRatingChange,
     cacheKeys,
     coalesce,
+    coalesceIds,
     defectsScope,
     replaceRouteDefects,
     servedStaleFromSsrCache,
@@ -502,5 +503,24 @@ describe('coalesce in a hidden tab', () => {
         visibility.mockReturnValue('visible')
         document.dispatchEvent(new Event('visibilitychange'))
         expect(task).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe('coalesceIds', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
+    it('hands the burst its changed ids, or null when one call wanted all', async () => {
+        const task = vi.fn(async (_ids: Set<string> | null) => {})
+        const soon = coalesceIds(task, 100)
+        soon('a')
+        soon('b')
+        soon('a')
+        await vi.advanceTimersByTimeAsync(250)
+        expect(task).toHaveBeenLastCalledWith(new Set(['a', 'b']))
+        soon('c')
+        soon()
+        await vi.advanceTimersByTimeAsync(250)
+        expect(task).toHaveBeenLastCalledWith(null)
     })
 })
