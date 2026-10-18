@@ -47,7 +47,7 @@ describe('AdminPendingInvites', () => {
             pending: ref(false),
             run: async (action: () => Promise<unknown>) => action(),
         }))
-        vi.stubGlobal('useRealtime', vi.fn())
+        vi.stubGlobal('useLiveRefresh', vi.fn())
     })
 
     it('lists pending invites with role', async () => {

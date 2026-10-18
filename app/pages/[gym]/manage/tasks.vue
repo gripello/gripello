@@ -199,19 +199,9 @@ watch(search, (term) => {
     searchDebounce = setTimeout(() => (debouncedSearch.value = term), 300)
 })
 
-let realtimeDebounce: ReturnType<typeof setTimeout> | undefined
-useRealtime(
-    () => `tasks:${gymId.value}`,
-    () => {
-        clearTimeout(realtimeDebounce)
-        realtimeDebounce = setTimeout(() => void reload(), 500)
-    },
-)
+useLiveRefresh(() => `tasks:${gymId.value}`, reload, { delayMs: 500 })
 
-onBeforeUnmount(() => {
-    clearTimeout(searchDebounce)
-    clearTimeout(realtimeDebounce)
-})
+onBeforeUnmount(() => clearTimeout(searchDebounce))
 
 function clearFilters() {
     kindFilter.value = null

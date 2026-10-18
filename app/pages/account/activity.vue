@@ -270,14 +270,18 @@ loading.value = false
 const { data: settings } = useNuxtData('settings')
 const retentionDays = computed(() => settings.value?.audit_retention_days ?? 90)
 
-useRealtime('audit_logs', (e: RecordChange<AuditLogRecord>) => {
-    if (e.action !== 'create' || !e.record) return
-    if (page.value !== 1) return
-    if (!matchesFilters(e.record)) return
-    if (entries.value.some((entry) => entry.id === e.record.id)) return
-    entries.value = [e.record as AuditLogRecord, ...entries.value]
-    totalItems.value += 1
-})
+useRealtime(
+    'audit_logs',
+    (e: RecordChange<AuditLogRecord>) => {
+        if (e.action !== 'create' || !e.record) return
+        if (page.value !== 1) return
+        if (!matchesFilters(e.record)) return
+        if (entries.value.some((entry) => entry.id === e.record.id)) return
+        entries.value = [e.record as AuditLogRecord, ...entries.value]
+        totalItems.value += 1
+    },
+    { resync: () => void reload() },
+)
 
 function matchesFilters(record: AuditLogRecord) {
     if (actionFilter.value && record.action !== actionFilter.value) return false

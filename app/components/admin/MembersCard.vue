@@ -221,7 +221,6 @@ import type { Form, TableColumn } from '@nuxt/ui'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import { blockedFieldError } from '~/utils/fieldErrors'
 import { canGrantRole, membershipIn } from '#shared/utils/memberships'
-import { coalesce } from '~/utils/realtimeCache'
 import {
     changeMembershipRole,
     deleteMembership,
@@ -451,16 +450,13 @@ defineExpose({ openInvite })
 
 void prefetch(`admin-members-${props.gymId}`)
 
-const reloadSoon = coalesce(() => Promise.all([refreshRoles(), reloadLoaded()]))
-
-useRealtime(
+useLiveRefresh(
     () => `gym:${gymId.value}`,
-    (event: GymEvent) => {
-        if (
+    () => Promise.all([refreshRoles(), reloadLoaded()]),
+    {
+        when: (event: GymEvent) =>
             event.kind === 'membership.changed' ||
-            event.kind === 'role.changed'
-        )
-            reloadSoon()
+            event.kind === 'role.changed',
     },
 )
 </script>

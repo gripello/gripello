@@ -229,7 +229,6 @@ import {
     type ModerationView,
 } from '~/utils/moderation'
 import { MODERATION_SEEN_KEY } from '~/utils/clientStorage'
-import { coalesce } from '~/utils/realtimeCache'
 
 const props = defineProps<{ gymId?: string; platform?: boolean }>()
 
@@ -406,14 +405,12 @@ function markSeen() {
     }
 }
 
-const reloadSoon = coalesce(reloadLoaded)
-useRealtime(
+useLiveRefresh(
     () =>
         props.platform
             ? 'moderation:platform'
             : props.gymId && `moderation:${props.gymId}`,
-    reloadSoon,
-    { resync: reloadSoon },
+    reloadLoaded,
 )
 onMounted(() => {
     seenBefore.value = readSeen()[seenScope.value]

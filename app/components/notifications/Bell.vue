@@ -168,6 +168,7 @@ useRealtime(
         const text = achievementToast(event, t)
         if (text) announce(text)
     },
+    { resync: () => authStore.isValid && void refresh() },
 )
 
 onMounted(() => {

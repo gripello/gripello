@@ -531,6 +531,7 @@ useRealtime(
             scheduleStatsRefresh()
         }
     },
+    { resync: () => void fetchList() },
 )
 
 onBeforeUnmount(() => {

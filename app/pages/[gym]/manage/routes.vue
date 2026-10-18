@@ -957,6 +957,7 @@ useRealtime(
             queueReload()
         } else if (change.collection === 'ratings') queueReload()
     },
+    { resync: queueReload },
 )
 
 onBeforeUnmount(() => {
