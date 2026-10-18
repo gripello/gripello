@@ -22,7 +22,7 @@ describe('docker ui build', () => {
 
     it('type-checks the app in CI', () => {
         expect(read('Dockerfile')).toMatch(
-            /^FROM ui-deps AS typecheck\nCOPY \. \.\nRUN mkdir \/out && \{ yarn typecheck > \/out\/typecheck\.txt 2>&1; echo \$\? > \/out\/exit-code; \}; cat \/out\/typecheck\.txt$/m,
+            /^FROM ui-deps AS typecheck\nCOPY \. \.\n# .+\nRUN --mount=type=cache,target=\/root\/\.npm mkdir \/out && \{ yarn typecheck > \/out\/typecheck\.txt 2>&1; echo \$\? > \/out\/exit-code; \}; cat \/out\/typecheck\.txt$/m,
         )
         expect(read('Dockerfile')).toContain('AS typecheck-results')
         expect(read('Jenkinsfile')).toContain(
