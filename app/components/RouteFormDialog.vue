@@ -295,7 +295,6 @@ import {
     deleteRoute as deleteRouteRecord,
     listRouteColors,
     listRoutes,
-    listWalls,
     updateRoute,
 } from '~/api/routes'
 import type { Form } from '@nuxt/ui'
@@ -445,7 +444,6 @@ const form = reactive({
     wall: '' as string | null,
 })
 const originalWall = ref({ wall: '', position: null as number | null })
-const locationWalls = ref<WallRecord[]>([])
 
 const openSnapshot = ref('')
 const hasChanges = computed(
@@ -460,21 +458,16 @@ const savedAnchorPoint = computed(() =>
 
 const { data: locationRecords } = useLocations()
 
+const locationWalls = useLocationWalls(gymId, () => form.location)
+
 const wallItems = computed(() =>
     locationWalls.value.map((wall) => ({ title: wall.name, value: wall.id })),
 )
-
-async function loadWalls(locationId: string) {
-    locationWalls.value = locationId
-        ? await listWalls(gymId.value, { location: locationId }).catch(() => [])
-        : []
-}
 
 watch(
     () => form.location,
     (next, previous) => {
         if (previous && next !== previous) form.wall = ''
-        void loadWalls(next)
     },
     { flush: 'sync' },
 )
