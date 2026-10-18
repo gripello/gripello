@@ -158,10 +158,7 @@ test.describe('browser bars', () => {
         await gotoSettled(page, gymPath('/'))
         await page.emulateMedia({ colorScheme: 'dark' })
         await expect(page.locator(appRoot)).toHaveClass(/(^|\s)dark(\s|$)/)
-        await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute(
-            'content',
-            'dark',
-        )
+        await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark')
         await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
             'content',
             /^#161b22$/i,
@@ -235,7 +232,7 @@ test.describe('browser bars', () => {
         await gotoSettled(page, gymPath('/'))
         await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute(
             'content',
-            'light',
+            'light dark',
         )
         await expect(page.locator('html')).toHaveCSS('color-scheme', 'light')
         await expect(page.locator('html')).toHaveCSS(
