@@ -6,6 +6,7 @@ import {
     externalUrl,
     isNativeApp,
     openInBrowser,
+    systemAppUrl,
 } from '~/utils/native'
 import { parentPath } from '~/utils/navigation'
 
@@ -80,6 +81,8 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         const url = externalUrl(link.href, location.origin)
         if (!url) return
         event.preventDefault()
-        void openInBrowser(url)
+        // Leaving the site at the top level makes Capacitor pass the link to the OS, which opens the Maps app.
+        if (systemAppUrl(url)) location.assign(url)
+        else void openInBrowser(url)
     })
 })

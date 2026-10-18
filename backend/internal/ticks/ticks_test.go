@@ -252,6 +252,8 @@ func TestLogbookListsOwnTicksWithTheRoute(t *testing.T) {
 		t.Fatalf("route summary = %+v", page.Items[1])
 	}
 	f.call("climber", "GET", "/me/ticks?route="+route, "", http.StatusOK, `"route":"`+route+`"`)
+	f.call("climber", "GET", "/me/ticks?gym="+f.gymA+"&total=true", "", http.StatusOK, `"total":1`, `"route":"`+route+`"`)
+	f.call("climber", "GET", "/me/ticks?gym="+f.gymB, "", http.StatusOK, `"items":[]`)
 	f.call("climber", "GET", "/me/ticks?since=2999-01-01", "", http.StatusOK, `"items":[]`)
 	f.call("climber", "GET", "/me/ticks?limit=1&page=2", "", http.StatusOK, `"page":2`, `"limit":1`)
 	f.call("climber", "GET", "/me/ticks?limit=1&total=true", "", http.StatusOK, `"total":2`)

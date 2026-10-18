@@ -10,6 +10,7 @@ paths:
       description: The logbook, newest first. `expand.route` (with `expand.gym`) is set while the route exists; otherwise the snapshot fields (route_name, grade*) remain.
       parameters:
         - { name: route, in: query, schema: { type: string } }
+        - { name: gym, in: query, description: gym id; only ticks on its routes, schema: { type: string } }
         - { name: since, in: query, description: date at or after, schema: { type: string } }
         - name: sort
           in: query

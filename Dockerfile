@@ -92,7 +92,9 @@ RUN apt-get update \
  && $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools" >/dev/null
 COPY capacitor.config.json ./
 COPY public/offline.html public/icon-192.png ./public/
-COPY mobile ./mobile
+# Only the Android shell, so iOS changes leave these layers cached.
+COPY mobile/www ./mobile/www
+COPY mobile/android ./mobile/android
 RUN --mount=type=cache,target=/root/.gradle \
     mkdir /out && npx cap sync android && cd mobile/android \
  && { ./gradlew --no-daemon -q assembleDebug; echo $? > /out/exit-code; } \

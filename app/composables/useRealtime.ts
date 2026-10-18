@@ -52,6 +52,30 @@ let streamToken: string | undefined
 let watchedClient: unknown
 let lastEventId = ''
 let replaySince = ''
+let watchingVisibility = false
+let hiddenAt = 0
+
+// A suspended app (or background tab) can lose the stream without an error event, so a long absence reconnects.
+const RESUME_RECONNECT_MS = 30_000
+
+function watchVisibility() {
+    if (watchingVisibility) return
+    watchingVisibility = true
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden')
+            return void (hiddenAt = Date.now())
+        const away = hiddenAt ? Date.now() - hiddenAt : 0
+        hiddenAt = 0
+        if (!source) return
+        if (
+            away <= RESUME_RECONNECT_MS &&
+            source.readyState !== EventSource.CLOSED
+        )
+            return
+        droppedSinceConnect = true
+        reopen()
+    })
+}
 
 function dispatch(event: Event) {
     const { type, data } = event as MessageEvent<string>
@@ -122,6 +146,7 @@ function resubscribe() {
 
 function open() {
     if (source || import.meta.server) return
+    watchVisibility()
     const client = useAuthStore()
     const auth = useAuthState(client)
     if (watchedClient !== client) {

@@ -37,3 +37,8 @@ mobile/android/**/build
 mobile/android/local.properties
 mobile/android/capacitor-cordova-android-plugins
 mobile/android/app/src/main/assets
+# The iOS app builds in Xcode; the unit tests read its sources, but not what Xcode and cap generate.
+mobile/ios/DerivedData
+mobile/ios/App/App/public
+mobile/ios/capacitor-cordova-ios-plugins
+mobile/ios/**/xcuserdata

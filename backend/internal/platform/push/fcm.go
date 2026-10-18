@@ -9,7 +9,9 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/jwt"
@@ -68,6 +70,11 @@ func (f *FCM) send(ctx context.Context, token string, payload []byte) (gone bool
 	if err := json.Unmarshal(payload, &p); err != nil {
 		return false, err
 	}
+	// iOS: the same lifetime as the Android ttl, and a newer notification with the tag replaces the older one.
+	apnsHeaders := map[string]string{"apns-expiration": strconv.FormatInt(time.Now().Unix()+ttlSeconds, 10)}
+	if p.Tag != "" {
+		apnsHeaders["apns-collapse-id"] = p.Tag
+	}
 	message, _ := json.Marshal(map[string]any{"message": map[string]any{
 		"token":        token,
 		"notification": map[string]string{"title": p.Title, "body": p.Body},
@@ -76,6 +83,7 @@ func (f *FCM) send(ctx context.Context, token string, payload []byte) (gone bool
 			"ttl":          fmt.Sprintf("%ds", ttlSeconds),
 			"notification": map[string]string{"tag": p.Tag},
 		},
+		"apns": map[string]any{"headers": apnsHeaders},
 	}})
 	bearer, err := f.tokens.Token()
 	if err != nil {

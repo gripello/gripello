@@ -133,6 +133,43 @@ describe('subscribeRealtime', () => {
         useAuthState().clearAuth()
     })
 
+    it('reconnects when the app or tab returns from a long absence', async () => {
+        const setVisibility = (state: DocumentVisibilityState) => {
+            Object.defineProperty(document, 'visibilityState', {
+                configurable: true,
+                value: state,
+            })
+            document.dispatchEvent(new Event('visibilitychange'))
+        }
+        const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+        try {
+            const connected = vi.fn()
+            track(onConnect(connected))
+            track(subscribeRealtime('own_ticks', vi.fn()))
+            await connect('c1')
+            await vi.waitFor(() => expect(connected).toHaveBeenCalledTimes(1))
+            const first = stream()
+
+            setVisibility('hidden')
+            now.mockReturnValue(1_010_000)
+            setVisibility('visible')
+            expect(stream()).toBe(first)
+
+            setVisibility('hidden')
+            now.mockReturnValue(1_050_000)
+            setVisibility('visible')
+            expect(first.readyState).toBe(FakeEventSource.CLOSED)
+            expect(stream()).not.toBe(first)
+            await connect('c2')
+            await vi.waitFor(() =>
+                expect(connected).toHaveBeenLastCalledWith(true),
+            )
+        } finally {
+            now.mockRestore()
+            delete (document as { visibilityState?: unknown }).visibilityState
+        }
+    })
+
     it('updates the topics when they change and closes when none are left', async () => {
         const stop = subscribeRealtime('own_ticks', vi.fn())
         await connect()

@@ -64,6 +64,22 @@ func TestFCMSendsTheNotificationWithItsLink(t *testing.T) {
 	if got["token"] != "device-token" || notification["title"] != "Alpha" || notification["body"] != "Fixed" || data["url"] != "/route?id=x" {
 		t.Errorf("message = %v", got)
 	}
+	android := got["android"].(map[string]any)["notification"].(map[string]any)
+	apns := got["apns"].(map[string]any)["headers"].(map[string]any)
+	if android["tag"] != "task_defect_fixed" || apns["apns-collapse-id"] != "task_defect_fixed" || apns["apns-expiration"] == "" {
+		t.Errorf("replacing by tag: android=%v apns=%v", android, apns)
+	}
+}
+
+func TestFCMLeavesUntaggedNotificationsUncollapsedOnIOS(t *testing.T) {
+	var got map[string]any
+	sender := fcmSender(t, func(w http.ResponseWriter, message map[string]any) { got = message })
+	if _, err := sender.Send(context.Background(), Subscription{Kind: KindFCM, Endpoint: "device-token"}, []byte(`{"title":"Alpha"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := got["apns"].(map[string]any)["headers"].(map[string]any)["apns-collapse-id"]; ok {
+		t.Errorf("an empty apns-collapse-id makes APNs reject the message: %v", got["apns"])
+	}
 }
 
 func TestFCMReportsUnregisteredTokensAsGone(t *testing.T) {

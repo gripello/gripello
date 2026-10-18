@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+. The widget's session token stays on this device. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="gripello.widget.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="gripello.widget.xml" />
+    </device-transfer>
+</data-extraction-rules>

@@ -5,7 +5,10 @@
     "appendUserAgent": "GripelloApp",
     "server": { "url": "https://gripello.app" },
     "android": { "path": "mobile/android" },
-    "ios": { "path": "mobile/ios" },
+    "ios": {
+        "path": "mobile/ios",
+        "limitsNavigationsToAppBoundDomains": true
+    },
     "plugins": {
         "SystemBars": { "initialViewportFitValueHint": "cover" },
         "SplashScreen": { "launchShowDuration": 3000 }

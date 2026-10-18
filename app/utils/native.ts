@@ -44,6 +44,17 @@ export function externalUrl(href: string, origin: string): string | null {
     }
 }
 
+// Directions belong in the Maps app; the OS hands these links to it, the in-app browser tab would not.
+export function systemAppUrl(url: string): boolean {
+    const { hostname, pathname } = new URL(url)
+    if (hostname === 'maps.apple.com' || hostname === 'maps.google.com')
+        return true
+    return (
+        (hostname === 'www.google.com' || hostname === 'google.com') &&
+        pathname.startsWith('/maps')
+    )
+}
+
 // Opens a page in the in-app browser tab (Custom Tab) and resolves once the user is back.
 export async function openInBrowser(url: string) {
     const { Browser } = await import('@capacitor/browser')

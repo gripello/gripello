@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget (ClimbingWidget.java); wording follows i18n/locales. -->
+<resources>
+    <string name="widget_name">Mi escalada</string>
+    <string name="widget_description">Tus encadenadas de la semana, tu racha y tus últimas vías.</string>
+    <string name="widget_this_week">Esta semana</string>
+    <string name="widget_sends">Encadenadas</string>
+    <string name="widget_flashes">Flashes: %1$d</string>
+    <string name="widget_hardest">Máx. %1$s</string>
+    <string name="widget_latest">Últimas encadenadas</string>
+    <string name="widget_empty">Aún no hay encadenadas esta semana</string>
+    <string name="widget_sign_in">Inicia sesión en Gripello para ver tu escalada.</string>
+    <string name="widget_all_gyms">Todos los rocódromos</string>
+    <string name="widget_choose_gym">Rocódromo</string>
+    <plurals name="widget_streak">
+        <item quantity="many">%1$d semanas seguidas</item>
+        <item quantity="one">%1$d semana seguida</item>
+        <item quantity="other">%1$d semanas seguidas</item>
+    </plurals>
+</resources>

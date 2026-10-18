@@ -447,6 +447,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@capacitor/ios@npm:8.5.3":
+  version: 8.5.3
+  resolution: "@capacitor/ios@npm:8.5.3"
+  peerDependencies:
+    "@capacitor/core": ^8.5.0
+  checksum: 10c0/dec9ee7edf74fb505169813e4a3fc5b470bc4e12787683e320b58ad3a3dce2998eabddf88312c8fa06481b636c7aff4dee5e43d229f96029740fc9169bc62047
+  languageName: node
+  linkType: hard
+
 "@capacitor/push-notifications@npm:8.1.3":
   version: 8.1.3
   resolution: "@capacitor/push-notifications@npm:8.1.3"
@@ -8181,6 +8190,7 @@ __metadata:
     "@capacitor/core": "npm:8.5.3"
     "@capacitor/filesystem": "npm:8.1.4"
     "@capacitor/haptics": "npm:8.0.2"
+    "@capacitor/ios": "npm:8.5.3"
     "@capacitor/push-notifications": "npm:8.1.3"
     "@capacitor/share": "npm:8.0.3"
     "@capacitor/splash-screen": "npm:8.0.2"

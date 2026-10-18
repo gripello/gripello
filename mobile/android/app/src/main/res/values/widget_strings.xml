@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget (ClimbingWidget.java); wording follows i18n/locales. -->
+<resources>
+    <string name="widget_name">My climbing</string>
+    <string name="widget_description">Your sends this week, your streak and your latest climbs.</string>
+    <string name="widget_this_week">This week</string>
+    <string name="widget_sends">Sends</string>
+    <string name="widget_flashes">Flashes: %1$d</string>
+    <string name="widget_hardest">Hardest %1$s</string>
+    <string name="widget_latest">Latest sends</string>
+    <string name="widget_empty">No sends this week yet</string>
+    <string name="widget_sign_in">Sign in to Gripello to see your climbing.</string>
+    <string name="widget_all_gyms">All gyms</string>
+    <string name="widget_choose_gym">Gym</string>
+    <plurals name="widget_streak">
+        <item quantity="one">%1$d week in a row</item>
+        <item quantity="other">%1$d weeks in a row</item>
+    </plurals>
+</resources>

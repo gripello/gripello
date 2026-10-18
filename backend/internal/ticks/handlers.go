@@ -83,6 +83,11 @@ func (m *module) listOwnTicks(w http.ResponseWriter, r *http.Request) error {
 		args = append(args, route)
 		sql += ` AND route = $` + strconv.Itoa(len(args))
 	}
+	// The home-screen widget narrows the week's stats to one gym.
+	if gym := query.Get("gym"); gym != "" {
+		args = append(args, gym)
+		sql += ` AND route IN (SELECT id FROM routes WHERE gym = $` + strconv.Itoa(len(args)) + `)`
+	}
 	if since := query.Get("since"); since != "" {
 		at, ok := parseTime(since)
 		if !ok {

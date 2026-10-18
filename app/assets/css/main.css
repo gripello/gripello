@@ -663,9 +663,11 @@
         }
     }
 
-    /* Non-zero only where the page runs under the status bar (installed PWA, native app), like the bottom inset. */
+    /* Non-zero only under a status bar (installed PWA, native app); --app-window-controls: iPad windows (MainViewController.swift). */
     :root {
-        --app-top-inset: env(safe-area-inset-top, 0px);
+        --app-top-inset: calc(
+            env(safe-area-inset-top, 0px) + var(--app-window-controls, 0px)
+        );
     }
 
     .dialog-fullscreen {
