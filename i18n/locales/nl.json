@@ -970,6 +970,8 @@
         "organizationNamePlaceholder": "bijv. Bergsportvereniging",
         "organizationUnit": "Organisatie-eenheid",
         "organizationUnitPlaceholder": "bijv. Klimhal Noord",
+        "organizationShortName": "Korte naam",
+        "organizationShortNamePlaceholder": "bijv. NKBV Utrecht",
         "publicUrls": "Openbare URL's",
         "imprintUrl": "URL colofon",
         "privacyUrl": "URL privacyverklaring",

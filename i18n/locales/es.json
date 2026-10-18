@@ -970,6 +970,8 @@
         "organizationNamePlaceholder": "p. ej. Club de Montaña",
         "organizationUnit": "Unidad de la organización",
         "organizationUnitPlaceholder": "p. ej. Rocódromo Norte",
+        "organizationShortName": "Nombre corto",
+        "organizationShortNamePlaceholder": "p. ej. FEDME Madrid",
         "publicUrls": "URL públicas",
         "imprintUrl": "URL del aviso legal",
         "privacyUrl": "URL de la política de privacidad",

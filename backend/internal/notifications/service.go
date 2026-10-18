@@ -166,15 +166,8 @@ func (m *module) pushWorker(ctx context.Context, job jobs.Job) error {
 	if err != nil {
 		return err
 	}
-	title := m.app.Cfg.AppName
-	if payload.Gym != "" {
-		var gymName string
-		if m.app.DB.QueryRow(ctx, `SELECT name FROM gyms WHERE id = $1`, payload.Gym).Scan(&gymName) == nil && gymName != "" {
-			title = gymName
-		}
-	}
 	body, _ := json.Marshal(push.Payload{
-		Title: title,
+		Title: m.pushTitle(ctx, payload.Gym),
 		Body:  push.Text(m.app.Locales, m.app.Locales.Language(language), n.Type, n.Params),
 		URL:   n.URL,
 		Tag:   n.Type,
@@ -185,6 +178,18 @@ func (m *module) pushWorker(ctx context.Context, job jobs.Job) error {
 	}
 	m.sendAll(ctx, subscriptions, body)
 	return nil
+}
+
+func (m *module) pushTitle(ctx context.Context, gym string) string {
+	if gym == "" {
+		return m.app.Cfg.AppName
+	}
+	var name string
+	m.app.DB.QueryRow(ctx, `SELECT COALESCE(NULLIF(btrim(short_name), ''), NULLIF(btrim(unit_name), ''), name) FROM gyms WHERE id = $1`, gym).Scan(&name)
+	if name == "" {
+		return m.app.Cfg.AppName
+	}
+	return name
 }
 
 type subscription struct {

@@ -970,6 +970,8 @@
         "organizationNamePlaceholder": "ex. Club alpin",
         "organizationUnit": "Unité de l’organisation",
         "organizationUnitPlaceholder": "ex. Salle d’escalade Nord",
+        "organizationShortName": "Nom court",
+        "organizationShortNamePlaceholder": "ex. CAF Lyon",
         "publicUrls": "URL publiques",
         "imprintUrl": "URL des mentions légales",
         "privacyUrl": "URL de la politique de confidentialité",

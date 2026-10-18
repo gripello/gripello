@@ -637,3 +637,13 @@ func TestHiddenGymIsSeenOnlyByMembers(t *testing.T) {
 		t.Error("deleting a hidden gym announced its slug publicly")
 	}
 }
+
+func TestShortNameIsLimitedForPushTitles(t *testing.T) {
+	f := newFixture(t)
+	gym := f.createGym("gym-a", "Gym A", true)
+	admin := f.user("admin-a")
+	f.member(admin, gym, "admin")
+
+	f.call(admin, "PATCH", "/gyms/"+gym, `{"short_name":"`+strings.Repeat("x", 31)+`"}`, http.StatusBadRequest, "short_name")
+	f.call(admin, "PATCH", "/gyms/"+gym, `{"short_name":"Gym A"}`, http.StatusOK, `"short_name":"Gym A"`)
+}

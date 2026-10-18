@@ -488,3 +488,26 @@ func TestWallDigestSkipsFollowersWhoCannotSeeTheGym(t *testing.T) {
 		t.Errorf("a hidden gym's digest reached a non-member: %d", n)
 	}
 }
+
+func TestPushTitleIsTheShortestGymName(t *testing.T) {
+	f := newFixture(t, false)
+	ctx := context.Background()
+	if title := f.m.pushTitle(ctx, ""); title != f.app.Cfg.AppName {
+		t.Errorf("without gym = %q", title)
+	}
+	if title := f.m.pushTitle(ctx, f.gym); title != "Alpha" {
+		t.Errorf("name = %q", title)
+	}
+	f.exec(`UPDATE gyms SET short_name = '   ' WHERE id = $1 RETURNING id`, f.gym)
+	if title := f.m.pushTitle(ctx, f.gym); title != "Alpha" {
+		t.Errorf("blank short name = %q", title)
+	}
+	f.exec(`UPDATE gyms SET unit_name = 'Alpha North' WHERE id = $1 RETURNING id`, f.gym)
+	if title := f.m.pushTitle(ctx, f.gym); title != "Alpha North" {
+		t.Errorf("unit name = %q", title)
+	}
+	f.exec(`UPDATE gyms SET short_name = 'AN' WHERE id = $1 RETURNING id`, f.gym)
+	if title := f.m.pushTitle(ctx, f.gym); title != "AN" {
+		t.Errorf("short name = %q", title)
+	}
+}

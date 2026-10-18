@@ -240,6 +240,7 @@ export interface GymRecord extends BaseRecord, LegalFields {
     previous_slugs?: string[] | null
     name: string
     unit_name?: string | null
+    short_name?: string | null
     active?: boolean
     hidden?: boolean
     page_logo?: string | null

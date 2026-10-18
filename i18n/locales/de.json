@@ -970,6 +970,8 @@
         "organizationNamePlaceholder": "z. B. Bergsportverein",
         "organizationUnit": "Organisationseinheit",
         "organizationUnitPlaceholder": "z. B. Kletterhalle Nord",
+        "organizationShortName": "Kurzname",
+        "organizationShortNamePlaceholder": "z. B. DAV Hanau",
         "publicUrls": "Öffentliche URLs",
         "imprintUrl": "Impressum-URL",
         "privacyUrl": "Datenschutz-URL",
