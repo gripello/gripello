@@ -447,6 +447,24 @@
                 </div>
             </div>
         </template>
+
+        <LayoutEmptyState
+            v-else
+            icon="i-lucide-trash-2"
+            :title="t('routes.removed')"
+            data-testid="route-removed"
+        >
+            <template #actions>
+                <UButton
+                    :to="gymPath('/routes')"
+                    color="neutral"
+                    variant="outline"
+                    data-testid="route-removed-back"
+                >
+                    {{ t('overview.allRoutes') }}
+                </UButton>
+            </template>
+        </LayoutEmptyState>
     </div>
 </template>
 

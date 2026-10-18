@@ -238,7 +238,8 @@
         "feed": "Fil d’actu",
         "info": "Infos",
         "outSoon": "Démontée le {date}",
-        "mapWork": "Voies & réouvertures"
+        "mapWork": "Voies & réouvertures",
+        "removed": "Cette voie a été supprimée."
     },
     "dashboard": {
         "online": "{0} en ligne"

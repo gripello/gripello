@@ -238,7 +238,8 @@
         "feed": "Feed",
         "info": "Info",
         "outSoon": "Eruit op {date}",
-        "mapWork": "Routes & resets"
+        "mapWork": "Routes & resets",
+        "removed": "Deze route is verwijderd."
     },
     "dashboard": {
         "online": "{0} online"

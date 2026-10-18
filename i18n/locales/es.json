@@ -238,7 +238,8 @@
         "feed": "Novedades",
         "info": "Info",
         "outSoon": "Se retira el {date}",
-        "mapWork": "Vías y reequipamiento"
+        "mapWork": "Vías y reequipamiento",
+        "removed": "Esta vía se ha eliminado."
     },
     "dashboard": {
         "online": "{0} en línea"

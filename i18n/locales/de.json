@@ -238,7 +238,8 @@
         "feed": "Feed",
         "info": "Info",
         "outSoon": "Raus am {date}",
-        "mapWork": "Routen & Resets"
+        "mapWork": "Routen & Resets",
+        "removed": "Diese Route wurde entfernt."
     },
     "dashboard": {
         "online": "{0} online"

@@ -154,6 +154,17 @@ export default defineNuxtPlugin((nuxtApp) => {
         refreshNuxtData(cacheKeys.routesList),
     )
 
+    // ponytail: one small timer entry per route opened this session
+    const routeDetailRefreshes = new Map<string, () => void>()
+    function refreshRouteDetailSoon(routeId: string) {
+        let soon = routeDetailRefreshes.get(routeId)
+        if (!soon) {
+            soon = coalesce(() => refreshNuxtData(cacheKeys.route(routeId)))
+            routeDetailRefreshes.set(routeId, soon)
+        }
+        soon()
+    }
+
     function cachedRecord(id: string) {
         for (const key of loadedKeys()) {
             if (
@@ -240,8 +251,10 @@ export default defineNuxtPlugin((nuxtApp) => {
         const keys = loadedKeys()
         if (action === 'create' && keys.includes(cacheKeys.routesList))
             refreshRoutesListSoon()
-        if (action !== 'delete' && keys.includes(cacheKeys.route(record.id)))
-            void refreshNuxtData(cacheKeys.route(record.id))
+        if (keys.includes(cacheKeys.route(record.id))) {
+            if (action === 'delete') write(cacheKeys.route(record.id), null)
+            else refreshRouteDetailSoon(record.id)
+        }
         if (keys.includes(cacheKeys.unplacedRoutes)) refreshUnplacedSoon()
         if (keys.includes(cacheKeys.communityFeed)) refreshCommunityFeedSoon()
     }
