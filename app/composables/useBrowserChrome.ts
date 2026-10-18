@@ -72,7 +72,7 @@ export function useBrowserChrome() {
                       content,
                   }))
                 : []),
-            { name: 'color-scheme', content: currentName },
+            { name: 'color-scheme', content: 'light dark' },
         ],
         htmlAttrs: { style: scrimmedPage },
         bodyAttrs: { style: scrimmedPage },
