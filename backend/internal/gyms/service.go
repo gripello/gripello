@@ -76,6 +76,7 @@ var gymFields = map[string]field{
 	"slug":                  {kind: "slug", required: true},
 	"name":                  {kind: "text", max: 100, required: true},
 	"unit_name":             {kind: "text", max: 100},
+	"short_name":            {kind: "text", max: 30},
 	"active":                {kind: "bool"},
 	"hidden":                {kind: "bool"},
 	"page_logo":             {kind: "file"},

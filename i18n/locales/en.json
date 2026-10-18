@@ -970,6 +970,8 @@
         "organizationNamePlaceholder": "e.g. Mountain Club",
         "organizationUnit": "Organization unit",
         "organizationUnitPlaceholder": "e.g. North climbing gym",
+        "organizationShortName": "Short name",
+        "organizationShortNamePlaceholder": "e.g. DAV Hanau",
         "publicUrls": "Public URLs",
         "imprintUrl": "Legal notice URL",
         "privacyUrl": "Privacy URL",

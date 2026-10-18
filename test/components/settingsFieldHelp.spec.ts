@@ -23,4 +23,11 @@ describe('settings fields', () => {
         expect(form).toContain("$t('settings.defaultLanguage')")
         expect(form).toContain("$t('settings.defaultLanguageHelp')")
     })
+
+    it('saves the short name used as push title', () => {
+        const form = source('admin/GymSettingsForm.vue')
+        expect(form).toContain('v-model="copySettings.short_name"')
+        expect(form).toContain('short_name: state.short_name')
+        expect(form).toContain('original.short_name = rec.short_name')
+    })
 })

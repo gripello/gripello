@@ -189,6 +189,21 @@
                         data-testid="settings-org-unit"
                     />
                 </UFormField>
+                <UFormField
+                    :label="$t('settings.organizationShortName')"
+                    :ui="fieldUi"
+                >
+                    <UInput
+                        v-model="copySettings.short_name"
+                        icon="i-lucide-bell"
+                        :placeholder="
+                            $t('settings.organizationShortNamePlaceholder')
+                        "
+                        :maxlength="30"
+                        class="w-full"
+                        data-testid="settings-org-short-name"
+                    />
+                </UFormField>
                 <template v-if="editSlug">
                     <UFormField
                         :label="$t('platform.gyms.slug')"
@@ -608,6 +623,7 @@ const original = reactive({
     privacy_url: '',
     name: '',
     unit_name: '',
+    short_name: '',
     contact_email: '',
     language: DEFAULT_LOCALE as string,
     slug: '',
@@ -745,6 +761,7 @@ function fieldsPayload(state: EditableSettings) {
         privacy_url: state.privacy_url,
         name: state.name,
         unit_name: state.unit_name,
+        short_name: state.short_name,
         contact_email: state.contact_email,
         language: state.language,
         slug: state.slug,
@@ -783,6 +800,7 @@ function adoptOriginal(rec: GymRecord) {
     original.privacy_url = rec.privacy_url ?? ''
     original.name = rec.name ?? ''
     original.unit_name = rec.unit_name ?? ''
+    original.short_name = rec.short_name ?? ''
     original.contact_email = rec.contact_email ?? ''
     original.language = rec.language || DEFAULT_LOCALE
     original.slug = rec.slug ?? ''
