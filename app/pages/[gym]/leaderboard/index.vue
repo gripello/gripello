@@ -142,9 +142,11 @@ import { formatDate } from '#shared/utils/formatting'
 import type { LogbookKind } from '#shared/utils/logbook'
 import {
     LEADERBOARD_KINDS,
+    LEADERBOARD_REFRESH_MS,
     ROLLING_SEASON,
     defaultSeason,
     keepSelectableSeason,
+    leaderboardTopic,
     selectableSeasons,
 } from '~/utils/leaderboard'
 
@@ -198,6 +200,9 @@ const {
         getLeaderboard(gymId.value, { kind: kind.value, season: season.value }),
     { watch: [kind, season] },
 )
+useLiveRefresh(() => leaderboardTopic(gymId.value), refresh, {
+    delayMs: LEADERBOARD_REFRESH_MS,
+})
 
 const meVisible = computed(
     () => !!board.value?.rows.some((row) => row.user === myId),

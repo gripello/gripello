@@ -5,6 +5,7 @@ import {
     defaultSeason,
     gradePyramid,
     keepSelectableSeason,
+    leaderboardTopic,
     seasonState,
     selectableSeasons,
 } from '~/utils/leaderboard'
@@ -79,5 +80,12 @@ describe('keepSelectableSeason', () => {
         expect(keepSelectableSeason([autumn, winter], 'winter', today)).toBe(
             'autumn',
         )
+    })
+})
+
+describe('leaderboardTopic', () => {
+    it('names the gym board topic, or nothing without a gym', () => {
+        expect(leaderboardTopic('g1')).toBe('leaderboard:g1')
+        expect(leaderboardTopic('')).toBe(null)
     })
 })

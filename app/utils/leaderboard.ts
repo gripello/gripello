@@ -90,3 +90,9 @@ export function keepSelectableSeason(
         ? selected
         : defaultSeason(seasons, today)
 }
+
+export const leaderboardTopic = (gymId: string) =>
+    gymId ? `leaderboard:${gymId}` : null
+
+// many screens watch one board: spread their refetches
+export const LEADERBOARD_REFRESH_MS = 2000

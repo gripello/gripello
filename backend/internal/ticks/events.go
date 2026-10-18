@@ -14,6 +14,11 @@ const (
 	TopicOwnTicks      = "own_ticks"
 	TopicFollowedTicks = "followed_ticks"
 	TopicTickChanged   = "tick.changed"
+	TopicLeaderboard   = "leaderboard:"
+
+	KindLeaderboardChanged = "leaderboard.changed"
+	leaderboardJob         = "leaderboard.changed"
+	leaderboardWindow      = 15 * time.Second
 )
 
 type TickChange struct {

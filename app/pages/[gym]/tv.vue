@@ -94,6 +94,7 @@ import { listRoutes, listWalls } from '~/api/routes'
 import { competitionShareUrl } from '~/utils/competitions'
 import { keepWhenOffline } from '~/utils/errors'
 import { qrDataUrl } from '~/utils/qrDataUrl'
+import { LEADERBOARD_REFRESH_MS, leaderboardTopic } from '~/utils/leaderboard'
 import { cacheKeys } from '~/utils/realtimeCache'
 import {
     TV_BOARD_ROWS,
@@ -265,6 +266,10 @@ useGymCompetitionsLive(async () => {
     competitions.value = await listCompetitions(gymId.value, {
         status: ['open'],
     })
+})
+
+useLiveRefresh(() => leaderboardTopic(gymId.value), refreshScreen, {
+    delayMs: LEADERBOARD_REFRESH_MS,
 })
 
 async function refreshScreen() {
