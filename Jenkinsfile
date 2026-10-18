@@ -9,6 +9,11 @@ def runTestSuite(String target, boolean junitReport = true) {
 }
 
 @NonCPS
+def builtCommits(changeSets) {
+    changeSets.collectMany { changeSet -> changeSet.items.collect { it.commitId } }
+}
+
+@NonCPS
 def typeErrors(String log) {
     log.readLines().findAll { it.contains('error TS') }
 }
@@ -41,6 +46,9 @@ pipeline {
         BUILDX_BUILDER = 'gripello'
         E2E_IMAGE = "gripello:e2e-${CI_ID}"
         E2E_COMPOSE = "docker compose -p e2e-${CI_ID} -f e2e/docker-compose.e2e.yml"
+        // alpha = closed testing; Play only accepts draft releases until the app is published, then switch to completed.
+        PLAY_TRACK = 'alpha'
+        PLAY_STATUS = 'draft'
     }
 
     options {
@@ -96,6 +104,13 @@ pipeline {
                     }
 
                     env.APP_VERSION = appVersion
+                    env.IS_RELEASE = isReleaseCommit.toString()
+
+                    // A release commit that only bumps the version right after a green build of its parent ships already tested code.
+                    def onlyVersionBump = sh(script: 'git diff --name-only HEAD~1 || true', returnStdout: true).trim() == 'package.json'
+                    def head = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+                    def parentPassed = currentBuild.previousBuild?.result == 'SUCCESS' && builtCommits(currentBuild.changeSets) == [head]
+                    env.SKIP_TESTS = (isReleaseCommit && onlyVersionBump && parentPassed).toString()
                     env.RELEASE_TAGS = tags
                 }
             }
@@ -104,6 +119,7 @@ pipeline {
         stage('Build & Test') {
             parallel {
                 stage('Vitest') {
+                    when { expression { env.SKIP_TESTS != 'true' } }
                     steps {
                         script { runTestSuite('vitest-results') }
                     }
@@ -116,11 +132,13 @@ pipeline {
                     }
                 }
                 stage('Go Tests') {
+                    when { expression { env.SKIP_TESTS != 'true' } }
                     steps {
                         script { runTestSuite('go-results') }
                     }
                 }
                 stage('Build Image') {
+                    when { expression { env.SKIP_TESTS != 'true' } }
                     steps {
                         script {
                             reportCheck('Build Image') {
@@ -140,6 +158,7 @@ pipeline {
                     }
                 }
                 stage('E2E Install') {
+                    when { expression { env.SKIP_TESTS != 'true' } }
                     steps {
                         sh '''
                             docker volume create gripello-e2e-yarn-cache
@@ -151,6 +170,7 @@ pipeline {
         }
 
         stage('E2E Tests') {
+            when { expression { env.SKIP_TESTS != 'true' } }
             steps {
                 sh 'E2E_DEPS_INSTALLED=1 $E2E_COMPOSE up --attach e2e --abort-on-container-exit --exit-code-from e2e'
             }
@@ -180,6 +200,38 @@ pipeline {
                 script {
                     reportCheck('Push Image') {
                         sh "docker buildx build --platform linux/amd64 --provenance=true --sbom=true --build-arg APP_VERSION=${env.APP_VERSION} ${env.RELEASE_TAGS} --push ."
+                    }
+                }
+            }
+        }
+
+        stage('Play Store') {
+            when { expression { env.IS_RELEASE == 'true' } }
+            steps {
+                script {
+                    reportCheck('Play Store') {
+                        withCredentials([
+                            file(credentialsId: 'android-upload-keystore', variable: 'ANDROID_KEYSTORE'),
+                            string(credentialsId: 'android-keystore-password', variable: 'ANDROID_KEYSTORE_PASSWORD'),
+                            string(credentialsId: 'android-key-password', variable: 'ANDROID_KEY_PASSWORD'),
+                            file(credentialsId: 'android-google-services', variable: 'GOOGLE_SERVICES'),
+                            file(credentialsId: 'play-service-account', variable: 'PLAY_SERVICE_ACCOUNT'),
+                        ]) {
+                            sh '''
+                                docker buildx build --platform linux/amd64 --target android-release-results --no-cache-filter android-release \
+                                    --build-arg PLAY_TRACK=$PLAY_TRACK --build-arg PLAY_STATUS=$PLAY_STATUS \
+                                    --secret id=android_keystore,src=$ANDROID_KEYSTORE \
+                                    --secret id=android_keystore_password,env=ANDROID_KEYSTORE_PASSWORD \
+                                    --secret id=android_key_password,env=ANDROID_KEY_PASSWORD \
+                                    --secret id=google_services,src=$GOOGLE_SERVICES \
+                                    --secret id=play_service_account,src=$PLAY_SERVICE_ACCOUNT \
+                                    --progress=plain --output type=local,dest=test-results/android-release .
+                            '''
+                        }
+                    }
+                    archiveArtifacts artifacts: 'test-results/android-release/gripello-release.aab'
+                    if (readFile('test-results/android-release/exit-code').trim() != '0') {
+                        error('Play Store upload failed')
                     }
                 }
             }
