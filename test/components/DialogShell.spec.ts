@@ -26,6 +26,8 @@ const overlayStub = (name: string) =>
                     {
                         'data-overlay': name,
                         'data-no-body-styles': props.noBodyStyles,
+                        'data-blocks-outside':
+                            props.content?.disableOutsidePointerEvents,
                         style: props.content?.style,
                     },
                     props.open ? slots.content?.() : [],
@@ -98,6 +100,18 @@ describe('DialogShell', () => {
             wrapper
                 .find('[data-overlay="UDrawer"]')
                 .attributes('data-no-body-styles'),
+        ).toBe('true')
+        wrapper.unmount()
+    })
+
+    it('keeps sheets tappable while the dialog locks the body', async () => {
+        width.value = 390
+        const wrapper = createWrapper()
+        await wrapper.setProps({ modelValue: true })
+        expect(
+            wrapper
+                .find('[data-overlay="UDrawer"]')
+                .attributes('data-blocks-outside'),
         ).toBe('true')
         wrapper.unmount()
     })

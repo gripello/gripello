@@ -70,7 +70,11 @@ const activatorProps = { onClick: () => (open.value = true) }
         :description="subtitle"
         :dismissible="!persistent"
         v-bind="asSheet ? { noBodyStyles: true } : {}"
-        :content="asSheet ? undefined : { style: widthStyle }"
+        :content="
+            asSheet
+                ? { disableOutsidePointerEvents: true }
+                : { style: widthStyle }
+        "
         :ui="{
             content: asSheet
                 ? undefined
