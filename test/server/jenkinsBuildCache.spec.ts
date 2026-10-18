@@ -4,12 +4,22 @@ import { describe, expect, it } from 'vitest'
 const jenkinsfile = readFileSync('Jenkinsfile', 'utf8')
 
 describe('docker build cache', () => {
+    const builds = jenkinsfile
+        .split('\n')
+        .filter((line) => line.includes('docker buildx build'))
+    const isPlayRelease = (build: string) =>
+        build.includes('--target android-release-results')
+
     it('reads the cache on every image and test build', () => {
-        const builds = jenkinsfile
-            .split('\n')
-            .filter((line) => line.includes('docker buildx build'))
-        expect(builds.length).toBeGreaterThan(0)
-        for (const build of builds) expect(build).toContain('${buildCache(')
+        const cached = builds.filter((build) => !isPlayRelease(build))
+        expect(cached.length).toBeGreaterThan(0)
+        for (const build of cached) expect(build).toContain('${buildCache(')
+    })
+
+    it('keeps the signed release bundle out of the registry cache', () => {
+        const release = builds.filter(isPlayRelease)
+        expect(release).toHaveLength(1)
+        expect(release[0]).not.toContain('buildCache(')
     })
 
     it('keeps one tag per target in a separate package, written only by main', () => {
