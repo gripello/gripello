@@ -439,6 +439,7 @@ watch(
     { immediate: true },
 )
 onBeforeUnmount(() => clearInterval(poll))
+usePlatformLive(['backup.created', 'backup.deleted', 'backup.updated'], refresh)
 
 const { pending: starting, run: runStart } = useAsyncAction()
 

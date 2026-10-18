@@ -14,11 +14,25 @@ export default defineNuxtPlugin(() => {
                 unsubscribe?.()
                 unsubscribe = undefined
                 await refresh()
-                if (next)
-                    unsubscribe = subscribeRealtime(
-                        `moderation:${next}`,
-                        refreshSoon,
+                if (!next) return
+                const stops = [
+                    subscribeRealtime(`moderation:${next}`, refreshSoon),
+                ]
+                // the platform badges also count suspended climbers
+                if (next === 'platform')
+                    stops.push(
+                        subscribeRealtime(
+                            'platform',
+                            (event: { kind?: string; changed?: string[] }) => {
+                                if (
+                                    event.kind === 'platform_users.changed' &&
+                                    event.changed?.includes('suspended_until')
+                                )
+                                    refreshSoon()
+                            },
+                        ),
                     )
+                unsubscribe = () => stops.forEach((stop) => stop())
             },
             { immediate: true },
         ),

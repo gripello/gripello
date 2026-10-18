@@ -57,6 +57,12 @@ func TestPrivacyDocIsSavedByGymAdminsAndOperators(t *testing.T) {
 	f.call(admin, "PATCH", "/settings", `{"privacy_doc":`+doc+`}`, http.StatusForbidden)
 	f.call(f.operator, "PATCH", "/settings", `{"privacy_doc":`+doc+`}`, http.StatusOK, `"text":"We film the entrance."`)
 	f.call("", "GET", "/settings", "", http.StatusOK, `"text":"We film the entrance."`)
+	var announced int
+	f.scalar(`SELECT count(*) FROM events WHERE topic = 'settings' AND kind = 'settings.updated' AND audience->'public' = 'true'
+		AND payload::text LIKE '%We film the entrance.%'`, &announced)
+	if announced != 1 {
+		t.Errorf("settings change announced %d times", announced)
+	}
 }
 
 func TestPrivacyMigrationMovesTheExtraTextIntoTheDocument(t *testing.T) {

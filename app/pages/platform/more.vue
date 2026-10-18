@@ -86,9 +86,20 @@ const climbingPath = computed(() =>
 )
 const { appVersionLabel } = useVersionCheck()
 
-const { data: system } = useAsyncData('platform-system', getPlatformSystem, {
-    server: false,
-})
+const { data: system, refresh: refreshSystem } = useAsyncData(
+    'platform-system',
+    getPlatformSystem,
+    { server: false },
+)
+usePlatformLive(
+    [
+        'backup.created',
+        'backup.deleted',
+        'backup.updated',
+        'platform_config.updated',
+    ],
+    refreshSystem,
+)
 
 const links = computed(() => {
     const state = system.value

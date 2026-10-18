@@ -513,7 +513,8 @@ func TestInboxContextAndSummary(t *testing.T) {
 		t.Errorf("unknown gym filter listed %d cases", len(items))
 	}
 	f.call("operator", "GET", "/moderation/cases?queue=platform&state=unreviewed", "", http.StatusOK, rating)
-	if f.count(`SELECT count(*) FROM events WHERE topic = $1 AND audience->'users' ? $2`, "moderation:"+f.gymA, f.users["operator"]) == 0 || f.count(`SELECT count(*) FROM events WHERE topic = 'moderation:platform' AND audience->'users' ? $1`, f.users["operator"]) == 0 {
+	if f.count(`SELECT count(*) FROM events WHERE topic = $1 AND audience->>'gym_perm' = $2`, "moderation:"+f.gymA, f.gymA+":manage_comments") == 0 ||
+		f.count(`SELECT count(*) FROM events WHERE topic = 'moderation:platform' AND audience->'platform_admins' = 'true'`) == 0 {
 		t.Error("inbox got no realtime events")
 	}
 }

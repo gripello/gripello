@@ -56,7 +56,7 @@ func (m *module) setLogLevel(w http.ResponseWriter, r *http.Request) error {
 		if _, err := tx.Exec(ctx, `UPDATE platform_config SET log_level = $1, updated = now()`, name); err != nil {
 			return err
 		}
-		return events.PublishAs(ctx, tx, p.UserID, "platform", "platform_config.updated", map[string]any{"id": "platformconfig", "changed": []string{"log_level"}}, events.Audience{})
+		return events.PublishAs(ctx, tx, p.UserID, "platform", "platform_config.updated", map[string]any{"id": "platformconfig", "changed": []string{"log_level"}}, events.Audience{PlatformAdmins: true})
 	})
 	if err != nil {
 		return err

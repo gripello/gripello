@@ -135,3 +135,11 @@ func TestGymTopicsPassTheGymGate(t *testing.T) {
 		}
 	}
 }
+
+func TestPlatformAdminsAudienceFollowsThePrincipal(t *testing.T) {
+	h := &Hub{perms: fakePerms{}}
+	aud := h.audience(events.Audience{PlatformAdmins: true})
+	if !aud(&auth.Principal{UserID: "op", PlatformAdmin: true}) || aud(&auth.Principal{UserID: "climber"}) || aud(nil) {
+		t.Fatal("only platform admins may receive platform events")
+	}
+}

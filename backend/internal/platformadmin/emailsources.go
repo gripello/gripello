@@ -131,7 +131,7 @@ func (m *module) setEmailSource(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		return events.PublishAs(ctx, tx, p.UserID, "platform", "platform_config.updated",
-			map[string]any{"id": "platformconfig", "changed": []string{"email_source:" + source.ID}}, events.Audience{})
+			map[string]any{"id": "platformconfig", "changed": []string{"email_source:" + source.ID}}, events.Audience{PlatformAdmins: true})
 	})
 	if err != nil {
 		return err

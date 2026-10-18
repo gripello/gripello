@@ -32,6 +32,7 @@ export const cacheKeys = {
     tickedRoutes: 'ticked-routes',
     logbook: 'logbook',
     seasons: 'leaderboard-seasons',
+    settings: 'settings',
     leaderboard: 'leaderboard',
     achievements: (userId: string) => `achievements:${userId}`,
     follows: 'follows',
@@ -86,6 +87,7 @@ export const liveTopics = {
     followedTicks: 'followed_ticks',
     followChanges: 'follow_changes',
     climbers: 'climbers',
+    settings: 'settings',
 }
 
 export const gymChangesTopic = (gymId: string) => `gym_changes:${gymId}`

@@ -151,7 +151,7 @@ func (m *module) run(ctx context.Context) error {
 		}
 	}
 	if err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		return events.PublishAs(ctx, tx, "", "platform", "backup.created", map[string]string{"id": name}, events.Audience{})
+		return events.PublishAs(ctx, tx, "", "platform", "backup.created", map[string]string{"id": name}, events.Audience{PlatformAdmins: true})
 	}); err != nil {
 		slog.Warn("backups: recording the archive failed", "archive", name, "error", err)
 	}
@@ -326,7 +326,7 @@ func (m *module) remove(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	p, _ := auth.From(ctx)
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		return events.PublishAs(ctx, tx, p.UserID, "platform", "backup.deleted", map[string]string{"id": filepath.Base(path)}, events.Audience{})
+		return events.PublishAs(ctx, tx, p.UserID, "platform", "backup.deleted", map[string]string{"id": filepath.Base(path)}, events.Audience{PlatformAdmins: true})
 	})
 	if err != nil {
 		return err
@@ -362,7 +362,7 @@ func (m *module) saveSettings(w http.ResponseWriter, r *http.Request) error {
 		if _, err := tx.Exec(ctx, `UPDATE backup_settings SET keep = $1, include_storage = $2, hour = $3, updated = now()`, body.Keep, body.IncludeStorage, body.Hour); err != nil {
 			return err
 		}
-		return events.PublishAs(ctx, tx, p.UserID, "platform", "backup.updated", map[string]any{"id": "settings", "changed": []string{"keep", "include_storage", "hour"}}, events.Audience{})
+		return events.PublishAs(ctx, tx, p.UserID, "platform", "backup.updated", map[string]any{"id": "settings", "changed": []string{"keep", "include_storage", "hour"}}, events.Audience{PlatformAdmins: true})
 	})
 	if err != nil {
 		return err

@@ -25,19 +25,21 @@ const gapGrace = 2 * time.Second
 // Criteria are ORed (Users ∪ GymPerm ∪ FollowersOf ∪ SignedIn); NotUsers always excludes; Public short-circuits.
 // GuestsOnly lets a payload variant target anonymous clients while signed-in ones get a richer variant.
 type Audience struct {
-	Public      bool     `json:"public,omitempty"`
-	GuestsOnly  bool     `json:"guests_only,omitempty"`
-	Users       []string `json:"users,omitempty"`
-	NotUsers    []string `json:"not_users,omitempty"`
-	SignedIn    bool     `json:"signed_in,omitempty"`
-	GymPerm     string   `json:"gym_perm,omitempty"` // "<gym>:<permission>"
-	FollowersOf string   `json:"followers_of,omitempty"`
-	Gym         string   `json:"gym,omitempty"` // only viewers who may see this gym, for topics that don't name it
+	Public     bool     `json:"public,omitempty"`
+	GuestsOnly bool     `json:"guests_only,omitempty"`
+	Users      []string `json:"users,omitempty"`
+	NotUsers   []string `json:"not_users,omitempty"`
+	SignedIn   bool     `json:"signed_in,omitempty"`
+	// PlatformAdmins reaches every platform admin, judged by the stream's principal like the other criteria.
+	PlatformAdmins bool   `json:"platform_admins,omitempty"`
+	GymPerm        string `json:"gym_perm,omitempty"` // "<gym>:<permission>"
+	FollowersOf    string `json:"followers_of,omitempty"`
+	Gym            string `json:"gym,omitempty"` // only viewers who may see this gym, for topics that don't name it
 }
 
 // Empty reports an audience no client matches, the mark of server-only events.
 func (a Audience) Empty() bool {
-	return !a.Public && !a.GuestsOnly && !a.SignedIn && len(a.Users) == 0 && a.GymPerm == "" && a.FollowersOf == ""
+	return !a.Public && !a.GuestsOnly && !a.SignedIn && !a.PlatformAdmins && len(a.Users) == 0 && a.GymPerm == "" && a.FollowersOf == ""
 }
 
 // Event is the outbox row. Actor (the user id behind the change) travels in the envelope, never in the

@@ -312,7 +312,7 @@ func (h *Hub) audience(a events.Audience) func(*auth.Principal) bool {
 		if p == nil || slices.Contains(a.NotUsers, p.UserID) {
 			return false
 		}
-		if a.SignedIn || slices.Contains(a.Users, p.UserID) {
+		if a.SignedIn || a.PlatformAdmins && p.PlatformAdmin || slices.Contains(a.Users, p.UserID) {
 			return true
 		}
 		if hasGymPerm {

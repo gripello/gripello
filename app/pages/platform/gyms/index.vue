@@ -266,6 +266,7 @@ const { t, locale } = useI18n()
 useHead({ title: () => t('platform.gyms.title') })
 
 const { data: gyms, error, refresh } = await usePlatformGyms()
+usePlatformLive(['platform_gyms.changed'], refresh)
 const { mdAndUp } = useDisplay()
 const { summary } = useModerationSummary()
 

@@ -213,4 +213,17 @@ describe('realtime cache plugin', () => {
             'climber:b',
         ])
     })
+
+    it('takes public settings changes as they come', async () => {
+        const app = await startPlugin({
+            settings: { allow_registration: true },
+        })
+        emit('settings', {
+            kind: 'settings.updated',
+            allow_registration: false,
+        })
+        expect(app.payload.data.settings).toEqual({
+            allow_registration: false,
+        })
+    })
 })

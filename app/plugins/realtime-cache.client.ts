@@ -14,6 +14,7 @@ import type {
     RouteRecord,
     RouteScoreRecord,
     SeasonRecord,
+    SettingsRecord,
     TickRecord,
     WallRecord,
 } from '~/types/models'
@@ -442,6 +443,14 @@ export default defineNuxtPlugin((nuxtApp) => {
         refreshClimbersSoon()
     }
 
+    function onSettings({
+        kind: _,
+        ...settings
+    }: SettingsRecord & { kind?: string }) {
+        if (read(cacheKeys.settings) !== undefined)
+            write(cacheKeys.settings, settings)
+    }
+
     const hydratedFromStaleCache = servedStaleFromSsrCache(
         document.documentElement.dataset.ssrAge,
     )
@@ -499,6 +508,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         subscribeRealtime(liveTopics.ownNotifications, onOwnNotification)
         subscribeRealtime(liveTopics.followChanges, onFollowChange)
         subscribeRealtime(liveTopics.climbers, onClimberChange)
+        subscribeRealtime(liveTopics.settings, onSettings)
         subscribeRealtime(liveTopics.followedTicks, refreshFollowsSoon)
     })
 

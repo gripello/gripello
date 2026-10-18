@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -64,6 +65,11 @@ func Register(app *platform.App) {
 		app.Handle(pattern, onlyPlatformAdmins(handler))
 	}
 	app.Handle("POST /client-errors", httpx.Handler(m.reportClientError))
+	if app.Bus != nil {
+		for prefix := range relayedKinds {
+			app.Bus.SubscribeOnce(prefix, "platformadmin.relay."+strings.TrimSuffix(prefix, ":"), m.relay(prefix))
+		}
+	}
 	app.Cron.Add("issueAlerts", "*/5 * * * *", m.alertIssues)
 	app.Cron.Add("emailSourcesSync", "37 3 * * *", m.syncEnabledEmailSources)
 }

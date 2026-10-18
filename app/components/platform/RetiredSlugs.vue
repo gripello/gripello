@@ -70,6 +70,7 @@ const {
     error,
     refresh,
 } = useAsyncData('platform-retired-slugs', listRetiredSlugs)
+usePlatformLive(['platform_gyms.changed', 'retired_slug.deleted'], refresh)
 
 const pending = ref<RetiredSlug | null>(null)
 const { pending: freeing, run } = useAsyncAction()
