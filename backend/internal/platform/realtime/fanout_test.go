@@ -40,7 +40,7 @@ func hubWithFriendFeedClients(perms Permissions, n int) *Hub {
 	h := &Hub{perms: perms, clients: map[string]*client{}, closing: make(chan struct{})}
 	for i := range n {
 		id := fmt.Sprintf("c%d", i)
-		h.clients[id] = &client{id: id, send: make(chan events.Event, 64),
+		h.clients[id] = &client{id: id, send: make(chan frame, 64),
 			principal: &auth.Principal{UserID: fmt.Sprintf("u%d", i)}, topics: []string{"followed_ticks"}}
 	}
 	return h
@@ -135,10 +135,10 @@ func TestAFailedGymLookupSendsSubscribersToReplay(t *testing.T) {
 	perms := &blindPerms{}
 	h := &Hub{perms: perms, clients: map[string]*client{}, closing: make(chan struct{})}
 	for _, id := range []string{"a", "b"} {
-		h.clients[id] = &client{id: id, send: make(chan events.Event, 4), gone: make(chan struct{}),
+		h.clients[id] = &client{id: id, send: make(chan frame, 4), gone: make(chan struct{}),
 			principal: &auth.Principal{UserID: id}, topics: []string{"gym_changes:g1"}}
 	}
-	h.clients["other"] = &client{id: "other", send: make(chan events.Event, 4), gone: make(chan struct{}), topics: []string{"own_ticks"}}
+	h.clients["other"] = &client{id: "other", send: make(chan frame, 4), gone: make(chan struct{}), topics: []string{"own_ticks"}}
 	h.deliver(events.Event{ID: 1, Topic: "gym_changes:g1", Audience: events.Audience{Public: true}})
 	if asked := perms.viewersAsked.Load(); asked != 1 {
 		t.Fatalf("visibility asked %d times in one fan-out", asked)

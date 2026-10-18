@@ -500,7 +500,7 @@ import {
     listRoutes,
     placeRoutes,
 } from '~/api/routes'
-import type { RouteRecord } from '~/types/models'
+import type { RatingRecord, RouteRecord } from '~/types/models'
 import {
     ageUnit,
     heatColor,
@@ -512,7 +512,13 @@ import {
 } from '~/utils/wallResets'
 import type { SheetSnap } from '~/components/map/Sheet.vue'
 import { formatAnchorPoint, formatDate } from '#shared/utils/formatting'
-import { cacheKeys } from '~/utils/realtimeCache'
+import {
+    cacheKeys,
+    gymChangesTopic,
+    gymDefectsTopic,
+    type GymChange,
+} from '~/utils/realtimeCache'
+import { leaderboardTopic } from '~/utils/leaderboard'
 
 const gymPath = useGymPath()
 
@@ -675,6 +681,35 @@ const { data: lastReset, refresh: refreshLastReset } = useAsyncData(
         default: () => null,
         server: false,
     },
+)
+
+// traffic, stars and defects of the location feed the reset flags
+const refreshResetStatsSoon = useLiveRefresh(
+    () => leaderboardTopic(gymId.value),
+    refreshResetStats,
+    { delayMs: 5000 },
+)
+useRealtime(
+    () => gymId.value && gymChangesTopic(gymId.value),
+    ({ collection, record }: GymChange<RouteRecord | RatingRecord>) => {
+        if (collection !== 'routes' && collection !== 'ratings') return
+        const routeId =
+            collection === 'routes'
+                ? record.id
+                : (record as RatingRecord).route_id
+        if (!routes.value.some((route) => route.id === routeId)) return
+        refreshResetStatsSoon()
+        if (
+            collection === 'routes' &&
+            (record as RouteRecord).archived &&
+            (record as RouteRecord).wall === placement.selectedWallId.value
+        )
+            void refreshLastReset()
+    },
+)
+useRealtime(
+    () => gymId.value && gymDefectsTopic(gymId.value),
+    refreshResetStatsSoon,
 )
 
 const hint = computed(() => {

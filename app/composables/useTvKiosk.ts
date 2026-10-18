@@ -5,6 +5,7 @@ const RELOAD_CHECK_MS = 60_000
 
 export function useTvKiosk() {
     const nuxtApp = useNuxtApp()
+    useLiveGym()
     const cursorHidden = ref(false)
     let wakeLock: WakeLockSentinel | null = null
     let cursorTimer: ReturnType<typeof setTimeout> | undefined

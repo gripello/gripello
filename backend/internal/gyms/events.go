@@ -12,6 +12,7 @@ const (
 	kindGymCreated = "gym.created"
 	kindGymUpdated = "gym.updated"
 	kindGymDeleted = "gym.deleted"
+	TopicSettings  = "settings"
 )
 
 type gymDeleted struct {

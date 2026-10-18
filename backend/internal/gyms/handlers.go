@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 )
@@ -151,7 +152,19 @@ func (m *module) updateSettings(w http.ResponseWriter, r *http.Request) error {
 	if err := updateRow(r.Context(), m.db, "settings", settingsID, changes); err != nil {
 		return err
 	}
-	return m.getSettings(w, r)
+	settings, err := settingsJSON(r.Context(), m.db)
+	if err != nil {
+		return err
+	}
+	// every client keeps the public settings (registration, legal pages) and patches them in place
+	err = pgx.BeginFunc(r.Context(), m.db, func(tx pgx.Tx) error {
+		return events.Publish(r.Context(), tx, TopicSettings, "settings.updated", settings, events.Audience{Public: true})
+	})
+	if err != nil {
+		slog.Warn("gyms: settings change not announced", "error", err)
+	}
+	httpx.JSON(w, http.StatusOK, settings)
+	return nil
 }
 
 func (m *module) listPermissions(w http.ResponseWriter, r *http.Request) error {

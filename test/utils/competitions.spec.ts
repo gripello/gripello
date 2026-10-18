@@ -12,6 +12,8 @@ import {
     copiedCompetition,
     defaultCategories,
     fromDateTimeInput,
+    judgesMayScore,
+    mergeCategoryRows,
     nextRouteNumber,
     scoringSettingsOf,
     toDateTimeInput,
@@ -326,5 +328,40 @@ describe('COMPETITION_PHASE_COLORS', () => {
         expect(Object.keys(COMPETITION_PHASE_COLORS).sort()).toEqual(
             [...COMPETITION_PHASES].sort(),
         )
+    })
+})
+
+describe('judgesMayScore', () => {
+    it('lets judges score open and closed competitions only', () => {
+        expect(judgesMayScore('open')).toBe(true)
+        expect(judgesMayScore('closed')).toBe(true)
+        expect(judgesMayScore('published')).toBe(false)
+        expect(judgesMayScore('draft')).toBe(false)
+        expect(judgesMayScore(undefined)).toBe(false)
+    })
+})
+
+describe('mergeCategoryRows', () => {
+    const row = (id: string, name: string) => ({ id, name, gender: 'any' })
+
+    it('takes remote changes of untouched rows and drops deleted ones', () => {
+        const saved = [row('a', 'Open'), row('b', 'Youth')]
+        const next = [row('a', 'Open Women')]
+        expect(mergeCategoryRows(next, saved, saved)).toEqual(next)
+    })
+
+    it('keeps rows being edited and new unsaved ones', () => {
+        const saved = [row('a', 'Open'), row('b', 'Youth')]
+        const local = [
+            row('a', 'Open*'),
+            row('b', 'Youth'),
+            { name: 'New', gender: 'any' },
+        ]
+        const next = [row('a', 'Open'), row('b', 'U16')]
+        expect(mergeCategoryRows(next, local, saved)).toEqual([
+            row('a', 'Open*'),
+            row('b', 'U16'),
+            { name: 'New', gender: 'any' },
+        ])
     })
 })

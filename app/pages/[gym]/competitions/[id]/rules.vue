@@ -106,6 +106,10 @@ const {
     { enabled: () => !!competitionId.value },
 )
 
+useCompetitionLive(competitionId, ({ kind }) => {
+    if (kind === 'competition' || kind === 'resync') void refresh()
+})
+
 if (competition.value && competition.value.gym !== useCurrentGymId().value)
     throw createError({ status: 404, fatal: true })
 

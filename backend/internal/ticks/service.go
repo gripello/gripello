@@ -273,11 +273,18 @@ func (m *module) createSeason(ctx context.Context, gym string, p patch) (Season,
 		return Season{}, err
 	}
 	id := ids.New()
-	if _, err := m.app.DB.Exec(ctx, `INSERT INTO seasons (id, gym, name, starts_at, ends_at) VALUES ($1, $2, $3, $4, $5)`,
-		id, gym, season.Name, season.StartsAt, season.EndsAt); err != nil {
-		return Season{}, err
-	}
-	return findSeason(ctx, m.app.DB, id)
+	var err error
+	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `INSERT INTO seasons (id, gym, name, starts_at, ends_at) VALUES ($1, $2, $3, $4, $5)`,
+			id, gym, season.Name, season.StartsAt, season.EndsAt); err != nil {
+			return err
+		}
+		if season, err = findSeason(ctx, tx, id); err != nil {
+			return err
+		}
+		return publishSeason(ctx, tx, "create", season)
+	})
+	return season, err
 }
 
 func (m *module) updateSeason(ctx context.Context, id string, p patch) (Season, error) {
@@ -294,11 +301,17 @@ func (m *module) updateSeason(ctx context.Context, id string, p patch) (Season, 
 	if err := p.applySeason(&season); err != nil {
 		return Season{}, err
 	}
-	if _, err := m.app.DB.Exec(ctx, `UPDATE seasons SET name = $2, starts_at = $3, ends_at = $4, updated = now() WHERE id = $1`,
-		id, season.Name, season.StartsAt, season.EndsAt); err != nil {
-		return Season{}, err
-	}
-	return findSeason(ctx, m.app.DB, id)
+	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `UPDATE seasons SET name = $2, starts_at = $3, ends_at = $4, updated = now() WHERE id = $1`,
+			id, season.Name, season.StartsAt, season.EndsAt); err != nil {
+			return err
+		}
+		if season, err = findSeason(ctx, tx, id); err != nil {
+			return err
+		}
+		return publishSeason(ctx, tx, "update", season)
+	})
+	return season, err
 }
 
 func (m *module) deleteSeason(ctx context.Context, id string) error {
@@ -309,8 +322,12 @@ func (m *module) deleteSeason(ctx context.Context, id string) error {
 	if err := m.requireSeasonManager(ctx, season.Gym); err != nil {
 		return err
 	}
-	_, err = m.app.DB.Exec(ctx, `DELETE FROM seasons WHERE id = $1`, id)
-	return err
+	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `DELETE FROM seasons WHERE id = $1`, id); err != nil {
+			return err
+		}
+		return publishSeason(ctx, tx, "delete", season)
+	})
 }
 
 func (p patch) rejectGymMove(current string) error {

@@ -632,6 +632,8 @@ const systemItems = computed(() => {
 function retry() {
     return Promise.all([refreshGyms(), refreshAdmins()])
 }
+usePlatformLive(['platform_gyms.changed'], refreshGyms)
+usePlatformLive(['platform_users.changed'], refreshAdmins)
 
 const tiles = computed(() => {
     const totals = platformTotals(gyms.value)

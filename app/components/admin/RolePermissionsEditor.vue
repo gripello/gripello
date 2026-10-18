@@ -299,7 +299,6 @@ import {
 } from '~/utils/roles'
 import { membershipIn } from '#shared/utils/memberships'
 import type { PermissionRecord, RoleRecord } from '~/types/models'
-import { coalesce } from '~/utils/realtimeCache'
 import {
     deleteRole as deleteRoleRecord,
     listRoles,
@@ -542,16 +541,13 @@ if (initial.value) {
 
 defineExpose({ startCreate })
 
-const fetchDataSoon = coalesce(() => fetchData({ silent: true }))
-useRealtime(
+useLiveRefresh(
     () => `gym:${gymId.value}`,
-    (event: GymEvent) => {
-        if (
+    () => fetchData({ silent: true }),
+    {
+        when: (event: GymEvent) =>
             event.kind === 'membership.changed' ||
-            event.kind === 'role.changed'
-        )
-            fetchDataSoon()
+            event.kind === 'role.changed',
     },
-    { onReactivate: fetchDataSoon },
 )
 </script>

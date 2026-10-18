@@ -742,9 +742,23 @@ func TestChangeAudiences(t *testing.T) {
 		t.Errorf("draft change audience = %+v", drafted)
 	}
 
+	listed := f.events("competitions:" + f.gymA)
+	if len(listed) != 1 || listed[0].Audience.Public || listed[0].Audience.GymPerm != f.gymA+":"+permManage {
+		t.Errorf("draft list change = %+v", listed)
+	}
+	f.call("manager", "PATCH", "/competitions/"+draft, `{"status":"open"}`, http.StatusOK)
+	listed = f.events("competitions:" + f.gymA)[1:]
+	if len(listed) != 2 || !listed[0].Audience.Public || listed[1].Audience.GymPerm == "" {
+		t.Errorf("opening a draft must tell spectators and managers: %+v", listed)
+	}
+
 	id, category, _, _ := f.competition("")
 	before := len(f.events("competition_changes:" + id))
+	lists := len(f.events("competitions:" + f.gymA))
 	entry := f.register("climber", id, category, "")
+	if got := len(f.events("competitions:" + f.gymA)); got != lists {
+		t.Errorf("an entry changed the competition list %d times", got-lists)
+	}
 	changes := f.events("competition_changes:" + id)[before:]
 	if len(changes) != 3 {
 		t.Fatalf("entry changes = %+v", changes)
@@ -921,4 +935,19 @@ func TestCachedStandingsFollowTheGymsVisibility(t *testing.T) {
 		t.Fatal("a hidden gym's standings are cached as public")
 	}
 	f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusNotFound)
+}
+
+func TestStaffScoringStopsOncePublished(t *testing.T) {
+	f := newFixture(t)
+	id, category, route1, _ := f.competition("")
+	entry := f.register("climber", id, category, "")
+	score := `{"scores":[{"entry":"` + entry + `","comp_route":"` + route1 + `","top_attempt":1}]}`
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
+	saved := items(f.call("judge", "PUT", "/competitions/"+id+"/scores", score, http.StatusOK))
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"draft"}`, http.StatusOK)
+	f.call("manager", "PUT", "/competitions/"+id+"/scores", score, http.StatusBadRequest)
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
+	f.call("manager", "POST", "/competitions/"+id+"/publish", "", http.StatusOK)
+	f.call("judge", "PUT", "/competitions/"+id+"/scores", score, http.StatusBadRequest)
+	f.call("manager", "DELETE", "/competition-scores/"+saved[0].(map[string]any)["id"].(string), "", http.StatusBadRequest)
 }

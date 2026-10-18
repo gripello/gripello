@@ -2,6 +2,7 @@ package authn
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
@@ -12,6 +13,7 @@ const (
 	TopicAudit          = "audit"
 	TopicSessionRevoked = "session.revoked"
 	KindSessionRevoked  = "session.revoked"
+	KindAccountChanged  = "account.changed"
 	KindLogin           = "auth.login"
 	KindLoginFailed     = "auth.failed"
 )
@@ -56,4 +58,16 @@ func publishSessionRevoked(ctx context.Context, tx pgx.Tx, userID string, sessio
 // Server-only, so every replica drops cached principals of the user even when no session row was deleted (the kept session, legacy tokens).
 func publishTokenRotated(ctx context.Context, tx pgx.Tx, userID string) error {
 	return events.Publish(ctx, tx, "user:"+userID, "user.token_rotated", map[string]string{"user": userID}, events.Audience{})
+}
+
+// announceAccount tells the user's other devices to reload a security list (mfa, sessions, identities);
+// it runs once the change is committed and only logs a failure, the change itself stands.
+func (m *module) announceAccount(ctx context.Context, userID, changed string) {
+	err := pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
+		return events.Publish(ctx, tx, "user:"+userID, KindAccountChanged, map[string][]string{"changed": {changed}},
+			events.Audience{Users: []string{userID}})
+	})
+	if err != nil {
+		slog.Warn("authn: account change not announced", "error", err)
+	}
 }

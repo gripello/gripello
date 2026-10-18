@@ -1,5 +1,7 @@
 import { GRADE_SYSTEMS, gradeLabels } from '#shared/utils/grades'
+import { normalizeCreators } from '#shared/utils/formatting'
 import type { RouteQuery } from '~/api/routes'
+import type { RouteRecord } from '~/types/models'
 
 const BARE_NUMBER = /^\d{1,2}$/
 
@@ -56,4 +58,41 @@ export function routeFilterQuery(input: RouteFilterInput): RouteQuery {
     if (input.wall) query.wall = input.wall
     if (input.type) query.type = input.type
     return query
+}
+
+const MAX_SEARCH_WORDS = 8
+
+type RouteMatchFields = Pick<
+    RouteRecord,
+    'id' | 'name' | 'grade' | 'type' | 'location' | 'wall'
+> &
+    Partial<
+        Pick<RouteRecord, 'archived' | 'color' | 'grade_system' | 'creator'>
+    >
+
+// Mirrors the Go list filter (routes/handlers.go routeFilter), so a live change can tell whether a list shows the route.
+export function routeMatchesQuery(route: RouteMatchFields, query: RouteQuery) {
+    const archived = query.archived ?? false
+    if (archived !== 'all' && !!route.archived !== archived) return false
+    if (query.location && route.location !== query.location) return false
+    if (
+        query.wall === 'none'
+            ? !!route.wall
+            : query.wall === 'any'
+              ? !route.wall
+              : !!query.wall && route.wall !== query.wall
+    )
+        return false
+    for (const key of ['type', 'color', 'grade_system'] as const)
+        if (query[key] && route[key] !== query[key]) return false
+    if (query.grade?.length && !query.grade.includes(route.grade)) return false
+    if (query.ids && !query.ids.includes(route.id)) return false
+    const name = route.name.toLowerCase()
+    const creators = normalizeCreators(route.creator).join(',').toLowerCase()
+    return (query.q ?? '')
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, MAX_SEARCH_WORDS)
+        .every((word) => name.includes(word) || creators.includes(word))
 }

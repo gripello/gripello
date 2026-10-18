@@ -238,7 +238,8 @@
         "feed": "Novedades",
         "info": "Info",
         "outSoon": "Se retira el {date}",
-        "mapWork": "Vías y reequipamiento"
+        "mapWork": "Vías y reequipamiento",
+        "removed": "Esta vía se ha eliminado."
     },
     "dashboard": {
         "online": "{0} en línea"
@@ -1325,7 +1326,8 @@
         "assignToMe": "Asignármela",
         "unassigned": "Sin asignar",
         "forThisRoute": "Para esta vía",
-        "newSubtitle": "Organiza el trabajo del equipo de equipadores"
+        "newSubtitle": "Organiza el trabajo del equipo de equipadores",
+        "deletedElsewhere": "Esta tarea se ha eliminado."
     },
     "audit": {
         "title": "Registro de actividad",

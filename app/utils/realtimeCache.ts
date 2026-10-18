@@ -1,3 +1,5 @@
+import type { RouteQuery } from '~/api/routes'
+import { routeMatchesQuery } from '~/utils/routeSearch'
 import type {
     OpenRouteDefectRecord,
     RatingRecord,
@@ -12,20 +14,27 @@ export const cacheKeys = {
     mapRoutes: 'map-routes',
     mapWalls: 'map-walls',
     keyLocations: 'live-key-locations',
+    keyQueries: 'live-key-queries',
+    mapMatching: 'map-matching',
     routesList: 'routes-list',
     route: (routeId: string) => `route:${routeId}`,
     ratings: (routeId: string) => `ratings:${routeId}`,
     ratingsSheet: (routeId: string) => `ratings-sheet:${routeId}`,
+    betas: (routeId: string) => `beta-videos:${routeId}`,
     unplacedRoutes: 'unplaced-routes',
     locations: 'locations',
     gymWalls: (scope: string) => `${scope}-walls`,
     placementRoutes: 'placement-routes',
     mapEditorRoutes: 'map-editor-routes',
-    routeFilterWalls: 'route-filter-walls',
+    routeFilterWalls: (scope: string) => `${scope}-filter-walls`,
     openDefects: 'open-route-defects',
     routeDefects: (routeId: string) => `route-defects:${routeId}`,
     tickedRoutes: 'ticked-routes',
     logbook: 'logbook',
+    seasons: 'leaderboard-seasons',
+    settings: 'settings',
+    leaderboard: 'leaderboard',
+    achievements: (userId: string) => `achievements:${userId}`,
     follows: 'follows',
     blocks: 'blocks',
     friendsFeed: 'friends-feed',
@@ -39,12 +48,46 @@ export const isFollowKey = (key: string) =>
     key.startsWith('climber:') ||
     key.startsWith('climber-ticks:')
 
+export const isOwnTickKey = (key: string) =>
+    key === cacheKeys.tickedRoutes ||
+    key === cacheKeys.logbook ||
+    key.startsWith('climber-compare-mine:')
+
+// Keys that show a climber's name or avatar: lookups by id, the profile, and authors of reviews and betas.
+export function showsClimber(key: string, data: unknown, climberId: string) {
+    const ids = keySuffix(key, 'climbers:')
+    if (ids !== undefined) return ids.split(',').includes(climberId)
+    if (key === `climber:${climberId}`) return true
+    if (
+        ratingsRouteId(key) === undefined &&
+        !key.startsWith(cacheKeys.betas(''))
+    )
+        return false
+    return (
+        Array.isArray(data) &&
+        data.some(
+            (item: { author?: { id?: string } }) =>
+                item.author?.id === climberId,
+        )
+    )
+}
+
+// climber-ticks:* reads the follow state and the profile while it loads
+export function splitFollowRefresh(keys: string[]) {
+    const first = keys.filter(
+        (key) => key === cacheKeys.follows || key.startsWith('climber:'),
+    )
+    return [first, keys.filter((key) => !first.includes(key))] as const
+}
+
 export const liveTopics = {
     openDefects: 'open_route_defects',
     ownTicks: 'own_ticks',
     ownNotifications: 'own_notifications',
     followedTicks: 'followed_ticks',
     followChanges: 'follow_changes',
+    climbers: 'climbers',
+    settings: 'settings',
 }
 
 export const gymChangesTopic = (gymId: string) => `gym_changes:${gymId}`
@@ -53,7 +96,7 @@ export const gymDefectsTopic = (gymId: string) =>
     `${liveTopics.openDefects}:${gymId}`
 
 export type GymChangeCollection =
-    'routes' | 'walls' | 'locations' | 'ratings' | 'beta_videos'
+    'routes' | 'walls' | 'locations' | 'ratings' | 'beta_videos' | 'seasons'
 
 export interface GymChange<T = Record<string, unknown>> {
     collection: GymChangeCollection
@@ -68,6 +111,7 @@ export interface OpenDefectsChange {
 }
 
 export type KeyLocations = Record<string, string>
+export type KeyQueries = Record<string, RouteQuery | null>
 
 function inLocation<T extends { location?: string | null }>(
     locationId: string | undefined,
@@ -89,12 +133,19 @@ function keySuffix(key: string, prefix: string) {
     return key.startsWith(prefix) ? key.slice(prefix.length) : undefined
 }
 
+// The paged list never inserts (a new row may belong on another page); rows that stop matching its query leave.
 export function routeRowsScope(
     key: string,
     keyLocations: KeyLocations = {},
+    keyQueries: KeyQueries = {},
 ): InScope<RouteRecord> | undefined {
     if (key === cacheKeys.overviewRoutes) return () => true
-    if (key === cacheKeys.routesList) return () => null
+    if (key === cacheKeys.routesList) {
+        const query = keyQueries[key]
+        return query
+            ? (route) => (routeMatchesQuery(route, query) ? null : false)
+            : () => null
+    }
     if (key.endsWith('-routes') && key in keyLocations)
         return inLocation(keyLocations[key])
 }
@@ -144,9 +195,20 @@ export function replaceRouteDefects<
     ]
 }
 
+const RESYNCED_KEYS: string[] = [
+    cacheKeys.unplacedRoutes,
+    cacheKeys.tickedRoutes,
+    cacheKeys.logbook,
+    cacheKeys.locations,
+    cacheKeys.blocks,
+    cacheKeys.mapMatching,
+]
+
 export function isLiveKey(key: string, keyLocations: KeyLocations = {}) {
     return (
-        key === cacheKeys.unplacedRoutes ||
+        RESYNCED_KEYS.includes(key) ||
+        key.startsWith('climbers:') ||
+        key.startsWith(cacheKeys.betas('')) ||
         isFollowKey(key) ||
         !!defectsScope(key) ||
         !!routeRowsScope(key, keyLocations) ||
@@ -304,17 +366,46 @@ export function servedStaleFromSsrCache(ageAttribute: string | undefined) {
     return Number(ageAttribute || 0) >= STALE_SSR_AGE_MS
 }
 
+// A hidden tab runs the task once when it becomes visible again, not per burst while hidden.
 export function coalesce(task: () => Promise<unknown>, delayMs = 1000) {
     let timer: ReturnType<typeof setTimeout> | undefined
+    let waitingForVisible = false
+    const run = () => void task().catch(() => {})
+    const runWhenVisible = () => {
+        if (document.visibilityState === 'hidden') return
+        document.removeEventListener('visibilitychange', runWhenVisible)
+        waitingForVisible = false
+        run()
+    }
     return () => {
-        if (timer) return
+        if (timer || waitingForVisible) return
         timer = setTimeout(
             () => {
                 timer = undefined
-                task().catch(() => {})
+                if (document.visibilityState !== 'hidden') return run()
+                waitingForVisible = true
+                document.addEventListener('visibilitychange', runWhenVisible)
             },
             delayMs + Math.random() * delayMs,
         )
+    }
+}
+
+// coalesce that remembers which ids changed; an id-less call asks for everything (null).
+export function coalesceIds(
+    task: (ids: Set<string> | null) => Promise<unknown>,
+    delayMs = 1000,
+) {
+    let ids: Set<string> | null = new Set()
+    const soon = coalesce(() => {
+        const changed = ids
+        ids = new Set()
+        return task(changed)
+    }, delayMs)
+    return (id?: string) => {
+        if (!id) ids = null
+        else ids?.add(id)
+        soon()
     }
 }
 
@@ -358,4 +449,55 @@ export function relinkRow<
     const next = [...rows]
     next[index] = relinked
     return next
+}
+
+export interface StaffRouteUpdate<T> {
+    rows: T[]
+    reload: boolean
+    rescore: string | null
+}
+
+// Staff tables patch what they show; a rating only rescores its route instead of reloading the page.
+export function staffRouteChange<
+    T extends { id: string; archived?: boolean } & Expandable,
+>(rows: T[], change: GymChange): StaffRouteUpdate<T> {
+    const record = change.record as {
+        id: string
+        route_id?: string
+        archived?: boolean
+    }
+    const unchanged = { rows, reload: false, rescore: null }
+    switch (change.collection) {
+        case 'routes': {
+            const row = rows.find((item) => item.id === record.id)
+            if (change.action === 'delete')
+                return {
+                    ...unchanged,
+                    rows: removeById(rows, record.id),
+                    reload: true,
+                }
+            if (
+                change.action === 'create' ||
+                !row ||
+                !!row.archived !== !!record.archived
+            )
+                return { ...unchanged, reload: true }
+            return { ...unchanged, rows: upsertById(rows, record as T) }
+        }
+        case 'walls':
+            return { ...unchanged, rows: patchExpanded(rows, 'wall', record) }
+        case 'locations':
+            return {
+                ...unchanged,
+                rows: patchExpanded(rows, 'location', record),
+            }
+        case 'ratings':
+            return {
+                ...unchanged,
+                rescore: rows.some((item) => item.id === record.route_id)
+                    ? record.route_id!
+                    : null,
+            }
+    }
+    return unchanged
 }

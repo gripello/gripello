@@ -103,23 +103,17 @@ func publishContentChange(ctx context.Context, tx pgx.Tx, kind string, it Item) 
 // publishItem feeds the inbox; gym staff never get the author id over the wire (anonymous reviewers).
 func publishItem(ctx context.Context, tx pgx.Tx, action string, it Item) error {
 	kind := "moderation_item." + kindSuffix[action]
-	admins, err := platformAdmins(ctx, tx)
-	if err != nil {
+	if err := publish(ctx, tx, "moderation:platform", kind, ItemChange{action, it}, events.Audience{PlatformAdmins: true}); err != nil {
 		return err
-	}
-	if len(admins) > 0 {
-		if err := publish(ctx, tx, "moderation:platform", kind, ItemChange{action, it}, events.Audience{Users: admins}); err != nil {
-			return err
-		}
 	}
 	if it.Gym == "" {
 		return nil
 	}
 	concealed := it
 	concealed.Author = ""
-	// Platform admins open gym inboxes without a membership.
+	// GymPerm also reaches platform admins, who open gym inboxes without a membership.
 	return publish(ctx, tx, "moderation:"+it.Gym, kind, ItemChange{action, concealed},
-		events.Audience{GymPerm: it.Gym + ":manage_comments", Users: admins})
+		events.Audience{GymPerm: it.Gym + ":manage_comments"})
 }
 
 const routeColumns = `id, created, updated, gym, name, anchor_point, type, comment, creator, archived, archived_at, color,

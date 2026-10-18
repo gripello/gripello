@@ -100,6 +100,7 @@ func (m *module) unlinkIdentity(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	m.announceAccount(ctx, p.UserID, "identities")
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -213,7 +214,7 @@ func (m *module) saveProviderSettings(w http.ResponseWriter, r *http.Request) er
 				return err
 			}
 		}
-		return events.PublishAs(ctx, tx, p.UserID, "platform", "oauth2_provider.updated", map[string]any{"id": provider}, events.Audience{})
+		return events.PublishAs(ctx, tx, p.UserID, "platform", "oauth2_provider.updated", map[string]any{"id": provider}, events.Audience{PlatformAdmins: true})
 	})
 	if err != nil {
 		return err

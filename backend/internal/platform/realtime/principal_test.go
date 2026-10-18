@@ -14,7 +14,7 @@ import (
 )
 
 func hubWithClient(principal *auth.Principal) (*Hub, *client) {
-	c := &client{id: "c1", principal: principal, send: make(chan events.Event, 1)}
+	c := &client{id: "c1", principal: principal, send: make(chan frame, 1)}
 	return &Hub{clients: map[string]*client{c.id: c}}, c
 }
 

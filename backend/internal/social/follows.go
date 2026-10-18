@@ -324,6 +324,9 @@ func (m *module) postBlock(w http.ResponseWriter, r *http.Request) error {
 			return invalid("blocked", "validation_not_unique", "This climber is already blocked.")
 		}
 		block = blocks[0]
+		if err := publishBlock(r.Context(), tx, "create", block); err != nil {
+			return err
+		}
 		ended, err := queryFollows(r.Context(), tx, `DELETE FROM follows WHERE (follower = $1 AND followee = $2) OR (follower = $2 AND followee = $1) RETURNING `+followColumns,
 			principal.UserID, body.Blocked)
 		if err != nil {
@@ -348,12 +351,19 @@ func (m *module) deleteBlock(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	tag, err := m.app.DB.Exec(r.Context(), `DELETE FROM blocks WHERE id = $1 AND blocker = $2`, r.PathValue("id"), principal.UserID)
+	err = pgx.BeginFunc(r.Context(), m.app.DB, func(tx pgx.Tx) error {
+		blocks, err := queryBlocks(r.Context(), tx, `DELETE FROM blocks WHERE id = $1 AND blocker = $2 RETURNING `+blockColumns,
+			r.PathValue("id"), principal.UserID)
+		if err != nil {
+			return err
+		}
+		if len(blocks) == 0 {
+			return httpx.ErrNotFound
+		}
+		return publishBlock(r.Context(), tx, "delete", blocks[0])
+	})
 	if err != nil {
 		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return httpx.ErrNotFound
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

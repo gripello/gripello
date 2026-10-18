@@ -1,0 +1,72 @@
+{
+    "routes": [
+        {
+            "name": "Crimp Line",
+            "grade": "6a",
+            "grade_system": "french",
+            "type": "Boulder",
+            "color": "#ff0000",
+            "creator": ["Anna Setter"],
+            "location": "hall",
+            "wall": "north",
+            "archived": false
+        },
+        {
+            "name": "Slab Dance",
+            "grade": "6b",
+            "grade_system": "french",
+            "type": "Route",
+            "color": "#00ff00",
+            "creator": ["Ben"],
+            "location": "hall",
+            "wall": null,
+            "archived": false
+        },
+        {
+            "name": "Old Roof",
+            "grade": "7a",
+            "grade_system": "font",
+            "type": "Boulder",
+            "color": "#ff0000",
+            "creator": ["Anna"],
+            "location": "annex",
+            "wall": null,
+            "archived": true
+        }
+    ],
+    "cases": [
+        { "query": {}, "names": ["Crimp Line", "Slab Dance"] },
+        {
+            "query": { "archived": "all" },
+            "names": ["Crimp Line", "Old Roof", "Slab Dance"]
+        },
+        { "query": { "archived": "true" }, "names": ["Old Roof"] },
+        {
+            "query": { "location": "annex", "archived": "all" },
+            "names": ["Old Roof"]
+        },
+        { "query": { "wall": "none" }, "names": ["Slab Dance"] },
+        { "query": { "wall": "any" }, "names": ["Crimp Line"] },
+        { "query": { "wall": "north" }, "names": ["Crimp Line"] },
+        { "query": { "type": "Route" }, "names": ["Slab Dance"] },
+        {
+            "query": { "color": "#ff0000", "archived": "all" },
+            "names": ["Crimp Line", "Old Roof"]
+        },
+        {
+            "query": { "grade_system": "font", "archived": "all" },
+            "names": ["Old Roof"]
+        },
+        {
+            "query": { "grade": ["6a", "7a"], "archived": "all" },
+            "names": ["Crimp Line", "Old Roof"]
+        },
+        { "query": { "q": "anna crimp" }, "names": ["Crimp Line"] },
+        { "query": { "q": "DANCE" }, "names": ["Slab Dance"] },
+        {
+            "query": { "q": "ann", "archived": "all" },
+            "names": ["Crimp Line", "Old Roof"]
+        },
+        { "query": { "q": "line ben" }, "names": [] }
+    ]
+}

@@ -121,7 +121,7 @@ func (m *module) putMail(w http.ResponseWriter, r *http.Request) error {
 			sender_address = $6, sender_name = $7, updated = now()`, body.Host, body.Port, body.Username, password, body.TLS, body.SenderAddress, body.SenderName); err != nil {
 			return err
 		}
-		return events.PublishAs(ctx, tx, p.UserID, "platform", "platform_config.updated", map[string]any{"id": "platformconfig", "changed": changed}, events.Audience{})
+		return events.PublishAs(ctx, tx, p.UserID, "platform", "platform_config.updated", map[string]any{"id": "platformconfig", "changed": changed}, events.Audience{PlatformAdmins: true})
 	})
 	if err != nil {
 		return err

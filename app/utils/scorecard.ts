@@ -144,3 +144,12 @@ export function flagEntries(
     }
     return flags
 }
+
+export function replaceEntryScores<T extends { entry: string }>(
+    scores: T[],
+    entries: Iterable<string>,
+    fresh: T[],
+): T[] {
+    const replaced = new Set(entries)
+    return [...scores.filter((score) => !replaced.has(score.entry)), ...fresh]
+}

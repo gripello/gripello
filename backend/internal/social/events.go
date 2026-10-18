@@ -2,6 +2,10 @@ package social
 
 import (
 	"context"
+	"encoding/json"
+	"log/slog"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -13,7 +17,11 @@ const (
 	TopicFollowChanged = "follow.changed"
 	TopicNotify        = "notify"
 	KindNotify         = "notify"
+	TopicClimbers      = "climbers"
 )
+
+// The fields other people see of a climber: names, avatar and what the profile page shows.
+var publicProfileFields = []string{"username", "firstname", "name", "avatar", "banner", "ticks_private", "follow_policy"}
 
 type FollowChange struct {
 	Action string `json:"action"`
@@ -49,4 +57,38 @@ func publishFollow(ctx context.Context, tx pgx.Tx, action string, f Follow) erro
 
 func publishNotify(ctx context.Context, tx pgx.Tx, n Notify) error {
 	return events.Publish(ctx, tx, TopicNotify, KindNotify, n, events.Audience{})
+}
+
+// Blocks are private: only the blocker's own devices learn about them.
+func publishBlock(ctx context.Context, tx pgx.Tx, action string, b Block) error {
+	return events.Publish(ctx, tx, TopicFollowChanges, "block."+action+"d", map[string]any{"action": action, "record": b},
+		events.Audience{Users: []string{b.Blocker}})
+}
+
+// onProfileChange tells signed-in clients which climber to look up again; names travel only through /climbers.
+func (m *module) onProfileChange(e events.Event) {
+	kind := "climber.updated"
+	switch e.Kind {
+	case "user.deleted":
+		kind = "climber.deleted"
+	case "user.updated":
+		var update struct {
+			Changed []string `json:"changed"`
+		}
+		json.Unmarshal(e.Payload, &update)
+		if update.Changed != nil && !slices.ContainsFunc(update.Changed, func(field string) bool {
+			return slices.Contains(publicProfileFields, field)
+		}) {
+			return
+		}
+	default:
+		return
+	}
+	id := strings.TrimPrefix(e.Topic, "user:")
+	err := pgx.BeginFunc(context.Background(), m.app.DB, func(tx pgx.Tx) error {
+		return events.Publish(context.Background(), tx, TopicClimbers, kind, map[string]string{"id": id}, events.Audience{SignedIn: true})
+	})
+	if err != nil {
+		slog.Error("social: climber change not published", "error", err)
+	}
 }

@@ -16,6 +16,7 @@ import (
 
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/jobs"
 	"gripello/internal/platform/testapp"
 )
 
@@ -153,6 +154,18 @@ func TestSeasonsAreManagedPerGym(t *testing.T) {
 	f.call("setterB", "DELETE", "/seasons/"+id, "", http.StatusForbidden)
 	f.call("setterA", "DELETE", "/seasons/"+id, "", http.StatusNoContent)
 	f.call("setterA", "DELETE", "/seasons/"+id, "", http.StatusNotFound)
+
+	kinds := []string{}
+	for _, e := range f.outbox("gym_changes:" + f.gymA) {
+		var change struct{ Collection, Action string }
+		json.Unmarshal(e.Payload, &change)
+		if change.Collection == "seasons" && e.Audience.Public {
+			kinds = append(kinds, e.Kind+"/"+change.Action)
+		}
+	}
+	if want := []string{"season.created/create", "season.updated/update", "season.deleted/delete"}; !slices.Equal(kinds, want) {
+		t.Fatalf("season events = %v, want %v", kinds, want)
+	}
 }
 
 func TestLeaderboardKeepsTheGradeOfTheBestRepeat(t *testing.T) {
@@ -423,5 +436,33 @@ func TestProfileChangesWithoutAFieldListForgetBoards(t *testing.T) {
 	t.Parallel()
 	if !touchesLeaderboard(nil) || touchesLeaderboard([]string{"followed_walls"}) || !touchesLeaderboard([]string{"avatar"}) {
 		t.Fatal("touchesLeaderboard")
+	}
+}
+
+func TestTicksAnnounceTheLeaderboardOncePerWindow(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	queued := func() (n int) {
+		f.app.DB.QueryRow(ctx, `SELECT count(*) FROM jobs WHERE kind = $1 AND key = $2`, leaderboardJob, f.gymA).Scan(&n)
+		return n
+	}
+	f.module.queueLeaderboardNews(TickChanged{User: f.users["climber"], Gym: f.gymA})
+	f.module.queueLeaderboardNews(TickChanged{User: f.users["friend"], Gym: f.gymA})
+	if got := queued(); got != 1 {
+		t.Fatalf("queued %d announcements, want one per gym", got)
+	}
+	f.exec(`DELETE FROM jobs RETURNING kind`)
+	f.exec(`UPDATE users SET ticks_private = true WHERE id = $1 RETURNING id`, f.users["climber"])
+	f.module.queueLeaderboardNews(TickChanged{User: f.users["climber"], Gym: f.gymA})
+	if got := queued(); got != 0 {
+		t.Fatal("a private climber's tick announced the leaderboard")
+	}
+
+	if err := f.app.Workers[leaderboardJob](ctx, jobs.Job{Key: f.gymA}); err != nil {
+		t.Fatal(err)
+	}
+	announced := f.outbox(TopicLeaderboard + f.gymA)
+	if len(announced) != 1 || !announced[0].Audience.Public || string(announced[0].Payload) != "{}" {
+		t.Fatalf("announcement = %+v", announced)
 	}
 }

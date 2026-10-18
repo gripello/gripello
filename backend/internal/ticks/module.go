@@ -1,13 +1,18 @@
 package ticks
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"slices"
+
+	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/jobs"
 	"gripello/internal/platform/tenancy"
 )
 
@@ -39,6 +44,7 @@ func newModule(app *platform.App) *module {
 		app.Handle(pattern, handler)
 	}
 	app.Bus.Subscribe(TopicTickChanged, m.onTickChanged)
+	app.Worker(leaderboardJob, m.announceLeaderboard)
 	app.Bus.Subscribe("user:", m.onUserEvent)
 	return m
 }
@@ -47,7 +53,31 @@ func (m *module) onTickChanged(e events.Event) {
 	var change TickChanged
 	if json.Unmarshal(e.Payload, &change) == nil {
 		m.refreshClimber(change.Gym, change.User, change.Route)
+		m.queueLeaderboardNews(change)
 	}
+}
+
+// Every replica sees the tick; the job queue coalesces their enqueues into one announcement per gym and window.
+func (m *module) queueLeaderboardNews(change TickChanged) {
+	if change.Gym == "" {
+		return
+	}
+	ctx := context.Background()
+	var offBoard bool
+	err := m.app.DB.QueryRow(ctx, `SELECT leaderboard_hidden OR ticks_private FROM users WHERE id = $1`, change.User).Scan(&offBoard)
+	if err != nil || offBoard {
+		return
+	}
+	if err := jobs.Enqueue(ctx, m.app.DB, leaderboardJob, change.Gym, nil, leaderboardWindow); err != nil {
+		slog.Error("leaderboard: enqueue failed", "gym", change.Gym, "error", err)
+	}
+}
+
+// The payload stays empty: boards differ per viewer, so clients refetch them.
+func (m *module) announceLeaderboard(ctx context.Context, job jobs.Job) error {
+	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		return events.Publish(ctx, tx, TopicLeaderboard+job.Key, KindLeaderboardChanged, struct{}{}, events.Audience{Public: true})
+	})
 }
 
 // user.updated carries {record, changed}; without `changed` every leaderboard field counts as changed.

@@ -103,10 +103,7 @@ const revoke = (invite: InviteRecord) =>
 
 defineExpose({ refresh })
 
-useRealtime(
-    () => `gym:${props.gymId}`,
-    (event: GymEvent) => {
-        if (event.kind === 'invite.changed') void refresh()
-    },
-)
+useLiveRefresh(() => `gym:${props.gymId}`, refresh, {
+    when: (event: GymEvent) => event.kind === 'invite.changed',
+})
 </script>

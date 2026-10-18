@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
@@ -436,7 +437,14 @@ func (m *module) deleteUser(w http.ResponseWriter, r *http.Request) error {
 		if err := revokeSessions(ctx, tx, p.UserID, t.ID); err != nil {
 			return err
 		}
+		announceRemoved, err := climbers.AnnounceDeletion(ctx, tx, p.UserID, t.ID)
+		if err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, t.ID); err != nil {
+			return err
+		}
+		if err := announceRemoved(); err != nil {
 			return err
 		}
 		return events.PublishAs(ctx, tx, p.UserID, "user:"+t.ID, "user.deleted", map[string]string{"id": t.ID}, events.Audience{Users: []string{t.ID}})

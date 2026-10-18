@@ -121,7 +121,7 @@ func (m *module) saveBlocklists(r *http.Request, change func(blocklists) blockli
 			after.BlockedEmails, after.AllowedEmails, after.ProtectedNames); err != nil {
 			return err
 		}
-		return events.PublishAs(ctx, tx, p.UserID, "platform", "platform_config.updated", map[string]any{"id": "platformconfig", "changed": changed}, events.Audience{})
+		return events.PublishAs(ctx, tx, p.UserID, "platform", "platform_config.updated", map[string]any{"id": "platformconfig", "changed": changed}, events.Audience{PlatformAdmins: true})
 	})
 }
 

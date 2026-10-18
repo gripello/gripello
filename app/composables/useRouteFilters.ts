@@ -4,7 +4,7 @@ import { ROUTE_TYPES } from '~/utils/routes'
 import { routeFilterQuery } from '~/utils/routeSearch'
 import type { WallRecord } from '~/types/models'
 
-export function useRouteFilters() {
+export function useRouteFilters(scope: string) {
     const { t } = useI18n()
     const { data: locationRecords } = useLocations()
     const { gradeFilterItems } = useGradeSystems()
@@ -16,15 +16,16 @@ export function useRouteFilters() {
     const selectedLocation = ref('')
     const selectedWall = ref('')
 
+    const wallsKey = cacheKeys.routeFilterWalls(scope)
     const { data: wallRecords } = useAsyncData(
-        cacheKeys.routeFilterWalls,
+        wallsKey,
         () =>
             selectedLocation.value
                 ? listWalls(gymId.value, { location: selectedLocation.value })
                 : Promise.resolve([] as WallRecord[]),
         { default: () => [], server: false, watch: [selectedLocation] },
     )
-    useLiveLocation([cacheKeys.routeFilterWalls], selectedLocation)
+    useLiveLocation([wallsKey], selectedLocation)
 
     watch(selectedLocation, () => {
         selectedWall.value = ''

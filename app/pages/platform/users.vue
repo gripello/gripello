@@ -298,6 +298,7 @@ const {
         }),
     { perPage: 48, requestKey: 'platformUsers' },
 )
+usePlatformLive(['platform_users.changed'], reloadLoaded)
 
 await prefetch('platform-users')
 

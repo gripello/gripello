@@ -64,6 +64,7 @@ describe('SessionList', () => {
         remove.mockReset().mockResolvedValue(true)
         send.mockReset().mockResolvedValue(null)
         globalThis.__AUTH_STORE__ = { token }
+        vi.stubGlobal('useAccountChanges', vi.fn())
         vi.stubGlobal('useNotification', () => ({ error: vi.fn() }))
         vi.stubGlobal('useAsyncAction', () => ({
             pending: ref(false),

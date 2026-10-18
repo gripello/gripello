@@ -21,6 +21,7 @@ import (
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/blocklist"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/logbuf"
 	"gripello/internal/platform/metrics"
@@ -846,5 +847,23 @@ func TestEmailSourceErrorsAreStoredWhole(t *testing.T) {
 	}
 	if got := truncate(strings.Repeat("ü", 600), 500); !utf8.ValidString(got) {
 		t.Errorf("truncate split a rune: %q", got)
+	}
+}
+
+func TestGymAndUserChangesReachThePlatformPages(t *testing.T) {
+	f := newFixture(t)
+	m := &module{app: f.app}
+	m.relay("user:")(events.Event{Topic: "user:" + f.climber, Kind: "user.updated", Payload: []byte(`{"changed":["suspended_until"]}`)})
+	m.relay("user:")(events.Event{Topic: "user:" + f.climber, Kind: "account.changed", Payload: []byte(`{"changed":["sessions"]}`)})
+	m.relay("gym:")(events.Event{Topic: "gym:" + f.gym, Kind: "gym.updated", Payload: []byte(`{}`)})
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = 'platform' AND kind = 'platform_users.changed'
+		AND payload->>'id' = $1 AND payload->'changed' ? 'suspended_until' AND audience->'platform_admins' = 'true'`, f.climber); n != 1 {
+		t.Errorf("user relays = %d, want the profile change only", n)
+	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = 'platform' AND kind = 'platform_gyms.changed' AND payload->>'id' = $1`, f.gym); n != 1 {
+		t.Errorf("gym relays = %d", n)
+	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = 'platform' AND NOT audience ? 'platform_admins'`); n != 0 {
+		t.Errorf("%d platform events reach no client", n)
 	}
 }

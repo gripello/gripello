@@ -31,6 +31,7 @@ import {
 } from '~/composables/useRealtime'
 import type { SettingsRecord } from '~/types/models'
 import { sessionNeedsRefresh } from '~/utils/session'
+import { userEventAction } from '~/utils/userEvents'
 
 const hydrated = useHydrated()
 
@@ -109,9 +110,9 @@ const realtimeGyms = computed(() =>
 )
 
 function onGymEvent(event: GymEvent) {
-    if (event.kind === 'gym.updated') {
-        if (event.record.id === gym.value?.id) gym.value = event.record
-    } else if (event.kind === 'membership.changed') {
+    const next = updatedGym(gym.value, event)
+    if (next) gym.value = next
+    else if (event.kind === 'membership.changed') {
         if (event.users?.includes(realtimeUserId.value)) refreshPermissions()
     } else if (event.kind === 'role.changed') {
         if (memberships.value.some((m) => m.role === event.id))
@@ -120,12 +121,11 @@ function onGymEvent(event: GymEvent) {
 }
 
 function onUserEvent(event: UserEvent) {
-    if (event.kind === 'user.deleted') {
-        authStore.clear()
-    } else {
-        authStore.save(authStore.token, event.record)
-        isLoggedIn.value = true
-    }
+    const action = userEventAction(event)
+    if (action.kind === 'clear') authStore.clear()
+    if (action.kind !== 'save') return
+    authStore.save(authStore.token, action.record)
+    isLoggedIn.value = true
 }
 
 function subscribeRealtimeTopics() {

@@ -30,6 +30,7 @@
 
 <script setup lang="ts">
 import { qrDataUrl } from '~/utils/qrDataUrl'
+import { LEADERBOARD_REFRESH_MS, leaderboardTopic } from '~/utils/leaderboard'
 import { TV_BOARD_ROWS } from '~/utils/tvScreen'
 
 definePageMeta({ layout: false })
@@ -61,6 +62,10 @@ async function refreshBoards() {
         // the wall screen keeps the last good board through network blips
     }
 }
+
+useLiveRefresh(() => leaderboardTopic(gymId.value), refreshBoards, {
+    delayMs: LEADERBOARD_REFRESH_MS,
+})
 
 const columns = computed(() =>
     boardData.value.boards.filter((column) => column.rows.length),

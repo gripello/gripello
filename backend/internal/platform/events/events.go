@@ -25,14 +25,21 @@ const gapGrace = 2 * time.Second
 // Criteria are ORed (Users ∪ GymPerm ∪ FollowersOf ∪ SignedIn); NotUsers always excludes; Public short-circuits.
 // GuestsOnly lets a payload variant target anonymous clients while signed-in ones get a richer variant.
 type Audience struct {
-	Public      bool     `json:"public,omitempty"`
-	GuestsOnly  bool     `json:"guests_only,omitempty"`
-	Users       []string `json:"users,omitempty"`
-	NotUsers    []string `json:"not_users,omitempty"`
-	SignedIn    bool     `json:"signed_in,omitempty"`
-	GymPerm     string   `json:"gym_perm,omitempty"` // "<gym>:<permission>"
-	FollowersOf string   `json:"followers_of,omitempty"`
-	Gym         string   `json:"gym,omitempty"` // only viewers who may see this gym, for topics that don't name it
+	Public     bool     `json:"public,omitempty"`
+	GuestsOnly bool     `json:"guests_only,omitempty"`
+	Users      []string `json:"users,omitempty"`
+	NotUsers   []string `json:"not_users,omitempty"`
+	SignedIn   bool     `json:"signed_in,omitempty"`
+	// PlatformAdmins reaches every platform admin, judged by the stream's principal like the other criteria.
+	PlatformAdmins bool   `json:"platform_admins,omitempty"`
+	GymPerm        string `json:"gym_perm,omitempty"` // "<gym>:<permission>"
+	FollowersOf    string `json:"followers_of,omitempty"`
+	Gym            string `json:"gym,omitempty"` // only viewers who may see this gym, for topics that don't name it
+}
+
+// Empty reports an audience no client matches, the mark of server-only events.
+func (a Audience) Empty() bool {
+	return !a.Public && !a.GuestsOnly && !a.SignedIn && !a.PlatformAdmins && len(a.Users) == 0 && a.GymPerm == "" && a.FollowersOf == ""
 }
 
 // Event is the outbox row. Actor (the user id behind the change) travels in the envelope, never in the
@@ -268,8 +275,19 @@ func (b *Bus) QueueMax() int {
 }
 
 // Since returns events after id, for SSE Last-Event-ID replay.
-func (b *Bus) Since(ctx context.Context, id int64, limit int) ([]Event, error) {
-	return b.query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events WHERE id > $1 ORDER BY id LIMIT $2`, id, limit)
+// Since lists the events of topics after id; complete is false when the limit cut the list or
+// Prune already dropped events after id, so the caller can't rebuild the gap from it.
+func (b *Bus) Since(ctx context.Context, id int64, topics []string, limit int) (missed []Event, complete bool, err error) {
+	missed, err = b.query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events
+		WHERE id > $1 AND topic = ANY($2) ORDER BY id LIMIT $3`, id, topics, limit)
+	if err != nil || len(missed) == limit {
+		return missed, false, err
+	}
+	var oldest *int64
+	if err := b.pool.QueryRow(ctx, `SELECT min(id) FROM events`).Scan(&oldest); err != nil {
+		return missed, false, err
+	}
+	return missed, oldest == nil || *oldest <= id+1, nil
 }
 
 func (b *Bus) query(ctx context.Context, sql string, args ...any) ([]Event, error) {

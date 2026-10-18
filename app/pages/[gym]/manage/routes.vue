@@ -476,11 +476,13 @@ import {
 import { toSortParam, type SortOption } from '~/utils/sorting'
 import {
     coalesce,
+    coalesceIds,
     gymChangesTopic,
+    staffRouteChange,
     type GymChange,
 } from '~/utils/realtimeCache'
 import type { TableColumn } from '@nuxt/ui'
-import type { RouteListItem } from '~/types/models'
+import type { RouteListItem, RouteScoreRecord } from '~/types/models'
 
 const gymPath = useGymPath()
 
@@ -515,7 +517,7 @@ const {
     activeFilterCount: routeFilterCount,
     routeQuery: baseQuery,
     clearFilters: clearRouteFilters,
-} = useRouteFilters()
+} = useRouteFilters('manage-routes')
 
 const displayArchived = ref(false)
 
@@ -781,21 +783,7 @@ const loadRoutes = async (options: LoadOptions = {}) => {
             total: true,
         })
 
-        const normalizedRoutes = list.items.map((route) => {
-            const hasRatings =
-                Number(route.ratings_count ?? 0) > 0 &&
-                typeof route.average_rating === 'number'
-
-            return {
-                ...route,
-                comment: typeof route.comment === 'string' ? route.comment : '',
-                creator: normalizeCreators(route.creator),
-                score: hasRatings ? route.average_rating : null,
-                has_ratings: hasRatings,
-            }
-        })
-
-        routes.value = normalizedRoutes
+        routes.value = list.items.map(normalizeRoute)
         totalItems.value = list.total ?? 0
     } catch (error) {
         if (isAbortError(error)) return
@@ -929,6 +917,33 @@ watch(routeQueryKey, () => {
     }, 300)
 })
 
+function normalizeRoute(route: RouteScoreRecord): RouteListItem {
+    const hasRatings =
+        Number(route.ratings_count ?? 0) > 0 &&
+        typeof route.average_rating === 'number'
+    return {
+        ...route,
+        comment: typeof route.comment === 'string' ? route.comment : '',
+        creator: normalizeCreators(route.creator),
+        score: hasRatings ? route.average_rating : null,
+        has_ratings: hasRatings,
+    }
+}
+
+const rescoreSoon = coalesceIds(async (ids) => {
+    if (!ids) return queueReload()
+    const { items } = await listRoutes(gymId.value, {
+        ids: [...ids],
+        archived: 'all',
+    })
+    for (const { id, average_rating, ratings_count } of items)
+        routes.value = routes.value.map((route) =>
+            route.id === id
+                ? normalizeRoute({ ...route, average_rating, ratings_count })
+                : route,
+        )
+}, 500)
+
 const queueReload = coalesce(async () => {
     invalidateAllRouteIdsCache()
     await reloadRoutes()
@@ -951,12 +966,15 @@ if (initial.value) {
 useRealtime(
     () => gymChangesTopic(gymId.value),
     (change: GymChange) => {
-        if (change.collection === 'routes') {
-            if (change.action === 'delete')
-                removeSelectedIds([change.record.id as string])
-            queueReload()
-        } else if (change.collection === 'ratings') queueReload()
+        if (change.collection === 'routes' && change.action === 'delete')
+            removeSelectedIds([change.record.id as string])
+        const next = staffRouteChange(routes.value, change)
+        if (next.rows !== routes.value)
+            routes.value = next.rows.map(normalizeRoute)
+        if (next.reload) queueReload()
+        if (next.rescore) rescoreSoon(next.rescore)
     },
+    { resync: queueReload },
 )
 
 onBeforeUnmount(() => {

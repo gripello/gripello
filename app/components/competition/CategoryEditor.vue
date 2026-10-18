@@ -89,16 +89,9 @@ import {
     updateCategory,
     type CategoryInput,
 } from '~/api/competitions'
+import { mergeCategoryRows, type CategoryRow } from '~/utils/competitions'
 
 const ANY_GENDER = 'any'
-
-interface CategoryRow {
-    id?: string
-    name: string
-    gender: string
-    min_birth_year?: number
-    max_birth_year?: number
-}
 
 const props = defineProps<{ competitionId: string }>()
 
@@ -122,19 +115,25 @@ const { data: categories, refresh } = useAsyncData(
     () => listCategories(props.competitionId),
 )
 
+let savedRows: CategoryRow[] = []
 watch(
     categories,
     (records) => {
-        rows.value = (records ?? []).map((category) => ({
+        const next = (records ?? []).map((category) => ({
             id: category.id,
             name: category.name,
             gender: category.gender || ANY_GENDER,
             min_birth_year: category.min_birth_year || undefined,
             max_birth_year: category.max_birth_year || undefined,
         }))
+        rows.value = mergeCategoryRows(next, rows.value, savedRows)
+        savedRows = next.map((row) => ({ ...row }))
     },
     { immediate: true },
 )
+useCompetitionLive(toRef(props, 'competitionId'), ({ kind }) => {
+    if (kind === 'categories') void refresh()
+})
 
 function add() {
     rows.value.push({ name: '', gender: ANY_GENDER })
@@ -156,7 +155,7 @@ async function save(index: number) {
     await run(
         async () => {
             if (row.id) await updateCategory(row.id, body)
-            else await createCategory(props.competitionId, body)
+            else row.id = (await createCategory(props.competitionId, body)).id
             await refresh()
             emit('changed')
         },

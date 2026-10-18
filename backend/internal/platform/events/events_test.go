@@ -34,7 +34,7 @@ func TestPublishReachesListener(t *testing.T) {
 		if e.Topic != "gym_changes:g1" || !e.Audience.Public {
 			t.Fatalf("got %+v", e)
 		}
-		since, _ := bus.Since(ctx, e.ID-1, 10)
+		since, _, _ := bus.Since(ctx, e.ID-1, []string{e.Topic}, 10)
 		if len(since) != 1 || since[0].ID != e.ID {
 			t.Fatalf("replay returned %+v", since)
 		}

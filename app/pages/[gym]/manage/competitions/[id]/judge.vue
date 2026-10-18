@@ -128,164 +128,194 @@
                 :title="t('competitions.noEntries')"
                 :card="false"
             />
-            <ul v-else-if="currentRoute" class="flex flex-col gap-2">
-                <li
-                    v-for="entry in visibleEntries"
-                    :key="entry.id"
-                    class="flex flex-col gap-3 rounded-lg p-3 ring sm:flex-row sm:items-center"
-                    :class="
-                        isTopped(entry)
-                            ? 'bg-success/5 ring-success/40'
-                            : 'bg-default ring-default'
-                    "
-                    :data-testid="`judge-entry-${entry.bib}`"
-                >
-                    <div class="flex min-w-0 flex-1 items-center gap-3">
-                        <span
-                            class="w-10 text-center text-lg font-bold tabular-nums text-highlighted"
-                            >{{ entry.bib }}</span
-                        >
-                        <div class="min-w-0 flex-1">
-                            <p
-                                class="flex min-w-0 items-center gap-2 font-medium text-highlighted"
+            <UBadge
+                v-else-if="!scoringOpen"
+                :color="
+                    COMPETITION_PHASE_COLORS[
+                        competitionPhase(competition, new Date())
+                    ]
+                "
+                variant="soft"
+                size="lg"
+                icon="i-lucide-lock"
+                class="mb-3"
+                data-testid="judge-scoring-closed"
+            >
+                {{ t(`competitions.statuses.${competition.status}`) }}
+            </UBadge>
+            <fieldset
+                v-if="compRoutes.length && entries.length && currentRoute"
+                :disabled="!scoringOpen"
+                class="contents"
+            >
+                <ul class="flex flex-col gap-2">
+                    <li
+                        v-for="entry in visibleEntries"
+                        :key="entry.id"
+                        class="flex flex-col gap-3 rounded-lg p-3 ring sm:flex-row sm:items-center"
+                        :class="
+                            isTopped(entry)
+                                ? 'bg-success/5 ring-success/40'
+                                : 'bg-default ring-default'
+                        "
+                        :data-testid="`judge-entry-${entry.bib}`"
+                    >
+                        <div class="flex min-w-0 flex-1 items-center gap-3">
+                            <span
+                                class="w-10 text-center text-lg font-bold tabular-nums text-highlighted"
+                                >{{ entry.bib }}</span
                             >
-                                <span class="truncate">{{
-                                    entry.display_name
-                                }}</span>
-                                <UIcon
-                                    v-if="saving.has(entry.id)"
-                                    name="i-lucide-loader-circle"
-                                    class="size-4 shrink-0 animate-spin text-muted"
-                                />
-                            </p>
-                            <p class="truncate text-xs text-muted">
-                                {{ categoryNames.get(entry.category) }}
-                            </p>
-                            <div class="flex flex-wrap gap-1">
-                                <UBadge
-                                    v-for="flag in flags.get(entry.id) ?? []"
-                                    :key="flag"
-                                    color="warning"
-                                    variant="soft"
-                                    size="sm"
-                                    icon="i-lucide-triangle-alert"
-                                    :data-testid="`judge-flag-${entry.bib}-${flag}`"
+                            <div class="min-w-0 flex-1">
+                                <p
+                                    class="flex min-w-0 items-center gap-2 font-medium text-highlighted"
                                 >
-                                    {{ t(`competitions.judge.flags.${flag}`) }}
-                                </UBadge>
+                                    <span class="truncate">{{
+                                        entry.display_name
+                                    }}</span>
+                                    <UIcon
+                                        v-if="saving.has(entry.id)"
+                                        name="i-lucide-loader-circle"
+                                        class="size-4 shrink-0 animate-spin text-muted"
+                                    />
+                                </p>
+                                <p class="truncate text-xs text-muted">
+                                    {{ categoryNames.get(entry.category) }}
+                                </p>
+                                <div class="flex flex-wrap gap-1">
+                                    <UBadge
+                                        v-for="flag in flags.get(entry.id) ??
+                                        []"
+                                        :key="flag"
+                                        color="warning"
+                                        variant="soft"
+                                        size="sm"
+                                        icon="i-lucide-triangle-alert"
+                                        :data-testid="`judge-flag-${entry.bib}-${flag}`"
+                                    >
+                                        {{
+                                            t(
+                                                `competitions.judge.flags.${flag}`,
+                                            )
+                                        }}
+                                    </UBadge>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div
-                        v-if="isLeadHeight"
-                        class="flex flex-wrap items-center justify-end gap-2"
-                    >
-                        <UInputNumber
-                            :model-value="heightOf(entry)"
-                            :min="0"
-                            :max="currentRoute.hold_count || 200"
-                            :aria-label="t('competitions.judge.height')"
-                            size="lg"
-                            class="w-36"
-                            :data-testid="`judge-height-${entry.bib}`"
-                            @update:model-value="
-                                (height) =>
+                        <div
+                            v-if="isLeadHeight"
+                            class="flex flex-wrap items-center justify-end gap-2"
+                        >
+                            <UInputNumber
+                                :model-value="heightOf(entry)"
+                                :min="0"
+                                :max="currentRoute.hold_count || 200"
+                                :aria-label="t('competitions.judge.height')"
+                                size="lg"
+                                class="w-36"
+                                :data-testid="`judge-height-${entry.bib}`"
+                                @update:model-value="
+                                    (height) =>
+                                        saveHeight(
+                                            entry,
+                                            height ?? 0,
+                                            plusOf(entry),
+                                        )
+                                "
+                            />
+                            <UButton
+                                :color="plusOf(entry) ? 'primary' : 'neutral'"
+                                :variant="plusOf(entry) ? 'soft' : 'outline'"
+                                :aria-pressed="plusOf(entry)"
+                                size="lg"
+                                :data-testid="`judge-plus-${entry.bib}`"
+                                @click="togglePlus(entry)"
+                            >
+                                +
+                            </UButton>
+                            <UButton
+                                v-if="currentRoute.hold_count"
+                                icon="i-lucide-flag"
+                                :color="
+                                    heightOf(entry) === currentRoute.hold_count
+                                        ? 'success'
+                                        : 'neutral'
+                                "
+                                variant="soft"
+                                size="lg"
+                                :data-testid="`judge-top-${entry.bib}`"
+                                @click="
                                     saveHeight(
                                         entry,
-                                        height ?? 0,
-                                        plusOf(entry),
+                                        currentRoute.hold_count,
+                                        false,
                                     )
-                            "
-                        />
-                        <UButton
-                            :color="plusOf(entry) ? 'primary' : 'neutral'"
-                            :variant="plusOf(entry) ? 'soft' : 'outline'"
-                            :aria-pressed="plusOf(entry)"
-                            size="lg"
-                            :data-testid="`judge-plus-${entry.bib}`"
-                            @click="togglePlus(entry)"
-                        >
-                            +
-                        </UButton>
-                        <UButton
-                            v-if="currentRoute.hold_count"
-                            icon="i-lucide-flag"
-                            :color="
-                                heightOf(entry) === currentRoute.hold_count
-                                    ? 'success'
-                                    : 'neutral'
-                            "
-                            variant="soft"
-                            size="lg"
-                            :data-testid="`judge-top-${entry.bib}`"
-                            @click="
-                                saveHeight(
-                                    entry,
-                                    currentRoute.hold_count,
-                                    false,
-                                )
-                            "
-                        >
-                            {{ t('competitions.scorecard.top') }}
-                        </UButton>
-                    </div>
+                                "
+                            >
+                                {{ t('competitions.scorecard.top') }}
+                            </UButton>
+                        </div>
 
-                    <div
-                        v-else
-                        class="flex flex-wrap items-center justify-end gap-2"
-                    >
-                        <CompetitionAttemptStepper
-                            :attempts="stateOf(entry).attempts"
-                            :add-disabled="!!stateOf(entry).topAttempt"
-                            size="lg"
-                            test-id-prefix="judge"
-                            :test-id-suffix="entry.bib"
-                            @undo="act(entry, { type: 'undoAttempt' })"
-                            @add="act(entry, { type: 'attempt' })"
-                        />
-                        <UButton
-                            v-if="currentRoute.zone"
-                            :color="
-                                stateOf(entry).zoneAttempt ? 'info' : 'neutral'
-                            "
-                            :variant="
-                                stateOf(entry).zoneAttempt ? 'soft' : 'outline'
-                            "
-                            size="lg"
-                            :disabled="!!stateOf(entry).topAttempt"
-                            :data-testid="`judge-zone-${entry.bib}`"
-                            @click="act(entry, { type: 'zone' })"
+                        <div
+                            v-else
+                            class="flex flex-wrap items-center justify-end gap-2"
                         >
-                            {{ t('competitions.zone') }}
-                        </UButton>
-                        <UButton
-                            :color="
-                                stateOf(entry).topAttempt
-                                    ? 'success'
-                                    : 'primary'
-                            "
-                            :variant="
-                                stateOf(entry).topAttempt ? 'solid' : 'soft'
-                            "
-                            size="lg"
-                            :icon="
-                                stateOf(entry).topAttempt
-                                    ? 'i-lucide-circle-check'
-                                    : 'i-lucide-flag'
-                            "
-                            :data-testid="`judge-top-${entry.bib}`"
-                            @click="act(entry, { type: 'top' })"
-                        >
-                            {{
-                                isFlash(stateOf(entry))
-                                    ? t('competitions.scorecard.flash')
-                                    : t('competitions.scorecard.top')
-                            }}
-                        </UButton>
-                    </div>
-                </li>
-            </ul>
+                            <CompetitionAttemptStepper
+                                :attempts="stateOf(entry).attempts"
+                                :add-disabled="!!stateOf(entry).topAttempt"
+                                size="lg"
+                                test-id-prefix="judge"
+                                :test-id-suffix="entry.bib"
+                                @undo="act(entry, { type: 'undoAttempt' })"
+                                @add="act(entry, { type: 'attempt' })"
+                            />
+                            <UButton
+                                v-if="currentRoute.zone"
+                                :color="
+                                    stateOf(entry).zoneAttempt
+                                        ? 'info'
+                                        : 'neutral'
+                                "
+                                :variant="
+                                    stateOf(entry).zoneAttempt
+                                        ? 'soft'
+                                        : 'outline'
+                                "
+                                size="lg"
+                                :disabled="!!stateOf(entry).topAttempt"
+                                :data-testid="`judge-zone-${entry.bib}`"
+                                @click="act(entry, { type: 'zone' })"
+                            >
+                                {{ t('competitions.zone') }}
+                            </UButton>
+                            <UButton
+                                :color="
+                                    stateOf(entry).topAttempt
+                                        ? 'success'
+                                        : 'primary'
+                                "
+                                :variant="
+                                    stateOf(entry).topAttempt ? 'solid' : 'soft'
+                                "
+                                size="lg"
+                                :icon="
+                                    stateOf(entry).topAttempt
+                                        ? 'i-lucide-circle-check'
+                                        : 'i-lucide-flag'
+                                "
+                                :data-testid="`judge-top-${entry.bib}`"
+                                @click="act(entry, { type: 'top' })"
+                            >
+                                {{
+                                    isFlash(stateOf(entry))
+                                        ? t('competitions.scorecard.flash')
+                                        : t('competitions.scorecard.top')
+                                }}
+                            </UButton>
+                        </div>
+                    </li>
+                </ul>
+            </fieldset>
         </template>
     </div>
 </template>
@@ -307,10 +337,16 @@ import {
     EMPTY_SCORE,
     flagEntries,
     isFlash,
+    replaceEntryScores,
     scoreBody,
     scoreFromRecord,
     type ScoreAction,
 } from '~/utils/scorecard'
+import {
+    COMPETITION_PHASE_COLORS,
+    competitionPhase,
+    judgesMayScore,
+} from '~/utils/competitions'
 import type {
     CompetitionEntryRecord,
     CompetitionRouteRecord,
@@ -358,7 +394,7 @@ const search = ref('')
 const filter = ref<'all' | 'open' | 'topped'>('all')
 const saving = reactive(new Set<string>())
 
-const { data: competition } = await useAsyncData(
+const { data: competition, refresh: refreshCompetition } = await useAsyncData(
     () => `judge-competition:${competitionId.value}`,
     (nuxtApp) =>
         keepWhenOffline(
@@ -401,16 +437,32 @@ const { data: scores, refresh: refreshScores } = useAsyncData(
     { default: () => [], deep: true, enabled: () => !!competitionId.value },
 )
 
+const scoringOpen = computed(() => judgesMayScore(competition.value?.status))
+const refreshCompetitionSoon = coalesce(() => refreshCompetition(), 400)
+const refreshCategoriesSoon = coalesce(() => refreshCategories(), 400)
 const refreshRoutesSoon = coalesce(() => refreshRoutes(), 400)
 const refreshEntriesSoon = coalesce(() => refreshEntries(), 400)
-const refreshScoresSoon = coalesce(() => refreshScores(), 400)
-useCompetitionLive(competitionId, ({ kind }) => {
+// every judge sees every score: fetch only the entries that changed
+const MAX_ENTRY_REFRESH = 8
+const refreshScoresSoon = coalesceIds(async (entryIds) => {
+    if (!entryIds || entryIds.size > MAX_ENTRY_REFRESH) return refreshScores()
+    const fresh = await Promise.all(
+        [...entryIds].map((entry) =>
+            listScores(competitionId.value, { entry }),
+        ),
+    )
+    scores.value = replaceEntryScores(scores.value, entryIds, fresh.flat())
+}, 400)
+useCompetitionLive(competitionId, ({ kind, entry }) => {
+    if (kind === 'competition' || kind === 'resync') refreshCompetitionSoon()
+    if (kind === 'categories' || kind === 'resync') refreshCategoriesSoon()
     if (kind === 'routes' || kind === 'resync') refreshRoutesSoon()
     if (kind === 'entries' || kind === 'resync') refreshEntriesSoon()
-    if (kind === 'scores' || kind === 'resync') refreshScoresSoon()
+    if (kind === 'scores') refreshScoresSoon(entry)
+    if (kind === 'resync') refreshScoresSoon()
 })
 
-const { data: categories } = useAsyncData(
+const { data: categories, refresh: refreshCategories } = useAsyncData(
     () => `judge-categories:${competitionId.value}`,
     () => listCategories(competitionId.value),
     { default: () => [], enabled: () => !!competitionId.value },

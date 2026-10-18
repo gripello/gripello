@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { backupHourOptions, formatBytes, nextBackupRun } from '~/utils/backups'
+import {
+    backupHourOptions,
+    formatBytes,
+    nextBackupRun,
+    syncCleanForm,
+} from '~/utils/backups'
 
 describe('formatBytes', () => {
     it('picks a binary unit with one decimal above bytes', () => {
@@ -27,5 +32,27 @@ describe('nextBackupRun', () => {
         expect(nextBackupRun(0, morning).toISOString()).toBe(
             '2026-10-12T00:30:00.000Z',
         )
+    })
+})
+
+describe('syncCleanForm', () => {
+    const saved = { keep: 7, include_storage: true, hour: 2 }
+
+    it('fills an untouched form with the newest settings', () => {
+        const form = { ...saved }
+        syncCleanForm(form, { ...saved, keep: 9 }, saved)
+        expect(form.keep).toBe(9)
+    })
+
+    it('keeps edits while a poll brings the same settings again', () => {
+        const form = { ...saved, hour: 5 }
+        syncCleanForm(form, { ...saved }, saved)
+        expect(form.hour).toBe(5)
+    })
+
+    it('takes the first settings that arrive', () => {
+        const form = { keep: 0, include_storage: false, hour: 0 }
+        syncCleanForm(form, saved, undefined)
+        expect(form).toEqual(saved)
     })
 })

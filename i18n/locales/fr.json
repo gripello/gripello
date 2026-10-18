@@ -238,7 +238,8 @@
         "feed": "Fil d’actu",
         "info": "Infos",
         "outSoon": "Démontée le {date}",
-        "mapWork": "Voies & réouvertures"
+        "mapWork": "Voies & réouvertures",
+        "removed": "Cette voie a été supprimée."
     },
     "dashboard": {
         "online": "{0} en ligne"
@@ -1325,7 +1326,8 @@
         "assignToMe": "M'attribuer",
         "unassigned": "Non attribuée",
         "forThisRoute": "Pour cette voie",
-        "newSubtitle": "Suivre le travail de l'équipe d'ouverture"
+        "newSubtitle": "Suivre le travail de l'équipe d'ouverture",
+        "deletedElsewhere": "Cette tâche a été supprimée."
     },
     "audit": {
         "title": "Journal d'activité",

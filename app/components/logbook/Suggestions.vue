@@ -52,6 +52,12 @@
 
 <script setup lang="ts">
 import { listRoutes } from '~/api/routes'
+import {
+    coalesce,
+    gymChangesTopic,
+    removeById,
+    type GymChange,
+} from '~/utils/realtimeCache'
 import type { RouteRecord } from '~/types/models'
 import type { LogbookKind } from '#shared/utils/logbook'
 import { locationName } from '#shared/utils/formatting'
@@ -69,7 +75,7 @@ const { tickedRouteIds } = useTickedRoutes()
 
 const gymId = useCurrentGymId()
 
-const { data: candidates } = useAsyncData(
+const { data: candidates, refresh: refreshCandidates } = useAsyncData(
     () => `logbook-suggestions-${gymId.value}-${props.kind ?? 'any'}`,
     () =>
         listRoutes<RouteRecord>(gymId.value, {
@@ -84,6 +90,18 @@ const { data: candidates } = useAsyncData(
             .then((page) => page.items)
             .catch(() => []),
     { default: () => [], enabled: () => !!gymId.value },
+)
+
+const refreshCandidatesSoon = coalesce(() => refreshCandidates(), 5000)
+useRealtime(
+    () => gymId.value && gymChangesTopic(gymId.value),
+    ({ collection, action, record }: GymChange<RouteRecord>) => {
+        if (collection !== 'routes') return
+        if (action === 'create') return refreshCandidatesSoon()
+        if (action === 'delete' || record.archived)
+            candidates.value = removeById(candidates.value, record.id)
+    },
+    { resync: refreshCandidatesSoon },
 )
 
 const newSince = Date.now() - NEW_ROUTE_DAYS * 86_400_000

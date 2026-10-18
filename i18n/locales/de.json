@@ -238,7 +238,8 @@
         "feed": "Feed",
         "info": "Info",
         "outSoon": "Raus am {date}",
-        "mapWork": "Routen & Resets"
+        "mapWork": "Routen & Resets",
+        "removed": "Diese Route wurde entfernt."
     },
     "dashboard": {
         "online": "{0} online"
@@ -1325,7 +1326,8 @@
         "assignToMe": "Mir zuweisen",
         "unassigned": "Nicht zugewiesen",
         "forThisRoute": "Für diese Route",
-        "newSubtitle": "Arbeit für das Schrauberteam festhalten"
+        "newSubtitle": "Arbeit für das Schrauberteam festhalten",
+        "deletedElsewhere": "Diese Aufgabe wurde gelöscht."
     },
     "audit": {
         "title": "Aktivitätsprotokoll",

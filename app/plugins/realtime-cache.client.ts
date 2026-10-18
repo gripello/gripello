@@ -1,4 +1,5 @@
 import { listRoutes } from '~/api/routes'
+import { routeMatchesQuery } from '~/utils/routeSearch'
 import {
     isRealtimeConnected,
     onConnect as onRealtimeConnect,
@@ -12,6 +13,8 @@ import type {
     RatingRecord,
     RouteRecord,
     RouteScoreRecord,
+    SeasonRecord,
+    SettingsRecord,
     TickRecord,
     WallRecord,
 } from '~/types/models'
@@ -19,6 +22,7 @@ import {
     applyRatingChange,
     cacheKeys,
     isFollowKey,
+    isOwnTickKey,
     coalesce,
     defectsScope,
     detailRouteId,
@@ -26,6 +30,8 @@ import {
     gymDefectsTopic,
     liveTopics,
     servedStaleFromSsrCache,
+    showsClimber,
+    splitFollowRefresh,
     isLiveKey,
     mapRows,
     NEW_ROUTE_SCORE,
@@ -44,6 +50,7 @@ import {
     type GymChange,
     type GymChangeCollection,
     type KeyLocations,
+    type KeyQueries,
     type OpenDefectsChange,
     type RatingChange,
     type RatingLedger,
@@ -64,6 +71,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         cacheKeys.keyLocations,
         () => ({}),
     )
+    const keyQueries = useState<KeyQueries>(cacheKeys.keyQueries, () => ({}))
 
     function loadedKeys() {
         return Object.keys(nuxtApp.payload.data).filter(
@@ -89,7 +97,11 @@ export default defineNuxtPlugin((nuxtApp) => {
         ) => RouteScoreRecord[],
     ) {
         for (const key of loadedKeys()) {
-            const inScope = routeRowsScope(key, keyLocations.value)
+            const inScope = routeRowsScope(
+                key,
+                keyLocations.value,
+                keyQueries.value,
+            )
             if (!inScope) continue
             const data = read<RowsData<RouteScoreRecord>>(key)
             const next = mapRows(data, (rows) => patch(rows, inScope))
@@ -150,9 +162,22 @@ export default defineNuxtPlugin((nuxtApp) => {
         refreshNuxtData(cacheKeys.unplacedRoutes),
     )
 
-    const refreshRoutesListSoon = coalesce(() =>
-        refreshNuxtData(cacheKeys.routesList),
+    // every viewer of the list refetches it, so spread them wider than other refreshes
+    const refreshRoutesListSoon = coalesce(
+        () => refreshNuxtData(cacheKeys.routesList),
+        5000,
     )
+
+    // ponytail: one small timer entry per route opened this session
+    const routeDetailRefreshes = new Map<string, () => void>()
+    function refreshRouteDetailSoon(routeId: string) {
+        let soon = routeDetailRefreshes.get(routeId)
+        if (!soon) {
+            soon = coalesce(() => refreshNuxtData(cacheKeys.route(routeId)))
+            routeDetailRefreshes.set(routeId, soon)
+        }
+        soon()
+    }
 
     function cachedRecord(id: string) {
         for (const key of loadedKeys()) {
@@ -222,9 +247,39 @@ export default defineNuxtPlugin((nuxtApp) => {
         rescoreSoon()
     }
 
+    function routesListNeedsRow(
+        record: RouteRecord,
+        action: GymChange['action'],
+    ) {
+        const query = keyQueries.value[cacheKeys.routesList]
+        if (action === 'delete' || !query) return action === 'create'
+        return (
+            routeMatchesQuery(record, query) &&
+            !rowsOf(
+                read<RowsData<RouteScoreRecord>>(cacheKeys.routesList),
+            ).some((row) => row.id === record.id)
+        )
+    }
+
+    function patchMapMatches(record: RouteRecord, removed: boolean) {
+        const query = keyQueries.value[cacheKeys.mapMatching]
+        const matches = read<{ id: string }[] | null>(cacheKeys.mapMatching)
+        if (!query || !matches) return
+        const next = patchList(
+            matches,
+            { id: record.id },
+            !removed && routeMatchesQuery(record, query),
+        )
+        if (next !== matches) write(cacheKeys.mapMatching, next)
+    }
+
     function onRoute({ action, record }: GymChange<RouteRecord>) {
         if (!inLiveGym(record)) return
         const removed = action === 'delete' || !!record.archived
+        const keys = loadedKeys()
+        const listNeedsRow =
+            keys.includes(cacheKeys.routesList) &&
+            routesListNeedsRow(record, action)
         patchRouteRows((rows, inScope) =>
             relinkRow(
                 patchList<RouteScoreRecord>(
@@ -237,11 +292,13 @@ export default defineNuxtPlugin((nuxtApp) => {
                 cachedRecord,
             ),
         )
-        const keys = loadedKeys()
-        if (action === 'create' && keys.includes(cacheKeys.routesList))
-            refreshRoutesListSoon()
-        if (action !== 'delete' && keys.includes(cacheKeys.route(record.id)))
-            void refreshNuxtData(cacheKeys.route(record.id))
+        if (listNeedsRow) refreshRoutesListSoon()
+        if (keys.includes(cacheKeys.mapMatching))
+            patchMapMatches(record, action === 'delete')
+        if (keys.includes(cacheKeys.route(record.id))) {
+            if (action === 'delete') write(cacheKeys.route(record.id), null)
+            else refreshRouteDetailSoon(record.id)
+        }
         if (keys.includes(cacheKeys.unplacedRoutes)) refreshUnplacedSoon()
         if (keys.includes(cacheKeys.communityFeed)) refreshCommunityFeedSoon()
     }
@@ -250,9 +307,36 @@ export default defineNuxtPlugin((nuxtApp) => {
         refreshNuxtData(cacheKeys.communityFeed),
     )
 
-    function onBetaVideo({ record }: GymChange<BetaVideoRecord>) {
-        if (inLiveGym(record) && loadedKeys().includes(cacheKeys.communityFeed))
+    function onBetaVideo({ action, record }: GymChange<BetaVideoRecord>) {
+        if (!inLiveGym(record)) return
+        const key = cacheKeys.betas(record.route)
+        const videos = read<BetaVideoRecord[] | undefined>(key)
+        if (videos) {
+            const next =
+                action === 'delete'
+                    ? removeById(videos, record.id)
+                    : upsertById(videos, record, 'start')
+            if (next !== videos) write(key, next)
+        }
+        if (loadedKeys().includes(cacheKeys.communityFeed))
             refreshCommunityFeedSoon()
+    }
+
+    const refreshLeaderboardSoon = coalesce(() =>
+        refreshNuxtData(cacheKeys.leaderboard),
+    )
+
+    function onSeason({ action, record }: GymChange<SeasonRecord>) {
+        if (!inLiveGym(record)) return
+        const seasons = read<SeasonRecord[] | undefined>(cacheKeys.seasons)
+        if (seasons)
+            write(
+                cacheKeys.seasons,
+                patchList(seasons, record, action !== 'delete'),
+            )
+        // the shown board may cover the season whose dates changed
+        if (loadedKeys().includes(cacheKeys.leaderboard))
+            refreshLeaderboardSoon()
     }
 
     function onWall({ action, record }: GymChange<WallRecord>) {
@@ -268,6 +352,8 @@ export default defineNuxtPlugin((nuxtApp) => {
             )
             if (next !== data) write(key, next)
         }
+        if (loadedKeys().includes(cacheKeys.unplacedRoutes))
+            refreshUnplacedSoon()
         if (action !== 'delete') patchExpandedEverywhere('wall', record)
     }
 
@@ -278,6 +364,8 @@ export default defineNuxtPlugin((nuxtApp) => {
             const next = patchList(data, record, action !== 'delete')
             if (next !== data) write(cacheKeys.locations, next)
         }
+        if (loadedKeys().includes(cacheKeys.unplacedRoutes))
+            refreshUnplacedSoon()
         if (action !== 'delete') patchExpandedEverywhere('location', record)
     }
 
@@ -297,21 +385,71 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
 
     const refreshOwnTicksSoon = coalesce(() => {
-        const keys = loadedKeys().filter(
-            (key) =>
-                key === cacheKeys.tickedRoutes || key === cacheKeys.logbook,
-        )
+        const keys = loadedKeys().filter(isOwnTickKey)
         return keys.length ? refreshNuxtData(keys) : Promise.resolve()
     }, 300)
+
+    // the achievements job runs a moment after the tick, so wait past its coalescing
+    const refreshOwnAchievementsSoon = coalesce(() => {
+        const key = cacheKeys.achievements(authStore.record?.id ?? '')
+        return loadedKeys().includes(key)
+            ? refreshNuxtData(key)
+            : Promise.resolve()
+    }, 3000)
 
     function onOwnTick({ record }: RecordChange<TickRecord>) {
-        if (record.user === authStore.record?.id) refreshOwnTicksSoon()
+        if (record.user !== authStore.record?.id) return
+        refreshOwnTicksSoon()
+        refreshOwnAchievementsSoon()
     }
 
-    const refreshFollowsSoon = coalesce(() => {
+    function onOwnNotification({
+        action,
+        record,
+    }: RecordChange<{ type?: string }>) {
+        if (action === 'create' && record.type === 'achievement_earned')
+            refreshOwnAchievementsSoon()
+    }
+
+    const refreshFollowsSoon = coalesce(async () => {
         const keys = loadedKeys().filter(isFollowKey)
-        return keys.length ? refreshNuxtData(keys) : Promise.resolve()
+        const [first, then] = splitFollowRefresh(keys)
+        if (first.length) await refreshNuxtData(first)
+        if (then.length) await refreshNuxtData(then)
     }, 300)
+
+    const refreshBlocksSoon = coalesce(
+        () => refreshNuxtData(cacheKeys.blocks),
+        300,
+    )
+
+    function onFollowChange(event: { kind?: string }) {
+        if (event.kind?.startsWith('block.')) refreshBlocksSoon()
+        else refreshFollowsSoon()
+    }
+
+    const changedClimbers = new Set<string>()
+    const refreshClimbersSoon = coalesce(() => {
+        const ids = [...changedClimbers]
+        changedClimbers.clear()
+        const keys = loadedKeys().filter((key) =>
+            ids.some((id) => showsClimber(key, read(key), id)),
+        )
+        return keys.length ? refreshNuxtData(keys) : Promise.resolve()
+    })
+
+    function onClimberChange({ id }: { id: string }) {
+        changedClimbers.add(id)
+        refreshClimbersSoon()
+    }
+
+    function onSettings({
+        kind: _,
+        ...settings
+    }: SettingsRecord & { kind?: string }) {
+        if (read(cacheKeys.settings) !== undefined)
+            write(cacheKeys.settings, settings)
+    }
 
     const hydratedFromStaleCache = servedStaleFromSsrCache(
         document.documentElement.dataset.ssrAge,
@@ -345,6 +483,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         walls: onWall,
         locations: onLocation,
         beta_videos: onBetaVideo,
+        seasons: onSeason,
     }
 
     function onGymChange(change: GymChange) {
@@ -366,7 +505,10 @@ export default defineNuxtPlugin((nuxtApp) => {
         )
         onRealtimeConnect(onConnect)
         subscribeRealtime(liveTopics.ownTicks, onOwnTick)
-        subscribeRealtime(liveTopics.followChanges, refreshFollowsSoon)
+        subscribeRealtime(liveTopics.ownNotifications, onOwnNotification)
+        subscribeRealtime(liveTopics.followChanges, onFollowChange)
+        subscribeRealtime(liveTopics.climbers, onClimberChange)
+        subscribeRealtime(liveTopics.settings, onSettings)
         subscribeRealtime(liveTopics.followedTicks, refreshFollowsSoon)
     })
 

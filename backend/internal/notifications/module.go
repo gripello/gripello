@@ -203,7 +203,18 @@ func (m *module) putPrefs(w http.ResponseWriter, r *http.Request) error {
 	if next == nil {
 		next = prefs{}
 	}
-	if _, err := m.app.DB.Exec(r.Context(), `UPDATE users SET notification_prefs = $2, updated = now() WHERE id = $1`, p.UserID, next); err != nil {
+	ctx := r.Context()
+	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		var record json.RawMessage
+		if err := tx.QueryRow(ctx, `UPDATE users u SET notification_prefs = $2, updated = now() WHERE id = $1
+			RETURNING to_jsonb(u) - 'password_hash' - 'token_key'`, p.UserID, next).Scan(&record); err != nil {
+			return err
+		}
+		// other devices of the user adopt the record, like after any profile save
+		return events.PublishAs(ctx, tx, p.UserID, "user:"+p.UserID, "user.updated",
+			map[string]any{"record": record, "changed": []string{"notification_prefs"}}, events.Audience{Users: []string{p.UserID}})
+	})
+	if err != nil {
 		return err
 	}
 	httpx.JSON(w, http.StatusOK, next)

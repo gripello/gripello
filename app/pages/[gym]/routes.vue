@@ -321,7 +321,7 @@ const {
     activeFilterCount,
     routeQuery: baseQuery,
     clearFilters,
-} = useRouteFilters()
+} = useRouteFilters('routes')
 
 useSeoMeta({
     title: () => t('page.title.index'),
@@ -484,6 +484,8 @@ function fetchLoadedRoutes(): Promise<RoutePage> {
         loadedRoutePage,
     )
 }
+
+useLiveQuery(cacheKeys.routesList, baseQuery)
 
 const { data: routePage } = await useAsyncData(
     cacheKeys.routesList,

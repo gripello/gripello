@@ -176,6 +176,7 @@ import { FEATURE_FLAGS, hasFeature } from '#shared/utils/featureFlags'
 import { setGymFeatures } from '~/api/platform'
 import { gymTitle } from '~/utils/gymNames'
 import type { GymRecord } from '~/types/models'
+import type { GymEvent } from '~/composables/useRealtime'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
@@ -189,6 +190,9 @@ const {
     error,
     refresh,
 } = await useAsyncData(`platform-gym-${gymId}`, () => getGymById(gymId))
+useLiveRefresh(`gym:${gymId}`, refresh, {
+    when: (event: GymEvent) => event.kind === 'gym.updated',
+})
 
 useHead({
     title: () => (gym.value ? gymTitle(gym.value) : t('platform.gyms.title')),

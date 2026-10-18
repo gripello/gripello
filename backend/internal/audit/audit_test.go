@@ -82,7 +82,7 @@ func (f *fixture) publishAs(actor, topic, kind string, payload any, audience eve
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	e, err := f.app.Bus.Since(ctx, 0, 100000)
+	e, _, err := f.app.Bus.Since(ctx, 0, []string{topic}, 100000)
 	if err != nil {
 		f.t.Fatal(err)
 	}

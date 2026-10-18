@@ -267,6 +267,10 @@ func TestMutedPushTopicStillLandsInTheBell(t *testing.T) {
 	defer alive.Close()
 	f.subscribe("climber", alive.URL)
 	f.call("climber", "PUT", "/me/notification-prefs", `{"push":{"tasks":false}}`, http.StatusOK)
+	if n := f.count(`SELECT COUNT(*) FROM events WHERE topic = $1 AND kind = 'user.updated' AND payload->'changed' ? 'notification_prefs'`,
+		"user:"+f.users["climber"]); n != 1 {
+		t.Errorf("prefs change reached %d user events", n)
+	}
 
 	f.notify(Notify{Type: "task_assigned", Users: []string{f.users["climber"]}, Gym: f.gym})
 	f.notify(Notify{Type: "task_defect_fixed", Users: []string{f.users["climber"]}, Gym: f.gym})

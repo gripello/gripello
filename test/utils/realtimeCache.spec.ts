@@ -3,6 +3,7 @@ import {
     applyRatingChange,
     cacheKeys,
     coalesce,
+    coalesceIds,
     defectsScope,
     replaceRouteDefects,
     servedStaleFromSsrCache,
@@ -15,10 +16,12 @@ import {
     removeById,
     routeRowsScope,
     shiftScore,
+    staffRouteChange,
     trackRating,
     unlessQueryChanged,
     upsertById,
     wallsScope,
+    type GymChange,
     type RatingLedger,
     patchExpanded,
     relinkRow,
@@ -216,8 +219,11 @@ describe('cache keys', () => {
     })
 
     it('ignores location lists without a location yet', () => {
-        const locations = { [cacheKeys.routeFilterWalls]: '' }
-        const walls = wallsScope(cacheKeys.routeFilterWalls, locations)!
+        const locations = { [cacheKeys.routeFilterWalls('routes')]: '' }
+        const walls = wallsScope(
+            cacheKeys.routeFilterWalls('routes'),
+            locations,
+        )!
         expect(walls({ location: '' } as WallRecord)).toBe(false)
         expect(routeRowsScope(cacheKeys.placementRoutes)).toBeUndefined()
         expect(routeRowsScope(cacheKeys.unplacedRoutes, locations)).toBe(
@@ -251,6 +257,14 @@ describe('cache keys', () => {
         expect(isLiveKey(cacheKeys.follows)).toBe(true)
         expect(isLiveKey(cacheKeys.friendsFeed)).toBe(true)
         expect(isLiveKey('climber-ticks:u1')).toBe(true)
+        for (const key of [
+            cacheKeys.tickedRoutes,
+            cacheKeys.logbook,
+            cacheKeys.locations,
+            cacheKeys.blocks,
+            cacheKeys.betas('r1'),
+        ])
+            expect(isLiveKey(key)).toBe(true)
         expect(isLiveKey('cap-status')).toBe(false)
     })
 })
@@ -466,5 +480,91 @@ describe('liveTopics', () => {
 describe('gymDefectsTopic', () => {
     it('keeps open defects within their gym', () => {
         expect(gymDefectsTopic('g1')).toBe('open_route_defects:g1')
+    })
+})
+
+describe('coalesce in a hidden tab', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => {
+        vi.useRealTimers()
+        vi.restoreAllMocks()
+    })
+
+    it('waits for a hidden tab to become visible', async () => {
+        const visibility = vi
+            .spyOn(document, 'visibilityState', 'get')
+            .mockReturnValue('hidden')
+        const task = vi.fn(async () => {})
+        const soon = coalesce(task, 100)
+        soon()
+        await vi.advanceTimersByTimeAsync(250)
+        soon()
+        await vi.advanceTimersByTimeAsync(250)
+        expect(task).not.toHaveBeenCalled()
+
+        visibility.mockReturnValue('visible')
+        document.dispatchEvent(new Event('visibilitychange'))
+        expect(task).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe('coalesceIds', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
+    it('hands the burst its changed ids, or null when one call wanted all', async () => {
+        const task = vi.fn(async (_ids: Set<string> | null) => {})
+        const soon = coalesceIds(task, 100)
+        soon('a')
+        soon('b')
+        soon('a')
+        await vi.advanceTimersByTimeAsync(250)
+        expect(task).toHaveBeenLastCalledWith(new Set(['a', 'b']))
+        soon('c')
+        soon()
+        await vi.advanceTimersByTimeAsync(250)
+        expect(task).toHaveBeenLastCalledWith(null)
+    })
+})
+
+describe('staffRouteChange', () => {
+    const rows = [{ id: 'r1', name: 'A', archived: false }]
+    const change = (collection: string, action: string, record: object) =>
+        ({ collection, action, record }) as GymChange
+
+    it('patches shown routes and rescores them on ratings', () => {
+        const edited = staffRouteChange(
+            rows,
+            change('routes', 'update', { id: 'r1', name: 'B' }),
+        )
+        expect(edited).toEqual({
+            rows: [{ id: 'r1', name: 'B', archived: false }],
+            reload: false,
+            rescore: null,
+        })
+        expect(
+            staffRouteChange(
+                rows,
+                change('ratings', 'create', { route_id: 'r1' }),
+            ).rescore,
+        ).toBe('r1')
+        expect(
+            staffRouteChange(
+                rows,
+                change('ratings', 'create', { route_id: 'r9' }),
+            ).rescore,
+        ).toBe(null)
+    })
+
+    it('reloads for new, removed, archived or unseen routes', () => {
+        for (const [action, record] of [
+            ['create', { id: 'r2' }],
+            ['delete', { id: 'r1' }],
+            ['update', { id: 'r1', archived: true }],
+            ['update', { id: 'r9' }],
+        ] as const)
+            expect(
+                staffRouteChange(rows, change('routes', action, record)).reload,
+            ).toBe(true)
     })
 })

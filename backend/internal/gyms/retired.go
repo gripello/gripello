@@ -50,7 +50,7 @@ func (m *module) freeRetiredSlug(w http.ResponseWriter, r *http.Request) error {
 			}
 			return err
 		}
-		return events.PublishAs(ctx, tx, p.UserID, "platform", "retired_slug.deleted", map[string]string{"id": r.PathValue("id"), "slug": slug}, events.Audience{})
+		return events.PublishAs(ctx, tx, p.UserID, "platform", "retired_slug.deleted", map[string]string{"id": r.PathValue("id"), "slug": slug}, events.Audience{PlatformAdmins: true})
 	})
 	if err != nil {
 		return err

@@ -4,6 +4,8 @@ import { ref as vueRef } from 'vue'
 const listCompetitions = vi.fn().mockResolvedValue([{ id: 'c1' }, { id: 'c2' }])
 vi.mock('~/api/competitions', () => ({ listCompetitions }))
 vi.stubGlobal('useCurrentGymId', () => vueRef('g1'))
+const useGymCompetitionsLive = vi.fn()
+vi.stubGlobal('useGymCompetitionsLive', useGymCompetitionsLive)
 
 describe('useJudgeableCompetitions', () => {
     it('lists every open or closed competition of the gym', async () => {
@@ -15,5 +17,6 @@ describe('useJudgeableCompetitions', () => {
         expect(listCompetitions).toHaveBeenCalledWith('g1', {
             status: ['open', 'closed'],
         })
+        expect(useGymCompetitionsLive).toHaveBeenCalled()
     })
 })

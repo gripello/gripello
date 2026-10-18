@@ -127,3 +127,19 @@ func TestAudienceAnswersAreCachedUntilPermissionsChange(t *testing.T) {
 		t.Fatal("a membership change must drop cached answers")
 	}
 }
+
+func TestGymTopicsPassTheGymGate(t *testing.T) {
+	for _, topic := range []string{"leaderboard:g1", "competitions:g1", "gym_changes:g1"} {
+		if got := gymOf(events.Event{Topic: topic}); got != "g1" {
+			t.Errorf("gymOf(%q) = %q", topic, got)
+		}
+	}
+}
+
+func TestPlatformAdminsAudienceFollowsThePrincipal(t *testing.T) {
+	h := &Hub{perms: fakePerms{}}
+	aud := h.audience(events.Audience{PlatformAdmins: true})
+	if !aud(&auth.Principal{UserID: "op", PlatformAdmin: true}) || aud(&auth.Principal{UserID: "climber"}) || aud(nil) {
+		t.Fatal("only platform admins may receive platform events")
+	}
+}

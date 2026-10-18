@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -178,8 +179,12 @@ func TestBlocksEndFollowsAndHideTheBlocker(t *testing.T) {
 	f.call("setter", "POST", "/blocks", `{"blocked":"`+f.users["climber"]+`"}`, http.StatusBadRequest, `validation_not_unique`)
 	f.call("setter", "POST", "/blocks", `{"blocked":"`+f.users["setter"]+`"}`, http.StatusBadRequest)
 	f.call("climber", "GET", "/me/follows", "", http.StatusOK, `[]`)
-	if deleted := f.outbox(TopicFollowChanges); len(deleted) != 4 || deleted[2].Kind != "follow.deleted" || deleted[3].Kind != "follow.deleted" {
-		t.Errorf("block did not announce the ended follows: %+v", deleted)
+	changes := f.outbox(TopicFollowChanges)
+	if len(changes) != 5 || changes[3].Kind != "follow.deleted" || changes[4].Kind != "follow.deleted" {
+		t.Errorf("block did not announce the ended follows: %+v", changes)
+	}
+	if blocked := changes[2]; blocked.Kind != "block.created" || !slices.Equal(blocked.Audience.Users, []string{f.users["setter"]}) {
+		t.Errorf("a block must reach only the blocker's devices: %+v", blocked)
 	}
 
 	f.follow("climber", "setter", http.StatusBadRequest, `can't be followed`)
@@ -194,6 +199,23 @@ func TestBlocksEndFollowsAndHideTheBlocker(t *testing.T) {
 	f.call("climber", "DELETE", "/blocks/"+block.ID, "", http.StatusNotFound)
 	f.call("setter", "DELETE", "/blocks/"+block.ID, "", http.StatusNoContent)
 	f.call("climber", "GET", "/climbers/"+f.users["setter"], "", http.StatusOK)
+	if last := f.outbox(TopicFollowChanges); last[len(last)-1].Kind != "block.deleted" ||
+		!slices.Equal(last[len(last)-1].Audience.Users, []string{f.users["setter"]}) {
+		t.Errorf("unblocking = %+v", last[len(last)-1])
+	}
+}
+
+func TestProfileChangesNameTheClimberToSignedInClients(t *testing.T) {
+	f := newFixture(t)
+	topic := "user:" + f.users["climber"]
+	f.module.onProfileChange(events.Event{Topic: topic, Kind: "user.updated", Payload: []byte(`{"changed":["notification_prefs"]}`)})
+	f.module.onProfileChange(events.Event{Topic: topic, Kind: "user.updated", Payload: []byte(`{"changed":["avatar"]}`)})
+	f.module.onProfileChange(events.Event{Topic: topic, Kind: "user.deleted", Payload: []byte(`{}`)})
+	got := f.outbox(TopicClimbers)
+	if len(got) != 2 || got[0].Kind != "climber.updated" || got[1].Kind != "climber.deleted" || !got[0].Audience.SignedIn ||
+		string(got[0].Payload) != `{"id": "`+f.users["climber"]+`"}` {
+		t.Fatalf("climber events = %+v", got)
+	}
 }
 
 func TestClimberLookups(t *testing.T) {
