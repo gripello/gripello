@@ -89,10 +89,8 @@
 </template>
 
 <script setup lang="ts">
-import { getGym } from '~/api/gyms'
 import { listCompetitions } from '~/api/competitions'
 import { listRoutes, listWalls } from '~/api/routes'
-import type { GymRecord } from '~/types/models'
 import { competitionShareUrl } from '~/utils/competitions'
 import { keepWhenOffline } from '~/utils/errors'
 import { qrDataUrl } from '~/utils/qrDataUrl'
@@ -118,7 +116,6 @@ const { t } = useI18n()
 const route = useRoute()
 const gymId = useCurrentGymId()
 const { gym } = useGym()
-const gymData = useNuxtData<GymRecord | null>('gym').data
 const requestUrl = useRequestURL({
     xForwardedHost: true,
     xForwardedProto: true,
@@ -278,14 +275,10 @@ useCompetitionLive(
 )
 
 async function refreshScreen() {
-    const [nextGym, nextBoards, nextCompetitions] = await Promise.allSettled([
-        getGym(gym.value?.slug ?? ''),
+    const [nextBoards, nextCompetitions] = await Promise.allSettled([
         loadTvBoards(gymId.value, TV_BOARD_ROWS),
         listCompetitions(gymId.value, { status: ['open'] }),
     ])
-    // an anonymous screen gets no gym events, so new settings arrive by polling
-    if (nextGym.status === 'fulfilled' && nextGym.value)
-        gymData.value = nextGym.value
     if (nextBoards.status === 'fulfilled') boardData.value = nextBoards.value
     if (nextCompetitions.status === 'fulfilled')
         competitions.value = nextCompetitions.value
