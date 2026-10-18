@@ -100,6 +100,28 @@ RUN --mount=type=cache,target=/root/.gradle \
 FROM scratch AS android-results
 COPY --from=android /out /
 
+# Release commits: AAB signed with the upload key, published to a Play track (Play App Signing re-signs it); a failed upload still exports the AAB.
+FROM android AS android-release
+ARG PLAY_TRACK
+ARG PLAY_STATUS
+COPY .docker/play-publish.mts ./.docker/
+RUN --mount=type=cache,target=/root/.gradle \
+    --mount=type=secret,id=android_keystore,required=true \
+    --mount=type=secret,id=android_keystore_password,required=true \
+    --mount=type=secret,id=android_key_password,required=true \
+    --mount=type=secret,id=google_services,required=true,target=/app/mobile/android/app/google-services.json \
+    --mount=type=secret,id=play_service_account,required=true \
+    cd mobile/android \
+ && ANDROID_KEYSTORE=/run/secrets/android_keystore ANDROID_KEY_ALIAS=upload \
+    ANDROID_KEYSTORE_PASSWORD="$(cat /run/secrets/android_keystore_password)" \
+    ANDROID_KEY_PASSWORD="$(cat /run/secrets/android_key_password)" \
+    ./gradlew --no-daemon -q bundleRelease \
+ && mkdir -p /release && cp app/build/outputs/bundle/release/app-release.aab /release/gripello-release.aab \
+ && { node /app/.docker/play-publish.mts /run/secrets/play_service_account app.gripello /release/gripello-release.aab "$PLAY_TRACK" "$PLAY_STATUS"; echo $? > /release/exit-code; }
+
+FROM scratch AS android-release-results
+COPY --from=android-release /release /
+
 FROM ui-deps AS ui-build
 COPY nuxt.config.ts ./
 COPY postcss ./postcss
