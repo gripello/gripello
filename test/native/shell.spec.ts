@@ -31,6 +31,20 @@ describe('android app links', () => {
             ).toBe(false)
     })
 
+    it('lets only the Play signing key use passkeys, which also opens App Links', () => {
+        const fingerprints = (relation: string) =>
+            assetLinks.find((statement: { relation: string[] }) =>
+                statement.relation.includes(relation),
+            ).target.sha256_cert_fingerprints
+        const passkeyKeys = fingerprints(
+            'delegate_permission/common.get_login_creds',
+        )
+        expect(passkeyKeys).toHaveLength(1)
+        expect(
+            fingerprints('delegate_permission/common.handle_all_urls'),
+        ).toContain(passkeyKeys[0])
+    })
+
     it('trusts the app id the shell is built with', () => {
         expect(
             assetLinks.map(
