@@ -52,6 +52,25 @@ export const isOwnTickKey = (key: string) =>
     key === cacheKeys.logbook ||
     key.startsWith('climber-compare-mine:')
 
+// Keys that show a climber's name or avatar: lookups by id, the profile, and authors of reviews and betas.
+export function showsClimber(key: string, data: unknown, climberId: string) {
+    const ids = keySuffix(key, 'climbers:')
+    if (ids !== undefined) return ids.split(',').includes(climberId)
+    if (key === `climber:${climberId}`) return true
+    if (
+        ratingsRouteId(key) === undefined &&
+        !key.startsWith(cacheKeys.betas(''))
+    )
+        return false
+    return (
+        Array.isArray(data) &&
+        data.some(
+            (item: { author?: { id?: string } }) =>
+                item.author?.id === climberId,
+        )
+    )
+}
+
 // climber-ticks:* reads the follow state and the profile while it loads
 export function splitFollowRefresh(keys: string[]) {
     const first = keys.filter(
@@ -66,6 +85,7 @@ export const liveTopics = {
     ownNotifications: 'own_notifications',
     followedTicks: 'followed_ticks',
     followChanges: 'follow_changes',
+    climbers: 'climbers',
 }
 
 export const gymChangesTopic = (gymId: string) => `gym_changes:${gymId}`
@@ -185,6 +205,7 @@ const RESYNCED_KEYS: string[] = [
 export function isLiveKey(key: string, keyLocations: KeyLocations = {}) {
     return (
         RESYNCED_KEYS.includes(key) ||
+        key.startsWith('climbers:') ||
         key.startsWith(cacheKeys.betas('')) ||
         isFollowKey(key) ||
         !!defectsScope(key) ||

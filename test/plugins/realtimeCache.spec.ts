@@ -189,4 +189,28 @@ describe('realtime cache plugin', () => {
         await vi.runAllTimersAsync()
         expect(refreshNuxtData).toHaveBeenCalledWith('leaderboard')
     })
+
+    it('reloads blocks on block events and follows on the rest', async () => {
+        await startPlugin({ blocks: [], follows: [] })
+        emit('follow_changes', { kind: 'block.created', action: 'create' })
+        await vi.runAllTimersAsync()
+        expect(refreshNuxtData.mock.calls).toEqual([['blocks']])
+    })
+
+    it('reloads only what shows a climber whose profile changed', async () => {
+        await startPlugin({
+            'climbers:a,b': [],
+            'climbers:c': [],
+            'ratings:r1': [{ id: 'x', author: { id: 'b' } }],
+            'ratings:r2': [{ id: 'y', author: { id: 'c' } }],
+            'climber:b': {},
+        })
+        emit('climbers', { kind: 'climber.updated', id: 'b' })
+        await vi.runAllTimersAsync()
+        expect(refreshNuxtData).toHaveBeenCalledWith([
+            'climbers:a,b',
+            'ratings:r1',
+            'climber:b',
+        ])
+    })
 })

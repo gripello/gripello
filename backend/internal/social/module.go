@@ -45,6 +45,9 @@ func newModule(app *platform.App) *module {
 	} {
 		app.Handle(pattern, handler)
 	}
+	if app.Bus != nil {
+		app.Bus.SubscribeOnce("user:", "social.climber_changed", m.onProfileChange)
+	}
 	return m
 }
 

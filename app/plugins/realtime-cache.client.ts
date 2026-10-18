@@ -29,6 +29,7 @@ import {
     gymDefectsTopic,
     liveTopics,
     servedStaleFromSsrCache,
+    showsClimber,
     splitFollowRefresh,
     isLiveKey,
     mapRows,
@@ -416,6 +417,31 @@ export default defineNuxtPlugin((nuxtApp) => {
         if (then.length) await refreshNuxtData(then)
     }, 300)
 
+    const refreshBlocksSoon = coalesce(
+        () => refreshNuxtData(cacheKeys.blocks),
+        300,
+    )
+
+    function onFollowChange(event: { kind?: string }) {
+        if (event.kind?.startsWith('block.')) refreshBlocksSoon()
+        else refreshFollowsSoon()
+    }
+
+    const changedClimbers = new Set<string>()
+    const refreshClimbersSoon = coalesce(() => {
+        const ids = [...changedClimbers]
+        changedClimbers.clear()
+        const keys = loadedKeys().filter((key) =>
+            ids.some((id) => showsClimber(key, read(key), id)),
+        )
+        return keys.length ? refreshNuxtData(keys) : Promise.resolve()
+    })
+
+    function onClimberChange({ id }: { id: string }) {
+        changedClimbers.add(id)
+        refreshClimbersSoon()
+    }
+
     const hydratedFromStaleCache = servedStaleFromSsrCache(
         document.documentElement.dataset.ssrAge,
     )
@@ -471,7 +497,8 @@ export default defineNuxtPlugin((nuxtApp) => {
         onRealtimeConnect(onConnect)
         subscribeRealtime(liveTopics.ownTicks, onOwnTick)
         subscribeRealtime(liveTopics.ownNotifications, onOwnNotification)
-        subscribeRealtime(liveTopics.followChanges, refreshFollowsSoon)
+        subscribeRealtime(liveTopics.followChanges, onFollowChange)
+        subscribeRealtime(liveTopics.climbers, onClimberChange)
         subscribeRealtime(liveTopics.followedTicks, refreshFollowsSoon)
     })
 
