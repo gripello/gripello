@@ -54,44 +54,33 @@
         >
             <div class="grid grid-cols-12 items-end gap-4 mb-4">
                 <UFormField
+                    :label="$t('ratings.stars')"
                     name="rating"
                     class="col-span-12 sm:col-span-6 review-form__rating"
                 >
-                    <template #label>
-                        <span id="review-form-rating-label">{{
-                            $t('ratings.stars')
-                        }}</span>
-                    </template>
-                    <div
-                        role="radiogroup"
-                        aria-labelledby="review-form-rating-label"
-                        class="flex items-center"
+                    <UInputRating
+                        :model-value="form.rating"
+                        clearable
+                        hoverable
+                        size="lg"
+                        :ui="{
+                            root: 'gap-2',
+                            indicator: 'data-[state=active]:text-amber-500',
+                        }"
                         data-testid="review-form-rating"
-                        @mouseleave="hoverRating = null"
+                        @update:model-value="form.rating = $event || undefined"
                     >
-                        <button
-                            v-for="star in 5"
-                            :key="star"
-                            type="button"
-                            role="radio"
-                            :aria-checked="form.rating === star"
-                            :aria-label="`${$t('ratings.stars')}: ${star}/5`"
-                            class="rounded p-1 focus-visible:outline-2 focus-visible:outline-primary"
-                            @mouseenter="hoverRating = star"
-                            @click="toggleRating(star)"
-                        >
+                        <template #item="{ filled }">
                             <UIcon
                                 name="i-lucide-star"
                                 mode="svg"
                                 class="size-6"
                                 :class="
-                                    star <= (hoverRating ?? form.rating ?? 0)
-                                        ? 'text-amber-500 **:fill-current'
-                                        : 'text-dimmed'
+                                    filled ? '**:fill-current' : 'text-dimmed'
                                 "
                             />
-                        </button>
-                    </div>
+                        </template>
+                    </UInputRating>
                 </UFormField>
 
                 <UFormField
@@ -260,7 +249,6 @@ const sheetOpen = computed({
 
 // ── Form state ─────────────────────────────────────────────────────────────
 
-const hoverRating = ref<number | null>(null)
 const saving = ref(false)
 
 const form = reactive({
@@ -283,10 +271,6 @@ const formRules = computed((): Record<string, Rule[]> =>
 const isFormValid = computed(
     () => validateRules(form, formRules.value).length === 0,
 )
-
-function toggleRating(star: number) {
-    form.rating = form.rating === star ? undefined : star
-}
 
 watch(
     () => props.review,

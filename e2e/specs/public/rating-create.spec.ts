@@ -9,7 +9,7 @@ test('an anonymous visitor can submit a review', async ({ page, route }) => {
 
     await page
         .getByTestId('review-form-rating')
-        .getByRole('radio', { name: /5\/5$/ })
+        .getByRole('radio', { name: /5 out of 5$/ })
         .click()
     await page
         .getByTestId('review-form-comment')
@@ -37,7 +37,7 @@ test('rolls the review back when the submit fails', async ({ page, route }) => {
 
     await page
         .getByTestId('review-form-rating')
-        .getByRole('radio', { name: /5\/5$/ })
+        .getByRole('radio', { name: /5 out of 5$/ })
         .click()
     await page
         .getByTestId('review-form-comment')
