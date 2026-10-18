@@ -16,6 +16,7 @@ export const cacheKeys = {
     route: (routeId: string) => `route:${routeId}`,
     ratings: (routeId: string) => `ratings:${routeId}`,
     ratingsSheet: (routeId: string) => `ratings-sheet:${routeId}`,
+    betas: (routeId: string) => `beta-videos:${routeId}`,
     unplacedRoutes: 'unplaced-routes',
     locations: 'locations',
     gymWalls: (scope: string) => `${scope}-walls`,
@@ -163,6 +164,7 @@ const RESYNCED_KEYS: string[] = [
 export function isLiveKey(key: string, keyLocations: KeyLocations = {}) {
     return (
         RESYNCED_KEYS.includes(key) ||
+        key.startsWith(cacheKeys.betas('')) ||
         isFollowKey(key) ||
         !!defectsScope(key) ||
         !!routeRowsScope(key, keyLocations) ||

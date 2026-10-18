@@ -259,6 +259,7 @@ describe('cache keys', () => {
             cacheKeys.logbook,
             cacheKeys.locations,
             cacheKeys.blocks,
+            cacheKeys.betas('r1'),
         ])
             expect(isLiveKey(key)).toBe(true)
         expect(isLiveKey('cap-status')).toBe(false)

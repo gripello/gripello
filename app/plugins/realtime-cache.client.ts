@@ -264,8 +264,18 @@ export default defineNuxtPlugin((nuxtApp) => {
         refreshNuxtData(cacheKeys.communityFeed),
     )
 
-    function onBetaVideo({ record }: GymChange<BetaVideoRecord>) {
-        if (inLiveGym(record) && loadedKeys().includes(cacheKeys.communityFeed))
+    function onBetaVideo({ action, record }: GymChange<BetaVideoRecord>) {
+        if (!inLiveGym(record)) return
+        const key = cacheKeys.betas(record.route)
+        const videos = read<BetaVideoRecord[] | undefined>(key)
+        if (videos) {
+            const next =
+                action === 'delete'
+                    ? removeById(videos, record.id)
+                    : upsertById(videos, record, 'start')
+            if (next !== videos) write(key, next)
+        }
+        if (loadedKeys().includes(cacheKeys.communityFeed))
             refreshCommunityFeedSoon()
     }
 

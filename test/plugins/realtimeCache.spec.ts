@@ -83,4 +83,26 @@ describe('realtime cache plugin', () => {
             [['climber-ticks:c1']],
         ])
     })
+
+    it('adds and removes beta videos of an open route', async () => {
+        const app = await startPlugin({
+            'beta-videos:r1': [{ id: 'b1', gym: 'g1', route: 'r1' }],
+        })
+        const beta = { id: 'b2', gym: 'g1', route: 'r1' }
+        emit('gym_changes:g1', {
+            collection: 'beta_videos',
+            action: 'create',
+            record: beta,
+        })
+        expect(app.payload.data['beta-videos:r1']).toEqual([
+            beta,
+            { id: 'b1', gym: 'g1', route: 'r1' },
+        ])
+        emit('gym_changes:g1', {
+            collection: 'beta_videos',
+            action: 'delete',
+            record: { id: 'b1', gym: 'g1', route: 'r1' },
+        })
+        expect(app.payload.data['beta-videos:r1']).toEqual([beta])
+    })
 })

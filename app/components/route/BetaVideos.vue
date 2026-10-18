@@ -174,6 +174,7 @@
 <script setup lang="ts">
 import { createBeta, deleteBeta, listBetas } from '~/api/ratings'
 import type { BetaVideoRecord } from '~/types/models'
+import { cacheKeys } from '~/utils/realtimeCache'
 import {
     BETA_VIDEO_MAX_BYTES,
     BETA_VIDEO_TYPES,
@@ -202,7 +203,7 @@ const visibleVideos = computed(() =>
 const { success: notifySuccess } = useNotification()
 
 const { data: videos, refresh } = useAsyncData(
-    `beta-videos:${props.routeId}`,
+    cacheKeys.betas(props.routeId),
     () => listBetas(props.routeId),
     { default: () => [] },
 )
