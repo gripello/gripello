@@ -77,8 +77,18 @@ type TickChanged struct {
 func publishChange(ctx context.Context, tx pgx.Tx, c Competition, kind, user, entry string) error {
 	change := Change{Competition: c.ID, Gym: c.Gym, Kind: kind, User: user, Entry: entry, At: time.Now().UnixMilli()}
 	topic := "competition_changes:" + c.ID
+	audience := events.Audience{Public: true, Gym: c.Gym}
 	if c.Status == "draft" {
-		return publish(ctx, tx, topic, KindChanged, change, events.Audience{GymPerm: c.Gym + ":" + permManage, Gym: c.Gym})
+		audience = events.Audience{GymPerm: c.Gym + ":" + permManage, Gym: c.Gym}
+	}
+	// lists of a gym's competitions follow the lifecycle without subscribing to every competition
+	if kind == "competition" {
+		if err := publish(ctx, tx, "competitions:"+c.Gym, KindChanged, change, audience); err != nil {
+			return err
+		}
+	}
+	if c.Status == "draft" {
+		return publish(ctx, tx, topic, KindChanged, change, audience)
 	}
 	if user == "" {
 		return publish(ctx, tx, topic, KindChanged, change, events.Audience{Public: true, Gym: c.Gym})

@@ -75,6 +75,8 @@ const {
     listCompetitions(gymId.value, { sort: '-starts_at' }),
 )
 
+useGymCompetitionsLive(refresh)
+
 useHead({ title: t('page.title.competitions') })
 
 function openCreated(competition: CompetitionRecord) {

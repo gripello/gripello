@@ -74,6 +74,8 @@ const {
     listCompetitions(gymId.value, { status: ['open', 'closed', 'published'] }),
 )
 
+useGymCompetitionsLive(refresh)
+
 const isPast = (competition: CompetitionRecord) =>
     ['ended', 'published'].includes(competitionPhase(competition, new Date()))
 

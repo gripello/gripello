@@ -379,8 +379,7 @@ const backTo = computed(() =>
         ? JUDGE_PICKER
         : gymPath(`/manage/competitions/${competitionId.value}`),
 )
-const { data: judgeable, refresh: refreshJudgeable } =
-    useJudgeableCompetitions()
+const { data: judgeable } = useJudgeableCompetitions()
 const competitionItems = computed(() =>
     (judgeable.value ?? []).map((item) => ({
         value: item.id,
@@ -438,10 +437,7 @@ const { data: scores, refresh: refreshScores } = useAsyncData(
 )
 
 const scoringOpen = computed(() => judgesMayScore(competition.value?.status))
-const refreshCompetitionSoon = coalesce(
-    () => Promise.all([refreshCompetition(), refreshJudgeable()]),
-    400,
-)
+const refreshCompetitionSoon = coalesce(() => refreshCompetition(), 400)
 const refreshCategoriesSoon = coalesce(() => refreshCategories(), 400)
 const refreshRoutesSoon = coalesce(() => refreshRoutes(), 400)
 const refreshEntriesSoon = coalesce(() => refreshEntries(), 400)

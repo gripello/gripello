@@ -253,7 +253,7 @@ func (h *Hub) refreshPlatformAdmin(e events.Event) {
 	}
 }
 
-var gymTopics = []string{"gym_changes:", "open_route_defects:", "tasks:", "gym:", "moderation:"}
+var gymTopics = []string{"gym_changes:", "open_route_defects:", "tasks:", "gym:", "moderation:", "competitions:"}
 
 func gymOf(e events.Event) string {
 	if e.Audience.Gym != "" {

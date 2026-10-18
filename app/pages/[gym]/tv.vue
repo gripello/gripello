@@ -94,7 +94,7 @@ import { listRoutes, listWalls } from '~/api/routes'
 import { competitionShareUrl } from '~/utils/competitions'
 import { keepWhenOffline } from '~/utils/errors'
 import { qrDataUrl } from '~/utils/qrDataUrl'
-import { cacheKeys, coalesce } from '~/utils/realtimeCache'
+import { cacheKeys } from '~/utils/realtimeCache'
 import {
     TV_BOARD_ROWS,
     buildPlaylist,
@@ -261,27 +261,17 @@ const eyebrow = computed(() => {
 
 useHead({ title: () => `${t('tv.title')} · ${gym.value?.name ?? ''}` })
 
-const refreshCompetitionsSoon = coalesce(async () => {
+useGymCompetitionsLive(async () => {
     competitions.value = await listCompetitions(gymId.value, {
         status: ['open'],
     })
-}, 300)
-useCompetitionLive(
-    computed(() => takeover.value?.id ?? ''),
-    ({ kind }) => {
-        if (kind === 'competition' || kind === 'resync')
-            refreshCompetitionsSoon()
-    },
-)
+})
 
 async function refreshScreen() {
-    const [nextBoards, nextCompetitions] = await Promise.allSettled([
-        loadTvBoards(gymId.value, TV_BOARD_ROWS),
-        listCompetitions(gymId.value, { status: ['open'] }),
-    ])
-    if (nextBoards.status === 'fulfilled') boardData.value = nextBoards.value
-    if (nextCompetitions.status === 'fulfilled')
-        competitions.value = nextCompetitions.value
+    const boards = await loadTvBoards(gymId.value, TV_BOARD_ROWS).catch(
+        () => null,
+    )
+    if (boards) boardData.value = boards
 }
 
 let rotateTimer: ReturnType<typeof setTimeout> | undefined
