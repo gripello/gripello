@@ -1,4 +1,5 @@
 import { listRoutes } from '~/api/routes'
+import { routeMatchesQuery } from '~/utils/routeSearch'
 import {
     isRealtimeConnected,
     onConnect as onRealtimeConnect,
@@ -45,6 +46,7 @@ import {
     type GymChange,
     type GymChangeCollection,
     type KeyLocations,
+    type KeyQueries,
     type OpenDefectsChange,
     type RatingChange,
     type RatingLedger,
@@ -65,6 +67,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         cacheKeys.keyLocations,
         () => ({}),
     )
+    const keyQueries = useState<KeyQueries>(cacheKeys.keyQueries, () => ({}))
 
     function loadedKeys() {
         return Object.keys(nuxtApp.payload.data).filter(
@@ -90,7 +93,11 @@ export default defineNuxtPlugin((nuxtApp) => {
         ) => RouteScoreRecord[],
     ) {
         for (const key of loadedKeys()) {
-            const inScope = routeRowsScope(key, keyLocations.value)
+            const inScope = routeRowsScope(
+                key,
+                keyLocations.value,
+                keyQueries.value,
+            )
             if (!inScope) continue
             const data = read<RowsData<RouteScoreRecord>>(key)
             const next = mapRows(data, (rows) => patch(rows, inScope))
@@ -151,8 +158,10 @@ export default defineNuxtPlugin((nuxtApp) => {
         refreshNuxtData(cacheKeys.unplacedRoutes),
     )
 
-    const refreshRoutesListSoon = coalesce(() =>
-        refreshNuxtData(cacheKeys.routesList),
+    // every viewer of the list refetches it, so spread them wider than other refreshes
+    const refreshRoutesListSoon = coalesce(
+        () => refreshNuxtData(cacheKeys.routesList),
+        5000,
     )
 
     // ponytail: one small timer entry per route opened this session
@@ -234,9 +243,39 @@ export default defineNuxtPlugin((nuxtApp) => {
         rescoreSoon()
     }
 
+    function routesListNeedsRow(
+        record: RouteRecord,
+        action: GymChange['action'],
+    ) {
+        const query = keyQueries.value[cacheKeys.routesList]
+        if (action === 'delete' || !query) return action === 'create'
+        return (
+            routeMatchesQuery(record, query) &&
+            !rowsOf(
+                read<RowsData<RouteScoreRecord>>(cacheKeys.routesList),
+            ).some((row) => row.id === record.id)
+        )
+    }
+
+    function patchMapMatches(record: RouteRecord, removed: boolean) {
+        const query = keyQueries.value[cacheKeys.mapMatching]
+        const matches = read<{ id: string }[] | null>(cacheKeys.mapMatching)
+        if (!query || !matches) return
+        const next = patchList(
+            matches,
+            { id: record.id },
+            !removed && routeMatchesQuery(record, query),
+        )
+        if (next !== matches) write(cacheKeys.mapMatching, next)
+    }
+
     function onRoute({ action, record }: GymChange<RouteRecord>) {
         if (!inLiveGym(record)) return
         const removed = action === 'delete' || !!record.archived
+        const keys = loadedKeys()
+        const listNeedsRow =
+            keys.includes(cacheKeys.routesList) &&
+            routesListNeedsRow(record, action)
         patchRouteRows((rows, inScope) =>
             relinkRow(
                 patchList<RouteScoreRecord>(
@@ -249,9 +288,9 @@ export default defineNuxtPlugin((nuxtApp) => {
                 cachedRecord,
             ),
         )
-        const keys = loadedKeys()
-        if (action === 'create' && keys.includes(cacheKeys.routesList))
-            refreshRoutesListSoon()
+        if (listNeedsRow) refreshRoutesListSoon()
+        if (keys.includes(cacheKeys.mapMatching))
+            patchMapMatches(record, action === 'delete')
         if (keys.includes(cacheKeys.route(record.id))) {
             if (action === 'delete') write(cacheKeys.route(record.id), null)
             else refreshRouteDetailSoon(record.id)

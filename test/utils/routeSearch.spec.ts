@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { routeFilterQuery, routeSearchQuery } from '~/utils/routeSearch'
+import {
+    routeFilterQuery,
+    routeMatchesQuery,
+    routeSearchQuery,
+} from '~/utils/routeSearch'
+import type { RouteQuery } from '~/api/routes'
+import type { RouteRecord } from '~/types/models'
+import fixture from '../../backend/testdata/routeFilter.json'
 
 describe('routeSearchQuery', () => {
     it('returns an empty query for blank input', () => {
@@ -83,4 +90,43 @@ describe('routeFilterQuery', () => {
             routeFilterQuery({ ...empty, difficulty: 'font:6a', search: '7a' }),
         ).toEqual({ grade_system: 'font', grade: [] })
     })
+})
+
+describe('routeMatchesQuery', () => {
+    const places: Record<string, string> = {
+        hall: 'loc-hall',
+        annex: 'loc-annex',
+        north: 'wall-north',
+    }
+    const routes = fixture.routes.map((route, index) => ({
+        ...route,
+        id: `r${index}`,
+        location: places[route.location]!,
+        wall: route.wall ? places[route.wall]! : null,
+    })) as unknown as RouteRecord[]
+
+    it.each(fixture.cases)(
+        'matches the server filter for %j',
+        ({ query, names }) => {
+            const raw = query as Record<string, unknown>
+            const archived = raw.archived
+            const routeQuery = {
+                ...raw,
+                archived: archived === 'all' ? 'all' : archived === 'true',
+                location: raw.location
+                    ? places[raw.location as string]
+                    : undefined,
+                wall:
+                    raw.wall === 'none' || raw.wall === 'any'
+                        ? raw.wall
+                        : raw.wall && places[raw.wall as string],
+            } as RouteQuery
+            expect(
+                routes
+                    .filter((route) => routeMatchesQuery(route, routeQuery))
+                    .map((route) => route.name)
+                    .sort(),
+            ).toEqual(names)
+        },
+    )
 })

@@ -1,3 +1,5 @@
+import type { RouteQuery } from '~/api/routes'
+import { routeMatchesQuery } from '~/utils/routeSearch'
 import type {
     OpenRouteDefectRecord,
     RatingRecord,
@@ -12,6 +14,8 @@ export const cacheKeys = {
     mapRoutes: 'map-routes',
     mapWalls: 'map-walls',
     keyLocations: 'live-key-locations',
+    keyQueries: 'live-key-queries',
+    mapMatching: 'map-matching',
     routesList: 'routes-list',
     route: (routeId: string) => `route:${routeId}`,
     ratings: (routeId: string) => `ratings:${routeId}`,
@@ -77,6 +81,7 @@ export interface OpenDefectsChange {
 }
 
 export type KeyLocations = Record<string, string>
+export type KeyQueries = Record<string, RouteQuery | null>
 
 function inLocation<T extends { location?: string | null }>(
     locationId: string | undefined,
@@ -98,12 +103,19 @@ function keySuffix(key: string, prefix: string) {
     return key.startsWith(prefix) ? key.slice(prefix.length) : undefined
 }
 
+// The paged list never inserts (a new row may belong on another page); rows that stop matching its query leave.
 export function routeRowsScope(
     key: string,
     keyLocations: KeyLocations = {},
+    keyQueries: KeyQueries = {},
 ): InScope<RouteRecord> | undefined {
     if (key === cacheKeys.overviewRoutes) return () => true
-    if (key === cacheKeys.routesList) return () => null
+    if (key === cacheKeys.routesList) {
+        const query = keyQueries[key]
+        return query
+            ? (route) => (routeMatchesQuery(route, query) ? null : false)
+            : () => null
+    }
     if (key.endsWith('-routes') && key in keyLocations)
         return inLocation(keyLocations[key])
 }
@@ -159,6 +171,7 @@ const RESYNCED_KEYS: string[] = [
     cacheKeys.logbook,
     cacheKeys.locations,
     cacheKeys.blocks,
+    cacheKeys.mapMatching,
 ]
 
 export function isLiveKey(key: string, keyLocations: KeyLocations = {}) {

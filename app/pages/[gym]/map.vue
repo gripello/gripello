@@ -389,14 +389,19 @@ const gradeFilter = computed({
 const hasServerFilter = computed(() => Object.keys(routeQuery.value).length > 0)
 const routeQueryKey = computed(() => JSON.stringify(routeQuery.value))
 
+const matchQuery = computed(() =>
+    locationId.value && hasServerFilter.value
+        ? { ...routeQuery.value, location: locationId.value }
+        : null,
+)
+useLiveQuery(cacheKeys.mapMatching, matchQuery)
 const { data: serverMatches } = useAsyncData(
-    'map-matching',
+    cacheKeys.mapMatching,
     () =>
-        locationId.value && hasServerFilter.value
-            ? listRoutes<{ id: string }>(gymId.value, {
-                  ...routeQuery.value,
-                  location: locationId.value,
-              }).then((list) => list.items)
+        matchQuery.value
+            ? listRoutes<{ id: string }>(gymId.value, matchQuery.value).then(
+                  (list) => list.items,
+              )
             : Promise.resolve(null),
     {
         watch: [routeQueryKey, locationId],

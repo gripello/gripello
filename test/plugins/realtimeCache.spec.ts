@@ -14,7 +14,11 @@ vi.mock('~/api/routes', () => ({ listRoutes: vi.fn() }))
 
 const refreshNuxtData = vi.fn(async (_keys?: string | string[]) => {})
 
-async function startPlugin(data: Record<string, unknown>) {
+async function startPlugin(
+    data: Record<string, unknown>,
+    queries: Record<string, unknown> = {},
+) {
+    useState('live-key-queries', () => queries)
     vi.stubGlobal('defineNuxtPlugin', (setup: unknown) => setup)
     vi.stubGlobal('useGym', () => ({ id: ref('g1') }))
     vi.stubGlobal('useAuthStore', () => ({ record: { id: 'me' } }))
@@ -104,5 +108,51 @@ describe('realtime cache plugin', () => {
             record: { id: 'b1', gym: 'g1', route: 'r1' },
         })
         expect(app.payload.data['beta-videos:r1']).toEqual([beta])
+    })
+
+    it('keeps the routes list in line with its filter', async () => {
+        const kept = { id: 'r1', gym: 'g1', name: 'A', type: 'Boulder' }
+        const app = await startPlugin(
+            { 'routes-list': { items: [kept], totalItems: 1 } },
+            { 'routes-list': { type: 'Boulder' } },
+        )
+        emit('gym_changes:g1', {
+            collection: 'routes',
+            action: 'update',
+            record: { ...kept, type: 'Route' },
+        })
+        expect(app.payload.data['routes-list']).toEqual({
+            items: [],
+            totalItems: 0,
+        })
+        await vi.runAllTimersAsync()
+        expect(refreshNuxtData).not.toHaveBeenCalled()
+
+        emit('gym_changes:g1', {
+            collection: 'routes',
+            action: 'update',
+            record: { id: 'r2', gym: 'g1', name: 'B', type: 'Boulder' },
+        })
+        await vi.runAllTimersAsync()
+        expect(refreshNuxtData).toHaveBeenCalledWith('routes-list')
+    })
+
+    it('adds and drops map highlights as routes start or stop matching', async () => {
+        const app = await startPlugin(
+            { 'map-matching': [{ id: 'r1' }] },
+            { 'map-matching': { grade: ['6a'], location: 'l1' } },
+        )
+        const route = { gym: 'g1', name: 'x', location: 'l1' }
+        emit('gym_changes:g1', {
+            collection: 'routes',
+            action: 'update',
+            record: { ...route, id: 'r2', grade: '6a' },
+        })
+        emit('gym_changes:g1', {
+            collection: 'routes',
+            action: 'update',
+            record: { ...route, id: 'r1', grade: '7a' },
+        })
+        expect(app.payload.data['map-matching']).toEqual([{ id: 'r2' }])
     })
 })

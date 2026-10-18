@@ -485,6 +485,8 @@ function fetchLoadedRoutes(): Promise<RoutePage> {
     )
 }
 
+useLiveQuery(cacheKeys.routesList, baseQuery)
+
 const { data: routePage } = await useAsyncData(
     cacheKeys.routesList,
     (nuxtApp) =>
