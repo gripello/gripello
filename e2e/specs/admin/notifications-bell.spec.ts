@@ -7,15 +7,12 @@ import { signInAs } from '../../support/auth'
 import { waitForNotification } from '../../support/notifications'
 import { createRole, listNotifications, type Api } from '../../support/api'
 
-async function decidedBetween(api: Api, from: number, to: number) {
-    return (await listNotifications(api)).filter((item) => {
-        const created = Date.parse(item.created ?? '')
-        return (
+async function decidedSince(api: Api, from: number) {
+    return (await listNotifications(api)).filter(
+        (item) =>
             item.type.includes('report_decided') &&
-            created >= from &&
-            created <= to
-        )
-    })
+            Date.parse(item.created ?? '') >= from,
+    ).length
 }
 
 test('a filed report raises a notification linking to the queue', async ({
@@ -153,13 +150,15 @@ test('deciding a report notifies the other moderators exactly once', async ({
     const from = Date.now() - 1_000
     await decide(page, 'approve')
     expect((await decided).ok()).toBe(true)
-    const to = Date.now() + 1_000
 
-    expect(await decidedBetween(await apiAs(decider), from, to)).toHaveLength(0)
+    // Parallel tests decide reports in the same gym and notify both moderators in one insert, so only the decider's own decision makes their counts differ.
+    const otherApi = await apiAs(other)
+    const deciderApi = await apiAs(decider)
     await expect
         .poll(
             async () =>
-                (await decidedBetween(await apiAs(other), from, to)).length,
+                (await decidedSince(otherApi, from)) -
+                (await decidedSince(deciderApi, from)),
         )
         .toBe(1)
 })
