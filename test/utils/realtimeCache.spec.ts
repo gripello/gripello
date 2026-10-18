@@ -16,10 +16,12 @@ import {
     removeById,
     routeRowsScope,
     shiftScore,
+    staffRouteChange,
     trackRating,
     unlessQueryChanged,
     upsertById,
     wallsScope,
+    type GymChange,
     type RatingLedger,
     patchExpanded,
     relinkRow,
@@ -522,5 +524,47 @@ describe('coalesceIds', () => {
         soon()
         await vi.advanceTimersByTimeAsync(250)
         expect(task).toHaveBeenLastCalledWith(null)
+    })
+})
+
+describe('staffRouteChange', () => {
+    const rows = [{ id: 'r1', name: 'A', archived: false }]
+    const change = (collection: string, action: string, record: object) =>
+        ({ collection, action, record }) as GymChange
+
+    it('patches shown routes and rescores them on ratings', () => {
+        const edited = staffRouteChange(
+            rows,
+            change('routes', 'update', { id: 'r1', name: 'B' }),
+        )
+        expect(edited).toEqual({
+            rows: [{ id: 'r1', name: 'B', archived: false }],
+            reload: false,
+            rescore: null,
+        })
+        expect(
+            staffRouteChange(
+                rows,
+                change('ratings', 'create', { route_id: 'r1' }),
+            ).rescore,
+        ).toBe('r1')
+        expect(
+            staffRouteChange(
+                rows,
+                change('ratings', 'create', { route_id: 'r9' }),
+            ).rescore,
+        ).toBe(null)
+    })
+
+    it('reloads for new, removed, archived or unseen routes', () => {
+        for (const [action, record] of [
+            ['create', { id: 'r2' }],
+            ['delete', { id: 'r1' }],
+            ['update', { id: 'r1', archived: true }],
+            ['update', { id: 'r9' }],
+        ] as const)
+            expect(
+                staffRouteChange(rows, change('routes', action, record)).reload,
+            ).toBe(true)
     })
 })

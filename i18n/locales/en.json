@@ -1326,7 +1326,8 @@
         "assignToMe": "Assign to me",
         "unassigned": "Unassigned",
         "forThisRoute": "For this route",
-        "newSubtitle": "Track work for the setting team"
+        "newSubtitle": "Track work for the setting team",
+        "deletedElsewhere": "This task was deleted."
     },
     "audit": {
         "title": "Activity log",

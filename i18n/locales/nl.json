@@ -1326,7 +1326,8 @@
         "assignToMe": "Aan mij toewijzen",
         "unassigned": "Niet toegewezen",
         "forThisRoute": "Voor deze route",
-        "newSubtitle": "Werk voor het routebouwteam bijhouden"
+        "newSubtitle": "Werk voor het routebouwteam bijhouden",
+        "deletedElsewhere": "Deze taak is verwijderd."
     },
     "audit": {
         "title": "Activiteitenlogboek",

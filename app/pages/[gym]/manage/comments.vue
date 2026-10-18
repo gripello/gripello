@@ -157,7 +157,11 @@ import {
 import { isAbortError } from '~/utils/errors'
 import { openCase } from '~/api/moderation'
 import { realtimeCommentPlacement } from '~/utils/comments'
-import { gymChangesTopic, type GymChange } from '~/utils/realtimeCache'
+import {
+    coalesceIds,
+    gymChangesTopic,
+    type GymChange,
+} from '~/utils/realtimeCache'
 import { formatNumber } from '#shared/utils/number'
 import { locationName } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
@@ -467,16 +471,6 @@ function removeComments(ids: string[]) {
     totalItems.value = Math.max(0, totalItems.value - removedCount)
 }
 
-async function fetchCommentIfVisible(id: string) {
-    const result = await listGymRatings(gymId.value, {
-        ...buildQuery(),
-        ids: [id],
-        page: 1,
-        limit: 1,
-    })
-    return result.items[0] ?? null
-}
-
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 
 const [, { data: initialStats }] = await Promise.all([
@@ -488,50 +482,50 @@ const [, { data: initialStats }] = await Promise.all([
 ])
 if (initialStats.value) stats.value = initialStats.value
 
+// one request per burst: the changed ids that still match the filters come back, the others leave the list
+const refreshCommentsSoon = coalesceIds(async (ids) => {
+    if (!ids) return fetchList()
+    const { items } = await listGymRatings(gymId.value, {
+        ...buildQuery(),
+        ids: [...ids],
+        page: 1,
+        limit: ids.size,
+    })
+    const found = new Map(items.map((rec) => [rec.id, rec]))
+    removeComments(
+        [...ids].filter(
+            (id) => !found.has(id) && comments.value.some((c) => c.id === id),
+        ),
+    )
+    for (const rec of found.values()) {
+        const index = comments.value.findIndex((c) => c.id === rec.id)
+        if (index !== -1) {
+            comments.value[index] = mapComment(rec)
+            continue
+        }
+        const placement = realtimeCommentPlacement(
+            sortOrder.value,
+            false,
+            hasMore.value,
+        )
+        if (placement === 'refetch') return fetchList()
+        comments.value =
+            placement === 'prepend'
+                ? [mapComment(rec), ...comments.value]
+                : [...comments.value, mapComment(rec)]
+        totalItems.value++
+    }
+}, 500)
+
 useRealtime(
     () => gymChangesTopic(gymId.value),
-    async (e: GymChange<RatingRecord>) => {
+    (e: GymChange<RatingRecord>) => {
         if (e.collection !== 'ratings') return
-        if (e.action === 'delete') {
-            removeComments([e.record.id])
-            scheduleStatsRefresh()
-        } else if (e.action === 'create') {
-            scheduleStatsRefresh()
-            try {
-                const rec = await fetchCommentIfVisible(e.record.id)
-                if (!rec) return
-                const placement = realtimeCommentPlacement(
-                    sortOrder.value,
-                    comments.value.some((c) => c.id === rec.id),
-                    hasMore.value,
-                )
-                if (placement === 'prepend') {
-                    comments.value = [mapComment(rec), ...comments.value]
-                    totalItems.value++
-                } else if (placement === 'append') {
-                    comments.value = [...comments.value, mapComment(rec)]
-                    totalItems.value++
-                } else {
-                    await fetchList()
-                }
-            } catch {}
-        } else if (e.action === 'update') {
-            if (!comments.value.some((c) => c.id === e.record.id)) return
-            try {
-                const [rec] = (
-                    await listGymRatings(gymId.value, {
-                        ids: [e.record.id],
-                        page: 1,
-                        limit: 1,
-                    })
-                ).items
-                const idx = comments.value.findIndex((c) => c.id === rec?.id)
-                if (rec && idx !== -1) comments.value[idx] = mapComment(rec)
-            } catch {}
-            scheduleStatsRefresh()
-        }
+        scheduleStatsRefresh()
+        if (e.action === 'delete') removeComments([e.record.id])
+        else refreshCommentsSoon(e.record.id)
     },
-    { resync: () => void fetchList() },
+    { resync: () => refreshCommentsSoon() },
 )
 
 onBeforeUnmount(() => {

@@ -1326,7 +1326,8 @@
         "assignToMe": "Mir zuweisen",
         "unassigned": "Nicht zugewiesen",
         "forThisRoute": "Für diese Route",
-        "newSubtitle": "Arbeit für das Schrauberteam festhalten"
+        "newSubtitle": "Arbeit für das Schrauberteam festhalten",
+        "deletedElsewhere": "Diese Aufgabe wurde gelöscht."
     },
     "audit": {
         "title": "Aktivitätsprotokoll",

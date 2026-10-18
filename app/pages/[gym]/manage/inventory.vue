@@ -507,6 +507,7 @@ import type { RouteRecord } from '~/types/models'
 import {
     coalesce,
     gymChangesTopic,
+    staffRouteChange,
     type GymChange,
 } from '~/utils/realtimeCache'
 
@@ -1004,7 +1005,10 @@ const loadRoutesSoon = coalesce(loadRoutes)
 useRealtime(
     () => gymChangesTopic(gymId.value),
     (change: GymChange) => {
-        if (change.collection === 'routes') loadRoutesSoon()
+        if (change.collection === 'ratings') return
+        const next = staffRouteChange(allRoutes.value, change)
+        allRoutes.value = next.rows
+        if (next.reload) loadRoutesSoon()
     },
     { resync: loadRoutesSoon },
 )

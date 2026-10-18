@@ -450,3 +450,54 @@ export function relinkRow<
     next[index] = relinked
     return next
 }
+
+export interface StaffRouteUpdate<T> {
+    rows: T[]
+    reload: boolean
+    rescore: string | null
+}
+
+// Staff tables patch what they show; a rating only rescores its route instead of reloading the page.
+export function staffRouteChange<
+    T extends { id: string; archived?: boolean } & Expandable,
+>(rows: T[], change: GymChange): StaffRouteUpdate<T> {
+    const record = change.record as {
+        id: string
+        route_id?: string
+        archived?: boolean
+    }
+    const unchanged = { rows, reload: false, rescore: null }
+    switch (change.collection) {
+        case 'routes': {
+            const row = rows.find((item) => item.id === record.id)
+            if (change.action === 'delete')
+                return {
+                    ...unchanged,
+                    rows: removeById(rows, record.id),
+                    reload: true,
+                }
+            if (
+                change.action === 'create' ||
+                !row ||
+                !!row.archived !== !!record.archived
+            )
+                return { ...unchanged, reload: true }
+            return { ...unchanged, rows: upsertById(rows, record as T) }
+        }
+        case 'walls':
+            return { ...unchanged, rows: patchExpanded(rows, 'wall', record) }
+        case 'locations':
+            return {
+                ...unchanged,
+                rows: patchExpanded(rows, 'location', record),
+            }
+        case 'ratings':
+            return {
+                ...unchanged,
+                rescore: rows.some((item) => item.id === record.route_id)
+                    ? record.route_id!
+                    : null,
+            }
+    }
+    return unchanged
+}

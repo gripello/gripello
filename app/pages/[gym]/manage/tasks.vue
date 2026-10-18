@@ -87,6 +87,7 @@
 </template>
 
 <script setup lang="ts">
+import type { GymEvent, RecordChange } from '~/composables/useRealtime'
 import { TASK_KINDS } from '~/utils/tasks'
 import { listTaskAssignees, type TaskQuery } from '~/api/tasks'
 import { useAuthState } from '~/api/auth'
@@ -122,9 +123,15 @@ const activeFilterCount = computed(
         ).length,
 )
 
-const { data: assignees } = await useAsyncData('task-assignees', () =>
-    listTaskAssignees(gymId.value),
+const { data: assignees, refresh: refreshAssignees } = await useAsyncData(
+    'task-assignees',
+    () => listTaskAssignees(gymId.value),
 )
+// assignees are whoever holds manage_tasks, so member and role changes reshape the list
+useLiveRefresh(() => `gym:${gymId.value}`, refreshAssignees, {
+    when: (event: GymEvent) =>
+        event.kind === 'membership.changed' || event.kind === 'role.changed',
+})
 
 const assigneeNames = computed(
     () =>
@@ -200,6 +207,18 @@ watch(search, (term) => {
 })
 
 useLiveRefresh(() => `tasks:${gymId.value}`, reload, { delayMs: 500 })
+
+const { warning: notifyWarning } = useNotification()
+// the dialog can't delete, so a delete of the open task always came from someone else
+useRealtime(
+    () => `tasks:${gymId.value}`,
+    ({ action, record }: RecordChange<TaskRecord>) => {
+        if (action !== 'delete' || !formOpen.value) return
+        if (record.id !== editedTask.value?.id) return
+        formOpen.value = false
+        notifyWarning(t('tasks.deletedElsewhere'))
+    },
+)
 
 onBeforeUnmount(() => clearTimeout(searchDebounce))
 
