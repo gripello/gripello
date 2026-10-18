@@ -11,6 +11,14 @@ interface ServiceAccount {
 const API = 'https://androidpublisher.googleapis.com'
 const SCOPE = 'https://www.googleapis.com/auth/androidpublisher'
 
+export const RELEASE_NOTES = [
+    { language: 'en-US', text: 'Bug fixes and improvements.' },
+    { language: 'de-DE', text: 'Fehlerbehebungen und Verbesserungen.' },
+    { language: 'es-ES', text: 'Corrección de errores y mejoras.' },
+    { language: 'fr-FR', text: 'Corrections de bugs et améliorations.' },
+    { language: 'nl-NL', text: 'Bugfixes en verbeteringen.' },
+]
+
 const base64url = (value: string | Buffer) =>
     Buffer.from(value).toString('base64url')
 
@@ -91,6 +99,7 @@ export async function publishBundle(options: {
                         {
                             versionCodes: [String(versionCode)],
                             status: options.status,
+                            releaseNotes: RELEASE_NOTES,
                         },
                     ],
                 }),

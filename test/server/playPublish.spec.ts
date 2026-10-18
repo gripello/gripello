@@ -1,8 +1,10 @@
 import { createVerify, generateKeyPairSync } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { SUPPORTED_LOCALES } from '~/utils/locales'
 import {
     publishBundle,
+    RELEASE_NOTES,
     serviceAccountAssertion,
 } from '../../.docker/play-publish.mts'
 
@@ -80,7 +82,13 @@ describe('publishBundle', () => {
         })
         expect(JSON.parse(calls[3]!.init.body as string)).toEqual({
             track: 'alpha',
-            releases: [{ versionCodes: ['20301'], status: 'draft' }],
+            releases: [
+                {
+                    versionCodes: ['20301'],
+                    status: 'draft',
+                    releaseNotes: RELEASE_NOTES,
+                },
+            ],
         })
     })
 
@@ -135,6 +143,16 @@ describe('publishBundle', () => {
         await expect(publish()).resolves.toBeNull()
         expect(calls.at(-1)).toBe(discardEdit)
         expect(calls.some((call) => call.endsWith(':commit'))).toBe(false)
+    })
+})
+
+describe('RELEASE_NOTES', () => {
+    it('covers every app language within the Play limit', () => {
+        expect(
+            RELEASE_NOTES.map((note) => note.language.slice(0, 2)).sort(),
+        ).toEqual(SUPPORTED_LOCALES.map((locale) => locale.code).sort())
+        for (const note of RELEASE_NOTES)
+            expect(note.text.length).toBeLessThanOrEqual(500)
     })
 })
 
