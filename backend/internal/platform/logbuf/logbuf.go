@@ -12,6 +12,7 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -288,7 +289,8 @@ func cleanValue(value any) any {
 
 // Recent returns the newest records of every replica at or above min.
 func Recent(ctx context.Context, pool *pgxpool.Pool, min slog.Level, limit int) ([]Entry, error) {
-	rows, err := pool.Query(ctx, `SELECT time, replica, level, message, attrs FROM server_logs WHERE severity >= $1 ORDER BY time DESC, id DESC LIMIT $2`, int(min), limit)
+	// a literal severity lets the planner pick the partial warn index, a parameter never does
+	rows, err := pool.Query(ctx, `SELECT time, replica, level, message, attrs FROM server_logs WHERE severity >= `+strconv.Itoa(int(min))+` ORDER BY time DESC, id DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}

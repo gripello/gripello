@@ -352,7 +352,7 @@ func (b *Bus) QueueMax() int {
 // Prune already dropped events after id, so the caller can't rebuild the gap from it.
 func (b *Bus) Since(ctx context.Context, id int64, topics []string, limit int) (missed []Event, complete bool, err error) {
 	missed, err = b.query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events
-		WHERE id > $1 AND topic = ANY($2) ORDER BY id LIMIT $3`, id, topics, limit)
+		WHERE id > $1 AND topic COLLATE "C" = ANY($2) ORDER BY id LIMIT $3`, id, topics, limit)
 	if err != nil || len(missed) == limit {
 		return missed, false, err
 	}
