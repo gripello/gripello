@@ -84,4 +84,80 @@ describe('useFileToken', () => {
         await flushPromises()
         expect(api).not.toHaveBeenCalled()
     })
+
+    it('retries a failed token request so protected files still show up', async () => {
+        vi.useFakeTimers()
+        let calls = 0
+        routeApi(async () => {
+            if (++calls === 1) throw new Error('unavailable')
+            return { token: 'late-token' }
+        })
+        let fileToken = {} as ReturnType<typeof useFileToken>
+        mount(
+            defineComponent({
+                setup() {
+                    fileToken = useFileToken(() => ({
+                        table: 'tasks',
+                        id: 't1',
+                    }))
+                    return () => h('div')
+                },
+            }),
+        )
+        await flushPromises()
+        expect(fileToken.token.value).toBe('')
+        await vi.advanceTimersByTimeAsync(2_000)
+        expect(fileToken.token.value).toBe('late-token')
+        vi.useRealTimers()
+    })
+
+    it('keeps the working token when renewing it fails', async () => {
+        vi.useFakeTimers()
+        let calls = 0
+        routeApi(async () => {
+            if (++calls === 2) throw new Error('unavailable')
+            return { token: `token-${calls}` }
+        })
+        let fileToken = {} as ReturnType<typeof useFileToken>
+        mount(
+            defineComponent({
+                setup() {
+                    fileToken = useFileToken(() => ({
+                        table: 'tasks',
+                        id: 't1',
+                    }))
+                    return () => h('div')
+                },
+            }),
+        )
+        await flushPromises()
+        await vi.advanceTimersByTimeAsync(60_000)
+        fileToken.renew()
+        await flushPromises()
+        expect(fileToken.token.value).toBe('token-1')
+        vi.useRealTimers()
+    })
+
+    it('stops retrying once the card is gone', async () => {
+        vi.useFakeTimers()
+        let answer!: (error: Error) => void
+        const api = vi.fn(
+            () => new Promise((_resolve, reject) => (answer = reject)),
+        )
+        routeApi(api)
+        const wrapper = mount(
+            defineComponent({
+                setup() {
+                    useFileToken(() => ({ table: 'tasks', id: 't1' }))
+                    return () => h('div')
+                },
+            }),
+        )
+        await flushPromises()
+        wrapper.unmount()
+        answer(new Error('unavailable'))
+        await vi.advanceTimersByTimeAsync(10_000)
+        expect(api).toHaveBeenCalledTimes(1)
+        vi.useRealTimers()
+    })
 })

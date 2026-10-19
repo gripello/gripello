@@ -178,18 +178,19 @@ func (m *module) updateTick(ctx context.Context, id string, p patch) (Tick, erro
 	if err != nil {
 		return Tick{}, err
 	}
-	original, err := findOwnTick(ctx, m.app.DB, id, principal.UserID)
-	if err != nil {
-		return Tick{}, err
-	}
-	if err := rejectLockedChanges(p, original); err != nil {
-		return Tick{}, err
-	}
-	tick := original
-	if err := p.applyEditable(&tick); err != nil {
-		return Tick{}, err
-	}
+	var tick Tick
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		original, err := lockOwnTick(ctx, tx, id, principal.UserID)
+		if err != nil {
+			return err
+		}
+		if err := rejectLockedChanges(p, original); err != nil {
+			return err
+		}
+		tick = original
+		if err := p.applyEditable(&tick); err != nil {
+			return err
+		}
 		if err := updateTick(ctx, tx, tick); err != nil {
 			return err
 		}
@@ -207,7 +208,7 @@ func (m *module) deleteTick(ctx context.Context, id string) error {
 		return err
 	}
 	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		tick, err := findOwnTick(ctx, tx, id, principal.UserID)
+		tick, err := lockOwnTick(ctx, tx, id, principal.UserID)
 		if err != nil {
 			return err
 		}

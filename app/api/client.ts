@@ -76,13 +76,14 @@ export function useApi() {
         },
         onResponseError(context) {
             const error = new ApiError(context)
-            const sentToken = new Headers(context.options.headers).has(
-                'Authorization',
-            )
+            // a late 401 for a token that was already replaced must not sign out the new session
+            const sentCurrentToken =
+                !!store.token &&
+                new Headers(context.options.headers).get('Authorization') ===
+                    `Bearer ${store.token}`
             if (
                 error.status === 401 &&
-                sentToken &&
-                store.token &&
+                sentCurrentToken &&
                 !error.response.mfaId
             )
                 store.clear()

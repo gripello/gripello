@@ -52,7 +52,8 @@ describe('GradeLabel', () => {
             boulder.find('[data-testid="grade-label-band"]').attributes(),
         ).toMatchObject({
             'data-band': 'red',
-            title: 'gradeConversion.bands.red',
+            role: 'img',
+            'aria-label': 'gradeConversion.bands.red',
         })
         expect(route.find('[data-testid="grade-label-band"]').exists()).toBe(
             false,
@@ -77,9 +78,11 @@ describe('GradeLabel', () => {
             source: { grade: '5.10a', grade_system: 'yds' },
         })
 
-        expect(wrapper.find('.grade-label__system').text()).toBe(
+        const system = wrapper.find('.grade-label__system')
+        expect(system.find('[aria-hidden="true"]').text()).toBe(
             'gradeSystemsShort.yds',
         )
+        expect(system.find('.sr-only').text()).toBe('gradeSystems.yds')
     })
 
     it('uses an explicit showSystem without asking the composable', () => {
@@ -88,9 +91,9 @@ describe('GradeLabel', () => {
             showSystem: true,
         })
 
-        expect(wrapper.find('.grade-label__system').text()).toBe(
-            'gradeSystemsShort.french',
-        )
+        expect(
+            wrapper.find('.grade-label__system [aria-hidden="true"]').text(),
+        ).toBe('gradeSystemsShort.french')
         expect(isUnexpectedSystem).not.toHaveBeenCalled()
     })
 

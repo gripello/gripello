@@ -70,6 +70,14 @@ func (f *fixture) user(name, gym string, permissions ...string) {
 
 func (f *fixture) call(user, method, path, body string, status int) map[string]any {
 	f.t.Helper()
+	code, out, raw := f.do(user, method, path, body)
+	if code != status {
+		f.t.Fatalf("%s %s as %q = %d, want %d: %s", method, path, user, code, status, raw)
+	}
+	return out
+}
+
+func (f *fixture) do(user, method, path, body string) (int, map[string]any, string) {
 	request := httptest.NewRequest(method, "/api"+path, strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	if user != "" {
@@ -77,12 +85,9 @@ func (f *fixture) call(user, method, path, body string, status int) map[string]a
 	}
 	recorder := httptest.NewRecorder()
 	f.handler.ServeHTTP(recorder, request)
-	if recorder.Code != status {
-		f.t.Fatalf("%s %s as %q = %d, want %d: %s", method, path, user, recorder.Code, status, recorder.Body.String())
-	}
 	out := map[string]any{}
 	json.Unmarshal(recorder.Body.Bytes(), &out)
-	return out
+	return recorder.Code, out, recorder.Body.String()
 }
 
 func (f *fixture) route(fields string) string {

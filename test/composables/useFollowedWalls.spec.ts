@@ -59,6 +59,19 @@ describe('useFollowedWalls', () => {
         expect(walls.followed.value).toEqual(['w1'])
     })
 
+    it('undoes only the failed toggle, not one that succeeded meanwhile', async () => {
+        let fail!: (error: Error) => void
+        follow.mockImplementationOnce(
+            () => new Promise((_, reject) => (fail = reject)),
+        )
+        const walls = await load()
+        const failing = walls.setFollowing('w2', true)
+        await walls.setFollowing('w3', true)
+        fail(new Error('offline'))
+        await expect(failing).rejects.toThrow()
+        expect(walls.followed.value).toEqual(['w1', 'w3'])
+    })
+
     it('follows the walls of the auth record when it changes', async () => {
         const walls = await load()
         const [onChange] = apiMock.authStore.onChange.mock.calls[0]

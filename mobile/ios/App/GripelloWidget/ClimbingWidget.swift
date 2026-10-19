@@ -24,8 +24,15 @@ struct ClimbingProvider: AppIntentTimelineProvider {
         return Timeline(entries: [entry], policy: .after(min(.now.addingTimeInterval(30 * 60), nextWeek)))
     }
 
+    // The picked gym outlives sign-out in the system's widget config (maybe another climber's hidden gym): only the current gym list confirms it.
     private func entry(for configuration: ClimbingWidgetIntent) async -> ClimbingEntry {
-        ClimbingEntry(date: .now, state: await WidgetAPI.load(gym: configuration.gym?.id), gymName: configuration.gym?.name)
+        guard let picked = configuration.gym else {
+            return ClimbingEntry(date: .now, state: await WidgetAPI.load(gym: nil), gymName: nil)
+        }
+        async let listed = WidgetAPI.lists(gym: picked.id)
+        let state = await WidgetAPI.load(gym: picked.id)
+        if await listed { return ClimbingEntry(date: .now, state: state, gymName: picked.name) }
+        return ClimbingEntry(date: .now, state: await WidgetAPI.load(gym: nil), gymName: nil)
     }
 }
 

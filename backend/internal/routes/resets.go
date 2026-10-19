@@ -58,7 +58,7 @@ func (m *module) planRemoval(ctx context.Context, gym string, body removalBody) 
 		newlyPlanned := map[string]int{}
 		slices.Sort(body.IDs)
 		for _, id := range slices.Compact(body.IDs) {
-			original, err := findRoute(ctx, tx, id)
+			original, err := lockRoute(ctx, tx, id)
 			if err != nil || original.Gym != gym || original.Archived {
 				return httpx.ErrNotFound
 			}

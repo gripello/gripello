@@ -187,7 +187,7 @@
                         class="color-swatch"
                         :class="{ 'color-swatch--active': isCurrentColor(c) }"
                         :aria-checked="isCurrentColor(c)"
-                        :aria-label="c"
+                        :aria-label="swatchLabel(c)"
                         :style="{ backgroundColor: c }"
                         @click="form.color = c"
                     />
@@ -323,6 +323,7 @@ import {
     type GradeSystem,
 } from '#shared/utils/grades'
 import { generateRouteName } from '#shared/utils/routeNames'
+import { translatedColorName } from '~/utils/colorName'
 
 const { t, locale } = useI18n()
 const { error: notifyError } = useNotification()
@@ -386,6 +387,9 @@ const activePalette = computed(() =>
         ? similarColors.value
         : defaultPalette.value,
 )
+
+const swatchLabel = (color: string) =>
+    [translatedColorName(t, color), color].filter(Boolean).join(', ')
 
 const isCustomColor = computed(
     () => !!form.color && !activePalette.value.some(isCurrentColor),
@@ -759,6 +763,13 @@ defineExpose({ open })
     transition:
         box-shadow 0.15s,
         transform 0.15s;
+}
+
+@media (pointer: coarse) {
+    .color-swatch {
+        width: 44px;
+        height: 44px;
+    }
 }
 
 .color-swatch:hover {

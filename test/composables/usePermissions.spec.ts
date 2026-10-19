@@ -571,4 +571,16 @@ describe('usePermissions', () => {
         await refreshPermissions()
         expect(loaded.value).toBe(true)
     })
+
+    it('keeps the newest memberships when an older request answers last', async () => {
+        const answers: ((user: unknown) => void)[] = []
+        getMe = () => new Promise((resolve) => answers.push(resolve))
+        const { can, refreshPermissions } = await loadComposable()
+        const older = refreshPermissions()
+        const newer = refreshPermissions()
+        answers[1]!(memberOf('setter', ['manage_routes']))
+        answers[0]!(userWith())
+        await Promise.all([older, newer])
+        expect(can('manage_routes')).toBe(true)
+    })
 })

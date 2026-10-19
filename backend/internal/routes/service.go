@@ -273,12 +273,15 @@ func (m *module) updateRoute(ctx context.Context, id string, p patch) (Route, er
 	if err := p.rejectGymMove(original.Gym); err != nil {
 		return Route{}, err
 	}
-	in := inputOf(original)
-	if err := in.apply(p); err != nil {
-		return Route{}, err
-	}
 	var route Route
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if original, err = lockRoute(ctx, tx, id); err != nil {
+			return err
+		}
+		in := inputOf(original)
+		if err := in.apply(p); err != nil {
+			return err
+		}
 		route, err = m.saveRoute(ctx, tx, original, in)
 		return err
 	})
@@ -291,6 +294,9 @@ func (m *module) archiveRoutes(ctx context.Context, gym string, routeIDs []strin
 	}
 	out := []Route{}
 	err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if err := lockRoutes(ctx, tx, routeIDs); err != nil {
+			return err
+		}
 		for _, id := range routeIDs {
 			original, err := findRoute(ctx, tx, id)
 			if err != nil || original.Gym != gym {
@@ -327,6 +333,13 @@ func (m *module) placeRoutes(ctx context.Context, gym string, placements []place
 	}
 	out := []Route{}
 	err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		routeIDs := make([]string, len(placements))
+		for i, placed := range placements {
+			routeIDs[i] = placed.Route
+		}
+		if err := lockRoutes(ctx, tx, routeIDs); err != nil {
+			return err
+		}
 		for _, placed := range placements {
 			original, err := findRoute(ctx, tx, placed.Route)
 			if err != nil || original.Gym != gym {
@@ -360,6 +373,12 @@ func (m *module) deleteRoute(ctx context.Context, id string, force bool) error {
 	}
 	var files []string
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM routes WHERE id = $1 FOR UPDATE`, id); err != nil {
+			return err
+		}
+		if route, err = findRoute(ctx, tx, id); err != nil {
+			return err
+		}
 		if !force {
 			var used bool
 			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM ratings WHERE route_id = $1)
@@ -455,12 +474,15 @@ func (m *module) updateLocation(ctx context.Context, id string, p patch) (Locati
 	if err := p.rejectGymMove(original.Gym); err != nil {
 		return Location{}, err
 	}
-	in := locationInput{Name: original.Name, MapArea: original.MapArea, Map: original.Map}
-	if err := in.apply(p); err != nil {
-		return Location{}, err
-	}
 	var location Location
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if original, err = lockLocation(ctx, tx, id); err != nil {
+			return err
+		}
+		in := locationInput{Name: original.Name, MapArea: original.MapArea, Map: original.Map}
+		if err := in.apply(p); err != nil {
+			return err
+		}
 		location, err = m.saveLocation(ctx, tx, original, in)
 		return err
 	})
@@ -484,6 +506,9 @@ func (m *module) deleteLocation(ctx context.Context, id string) error {
 		return err
 	}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM locations WHERE id = $1 FOR UPDATE`, id); err != nil {
+			return err
+		}
 		routes, err := count(ctx, tx, `SELECT COUNT(*) FROM routes WHERE location = $1`, id)
 		if err != nil {
 			return err
@@ -623,7 +648,17 @@ func (m *module) moveWallRoutes(ctx context.Context, tx pgx.Tx, wall Wall) error
 	return nil
 }
 
-func (m *module) removeWall(ctx context.Context, tx pgx.Tx, wall Wall) error {
+func (m *module) removeWall(ctx context.Context, tx pgx.Tx, id string) error {
+	if err := lockWallRoutes(ctx, tx, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM walls WHERE id = $1 FOR UPDATE`, id); err != nil {
+		return err
+	}
+	wall, err := findWall(ctx, tx, id)
+	if err != nil {
+		return err
+	}
 	active, err := count(ctx, tx, `SELECT COUNT(*) FROM routes WHERE wall = $1 AND NOT archived`, wall.ID)
 	if err != nil {
 		return err
@@ -672,12 +707,18 @@ func (m *module) updateWall(ctx context.Context, id string, p patch) (Wall, erro
 	if err := p.rejectGymMove(original.Gym); err != nil {
 		return Wall{}, err
 	}
-	in := inputOfWall(original)
-	if err := in.apply(p); err != nil {
-		return Wall{}, err
-	}
 	var wall Wall
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if err := lockWallRoutes(ctx, tx, id); err != nil {
+			return err
+		}
+		if original, err = lockWall(ctx, tx, id); err != nil {
+			return err
+		}
+		in := inputOfWall(original)
+		if err := in.apply(p); err != nil {
+			return err
+		}
 		wall, err = m.saveWall(ctx, tx, original, in)
 		return err
 	})
@@ -689,7 +730,7 @@ func (m *module) deleteWall(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error { return m.removeWall(ctx, tx, wall) })
+	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error { return m.removeWall(ctx, tx, wall.ID) })
 }
 
 type floorPlan struct {
@@ -731,6 +772,9 @@ func (m *module) saveFloorPlan(ctx context.Context, id string, plan floorPlan) (
 	}
 	result := floorPlanResult{Walls: []Wall{}}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if original, err = lockLocation(ctx, tx, id); err != nil {
+			return err
+		}
 		in := locationInput{Name: original.Name, MapArea: original.MapArea, Map: plan.Map}
 		if result.Location, err = m.saveLocation(ctx, tx, original, in); err != nil {
 			return err
@@ -740,7 +784,7 @@ func (m *module) saveFloorPlan(ctx context.Context, id string, plan floorPlan) (
 			if err != nil || wall.Location != id {
 				return httpx.ErrNotFound
 			}
-			if err := m.removeWall(ctx, tx, wall); err != nil {
+			if err := m.removeWall(ctx, tx, wall.ID); err != nil {
 				return atIndex("removed", index, err)
 			}
 		}
@@ -750,7 +794,7 @@ func (m *module) saveFloorPlan(ctx context.Context, id string, plan floorPlan) (
 			if in.ID == "" {
 				continue
 			}
-			wall, err := findWall(ctx, tx, in.ID)
+			wall, err := lockWall(ctx, tx, in.ID)
 			if err != nil || wall.Location != id {
 				return httpx.ErrNotFound
 			}

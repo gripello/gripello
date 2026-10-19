@@ -137,7 +137,9 @@
                                                 :style="{
                                                     background: gymBand.color,
                                                 }"
+                                                role="img"
                                                 :title="bandName(gymBand)"
+                                                :aria-label="bandName(gymBand)"
                                                 :data-band="gymBand.key"
                                                 data-testid="route-grade-band"
                                             />

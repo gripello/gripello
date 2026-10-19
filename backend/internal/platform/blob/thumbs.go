@@ -3,11 +3,13 @@ package blob
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -57,7 +59,7 @@ func (s *Store) Thumb(ctx context.Context, key, size string) (string, error) {
 	dir, name := path.Split(key)
 	thumbKey := dir + "thumbs_" + name + "/" + size + "_" + name
 	if _, err := s.root.Stat(thumbKey); err == nil {
-		return thumbKey, nil
+		return thumbKey, s.sourceExists(ctx, key)
 	}
 	select {
 	case thumbSlots <- struct{}{}:
@@ -66,7 +68,7 @@ func (s *Store) Thumb(ctx context.Context, key, size string) (string, error) {
 		return "", ctx.Err()
 	}
 	if _, err := s.root.Stat(thumbKey); err == nil {
-		return thumbKey, nil
+		return thumbKey, s.sourceExists(ctx, key)
 	}
 	f, err := s.root.Open(key)
 	if err != nil {
@@ -91,7 +93,7 @@ func (s *Store) Thumb(ctx context.Context, key, size string) (string, error) {
 			slog.Warn("vips thumbnail failed, serving the original", "key", key, "error", err)
 			return key, nil
 		}
-		return thumbKey, nil
+		return thumbKey, s.sourceExists(ctx, key)
 	}
 	f.Seek(0, io.SeekStart)
 	src, _, err := image.Decode(f)
@@ -108,7 +110,19 @@ func (s *Store) Thumb(ctx context.Context, key, size string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return thumbKey, s.Put(ctx, thumbKey, &out)
+	if err := s.Put(ctx, thumbKey, &out); err != nil {
+		return "", err
+	}
+	return thumbKey, s.sourceExists(ctx, key)
+}
+
+// sourceExists keeps thumbs from outliving their original: a Delete during a render leaves a freshly put thumb behind.
+func (s *Store) sourceExists(ctx context.Context, key string) error {
+	_, err := s.root.Stat(key)
+	if errors.Is(err, fs.ErrNotExist) {
+		s.Delete(ctx, key)
+	}
+	return err
 }
 
 var vipsOutputs = map[string]struct{ ext, options string }{

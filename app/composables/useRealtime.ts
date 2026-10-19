@@ -3,6 +3,7 @@ import {
     onBeforeUnmount,
     onDeactivated,
     onMounted,
+    onScopeDispose,
     toValue,
     watch,
     type MaybeRefOrGetter,
@@ -48,6 +49,9 @@ let connected = false
 let droppedSinceConnect = false
 let syncedTopics: string | null = null
 let syncTimer: ReturnType<typeof setTimeout> | undefined
+let syncInFlight: Promise<void> | null = null
+let syncAgain = false
+let syncRetryMs = 0
 let streamToken: string | undefined
 let watchedClient: unknown
 let lastEventId = ''
@@ -99,7 +103,24 @@ function scheduleSync() {
     syncTimer = setTimeout(syncTopics, 0)
 }
 
-async function syncTopics() {
+const SYNC_RETRY_MAX_MS = 30_000
+
+// One subscription request at a time, so the server applies them in order; the rerun sends the latest topics.
+function syncTopics(): Promise<void> {
+    if (syncInFlight) {
+        syncAgain = true
+        return syncInFlight
+    }
+    syncInFlight = (async () => {
+        do {
+            syncAgain = false
+            await syncOnce()
+        } while (syncAgain)
+    })().finally(() => (syncInFlight = null))
+    return syncInFlight
+}
+
+async function syncOnce() {
     if (!handlers.size && !connectCallbacks.size) {
         lastEventId = ''
         return close()
@@ -119,11 +140,19 @@ async function syncTopics() {
             },
         })
     } catch (error) {
-        if (target === clientId) syncedTopics = null
         replaySince ||= since
         console.error('Realtime subscription failed:', error)
+        if (target !== clientId) return
+        const { status = 0 } = (error as { status?: number } | null) ?? {}
+        // a refused topic set is only sent again once the topics or the stream change
+        if (status && status !== 429 && status < 500) return
+        syncedTopics = null
+        syncRetryMs = Math.min(SYNC_RETRY_MAX_MS, syncRetryMs * 2 || 1000)
+        clearTimeout(syncTimer)
+        syncTimer = setTimeout(syncTopics, syncRetryMs)
         return
     }
+    syncRetryMs = 0
     if (target !== clientId || connected) return
     connected = true
     // the server replays a dropped stream after its last event id; only a stream that never got one has a gap
@@ -168,6 +197,7 @@ function open() {
     stream.addEventListener('connect', (event) => {
         clientId = JSON.parse((event as MessageEvent<string>).data).clientId
         connected = false
+        syncRetryMs = 0
         syncedTopics = null
         void syncTopics()
     })
@@ -301,6 +331,7 @@ export function useLiveRefresh<T = any>(
     options: { when?: (payload: T) => boolean; delayMs?: number } = {},
 ) {
     const soon = coalesce(refresh, options.delayMs)
+    onScopeDispose(soon.cancel)
     useRealtime<T>(
         topic,
         (payload) => {

@@ -825,12 +825,13 @@ func (h *handlers) acceptInvite(w http.ResponseWriter, r *http.Request) error {
 		userID = account.ID
 	}
 	err = h.inTx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `DELETE FROM invites WHERE id = $1`, accepted.ID)
+		err := tx.QueryRow(ctx, `DELETE FROM invites WHERE id = $1 AND token_hash = $2 AND expires_at > now() RETURNING role`,
+			accepted.ID, hashToken(r.PathValue("token"))).Scan(&accepted.Role)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.NewError(http.StatusNotFound, invalidInvite)
+		}
 		if err != nil {
 			return err
-		}
-		if tag.RowsAffected() == 0 {
-			return httpx.NewError(http.StatusNotFound, invalidInvite)
 		}
 		changed := InviteChanged{Action: "accepted", ID: accepted.ID, Gym: accepted.Gym}
 		if account != nil {

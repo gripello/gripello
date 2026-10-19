@@ -24,11 +24,14 @@ export function useList<
     const totalItems = ref(0)
     const loading = ref(false)
     const loadingMore = ref(false)
+    const reloading = ref(false)
     const error = ref<unknown>(null)
     const exhausted = ref(false)
     const hasMore = computed(
         () => !exhausted.value && items.value.length < totalItems.value,
     )
+
+    let latestRequest = 0
 
     const toItem = (record: TRecord) =>
         options.map ? options.map(record) : (record as unknown as TItem)
@@ -38,10 +41,13 @@ export function useList<
         busy: Ref<boolean>,
         perPage = options.perPage,
     ) {
+        const request = ++latestRequest
+        loadingMore.value = false
         busy.value = true
         error.value = null
         try {
             const result = await load(target, perPage)
+            if (request !== latestRequest) return
             const mapped = result.items.map(toItem)
             const loadedIds = new Set(items.value.map((item) => item.id))
             const unseen = mapped.filter((item) => !loadedIds.has(item.id))
@@ -49,14 +55,14 @@ export function useList<
             exhausted.value = target !== 1 && unseen.length === 0
             totalItems.value = result.total ?? 0
         } catch (err) {
-            if (isAbortError(err)) return
+            if (request !== latestRequest || isAbortError(err)) return
             if (target === 1 && items.value.length && isOfflineError(err))
                 return
             error.value = err
             console.error(`Failed to fetch ${options.requestKey}:`, err)
             notifyError(t('notifications.error.generic'))
         } finally {
-            busy.value = false
+            if (request === latestRequest) busy.value = false
         }
     }
 
@@ -68,13 +74,19 @@ export function useList<
     function reloadLoaded() {
         return fetchPage(
             1,
-            ref(false),
+            loading.value ? loading : reloading,
             Math.max(items.value.length, options.perPage),
         )
     }
 
     async function loadMore() {
-        if (loading.value || loadingMore.value || !hasMore.value) return
+        if (
+            loading.value ||
+            loadingMore.value ||
+            reloading.value ||
+            !hasMore.value
+        )
+            return
         const nextPage = Math.floor(items.value.length / options.perPage) + 1
         await fetchPage(nextPage, loadingMore)
     }

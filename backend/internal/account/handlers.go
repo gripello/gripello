@@ -388,17 +388,23 @@ func (m *module) deleteMe(w http.ResponseWriter, r *http.Request) error {
 	if err := m.db.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, p.UserID).Scan(&hash); err != nil {
 		return err
 	}
-	if lockout.IsLocked(ctx, m.db, p.UserID) {
-		return lockout.ErrLocked
-	}
 	if hash == "" {
+		if lockout.IsLocked(ctx, m.db, p.UserID) {
+			return lockout.ErrLocked
+		}
 		return httpx.NewError(http.StatusBadRequest, "Set a password first.").Field("password", "password_required", "Set a password first.")
 	}
+	if err := lockout.Reserve(ctx, m.db, p.UserID); err != nil {
+		return err
+	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.Password)) != nil {
-		if _, err := lockout.CountFailure(ctx, m.db, p.UserID); err != nil {
+		if _, err := lockout.Failed(ctx, m.db, p.UserID); err != nil {
 			return err
 		}
 		return httpx.NewError(http.StatusBadRequest, "Failed to validate.").Field("password", "validation_invalid_password", "Missing or invalid password.")
+	}
+	if err := lockout.Release(ctx, m.db, p.UserID); err != nil {
+		return err
 	}
 	var betas, moderated []string
 	err = pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {

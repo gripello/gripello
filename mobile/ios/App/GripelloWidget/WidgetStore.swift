@@ -42,19 +42,38 @@ enum WidgetStore {
         return try? JSONDecoder().decode(Session.self, from: data)
     }
 
+    // Another climber gets none of the previous one's numbers or gym list (maybe hidden gyms).
     static func saveSession(_ session: Session) {
         guard let data = try? JSONEncoder().encode(session) else { return }
-        SecItemDelete(query() as CFDictionary)
-        var item = query()
-        item[kSecValueData as String] = data
-        // The widget refreshes in the background, also while the phone is locked.
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(item as CFDictionary, nil)
+        if let previous = loadSession(), previous.userId != session.userId { dropSnapshots() }
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            // The widget refreshes in the background, also while the phone is locked.
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+        guard SecItemUpdate(query() as CFDictionary, attributes as CFDictionary) == errSecItemNotFound else { return }
+        SecItemAdd(query().merging(attributes) { $1 } as CFDictionary, nil)
+    }
+
+    // A token renewed by a load that started before a sign-out or a new session is dropped.
+    static func replaceSession(ifToken token: String, with next: Session) {
+        guard loadSession()?.token == token else { return }
+        saveSession(next)
+    }
+
+    // A load that outlived a sign-out or a new session keeps its numbers to itself.
+    static func saveSnapshot(_ data: Data?, forKey key: String, ifToken token: String) {
+        guard loadSession()?.token == token else { return }
+        shared.set(data, forKey: key)
     }
 
     // Signing out also drops the numbers drawn for the previous climber.
     static func clearSession() {
         SecItemDelete(query() as CFDictionary)
+        dropSnapshots()
+    }
+
+    private static func dropSnapshots() {
         for key in shared.dictionaryRepresentation().keys where key.hasPrefix(snapshotPrefix) {
             shared.removeObject(forKey: key)
         }

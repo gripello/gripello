@@ -2,6 +2,7 @@ package lockout
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -31,20 +32,36 @@ func IsLocked(ctx context.Context, q Querier, key string) bool {
 	return locked
 }
 
-// CountFailure is one upsert, so parallel guesses are all counted; the tenth locks the key.
-func CountFailure(ctx context.Context, q Querier, key string) (bool, error) {
-	var failures int
+const windowExpired = `login_lockouts.window_start IS NULL OR login_lockouts.window_start < now() - $3::interval`
+
+// Reserve counts an attempt before its secret is checked, so parallel guesses can't outrun the limit; ErrLocked
+// once the key is locked or the open attempts reach it. Release takes it back after a success, Failed keeps it.
+func Reserve(ctx context.Context, q Querier, key string) error {
+	var reserved bool
 	err := q.QueryRow(ctx, `INSERT INTO login_lockouts (id, key, failures, window_start) VALUES ($1, $2, 1, now())
 		ON CONFLICT (key) DO UPDATE SET
-		  failures = CASE WHEN login_lockouts.window_start IS NULL OR login_lockouts.window_start < now() - $3::interval THEN 1 ELSE login_lockouts.failures + 1 END,
-		  window_start = CASE WHEN login_lockouts.window_start IS NULL OR login_lockouts.window_start < now() - $3::interval THEN now() ELSE login_lockouts.window_start END
-		RETURNING failures`, ids.New(), key, Window.String()).Scan(&failures)
-	if err != nil || failures < MaxFailures {
-		return false, err
+		  failures = CASE WHEN `+windowExpired+` THEN 1 ELSE login_lockouts.failures + 1 END,
+		  window_start = CASE WHEN `+windowExpired+` THEN now() ELSE login_lockouts.window_start END
+		WHERE (login_lockouts.locked_until IS NULL OR login_lockouts.locked_until <= now())
+		  AND (`+windowExpired+` OR login_lockouts.failures < $4)
+		RETURNING true`, ids.New(), key, Window.String(), MaxFailures).Scan(&reserved)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrLocked
 	}
-	_, err = q.Exec(ctx, `UPDATE login_lockouts SET locked_until = now() + $2::interval, failures = 0, window_start = now() WHERE key = $1`,
-		key, Duration.String())
-	return err == nil, err
+	return err
+}
+
+// Release and Failed outlive the request: a client that hangs up must not leave its attempt open.
+func Release(ctx context.Context, q Querier, key string) error {
+	_, err := q.Exec(context.WithoutCancel(ctx), `UPDATE login_lockouts SET failures = GREATEST(failures - 1, 0) WHERE key = $1`, key)
+	return err
+}
+
+// Failed turns a reserved attempt into a failure; the one that reaches MaxFailures locks the key.
+func Failed(ctx context.Context, q Querier, key string) (bool, error) {
+	tag, err := q.Exec(context.WithoutCancel(ctx), `UPDATE login_lockouts SET locked_until = now() + $2::interval, failures = 0, window_start = now()
+		WHERE key = $1 AND failures >= $3`, key, Duration.String(), MaxFailures)
+	return tag.RowsAffected() > 0, err
 }
 
 func Clear(ctx context.Context, q Querier, key string) error {

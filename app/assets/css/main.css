@@ -338,7 +338,7 @@
    InventoryRouteList component, which cannot see the page's scoped styles. */
     .scope-list {
         /* Viewport-relative so tall screens show more rows instead of padding. */
-        max-height: 46vh;
+        max-height: 46svh;
         overflow-y: auto;
     }
 
@@ -468,7 +468,7 @@
 
     @variant 2xl {
         .scope-list {
-            max-height: calc(100vh - 320px);
+            max-height: calc(100svh - 320px);
         }
     }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"hash/fnv"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -11,24 +12,35 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-// Cron runs each job on exactly one replica: the job body only runs while this replica holds the job's advisory lock.
+// Cron runs each job once per scheduled minute (a cron_runs slot) and only under its advisory lock, so runs never overlap.
 type Cron struct {
-	pool *pgxpool.Pool
-	cron *cron.Cron
+	pool     *pgxpool.Pool
+	cron     *cron.Cron
+	ctx      context.Context
+	shutdown context.CancelFunc
 }
 
 func NewCron(pool *pgxpool.Pool) *Cron {
-	return &Cron{pool: pool, cron: cron.New()}
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Cron{pool: pool, cron: cron.New(), ctx: ctx, shutdown: cancel}
 }
 
 func (c *Cron) Add(name, spec string, fn func(ctx context.Context) error) {
 	key := int64(fnv32(name))
 	_, err := c.cron.AddFunc(spec, func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		slot := time.Now().Truncate(time.Minute)
+		ctx, cancel := context.WithTimeout(c.ctx, 10*time.Minute)
 		defer cancel()
 		runLocked(ctx, c.pool, key, func(ctx context.Context) {
+			if !claimSlot(ctx, c.pool, name, slot) {
+				return
+			}
 			start := time.Now()
-			if err := fn(ctx); err != nil {
+			err := fn(ctx)
+			if c.ctx.Err() != nil {
+				unclaimSlot(c.pool, name, slot)
+			}
+			if err != nil {
 				slog.Error("cron job failed", "job", name, "ms", time.Since(start).Milliseconds(), "error", err)
 			} else {
 				slog.Debug("cron job done", "job", name, "ms", time.Since(start).Milliseconds())
@@ -65,8 +77,43 @@ func runLocked(ctx context.Context, pool *pgxpool.Pool, key int64, fn func(ctx c
 	fn(ctx)
 }
 
+// claimSlot: replica clocks differ by a little, so a short job would otherwise run again on a replica that fires after the first released the lock.
+func claimSlot(ctx context.Context, pool *pgxpool.Pool, name string, slot time.Time) bool {
+	tag, err := pool.Exec(ctx, `WITH pruned AS (DELETE FROM cron_runs WHERE name = $1 AND slot < $2::timestamptz - interval '1 day')
+		INSERT INTO cron_runs (name, slot) VALUES ($1, $2) ON CONFLICT DO NOTHING`, name, slot)
+	if err != nil {
+		slog.Warn("cron: claiming the slot failed", "job", name, "error", err)
+		return false
+	}
+	return tag.RowsAffected() == 1
+}
+
+// unclaimSlot frees the slot of a run shutdown cut short, for a replica whose tick fires later.
+func unclaimSlot(pool *pgxpool.Pool, name string, slot time.Time) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	pool.Exec(ctx, `DELETE FROM cron_runs WHERE name = $1 AND slot = $2`, name, slot)
+}
+
 func (c *Cron) Start() { c.cron.Start() }
-func (c *Cron) Stop()  { <-c.cron.Stop().Done() }
+
+// Stop gives running jobs stopTimeout, then cancels them and waits a little longer (docker stop kills after 10 s).
+func (c *Cron) Stop() {
+	stopped := c.cron.Stop().Done()
+	select {
+	case <-stopped:
+		return
+	case <-time.After(stopTimeout):
+	}
+	c.shutdown()
+	select {
+	case <-stopped:
+	case <-time.After(2 * time.Second):
+		slog.Warn("cron: jobs still running at shutdown")
+	}
+}
+
+var stopTimeout = 5 * time.Second
 
 func fnv32(s string) uint32 {
 	h := fnv.New32a()
@@ -78,7 +125,7 @@ func fnv32(s string) uint32 {
 func Enqueue(ctx context.Context, pool *pgxpool.Pool, kind, key string, payload []byte, delay time.Duration) error {
 	_, err := pool.Exec(ctx, `INSERT INTO jobs (kind, key, payload, run_after) VALUES ($1, $2, $3, now() + $4::interval)
 		ON CONFLICT (kind, key) DO UPDATE SET run_after = CASE
-			WHEN jobs.locked_until > now() THEN EXCLUDED.run_after
+			WHEN jobs.locked_until IS NOT NULL AND jobs.run_after <= now() THEN EXCLUDED.run_after
 			ELSE LEAST(jobs.run_after, EXCLUDED.run_after) END`,
 		kind, key, payload, delay.String())
 	return err
@@ -95,9 +142,22 @@ type Job struct {
 
 type Worker func(ctx context.Context, job Job) error
 
-// RunQueue polls with SKIP LOCKED so any number of replicas can share the queue without double-running a job.
+// RunQueue polls with SKIP LOCKED so replicas share the queue; after ctx ends running jobs get stopTimeout before they are cancelled.
 func RunQueue(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, concurrency int) {
+	workCtx, cancelWork := context.WithCancel(context.WithoutCancel(ctx))
+	defer cancelWork()
 	sem := make(chan struct{}, concurrency)
+	var running sync.WaitGroup
+	defer func() {
+		idle := make(chan struct{})
+		go func() { running.Wait(); close(idle) }()
+		select {
+		case <-idle:
+		case <-time.After(stopTimeout):
+			cancelWork()
+			<-idle
+		}
+	}()
 	for ctx.Err() == nil {
 		// A free slot first: a claimed job waiting for one would let its unrenewed lease run out.
 		select {
@@ -108,13 +168,16 @@ func RunQueue(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker
 		job, ok := claim(ctx, pool)
 		if !ok {
 			<-sem
-			time.Sleep(time.Second)
+			select {
+			case <-time.After(time.Second):
+			case <-ctx.Done():
+			}
 			continue
 		}
-		go func() {
+		running.Go(func() {
 			defer func() { <-sem }()
-			run(ctx, pool, workers, job)
-		}()
+			run(workCtx, pool, workers, job)
+		})
 	}
 }
 
@@ -136,10 +199,23 @@ func claim(ctx context.Context, pool *pgxpool.Pool) (Job, bool) {
 }
 
 func run(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, job Job) {
+	// The bookkeeping outlives a cancelled job: a finished job left claimed would rerun once its lease ends.
+	exec := func(sql string, args ...any) {
+		bookCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+		defer cancel()
+		if _, err := pool.Exec(bookCtx, sql, args...); err != nil {
+			slog.Warn("jobs: updating the job failed", "kind", job.Kind, "key", job.Key, "error", err)
+		}
+	}
+	// An Enqueue that landed while the job ran moved run_after; keep that row so the job runs again.
+	finish := func() {
+		exec(`DELETE FROM jobs WHERE id = $1 AND run_after = $2`, job.ID, job.RunAfter)
+		exec(`UPDATE jobs SET locked_until = NULL, attempts = 0 WHERE id = $1`, job.ID)
+	}
 	w := workers[job.Kind]
 	if w == nil {
 		slog.Error("jobs: no worker", "kind", job.Kind)
-		pool.Exec(ctx, `DELETE FROM jobs WHERE id = $1`, job.ID)
+		exec(`DELETE FROM jobs WHERE id = $1`, job.ID)
 		return
 	}
 	done, renewing := make(chan struct{}), make(chan struct{})
@@ -164,15 +240,20 @@ func run(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, job
 	close(done)
 	<-renewing
 	attrs := []any{"kind", job.Kind, "key", job.Key, "attempt", job.Attempts, "ms", took.Milliseconds(), "waited_ms", start.Sub(job.RunAfter).Milliseconds()}
+	if err != nil && ctx.Err() != nil {
+		slog.Warn("job cut off by shutdown, handed back", attrs...)
+		exec(`UPDATE jobs SET locked_until = NULL, attempts = attempts - 1 WHERE id = $1`, job.ID)
+		return
+	}
 	if err != nil {
 		if job.Attempts >= maxAttempts {
 			slog.Error("job failed for good, dropped", append(attrs, "error", err)...)
-			pool.Exec(ctx, `DELETE FROM jobs WHERE id = $1`, job.ID)
+			finish()
 			return
 		}
 		slog.Warn("job failed, retrying in a minute", append(attrs, "error", err)...)
 		// ponytail: fixed 1 min retry, no backoff; attempts is there when one is needed
-		pool.Exec(ctx, `UPDATE jobs SET run_after = now() + interval '1 minute', locked_until = NULL WHERE id = $1`, job.ID)
+		exec(`UPDATE jobs SET run_after = now() + interval '1 minute', locked_until = NULL WHERE id = $1`, job.ID)
 		return
 	}
 	if took > lease/2 {
@@ -180,7 +261,5 @@ func run(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, job
 	} else {
 		slog.Debug("job done", attrs...)
 	}
-	// An Enqueue that landed while the job ran moved run_after; keep that row so the job runs again.
-	pool.Exec(ctx, `DELETE FROM jobs WHERE id = $1 AND run_after = $2`, job.ID, job.RunAfter)
-	pool.Exec(ctx, `UPDATE jobs SET locked_until = NULL, attempts = 0 WHERE id = $1`, job.ID)
+	finish()
 }

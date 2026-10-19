@@ -485,10 +485,13 @@ func (m *module) deleteMapTrace(w http.ResponseWriter, r *http.Request) error {
 func (m *module) replaceMapTrace(ctx context.Context, location Location, file string) (Location, error) {
 	var updated Location
 	err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		var err error
+		if location, err = lockLocation(ctx, tx, location.ID); err != nil {
+			return err
+		}
 		if err := setMapTrace(ctx, tx, location.ID, file); err != nil {
 			return err
 		}
-		var err error
 		if updated, err = findLocation(ctx, tx, location.ID); err != nil {
 			return err
 		}

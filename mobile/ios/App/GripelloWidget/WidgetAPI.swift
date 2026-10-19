@@ -78,7 +78,7 @@ enum WidgetAPI {
                                   streak: await achievements?.first { $0.key == "active_weeks" }?.current ?? 0,
                                   unread: await unread?.total ?? 0,
                                   origin: session.origin)
-            WidgetStore.shared.set(try? JSONEncoder().encode(stats), forKey: cacheKey)
+            WidgetStore.saveSnapshot(try? JSONEncoder().encode(stats), forKey: cacheKey, ifToken: session.token)
             return .stats(stats)
         } catch is Unauthorized {
             // A revoked or expired session: the app signs the widget in again on its next start.
@@ -102,13 +102,21 @@ enum WidgetAPI {
             if let session { request.setValue("Bearer \(session.token)", forHTTPHeaderField: "Authorization") }
             let (data, _) = try await URLSession.shared.data(for: request)
             let gyms = try JSONDecoder().decode(Gyms.self, from: data).items
-            WidgetStore.shared.set(try? JSONEncoder().encode(gyms), forKey: WidgetStore.gymsKey)
+            if let session {
+                WidgetStore.saveSnapshot(try? JSONEncoder().encode(gyms), forKey: WidgetStore.gymsKey, ifToken: session.token)
+            }
             return gyms
         } catch {
             guard let data = WidgetStore.shared.data(forKey: WidgetStore.gymsKey),
                   let cached = try? JSONDecoder().decode([Gym].self, from: data) else { throw error }
             return cached
         }
+    }
+
+    // Whether the signed-in climber's current gyms (the cached list only offline) include this one.
+    static func lists(gym id: String) async -> Bool {
+        guard WidgetStore.loadSession() != nil, let list = try? await gyms() else { return false }
+        return list.contains(where: { $0.id == id })
     }
 
     static func weekStart(_ now: Date = .now) -> Date {
@@ -126,7 +134,10 @@ enum WidgetAPI {
     // Boulder and route grades share no axis, so the hardest comes from the week's most climbed grade system.
     private static func summarize(_ ticks: [TickPage.Tick], streak: Int, unread: Int, origin: String) -> ClimbingStats {
         let sends = ticks.filter { $0.type != "attempt" }
-        let system = Dictionary(grouping: sends, by: \.grade_system).max { $0.value.count < $1.value.count }?.key
+        let counts = sends.reduce(into: [String: Int]()) { $0[$1.grade_system, default: 0] += 1 }
+        // A tie goes to the system of the most recent send (the list is newest first), as on Android.
+        let top = counts.values.max()
+        let system = sends.first { counts[$0.grade_system] == top }?.grade_system
         let send = { (tick: TickPage.Tick) in
             ClimbingStats.Send(name: tick.route_name, grade: tick.grade,
                                color: tick.expand?.route?.color ?? "#9E9E9E", flash: tick.type == "flash")
@@ -151,7 +162,8 @@ enum WidgetAPI {
         guard let token = try? JSONDecoder().decode(Refreshed.self, from: data).token else { return session }
         var next = session
         next.token = token
-        WidgetStore.saveSession(next)
+        // The renewed token stays valid for this load even when a newer session won.
+        WidgetStore.replaceSession(ifToken: session.token, with: next)
         return next
     }
 

@@ -22,14 +22,16 @@ export function useFollowedWalls() {
     async function setFollowing(wallId: string, follow: boolean) {
         const userId = auth.currentUserId()
         if (!userId) return
-        const previous = followed.value
-        followed.value = follow
-            ? [...previous, wallId]
-            : previous.filter((id) => id !== wallId)
+        const toggle = (on: boolean) => {
+            const others = followed.value.filter((id) => id !== wallId)
+            followed.value = on ? [...others, wallId] : others
+        }
+        const wasFollowing = isFollowing(wallId)
+        toggle(follow)
         try {
             await (follow ? followWall : unfollowWall)(wallId)
         } catch (err) {
-            followed.value = previous
+            toggle(wasFollowing)
             throw err
         }
     }

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fileToken, fileUrl, useApi } from '~/api/client'
+import { useAuthState } from '~/api/auth'
 import { jsonResponse, mockApi } from './apiMock'
 
 let api: ReturnType<typeof mockApi>
@@ -76,6 +77,27 @@ describe('useApi', () => {
             Object.assign(new Error('aborted'), { name: 'AbortError' }),
         )
         await expect(useApi()('/me')).rejects.toMatchObject({ isAbort: true })
+    })
+
+    it('keeps the new session when a late 401 answers the token it replaced', async () => {
+        const oldToken = `x.${btoa(JSON.stringify({ exp: 4102444800 }))}.old`
+        const newToken = `x.${btoa(JSON.stringify({ exp: 4102444800 }))}.new`
+        const auth = useAuthState()
+        auth.saveAuth({ token: oldToken, record: { id: 'u1' } as never })
+        let answer!: (response: Response) => void
+        api.fetchMock.mockImplementationOnce(
+            () => new Promise<Response>((resolve) => (answer = resolve)),
+        )
+        const late = useApi()('/me').catch((e) => e)
+        await vi.waitFor(() => expect(answer).toBeTypeOf('function'))
+        auth.saveAuth({ token: newToken, record: { id: 'u1' } as never })
+        answer(jsonResponse({ status: 401, data: {} }, 401))
+        expect((await late).status).toBe(401)
+        expect(auth.token()).toBe(newToken)
+
+        api.respond({ status: 401, data: {} }, 401)
+        await useApi()('/me').catch(() => {})
+        expect(auth.isSignedIn()).toBe(false)
     })
 
     it('keeps a non-JSON error body out of the response', async () => {

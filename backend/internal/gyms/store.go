@@ -51,8 +51,10 @@ var seededGymRoles = []seededRole{
 	},
 }
 
-// Children first where a foreign key restricts the delete (entries → categories, walls/routes/competitions → locations, memberships → roles).
+// Competitions, then routes locked first like entry and route writes do, then children first where a foreign key restricts the delete (entries → categories, walls/routes/competitions → locations, memberships → roles).
 var gymDeletionOrder = []string{
+	"SELECT 1 FROM competitions WHERE gym = $1 ORDER BY id FOR UPDATE",
+	"SELECT 1 FROM routes WHERE gym = $1 ORDER BY id FOR UPDATE",
 	"DELETE FROM competition_entries WHERE competition IN (SELECT id FROM competitions WHERE gym = $1)",
 	"DELETE FROM competitions WHERE gym = $1",
 	"DELETE FROM seasons WHERE gym = $1",

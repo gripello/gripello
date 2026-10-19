@@ -1050,7 +1050,7 @@ watch(instructionsDialog, (open) => {
 .scanner-viewport {
     position: relative;
     width: 100%;
-    height: 40vh;
+    height: 40svh;
     min-height: 200px;
     background: #111;
     overflow: hidden;
@@ -1113,7 +1113,7 @@ watch(instructionsDialog, (open) => {
     }
 
     .inventory-column :deep(.scope-list) {
-        max-height: calc(100vh - 360px);
+        max-height: calc(100svh - 360px);
     }
 
     .inventory-column--missing {
@@ -1132,7 +1132,7 @@ watch(instructionsDialog, (open) => {
     }
 
     .scanner-viewport {
-        height: 45vh;
+        height: 45svh;
         border-radius: 12px;
     }
 }
@@ -1165,13 +1165,13 @@ watch(instructionsDialog, (open) => {
     }
 
     .inventory-column :deep(.scope-list) {
-        max-height: calc(100vh - 220px);
+        max-height: calc(100svh - 220px);
     }
 
     .scanner-viewport {
         height: auto;
         aspect-ratio: 4 / 3;
-        max-height: calc(100vh - 300px);
+        max-height: calc(100svh - 300px);
     }
 }
 </style>

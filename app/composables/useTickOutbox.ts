@@ -11,6 +11,7 @@ import {
     isOfflineError,
     opsOfUser,
     replayFailure,
+    settleReplayedOp,
     updatableFields,
     TICKS_DB,
     type PendingTick,
@@ -64,25 +65,97 @@ function replaceAll<T extends { id: string }>(name: StoreName, rows: T[]) {
     })
 }
 
+// Per-row writes, so tabs sharing the outbox don't erase each other's ops.
+function writeRows<T extends { id: string }>(
+    name: StoreName,
+    puts: T[],
+    deletes: string[],
+) {
+    const plainRows: T[] = JSON.parse(JSON.stringify(puts))
+    return withStore(name, 'readwrite', (store) => {
+        for (const id of deletes) store.delete(id)
+        for (const row of plainRows) store.put(row)
+    })
+}
+
+let outboxWrites: Promise<unknown> = Promise.resolve()
+let flushing: Promise<void> | null = null
+let flushAgain = false
+const deletedWhileQueued = new Set<string>()
+
+function withOutboxLock(run: () => Promise<void>) {
+    const locks = globalThis.navigator?.locks
+    return locks?.request ? locks.request('gripello-tick-outbox', run) : run()
+}
+
 export function useTickOutbox() {
     const authStore = useAuthStore()
     const queue = useState<TickOutboxOp[]>('tick-outbox', () => [])
     const loaded = useState('tick-outbox-loaded', () => false)
     const available = import.meta.client && 'indexedDB' in globalThis
 
-    async function load() {
-        if (!available || loaded.value) return
-        queue.value = await readAll<TickOutboxOp>('outbox').catch(() => [])
+    async function settledWrites() {
+        let pending: Promise<unknown>
+        do {
+            pending = outboxWrites
+            await pending
+        } while (pending !== outboxWrites)
+    }
+
+    async function reload() {
+        let pending: Promise<unknown>
+        let rows: TickOutboxOp[] | null
+        do {
+            pending = outboxWrites
+            await pending
+            rows = await readAll<TickOutboxOp>('outbox').catch(() => null)
+        } while (pending !== outboxWrites)
+        if (rows) queue.value = rows
         loaded.value = true
     }
 
-    function persist() {
-        if (available) void replaceAll('outbox', queue.value).catch(() => {})
+    // another tab may have edited or deleted this row while it was being sent
+    async function withStoredRow(op: TickOutboxOp) {
+        let pending: Promise<unknown>
+        let stored: TickOutboxOp | undefined | null
+        do {
+            pending = outboxWrites
+            await pending
+            stored = await withStore<TickOutboxOp>(
+                'outbox',
+                'readonly',
+                (store) => store.get(op.id),
+            ).catch(() => null)
+        } while (pending !== outboxWrites)
+        if (stored === null) return queue.value
+        const current =
+            stored && JSON.stringify(stored) === JSON.stringify(op)
+                ? op
+                : stored
+        const others = queue.value.filter((entry) => entry.id !== op.id)
+        return current ? [...others, current] : others
+    }
+
+    async function load() {
+        if (!available || loaded.value) return
+        await reload()
+    }
+
+    function setQueue(next: TickOutboxOp[]) {
+        const previous = new Map(queue.value.map((entry) => [entry.id, entry]))
+        queue.value = next
+        if (!available) return
+        const kept = new Set(next.map((entry) => entry.id))
+        const puts = next.filter((entry) => previous.get(entry.id) !== entry)
+        const deletes = [...previous.keys()].filter((id) => !kept.has(id))
+        if (!puts.length && !deletes.length) return
+        outboxWrites = outboxWrites
+            .then(() => writeRows('outbox', puts, deletes))
+            .catch(() => {})
     }
 
     function enqueue(op: TickOutboxOp) {
-        queue.value = enqueueTickOp(queue.value, op)
-        persist()
+        setQueue(enqueueTickOp(queue.value, op))
         void navigator.storage?.persist?.().catch(() => {})
     }
 
@@ -146,6 +219,7 @@ export function useTickOutbox() {
 
     async function deleteTick(id: string) {
         if (queue.value.some((op) => op.op === 'create' && op.id === id)) {
+            deletedWhileQueued.add(id)
             enqueue({ op: 'delete', id, queued: new Date().toISOString() })
             return { queued: false }
         }
@@ -164,8 +238,24 @@ export function useTickOutbox() {
         }
     }
 
-    async function flush() {
-        await load()
+    // one replay at a time: in this tab, and across tabs where Web Locks exist
+    function flush(): Promise<void> {
+        if (flushing) {
+            flushAgain = true
+            return flushing
+        }
+        flushing = (async () => {
+            do {
+                flushAgain = false
+                await withOutboxLock(replay)
+            } while (flushAgain)
+        })().finally(() => (flushing = null))
+        return flushing
+    }
+
+    async function replay() {
+        if (!available) return
+        await reload()
         if (!authStore.isValid) return
         const replayable = opsOfUser(queue.value, authStore.record?.id).filter(
             (op) => !op.failed,
@@ -181,17 +271,31 @@ export function useTickOutbox() {
                 if (isOfflineError(error)) break
                 if (op.op !== 'delete' && !isAlreadyApplied(op, error)) {
                     console.error('Replaying tick failed:', error)
-                    queue.value = queue.value.map((entry) =>
-                        entry === op
-                            ? { ...entry, failed: replayFailure(error) }
-                            : entry,
+                    setQueue(
+                        queue.value.map((entry) =>
+                            entry === op
+                                ? { ...entry, failed: replayFailure(error) }
+                                : entry,
+                        ),
                     )
                     continue
                 }
             }
-            queue.value = queue.value.filter((entry) => entry.id !== op.id)
+            const stored = await withStoredRow(op)
+            const deletedHere = deletedWhileQueued.delete(op.id)
+            // without Web Locks a vanished row may be another tab's settle, not a delete
+            const settledElsewhere =
+                !globalThis.navigator?.locks &&
+                !deletedHere &&
+                !stored.some((entry) => entry.id === op.id)
+            const next = settledElsewhere
+                ? stored
+                : settleReplayedOp(stored, op)
+            if (next.some((entry) => entry.id === op.id)) flushAgain = true
+            setQueue(next)
         }
-        persist()
+        // the lock must outlast the writes, or the next tab replays what was just sent
+        await settledWrites()
         await refreshNuxtData(['logbook', 'ticked-routes'])
     }
 

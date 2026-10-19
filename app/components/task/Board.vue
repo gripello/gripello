@@ -124,7 +124,9 @@
                 </div>
                 <div
                     class="absolute inset-x-3 flex flex-col gap-2"
-                    :style="{ bottom: 'calc(var(--app-bottom, 0px) + 12px)' }"
+                    :style="{
+                        bottom: 'calc(var(--app-bottom, 0px) + var(--app-bottom-inset, 0px) + 12px)',
+                    }"
                 >
                     <p class="text-center text-xs font-medium text-muted">
                         {{ t('tasks.board.dropHint') }}

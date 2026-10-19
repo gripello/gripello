@@ -506,6 +506,23 @@ describe('coalesce in a hidden tab', () => {
         document.dispatchEvent(new Event('visibilitychange'))
         expect(task).toHaveBeenCalledTimes(1)
     })
+
+    it('runs nothing once cancelled, neither a timer nor a visibility wait', async () => {
+        const visibility = vi
+            .spyOn(document, 'visibilityState', 'get')
+            .mockReturnValue('hidden')
+        const task = vi.fn(async () => {})
+        const soon = coalesce(task, 100)
+        soon()
+        await vi.advanceTimersByTimeAsync(250)
+        soon.cancel()
+        visibility.mockReturnValue('visible')
+        document.dispatchEvent(new Event('visibilitychange'))
+        soon()
+        soon.cancel()
+        await vi.advanceTimersByTimeAsync(250)
+        expect(task).not.toHaveBeenCalled()
+    })
 })
 
 describe('coalesceIds', () => {

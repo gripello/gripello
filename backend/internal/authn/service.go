@@ -54,7 +54,7 @@ func lockoutKey(user *account, identity string) string {
 }
 
 func (m *module) recordLoginFailure(ctx context.Context, r *http.Request, key string, user *account, label string) {
-	locked, err := lockout.CountFailure(ctx, m.db, key)
+	locked, err := lockout.Failed(ctx, m.db, key)
 	if err != nil {
 		slog.Error("authn: counting a failed login failed", "error", err)
 		return
@@ -187,7 +187,7 @@ func (m *module) secondFactorMethods(ctx context.Context, userID string) ([]stri
 	return methods, nil
 }
 
-// mfaUser resolves the pending challenge of a second step without consuming it, so a wrong code can be retried.
+// mfaUser leaves the challenge for a retry and reserves a lockout attempt the caller settles.
 func (m *module) mfaUser(ctx context.Context, mfaID string) (account, error) {
 	c, err := findChallenge(ctx, m.db, "login", mfaID)
 	if isNoRows(err) || err == nil && c.User == "" {
@@ -203,10 +203,10 @@ func (m *module) mfaUser(ctx context.Context, mfaID string) (account, error) {
 	if err != nil {
 		return account{}, err
 	}
-	if lockout.IsLocked(ctx, m.db, user.ID) {
-		return account{}, lockout.ErrLocked
+	if err := checkAccess(user); err != nil {
+		return account{}, err
 	}
-	return user, checkAccess(user)
+	return user, lockout.Reserve(ctx, m.db, user.ID)
 }
 
 type mailClaims struct {

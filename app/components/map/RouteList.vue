@@ -53,7 +53,7 @@
                 <NuxtLink
                     v-if="!linkRows"
                     :to="gymPath(`/route?id=${route.id}`)"
-                    class="map-route-row__open"
+                    class="map-route-row__open icon-btn"
                     :aria-label="$t('routes.view')"
                     :title="$t('routes.view')"
                     data-testid="route-view"

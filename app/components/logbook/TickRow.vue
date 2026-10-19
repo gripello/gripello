@@ -47,7 +47,6 @@
                             color="error"
                             variant="soft"
                             icon="i-lucide-circle-alert"
-                            :title="tick.syncFailed"
                             data-testid="logbook-tick-sync-failed"
                         >
                             {{ $t('ticks.syncFailed') }}

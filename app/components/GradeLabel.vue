@@ -4,7 +4,9 @@
             v-if="band"
             class="grade-label__band"
             :style="{ background: band.color }"
+            role="img"
             :title="bandName(band)"
+            :aria-label="bandName(band)"
             :data-band="band.key"
             data-testid="grade-label-band"
         />
@@ -13,7 +15,12 @@
             v-if="system"
             class="grade-label__system"
             :title="$t(`gradeSystems.${system}`)"
-            >{{ $t(`gradeSystemsShort.${system}`) }}</span
+            ><span aria-hidden="true">{{
+                $t(`gradeSystemsShort.${system}`)
+            }}</span
+            ><span class="sr-only">{{
+                $t(`gradeSystems.${system}`)
+            }}</span></span
         >
     </span>
 </template>

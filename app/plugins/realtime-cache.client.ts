@@ -90,34 +90,61 @@ export default defineNuxtPlugin((nuxtApp) => {
         else nuxtApp.payload.data[key] = value
     }
 
+    // a fetch already under way answers from before this live patch and would overwrite it
+    const settledFetches = new WeakSet<Promise<unknown>>()
+    function afterRunningFetch(key: string, again: () => void) {
+        const fetching = (
+            nuxtApp._asyncDataPromises as
+                Record<string, Promise<unknown> | undefined> | undefined
+        )?.[key]
+        if (!fetching || settledFetches.has(fetching)) return
+        const run = () => {
+            settledFetches.add(fetching)
+            again()
+        }
+        void fetching.then(run, run)
+    }
+
+    type RouteRowsPatch = (
+        rows: RouteScoreRecord[],
+        inScope: (route: RouteRecord) => boolean | null,
+    ) => RouteScoreRecord[]
+
     function patchRouteRows(
-        patch: (
-            rows: RouteScoreRecord[],
-            inScope: (route: RouteRecord) => boolean | null,
-        ) => RouteScoreRecord[],
+        patch: RouteRowsPatch,
+        afterFetch: (key: string) => void = (key) =>
+            patchRouteRows(patch, afterFetch, [key]),
+        keys = loadedKeys(),
     ) {
-        for (const key of loadedKeys()) {
+        for (const key of keys) {
             const inScope = routeRowsScope(
                 key,
                 keyLocations.value,
                 keyQueries.value,
             )
             if (!inScope) continue
-            const data = read<RowsData<RouteScoreRecord>>(key)
+            const data = read<RowsData<RouteScoreRecord> | null | undefined>(
+                key,
+            )
+            if (!data) continue
             const next = mapRows(data, (rows) => patch(rows, inScope))
             if (next !== data) write(key, next)
+            afterRunningFetch(key, () => afterFetch(key))
         }
     }
 
     function patchRatingLists(
         patch: (ratings: RatingRecord[], routeId: string) => RatingRecord[],
+        keys = loadedKeys(),
     ) {
-        for (const key of loadedKeys()) {
+        for (const key of keys) {
             const routeId = ratingsRouteId(key)
             if (routeId === undefined) continue
-            const data = read<RatingRecord[]>(key)
+            const data = read<RatingRecord[] | null | undefined>(key)
+            if (!data) continue
             const next = patch(data, routeId)
             if (next !== data) write(key, next)
+            afterRunningFetch(key, () => patchRatingLists(patch, [key]))
         }
     }
 
@@ -147,6 +174,9 @@ export default defineNuxtPlugin((nuxtApp) => {
         const { items: scores } = await listRoutes(null, {
             ids,
             archived: 'all',
+        }).catch((error) => {
+            for (const id of ids) routesToRescore.add(id)
+            throw error
         })
         for (const { id, average_rating, ratings_count } of scores)
             patchRouteRows((rows) =>
@@ -208,8 +238,16 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
 
     function applyChange(change: RatingChange | 'unknown' | null) {
-        if (change && change !== 'unknown')
-            patchRouteRows((rows) => applyRatingChange(rows, change))
+        if (!change || change === 'unknown') return
+        // a score shift isn't idempotent, so rows a fetch replaced are rescored instead
+        const routeIds = [change.added?.route_id, change.removed?.route_id]
+        patchRouteRows(
+            (rows) => applyRatingChange(rows, change),
+            () => {
+                for (const id of routeIds) if (id) routesToRescore.add(id)
+                rescoreSoon()
+            },
+        )
     }
 
     function applyRating(rating: RatingRecord) {

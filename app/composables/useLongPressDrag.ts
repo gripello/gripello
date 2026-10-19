@@ -80,13 +80,17 @@ export function useLongPressDrag<T>(options: LongPressDragOptions<T>) {
     }
 
     onMounted(() => {
-        window.addEventListener('touchmove', onTouchMove, { passive: false })
+        // capture runs before pull-to-refresh's bubble listener, which then sees defaultPrevented
+        window.addEventListener('touchmove', onTouchMove, {
+            passive: false,
+            capture: true,
+        })
         window.addEventListener('touchend', release)
         window.addEventListener('touchcancel', cancel)
     })
 
     onBeforeUnmount(() => {
-        window.removeEventListener('touchmove', onTouchMove)
+        window.removeEventListener('touchmove', onTouchMove, { capture: true })
         window.removeEventListener('touchend', release)
         window.removeEventListener('touchcancel', cancel)
         cancel()

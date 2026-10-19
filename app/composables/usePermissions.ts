@@ -41,10 +41,10 @@ export function usePermissions() {
         return (auth.isSignedIn() && auth.currentUserId()) || ''
     }
 
-    async function fetchMemberships(userId: string) {
+    async function fetchMemberships(userId: string, isLatest: () => boolean) {
         try {
             const user = await getMe({ include: ['memberships'] })
-            if (currentUserId() !== userId) return
+            if (!isLatest() || currentUserId() !== userId) return
             verifiedUser.value = { ...user, expand: undefined }
             authRejected.value = false
             loadFailed.value = false
@@ -52,7 +52,12 @@ export function usePermissions() {
             memberships.value =
                 (user.expand?.memberships_via_user as MembershipRecord[]) ?? []
         } catch (err) {
-            if (isAutoCancelled(err) || currentUserId() !== userId) return
+            if (
+                isAutoCancelled(err) ||
+                !isLatest() ||
+                currentUserId() !== userId
+            )
+                return
             authRejected.value = [401, 403, 404].includes(
                 (err as { status?: number })?.status ?? 0,
             )
@@ -71,14 +76,15 @@ export function usePermissions() {
     }
 
     function startFetch(userId: string) {
-        const membershipFetch: MembershipFetch = {
-            userId,
-            promise: fetchMemberships(userId).finally(() => {
-                if (membershipFetches.get(nuxtApp) === membershipFetch)
-                    membershipFetches.delete(nuxtApp)
-            }),
-        }
+        const membershipFetch = { userId } as MembershipFetch
+        const isLatest = () =>
+            membershipFetches.get(nuxtApp) === membershipFetch
         membershipFetches.set(nuxtApp, membershipFetch)
+        membershipFetch.promise = fetchMemberships(userId, isLatest).finally(
+            () => {
+                if (isLatest()) membershipFetches.delete(nuxtApp)
+            },
+        )
     }
 
     async function awaitLatestFetch() {

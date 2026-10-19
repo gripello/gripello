@@ -158,4 +158,83 @@ describe('useList', () => {
         expect(list.error.value).toBeNull()
         expect(notifyError).not.toHaveBeenCalled()
     })
+
+    it('lets only the newest request fill the list', async () => {
+        const answers: ((page: ReturnType<typeof pageOf>) => void)[] = []
+        getList.mockImplementation(
+            () => new Promise((resolve) => answers.push(resolve)),
+        )
+        const list = createList()
+        const older = list.refresh()
+        const newer = list.refresh()
+        answers[1]!(pageOf(['new'], 1))
+        await newer
+        answers[0]!(pageOf(['old'], 1))
+        await older
+        expect(list.ids.value).toEqual(['new'])
+        expect(list.loading.value).toBe(false)
+    })
+
+    it('drops a page still loading when the list is refreshed', async () => {
+        getList.mockResolvedValueOnce(pageOf(['a', 'b'], 4))
+        const list = createList()
+        await list.refresh()
+        let answerMore!: (page: ReturnType<typeof pageOf>) => void
+        getList.mockImplementationOnce(
+            () => new Promise((resolve) => (answerMore = resolve)),
+        )
+        const more = list.loadMore()
+        getList.mockResolvedValueOnce(pageOf(['x', 'y'], 4))
+        await list.refresh()
+        answerMore(pageOf(['c', 'd'], 4))
+        await more
+        expect(list.ids.value).toEqual(['x', 'y'])
+        expect(list.loadingMore.value).toBe(false)
+    })
+
+    it('stops loading when a live reload overtakes a refresh', async () => {
+        let answerRefresh!: (page: ReturnType<typeof pageOf>) => void
+        getList.mockImplementationOnce(
+            () => new Promise((resolve) => (answerRefresh = resolve)),
+        )
+        const list = createList()
+        const refreshing = list.refresh()
+        getList.mockResolvedValueOnce(pageOf(['a', 'b'], 2))
+        await list.reloadLoaded()
+        answerRefresh(pageOf(['x'], 1))
+        await refreshing
+        expect(list.ids.value).toEqual(['a', 'b'])
+        expect(list.loading.value).toBe(false)
+    })
+
+    it('keeps loading while a live reload replaces a refresh', async () => {
+        getList.mockImplementationOnce(() => new Promise(() => {}))
+        const list = createList()
+        void list.refresh()
+        let answerReload!: (page: ReturnType<typeof pageOf>) => void
+        getList.mockImplementationOnce(
+            () => new Promise((resolve) => (answerReload = resolve)),
+        )
+        const reloading = list.reloadLoaded()
+        expect(list.loading.value).toBe(true)
+        answerReload(pageOf(['a'], 1))
+        await reloading
+        expect(list.loading.value).toBe(false)
+    })
+
+    it('loads no next page while a live reload runs', async () => {
+        getList.mockResolvedValueOnce(pageOf(['a', 'b'], 4))
+        const list = createList()
+        await list.refresh()
+        let answerReload!: (page: ReturnType<typeof pageOf>) => void
+        getList.mockImplementationOnce(
+            () => new Promise((resolve) => (answerReload = resolve)),
+        )
+        const reloading = list.reloadLoaded()
+        await list.loadMore()
+        answerReload(pageOf(['new', 'a'], 5))
+        await reloading
+        expect(getList).toHaveBeenCalledTimes(2)
+        expect(list.ids.value).toEqual(['new', 'a'])
+    })
 })

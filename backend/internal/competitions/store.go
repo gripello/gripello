@@ -163,6 +163,11 @@ func findCompetition(ctx context.Context, q querier, id string) (Competition, er
 	return one[Competition](ctx, q, `SELECT `+competitionColumns+` FROM competitions WHERE id = $1`, id)
 }
 
+// Strength: FOR SHARE for entry/score writes, FOR NO KEY UPDATE for status and bibs, FOR UPDATE for deletes.
+func lockCompetition(ctx context.Context, tx pgx.Tx, id, strength string) (Competition, error) {
+	return one[Competition](ctx, tx, `SELECT `+competitionColumns+` FROM competitions WHERE id = $1 FOR `+strength, id)
+}
+
 func findVisibleCompetition(ctx context.Context, q querier, id string) (Competition, error) {
 	c, err := findCompetition(ctx, q, id)
 	if err != nil {

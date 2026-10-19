@@ -143,10 +143,13 @@ const rangeItems = computed(() =>
 
 watch(
     open,
-    async (fingerprint) => {
+    async (fingerprint, _, onCleanup) => {
+        let stale = false
+        onCleanup(() => (stale = true))
         occurrences.value = []
         if (!fingerprint || !import.meta.client) return
-        occurrences.value = (await listIssueOccurrences(fingerprint)).items
+        const { items } = await listIssueOccurrences(fingerprint)
+        if (!stale) occurrences.value = items
     },
     { immediate: true },
 )

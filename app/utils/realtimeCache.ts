@@ -377,7 +377,7 @@ export function coalesce(task: () => Promise<unknown>, delayMs = 1000) {
         waitingForVisible = false
         run()
     }
-    return () => {
+    const schedule = () => {
         if (timer || waitingForVisible) return
         timer = setTimeout(
             () => {
@@ -389,6 +389,13 @@ export function coalesce(task: () => Promise<unknown>, delayMs = 1000) {
             delayMs + Math.random() * delayMs,
         )
     }
+    const cancel = () => {
+        clearTimeout(timer)
+        timer = undefined
+        waitingForVisible = false
+        document.removeEventListener('visibilitychange', runWhenVisible)
+    }
+    return Object.assign(schedule, { cancel })
 }
 
 // coalesce that remembers which ids changed; an id-less call asks for everything (null).

@@ -248,14 +248,20 @@ func serve(ctx context.Context, args []string) error {
 		return app.Bus.Prune(ctx, time.Hour)
 	})
 
+	// Shutdown work (last logs, replica row, handlers, jobs) runs alongside the HTTP drain.
+	var stopping sync.WaitGroup
+	defer stopping.Wait()
+	ctx, cancel := context.WithCancel(ctx) // a failed Serve also ends them
+	defer cancel()
 	app.Bus.Start(ctx)
 	go app.Metrics.Run(ctx)
 	replica, _ := os.Hostname()
-	// Both write once more after ctx ends (last logs, removing this replica); returning waits for that.
-	var reporting sync.WaitGroup
-	defer reporting.Wait()
-	reporting.Go(func() { app.Logs.Ship(ctx, app.DB, replica) })
-	reporting.Go(func() {
+	stopping.Go(func() { app.Logs.Ship(ctx, app.DB, replica) })
+	stopping.Go(func() {
+		<-ctx.Done()
+		app.Bus.WaitForHandlers(5 * time.Second)
+	})
+	stopping.Go(func() {
 		replicas.Run(ctx, app.DB, replicas.Replica{Name: replica, Version: config.Version, Role: cfg.Role, Started: time.Now()},
 			replicas.Probes{RealtimeClients: app.Realtime.Clients, RealtimeDropped: app.Realtime.Dropped, BusLag: app.Bus.Lag, BusQueueMax: app.Bus.QueueMax})
 	})
@@ -273,8 +279,11 @@ func serve(ctx context.Context, args []string) error {
 	})
 	if cfg.Role != "api" {
 		app.Cron.Start()
-		defer app.Cron.Stop()
-		go jobs.RunQueue(ctx, app.DB, app.Workers, 2)
+		stopping.Go(func() {
+			<-ctx.Done()
+			app.Cron.Stop()
+		})
+		stopping.Go(func() { jobs.RunQueue(ctx, app.DB, app.Workers, 2) })
 	}
 	if cfg.Role == "worker" {
 		<-ctx.Done()

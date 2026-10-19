@@ -124,6 +124,40 @@ func findRoute(ctx context.Context, q querier, id string) (Route, error) {
 	return one(queryRoutes(ctx, q, where, ""))
 }
 
+// FOR NO KEY UPDATE lets ticks and ratings of the edited route insert; deletes take FOR UPDATE to hold them back.
+func lockRoute(ctx context.Context, tx pgx.Tx, id string) (Route, error) {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM routes WHERE id = $1 FOR NO KEY UPDATE`, id); err != nil {
+		return Route{}, err
+	}
+	return findRoute(ctx, tx, id)
+}
+
+// lockRoutes takes the row locks in id order, so batches over the same routes queue instead of deadlocking.
+func lockRoutes(ctx context.Context, tx pgx.Tx, ids []string) error {
+	_, err := tx.Exec(ctx, `SELECT 1 FROM routes WHERE id = ANY($1) ORDER BY id FOR NO KEY UPDATE`, ids)
+	return err
+}
+
+func lockLocation(ctx context.Context, tx pgx.Tx, id string) (Location, error) {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM locations WHERE id = $1 FOR NO KEY UPDATE`, id); err != nil {
+		return Location{}, err
+	}
+	return findLocation(ctx, tx, id)
+}
+
+// A wall's routes go before the wall, in id order like batch route edits, so a move or delete can't deadlock with them.
+func lockWallRoutes(ctx context.Context, tx pgx.Tx, wall string) error {
+	_, err := tx.Exec(ctx, `SELECT 1 FROM routes WHERE wall = $1 ORDER BY id FOR NO KEY UPDATE`, wall)
+	return err
+}
+
+func lockWall(ctx context.Context, tx pgx.Tx, id string) (Wall, error) {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM walls WHERE id = $1 FOR NO KEY UPDATE`, id); err != nil {
+		return Wall{}, err
+	}
+	return findWall(ctx, tx, id)
+}
+
 func countRoutes(ctx context.Context, q querier, where *conditions) (int, error) {
 	var total int
 	err := q.QueryRow(ctx, `SELECT COUNT(*) FROM routes`+where.sql(), where.args...).Scan(&total)

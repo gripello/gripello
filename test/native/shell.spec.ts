@@ -235,16 +235,18 @@ describe('home-screen widget', () => {
         const excluded = (file: string) =>
             [
                 ...read(`${res}/${file}`).matchAll(
-                    /<exclude domain="sharedpref" path="([^"]+)"/g,
+                    /<exclude domain="(\w+)" path="([^"]+)"/g,
                 ),
-            ].map((m) => m[1])
+            ].map((m) => `${m[1]}:${m[2]}`)
         const prefs = read(
             'mobile/android/app/src/main/java/app/gripello/widget/WidgetStore.java',
         ).match(/PREFS = "([^"]+)"/)?.[1]
-        expect(excluded('backup_rules.xml')).toEqual([`${prefs}.xml`])
+        // app_webview/ holds the gripello_auth cookie.
+        const local = [`sharedpref:${prefs}.xml`, 'root:app_webview/']
+        expect(excluded('backup_rules.xml')).toEqual(local)
         expect(excluded('data_extraction_rules.xml')).toEqual([
-            `${prefs}.xml`,
-            `${prefs}.xml`,
+            ...local,
+            ...local,
         ])
         expect(
             read('mobile/ios/App/GripelloWidget/WidgetStore.swift'),
@@ -260,6 +262,85 @@ describe('home-screen widget', () => {
         expect(read('mobile/ios/App/GripelloWidget/WidgetAPI.swift')).toContain(
             'sends.filter { $0.grade_system == system }',
         )
+    })
+
+    it('breaks a tie between grade systems by the most recent send on both widgets', () => {
+        expect(
+            read(
+                'mobile/android/app/src/main/java/app/gripello/widget/WidgetData.java',
+            ),
+        ).toContain('Map<String, Integer> systems = new LinkedHashMap<>();')
+        expect(read('mobile/ios/App/GripelloWidget/WidgetAPI.swift')).toContain(
+            'sends.first { counts[$0.grade_system] == top }',
+        )
+    })
+
+    it('keeps a late load from writing over a sign-out or a newer session', () => {
+        const data = read(
+            'mobile/android/app/src/main/java/app/gripello/widget/WidgetData.java',
+        )
+        expect(data).toContain('WidgetStore.replaceSessionIf(')
+        expect(data).toContain('WidgetStore.saveSnapshotIf(')
+        expect(data).not.toContain('WidgetStore.saveSnapshot(')
+        const api = read('mobile/ios/App/GripelloWidget/WidgetAPI.swift')
+        expect(api).toContain('WidgetStore.replaceSession(ifToken:')
+        expect(api).toContain('WidgetStore.saveSnapshot(')
+        expect(api).not.toContain('WidgetStore.saveSession(')
+        expect(api).not.toContain('WidgetStore.shared.set(')
+        // An expired token signs the widget out but keeps each widget's gym for the same climber.
+        const store = read(
+            'mobile/android/app/src/main/java/app/gripello/widget/WidgetStore.java',
+        )
+        const clearIf = store.slice(
+            store.indexOf('void clearSessionIf('),
+            store.indexOf('private static void drop('),
+        )
+        expect(clearIf).toContain('drop(context, editor, false)')
+        expect(clearIf).not.toContain('clearSession(context)')
+    })
+
+    it("drops the previous climber's widget data when another one signs in on iOS", () => {
+        const store = read('mobile/ios/App/GripelloWidget/WidgetStore.swift')
+        const save = store.slice(
+            store.indexOf('static func saveSession('),
+            store.indexOf('static func replaceSession('),
+        )
+        expect(save).toContain(
+            'previous.userId != session.userId { dropSnapshots() }',
+        )
+    })
+
+    it('reruns an Android widget load that a reload joined', () => {
+        const job = read(
+            'mobile/android/app/src/main/java/app/gripello/widget/WidgetUpdateJob.java',
+        )
+        expect(job).toContain('again = true;')
+        expect(job).toContain('(current && again)')
+    })
+
+    it('declares the App Group defaults in the app and the widget privacy manifests', () => {
+        for (const file of [
+            'mobile/ios/App/App/PrivacyInfo.xcprivacy',
+            'mobile/ios/App/GripelloWidget/PrivacyInfo.xcprivacy',
+        ])
+            expect(read(file)).toMatch(
+                /<string>NSPrivacyAccessedAPICategoryUserDefaults<\/string>\s*<key>NSPrivacyAccessedAPITypeReasons<\/key>\s*<array>\s*<string>1C8F\.1<\/string>/,
+            )
+        const project = read('mobile/ios/App/App.xcodeproj/project.pbxproj')
+        const phase = (id: string) =>
+            project.match(
+                new RegExp(`${id} /\\* Resources \\*/ = \\{[^}]*\\}`),
+            )?.[0] ?? ''
+        const target = (name: string) =>
+            project.match(
+                new RegExp(
+                    `/\\* ${name} \\*/ = \\{\\s*isa = PBXNativeTarget;[^]*?(\\w+) /\\* Resources \\*/`,
+                ),
+            )?.[1] ?? ''
+        for (const name of ['App', 'GripelloWidget'])
+            expect(phase(target(name))).toContain(
+                'PrivacyInfo.xcprivacy in Resources',
+            )
     })
 
     it('embeds the widget extension under the app id', () => {

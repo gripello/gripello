@@ -7,6 +7,18 @@ import {
 } from '~/api/notifications'
 import { removeById, upsertById } from '~/utils/realtimeCache'
 
+// live events seen while a list request runs, replayed onto its answer
+const eventsDuringRefresh = new Set<RecordChange<NotificationRecord>[]>()
+
+function applyChange(
+    items: NotificationRecord[],
+    { action, record }: RecordChange<NotificationRecord>,
+) {
+    return action === 'delete'
+        ? removeById(items, record.id)
+        : upsertById(items, record, 'start')
+}
+
 export function useNotificationQueue() {
     const authStore = useAuthStore()
     const items = useState<NotificationRecord[]>('notification-queue', () => [])
@@ -27,21 +39,24 @@ export function useNotificationQueue() {
             return
         }
 
+        const seen: RecordChange<NotificationRecord>[] = []
+        eventsDuringRefresh.add(seen)
         try {
-            items.value = (await listNotifications()).items
+            const { items: listed } = await listNotifications()
+            items.value = seen.reduce(applyChange, listed)
             loaded.value = true
         } catch (err) {
             if (isAutoCancelled(err)) return
             console.error('Failed to load notifications:', err)
             loaded.value = true
+        } finally {
+            eventsDuringRefresh.delete(seen)
         }
     }
 
-    function applyEvent({ action, record }: RecordChange<NotificationRecord>) {
-        items.value =
-            action === 'delete'
-                ? removeById(items.value, record.id)
-                : upsertById(items.value, record, 'start')
+    function applyEvent(change: RecordChange<NotificationRecord>) {
+        for (const seen of eventsDuringRefresh) seen.push(change)
+        items.value = applyChange(items.value, change)
     }
 
     async function markRead(id: string) {
