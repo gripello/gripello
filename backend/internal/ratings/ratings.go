@@ -153,7 +153,7 @@ func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 		where.add("created >= ?", at)
 	}
 	if q := strings.TrimSpace(query.Get("q")); q != "" {
-		where.add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (comment ILIKE w OR route_id IN (SELECT routes.id FROM routes WHERE routes.name ILIKE w)))", db.WordPatterns(q))
+		where.add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (comment ILIKE w OR EXISTS (SELECT 1 FROM routes WHERE routes.id = ratings.route_id AND routes.name ILIKE w)))", db.WordPatterns(q))
 	}
 	sort := query.Get("sort")
 	if sort == "" {
