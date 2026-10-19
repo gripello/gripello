@@ -794,7 +794,8 @@
             "friends": "Freunde - Gripello",
             "climber": "{name} - Gripello",
             "feed": "Feed",
-            "info": "Halleninfo - Gripello"
+            "info": "Halleninfo - Gripello",
+            "gymOnboarding": "Halle einrichten - Gripello"
         },
         "content": {
             "settings": "Einstellungen",
@@ -2514,6 +2515,13 @@
                 "24h": "24 h",
                 "7d": "7 Tage"
             }
+        },
+        "onboardings": {
+            "title": "Onboarding-Links",
+            "send": "Onboarding-Link senden",
+            "empty": "Keine offenen Onboarding-Links",
+            "revoke": "Link widerrufen",
+            "sent": "Onboarding-Link an {email} gesendet"
         }
     },
     "mails": {
@@ -2637,6 +2645,22 @@
             "subject": "Test-E-Mail von {app}",
             "body": "Der E-Mail-Versand funktioniert. Diese Nachricht wurde aus den Plattform-Einstellungen von {app} verschickt.",
             "note": "Du kannst diese E-Mail ignorieren."
+        },
+        "gymOnboarding": {
+            "subject": "Richte deine Halle auf {app} ein",
+            "body": "Du wurdest eingeladen, deine Kletterhalle auf {app} einzurichten. Wähle einen Namen und eine Webadresse und teste alles 30 Tage kostenlos.",
+            "action": "Halle einrichten",
+            "note": "Der Link ist 14 Tage gültig. Wenn du ihn nicht erwartet hast, kannst du diese E-Mail ignorieren."
+        },
+        "gymTrialEnding": {
+            "subject": "Deine Testphase von {app} endet bald",
+            "body": "Die Testphase von {gym} endet am {date}. Kletternde können die Halle danach weiter nutzen, aber dein Team kann nichts mehr ändern, bis die Halle auf einen vollen Tarif umgestellt ist.",
+            "note": "Antworte auf diese E-Mail, um mit {app} weiterzumachen."
+        },
+        "gymTrialEnded": {
+            "subject": "Deine Testphase von {app} ist beendet",
+            "body": "Die Testphase von {gym} endete am {date}. Kletternde können die Halle weiter nutzen, aber dein Team kann nichts mehr ändern.",
+            "note": "Antworte auf diese E-Mail, um mit {app} weiterzumachen."
         }
     },
     "leaderboard": {
@@ -3106,5 +3130,23 @@
             "grey": "Granit.m Nebel.m Elefant.m Wolf.m",
             "brown": "Dachs.m Bär.m Schlamm.m Schokolade.f"
         }
+    },
+    "gymOnboarding": {
+        "eyebrow": "NEUE HALLE",
+        "title": "Richte deine Halle ein",
+        "subtitle": "Einladung für {email}. Deine 30-tägige Testphase beginnt, sobald die Halle angelegt ist.",
+        "submit": "Halle anlegen",
+        "slugTaken": "Diese URL ist bereits vergeben.",
+        "invalid": "Dieser Link ist ungültig, abgelaufen oder wurde schon verwendet.",
+        "home": "Zu Gripello"
+    },
+    "trial": {
+        "daysLeft": "Testphase · {n} Tag übrig | Testphase · {n} Tage übrig",
+        "ended": "Testphase beendet",
+        "readOnly": "Testphase beendet · nur lesen",
+        "until": "Testphase bis {date}",
+        "extend": "Testphase verlängern",
+        "convert": "Voll freischalten",
+        "convertConfirm": "Testphase von {name} beenden? Das Team behält vollen Zugriff."
     }
 }

@@ -131,6 +131,78 @@ paths:
         '204': { description: Freed }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /platform/gym-onboardings:
+    get:
+      operationId: listGymOnboardings
+      tags: [gyms]
+      description: Open onboarding links; platform admins only.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { type: object, properties: { id: { type: string }, email: { type: string }, created: { type: string, format: date-time }, expires_at: { type: string, format: date-time } } }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createGymOnboarding
+      tags: [gyms]
+      description: Mails a single-use link (14 days) to set up a trial gym; sending again to the same e-mail replaces the link. Platform admins only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
+      responses:
+        '202': { description: Sent }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /platform/gym-onboardings/{id}:
+    delete:
+      operationId: deleteGymOnboarding
+      tags: [gyms]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Revoked }
+        '403': { $ref: '#/components/responses/Error' }
+  /gym-onboardings/{token}:
+    get:
+      operationId: showGymOnboarding
+      tags: [gyms]
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { email: { type: string } } }
+        '404': { $ref: '#/components/responses/Error' }
+  /gym-onboardings/{token}/redeem:
+    post:
+      operationId: redeemGymOnboarding
+      tags: [gyms]
+      description: Creates an active gym with a 30-day trial and an admin invite for the link's e-mail; the link is used up.
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name, slug], properties: { name: { type: string, maxLength: 100 }, slug: { type: string } } }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { type: object, properties: { gym: { type: string }, invite: { type: string, description: 'Token for /invites/{token}/accept' } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /settings:
     get:
       operationId: getSettings
@@ -282,6 +354,7 @@ components:
         short_name: { type: string, maxLength: 30 }
         active: { type: boolean }
         hidden: { type: boolean }
+        trial_ends_at: { type: string, format: date-time, nullable: true, description: "Set while the gym is on trial; staff are read-only once it passed. Platform admins only." }
         contact_email: { type: string, format: email }
         route_grade_system: { type: string, maxLength: 50 }
         boulder_grade_system: { type: string, maxLength: 50 }

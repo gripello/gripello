@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -30,6 +31,7 @@ type gymState struct {
 	Hidden        bool
 	Features      map[string]any
 	PreviousSlugs []string
+	TrialEndsAt   *time.Time
 	Files         map[string]string
 }
 
@@ -74,9 +76,9 @@ var gymDeletionOrder = []string{
 func loadGym(ctx context.Context, q queryer, id string) (*gymState, error) {
 	g := gymState{Files: map[string]string{}}
 	var logo, icon, sign, cover string
-	err := q.QueryRow(ctx, `SELECT id, slug, name, active, hidden, features, previous_slugs, page_logo, page_icon, sign_image, cover_image
+	err := q.QueryRow(ctx, `SELECT id, slug, name, active, hidden, features, previous_slugs, trial_ends_at, page_logo, page_icon, sign_image, cover_image
 		FROM gyms WHERE id = $1`, id).
-		Scan(&g.ID, &g.Slug, &g.Name, &g.Active, &g.Hidden, &g.Features, &g.PreviousSlugs, &logo, &icon, &sign, &cover)
+		Scan(&g.ID, &g.Slug, &g.Name, &g.Active, &g.Hidden, &g.Features, &g.PreviousSlugs, &g.TrialEndsAt, &logo, &icon, &sign, &cover)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -93,7 +95,7 @@ func loadGym(ctx context.Context, q queryer, id string) (*gymState, error) {
 // findGym resolves a slug, a previous slug (answer carries redirect_to) or an id the viewer may see.
 func findGym(ctx context.Context, q queryer, key, viewer string) (json.RawMessage, error) {
 	var gym json.RawMessage
-	err := q.QueryRow(ctx, `SELECT to_jsonb(g) || CASE WHEN slug <> $1 AND id <> $1
+	err := q.QueryRow(ctx, `SELECT `+gymForViewer+` || CASE WHEN slug <> $1 AND id <> $1
 			THEN jsonb_build_object('redirect_to', slug) ELSE '{}'::jsonb END
 		FROM gyms g WHERE (slug = $1 OR id = $1 OR previous_slugs ? $1) AND gym_visible(id, $2)
 		ORDER BY (slug = $1) DESC, (id = $1) DESC LIMIT 1`, key, viewer).Scan(&gym)
@@ -105,14 +107,24 @@ func findGym(ctx context.Context, q queryer, key, viewer string) (json.RawMessag
 
 func listGyms(ctx context.Context, q queryer, includeAll bool, viewer string) (json.RawMessage, error) {
 	var items json.RawMessage
-	err := q.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(to_jsonb(g) - 'privacy_doc' - 'tv_settings' ORDER BY g.name), '[]') FROM gyms g
+	err := q.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(`+gymForViewer+` - 'privacy_doc' - 'tv_settings' ORDER BY g.name), '[]') FROM gyms g
 		WHERE $1 OR (active AND gym_visible(id, $2))`, includeAll, viewer).Scan(&items)
 	return items, err
 }
 
+// The trial end is only for the gym's members and platform admins ($2 is the viewer); trial_notice is internal.
+const gymForViewer = `(to_jsonb(g) - 'trial_notice' - CASE WHEN EXISTS (SELECT 1 FROM memberships WHERE gym = g.id AND "user" = $2)
+	OR EXISTS (SELECT 1 FROM users WHERE id = $2 AND platform_admin) THEN '' ELSE 'trial_ends_at' END)`
+
 func gymJSON(ctx context.Context, q queryer, id string) (json.RawMessage, error) {
 	var out json.RawMessage
-	err := q.QueryRow(ctx, `SELECT to_jsonb(g) FROM gyms g WHERE id = $1`, id).Scan(&out)
+	err := q.QueryRow(ctx, `SELECT to_jsonb(g) - 'trial_notice' FROM gyms g WHERE id = $1`, id).Scan(&out)
+	return out, err
+}
+
+func publicGymJSON(ctx context.Context, q queryer, id string) (json.RawMessage, error) {
+	var out json.RawMessage
+	err := q.QueryRow(ctx, `SELECT to_jsonb(g) - 'trial_notice' - 'trial_ends_at' FROM gyms g WHERE id = $1`, id).Scan(&out)
 	return out, err
 }
 

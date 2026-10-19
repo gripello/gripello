@@ -327,6 +327,11 @@ func TestListMembersAndOwnMemberships(t *testing.T) {
 		t.Errorf("own memberships leak another gym: %s", body)
 	}
 	f.call(http.MethodGet, "/me/memberships", "", "", http.StatusUnauthorized)
+	f.exec(`UPDATE gyms SET trial_ends_at = now() - interval '1 hour' WHERE id = $1`, f.gymA)
+	if body := f.call(http.MethodGet, "/me/memberships", "", f.setterA, http.StatusOK, `"view_analytics"`); strings.Contains(body, "manage_routes") {
+		t.Errorf("an ended trial still lists staff permissions: %s", body)
+	}
+	f.exec(`UPDATE gyms SET trial_ends_at = NULL WHERE id = $1`, f.gymA)
 	if body := f.call(http.MethodGet, "/gyms/"+f.gymA+"/members", "", f.adminA, http.StatusOK); strings.Contains(body, "@example.com") {
 		t.Errorf("hidden e-mails exposed: %s", body)
 	}

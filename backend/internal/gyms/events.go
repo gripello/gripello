@@ -12,6 +12,7 @@ const (
 	kindGymCreated = "gym.created"
 	kindGymUpdated = "gym.updated"
 	kindGymDeleted = "gym.deleted"
+	kindGymTrial   = "gym.trial_changed"
 	TopicSettings  = "settings"
 )
 
@@ -27,4 +28,23 @@ func publishGym(ctx context.Context, tx pgx.Tx, actor, kind, gymID string, publi
 		audience = events.Audience{GymPerm: gymID + ":manage_settings"}
 	}
 	return events.PublishAs(ctx, tx, actor, "gym:"+gymID, kind, payload, audience)
+}
+
+type trialEvent struct {
+	Gym         string `json:"gym"`
+	TrialEndsAt any    `json:"trial_ends_at"`
+}
+
+// The trial end is for the gym's members (their permissions follow it) and platform admins only.
+func publishTrial(ctx context.Context, tx pgx.Tx, actor, gymID string, endsAt any) error {
+	rows, err := tx.Query(ctx, `SELECT "user" FROM memberships WHERE gym = $1`, gymID)
+	if err != nil {
+		return err
+	}
+	members, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return err
+	}
+	return events.PublishAs(ctx, tx, actor, "gym:"+gymID, kindGymTrial, trialEvent{Gym: gymID, TrialEndsAt: endsAt},
+		events.Audience{Users: members, PlatformAdmins: true})
 }

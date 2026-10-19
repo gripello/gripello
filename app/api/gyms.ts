@@ -91,3 +91,48 @@ export async function listPermissions() {
     const { items } = await useApi()<Items<PermissionRecord>>('/permissions')
     return items
 }
+
+export interface GymOnboarding {
+    id: string
+    email: string
+    created: string
+    expires_at: string
+}
+
+export async function listGymOnboardings() {
+    const { items } = await useApi()<Items<GymOnboarding>>(
+        '/platform/gym-onboardings',
+    )
+    return items
+}
+
+export async function createGymOnboarding(email: string) {
+    await useApi()('/platform/gym-onboardings', {
+        method: 'POST',
+        body: { email },
+    })
+    return true
+}
+
+export async function deleteGymOnboarding(id: string) {
+    await useApi()(`/platform/gym-onboardings/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+    })
+    return true
+}
+
+export function showGymOnboarding(token: string) {
+    return useApi()<{ email: string }>(
+        `/gym-onboardings/${encodeURIComponent(token)}`,
+    )
+}
+
+export function redeemGymOnboarding(
+    token: string,
+    body: Pick<GymRecord, 'name' | 'slug'>,
+) {
+    return useApi()<{ gym: string; invite: string }>(
+        `/gym-onboardings/${encodeURIComponent(token)}/redeem`,
+        { method: 'POST', body },
+    )
+}

@@ -51,7 +51,7 @@ func (m *module) createGym(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	gym, err := m.saveGym(r.Context(), p.UserID, ids.New(), nil, changes, files)
+	gym, err := m.saveGym(r.Context(), p.UserID, ids.New(), nil, changes, files, nil)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,14 @@ func (m *module) updateGym(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	gym, err := m.saveGym(r.Context(), p.UserID, current.ID, current, changes, files)
+	if _, ok := changes["trial_ends_at"]; ok {
+		if trialChanged(current.TrialEndsAt, body["trial_ends_at"]) {
+			changes["trial_notice"] = 0
+		} else {
+			delete(changes, "trial_ends_at")
+		}
+	}
+	gym, err := m.saveGym(r.Context(), p.UserID, current.ID, current, changes, files, nil)
 	if err != nil {
 		return err
 	}
@@ -185,7 +192,8 @@ func (m *module) listPermissions(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (m *module) saveGym(ctx context.Context, actor, id string, current *gymState, changes map[string]any, files map[string]*multipart.FileHeader) (json.RawMessage, error) {
+// alsoInTx runs inside the write transaction of a new gym, after its roles are seeded.
+func (m *module) saveGym(ctx context.Context, actor, id string, current *gymState, changes map[string]any, files map[string]*multipart.FileHeader, alsoInTx func(pgx.Tx) error) (json.RawMessage, error) {
 	slug, previous := slugHistory(current, changes)
 	if current == nil || slug != current.Slug {
 		taken, err := slugTaken(ctx, m.db, id, slug)
@@ -216,7 +224,7 @@ func (m *module) saveGym(ctx context.Context, actor, id string, current *gymStat
 	uploaded, err := m.storeFiles(ctx, id, files, changes)
 	var gym json.RawMessage
 	if err == nil {
-		gym, err = m.writeGym(ctx, actor, id, slug, current == nil, changes)
+		gym, err = m.writeGym(ctx, actor, id, slug, current == nil, changes, alsoInTx)
 	}
 	if err != nil {
 		for _, name := range uploaded {
@@ -237,7 +245,7 @@ func (m *module) saveGym(ctx context.Context, actor, id string, current *gymStat
 	return gym, nil
 }
 
-func (m *module) writeGym(ctx context.Context, actor, id, slug string, creating bool, changes map[string]any) (gym json.RawMessage, err error) {
+func (m *module) writeGym(ctx context.Context, actor, id, slug string, creating bool, changes map[string]any, alsoInTx func(pgx.Tx) error) (gym json.RawMessage, err error) {
 	err = pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
 		kind := kindGymUpdated
 		if creating {
@@ -252,6 +260,11 @@ func (m *module) writeGym(ctx context.Context, actor, id, slug string, creating 
 		if err := updateRow(ctx, tx, "gyms", id, changes); err != nil {
 			return err
 		}
+		if alsoInTx != nil {
+			if err := alsoInTx(tx); err != nil {
+				return err
+			}
+		}
 		if gym, err = gymJSON(ctx, tx, id); err != nil {
 			return err
 		}
@@ -259,7 +272,16 @@ func (m *module) writeGym(ctx context.Context, actor, id, slug string, creating 
 		if err := json.Unmarshal(gym, &state); err != nil {
 			return err
 		}
-		return publishGym(ctx, tx, actor, kind, id, state.Active, map[string]json.RawMessage{"record": gym})
+		if endsAt, ok := changes["trial_ends_at"]; ok && !creating {
+			if err := publishTrial(ctx, tx, actor, id, endsAt); err != nil {
+				return err
+			}
+		}
+		public, err := publicGymJSON(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		return publishGym(ctx, tx, actor, kind, id, state.Active, map[string]json.RawMessage{"record": public})
 	})
 	return gym, err
 }

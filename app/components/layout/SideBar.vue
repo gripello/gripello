@@ -66,6 +66,20 @@
 
         <template #footer>
             <div class="flex w-full min-w-0 flex-col gap-2">
+                <UBadge
+                    v-if="open && trial && roleName()"
+                    :color="trial.ended ? 'warning' : 'info'"
+                    variant="soft"
+                    icon="i-lucide-hourglass"
+                    class="self-start"
+                    data-testid="nav-gym-trial"
+                >
+                    {{
+                        trial.ended
+                            ? $t('trial.readOnly')
+                            : $t('trial.daysLeft', trial.daysLeft)
+                    }}
+                </UBadge>
                 <UButton
                     v-if="staffEntry"
                     :to="staffEntry"
@@ -116,6 +130,7 @@ import {
     type SidebarItem,
 } from '~/utils/navigation'
 import { gymTitle } from '~/utils/gymNames'
+import { gymTrial } from '~/utils/gymTrial'
 import type { GymRecord, SettingsRecord } from '~/types/models'
 
 const props = defineProps<{
@@ -124,7 +139,7 @@ const props = defineProps<{
     footerGymSlug?: string
 }>()
 
-const { can } = usePermissions()
+const { can, roleName } = usePermissions()
 const { t } = useI18n()
 const route = useRoute()
 
@@ -142,6 +157,7 @@ const context = computed(() =>
     navContext(route.path, routeGymSlug(route.params)),
 )
 const staff = computed(() => context.value === 'staff')
+const trial = computed(() => gymTrial(gym.value))
 const { badges } = useModerationSummary()
 const nav = computed(() =>
     sidebarSections(

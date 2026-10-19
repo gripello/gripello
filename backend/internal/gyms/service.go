@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"time"
 	"unicode/utf8"
 
 	"gripello/internal/platform/httpx"
@@ -109,6 +110,7 @@ var gymFields = map[string]field{
 	"hours_note":            {kind: "text", max: 300},
 	"amenities":             {kind: "amenities"},
 	"tv_settings":           {kind: "tv", max: 16000},
+	"trial_ends_at":         {kind: "time"},
 }
 
 var settingsFields = map[string]field{
@@ -285,6 +287,15 @@ func validateValue(spec field, raw json.RawMessage) (any, string) {
 			features = map[string]any{}
 		}
 		return features, ""
+	case "time":
+		if isNull(raw) {
+			return nil, ""
+		}
+		var t time.Time
+		if json.Unmarshal(raw, &t) != nil {
+			return nil, "Must be a date and time."
+		}
+		return t, ""
 	case "amenities":
 		var amenities []string
 		if !isNull(raw) && json.Unmarshal(raw, &amenities) != nil {
@@ -359,6 +370,9 @@ func platformOnlyChange(body map[string]json.RawMessage, current *gymState) stri
 			return "Only platform admins may activate or deactivate gyms."
 		}
 	}
+	if raw, ok := body["trial_ends_at"]; ok && trialChanged(current.TrialEndsAt, raw) {
+		return "Only platform admins may change the trial."
+	}
 	if raw, ok := body["hidden"]; ok {
 		var hidden bool
 		if json.Unmarshal(raw, &hidden) != nil || hidden != current.Hidden {
@@ -366,6 +380,14 @@ func platformOnlyChange(body map[string]json.RawMessage, current *gymState) stri
 		}
 	}
 	return ""
+}
+
+func trialChanged(stored *time.Time, raw json.RawMessage) bool {
+	if isNull(raw) {
+		return stored != nil
+	}
+	var after time.Time
+	return json.Unmarshal(raw, &after) != nil || stored == nil || !after.Equal(*stored)
 }
 
 // Compares the stored JSON values, not their bool reading: 1 is a change from true.

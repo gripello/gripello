@@ -32,7 +32,9 @@ export interface GymMemberChange {
 }
 
 export type GymEvent =
-    GymMemberChange | { kind: 'gym.updated'; record: GymRecord }
+    | GymMemberChange
+    | { kind: 'gym.updated'; record: GymRecord }
+    | { kind: 'gym.trial_changed'; gym: string; trial_ends_at: string | null }
 
 export type AccountPart = 'mfa' | 'sessions' | 'identities'
 

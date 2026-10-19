@@ -794,7 +794,8 @@
             "friends": "Vrienden - Gripello",
             "climber": "{name} - Gripello",
             "feed": "Feed",
-            "info": "Halinfo - Gripello"
+            "info": "Halinfo - Gripello",
+            "gymOnboarding": "Hal inrichten - Gripello"
         },
         "content": {
             "settings": "Instellingen",
@@ -2514,6 +2515,13 @@
                 "24h": "24 u",
                 "7d": "7 dagen"
             }
+        },
+        "onboardings": {
+            "title": "Onboardinglinks",
+            "send": "Onboardinglink versturen",
+            "empty": "Geen open onboardinglinks",
+            "revoke": "Link intrekken",
+            "sent": "Onboardinglink verstuurd naar {email}"
         }
     },
     "mails": {
@@ -2637,6 +2645,22 @@
             "subject": "Test-e-mail van {app}",
             "body": "Het versturen van e-mail werkt. Dit bericht is verstuurd vanuit de platforminstellingen van {app}.",
             "note": "Je kunt deze e-mail negeren."
+        },
+        "gymOnboarding": {
+            "subject": "Richt je hal in op {app}",
+            "body": "Je bent uitgenodigd om je klimhal op {app} in te richten. Kies een naam en een webadres en probeer alles 30 dagen gratis.",
+            "action": "Hal inrichten",
+            "note": "De link is 14 dagen geldig. Als je deze niet verwachtte, kun je deze e-mail negeren."
+        },
+        "gymTrialEnding": {
+            "subject": "Je proefperiode van {app} eindigt binnenkort",
+            "body": "De proefperiode van {gym} eindigt op {date}. Klimmers kunnen de hal daarna blijven gebruiken, maar je team kan niets meer wijzigen tot de hal naar een volledig abonnement is omgezet.",
+            "note": "Beantwoord deze e-mail om verder te gaan met {app}."
+        },
+        "gymTrialEnded": {
+            "subject": "Je proefperiode van {app} is afgelopen",
+            "body": "De proefperiode van {gym} eindigde op {date}. Klimmers kunnen de hal blijven gebruiken, maar je team kan niets meer wijzigen.",
+            "note": "Beantwoord deze e-mail om verder te gaan met {app}."
         }
     },
     "leaderboard": {
@@ -3106,5 +3130,23 @@
             "grey": "graniet.h mist.d olifant.d wolf.d",
             "brown": "das.d beer.d modder.d chocolade.d"
         }
+    },
+    "gymOnboarding": {
+        "eyebrow": "NIEUWE HAL",
+        "title": "Richt je hal in",
+        "subtitle": "Uitnodiging voor {email}. Je proefperiode van 30 dagen start zodra de hal is aangemaakt.",
+        "submit": "Hal aanmaken",
+        "slugTaken": "Deze URL is al in gebruik.",
+        "invalid": "Deze link is ongeldig, verlopen of al gebruikt.",
+        "home": "Naar Gripello"
+    },
+    "trial": {
+        "daysLeft": "Proef · nog {n} dag | Proef · nog {n} dagen",
+        "ended": "Proefperiode voorbij",
+        "readOnly": "Proefperiode voorbij · alleen lezen",
+        "until": "Proef tot {date}",
+        "extend": "Proef verlengen",
+        "convert": "Volledig activeren",
+        "convertConfirm": "Proefperiode van {name} beëindigen? Het team houdt volledige toegang."
     }
 }

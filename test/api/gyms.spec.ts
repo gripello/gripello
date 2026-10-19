@@ -1,14 +1,19 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
     createGym,
+    createGymOnboarding,
+    deleteGymOnboarding,
     deleteGym,
     freeRetiredSlug,
     getGym,
     getGymById,
     getSettings,
+    listGymOnboardings,
     listGyms,
     listPermissions,
     listRetiredSlugs,
+    redeemGymOnboarding,
+    showGymOnboarding,
     updateGym,
     updateSettings,
 } from '~/api/gyms'
@@ -72,6 +77,36 @@ describe('gyms', () => {
         expect(api.request()).toMatchObject({
             url: '/api/platform/retired-slugs/s1',
             method: 'DELETE',
+        })
+    })
+
+    it('sends, lists, revokes and redeems onboarding links', async () => {
+        api.respond(null, 202)
+        await createGymOnboarding('owner@gym.test')
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/gym-onboardings',
+            method: 'POST',
+            body: { email: 'owner@gym.test' },
+        })
+        api.respond({ items: [{ id: 'o1' }] })
+        expect(await listGymOnboardings()).toEqual([{ id: 'o1' }])
+        api.respond(null, 204)
+        await deleteGymOnboarding('o1')
+        expect(api.request()).toMatchObject({
+            url: '/api/platform/gym-onboardings/o1',
+            method: 'DELETE',
+        })
+        api.respond({ email: 'owner@gym.test' })
+        await showGymOnboarding('tok')
+        expect(api.request().url).toBe('/api/gym-onboardings/tok')
+        api.respond({ gym: 'new', invite: 'inv' }, 201)
+        expect(
+            await redeemGymOnboarding('tok', { name: 'New', slug: 'new' }),
+        ).toEqual({ gym: 'new', invite: 'inv' })
+        expect(api.request()).toMatchObject({
+            url: '/api/gym-onboardings/tok/redeem',
+            method: 'POST',
+            body: { name: 'New', slug: 'new' },
         })
     })
 

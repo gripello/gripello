@@ -33,7 +33,21 @@
                     {{ $t('platform.gyms.inactive') }}
                 </UBadge>
                 <UBadge
-                    v-else-if="gym.hidden"
+                    v-if="trial"
+                    :color="trial.ended ? 'warning' : 'info'"
+                    variant="soft"
+                    size="sm"
+                    class="shrink-0"
+                    :data-testid="`platform-gym-trial-${gym.slug}`"
+                >
+                    {{
+                        trial.ended
+                            ? $t('trial.ended')
+                            : $t('trial.daysLeft', trial.daysLeft)
+                    }}
+                </UBadge>
+                <UBadge
+                    v-if="gym.active && gym.hidden"
                     color="neutral"
                     variant="soft"
                     size="sm"
@@ -56,8 +70,10 @@ import { fileUrl } from '~/api/client'
 import type { GymRecord } from '~/types/models'
 import { avatarColor, nameInitials } from '~/utils/avatar'
 import { gymTitle } from '~/utils/gymNames'
+import { gymTrial } from '~/utils/gymTrial'
 
 const props = defineProps<{ gym: GymRecord }>()
+const trial = computed(() => gymTrial(props.gym))
 
 const title = computed(() => gymTitle(props.gym))
 const logoUrl = computed(() =>

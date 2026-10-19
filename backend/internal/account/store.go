@@ -30,7 +30,7 @@ func withMemberships(ctx context.Context, q querier, userID string, record json.
 	err := q.QueryRow(ctx, `SELECT $2::jsonb || jsonb_build_object('memberships', COALESCE(jsonb_agg(jsonb_build_object(
 			'id', m.id,
 			'gym', jsonb_build_object('id', g.id, 'slug', g.slug, 'name', g.name, 'active', g.active),
-			'role', jsonb_build_object('id', r.id, 'name', r.name, 'permissions', r.permissions)) ORDER BY g.name), '[]'))
+			'role', jsonb_build_object('id', r.id, 'name', r.name, 'permissions', effective_permissions(g.id, r.permissions))) ORDER BY g.name), '[]'))
 		FROM memberships m JOIN gyms g ON g.id = m.gym JOIN roles r ON r.id = m.role WHERE m."user" = $1`, userID, record).Scan(&merged)
 	return merged, err
 }
