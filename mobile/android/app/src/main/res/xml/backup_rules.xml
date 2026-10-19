@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 11 and older. The widget's session token stays on this device. -->
+<!-- Android 11 and older. The widget's session token and the WebView's (gripello_auth cookie) stay on this device. -->
 <full-backup-content>
     <exclude domain="sharedpref" path="gripello.widget.xml" />
+    <exclude domain="root" path="app_webview/" />
 </full-backup-content>

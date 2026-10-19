@@ -45,7 +45,7 @@ let pageBackOwners = 0
                 : 'flex-col sm:flex-row sm:items-center'
         "
     >
-        <div>
+        <div class="min-w-0 break-words">
             <h1 class="page-header__title">{{ title }}</h1>
             <p v-if="subtitle" class="page-header__subtitle mb-0">
                 {{ subtitle }}

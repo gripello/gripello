@@ -125,3 +125,35 @@ export function updatableFields(record: TickRecord | undefined) {
     const { type, attempts, date, note } = record
     return { type, attempts, date, note }
 }
+
+// Ops queued while this one was in flight stay; a create they folded into becomes the follow-up edit or delete.
+export function settleReplayedOp(
+    queue: TickOutboxOp[],
+    op: TickOutboxOp,
+): TickOutboxOp[] {
+    const current = queue.find((entry) => entry.id === op.id)
+    if (current === op) return queue.filter((entry) => entry !== op)
+    if (op.op !== 'create') return queue
+    if (!current)
+        return [
+            ...queue,
+            {
+                op: 'delete',
+                id: op.id,
+                user: op.user,
+                queued: new Date().toISOString(),
+            },
+        ]
+    if (current.op !== 'create') return queue
+    return queue.map((entry) =>
+        entry === current
+            ? {
+                  op: 'update',
+                  id: op.id,
+                  user: op.user,
+                  record: current.record,
+                  queued: current.queued,
+              }
+            : entry,
+    )
+}

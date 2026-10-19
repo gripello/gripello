@@ -6,6 +6,7 @@ import {
     isAlreadyApplied,
     opsOfUser,
     replayFailure,
+    settleReplayedOp,
     updatableFields,
     type TickOutboxOp,
 } from '~/utils/tickOutbox'
@@ -188,5 +189,45 @@ describe('offline tick edits', () => {
             date: '2026-10-01',
             note: 'crux',
         })
+    })
+})
+
+describe('settleReplayedOp', () => {
+    it('removes only the replayed entry', () => {
+        const sent = create('a', '2026-10-01')
+        const other = remove('b')
+        expect(settleReplayedOp([sent, other], sent)).toEqual([other])
+    })
+
+    it('keeps an edit folded into the create while it was posted', () => {
+        const sent = create('a', '2026-10-01')
+        const edited = enqueueTickOp([sent], {
+            op: 'update',
+            id: 'a',
+            user: 'u1',
+            record: { ...tick('a', '2026-10-01'), note: 'crux' },
+            queued: '2026-10-03T11:00:00Z',
+        })
+        expect(settleReplayedOp(edited, sent)).toEqual([
+            expect.objectContaining({
+                op: 'update',
+                id: 'a',
+                record: expect.objectContaining({ note: 'crux' }),
+            }),
+        ])
+    })
+
+    it('deletes a create that was removed while it was posted', () => {
+        const sent = create('a', '2026-10-01')
+        const queue = enqueueTickOp([sent], remove('a'))
+        expect(settleReplayedOp(queue, sent)).toEqual([
+            expect.objectContaining({ op: 'delete', id: 'a', user: 'u1' }),
+        ])
+    })
+
+    it('keeps a newer edit that replaced the replayed one', () => {
+        const sent = remove('srv')
+        const newer = { ...remove('srv'), queued: 'later' }
+        expect(settleReplayedOp([newer], sent)).toEqual([newer])
     })
 })

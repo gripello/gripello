@@ -101,6 +101,13 @@ func findOwnTick(ctx context.Context, q querier, id, user string) (Tick, error) 
 	return items[0], nil
 }
 
+func lockOwnTick(ctx context.Context, tx pgx.Tx, id, user string) (Tick, error) {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM ticks WHERE id = $1 AND "user" = $2 FOR NO KEY UPDATE`, id, user); err != nil {
+		return Tick{}, err
+	}
+	return findOwnTick(ctx, tx, id, user)
+}
+
 func expandRoutes(ctx context.Context, q querier, items []Tick) error {
 	var routeIDs []string
 	for _, tick := range items {

@@ -5,10 +5,11 @@ import {
     isRealtimeConnected,
     onConnect,
     subscribeRealtime,
+    useLiveRefresh,
     useRealtime,
 } from '~/composables/useRealtime'
 import { useAuthState } from '~/api/auth'
-import { mockApi } from '../api/apiMock'
+import { jsonResponse, mockApi } from '../api/apiMock'
 
 class FakeEventSource extends EventTarget {
     static readonly CLOSED = 2
@@ -212,6 +213,65 @@ describe('subscribeRealtime', () => {
         expect(put.body).toEqual({ topics: ['own_ticks'], since: 41 })
     })
 
+    it('retries a failed subscription with backoff', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        const connected = vi.fn()
+        track(onConnect(connected))
+        track(subscribeRealtime('own_ticks', vi.fn()))
+        api.respond({ status: 503, data: {} }, 503)
+        await connect('c1')
+        expect(connected).not.toHaveBeenCalled()
+        await vi.waitFor(() => expect(subscriptionCalls()).toHaveLength(2), {
+            timeout: 2000,
+        })
+        await vi.waitFor(() => expect(connected).toHaveBeenCalledOnce())
+        expect(subscriptionCalls()[1]!.body).toEqual({ topics: ['own_ticks'] })
+    })
+
+    it('gives up on a subscription the server refuses', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        track(subscribeRealtime('own_ticks', vi.fn()))
+        api.respond({ status: 400, data: {} }, 400)
+        await connect('c1')
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+        expect(subscriptionCalls()).toHaveLength(1)
+    })
+
+    it('starts the retry backoff over on a new connection', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        track(subscribeRealtime('own_ticks', vi.fn()))
+        api.respond({ status: 503, data: {} }, 503)
+        api.respond({ status: 503, data: {} }, 503)
+        await connect('c1')
+        await vi.waitFor(() => expect(subscriptionCalls()).toHaveLength(2), {
+            timeout: 2000,
+        })
+        api.respond({ status: 503, data: {} }, 503)
+        await connect('c2')
+        await vi.waitFor(() => expect(subscriptionCalls()).toHaveLength(4), {
+            timeout: 1500,
+        })
+    })
+
+    it('sends one subscription at a time and then the latest topics', async () => {
+        track(subscribeRealtime('own_ticks', vi.fn()))
+        let answer!: (response: Response) => void
+        api.fetchMock.mockImplementationOnce(
+            () => new Promise<Response>((resolve) => (answer = resolve)),
+        )
+        await connect('c1')
+        track(subscribeRealtime('gym:g1', vi.fn()))
+        track(subscribeRealtime('gym:g2', vi.fn()))
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        expect(subscriptionCalls()).toHaveLength(1)
+
+        answer(jsonResponse({}))
+        await vi.waitFor(() => expect(subscriptionCalls()).toHaveLength(2))
+        expect(subscriptionCalls()[1]!.body).toEqual({
+            topics: ['gym:g1', 'gym:g2', 'own_ticks'],
+        })
+    })
+
     it('reopens a closed stream after its last event and reloads only on resync', async () => {
         const connected = vi.fn()
         track(onConnect(connected))
@@ -298,5 +358,21 @@ describe('useRealtime', () => {
         await nextTick()
         expect(resync).toHaveBeenCalledTimes(1)
         wrapper.unmount()
+    })
+
+    it('drops a pending live refresh when the component unmounts', async () => {
+        const refresh = vi.fn(async () => {})
+        const wrapper = mount(
+            defineComponent({
+                setup() {
+                    useLiveRefresh('own_ticks', refresh, { delayMs: 10 })
+                    return () => h('div')
+                },
+            }),
+        )
+        stream().emit('own_ticks', { action: 'create' })
+        wrapper.unmount()
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        expect(refresh).not.toHaveBeenCalled()
     })
 })

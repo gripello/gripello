@@ -230,7 +230,7 @@ func (m *module) createCompetition(ctx context.Context, gym string, raw json.Raw
 		return Competition{}, err
 	}
 	c.ID, c.Gym, c.Expand = ids.New(), gym, nil
-	if err := m.checkCompetition(ctx, &c); err != nil {
+	if err := m.checkCompetition(ctx, m.app.DB, &c); err != nil {
 		return Competition{}, err
 	}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
@@ -245,28 +245,32 @@ func (m *module) createCompetition(ctx context.Context, gym string, raw json.Raw
 	return c, err
 }
 
-func (m *module) checkCompetition(ctx context.Context, c *Competition) error {
+func (m *module) checkCompetition(ctx context.Context, q querier, c *Competition) error {
 	stampFreezeAt(c)
 	if err := validateCompetition(*c); err != nil {
 		return err
 	}
-	return m.checkLocation(ctx, m.app.DB, *c)
+	return m.checkLocation(ctx, q, *c)
 }
 
 func (m *module) updateCompetition(ctx context.Context, id string, raw json.RawMessage) (Competition, error) {
-	before, err := m.loadManaged(ctx, id)
-	if err != nil {
+	if _, err := m.loadManaged(ctx, id); err != nil {
 		return Competition{}, err
 	}
-	c := before
-	if err := unmarshalBody(raw, &c); err != nil {
-		return Competition{}, err
-	}
-	c.ID, c.Gym, c.Created, c.Updated, c.Expand = before.ID, before.Gym, before.Created, before.Updated, nil
-	if err := m.checkCompetition(ctx, &c); err != nil {
-		return Competition{}, err
-	}
-	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+	var c Competition
+	err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		before, err := lockCompetition(ctx, tx, id, "NO KEY UPDATE")
+		if err != nil {
+			return err
+		}
+		c = before
+		if err := unmarshalBody(raw, &c); err != nil {
+			return err
+		}
+		c.ID, c.Gym, c.Created, c.Updated, c.Expand = before.ID, before.Gym, before.Created, before.Updated, nil
+		if err := m.checkCompetition(ctx, tx, &c); err != nil {
+			return err
+		}
 		if err := saveCompetition(ctx, tx, c); err != nil {
 			return err
 		}
@@ -295,6 +299,9 @@ func (m *module) deleteCompetition(ctx context.Context, id string) error {
 		return err
 	}
 	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if c, err = lockCompetition(ctx, tx, id, "UPDATE"); err != nil {
+			return err
+		}
 		entries, err := list[Entry](ctx, tx, `DELETE FROM competition_entries WHERE competition = $1 RETURNING `+entryColumns, id)
 		if err != nil {
 			return err
@@ -643,8 +650,11 @@ func (m *module) createEntry(ctx context.Context, competitionID string, raw json
 		}
 	}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `SELECT 1 FROM competitions WHERE id = $1 FOR UPDATE`, c.ID); err != nil {
+		if c, err = lockCompetition(ctx, tx, c.ID, "NO KEY UPDATE"); err != nil {
 			return err
+		}
+		if !v.manager && !registrationOpen(c, now) {
+			return badRequest("Registration is closed.")
 		}
 		if e.Bib == 0 {
 			if e.Bib, err = nextBib(ctx, tx, c.ID); err != nil {
@@ -707,44 +717,49 @@ func (m *module) loadOwnedEntry(ctx context.Context, id string) (Entry, Competit
 }
 
 func (m *module) updateEntry(ctx context.Context, id string, raw json.RawMessage) (Entry, error) {
-	before, c, v, err := m.loadOwnedEntry(ctx, id)
+	_, c, v, err := m.loadOwnedEntry(ctx, id)
 	if err != nil {
 		return Entry{}, err
 	}
-	e := before
-	if err := unmarshalBody(raw, &e); err != nil {
-		return Entry{}, err
-	}
-	now := time.Now()
-	if !v.manager {
-		open := registrationOpen(c, now)
-		e.Competition, e.User, e.Bib, e.Paid = before.Competition, before.User, before.Bib, before.Paid
-		e.Status = ownerEntryStatus(before.Status, e.Status, open)
-		if e.Category != before.Category && !open {
-			return Entry{}, invalid("category", "Categories can only change while registration is open.")
-		}
-	}
-	if e.Competition != before.Competition {
-		return Entry{}, errMoved
-	}
-	if e.User != before.User {
-		return Entry{}, invalid("user", "This field can't be changed.")
-	}
-	e.ID, e.Expand = before.ID, nil
-	if err := validateEntry(ctx, m.app.DB, e, now.Year(), !v.manager); err != nil {
-		return Entry{}, err
-	}
-	if !v.manager && e.DisplayName != before.DisplayName {
-		if err := checkEntryName(ctx, m.app.DB, e.DisplayName); err != nil {
-			return Entry{}, err
-		}
-	}
-	if e.DisplayName != before.DisplayName || e.Hidden != before.Hidden {
-		if err := refuseWhileHidden(ctx, m.app.DB, "competition_entry", id); err != nil {
-			return Entry{}, err
-		}
-	}
+	var e Entry
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		before, err := m.lockEntry(ctx, tx, &c, id)
+		if err != nil {
+			return err
+		}
+		e = before
+		if err := unmarshalBody(raw, &e); err != nil {
+			return err
+		}
+		now := time.Now()
+		if !v.manager {
+			open := registrationOpen(c, now)
+			e.Competition, e.User, e.Bib, e.Paid = before.Competition, before.User, before.Bib, before.Paid
+			e.Status = ownerEntryStatus(before.Status, e.Status, open)
+			if e.Category != before.Category && !open {
+				return invalid("category", "Categories can only change while registration is open.")
+			}
+		}
+		if e.Competition != before.Competition {
+			return errMoved
+		}
+		if e.User != before.User {
+			return invalid("user", "This field can't be changed.")
+		}
+		e.ID, e.Expand = before.ID, nil
+		if err := validateEntry(ctx, tx, e, now.Year(), !v.manager); err != nil {
+			return err
+		}
+		if !v.manager && e.DisplayName != before.DisplayName {
+			if err := checkEntryName(ctx, tx, e.DisplayName); err != nil {
+				return err
+			}
+		}
+		if e.DisplayName != before.DisplayName || e.Hidden != before.Hidden {
+			if err := refuseWhileHidden(ctx, tx, "competition_entry", id); err != nil {
+				return err
+			}
+		}
 		if err := saveEntry(ctx, tx, e, false); err != nil {
 			return err
 		}
@@ -756,12 +771,25 @@ func (m *module) updateEntry(ctx context.Context, id string, raw json.RawMessage
 	return e, entryConflict(err)
 }
 
+// lockEntry locks the competition before the entry, the order every competition write follows.
+func (m *module) lockEntry(ctx context.Context, tx pgx.Tx, c *Competition, id string) (Entry, error) {
+	var err error
+	if *c, err = lockCompetition(ctx, tx, c.ID, "SHARE"); err != nil {
+		return Entry{}, err
+	}
+	return one[Entry](ctx, tx, `SELECT `+entryColumns+` FROM competition_entries WHERE id = $1 FOR UPDATE`, id)
+}
+
 func (m *module) deleteEntry(ctx context.Context, id string) error {
-	e, c, v, err := m.loadOwnedEntry(ctx, id)
+	_, c, v, err := m.loadOwnedEntry(ctx, id)
 	if err != nil {
 		return err
 	}
 	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		e, err := m.lockEntry(ctx, tx, &c, id)
+		if err != nil {
+			return err
+		}
 		if !v.manager {
 			var scored bool
 			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM competition_scores WHERE entry = $1)`, id).Scan(&scored); err != nil {
@@ -886,6 +914,9 @@ func (m *module) upsertScores(ctx context.Context, competitionID string, inputs 
 	now := time.Now()
 	saved := []Score{}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if c, err = lockCompetition(ctx, tx, c.ID, "SHARE"); err != nil {
+			return err
+		}
 		entries := map[string]bool{}
 		for _, s := range inputs {
 			e, err := findEntry(ctx, tx, s.Entry)
@@ -929,10 +960,13 @@ func (m *module) deleteScore(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	if !scoringOpen(c) {
-		return badRequest("Scoring is closed.")
-	}
 	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if c, err = lockCompetition(ctx, tx, c.ID, "SHARE"); err != nil {
+			return err
+		}
+		if !scoringOpen(c) {
+			return badRequest("Scoring is closed.")
+		}
 		if _, err := tx.Exec(ctx, `DELETE FROM competition_scores WHERE id = $1`, id); err != nil {
 			return err
 		}

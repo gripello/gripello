@@ -11,6 +11,7 @@ vi.mock('~/composables/useRealtime', () => ({
     isRealtimeConnected: () => true,
 }))
 vi.mock('~/api/routes', () => ({ listRoutes: vi.fn() }))
+import { listRoutes } from '~/api/routes'
 
 const refreshNuxtData = vi.fn(async (_keys?: string | string[]) => {})
 
@@ -26,6 +27,7 @@ async function startPlugin(
     const nuxtApp = {
         payload: { data },
         _asyncData: {},
+        _asyncDataPromises: {} as Record<string, Promise<unknown>>,
         hook: (name: string, callback: () => void) => {
             if (name === 'app:mounted') callback()
         },
@@ -225,5 +227,80 @@ describe('realtime cache plugin', () => {
         expect(app.payload.data.settings).toEqual({
             allow_registration: false,
         })
+    })
+
+    function fetchUnderWay(
+        app: { _asyncDataPromises: Record<string, Promise<unknown>> },
+        key: string,
+    ) {
+        let land!: () => void
+        app._asyncDataPromises[key] = new Promise<void>(
+            (resolve) => (land = resolve),
+        )
+        return land
+    }
+
+    it('keeps a new review that a list fetch already under way answers without', async () => {
+        const row = { id: 'r1', gym: 'g1', average_rating: 4, ratings_count: 1 }
+        const app = await startPlugin({
+            'overview-routes': [row],
+            'ratings:r1': [],
+        })
+        const routesLand = fetchUnderWay(app, 'overview-routes')
+        const ratingsLand = fetchUnderWay(app, 'ratings:r1')
+        const review = { id: 'v1', gym: 'g1', route_id: 'r1', rating: 2 }
+        emit('gym_changes:g1', {
+            collection: 'ratings',
+            action: 'create',
+            record: review,
+        })
+        expect(app.payload.data['overview-routes']).toEqual([
+            { ...row, average_rating: 3, ratings_count: 2 },
+        ])
+
+        vi.mocked(listRoutes).mockResolvedValueOnce({
+            items: [{ id: 'r1', average_rating: 3, ratings_count: 2 }],
+        } as never)
+        app.payload.data['overview-routes'] = [row]
+        app.payload.data['ratings:r1'] = []
+        routesLand()
+        ratingsLand()
+        await vi.runAllTimersAsync()
+
+        expect(app.payload.data['ratings:r1']).toEqual([review])
+        expect(listRoutes).toHaveBeenLastCalledWith(null, {
+            ids: ['r1'],
+            archived: 'all',
+        })
+        expect(app.payload.data['overview-routes']).toEqual([
+            { ...row, average_rating: 3, ratings_count: 2 },
+        ])
+    })
+
+    it('rescores a route again after its rescore request failed', async () => {
+        const app = await startPlugin({
+            'overview-routes': [
+                { id: 'r1', gym: 'g1' },
+                { id: 'r2', gym: 'g1' },
+            ],
+        })
+        const unknownUpdate = (id: string, route_id: string) =>
+            emit('gym_changes:g1', {
+                collection: 'ratings',
+                action: 'update',
+                record: { id, gym: 'g1', route_id, rating: 3 },
+            })
+        vi.mocked(listRoutes).mockRejectedValueOnce(new Error('offline'))
+        unknownUpdate('v1', 'r1')
+        await vi.runAllTimersAsync()
+
+        vi.mocked(listRoutes).mockResolvedValueOnce({ items: [] } as never)
+        unknownUpdate('v2', 'r2')
+        await vi.runAllTimersAsync()
+        expect(listRoutes).toHaveBeenLastCalledWith(null, {
+            ids: ['r1', 'r2'],
+            archived: 'all',
+        })
+        expect(app.payload.data['overview-routes']).toHaveLength(2)
     })
 })

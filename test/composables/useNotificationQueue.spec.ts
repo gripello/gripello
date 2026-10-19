@@ -181,4 +181,26 @@ describe('useNotificationQueue', () => {
         expect(items.value).toEqual([])
         expect(api).not.toHaveBeenCalled()
     })
+
+    it('keeps live events that arrive while the list loads', async () => {
+        let answer!: (value: unknown) => void
+        routeApi(
+            () =>
+                new Promise(
+                    (resolve) => (answer = resolve),
+                ) as Promise<unknown>,
+        )
+        const { refresh, applyEvent, items } = await loadComposable()
+        const loading = refresh()
+        applyEvent({ action: 'create', record: record('new') })
+        applyEvent({ action: 'delete', record: record('gone') })
+        answer({
+            items: [record('gone'), record('old')],
+            page: 1,
+            limit: 200,
+            total: 2,
+        })
+        await loading
+        expect(items.value.map((item) => item.id)).toEqual(['new', 'old'])
+    })
 })

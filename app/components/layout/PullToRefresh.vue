@@ -66,7 +66,7 @@ function onStart(event: TouchEvent) {
 function onMove(event: TouchEvent) {
     const touch = event.touches[0]
     if (!start || !touch) return
-    if (event.touches.length > 1) return reset()
+    if (event.touches.length > 1 || event.defaultPrevented) return reset()
     const dy = touch.clientY - start.y
     if (!dragging.value) {
         const gesture = pullGesture(touch.clientX - start.x, dy)

@@ -7,6 +7,8 @@ import {
     type ModerationSummary,
 } from '~/utils/moderation'
 
+let latestRequest = 0
+
 export function useModerationSummary() {
     const route = useRouter().currentRoute
     const gymId = useCurrentGymId()
@@ -34,9 +36,11 @@ export function useModerationSummary() {
             summary.value = null
             return
         }
-        summary.value = await getModerationSummary(
+        const request = ++latestRequest
+        const next = await getModerationSummary(
             scope.value === 'platform' ? undefined : scope.value,
         ).catch(() => null)
+        if (request === latestRequest) summary.value = next
     }
 
     const badges = computed<NavBadges>(() =>

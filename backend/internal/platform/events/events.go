@@ -21,6 +21,15 @@ const channel = "gripello_events"
 // An id below a committed one can still be in flight; a rolled-back publish leaves a gap for good.
 const gapGrace = 2 * time.Second
 
+const (
+	// Ids passed over after gapGrace are looked up again on every drain for lateFor; rollbacks leave such ids for good.
+	lateFor    = time.Minute
+	maxSkipped = 1000
+	drainBatch = 1000
+	// Ids just below the sequence when the outbox is empty at startup may still commit.
+	startupInFlight = 100
+)
+
 // Audience decides who may receive an event, evaluated on each replica against the subscriber's principal.
 // Criteria are ORed (Users ∪ GymPerm ∪ FollowersOf ∪ SignedIn); NotUsers always excludes; Public short-circuits.
 // GuestsOnly lets a payload variant target anonymous clients while signed-in ones get a richer variant.
@@ -118,6 +127,10 @@ type Bus struct {
 	onces    []onceSubscription
 	lastID   int64
 	gapSince time.Time
+	skipped  map[int64]time.Time // id → until when it may still commit
+	done     <-chan struct{}
+	// Once handlers hold it for reading while they claim and run; WaitForHandlers takes it for writing.
+	running sync.RWMutex
 	// delivered mirrors lastID for readers outside the listener goroutine.
 	delivered  atomic.Int64
 	started    atomic.Bool
@@ -162,7 +175,21 @@ func runSafely(h Handler, e Event) (ok bool) {
 // it reconnects on errors and reads by id, not by notification payload.
 // Plain handlers start at the live head; SubscribeOnce handlers also get the unclaimed events still in the outbox.
 func (b *Bus) Start(ctx context.Context) {
-	b.pool.QueryRow(ctx, `SELECT COALESCE(MAX(id), 0) FROM events`).Scan(&b.lastID)
+	b.done = ctx.Done()
+	var committed *int64
+	for {
+		err := b.pool.QueryRow(ctx, `SELECT (SELECT MAX(id) FROM events), CASE WHEN is_called THEN last_value ELSE 0 END FROM events_id_seq`).Scan(&committed, &b.lastID)
+		if err == nil || ctx.Err() != nil {
+			break
+		}
+		slog.Error("events: reading the outbox head failed", "error", err)
+		time.Sleep(time.Second)
+	}
+	if committed != nil {
+		b.lastID = *committed
+	} else {
+		b.skip(max(1, b.lastID-startupInFlight+1), b.lastID+1)
+	}
 	b.delivered.Store(b.lastID)
 	b.started.Store(true)
 	go b.sweepUnclaimed(ctx)
@@ -210,45 +237,91 @@ func (b *Bus) listen(ctx context.Context) error {
 
 // drain dispatches in id order and holds back at a gap until gapGrace has passed, because ids are taken
 // at insert time but become visible at commit: reading past a gap would skip a slower transaction's event.
+// Rows are read before dispatching, so a full handler queue never holds a connection.
 func (b *Bus) drain(ctx context.Context) (waitingOnGap bool, err error) {
-	rows, err := b.pool.Query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events WHERE id > $1 ORDER BY id`, b.lastID)
-	if err != nil {
+	if err := b.dispatchLate(ctx); err != nil {
 		return false, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var e Event
-		var aud []byte
-		if err := rows.Scan(&e.ID, &e.Topic, &e.Kind, &e.Payload, &aud, &e.Actor, &e.Created); err != nil {
+	for {
+		pending, err := b.query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events WHERE id > $1 ORDER BY id LIMIT $2`, b.lastID, drainBatch)
+		if err != nil {
 			return false, err
 		}
-		if e.ID != b.lastID+1 && b.lastID != 0 {
-			if b.gapSince.IsZero() {
-				b.gapSince = time.Now()
+		for _, e := range pending {
+			if e.ID != b.lastID+1 {
+				if b.gapSince.IsZero() {
+					b.gapSince = time.Now()
+				}
+				if time.Since(b.gapSince) < gapGrace {
+					return true, nil
+				}
+				b.skip(b.lastID+1, e.ID)
 			}
-			if time.Since(b.gapSince) < gapGrace {
-				return true, nil
-			}
+			b.gapSince = time.Time{}
+			b.lastID = e.ID
+			b.delivered.Store(e.ID)
+			b.dispatch(e)
 		}
-		b.gapSince = time.Time{}
-		json.Unmarshal(aud, &e.Audience)
-		b.lastID = e.ID
-		b.delivered.Store(e.ID)
-		b.dispatch(e)
+		if len(pending) < drainBatch {
+			return false, nil
+		}
 	}
-	return false, rows.Err()
 }
 
+func (b *Bus) skip(from, to int64) {
+	if b.skipped == nil {
+		b.skipped = map[int64]time.Time{}
+	}
+	until := time.Now().Add(lateFor)
+	for id := from; id < to; id++ {
+		if len(b.skipped) >= maxSkipped {
+			slog.Warn("events: too many skipped ids, an event committing later is not dispatched to plain handlers", "from", id, "to", to)
+			return
+		}
+		b.skipped[id] = until
+	}
+}
+
+// dispatchLate hands handlers the skipped ids that committed after all; they arrive out of id order.
+func (b *Bus) dispatchLate(ctx context.Context) error {
+	if len(b.skipped) == 0 {
+		return nil
+	}
+	ids := make([]int64, 0, len(b.skipped))
+	for id, until := range b.skipped {
+		if time.Now().After(until) {
+			delete(b.skipped, id)
+		} else {
+			ids = append(ids, id)
+		}
+	}
+	late, err := b.query(ctx, `SELECT id, topic, kind, payload, audience, actor, created FROM events WHERE id = ANY($1) ORDER BY id`, ids)
+	if err != nil {
+		return err
+	}
+	for _, e := range late {
+		delete(b.skipped, e.ID)
+		b.dispatch(e)
+	}
+	return nil
+}
+
+// dispatch blocks on a full queue without holding b.mu, and never once Start's ctx is done.
 func (b *Bus) dispatch(e Event) {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
-	for _, sub := range b.subs {
+	subs := b.subs
+	b.mu.RUnlock()
+	for _, sub := range subs {
 		if strings.HasPrefix(e.Topic, sub.prefix) {
 			if len(sub.queue) > handlerBacklog*8/10 && time.Since(b.warnedFull) > time.Minute {
 				b.warnedFull = time.Now()
 				slog.Warn("events: handler queue almost full, dispatch will stall", "prefix", sub.prefix, "queued", len(sub.queue))
 			}
-			sub.queue <- e
+			select {
+			case sub.queue <- e:
+			case <-b.done:
+				return
+			}
 		}
 	}
 }
@@ -329,26 +402,27 @@ var (
 // whole outbox, catching retries that failed after the cursor passed and ids that committed below it.
 // Events pruned from the outbox (see Prune) are gone for good.
 func (b *Bus) sweepUnclaimed(ctx context.Context) {
+	every, fullEvery, minAge := onceSweepEvery, onceFullSweepEvery, onceSweepMinAge
 	cursors := map[chan Event]int64{}
-	nextFullSweep := time.Now().Add(onceFullSweepEvery)
+	nextFullSweep := time.Now().Add(fullEvery)
 	for {
 		if time.Now().After(nextFullSweep) {
 			clear(cursors)
-			nextFullSweep = time.Now().Add(onceFullSweepEvery)
+			nextFullSweep = time.Now().Add(fullEvery)
 		}
-		b.sweepOnces(ctx, cursors)
+		b.sweepOnces(ctx, cursors, minAge)
 		select {
-		case <-time.After(onceSweepEvery/2 + rand.N(onceSweepEvery)):
+		case <-time.After(every/2 + rand.N(every)):
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (b *Bus) sweepOnces(ctx context.Context, cursors map[chan Event]int64) {
+func (b *Bus) sweepOnces(ctx context.Context, cursors map[chan Event]int64, minAge time.Duration) {
 	var upTo int64
 	if err := b.pool.QueryRow(ctx, `SELECT COALESCE(MAX(id), 0) FROM events WHERE created < now() - $1::interval`,
-		onceSweepMinAge.String()).Scan(&upTo); err != nil {
+		minAge.String()).Scan(&upTo); err != nil {
 		if ctx.Err() == nil {
 			slog.Error("events: sweeping unclaimed events failed", "error", err)
 		}
@@ -386,11 +460,15 @@ func (b *Bus) sweepOnces(ctx context.Context, cursors map[chan Event]int64) {
 const topicHasPrefix = `topic COLLATE "C" >= $1 AND topic COLLATE "C" < $1 || chr(1114111)`
 
 // SubscribeOnce runs h on exactly one replica per event: the replica that inserts the claim row runs it.
+// ponytail: a crash mid-handler loses that claimed event; a claim lease (claimed_at + done) closes that when it matters.
 // A handler that panics gives the claim back and is retried, so a failure doesn't lose the event.
 // Use it for side effects (writing rows, sending mail); plain Subscribe is for per-replica state like caches and SSE.
 func (b *Bus) SubscribeOnce(prefix, handler string, h Handler) {
+	retryDelay := onceRetryDelay
 	sub := b.subscribe(prefix, func(e Event) {
-		for attempt := 1; attempt <= 3; attempt++ {
+		b.running.RLock()
+		defer b.running.RUnlock()
+		for attempt := 1; attempt <= 3 && !b.stopping(); attempt++ {
 			tag, err := b.pool.Exec(context.Background(),
 				`INSERT INTO event_claims (event_id, handler) VALUES ($1, $2) ON CONFLICT DO NOTHING`, e.ID, handler)
 			if err != nil {
@@ -401,10 +479,35 @@ func (b *Bus) SubscribeOnce(prefix, handler string, h Handler) {
 				return
 			}
 			b.pool.Exec(context.Background(), `DELETE FROM event_claims WHERE event_id = $1 AND handler = $2`, e.ID, handler)
-			time.Sleep(time.Duration(attempt) * onceRetryDelay)
+			time.Sleep(time.Duration(attempt) * retryDelay)
 		}
 	})
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.onces = append(b.onces, onceSubscription{sub, handler})
+}
+
+// stopping: once Start's ctx is done, queued events stay unclaimed for another replica's sweep.
+func (b *Bus) stopping() bool {
+	select {
+	case <-b.done:
+		return true
+	default:
+		return false
+	}
+}
+
+// WaitForHandlers lets once handlers that already claimed an event finish, at most timeout; call it after Start's ctx is done.
+func (b *Bus) WaitForHandlers(timeout time.Duration) {
+	idle := make(chan struct{})
+	go func() {
+		b.running.Lock()
+		b.running.Unlock()
+		close(idle)
+	}()
+	select {
+	case <-idle:
+	case <-time.After(timeout):
+		slog.Warn("events: once handlers still running at shutdown")
+	}
 }

@@ -1,15 +1,124 @@
 import { useTickOutbox } from '~/composables/useTickOutbox'
 import type { TickRecord } from '~/types/models'
+import type { TickOutboxOp } from '~/utils/tickOutbox'
+import { jsonResponse, mockApi } from '../api/apiMock'
+
+type Row = { id: string }
+
+function fakeIndexedDb() {
+    const stores = new Map<string, Map<string, Row>>()
+    const request = <T>(result: T) => ({ result }) as IDBRequest<T>
+    const db = {
+        objectStoreNames: { contains: (name: string) => stores.has(name) },
+        createObjectStore: (name: string) => stores.set(name, new Map()),
+        close: () => {},
+        transaction(name: string) {
+            const rows = stores.get(name)!
+            const tx = {
+                oncomplete: null as null | (() => void),
+                onerror: null,
+                onabort: null,
+                objectStore: () => ({
+                    getAll: () => request([...rows.values()]),
+                    get: (id: string) => request(rows.get(id)),
+                    put: (row: Row) => request(rows.set(row.id, row)),
+                    delete: (id: string) => request(rows.delete(id)),
+                    clear: () => request(rows.clear()),
+                }),
+            }
+            setTimeout(() => tx.oncomplete?.(), 0)
+            return tx
+        },
+    }
+    return {
+        stores,
+        open() {
+            const open = {
+                result: db,
+                onupgradeneeded: null as null | (() => void),
+                onsuccess: null as null | (() => void),
+            }
+            setTimeout(() => {
+                open.onupgradeneeded?.()
+                open.onsuccess?.()
+            }, 0)
+            return open
+        },
+    }
+}
+
+const token = `x.${btoa(JSON.stringify({ exp: 4102444800 }))}.y`
+const tick = (id: string, note = ''): TickRecord =>
+    ({
+        id,
+        user: 'u1',
+        route: 'r1',
+        type: 'top',
+        attempts: 1,
+        date: '2026-10-01',
+        note,
+    }) as TickRecord
+const created = (id: string): TickOutboxOp => ({
+    op: 'create',
+    id,
+    user: 'u1',
+    record: tick(id),
+    queued: '2026-10-01T10:00:00Z',
+})
+
+let idb: ReturnType<typeof fakeIndexedDb>
+let api: ReturnType<typeof mockApi>
+
+beforeEach(() => {
+    idb = fakeIndexedDb()
+    vi.stubGlobal('indexedDB', idb)
+    vi.stubGlobal(
+        'refreshNuxtData',
+        vi.fn(async () => {}),
+    )
+    api = mockApi()
+    useAuthStore().save(token, { id: 'u1' } as never)
+})
+
+afterEach(() => {
+    useAuthStore().clear()
+})
+
+async function seed(...ops: TickOutboxOp[]) {
+    const outbox = useTickOutbox()
+    await outbox.load()
+    idb.stores.set('outbox', new Map(ops.map((op) => [op.id, op])))
+    return outbox
+}
+
+function holdNextRequest() {
+    let answer!: (response: Response) => void
+    api.fetchMock.mockImplementationOnce(
+        () => new Promise<Response>((resolve) => (answer = resolve)),
+    )
+    return async (response: Response) => {
+        await vi.waitFor(() => expect(answer).toBeTypeOf('function'))
+        answer(response)
+    }
+}
+
+const sent = () =>
+    api.fetchMock.mock.calls.map((_, index) => {
+        const { method, url } = api.request(index)
+        return `${method} ${url}`
+    })
 
 describe('useTickOutbox', () => {
     it('asks the browser to keep storage once a tick waits offline', async () => {
-        vi.stubGlobal('indexedDB', { open: () => ({}) })
+        const realNavigator = navigator
+        onTestFinished(() => vi.stubGlobal('navigator', realNavigator))
         const persist = vi.fn().mockResolvedValue(true)
         vi.stubGlobal('navigator', {
             ...navigator,
             onLine: false,
             storage: { persist },
         })
+        api.fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'))
 
         const { queued } = await useTickOutbox().createTick({
             user: 'anna',
@@ -18,5 +127,100 @@ describe('useTickOutbox', () => {
 
         expect(queued).toBe(true)
         expect(persist).toHaveBeenCalledOnce()
+    })
+
+    it('keeps ops another tab queued when this tab writes', async () => {
+        const outbox = await seed()
+        idb.stores.get('outbox')!.set('other', created('other'))
+        api.fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'))
+        await outbox.deleteTick('srv')
+        await vi.waitFor(() =>
+            expect([...idb.stores.get('outbox')!.keys()].sort()).toEqual([
+                'other',
+                'srv',
+            ]),
+        )
+    })
+
+    it('replays an edit made while the queued create was being sent', async () => {
+        const outbox = await seed(created('a'))
+        const answer = holdNextRequest()
+        const flushed = outbox.flush()
+        await vi.waitFor(() => expect(sent()).toEqual(['POST /api/me/ticks']))
+        await outbox.updateTick(tick('a'), { note: 'crux' })
+        await answer(jsonResponse(tick('a')))
+        await flushed
+        expect(sent()).toEqual(['POST /api/me/ticks', 'PATCH /api/ticks/a'])
+        expect(api.request().body).toMatchObject({ note: 'crux' })
+        expect(outbox.queue.value).toEqual([])
+    })
+
+    it('deletes a tick removed while its queued create was being sent', async () => {
+        const outbox = await seed(created('a'))
+        const answer = holdNextRequest()
+        const flushed = outbox.flush()
+        await vi.waitFor(() => expect(sent()).toHaveLength(1))
+        await outbox.deleteTick('a')
+        await answer(jsonResponse(tick('a')))
+        await flushed
+        expect(sent()).toEqual(['POST /api/me/ticks', 'DELETE /api/ticks/a'])
+        expect(outbox.queue.value).toEqual([])
+    })
+
+    it('replays an edit another tab folded into the create while it was sent', async () => {
+        const outbox = await seed(created('a'))
+        const answer = holdNextRequest()
+        const flushed = outbox.flush()
+        await vi.waitFor(() => expect(sent()).toHaveLength(1))
+        idb.stores.get('outbox')!.set('a', {
+            ...created('a'),
+            record: tick('a', 'crux'),
+        })
+        await answer(jsonResponse(tick('a')))
+        await flushed
+        expect(sent()).toEqual(['POST /api/me/ticks', 'PATCH /api/ticks/a'])
+        expect(api.request().body).toMatchObject({ note: 'crux' })
+        expect(idb.stores.get('outbox')!.size).toBe(0)
+    })
+
+    it('deletes a tick another tab removed while its create was sent', async () => {
+        Object.defineProperty(navigator, 'locks', {
+            configurable: true,
+            value: { request: (_name: string, run: () => unknown) => run() },
+        })
+        try {
+            const outbox = await seed(created('a'))
+            const answer = holdNextRequest()
+            const flushed = outbox.flush()
+            await vi.waitFor(() => expect(sent()).toHaveLength(1))
+            idb.stores.get('outbox')!.delete('a')
+            await answer(jsonResponse(tick('a')))
+            await flushed
+            expect(sent()).toEqual([
+                'POST /api/me/ticks',
+                'DELETE /api/ticks/a',
+            ])
+        } finally {
+            delete (navigator as { locks?: unknown }).locks
+        }
+    })
+
+    it('keeps a tick another tab settled without Web Locks', async () => {
+        const outbox = await seed(created('a'))
+        const answer = holdNextRequest()
+        const flushed = outbox.flush()
+        await vi.waitFor(() => expect(sent()).toHaveLength(1))
+        idb.stores.get('outbox')!.delete('a')
+        await answer(jsonResponse(tick('a')))
+        await flushed
+        expect(sent()).toEqual(['POST /api/me/ticks'])
+        expect(outbox.queue.value).toEqual([])
+    })
+
+    it('replays each op once when flushes overlap', async () => {
+        const outbox = await seed(created('a'))
+        await Promise.all([outbox.flush(), outbox.flush(), outbox.flush()])
+        expect(sent()).toEqual(['POST /api/me/ticks'])
+        expect(idb.stores.get('outbox')!.size).toBe(0)
     })
 })

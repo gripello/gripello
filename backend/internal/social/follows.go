@@ -154,6 +154,9 @@ func (m *module) postFollow(w http.ResponseWriter, r *http.Request) error {
 	}
 	var follow Follow
 	err = pgx.BeginFunc(r.Context(), m.app.DB, func(tx pgx.Tx) error {
+		if err := lockPair(r.Context(), tx, principal.UserID, body.Followee); err != nil {
+			return err
+		}
 		followee, ok, err := findPerson(r.Context(), tx, body.Followee)
 		if err != nil {
 			return err
@@ -261,6 +264,12 @@ func (m *module) deleteFollow(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// lockPair serializes follows and blocks between two climbers, so a follow can't slip in next to a new block.
+func lockPair(ctx context.Context, tx pgx.Tx, a, b string) error {
+	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('follow:' || least($1::text, $2::text) || ':' || greatest($1::text, $2::text), 0))`, a, b)
+	return err
+}
+
 func queryBlocks(ctx context.Context, q querier, sql string, args ...any) ([]Block, error) {
 	rows, err := q.Query(ctx, sql, args...)
 	if err != nil {
@@ -309,6 +318,9 @@ func (m *module) postBlock(w http.ResponseWriter, r *http.Request) error {
 	}
 	var block Block
 	err = pgx.BeginFunc(r.Context(), m.app.DB, func(tx pgx.Tx) error {
+		if err := lockPair(r.Context(), tx, principal.UserID, body.Blocked); err != nil {
+			return err
+		}
 		if _, ok, err := findPerson(r.Context(), tx, body.Blocked); err != nil || !ok {
 			if err == nil {
 				err = invalid("blocked", "validation_invalid_value", "Unknown climber.")

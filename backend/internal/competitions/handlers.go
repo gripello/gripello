@@ -477,11 +477,13 @@ type standingsCache struct {
 	mu          sync.Mutex
 	entries     map[string]cachedStandings
 	generations map[string]int
-	builds      singleflight.Group
+	// gym: events also outdate builds of competitions that weren't cached yet
+	gymGenerations map[string]int
+	builds         singleflight.Group
 }
 
 func newStandingsCache() *standingsCache {
-	return &standingsCache{entries: map[string]cachedStandings{}, generations: map[string]int{}}
+	return &standingsCache{entries: map[string]cachedStandings{}, generations: map[string]int{}, gymGenerations: map[string]int{}}
 }
 
 func (c *standingsCache) forget(id string) {
@@ -494,6 +496,7 @@ func (c *standingsCache) forget(id string) {
 func (c *standingsCache) forgetGym(gym string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.gymGenerations[gym]++
 	for id, cached := range c.entries {
 		if cached.gym == gym {
 			delete(c.entries, id)
@@ -503,7 +506,13 @@ func (c *standingsCache) forgetGym(gym string) {
 }
 
 // store skips results whose build started before the latest change, so they can't outlive it.
-func (c *standingsCache) store(id string, generation int, comp Competition, public bool, standings Standings) {
+func (c *standingsCache) gymGeneration(gym string) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.gymGenerations[gym]
+}
+
+func (c *standingsCache) store(id string, generation, gymGeneration int, comp Competition, public bool, standings Standings) {
 	expires := time.Now().Add(standingsCacheTTL)
 	if standings.Visibility == "live" && comp.FreezeAt != nil && comp.FreezeAt.Before(expires) {
 		expires = *comp.FreezeAt
@@ -515,7 +524,7 @@ func (c *standingsCache) store(id string, generation int, comp Competition, publ
 			delete(c.entries, stale)
 		}
 	}
-	if c.generations[id] == generation {
+	if c.generations[id] == generation && c.gymGenerations[comp.Gym] == gymGeneration {
 		c.entries[id] = cachedStandings{gym: comp.Gym, public: public, standings: standings, expires: expires}
 	}
 }
@@ -562,11 +571,12 @@ func (m *module) publicStandings(ctx context.Context, id string) (Standings, err
 		if err != nil {
 			return standings, err
 		}
+		gymGeneration := cache.gymGeneration(c.Gym)
 		var public bool
 		if err := m.app.DB.QueryRow(ctx, `SELECT gym_visible($1, '')`, c.Gym).Scan(&public); err != nil {
 			return standings, err
 		}
-		cache.store(id, generation, c, public, standings)
+		cache.store(id, generation, gymGeneration, c, public, standings)
 		return standings, err
 	})
 	return standings.(Standings), err

@@ -67,7 +67,7 @@ public class WidgetConfigureActivity extends AppCompatActivity {
 
     private void choose(String gymId, String gymName) {
         WidgetStore.saveGym(this, widgetId, gymId, gymName);
-        ClimbingWidget.updateAll(this);
+        ClimbingWidget.updateAll(this, true);
         setResult(RESULT_OK, new Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId));
         finish();
     }

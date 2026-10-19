@@ -59,12 +59,15 @@ func (m *module) login(w http.ResponseWriter, r *http.Request) error {
 		known = &user
 	}
 	key := lockoutKey(known, body.Identity)
-	if lockout.IsLocked(ctx, m.db, key) {
-		return lockout.ErrLocked
+	if err := lockout.Reserve(ctx, m.db, key); err != nil {
+		return err
 	}
 	if !checkPassword(user.PasswordHash, body.Password) || known == nil {
 		m.recordLoginFailure(ctx, r, key, known, maskedIdentity(body.Identity))
 		return errFailedAuth
+	}
+	if err := lockout.Release(ctx, m.db, key); err != nil {
+		return err
 	}
 	if err := checkAccess(user); err != nil {
 		return err
@@ -112,6 +115,7 @@ func (m *module) loginWithTOTP(w http.ResponseWriter, r *http.Request) error {
 	}
 	factors, err := listFactors(ctx, m.db, user.ID)
 	if err != nil {
+		lockout.Release(ctx, m.db, user.ID)
 		return err
 	}
 	accepted := false
@@ -127,6 +131,9 @@ func (m *module) loginWithTOTP(w http.ResponseWriter, r *http.Request) error {
 	if !accepted {
 		m.recordLoginFailure(ctx, r, user.ID, &user, "")
 		return errFailedAuth
+	}
+	if err := lockout.Release(ctx, m.db, user.ID); err != nil {
+		return err
 	}
 	return m.signIn(w, r, user, methodTOTP, body.MFAID)
 }
@@ -145,6 +152,10 @@ func (m *module) loginWithRecoveryCode(w http.ResponseWriter, r *http.Request) e
 	if !useRecoveryCode(ctx, m.db, user.ID, hash) {
 		m.recordLoginFailure(ctx, r, user.ID, &user, "")
 		return errFailedAuth
+	}
+	if err := lockout.Release(ctx, m.db, user.ID); err != nil {
+		restoreRecoveryCode(ctx, m.db, user.ID, hash)
+		return err
 	}
 	if err := m.signIn(w, r, user, methodRecovery, body.MFAID); err != nil {
 		restoreRecoveryCode(ctx, m.db, user.ID, hash)
@@ -390,8 +401,12 @@ func (m *module) confirmPasswordReset(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 	err = pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE users SET password_hash = $2, verified = true WHERE id = $1`, user.ID, hash); err != nil {
+		tag, err := tx.Exec(ctx, `UPDATE users SET password_hash = $2, verified = true WHERE id = $1 AND token_key = $3`, user.ID, hash, user.TokenKey)
+		if err != nil {
 			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return invalidToken()
 		}
 		if err := rotateTokenKey(ctx, tx, user.ID); err != nil {
 			return err
@@ -519,8 +534,15 @@ func (m *module) confirmEmailChange(w http.ResponseWriter, r *http.Request) erro
 		return httpx.NewError(http.StatusBadRequest, "Failed to validate.").Field("newEmail", code, message)
 	}
 	err := pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE users SET email = $2, verified = true WHERE id = $1`, user.ID, claims.NewEmail); err != nil {
+		tag, err := tx.Exec(ctx, `UPDATE users SET email = $2, verified = true WHERE id = $1 AND token_key = $3`, user.ID, claims.NewEmail, user.TokenKey)
+		if isUniqueViolation(err, "email") {
+			return httpx.NewError(http.StatusBadRequest, "Failed to validate.").Field("newEmail", codeNotUnique, "Value must be unique.")
+		}
+		if err != nil {
 			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return invalidToken()
 		}
 		if err := rotateTokenKey(ctx, tx, user.ID); err != nil {
 			return err
@@ -630,17 +652,20 @@ func (m *module) requirePassword(r *http.Request) (account, error) {
 // confirmPassword checks the password of a known account; wrong guesses count toward its lockout.
 func (m *module) confirmPassword(r *http.Request, user account, field, password, wrongCode string) error {
 	ctx := r.Context()
-	if lockout.IsLocked(ctx, m.db, user.ID) {
-		return lockout.ErrLocked
-	}
 	if user.PasswordHash == "" {
+		if lockout.IsLocked(ctx, m.db, user.ID) {
+			return lockout.ErrLocked
+		}
 		return httpx.NewError(http.StatusBadRequest, "Set a password first.").Field(field, "password_required", "Set a password first.")
+	}
+	if err := lockout.Reserve(ctx, m.db, user.ID); err != nil {
+		return err
 	}
 	if !checkPassword(user.PasswordHash, password) {
 		m.recordLoginFailure(ctx, r, user.ID, &user, "")
 		return httpx.NewError(http.StatusBadRequest, "Invalid password.").Field(field, wrongCode, "Invalid password.")
 	}
-	return nil
+	return lockout.Release(ctx, m.db, user.ID)
 }
 
 func (m *module) listMFAFactors(w http.ResponseWriter, r *http.Request) error {

@@ -696,22 +696,37 @@ func TestStandingsCacheDropsBuildsOlderThanAChange(t *testing.T) {
 	cache := newStandingsCache()
 	freezeAt := time.Now().Add(10 * time.Second)
 	comp := Competition{Gym: "g", FreezeAt: &freezeAt}
-	cache.store("c", 0, comp, true, Standings{Visibility: "live"})
+	cache.store("c", 0, 0, comp, true, Standings{Visibility: "live"})
 	if got := cache.entries["c"].expires; !got.Equal(freezeAt) {
 		t.Errorf("live standings should expire at the freeze, got %s", got)
 	}
-	cache.store("f", 0, comp, true, Standings{Visibility: "frozen"})
+	cache.store("f", 0, 0, comp, true, Standings{Visibility: "frozen"})
 	if got := cache.entries["f"].expires; !got.After(freezeAt) {
 		t.Errorf("frozen standings should keep the regular ttl, got %s", got)
 	}
 	cache.forget("c")
-	cache.store("c", 0, comp, true, Standings{Visibility: "live"})
+	cache.store("c", 0, 0, comp, true, Standings{Visibility: "live"})
 	if _, ok := cache.entries["c"]; ok {
 		t.Error("a build that started before the change must not be cached")
 	}
-	cache.store("c", 1, comp, true, Standings{Visibility: "live"})
+	cache.store("c", 1, 0, comp, true, Standings{Visibility: "live"})
 	if _, ok := cache.entries["c"]; !ok {
 		t.Error("a build after the change should be cached")
+	}
+}
+
+func TestStandingsCacheDropsBuildsOlderThanAGymChange(t *testing.T) {
+	cache := newStandingsCache()
+	comp := Competition{Gym: "g"}
+	gymGeneration := cache.gymGeneration("g")
+	cache.forgetGym("g")
+	cache.store("c", 0, gymGeneration, comp, true, Standings{Visibility: "live"})
+	if _, ok := cache.entries["c"]; ok {
+		t.Error("a build that started before the gym changed must not be cached")
+	}
+	cache.store("c", 0, cache.gymGeneration("g"), comp, true, Standings{Visibility: "live"})
+	if _, ok := cache.entries["c"]; !ok {
+		t.Error("a build after the gym change should be cached")
 	}
 }
 

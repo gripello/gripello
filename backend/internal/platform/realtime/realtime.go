@@ -27,6 +27,8 @@ const (
 	replayLimit     = 500
 	permCacheTTL    = 5 * time.Second
 	permLookupLimit = 2 * time.Second
+	// A subscription verified just before its session was revoked can arrive after the revocation; it outlives the 15 s token cache and bus lag.
+	revokedFor = 10 * time.Minute
 	// Server-only (empty audience): a subscription change on its way to the replica holding the stream.
 	subscriptionTopic = "realtime.subscriptions"
 )
@@ -43,13 +45,16 @@ type frame struct {
 	id    int64
 	topic string
 	data  []byte
+	epoch int // the client's principal generation when it was queued
 }
 
-func frameOf(e events.Event) frame { return frame{e.ID, e.Topic, withKind(e)} }
+func frameOf(e events.Event) frame { return frame{id: e.ID, topic: e.Topic, data: withKind(e)} }
 
 type client struct {
 	id          string
 	principal   *auth.Principal
+	epoch       int   // bumped when the principal changes, so frames queued for the old one are not written
+	subscribed  int64 // id of the subscription change applied last
 	topics      []string
 	send        chan frame
 	replayFrom  int64 // Last-Event-ID, replayed once the client has told us its topics
@@ -88,6 +93,9 @@ type Hub struct {
 	closing   chan struct{}
 	closeOnce sync.Once
 	dropped   atomic.Int64
+	revokedMu sync.Mutex
+	revoked   map[string]time.Time
+	seen      int64 // highest event id deliver got; only the deliver goroutine touches it
 }
 
 type cachedUsers struct {
@@ -154,9 +162,12 @@ func (h *Hub) usersFor(key string, load func(context.Context) ([]string, error))
 }
 
 func (h *Hub) deliver(e events.Event) {
+	// the bus dispatches events that committed after a gap out of order
+	latest := h.seen
+	h.seen = max(h.seen, e.ID)
 	switch {
 	case e.Topic == subscriptionTopic:
-		h.applySubscription(e)
+		h.applySubscription(e, latest)
 		return
 	case e.Topic == "session.revoked":
 		h.dropSession(e)
@@ -177,7 +188,7 @@ func (h *Hub) deliver(e events.Event) {
 	for _, c := range h.snapshot() {
 		c.mu.Lock()
 		subscribed := slices.Contains(c.topics, e.Topic)
-		p := c.principal
+		p, epoch := c.principal, c.epoch
 		c.mu.Unlock()
 		if !subscribed || c.stale.Load() {
 			continue
@@ -193,8 +204,10 @@ func (h *Hub) deliver(e events.Event) {
 			f := frameOf(e)
 			out = &f
 		}
+		f := *out
+		f.epoch = epoch
 		select {
-		case c.send <- *out:
+		case c.send <- f:
 		default: // slow client: end the stream before anything newer, it catches up through Last-Event-ID
 			h.dropped.Add(1)
 			c.reconnect()
@@ -218,15 +231,44 @@ func (h *Hub) dropSession(e events.Event) {
 		Session string `json:"session"`
 	}
 	json.Unmarshal(e.Payload, &payload)
+	if payload.Session == "" {
+		return
+	}
+	h.revokedMu.Lock()
+	if h.revoked == nil {
+		h.revoked = map[string]time.Time{}
+	}
+	for sid, at := range h.revoked {
+		if time.Since(at) > revokedFor {
+			delete(h.revoked, sid)
+		}
+	}
+	h.revoked[payload.Session] = time.Now()
+	h.revokedMu.Unlock()
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for _, c := range h.clients {
 		c.mu.Lock()
+		// Ending the stream also discards what was queued for the session; the client resumes as whoever it is now.
 		if c.principal != nil && c.principal.SessionID == payload.Session {
 			c.principal = nil
+			c.reconnect()
 		}
 		c.mu.Unlock()
 	}
+}
+
+// live drops a principal whose session this hub saw revoked.
+func (h *Hub) live(p *auth.Principal) *auth.Principal {
+	if p == nil || p.SessionID == "" {
+		return p
+	}
+	h.revokedMu.Lock()
+	defer h.revokedMu.Unlock()
+	if _, revoked := h.revoked[p.SessionID]; revoked {
+		return nil
+	}
+	return p
 }
 
 func (h *Hub) refreshPlatformAdmin(e events.Event) {
@@ -245,6 +287,9 @@ func (h *Hub) refreshPlatformAdmin(e events.Event) {
 	for _, c := range h.clients {
 		c.mu.Lock()
 		if c.principal != nil && c.principal.UserID == userID {
+			if c.principal.PlatformAdmin && !payload.Record.PlatformAdmin {
+				c.reconnect() // frames queued for the admin must not go out
+			}
 			refreshed := *c.principal
 			refreshed.PlatformAdmin = payload.Record.PlatformAdmin
 			c.principal = &refreshed
@@ -357,7 +402,7 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 	}
 	c := &client{id: ids.New(), send: make(chan frame, 64), gone: make(chan struct{}), replayReady: make(chan struct{}, 1)}
 	if p, ok := auth.From(r.Context()); ok {
-		c.principal = &p
+		c.principal = h.live(&p)
 	}
 	lastID := r.Header.Get("Last-Event-ID")
 	if lastID == "" {
@@ -385,13 +430,15 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 	defer cancel()
 	ping := time.NewTicker(heartbeat)
 	defer ping.Stop()
+	written := newWrittenIDs()
 	writeReplay := func() {
 		frames, resyncAt := c.takeReplay()
 		for _, f := range frames {
-			writeFrame(w, f)
+			written.write(w, f)
 		}
 		if resyncAt > 0 {
-			fmt.Fprintf(w, "id:%d\nevent:resync\ndata:{}\n\n", resyncAt)
+			written.writeID(w, resyncAt)
+			fmt.Fprint(w, "event:resync\ndata:{}\n\n")
 		}
 		if len(frames) > 0 || resyncAt > 0 {
 			flusher.Flush()
@@ -410,27 +457,60 @@ func (h *Hub) Connect(w http.ResponseWriter, r *http.Request) error {
 			fmt.Fprint(w, ":ping\n\n")
 			flusher.Flush()
 		case <-c.replayReady:
-			writeReplay()
-		case f := <-c.send:
-			writeReplay()
-			c.mu.Lock()
-			subscribed := slices.Contains(c.topics, f.topic)
-			c.mu.Unlock()
 			if c.stale.Load() {
 				sendRetryLater(w, flusher)
 				return nil
 			}
-			if !subscribed {
+			writeReplay()
+		case f := <-c.send:
+			if c.stale.Load() {
+				sendRetryLater(w, flusher)
+				return nil
+			}
+			writeReplay()
+			c.mu.Lock()
+			current := slices.Contains(c.topics, f.topic) && f.epoch == c.epoch
+			c.mu.Unlock()
+			if !current {
 				continue
 			}
-			writeFrame(w, f)
-			flusher.Flush()
+			if written.write(w, f) {
+				flusher.Flush()
+			}
 		}
 	}
 }
 
-func writeFrame(w http.ResponseWriter, f frame) {
-	fmt.Fprintf(w, "id:%d\nevent:%s\ndata:%s\n\n", f.id, f.topic, f.data)
+// writtenIDs remembers the last replayLimit ids a stream wrote: a replay may repeat frames already queued or sent live.
+type writtenIDs struct {
+	seen  map[int64]bool
+	order []int64
+	last  int64
+}
+
+func newWrittenIDs() *writtenIDs { return &writtenIDs{seen: map[int64]bool{}} }
+
+func (s *writtenIDs) write(w http.ResponseWriter, f frame) bool {
+	if s.seen[f.id] {
+		return false
+	}
+	s.seen[f.id] = true
+	s.order = append(s.order, f.id)
+	if len(s.order) > replayLimit {
+		delete(s.seen, s.order[0])
+		s.order = s.order[1:]
+	}
+	s.writeID(w, f.id)
+	fmt.Fprintf(w, "event:%s\ndata:%s\n\n", f.topic, f.data)
+	return true
+}
+
+// writeID only moves the stream's Last-Event-ID forward; a frame below it (replayed, or committed late) goes out without one.
+func (s *writtenIDs) writeID(w http.ResponseWriter, id int64) {
+	if id > s.last {
+		s.last = id
+		fmt.Fprintf(w, "id:%d\n", id)
+	}
 }
 
 // sendRetryLater spreads the reconnects of streams closed together (one failed lookup closes all of a gym's) over a few seconds.
@@ -468,7 +548,8 @@ type subscriptionChange struct {
 	Principal *auth.Principal `json:"principal,omitempty"`
 }
 
-func (h *Hub) applySubscription(e events.Event) {
+// latest > e.ID: the change committed late, events after it already went out under the old subscription.
+func (h *Hub) applySubscription(e events.Event, latest int64) {
 	var change subscriptionChange
 	if json.Unmarshal(e.Payload, &change) != nil {
 		return
@@ -479,12 +560,28 @@ func (h *Hub) applySubscription(e events.Event) {
 	if c == nil {
 		return
 	}
+	principal := h.live(change.Principal)
 	c.mu.Lock()
+	if e.ID < c.subscribed {
+		c.mu.Unlock()
+		return
+	}
+	c.subscribed = e.ID
 	c.topics = change.Topics
-	c.principal = change.Principal
+	if !samePrincipal(c.principal, principal) {
+		c.epoch++
+	}
+	c.principal = principal
 	replayFrom := max(c.replayFrom, change.Since)
 	c.replayFrom = 0
 	c.mu.Unlock()
+	if latest > e.ID && len(change.Topics) > 0 {
+		c.mu.Lock()
+		c.resyncAt = latest
+		c.mu.Unlock()
+		c.signalReplay()
+		return
+	}
 	if replayFrom == 0 || len(change.Topics) == 0 {
 		return
 	}
@@ -499,7 +596,7 @@ func (h *Hub) applySubscription(e events.Event) {
 			complete = err == nil
 			break
 		}
-		ok, retry := h.accepts(missedEvent)(change.Principal)
+		ok, retry := h.accepts(missedEvent)(principal)
 		if retry {
 			c.reconnect()
 			return
@@ -514,10 +611,18 @@ func (h *Hub) applySubscription(e events.Event) {
 		c.resyncAt = e.ID
 	}
 	c.mu.Unlock()
+	c.signalReplay()
+}
+
+func (c *client) signalReplay() {
 	select {
 	case c.replayReady <- struct{}{}:
 	default:
 	}
+}
+
+func samePrincipal(a, b *auth.Principal) bool {
+	return a == nil && b == nil || a != nil && b != nil && *a == *b
 }
 
 func mustJSON(v any) []byte {

@@ -807,7 +807,9 @@ function onItemPointerDown(item: RouteRecord, event: PointerEvent) {
         window.removeEventListener('pointermove', move)
         window.removeEventListener('pointerup', end)
         window.removeEventListener('pointercancel', cancel)
-        window.removeEventListener('touchmove', preventScroll)
+        window.removeEventListener('touchmove', preventScroll, {
+            capture: true,
+        })
     }
     const move = (moveEvent: PointerEvent) => {
         const distance = Math.hypot(
@@ -837,7 +839,10 @@ function onItemPointerDown(item: RouteRecord, event: PointerEvent) {
     }
 
     if (isTouch) {
-        window.addEventListener('touchmove', preventScroll, { passive: false })
+        window.addEventListener('touchmove', preventScroll, {
+            passive: false,
+            capture: true,
+        })
         pressTimer = window.setTimeout(() => {
             longPressed = true
             void haptic('press')

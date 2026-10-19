@@ -39,6 +39,11 @@
                     <span v-else>{{ entry.record_id }}</span>
                 </template>
                 <span v-if="ip">{{ ip }}</span>
+                <span
+                    class="pointer-fine:hidden"
+                    data-testid="audit-card-absolute-time"
+                    >{{ absoluteTime }}</span
+                >
             </div>
 
             <div v-if="changedFields.length" class="audit-card__meta text-xs">

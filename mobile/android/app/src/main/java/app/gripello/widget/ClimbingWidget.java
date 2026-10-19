@@ -28,19 +28,20 @@ public class ClimbingWidget extends AppWidgetProvider {
     private static final int[] FLASHES = { R.id.widget_row1_flash, R.id.widget_row2_flash, R.id.widget_row3_flash };
 
     // The app's bridge (GripelloWidgetPlugin) and the gym picker ask every placed widget to load again.
-    public static void updateAll(Context context) {
+    // replace: the session or a gym changed, so a load already running would draw stale numbers.
+    public static void updateAll(Context context, boolean replace) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, ClimbingWidget.class));
         if (ids.length == 0) return;
         drawCached(context, manager, ids);
-        WidgetUpdateJob.schedule(context);
+        WidgetUpdateJob.schedule(context, replace);
     }
 
     // The network work runs in WidgetUpdateJob: a broadcast receiver has only seconds, even with goAsync.
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         drawCached(context, manager, ids);
-        WidgetUpdateJob.schedule(context);
+        WidgetUpdateJob.schedule(context, false);
     }
 
     // The last numbers (or the sign-in prompt) right away, also offline, until the job brings fresh ones.

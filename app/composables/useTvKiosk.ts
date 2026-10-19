@@ -11,6 +11,7 @@ export function useTvKiosk() {
     let cursorTimer: ReturnType<typeof setTimeout> | undefined
     let reloadTimer: ReturnType<typeof setInterval> | undefined
     let updatePending = false
+    let unmounted = false
 
     const loadedAt = () => new Date(performance.timeOrigin)
 
@@ -29,7 +30,11 @@ export function useTvKiosk() {
 
     async function lockScreen() {
         if (document.visibilityState !== 'visible') return
-        wakeLock = await navigator.wakeLock?.request('screen').catch(() => null)
+        const lock = await navigator.wakeLock
+            ?.request('screen')
+            .catch(() => null)
+        if (unmounted) return void lock?.release().catch(() => {})
+        wakeLock = lock ?? null
     }
 
     function showCursor() {
@@ -55,6 +60,7 @@ export function useTvKiosk() {
         reloadTimer = setInterval(() => void checkReload(), RELOAD_CHECK_MS)
     })
     onBeforeUnmount(() => {
+        unmounted = true
         removeUpdateHook()
         document.removeEventListener('visibilitychange', lockScreen)
         window.removeEventListener('pointermove', showCursor)

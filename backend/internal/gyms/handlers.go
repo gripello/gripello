@@ -103,6 +103,12 @@ func (m *module) deleteGym(w http.ResponseWriter, r *http.Request) error {
 	}
 	var dirs []string
 	err = pgx.BeginFunc(r.Context(), m.db, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(r.Context(), `SELECT 1 FROM gyms WHERE id = $1 FOR UPDATE`, gym.ID); err != nil {
+			return err
+		}
+		if gym, err = loadGym(r.Context(), tx, gym.ID); err != nil {
+			return err
+		}
 		if dirs, err = gymBlobDirs(r.Context(), tx, gym.ID); err != nil {
 			return err
 		}

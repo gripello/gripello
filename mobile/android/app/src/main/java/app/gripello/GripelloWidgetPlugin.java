@@ -21,20 +21,20 @@ public class GripelloWidgetPlugin extends Plugin {
             return;
         }
         WidgetStore.saveSession(getContext(), new WidgetStore.Session(token, userId, origin));
-        ClimbingWidget.updateAll(getContext());
+        ClimbingWidget.updateAll(getContext(), true);
         call.resolve();
     }
 
     @PluginMethod
     public void clearSession(PluginCall call) {
         WidgetStore.clearSession(getContext());
-        ClimbingWidget.updateAll(getContext());
+        ClimbingWidget.updateAll(getContext(), true);
         call.resolve();
     }
 
     @PluginMethod
     public void reload(PluginCall call) {
-        ClimbingWidget.updateAll(getContext());
+        ClimbingWidget.updateAll(getContext(), false);
         call.resolve();
     }
 }

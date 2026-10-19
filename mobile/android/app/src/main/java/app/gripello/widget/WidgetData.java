@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -127,7 +128,7 @@ final class WidgetData {
                     continue;
                 }
                 String json = stats.toJson();
-                if (json != null) WidgetStore.saveSnapshot(context, id, json);
+                if (json != null) WidgetStore.saveSnapshotIf(context, id, json, session.token, gym);
                 result.put(id, stats);
             }
         } catch (Unauthorized e) {
@@ -198,7 +199,8 @@ final class WidgetData {
         Stats stats = new Stats();
         List<JSONObject> ticks = new ArrayList<>();
         List<Send> sends = new ArrayList<>();
-        Map<String, Integer> systems = new HashMap<>();
+        // Insertion order = newest first, so a tie goes to the system of the most recent send (as on iOS).
+        Map<String, Integer> systems = new LinkedHashMap<>();
         for (int i = 0; i < items.length(); i++) {
             JSONObject tick = items.getJSONObject(i);
             String type = tick.optString("type");

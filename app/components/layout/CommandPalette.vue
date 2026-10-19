@@ -28,7 +28,7 @@
                 :placeholder="$t('nav.commandPalettePlaceholder')"
                 :input="inputAttrs"
                 :ui="{
-                    content: 'max-h-[min(65vh,640px)]',
+                    content: 'max-h-[min(65dvh,640px)]',
                     viewport: '[scrollbar-width:thin]',
                     footer: 'px-4 py-2',
                     empty: searching ? 'hidden' : '',

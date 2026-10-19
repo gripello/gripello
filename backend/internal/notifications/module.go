@@ -305,8 +305,12 @@ func (m *module) subscribe(w http.ResponseWriter, r *http.Request) error {
 	}
 	var created PushSubscription
 	err = pgx.BeginFunc(r.Context(), m.app.DB, func(tx pgx.Tx) error {
+		// FOR UPDATE locks nothing while the endpoint is new, so first registrations serialize on its hash
+		if _, err := tx.Exec(r.Context(), `SELECT pg_advisory_xact_lock(hashtextextended('push:' || $1::text, 0))`, body.Endpoint); err != nil {
+			return err
+		}
 		var previous, p256dh, authSecret string
-		err := tx.QueryRow(r.Context(), `SELECT "user", p256dh, auth FROM push_subscriptions WHERE endpoint = $1 FOR UPDATE`, body.Endpoint).Scan(&previous, &p256dh, &authSecret)
+		err := tx.QueryRow(r.Context(), `SELECT "user", p256dh, auth FROM push_subscriptions WHERE endpoint = $1`, body.Endpoint).Scan(&previous, &p256dh, &authSecret)
 		if err != nil && err != pgx.ErrNoRows {
 			return err
 		}

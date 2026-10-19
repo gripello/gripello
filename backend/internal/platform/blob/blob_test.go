@@ -5,11 +5,13 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"hash/crc32"
 	"image"
 	"image/color"
 	"image/png"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -369,5 +371,19 @@ func TestVipsArgsMirrorTheThumbModes(t *testing.T) {
 		if want := append([]string{"thumbnail_source", "[descriptor=0]", "out.png"}, c.want...); !slices.Equal(got, want) {
 			t.Errorf("%dx%d%s = %v, want %v", c.width, c.height, c.mode, got, want)
 		}
+	}
+}
+
+func TestThumbOfADeletedOriginalIsNotServed(t *testing.T) {
+	s, _ := newStore(t)
+	ctx := context.Background()
+	const key, thumb = "gyms/g1/logo_abc.png", "gyms/g1/thumbs_logo_abc.png/100x100_logo_abc.png"
+	// a render that finished after Delete removed the original and its thumbs
+	s.Put(ctx, thumb, bytes.NewReader(pngBytes(t, 100, 100)))
+	if _, err := s.Thumb(ctx, key, "100x100"); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("err = %v, want not found", err)
+	}
+	if _, err := s.Open(ctx, thumb); err == nil {
+		t.Error("orphaned thumb still stored")
 	}
 }

@@ -295,12 +295,12 @@ func TestSweepReadsOnlyIdsPastTheCursorUntilAFullPass(t *testing.T) {
 	pool.QueryRow(ctx, `SELECT nextval('events_id_seq')`).Scan(&lateID)
 	publish("first")
 	cursors := map[chan Event]int64{}
-	bus.sweepOnces(ctx, cursors)
+	bus.sweepOnces(ctx, cursors, onceSweepMinAge)
 	expect("first")
 
 	pool.Exec(ctx, `INSERT INTO events (id, topic, kind, payload) VALUES ($1, 'audit', 'late', 'null')`, lateID)
 	publish("second")
-	bus.sweepOnces(ctx, cursors)
+	bus.sweepOnces(ctx, cursors, onceSweepMinAge)
 	expect("second")
 	select {
 	case kind := <-once:
@@ -308,7 +308,7 @@ func TestSweepReadsOnlyIdsPastTheCursorUntilAFullPass(t *testing.T) {
 	case <-time.After(300 * time.Millisecond):
 	}
 
-	bus.sweepOnces(ctx, map[chan Event]int64{})
+	bus.sweepOnces(ctx, map[chan Event]int64{}, onceSweepMinAge)
 	expect("late")
 }
 
@@ -401,5 +401,151 @@ func TestLagIgnoresTheOutboxBeforeTheBusStarts(t *testing.T) {
 	bus.delivered.Store(0)
 	if lag, _ := bus.Lag(ctx); lag < 29*time.Minute {
 		t.Errorf("an undelivered 30-minute-old event shows lag %v", lag)
+	}
+}
+
+func TestEventCommittedAfterTheGapGraceStillReachesPlainHandlers(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool := testkit.Pool(t)
+	bus := NewBus(pool)
+	got := make(chan string, 4)
+	bus.Subscribe("t", func(e Event) { got <- e.Kind })
+	bus.Start(ctx)
+
+	slow, _ := pool.Begin(ctx)
+	Publish(ctx, slow, "t", "slow", nil, Audience{})
+	fast, _ := pool.Begin(ctx)
+	Publish(ctx, fast, "t", "fast", nil, Audience{})
+	fast.Commit(ctx)
+	if kind := receive(t, got); kind != "fast" {
+		t.Fatalf("got %q", kind)
+	}
+	slow.Commit(ctx)
+	if kind := receive(t, got); kind != "slow" {
+		t.Fatalf("got %q, want the late event", kind)
+	}
+}
+
+func TestStartOnAnEmptyOutboxReadsTheHeadFromTheSequence(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool := testkit.Pool(t)
+	var id int64
+	pool.QueryRow(ctx, `INSERT INTO events (topic, kind, payload) VALUES ('t', 'x', 'null') RETURNING id`).Scan(&id)
+	pool.Exec(ctx, `DELETE FROM events`)
+	bus := NewBus(pool)
+	bus.Start(ctx)
+	if bus.lastID != id {
+		t.Fatalf("head = %d, want %d", bus.lastID, id)
+	}
+}
+
+func TestDispatchBlockedOnAFullQueueDoesNotBlockSubscribe(t *testing.T) {
+	bus := NewBus(nil)
+	release := make(chan struct{})
+	defer close(release)
+	bus.Subscribe("", func(Event) { <-release })
+	go func() {
+		for i := range handlerBacklog + 2 {
+			bus.dispatch(Event{ID: int64(i + 1), Topic: "t"})
+		}
+	}()
+	time.Sleep(100 * time.Millisecond)
+	subscribed := make(chan struct{})
+	go func() {
+		bus.Subscribe("", func(Event) {})
+		bus.QueueMax()
+		close(subscribed)
+	}()
+	select {
+	case <-subscribed:
+	case <-time.After(time.Second):
+		t.Fatal("Subscribe waited behind a dispatch stuck on a full queue")
+	}
+}
+
+func TestShutdownWaitsForRunningOnceHandlersAndClaimsNothingNew(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool := testkit.Pool(t)
+	bus := NewBus(pool)
+	started, release := make(chan struct{}, 2), make(chan struct{})
+	var finished atomic.Int32
+	bus.SubscribeOnce("audit", "audit.write", func(Event) {
+		started <- struct{}{}
+		<-release
+		finished.Add(1)
+	})
+	bus.Start(ctx)
+	for range 2 {
+		tx, _ := pool.Begin(ctx)
+		Publish(ctx, tx, "audit", "x", nil, Audience{})
+		tx.Commit(ctx)
+	}
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("handler did not start")
+	}
+	cancel()
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		close(release)
+	}()
+	bus.WaitForHandlers(3 * time.Second)
+	if finished.Load() != 1 {
+		t.Fatalf("%d handlers finished before shutdown returned, want the running one", finished.Load())
+	}
+	var claims int
+	pool.QueryRow(context.Background(), `SELECT count(*) FROM event_claims WHERE handler = 'audit.write'`).Scan(&claims)
+	if claims != 1 {
+		t.Fatalf("%d claims; the queued event must stay unclaimed for another replica", claims)
+	}
+}
+
+func TestDispatchAfterShutdownNeverBlocks(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	pool := testkit.Pool(t)
+	bus := NewBus(pool)
+	bus.SubscribeOnce("audit", "audit.write", func(Event) {})
+	bus.Start(ctx)
+	cancel()
+	bus.WaitForHandlers(time.Second)
+	dispatched := make(chan struct{})
+	go func() {
+		for i := range handlerBacklog + 5 {
+			bus.dispatch(Event{ID: int64(i + 1), Topic: "audit"})
+		}
+		close(dispatched)
+	}()
+	select {
+	case <-dispatched:
+	case <-time.After(3 * time.Second):
+		t.Fatal("dispatch blocked after shutdown, holding the listener's connection")
+	}
+}
+
+func TestEventInFlightWhileTheOutboxWasEmptyReachesPlainHandlers(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool := testkit.Pool(t)
+	inFlight, _ := pool.Begin(ctx)
+	Publish(ctx, inFlight, "t", "in flight", nil, Audience{})
+	bus := NewBus(pool)
+	got := make(chan string, 2)
+	bus.Subscribe("t", func(e Event) { got <- e.Kind })
+	bus.Start(ctx)
+	inFlight.Commit(ctx)
+	if kind := receive(t, got); kind != "in flight" {
+		t.Fatalf("got %q", kind)
+	}
+}
+
+func TestSkippedIdsAreCapped(t *testing.T) {
+	bus := NewBus(nil)
+	bus.skip(1, 5*maxSkipped)
+	if len(bus.skipped) != maxSkipped {
+		t.Fatalf("%d skipped ids remembered", len(bus.skipped))
 	}
 }

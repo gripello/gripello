@@ -3,8 +3,9 @@ import { ref, shallowRef } from 'vue'
 
 vi.stubGlobal('ref', ref)
 vi.stubGlobal('shallowRef', shallowRef)
-vi.stubGlobal('onMounted', () => {})
-vi.stubGlobal('onBeforeUnmount', () => {})
+vi.stubGlobal('onMounted', (hook: () => void) => hook())
+const unmountHooks: (() => void)[] = []
+vi.stubGlobal('onBeforeUnmount', (hook: () => void) => unmountHooks.push(hook))
 
 const { useLongPressDrag } = await import('~/composables/useLongPressDrag')
 
@@ -19,7 +20,10 @@ function setup() {
 
 describe('useLongPressDrag', () => {
     beforeEach(() => vi.useFakeTimers())
-    afterEach(() => vi.useRealTimers())
+    afterEach(() => {
+        unmountHooks.splice(0).forEach((hook) => hook())
+        vi.useRealTimers()
+    })
 
     it('lifts the item after a steady long press and drops it on a target', () => {
         const { drag, onDrop } = setup()
@@ -67,5 +71,27 @@ describe('useLongPressDrag', () => {
         drag.move({ x: 100, y: 200 })
         drag.release()
         expect(onDrop).not.toHaveBeenCalled()
+    })
+
+    it('claims the touchmove before bubble listeners like pull-to-refresh', () => {
+        let preventedForLaterListeners = false
+        const later = (event: Event) =>
+            (preventedForLaterListeners = event.defaultPrevented)
+        window.addEventListener('touchmove', later)
+        const { drag } = setup()
+        drag.press('task-1', { x: 100, y: 100 })
+        vi.advanceTimersByTime(350)
+
+        const event = new Event('touchmove', {
+            bubbles: true,
+            cancelable: true,
+        })
+        Object.defineProperty(event, 'touches', {
+            value: [{ clientX: 100, clientY: 160 }],
+        })
+        document.body.dispatchEvent(event)
+        window.removeEventListener('touchmove', later)
+
+        expect(preventedForLaterListeners).toBe(true)
     })
 })

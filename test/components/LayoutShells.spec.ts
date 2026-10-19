@@ -40,6 +40,17 @@ describe('layout shells', () => {
         expect(back.text()).toContain('Back')
     })
 
+    it('PageHeader lets a long title wrap beside inline actions', () => {
+        const header = mount(PageHeader, {
+            props: { title: 'T', inlineActions: true },
+            slots: { actions: '<button>Go</button>' },
+            global: { stubs },
+        })
+        expect(
+            header.find('.page-header__title').element.parentElement?.className,
+        ).toBe('min-w-0 break-words')
+    })
+
     it('PageHeader hands its back target to the top bar while mounted', () => {
         const back = mount(PageHeader, {
             props: { title: 'T', backTo: '/judge' },

@@ -561,7 +561,10 @@ func TestParallelFailuresStillLock(t *testing.T) {
 	var wg sync.WaitGroup
 	for range lockout.MaxFailures {
 		wg.Go(func() {
-			if _, err := lockout.CountFailure(context.Background(), f.app.DB, "parallel"); err != nil {
+			if err := lockout.Reserve(context.Background(), f.app.DB, "parallel"); err != nil {
+				t.Error(err)
+			}
+			if _, err := lockout.Failed(context.Background(), f.app.DB, "parallel"); err != nil {
 				t.Error(err)
 			}
 		})
@@ -569,6 +572,28 @@ func TestParallelFailuresStillLock(t *testing.T) {
 	wg.Wait()
 	if !lockout.IsLocked(context.Background(), f.app.DB, "parallel") {
 		t.Error("parallel failures were not all counted")
+	}
+}
+
+func TestParallelGuessesStopAtTheLimit(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	f.user("hammered@example.com")
+	var wg sync.WaitGroup
+	var checked atomic.Int32
+	for range 3 * lockout.MaxFailures {
+		wg.Go(func() {
+			if status, _ := f.login("hammered@example.com", "wrong"); status == http.StatusBadRequest {
+				checked.Add(1)
+			}
+		})
+	}
+	wg.Wait()
+	if n := checked.Load(); n > lockout.MaxFailures {
+		t.Errorf("%d parallel guesses were checked, limit %d", n, lockout.MaxFailures)
+	}
+	if status, _ := f.login("hammered@example.com", testPassword); status != http.StatusTooManyRequests {
+		t.Errorf("login after the parallel guesses = %d", status)
 	}
 }
 
