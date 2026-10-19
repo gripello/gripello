@@ -112,6 +112,7 @@ const realtimeGyms = computed(() =>
 function onGymEvent(event: GymEvent) {
     const next = updatedGym(gym.value, event)
     if (next) gym.value = next
+    if (event.kind === 'gym.trial_changed') refreshPermissions()
     else if (event.kind === 'membership.changed') {
         if (event.users?.includes(realtimeUserId.value)) refreshPermissions()
     } else if (event.kind === 'role.changed') {

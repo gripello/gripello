@@ -26,6 +26,41 @@
                     :back-label="t('platform.gyms.title')"
                 >
                     <template #actions>
+                        <template v-if="trial">
+                            <UBadge
+                                :color="trial.ended ? 'warning' : 'info'"
+                                variant="soft"
+                                data-testid="platform-gym-trial"
+                            >
+                                {{
+                                    trial.ended
+                                        ? t('trial.ended')
+                                        : t('trial.until', {
+                                              date: formatDate(trial.endsAt, {
+                                                  locale,
+                                              }),
+                                          })
+                                }}
+                            </UBadge>
+                            <UButton
+                                color="neutral"
+                                variant="outline"
+                                icon="i-lucide-calendar-plus"
+                                data-testid="platform-gym-trial-extend"
+                                @click="setTrial(extendedTrialEnd(gym))"
+                            >
+                                {{ t('trial.extend') }}
+                            </UButton>
+                            <UButton
+                                color="primary"
+                                variant="soft"
+                                icon="i-lucide-badge-check"
+                                data-testid="platform-gym-trial-convert"
+                                @click="convertDialogOpen = true"
+                            >
+                                {{ t('trial.convert') }}
+                            </UButton>
+                        </template>
                         <USwitch
                             :model-value="!!gym.active"
                             :label="t('platform.gyms.active')"
@@ -144,6 +179,15 @@
             />
 
             <ConfirmDialog
+                v-model="convertDialogOpen"
+                :title="t('trial.convert')"
+                :message="t('trial.convertConfirm', { name: gymTitle(gym) })"
+                :confirm-text="t('trial.convert')"
+                confirm-color="primary"
+                data-testid="platform-gym-trial-convert-dialog"
+                @confirm="setTrial(null)"
+            />
+            <ConfirmDialog
                 v-model="hiddenDialogOpen"
                 :title="t('platform.gyms.makeInvisible')"
                 :message="
@@ -175,12 +219,14 @@ import type { FeatureFlag } from '#shared/utils/featureFlags'
 import { FEATURE_FLAGS, hasFeature } from '#shared/utils/featureFlags'
 import { setGymFeatures } from '~/api/platform'
 import { gymTitle } from '~/utils/gymNames'
+import { extendedTrialEnd, gymTrial } from '~/utils/gymTrial'
+import { formatDate } from '#shared/utils/formatting'
 import type { GymRecord } from '~/types/models'
 import type { GymEvent } from '~/composables/useRealtime'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const gymId = String(route.params.id)
 const membersCard = useTemplateRef<{ openInvite: () => void }>('membersCard')
@@ -231,6 +277,16 @@ async function setFlags(flags: Pick<GymRecord, 'active' | 'hidden'>) {
     hiddenDialogOpen.value = false
     await runToggle(async () => {
         gym.value = await updateGym(gymId, flags)
+    })
+}
+
+const trial = computed(() => gymTrial(gym.value))
+const convertDialogOpen = ref(false)
+
+async function setTrial(trialEndsAt: string | null) {
+    convertDialogOpen.value = false
+    await runToggle(async () => {
+        gym.value = await updateGym(gymId, { trial_ends_at: trialEndsAt })
     })
 }
 

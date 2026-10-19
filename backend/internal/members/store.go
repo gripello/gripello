@@ -83,6 +83,9 @@ type invite struct {
 
 const roleColumns = `r.id, r.gym, r.name, r.description, r.permissions, r.color, r.created, r.updated`
 
+// An ended trial narrows what a member may do; usePermissions reads this.
+const effectiveRoleColumns = `r.id, r.gym, r.name, r.description, effective_permissions(r.gym, r.permissions), r.color, r.created, r.updated`
+
 func roleFields(r *role) []any {
 	return []any{&r.ID, &r.Gym, &r.Name, &r.Description, &r.Permissions, &r.Color, &r.Created, &r.Updated}
 }
@@ -199,7 +202,7 @@ func countMembers(ctx context.Context, q querier, gymID string, query memberQuer
 }
 
 func listOwnMemberships(ctx context.Context, q querier, userID string) ([]ownMembership, error) {
-	rows, err := q.Query(ctx, `SELECT m.id, m.created, g.id, g.slug, g.name, g.active, `+roleColumns+`
+	rows, err := q.Query(ctx, `SELECT m.id, m.created, g.id, g.slug, g.name, g.active, `+effectiveRoleColumns+`
 		FROM memberships m JOIN gyms g ON g.id = m.gym JOIN roles r ON r.id = m.role
 		WHERE m."user" = $1 ORDER BY g.name`, userID)
 	if err != nil {

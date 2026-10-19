@@ -6,9 +6,16 @@ export function updatedGym(
     current: GymRecord | null | undefined,
     event: GymEvent,
 ) {
-    return event.kind === 'gym.updated' && event.record.id === current?.id
-        ? event.record
-        : null
+    if (event.kind === 'gym.trial_changed')
+        return event.gym === current?.id
+            ? { ...current, trial_ends_at: event.trial_ends_at }
+            : null
+    if (event.kind !== 'gym.updated' || event.record.id !== current?.id)
+        return null
+    // gym.updated goes out without the trial end; members get it as gym.trial_changed.
+    return current.trial_ends_at
+        ? { ...event.record, trial_ends_at: current.trial_ends_at }
+        : event.record
 }
 
 // For pages without the default layout, which keeps the gym live for every other page.

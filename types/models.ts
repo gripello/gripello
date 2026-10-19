@@ -243,6 +243,7 @@ export interface GymRecord extends BaseRecord, LegalFields {
     short_name?: string | null
     active?: boolean
     hidden?: boolean
+    trial_ends_at?: string | null
     page_logo?: string | null
     page_icon?: string | null
     sign_image?: string | null

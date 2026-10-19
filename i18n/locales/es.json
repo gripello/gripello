@@ -794,7 +794,8 @@
             "friends": "Amigos - Gripello",
             "climber": "{name} - Gripello",
             "feed": "Novedades",
-            "info": "Info del rocódromo - Gripello"
+            "info": "Info del rocódromo - Gripello",
+            "gymOnboarding": "Configurar rocódromo - Gripello"
         },
         "content": {
             "settings": "Ajustes",
@@ -2514,6 +2515,13 @@
                 "24h": "24 h",
                 "7d": "7 días"
             }
+        },
+        "onboardings": {
+            "title": "Enlaces de alta",
+            "send": "Enviar enlace de alta",
+            "empty": "No hay enlaces de alta abiertos",
+            "revoke": "Revocar enlace",
+            "sent": "Enlace de alta enviado a {email}"
         }
     },
     "mails": {
@@ -2637,6 +2645,22 @@
             "subject": "Correo de prueba de {app}",
             "body": "El envío de correos funciona. Este mensaje se ha enviado desde los ajustes de la plataforma de {app}.",
             "note": "Puedes ignorar este correo."
+        },
+        "gymOnboarding": {
+            "subject": "Configura tu rocódromo en {app}",
+            "body": "Te han invitado a configurar tu rocódromo en {app}. Elige un nombre y una dirección web y prueba todo gratis durante 30 días.",
+            "action": "Configurar rocódromo",
+            "note": "El enlace es válido durante 14 días. Si no lo esperabas, puedes ignorar este correo."
+        },
+        "gymTrialEnding": {
+            "subject": "Tu prueba de {app} termina pronto",
+            "body": "La prueba de {gym} termina el {date}. Los escaladores podrán seguir usando el rocódromo, pero tu equipo ya no podrá hacer cambios hasta que el rocódromo pase a un plan completo.",
+            "note": "Responde a este correo para continuar con {app}."
+        },
+        "gymTrialEnded": {
+            "subject": "Tu prueba de {app} ha terminado",
+            "body": "La prueba de {gym} terminó el {date}. Los escaladores pueden seguir usando el rocódromo, pero tu equipo ya no puede hacer cambios.",
+            "note": "Responde a este correo para continuar con {app}."
         }
     },
     "leaderboard": {
@@ -3106,5 +3130,23 @@
             "grey": "granito.m niebla.f elefante.m lobo.m",
             "brown": "tejón.m oso.m barro.m chocolate.m"
         }
+    },
+    "gymOnboarding": {
+        "eyebrow": "NUEVO ROCÓDROMO",
+        "title": "Configura tu rocódromo",
+        "subtitle": "Invitación para {email}. Tu prueba de 30 días empieza en cuanto se crea el rocódromo.",
+        "submit": "Crear rocódromo",
+        "slugTaken": "Esta URL ya está en uso.",
+        "invalid": "Este enlace no es válido, ha caducado o ya se usó.",
+        "home": "Ir a Gripello"
+    },
+    "trial": {
+        "daysLeft": "Prueba · queda {n} día | Prueba · quedan {n} días",
+        "ended": "Prueba terminada",
+        "readOnly": "Prueba terminada · solo lectura",
+        "until": "Prueba hasta el {date}",
+        "extend": "Ampliar prueba",
+        "convert": "Activar plan completo",
+        "convertConfirm": "¿Terminar la prueba de {name}? Su equipo mantiene el acceso completo."
     }
 }

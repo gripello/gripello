@@ -25,7 +25,7 @@ func (p *Permissions) Can(ctx context.Context, userID, gym, permission string) b
 	var ok bool
 	p.pool.QueryRow(ctx, `SELECT EXISTS (
 		SELECT 1 FROM memberships m JOIN roles r ON r.id = m.role
-		WHERE m."user" = $1 AND m.gym = $2 AND $3 = ANY (r.permissions))`, userID, gym, permission).Scan(&ok)
+		WHERE m."user" = $1 AND m.gym = $2 AND $3 = ANY (effective_permissions(m.gym, r.permissions)))`, userID, gym, permission).Scan(&ok)
 	return ok
 }
 
@@ -39,7 +39,7 @@ func (p *Permissions) Follows(ctx context.Context, followerID, followeeID string
 // UsersWith lists everyone holding permission in gym, so one query answers a whole fan-out.
 func (p *Permissions) UsersWith(ctx context.Context, gym, permission string) ([]string, error) {
 	return p.userIDs(ctx, `SELECT m."user" FROM memberships m JOIN roles r ON r.id = m.role
-		WHERE m.gym = $1 AND $2 = ANY (r.permissions)`, gym, permission)
+		WHERE m.gym = $1 AND $2 = ANY (effective_permissions(m.gym, r.permissions))`, gym, permission)
 }
 
 func (p *Permissions) Followers(ctx context.Context, followeeID string) ([]string, error) {
@@ -65,7 +65,7 @@ func (p *Permissions) userIDs(ctx context.Context, query string, args ...any) ([
 
 // Memberships returns gym → permission names for one user; loaded once per request by the auth middleware's callers.
 func (p *Permissions) Memberships(ctx context.Context, userID string) (map[string][]string, error) {
-	rows, err := p.pool.Query(ctx, `SELECT m.gym, r.permissions FROM memberships m JOIN roles r ON r.id = m.role WHERE m."user" = $1`, userID)
+	rows, err := p.pool.Query(ctx, `SELECT m.gym, effective_permissions(m.gym, r.permissions) FROM memberships m JOIN roles r ON r.id = m.role WHERE m."user" = $1`, userID)
 	if err != nil {
 		return nil, err
 	}

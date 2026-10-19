@@ -36,7 +36,7 @@ func testBrand() Brand {
 
 func TestEveryMailRendersInEveryLocale(t *testing.T) {
 	c := testClient(t)
-	params := map[string]any{"route": "Arete", "problem": "Loose hold", "email": "gym@example.com", "role": "routesetter"}
+	params := map[string]any{"route": "Arete", "problem": "Loose hold", "email": "gym@example.com", "role": "routesetter", "date": "2026-11-18"}
 	for key, value := range c.Messages.Group("en", "mails") {
 		group, _ := value.(map[string]any)
 		if _, isMail := group["subject"]; !isMail {

@@ -154,6 +154,8 @@
             </LayoutListGroup>
         </template>
 
+        <PlatformGymOnboardings class="mt-6" />
+
         <PlatformRetiredSlugs class="mt-6" />
 
         <ConfirmDialog

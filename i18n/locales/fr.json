@@ -794,7 +794,8 @@
             "friends": "Amis - Gripello",
             "climber": "{name} - Gripello",
             "feed": "Fil d’actu",
-            "info": "Infos de la salle - Gripello"
+            "info": "Infos de la salle - Gripello",
+            "gymOnboarding": "Configurer la salle - Gripello"
         },
         "content": {
             "settings": "Paramètres",
@@ -2514,6 +2515,13 @@
                 "24h": "24 h",
                 "7d": "7 jours"
             }
+        },
+        "onboardings": {
+            "title": "Liens d’intégration",
+            "send": "Envoyer un lien d’intégration",
+            "empty": "Aucun lien d’intégration ouvert",
+            "revoke": "Révoquer le lien",
+            "sent": "Lien d’intégration envoyé à {email}"
         }
     },
     "mails": {
@@ -2637,6 +2645,22 @@
             "subject": "E-mail de test de {app}",
             "body": "L’envoi d’e-mails fonctionne. Ce message a été envoyé depuis les paramètres de la plateforme {app}.",
             "note": "Tu peux ignorer cet e-mail."
+        },
+        "gymOnboarding": {
+            "subject": "Configurez votre salle sur {app}",
+            "body": "Vous êtes invité à configurer votre salle d'escalade sur {app}. Choisissez un nom et une adresse web, puis essayez tout gratuitement pendant 30 jours.",
+            "action": "Configurer la salle",
+            "note": "Le lien est valable 14 jours. Si vous ne l'attendiez pas, vous pouvez ignorer cet e-mail."
+        },
+        "gymTrialEnding": {
+            "subject": "Votre essai de {app} se termine bientôt",
+            "body": "L'essai de {gym} se termine le {date}. Les grimpeurs pourront continuer à utiliser la salle, mais votre équipe ne pourra plus rien modifier jusqu'au passage à une offre complète.",
+            "note": "Répondez à cet e-mail pour continuer avec {app}."
+        },
+        "gymTrialEnded": {
+            "subject": "Votre essai de {app} est terminé",
+            "body": "L'essai de {gym} s'est terminé le {date}. Les grimpeurs peuvent continuer à utiliser la salle, mais votre équipe ne peut plus rien modifier.",
+            "note": "Répondez à cet e-mail pour continuer avec {app}."
         }
     },
     "leaderboard": {
@@ -3106,5 +3130,23 @@
             "grey": "granit.m brouillard.m éléphant.m loup.m",
             "brown": "blaireau.m ours.m boue.f chocolat.m"
         }
+    },
+    "gymOnboarding": {
+        "eyebrow": "NOUVELLE SALLE",
+        "title": "Configurez votre salle",
+        "subtitle": "Invitation pour {email}. Votre essai de 30 jours commence dès la création de la salle.",
+        "submit": "Créer la salle",
+        "slugTaken": "Cette URL est déjà prise.",
+        "invalid": "Ce lien est invalide, expiré ou déjà utilisé.",
+        "home": "Aller sur Gripello"
+    },
+    "trial": {
+        "daysLeft": "Essai · {n} jour restant | Essai · {n} jours restants",
+        "ended": "Essai terminé",
+        "readOnly": "Essai terminé · lecture seule",
+        "until": "Essai jusqu’au {date}",
+        "extend": "Prolonger l’essai",
+        "convert": "Activer l’offre complète",
+        "convertConfirm": "Terminer l’essai de {name} ? Son équipe garde un accès complet."
     }
 }

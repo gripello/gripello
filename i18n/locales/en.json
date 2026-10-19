@@ -794,7 +794,8 @@
             "friends": "Friends - Gripello",
             "climber": "{name} - Gripello",
             "feed": "Feed",
-            "info": "Gym info - Gripello"
+            "info": "Gym info - Gripello",
+            "gymOnboarding": "Gym onboarding - Gripello"
         },
         "content": {
             "settings": "Settings",
@@ -2514,6 +2515,13 @@
                 "24h": "24 h",
                 "7d": "7 days"
             }
+        },
+        "onboardings": {
+            "title": "Onboarding links",
+            "send": "Send onboarding link",
+            "empty": "No open onboarding links",
+            "revoke": "Revoke link",
+            "sent": "Onboarding link sent to {email}"
         }
     },
     "mails": {
@@ -2637,6 +2645,22 @@
             "subject": "Test email from {app}",
             "body": "Mail delivery works. This message was sent from the platform settings of {app}.",
             "note": "You can ignore this email."
+        },
+        "gymOnboarding": {
+            "subject": "Set up your gym on {app}",
+            "body": "You have been invited to set up your climbing gym on {app}. Pick a name and a web address, then try everything free for 30 days.",
+            "action": "Set up your gym",
+            "note": "The link is valid for 14 days. If you didn't expect it, you can ignore this email."
+        },
+        "gymTrialEnding": {
+            "subject": "Your trial of {app} ends soon",
+            "body": "The trial of {gym} ends on {date}. Climbers can keep using the gym afterwards, but your team can no longer make changes until the gym is switched to a full plan.",
+            "note": "Reply to this email to continue with {app}."
+        },
+        "gymTrialEnded": {
+            "subject": "Your trial of {app} has ended",
+            "body": "The trial of {gym} ended on {date}. Climbers can keep using the gym, but your team can no longer make changes.",
+            "note": "Reply to this email to continue with {app}."
         }
     },
     "leaderboard": {
@@ -3106,5 +3130,23 @@
             "grey": "granite fog elephant wolf",
             "brown": "badger bear mud chocolate"
         }
+    },
+    "gymOnboarding": {
+        "eyebrow": "NEW GYM",
+        "title": "Set up your gym",
+        "subtitle": "Invitation for {email}. Your 30-day trial starts once the gym is created.",
+        "submit": "Create gym",
+        "slugTaken": "This URL is already taken.",
+        "invalid": "This link is invalid, expired or already used.",
+        "home": "Go to Gripello"
+    },
+    "trial": {
+        "daysLeft": "Trial · {n} day left | Trial · {n} days left",
+        "ended": "Trial ended",
+        "readOnly": "Trial ended · read-only",
+        "until": "Trial until {date}",
+        "extend": "Extend trial",
+        "convert": "Convert to full",
+        "convertConfirm": "End the trial of {name}? Its team keeps full access."
     }
 }
