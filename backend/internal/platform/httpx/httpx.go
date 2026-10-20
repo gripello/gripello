@@ -1,11 +1,18 @@
 package httpx
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
+	"strings"
+	"unicode"
+
+	"gripello/internal/platform/apitime"
 )
 
 // Error is the JSON shape the frontend already maps onto forms: {status, message, data: {field: {code, message}}}.
@@ -39,9 +46,14 @@ func (e *Error) Field(name, code, message string) *Error {
 }
 
 func JSON(w http.ResponseWriter, status int, v any) {
+	body, err := json.Marshal(v)
+	if err != nil {
+		Fail(w, err)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	w.Write(append(apitime.Canonical(body), '\n'))
 }
 
 // Fail writes err as JSON; unknown errors become a 500 without leaking their text.
@@ -75,14 +87,92 @@ func Fail(w http.ResponseWriter, err error) {
 type Handler func(w http.ResponseWriter, r *http.Request) error
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if strings.ContainsRune(r.URL.Path, 0) || strings.ContainsRune(r.URL.RawQuery, 0) || strings.Contains(r.URL.RawQuery, "%00") {
+		Fail(w, errNUL)
+		return
+	}
 	if err := h(w, r); err != nil {
 		Fail(w, err)
 	}
 }
 
-func Decode(r *http.Request, v any) error {
-	if err := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 1<<20)).Decode(v); err != nil {
-		return NewError(http.StatusBadRequest, "Invalid JSON body.")
+var errNUL = NewError(http.StatusBadRequest, "Text must not contain NUL characters.")
+
+// CheckForm refuses a parsed multipart form whose fields hold NUL, raw or escaped in a JSON payload, like Decode does.
+func CheckForm(r *http.Request) error {
+	if r.MultipartForm == nil {
+		return nil
+	}
+	for key, values := range r.MultipartForm.Value {
+		for _, value := range append(values, key) {
+			if strings.ContainsRune(value, 0) || escapesNUL([]byte(value)) {
+				return errNUL
+			}
+		}
 	}
 	return nil
+}
+
+func Decode(r *http.Request, v any) error {
+	raw, err := io.ReadAll(http.MaxBytesReader(nil, r.Body, 1<<20))
+	if err != nil || json.NewDecoder(bytes.NewReader(raw)).Decode(v) != nil {
+		return NewError(http.StatusBadRequest, "Invalid JSON body.")
+	}
+	if escapesNUL(raw) {
+		return errNUL
+	}
+	return nil
+}
+
+// ReadBody accepts JSON or multipart: one file per part named in fileTypes, the other fields as JSON in `@jsonPayload`.
+func ReadBody(w http.ResponseWriter, r *http.Request, maxBytes int64, fileTypes map[string][]string) (map[string]json.RawMessage, map[string]*multipart.FileHeader, error) {
+	body := map[string]json.RawMessage{}
+	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		return body, nil, Decode(r, &body)
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+	if err := r.ParseMultipartForm(8 << 20); err != nil {
+		return nil, nil, BadRequest("Invalid multipart body.")
+	}
+	if err := CheckForm(r); err != nil {
+		return nil, nil, err
+	}
+	if payload := r.FormValue("@jsonPayload"); payload != "" {
+		if err := json.Unmarshal([]byte(payload), &body); err != nil {
+			return nil, nil, BadRequest("Invalid JSON body.")
+		}
+	}
+	files := map[string]*multipart.FileHeader{}
+	for name, headers := range r.MultipartForm.File {
+		if _, ok := fileTypes[name]; ok && len(headers) > 0 {
+			files[name] = headers[0]
+		}
+	}
+	return body, files, nil
+}
+
+// Postgres text can't hold U+0000, and JSON can only carry it escaped.
+func escapesNUL(raw []byte) bool {
+	for i := bytes.Index(raw, []byte(`\u0000`)); i >= 0; {
+		backslashes := 0
+		for j := i - 1; j >= 0 && raw[j] == '\\'; j-- {
+			backslashes++
+		}
+		if backslashes%2 == 0 {
+			return true
+		}
+		next := bytes.Index(raw[i+1:], []byte(`\u0000`))
+		if next < 0 {
+			return false
+		}
+		i += 1 + next
+	}
+	return false
+}
+
+// Blank reports text that renders as nothing: whitespace, zero-width and other format or control characters.
+func Blank(s string) bool {
+	return strings.TrimFunc(s, func(r rune) bool {
+		return unicode.IsSpace(r) || unicode.In(r, unicode.Cf, unicode.Cc) || r == '\u3164' || r == '\u2800'
+	}) == ""
 }

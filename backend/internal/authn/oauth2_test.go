@@ -128,6 +128,7 @@ func TestOAuth2LinksAVerifiedAccountByVerifiedEmail(t *testing.T) {
 	idp := newFakeIdP(t)
 	f.enableOIDC(idp)
 	climber := f.user("climber@example.com")
+	idp.claims["email"] = "Climber@EXAMPLE.com"
 
 	flow := f.startOAuth("", map[string]any{"redirect": "/kletterhalle/routes"})
 	target := f.callback(flow)
@@ -150,8 +151,8 @@ func TestOAuth2LinksAVerifiedAccountByVerifiedEmail(t *testing.T) {
 	if rec := f.raw(http.MethodGet, "/auth/oauth2/oidc/callback?state="+flow.state+"&code="+flow.nonce, "", nil); !strings.Contains(rec.Header().Get("Location"), "oauth2Error=failed") {
 		t.Errorf("state reused: %s", rec.Header().Get("Location"))
 	}
-	if n := f.count(`SELECT count(*) FROM user_identities WHERE "user" = $1 AND provider = 'oidc' AND subject = 'subject-1'`, climber); n != 1 {
-		t.Errorf("%d identities linked", n)
+	if n := f.count(`SELECT count(*) FROM user_identities WHERE "user" = $1 AND provider = 'oidc' AND subject = 'subject-1' AND email = 'climber@example.com'`, climber); n != 1 {
+		t.Errorf("%d identities linked with the normalised e-mail", n)
 	}
 	if n := f.count(`SELECT count(*) FROM sessions WHERE "user" = $1 AND method = 'oauth2:oidc'`, climber); n != 1 {
 		t.Errorf("%d oauth2 sessions", n)

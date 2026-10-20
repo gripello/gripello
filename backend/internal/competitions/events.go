@@ -6,14 +6,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/apitime"
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/events"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
 	KindChanged        = "competition.changed"
-	TopicNotify        = "notify"
-	KindNotify         = "notify"
 	TopicEntryCreated  = "entry.created"
 	TopicEntryDeleted  = "entry.deleted"
 	TopicOwnTicks      = "own_ticks"
@@ -30,14 +30,6 @@ type Change struct {
 	At          int64  `json:"at"`
 }
 
-type Notify struct {
-	Type   string         `json:"type"`
-	Users  []string       `json:"users"`
-	Gym    string         `json:"gym"`
-	Params map[string]any `json:"params"`
-	URL    string         `json:"url"`
-}
-
 type EntryCreated struct {
 	ID          string `json:"id"`
 	Competition string `json:"competition"`
@@ -46,19 +38,19 @@ type EntryCreated struct {
 }
 
 type Tick struct {
-	ID          string    `json:"id"`
-	Created     time.Time `json:"created"`
-	Updated     time.Time `json:"updated"`
-	User        string    `json:"user"`
-	Route       string    `json:"route"`
-	Type        string    `json:"type"`
-	Attempts    int       `json:"attempts"`
-	Date        time.Time `json:"date"`
-	Note        string    `json:"note"`
-	Grade       string    `json:"grade"`
-	GradeSystem string    `json:"grade_system"`
-	GradeIndex  float64   `json:"grade_index"`
-	RouteName   string    `json:"route_name"`
+	ID          string       `json:"id"`
+	Created     time.Time    `json:"created"`
+	Updated     time.Time    `json:"updated"`
+	User        string       `json:"user"`
+	Route       string       `json:"route"`
+	Type        string       `json:"type"`
+	Attempts    int          `json:"attempts"`
+	Date        apitime.Date `json:"date"`
+	Note        string       `json:"note"`
+	Grade       string       `json:"grade"`
+	GradeSystem string       `json:"grade_system"`
+	GradeIndex  float64      `json:"grade_index"`
+	RouteName   string       `json:"route_name"`
 }
 
 type TickChange struct {
@@ -67,10 +59,10 @@ type TickChange struct {
 }
 
 type TickChanged struct {
-	User  string    `json:"user"`
-	Route string    `json:"route"`
-	Gym   string    `json:"gym"`
-	Date  time.Time `json:"date"`
+	User  string       `json:"user"`
+	Route string       `json:"route"`
+	Gym   string       `json:"gym"`
+	Date  apitime.Date `json:"date"`
 }
 
 // publishChange: drafts reach only managers; an entry's owner gets user+entry, everyone else the stripped change.
@@ -79,7 +71,7 @@ func publishChange(ctx context.Context, tx pgx.Tx, c Competition, kind, user, en
 	topic := "competition_changes:" + c.ID
 	audience := events.Audience{Public: true, Gym: c.Gym}
 	if c.Status == "draft" {
-		audience = events.Audience{GymPerm: c.Gym + ":" + permManage, Gym: c.Gym}
+		audience = events.Audience{GymPerm: c.Gym + ":" + tenancy.PermManageCompetitions, Gym: c.Gym}
 	}
 	// lists of a gym's competitions follow the lifecycle without subscribing to every competition
 	if kind == "competition" {
@@ -120,13 +112,6 @@ func publishTick(ctx context.Context, tx pgx.Tx, tick Tick, gym string, private 
 		TickChanged{User: tick.User, Route: tick.Route, Gym: gym, Date: tick.Date}, events.Audience{})
 }
 
-func publishNotify(ctx context.Context, tx pgx.Tx, n Notify) error {
-	if len(n.Users) == 0 {
-		return nil
-	}
-	return publish(ctx, tx, TopicNotify, KindNotify, n, events.Audience{})
-}
-
 func publishEntryCreated(ctx context.Context, tx pgx.Tx, e Entry, gym string) error {
 	return publish(ctx, tx, TopicEntryCreated, TopicEntryCreated,
 		EntryCreated{ID: e.ID, Competition: e.Competition, Gym: gym, User: e.User}, events.Audience{})
@@ -138,6 +123,5 @@ func publishEntryDeleted(ctx context.Context, tx pgx.Tx, e Entry, gym string) er
 }
 
 func publish(ctx context.Context, tx pgx.Tx, topic, kind string, payload any, audience events.Audience) error {
-	p, _ := auth.From(ctx)
-	return events.PublishAs(ctx, tx, p.UserID, topic, kind, payload, audience)
+	return events.PublishAs(ctx, tx, auth.UserID(ctx), topic, kind, payload, audience)
 }

@@ -2,6 +2,7 @@ package replicas
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -68,5 +69,21 @@ func TestReplicasReportThemselvesAndGoOfflineWhenSilent(t *testing.T) {
 	}
 	if list, _ := List(ctx, pool); len(list) != 2 {
 		t.Errorf("a stopped replica stays listed: %+v", list)
+	}
+}
+
+func TestStrainFlagsOnlineReplicas(t *testing.T) {
+	healthy := Replica{Online: true, DBConnsInUse: 2, DBConnsMax: 20}
+	if got := Strain(healthy); len(got) != 0 {
+		t.Errorf("healthy replica strained: %v", got)
+	}
+	offline := healthy
+	offline.Online, offline.DBWaitMS = false, 5000
+	if got := Strain(offline); len(got) != 0 {
+		t.Errorf("offline replica strained: %v", got)
+	}
+	strained := Replica{Online: true, DBWaitMS: 1500, DBConnsInUse: 20, DBConnsMax: 20, RealtimeDropped: 3, BusLagMS: 12_000}
+	if got := Strain(strained); !slices.Equal(got, []string{StrainDBWaits, StrainDBFull, StrainDropped, StrainBusLag}) {
+		t.Errorf("Strain = %v", got)
 	}
 }

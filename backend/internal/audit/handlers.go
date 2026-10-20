@@ -2,26 +2,24 @@ package audit
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/apitime"
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
 	defaultPageSize = 50
 	maxPageSize     = 200
 )
-
-var timeLayouts = []string{time.RFC3339Nano, "2006-01-02 15:04:05.999Z07:00", "2006-01-02 15:04:05.999Z", "2006-01-02"}
 
 type gymRef struct {
 	ID   string `json:"id"`
@@ -45,35 +43,19 @@ type Entry struct {
 	} `json:"expand,omitempty"`
 }
 
-type query struct {
-	where []string
-	args  []any
-}
-
-func (q *query) add(clause string, args ...any) {
-	for _, arg := range args {
-		q.args = append(q.args, arg)
-		clause = strings.Replace(clause, "?", "$"+strconv.Itoa(len(q.args)), 1)
-	}
-	q.where = append(q.where, clause)
-}
-
 func (m *module) listGym(w http.ResponseWriter, r *http.Request) error {
 	p, err := auth.Require(r.Context())
 	if err != nil {
 		return err
 	}
-	var gym string
-	err = m.db.QueryRow(r.Context(), `SELECT id FROM gyms WHERE id = $1 OR slug = $1 LIMIT 1`, r.PathValue("gym")).Scan(&gym)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return httpx.ErrNotFound
-	} else if err != nil {
+	gym, err := tenancy.ResolveGym(r.Context(), m.db, r.PathValue("gym"))
+	if err != nil {
 		return err
 	}
-	q := &query{}
-	q.add("a.gym = ?", gym)
-	if !p.PlatformAdmin && !m.perms.Can(r.Context(), p.UserID, gym, "view_audit_log") {
-		q.add("a.actor = ?", p.UserID)
+	q := &db.Where{}
+	q.Add("a.gym = ?", gym)
+	if !p.PlatformAdmin && !m.perms.Has(r.Context(), gym, tenancy.PermViewAuditLog) {
+		q.Add("a.actor = ?", p.UserID)
 	}
 	return m.list(w, r, p, q)
 }
@@ -83,88 +65,72 @@ func (m *module) listOwn(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	q := &query{}
-	q.add("a.actor = ?", p.UserID)
+	q := &db.Where{}
+	q.Add("a.actor = ?", p.UserID)
 	return m.list(w, r, p, q)
 }
 
 func (m *module) listPlatform(w http.ResponseWriter, r *http.Request) error {
-	p, err := auth.Require(r.Context())
+	p, err := auth.RequirePlatformAdmin(r.Context())
 	if err != nil {
 		return err
 	}
-	if !p.PlatformAdmin {
-		return httpx.ErrForbidden
-	}
-	q := &query{}
+	q := &db.Where{}
 	if gym := r.URL.Query().Get("gym"); gym != "" {
-		q.add("(a.gym = ? OR g.slug = ?)", gym, gym)
+		q.Add("(a.gym = ? OR g.slug = ?)", gym)
 	}
 	return m.list(w, r, p, q)
 }
 
-func (m *module) list(w http.ResponseWriter, r *http.Request, p auth.Principal, q *query) error {
+func (m *module) list(w http.ResponseWriter, r *http.Request, p auth.Principal, q *db.Where) error {
 	params := r.URL.Query()
 	if action := params.Get("action"); action != "" {
 		if recordActions[action] != action && !slices.Contains(authActions, action) {
-			return httpx.NewError(http.StatusBadRequest, "Unknown action.").Field("action", "validation_invalid_value", "Invalid value "+action+".")
+			return httpx.BadRequest("Unknown action.").Field("action", "validation_invalid_value", "Invalid value "+action+".")
 		}
-		q.add("a.action = ?", action)
+		q.Add("a.action = ?", action)
 	}
 	if collection := params.Get("collection"); collection != "" {
-		q.add("a.collection_name = ?", collection)
+		q.Add("a.collection_name = ?", collection)
 	}
 	switch actor := params.Get("actor"); actor {
 	case "":
 	case "me":
-		q.add("a.actor = ?", p.UserID)
+		q.Add("a.actor = ?", p.UserID)
 	case "guest", "guests":
-		q.add("a.actor IS NULL AND a.actor_label <> ?", platformLabel)
+		q.Add("a.actor IS NULL AND a.actor_label <> ?", platformLabel)
 	case "platform":
-		q.add("a.actor_label = ?", platformLabel)
+		q.Add("a.actor_label = ?", platformLabel)
 	default:
-		q.add("a.actor = ?", actor)
+		q.Add("a.actor = ?", actor)
 	}
 	for param, op := range map[string]string{"from": ">=", "to": "<="} {
 		if value := params.Get(param); value != "" {
-			at, ok := parseTime(value)
-			if !ok {
-				return httpx.NewError(http.StatusBadRequest, "Invalid date.").Field(param, "validation_invalid_date", "Must be a valid date.")
+			at, err := apitime.ParseTimeOrDay(value)
+			if err != nil {
+				return httpx.BadRequest("Invalid date.").Field(param, "validation_invalid_date", "Must be a valid date.")
 			}
-			q.add("a.created "+op+" ?", at)
+			q.Add("a.created "+op+" ?", at)
 		}
 	}
 	if term := strings.TrimSpace(params.Get("q")); term != "" {
-		q.add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (a.actor_label ILIKE w OR a.record_id ILIKE w OR a.collection_name ILIKE w))", db.WordPatterns(term))
+		q.Add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (a.actor_label ILIKE w OR a.record_id ILIKE w OR a.collection_name ILIKE w))", db.WordPatterns(term))
 	}
-	page := max(1, atoi(params.Get("page"), 1))
-	limit := min(maxPageSize, max(1, atoi(params.Get("limit"), defaultPageSize)))
-	where := "TRUE"
-	if len(q.where) > 0 {
-		where = strings.Join(q.where, " AND ")
-	}
-	from := ` FROM audit_logs a LEFT JOIN gyms g ON g.id = a.gym WHERE ` + where
+	page := httpx.Page(r, defaultPageSize, maxPageSize)
+	from := ` FROM audit_logs a LEFT JOIN gyms g ON g.id = a.gym` + q.SQL()
 	var total int
-	if err := m.db.QueryRow(r.Context(), `SELECT count(*)`+from, q.args...).Scan(&total); err != nil {
+	if err := m.db.QueryRow(r.Context(), `SELECT count(*)`+from, q.Args...).Scan(&total); err != nil {
 		return err
 	}
 	items, err := entries(r.Context(), m.db, entryColumns+from+
-		` ORDER BY a.created DESC, a.id DESC LIMIT `+strconv.Itoa(limit)+` OFFSET `+strconv.Itoa((page-1)*limit), q.args)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "page": page, "limit": limit, "total": total})
-	return nil
+		` ORDER BY a.created DESC, a.id DESC`+page.SQL(), q.Args)
+	return httpx.Respond(w, http.StatusOK, httpx.PageOf[Entry]{Items: items, Page: page.Page, Limit: page.Limit, Total: &total}, err)
 }
 
 const entryColumns = `SELECT a.id, a.created, COALESCE(a.actor, ''), a.actor_label, a.action, a.collection_name, a.record_id,
 	a.changed_fields, a.ip, COALESCE(a.gym, ''), COALESCE(g.slug, ''), COALESCE(g.name, '')`
 
-type querier interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-}
-
-func entries(ctx context.Context, q querier, sql string, args []any) ([]Entry, error) {
+func entries(ctx context.Context, q db.Querier, sql string, args []any) ([]Entry, error) {
 	rows, err := q.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
@@ -186,20 +152,4 @@ func entries(ctx context.Context, q querier, sql string, args []any) ([]Entry, e
 		items = []Entry{}
 	}
 	return items, err
-}
-
-func parseTime(value string) (time.Time, bool) {
-	for _, layout := range timeLayouts {
-		if at, err := time.Parse(layout, value); err == nil {
-			return at, true
-		}
-	}
-	return time.Time{}, false
-}
-
-func atoi(value string, fallback int) int {
-	if n, err := strconv.Atoi(value); err == nil {
-		return n
-	}
-	return fallback
 }

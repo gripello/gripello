@@ -4,21 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"gripello/internal/platform/apitime"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 )
-
-type querier interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-}
 
 type Route struct {
 	ID                string          `db:"id" json:"id"`
@@ -33,7 +27,7 @@ type Route struct {
 	Archived          bool            `db:"archived" json:"archived"`
 	ArchivedAt        *time.Time      `db:"archived_at" json:"archived_at"`
 	Color             string          `db:"color" json:"color"`
-	ScrewDate         *time.Time      `db:"screw_date" json:"screw_date"`
+	ScrewDate         *apitime.Date   `db:"screw_date" json:"screw_date"`
 	Location          string          `db:"location" json:"location"`
 	Wall              string          `db:"wall" json:"wall"`
 	WallPosition      float64         `db:"wall_position" json:"wall_position"`
@@ -44,6 +38,7 @@ type Route struct {
 	RemovalPlannedFor *string         `db:"removal_planned_for" json:"removal_planned_for"`
 	AverageRating     *float64        `db:"average_rating" json:"average_rating"`
 	RatingsCount      int             `db:"ratings_count" json:"ratings_count"`
+	SendsCount        *int            `db:"-" json:"sends_count,omitempty"`
 	Expand            map[string]any  `db:"-" json:"expand,omitempty"`
 }
 
@@ -87,41 +82,15 @@ const locationColumns = `id, created, updated, gym, name, map_area, map, map_tra
 
 const wallColumns = `id, created, updated, gym, location, name, outline, edge, label, sort, anchor_from, anchor_to`
 
-// conditions builds a WHERE clause; each clause uses "?" for its single argument.
-type conditions struct {
-	clauses []string
-	args    []any
+// db.Where builds a WHERE clause; each clause uses "?" for its single argument.
+func queryRoutes(ctx context.Context, q db.Querier, where *db.Where, tail string) ([]Route, error) {
+	return db.List[Route](ctx, q, `SELECT `+routeColumns+` FROM average_rating`+where.SQL()+tail, where.Args...)
 }
 
-func (c *conditions) add(clause string, arg any) {
-	c.args = append(c.args, arg)
-	c.clauses = append(c.clauses, strings.Replace(clause, "?", "$"+strconv.Itoa(len(c.args)), -1))
-}
-
-func (c *conditions) sql() string {
-	if len(c.clauses) == 0 {
-		return ""
-	}
-	return " WHERE " + strings.Join(c.clauses, " AND ")
-}
-
-func (c *conditions) next(arg any) string {
-	c.args = append(c.args, arg)
-	return "$" + strconv.Itoa(len(c.args))
-}
-
-func queryRoutes(ctx context.Context, q querier, where *conditions, tail string) ([]Route, error) {
-	rows, err := q.Query(ctx, `SELECT `+routeColumns+` FROM average_rating`+where.sql()+tail, where.args...)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[Route])
-}
-
-func findRoute(ctx context.Context, q querier, id string) (Route, error) {
-	where := &conditions{}
-	where.add("id = ?", id)
-	return one(queryRoutes(ctx, q, where, ""))
+func findRoute(ctx context.Context, q db.Querier, id string) (Route, error) {
+	where := &db.Where{}
+	where.Add("id = ?", id)
+	return db.First(queryRoutes(ctx, q, where, ""))
 }
 
 // FOR NO KEY UPDATE lets ticks and ratings of the edited route insert; deletes take FOR UPDATE to hold them back.
@@ -158,52 +127,33 @@ func lockWall(ctx context.Context, tx pgx.Tx, id string) (Wall, error) {
 	return findWall(ctx, tx, id)
 }
 
-func countRoutes(ctx context.Context, q querier, where *conditions) (int, error) {
+func countRoutes(ctx context.Context, q db.Querier, where *db.Where) (int, error) {
 	var total int
-	err := q.QueryRow(ctx, `SELECT COUNT(*) FROM routes`+where.sql(), where.args...).Scan(&total)
+	err := q.QueryRow(ctx, `SELECT COUNT(*) FROM routes`+where.SQL(), where.Args...).Scan(&total)
 	return total, err
 }
 
-func queryLocations(ctx context.Context, q querier, where *conditions) ([]Location, error) {
-	rows, err := q.Query(ctx, `SELECT `+locationColumns+` FROM locations`+where.sql()+` ORDER BY name, id`, where.args...)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[Location])
+func queryLocations(ctx context.Context, q db.Querier, where *db.Where) ([]Location, error) {
+	return db.List[Location](ctx, q, `SELECT `+locationColumns+` FROM locations`+where.SQL()+` ORDER BY name, id`, where.Args...)
 }
 
-func findLocation(ctx context.Context, q querier, id string) (Location, error) {
-	where := &conditions{}
-	where.add("id = ?", id)
-	return one(queryLocations(ctx, q, where))
+func findLocation(ctx context.Context, q db.Querier, id string) (Location, error) {
+	where := &db.Where{}
+	where.Add("id = ?", id)
+	return db.First(queryLocations(ctx, q, where))
 }
 
-func queryWalls(ctx context.Context, q querier, where *conditions) ([]Wall, error) {
-	rows, err := q.Query(ctx, `SELECT `+wallColumns+` FROM walls`+where.sql()+` ORDER BY sort, name, id`, where.args...)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[Wall])
+func queryWalls(ctx context.Context, q db.Querier, where *db.Where) ([]Wall, error) {
+	return db.List[Wall](ctx, q, `SELECT `+wallColumns+` FROM walls`+where.SQL()+` ORDER BY sort, name, id`, where.Args...)
 }
 
-func findWall(ctx context.Context, q querier, id string) (Wall, error) {
-	where := &conditions{}
-	where.add("id = ?", id)
-	return one(queryWalls(ctx, q, where))
+func findWall(ctx context.Context, q db.Querier, id string) (Wall, error) {
+	where := &db.Where{}
+	where.Add("id = ?", id)
+	return db.First(queryWalls(ctx, q, where))
 }
 
-func one[T any](items []T, err error) (T, error) {
-	var zero T
-	if err != nil {
-		return zero, err
-	}
-	if len(items) == 0 {
-		return zero, httpx.ErrNotFound
-	}
-	return items[0], nil
-}
-
-func gymRefs(ctx context.Context, q querier, ids []string) (map[string]GymRef, error) {
+func gymRefs(ctx context.Context, q db.Querier, ids []string) (map[string]GymRef, error) {
 	rows, err := q.Query(ctx, `SELECT id, slug, name FROM gyms WHERE id = ANY ($1)`, ids)
 	if err != nil {
 		return nil, err
@@ -220,7 +170,7 @@ func gymRefs(ctx context.Context, q querier, ids []string) (map[string]GymRef, e
 	return out, rows.Err()
 }
 
-func insertRoute(ctx context.Context, q querier, id, gym string, r routeInput) error {
+func insertRoute(ctx context.Context, q db.Querier, id, gym string, r routeInput) error {
 	_, err := q.Exec(ctx, `INSERT INTO routes (id, gym, name, anchor_point, type, comment, creator, archived, archived_at, color,
 		screw_date, location, wall, wall_position, grade, grade_system, grade_index, permanent)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 THEN now() END, $9, $10, NULLIF($11, ''), NULLIF($12, ''), $13, $14, $15, $16, $17)`,
@@ -229,7 +179,7 @@ func insertRoute(ctx context.Context, q querier, id, gym string, r routeInput) e
 	return err
 }
 
-func updateRoute(ctx context.Context, q querier, id string, r routeInput) error {
+func updateRoute(ctx context.Context, q db.Querier, id string, r routeInput) error {
 	_, err := q.Exec(ctx, `UPDATE routes SET name = $2, anchor_point = $3, type = $4, comment = $5, creator = $6,
 		archived_at = `+archivedAtSQL("$7")+`, archived = $7, color = $8, screw_date = $9, location = NULLIF($10, ''),
 		wall = NULLIF($11, ''), wall_position = $12, grade = $13, grade_system = $14, grade_index = $15, permanent = $16,
@@ -244,55 +194,55 @@ func archivedAtSQL(archived string) string {
 	return `CASE WHEN NOT ` + archived + ` THEN NULL WHEN archived AND archived_at IS NOT NULL THEN archived_at ELSE now() END`
 }
 
-func setArchived(ctx context.Context, q querier, id string, archived bool) error {
+func setArchived(ctx context.Context, q db.Querier, id string, archived bool) error {
 	_, err := q.Exec(ctx, `UPDATE routes SET archived_at = `+archivedAtSQL("$2")+`, archived = $2,
 		removal_planned_for = CASE WHEN $2 THEN NULL ELSE removal_planned_for END, updated = now() WHERE id = $1`, id, archived)
 	return err
 }
 
-func insertLocation(ctx context.Context, q querier, id, gym string, l locationInput) error {
+func insertLocation(ctx context.Context, q db.Querier, id, gym string, l locationInput) error {
 	_, err := q.Exec(ctx, `INSERT INTO locations (id, gym, name, map_area, map) VALUES ($1, $2, $3, $4, $5)`,
 		id, gym, l.Name, nullJSON(l.MapArea), nullJSON(l.Map))
 	return err
 }
 
-func updateLocation(ctx context.Context, q querier, id string, l locationInput) error {
+func updateLocation(ctx context.Context, q db.Querier, id string, l locationInput) error {
 	_, err := q.Exec(ctx, `UPDATE locations SET name = $2, map_area = $3, map = $4, updated = now() WHERE id = $1`,
 		id, l.Name, nullJSON(l.MapArea), nullJSON(l.Map))
 	return err
 }
 
-func setMapTrace(ctx context.Context, q querier, id, file string) error {
+func setMapTrace(ctx context.Context, q db.Querier, id, file string) error {
 	_, err := q.Exec(ctx, `UPDATE locations SET map_trace = $2, updated = now() WHERE id = $1`, id, file)
 	return err
 }
 
-func insertWall(ctx context.Context, q querier, id, gym string, w wallInput) error {
+func insertWall(ctx context.Context, q db.Querier, id, gym string, w wallInput) error {
 	_, err := q.Exec(ctx, `INSERT INTO walls (id, gym, location, name, outline, edge, label, sort, anchor_from, anchor_to)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		id, gym, w.Location, w.Name, w.Outline, w.Edge, nullJSON(w.Label), w.Sort, w.AnchorFrom, w.AnchorTo)
 	return err
 }
 
-func updateWall(ctx context.Context, q querier, id string, w wallInput) error {
+func updateWall(ctx context.Context, q db.Querier, id string, w wallInput) error {
 	_, err := q.Exec(ctx, `UPDATE walls SET location = $2, name = $3, outline = $4, edge = $5, label = $6, sort = $7,
 		anchor_from = $8, anchor_to = $9, updated = now() WHERE id = $1`,
 		id, w.Location, w.Name, w.Outline, w.Edge, nullJSON(w.Label), w.Sort, w.AnchorFrom, w.AnchorTo)
 	return err
 }
 
-func deleteRow(ctx context.Context, q querier, table, id string) error {
+func deleteRow(ctx context.Context, q db.Querier, table, id string) error {
 	_, err := q.Exec(ctx, `DELETE FROM `+table+` WHERE id = $1`, id)
 	return err
 }
 
-func count(ctx context.Context, q querier, sql string, args ...any) (int, error) {
+func count(ctx context.Context, q db.Querier, sql string, args ...any) (int, error) {
 	var n int
 	err := q.QueryRow(ctx, sql, args...).Scan(&n)
 	return n, err
 }
 
-func usedColors(ctx context.Context, q querier, gym string) ([]string, error) {
+func usedColors(ctx context.Context, q db.Querier, gym string) ([]string, error) {
 	rows, err := q.Query(ctx, `SELECT color FROM used_colors WHERE gym = $1 AND color <> '' ORDER BY color`, gym)
 	if err != nil {
 		return nil, err
@@ -311,21 +261,17 @@ func nullJSON(raw json.RawMessage) any {
 func uniqueViolation(err error) error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-		return httpx.NewError(400, "Failed to save record.").Field("name", "validation_not_unique", "Value must be unique.")
+		return httpx.BadRequest("Failed to save record.").Field("name", "validation_not_unique", "Value must be unique.")
 	}
 	return err
 }
 
-func parseTime(value string) (*time.Time, bool) {
+func parseDay(value string) (*apitime.Date, bool) {
 	if value == "" {
 		return nil, true
 	}
-	for _, layout := range []string{time.RFC3339Nano, "2006-01-02 15:04:05.000Z07:00", "2006-01-02 15:04:05Z07:00", "2006-01-02 15:04:05.000Z", "2006-01-02 15:04:05Z", "2006-01-02"} {
-		if t, err := time.Parse(layout, value); err == nil {
-			return &t, true
-		}
-	}
-	return nil, false
+	day, err := apitime.ParseDate(value)
+	return &day, err == nil
 }
 
 type WallWithLocation struct {
@@ -333,7 +279,7 @@ type WallWithLocation struct {
 	LocationName string `db:"location_name" json:"location_name"`
 }
 
-func wallsWithLocation(ctx context.Context, q querier, wallIDs []string, viewer string) ([]WallWithLocation, error) {
+func wallsWithLocation(ctx context.Context, q db.Querier, wallIDs []string, viewer string) ([]WallWithLocation, error) {
 	rows, err := q.Query(ctx, `SELECT w.id, w.created, w.updated, w.gym, w.location, w.name, w.outline, w.edge, w.label,
 		w.sort, w.anchor_from, w.anchor_to, l.name AS location_name
 		FROM walls w JOIN locations l ON l.id = w.location WHERE w.id = ANY ($1) AND gym_visible(w.gym, $2) ORDER BY l.name, w.sort, w.name, w.id`, wallIDs, viewer)

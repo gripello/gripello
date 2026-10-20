@@ -3,13 +3,11 @@ package members
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
-	"net/http"
 	"slices"
 	"time"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 )
 
@@ -21,7 +19,7 @@ const (
 	tokenAlphabet       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 )
 
-func callerMayAssignRole(ctx context.Context, q querier, caller auth.Principal, r role) bool {
+func callerMayAssignRole(ctx context.Context, q db.Querier, caller auth.Principal, r role) bool {
 	if caller.PlatformAdmin {
 		return true
 	}
@@ -35,7 +33,7 @@ func callerMayAssignRole(ctx context.Context, q querier, caller auth.Principal, 
 	return isSubset(r.Permissions, callerRole.Permissions)
 }
 
-func callerHoldsPermissions(ctx context.Context, q querier, caller auth.Principal, gymID string, permissions []string) bool {
+func callerHoldsPermissions(ctx context.Context, q db.Querier, caller auth.Principal, gymID string, permissions []string) bool {
 	if caller.PlatformAdmin {
 		return true
 	}
@@ -43,7 +41,7 @@ func callerHoldsPermissions(ctx context.Context, q querier, caller auth.Principa
 	return isSubset(permissions, callerRole.Permissions)
 }
 
-func keepAnAdmin(ctx context.Context, q querier, m membership, before role, after *role) error {
+func keepAnAdmin(ctx context.Context, q db.Querier, m membership, before role, after *role) error {
 	if before.Name != adminRoleName || (after != nil && after.Name == adminRoleName) {
 		return nil
 	}
@@ -52,7 +50,7 @@ func keepAnAdmin(ctx context.Context, q querier, m membership, before role, afte
 		return err
 	}
 	if others == 0 {
-		return httpx.NewError(http.StatusBadRequest, "A gym needs at least one admin.")
+		return httpx.BadRequest("A gym needs at least one admin.")
 	}
 	return nil
 }
@@ -83,9 +81,4 @@ func newInviteToken() string {
 		b[i] = tokenAlphabet[int(b[i])%len(tokenAlphabet)]
 	}
 	return string(b)
-}
-
-func hashToken(token string) string {
-	sum := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(sum[:])
 }

@@ -25,7 +25,7 @@ const (
 var fcmToken = regexp.MustCompile(`^[A-Za-z0-9_:\-]+$`)
 
 func ValidFCMToken(token string) bool {
-	return len(token) >= 20 && len(token) <= 4096 && fcmToken.MatchString(token)
+	return len(token) >= 20 && len(token) <= MaxEndpointLength && fcmToken.MatchString(token)
 }
 
 // FCM sends to the native apps through the Firebase Cloud Messaging HTTP v1 API.

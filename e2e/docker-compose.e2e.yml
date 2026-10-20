@@ -64,7 +64,7 @@ services:
         working_dir: /work
         shm_size: 1gb
         volumes:
-            - ..:/work:Z
+            - ..:/work:z
             - e2e-ssl:/ssl:ro
             - gripello-bin:/opt/gripello:ro
             - yarn-cache:/root/.yarn/berry/cache

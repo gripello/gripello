@@ -45,57 +45,50 @@ func taskOrder(sort string) (string, error) {
 	return " ORDER BY " + strings.Join(parts, ", ") + ", id", nil
 }
 
-func taskFilter(gym string, query map[string][]string) (*conditions, error) {
+func taskFilter(gym string, query map[string][]string) (*db.Where, error) {
 	get := func(key string) string {
 		if values := query[key]; len(values) > 0 {
 			return values[0]
 		}
 		return ""
 	}
-	where := &conditions{}
-	where.add("gym = ?", gym)
+	where := &db.Where{}
+	where.Add("gym = ?", gym)
 	if statuses := slices.Concat(query["status"], query["status[]"]); len(statuses) > 0 {
 		for _, status := range statuses {
 			if !slices.Contains(taskStatuses, status) {
 				return nil, invalid("status", "Invalid value "+status+".")
 			}
 		}
-		where.add("status = ANY (?)", statuses)
+		where.Add("status = ANY (?)", statuses)
 	}
 	if kind := get("kind"); kind != "" {
-		where.add("kind = ?", kind)
+		where.Add("kind = ?", kind)
 	}
 	switch assignee := get("assignee"); assignee {
 	case "":
 	case "none":
-		where.clauses = append(where.clauses, "assignee IS NULL")
+		where.Clauses = append(where.Clauses, "assignee IS NULL")
 	default:
-		where.add("assignee = ?", assignee)
+		where.Add("assignee = ?", assignee)
 	}
 	for _, key := range []string{"route", "location", "wall"} {
 		if value := get(key); value != "" {
-			where.add(key+" = ?", value)
+			where.Add(key+" = ?", value)
 		}
 	}
 	if q := strings.TrimSpace(get("q")); q != "" {
-		where.add(`NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (title ILIKE w OR description ILIKE w
+		where.Add(`NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (title ILIKE w OR description ILIKE w
 			OR EXISTS (SELECT 1 FROM routes WHERE routes.id = tasks.route AND routes.name ILIKE w)
 			OR EXISTS (SELECT 1 FROM walls WHERE walls.id = tasks.wall AND walls.name ILIKE w)))`, db.WordPatterns(q))
 	}
 	if get("urgent") == "true" {
-		where.add("priority = ?", urgentTaskPriority)
+		where.Add("priority = ?", urgentTaskPriority)
 	}
 	if get("overdue") == "true" {
-		where.clauses = append(where.clauses, "due_date < current_date AND status IN ('open', 'in_progress', 'waiting')")
+		where.Clauses = append(where.Clauses, "due_date < current_date AND status IN ('open', 'in_progress', 'waiting')")
 	}
 	return where, nil
-}
-
-func atoi(value string, fallback int) int {
-	if n, err := strconv.Atoi(value); err == nil {
-		return n
-	}
-	return fallback
 }
 
 func (m *module) listTasks(w http.ResponseWriter, r *http.Request) error {
@@ -103,7 +96,7 @@ func (m *module) listTasks(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.requireManager(r.Context(), gym); err != nil {
+	if err := m.perms.Require(r.Context(), gym, tenancy.PermManageTasks); err != nil {
 		return err
 	}
 	query := r.URL.Query()
@@ -115,9 +108,8 @@ func (m *module) listTasks(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	page := min(1_000_000, max(1, atoi(query.Get("page"), 1)))
-	limit := min(maxPageSize, max(1, atoi(query.Get("limit"), defaultPageSize)))
-	items, err := queryTasks(r.Context(), m.app.DB, where, order+" LIMIT "+strconv.Itoa(limit)+" OFFSET "+strconv.Itoa((page-1)*limit))
+	page := httpx.Page(r, defaultPageSize, maxPageSize)
+	items, err := queryTasks(r.Context(), m.app.DB, where, order+page.SQL())
 	if err != nil {
 		return err
 	}
@@ -131,8 +123,7 @@ func (m *module) listTasks(w http.ResponseWriter, r *http.Request) error {
 	if items == nil {
 		items = []Task{}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "page": page, "limit": limit, "total": total})
-	return nil
+	return httpx.Respond(w, http.StatusOK, httpx.PageOf[Task]{Items: items, Page: page.Page, Limit: page.Limit, Total: &total}, nil)
 }
 
 // expand fills `expand`, so `task.expand.route.name` keeps working.
@@ -178,8 +169,7 @@ func (m *module) respondTask(ctx context.Context, w http.ResponseWriter, status 
 	if err := m.expand(ctx, items); err != nil {
 		return err
 	}
-	httpx.JSON(w, status, items[0])
-	return nil
+	return httpx.Respond(w, status, items[0], nil)
 }
 
 func (m *module) getTask(w http.ResponseWriter, r *http.Request) error {
@@ -187,7 +177,7 @@ func (m *module) getTask(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.requireManager(r.Context(), t.Gym); err != nil {
+	if err := m.perms.Require(r.Context(), t.Gym, tenancy.PermManageTasks); err != nil {
 		return err
 	}
 	return m.respondTask(r.Context(), w, http.StatusOK, t)
@@ -211,9 +201,8 @@ func (m *module) postTask(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if !m.isManager(r.Context(), gym) {
-		httpx.JSON(w, http.StatusCreated, map[string]string{"id": t.ID})
-		return nil
+	if !m.perms.Has(r.Context(), gym, tenancy.PermManageTasks) {
+		return httpx.Respond(w, http.StatusCreated, map[string]string{"id": t.ID}, nil)
 	}
 	return m.respondTask(r.Context(), w, http.StatusCreated, t)
 }
@@ -264,11 +253,7 @@ func (m *module) setStatus(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) deleteTaskHandler(w http.ResponseWriter, r *http.Request) error {
-	if err := m.deleteTask(r.Context(), r.PathValue("id")); err != nil {
-		return err
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, m.deleteTask(r.Context(), r.PathValue("id")))
 }
 
 func (m *module) listAssignees(w http.ResponseWriter, r *http.Request) error {
@@ -276,7 +261,7 @@ func (m *module) listAssignees(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.requireManager(r.Context(), gym); err != nil {
+	if err := m.perms.Require(r.Context(), gym, tenancy.PermManageTasks); err != nil {
 		return err
 	}
 	items, err := listAssignees(r.Context(), m.app.DB, gym)
@@ -286,8 +271,7 @@ func (m *module) listAssignees(w http.ResponseWriter, r *http.Request) error {
 	if items == nil {
 		items = []Assignee{}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 func (m *module) listGymDefects(w http.ResponseWriter, r *http.Request) error {
@@ -321,8 +305,7 @@ func (m *module) respondDefects(ctx context.Context, w http.ResponseWriter, gym 
 	if items == nil {
 		items = []OpenDefect{}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 // readInput accepts multipart (with an optional `photo`) or JSON; JSON null clears a field.
@@ -335,7 +318,10 @@ func readInput(w http.ResponseWriter, r *http.Request) (map[string]string, *mult
 			if errors.As(err, &tooLarge) {
 				return nil, nil, httpx.NewError(http.StatusRequestEntityTooLarge, "The file is too large.")
 			}
-			return nil, nil, badRequest("Invalid form body.")
+			return nil, nil, httpx.BadRequest("Invalid form body.")
+		}
+		if err := httpx.CheckForm(r); err != nil {
+			return nil, nil, err
 		}
 		for key, values := range r.MultipartForm.Value {
 			if len(values) > 0 {

@@ -132,23 +132,24 @@ func TestSeasonsAreManagedPerGym(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t)
 	body := func(starts, ends string) string {
-		return `{"name":"Winter","starts_at":"` + starts + ` 00:00:00.000Z","ends_at":"` + ends + ` 00:00:00.000Z"}`
+		return `{"name":"Winter","starts_at":"` + starts + `","ends_at":"` + ends + `"}`
 	}
 	seasons := "/gyms/" + f.gymA + "/seasons"
 	f.call("", "POST", seasons, body("2026-01-01", "2026-03-31"), http.StatusUnauthorized)
 	f.call("climber", "POST", seasons, body("2026-01-01", "2026-03-31"), http.StatusForbidden)
 	f.call("setterB", "POST", seasons, body("2026-01-01", "2026-03-31"), http.StatusForbidden)
 	f.call("adminA", "POST", seasons, body("2026-01-01", "2026-03-31"), http.StatusForbidden)
-	f.call("setterA", "POST", seasons, body("2026-03-31", "2026-01-01"), http.StatusBadRequest, "end after")
+	f.call("setterA", "POST", seasons, body("2026-03-31", "2026-01-01"), http.StatusBadRequest, "end before")
+	f.call("setterA", "POST", seasons, body("2026-01-01 00:00:00.000Z", "2026-03-31"), http.StatusBadRequest, `"starts_at":{"code":"validation_invalid_value"`)
 	f.call("setterA", "POST", seasons, `{"gym":"`+f.gymB+`","name":"Winter","starts_at":"2026-01-01","ends_at":"2026-03-31"}`, http.StatusBadRequest)
 	f.call("setterA", "POST", seasons, `{"starts_at":"2026-01-01","ends_at":"2026-03-31"}`, http.StatusBadRequest, `"name"`)
 	var season Season
-	json.Unmarshal([]byte(f.call("setterA", "POST", seasons, body("2026-01-01", "2026-03-31"), http.StatusCreated, `"name":"Winter"`)), &season)
+	json.Unmarshal([]byte(f.call("setterA", "POST", seasons, body("2026-01-01", "2026-03-31"), http.StatusCreated, `"name":"Winter"`, `"starts_at":"2026-01-01"`, `"ends_at":"2026-03-31"`)), &season)
 	id := season.ID
 	f.call("", "GET", seasons, "", http.StatusOK, `"id":"`+id+`"`)
 	f.call("", "GET", "/gyms/beta/seasons", "", http.StatusOK, `[]`)
 	f.call("setterB", "PATCH", "/seasons/"+id, `{"name":"Mine"}`, http.StatusForbidden)
-	f.call("setterA", "PATCH", "/seasons/"+id, `{"ends_at":"2025-12-01"}`, http.StatusBadRequest, "end after")
+	f.call("setterA", "PATCH", "/seasons/"+id, `{"ends_at":"2025-12-01"}`, http.StatusBadRequest, "end before")
 	f.call("setterA", "PATCH", "/seasons/"+id, `{"gym":"`+f.gymB+`"}`, http.StatusBadRequest)
 	f.call("setterA", "PATCH", "/seasons/"+id, `{"name":"Spring"}`, http.StatusOK, `"name":"Spring"`)
 	f.call("setterB", "DELETE", "/seasons/"+id, "", http.StatusForbidden)
@@ -166,6 +167,7 @@ func TestSeasonsAreManagedPerGym(t *testing.T) {
 	if want := []string{"season.created/create", "season.updated/update", "season.deleted/delete"}; !slices.Equal(kinds, want) {
 		t.Fatalf("season events = %v, want %v", kinds, want)
 	}
+	f.call("setterB", "POST", "/gyms/"+f.gymB+"/seasons", body("2026-02-14", "2026-02-14"), http.StatusCreated, `"ends_at":"2026-02-14"`)
 }
 
 func TestLeaderboardKeepsTheGradeOfTheBestRepeat(t *testing.T) {
@@ -264,7 +266,7 @@ func TestUpdatingOrDeletingATickRefreshesItsPair(t *testing.T) {
 	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool {
 		return row != nil && row.Score == 1570+leaderboardFlashBonus && row.Hardest == "6A"
 	})
-	f.call("climber", "PATCH", "/ticks/"+easy.ID, `{"date":"`+time.Now().AddDate(0, 0, -90).UTC().Format(time.RFC3339)+`"}`, http.StatusOK)
+	f.call("climber", "PATCH", "/ticks/"+easy.ID, `{"date":"`+time.Now().AddDate(0, 0, -90).UTC().Format(time.DateOnly)+`"}`, http.StatusOK)
 	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row == nil })
 }
 
@@ -374,7 +376,7 @@ func TestLiveBoardsMatchAFreshBuildAfterRandomChanges(t *testing.T) {
 			f.call(f.nameOf(tick.User), "PATCH", "/ticks/"+tick.ID, `{"type":"`+types[random.IntN(len(types))]+`"}`, http.StatusOK)
 		case op == 2:
 			tick := ticks[random.IntN(len(ticks))]
-			f.call(f.nameOf(tick.User), "PATCH", "/ticks/"+tick.ID, `{"date":"`+randomDate().UTC().Format(time.RFC3339)+`"}`, http.StatusOK)
+			f.call(f.nameOf(tick.User), "PATCH", "/ticks/"+tick.ID, `{"date":"`+randomDate().UTC().Format(time.DateOnly)+`"}`, http.StatusOK)
 		default:
 			index := random.IntN(len(ticks))
 			f.call(f.nameOf(ticks[index].User), "DELETE", "/ticks/"+ticks[index].ID, "", http.StatusNoContent)
@@ -464,5 +466,36 @@ func TestTicksAnnounceTheLeaderboardOncePerWindow(t *testing.T) {
 	announced := f.outbox(TopicLeaderboard + f.gymA)
 	if len(announced) != 1 || !announced[0].Audience.Public || string(announced[0].Payload) != "{}" {
 		t.Fatalf("announcement = %+v", announced)
+	}
+}
+
+func TestCorrectedRouteGradeReachesTicksAndTheLeaderboard(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	route := f.boulder(f.hallA, "8A", 25.1)
+	f.tick("climber", route, "top", time.Now())
+	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Score == 2510 })
+
+	f.exec(`UPDATE routes SET grade = '6A', grade_index = 15.7 WHERE id = $1 RETURNING id`, route)
+	err := pgx.BeginFunc(context.Background(), f.app.DB, func(tx pgx.Tx) error {
+		return events.Publish(context.Background(), tx, "gym_changes:"+f.gymA, "route.updated",
+			map[string]any{"collection": "routes", "action": "update", "record": map[string]any{"id": route}, "changed": []string{"grade", "grade_index"}},
+			events.Audience{Public: true})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	testapp.WaitFor(t, func() bool {
+		var queued bool
+		f.app.DB.QueryRow(context.Background(), `SELECT EXISTS (SELECT 1 FROM jobs WHERE kind = $1 AND key = $2)`, routeGradesJob, route).Scan(&queued)
+		return queued
+	})
+	if err := f.app.Workers[routeGradesJob](context.Background(), jobs.Job{Kind: routeGradesJob, Key: route}); err != nil {
+		t.Fatal(err)
+	}
+	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Score == 1570 })
+	f.call("climber", "GET", "/me/ticks", "", http.StatusOK, `"grade":"6A"`, `"grade_index":15.7`)
+	if updates := f.outbox(TopicOwnTicks); len(updates) != 2 || updates[1].Kind != "tick.updated" {
+		t.Errorf("own_ticks events = %d", len(updates))
 	}
 }

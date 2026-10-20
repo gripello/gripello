@@ -6,35 +6,20 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/auth"
 	"gripello/internal/platform/events"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
 	TopicTasks        = "tasks"
-	TopicNotify       = "notify"
-	KindNotify        = "notify"
 	KindDefectsChange = "defects.changed"
 )
-
-type Notify struct {
-	Type   string         `json:"type"`
-	Users  []string       `json:"users"`
-	Gym    string         `json:"gym"`
-	Params map[string]any `json:"params"`
-	URL    string         `json:"url"`
-}
 
 type OpenDefectsChange struct {
 	Gym     string       `json:"gym"`
 	Routes  []string     `json:"routes"`
 	Defects []OpenDefect `json:"defects"`
-}
-
-func publishNotify(ctx context.Context, tx pgx.Tx, n Notify) error {
-	if len(n.Users) == 0 {
-		return nil
-	}
-	return events.PublishAs(ctx, tx, actorOf(ctx), TopicNotify, KindNotify, n, events.Audience{})
 }
 
 func defectRoutes(tasks ...Task) []string {
@@ -59,7 +44,7 @@ func publishOpenDefects(ctx context.Context, tx pgx.Tx, gym string, routes []str
 	if defects == nil {
 		defects = []OpenDefect{}
 	}
-	return events.PublishAs(ctx, tx, actorOf(ctx), "open_route_defects:"+gym, KindDefectsChange,
+	return events.PublishAs(ctx, tx, auth.UserID(ctx), "open_route_defects:"+gym, KindDefectsChange,
 		OpenDefectsChange{Gym: gym, Routes: routes, Defects: defects}, events.Audience{Public: true})
 }
 
@@ -73,6 +58,6 @@ var taskChangeKinds = map[string]string{"create": "task.created", "update": "tas
 // publishTaskChange feeds both the staff task board (live) and the audit log (prefix "tasks:").
 func publishTaskChange(ctx context.Context, tx pgx.Tx, action string, t Task) error {
 	t.Expand = nil
-	return events.PublishAs(ctx, tx, actorOf(ctx), TopicTasks+":"+t.Gym, taskChangeKinds[action], TaskChange{Action: action, Record: t},
-		events.Audience{GymPerm: t.Gym + ":" + permManageTasks})
+	return events.PublishAs(ctx, tx, auth.UserID(ctx), TopicTasks+":"+t.Gym, taskChangeKinds[action], TaskChange{Action: action, Record: t},
+		events.Audience{GymPerm: t.Gym + ":" + tenancy.PermManageTasks})
 }

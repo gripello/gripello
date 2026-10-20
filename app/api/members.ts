@@ -4,7 +4,7 @@ import type {
     RoleRecord,
 } from '../../types/models'
 import { useAuthState, type AuthResult } from './auth'
-import { useApi } from './client'
+import { useApi, type Page } from './client'
 
 export interface MemberQuery {
     q?: string
@@ -40,13 +40,6 @@ export interface Member {
     updated: string
 }
 
-export interface MemberPage {
-    items: Member[]
-    page: number
-    limit: number
-    total?: number
-}
-
 export interface Membership {
     id: string
     user: string
@@ -79,7 +72,7 @@ export type RoleInput = Partial<
 >
 
 export function listMembers(gym: string, query: MemberQuery = {}) {
-    return useApi()<MemberPage>(`/gyms/${gym}/members`, {
+    return useApi()<Page<Member>>(`/gyms/${gym}/members`, {
         query: {
             ...(query.q ? { q: query.q } : {}),
             ...(query.role ? { role: query.role } : {}),
@@ -94,7 +87,7 @@ export function inviteMember(gym: string, invite: InviteRequest) {
     return useApi()(`/gyms/${gym}/members`, { method: 'POST', body: invite })
 }
 
-export function createMembership(
+export function addMembership(
     input: Pick<Membership, 'user' | 'gym' | 'role'>,
 ) {
     return useApi()<Membership>(`/gyms/${input.gym}/memberships`, {

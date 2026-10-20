@@ -15,18 +15,22 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/apitime"
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/blob"
+	"gripello/internal/platform/db"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/jobs"
 	"gripello/internal/platform/mail"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
 	normalTaskPriority = 2
 	urgentTaskPriority = 4
 	maxPhotoBytes      = 5 << 20
-	permManageTasks    = "manage_tasks"
 	urgentAlertJob     = "tasks.urgentAlert"
 )
 
@@ -41,10 +45,8 @@ var (
 	photoTypes             = []string{"image/jpeg", "image/png", "image/webp"}
 )
 
-func badRequest(message string) *httpx.Error { return httpx.NewError(http.StatusBadRequest, message) }
-
 func invalid(field, message string) *httpx.Error {
-	return badRequest("Failed to save record.").Field(field, "validation_invalid_value", message)
+	return httpx.BadRequest("Failed to save record.").Field(field, "validation_invalid_value", message)
 }
 
 func defaultTaskPriority(kind, category string) int {
@@ -94,18 +96,18 @@ func validateTask(t Task) error {
 	switch t.Kind {
 	case "wish":
 		if t.Route != "" {
-			return badRequest("A wish cannot point to an existing route.")
+			return httpx.BadRequest("A wish cannot point to an existing route.")
 		}
 		if t.Location == "" || t.RouteType == "" {
-			return badRequest("A wish needs a location and a route type.")
+			return httpx.BadRequest("A wish needs a location and a route type.")
 		}
 	case "defect":
 		if t.Route == "" || t.Category == "" {
-			return badRequest("A defect needs a route and a category.")
+			return httpx.BadRequest("A defect needs a route and a category.")
 		}
 	default:
-		if t.Title == "" {
-			return badRequest("A task needs a title.")
+		if httpx.Blank(t.Title) {
+			return httpx.BadRequest("A task needs a title.").Field("title", "validation_required", "Cannot be blank.")
 		}
 	}
 	return nil
@@ -134,10 +136,10 @@ func defectFiledParams(routeName, gymName string) map[string]any {
 }
 
 // attachTarget derives location (and the default wall) from the route or wall; none of them may sit in another gym.
-func attachTarget(ctx context.Context, q querier, t *Task, creating bool) error {
+func attachTarget(ctx context.Context, q db.Querier, t *Task, creating bool) error {
 	sameGym := func(gym string) error {
 		if gym != t.Gym {
-			return badRequest("The task cannot belong to another gym.")
+			return httpx.BadRequest("The task cannot belong to another gym.")
 		}
 		return nil
 	}
@@ -149,7 +151,7 @@ func attachTarget(ctx context.Context, q querier, t *Task, creating bool) error 
 			return err
 		}
 		if creating && route.Archived {
-			return badRequest("This route has been removed.")
+			return httpx.BadRequest("This route has been removed.")
 		}
 		t.Location = route.Location
 		if t.Wall == "" {
@@ -177,7 +179,7 @@ func attachTarget(ctx context.Context, q querier, t *Task, creating bool) error 
 	return nil
 }
 
-func validateAssignee(ctx context.Context, q querier, t Task) error {
+func validateAssignee(ctx context.Context, q db.Querier, t Task) error {
 	if t.Assignee == "" {
 		return nil
 	}
@@ -216,54 +218,25 @@ func applyInput(t *Task, in map[string]string, creating bool) error {
 		}
 	}
 	if value, ok := in["due_date"]; ok {
-		at, valid := parseTime(value)
+		day, valid := parseDay(value)
 		if !valid {
-			return invalid("due_date", "Invalid date.")
+			return invalid("due_date", "Must be a day as YYYY-MM-DD.")
 		}
-		t.DueDate = at
+		t.DueDate = day
 	}
 	return nil
 }
 
-func parseTime(value string) (*time.Time, bool) {
+func parseDay(value string) (*apitime.Date, bool) {
 	if value == "" {
 		return nil, true
 	}
-	for _, layout := range []string{time.RFC3339Nano, "2006-01-02 15:04:05.000Z07:00", "2006-01-02 15:04:05Z07:00", "2006-01-02 15:04:05.000Z", "2006-01-02 15:04:05Z", "2006-01-02"} {
-		if t, err := time.Parse(layout, value); err == nil {
-			return &t, true
-		}
-	}
-	return nil, false
-}
-
-func actorOf(ctx context.Context) string {
-	p, _ := auth.From(ctx)
-	return p.UserID
-}
-
-func (m *module) isManager(ctx context.Context, gym string) bool {
-	p, ok := auth.From(ctx)
-	return ok && m.perms.Can(ctx, p.UserID, gym, permManageTasks)
-}
-
-func (m *module) requireManager(ctx context.Context, gym string) error {
-	if _, err := auth.Require(ctx); err != nil {
-		return err
-	}
-	if !m.isManager(ctx, gym) {
-		return httpx.ErrForbidden
-	}
-	return nil
-}
-
-func (m *module) gymPath(ctx context.Context, q querier, gym, path string) string {
-	g, _ := findGym(ctx, q, gym)
-	return "/" + g.Slug + path
+	day, err := apitime.ParseDate(value)
+	return &day, err == nil
 }
 
 func (m *module) createTask(ctx context.Context, gym string, in map[string]string, photo *multipart.FileHeader) (Task, error) {
-	actor := actorOf(ctx)
+	actor := auth.UserID(ctx)
 	t := Task{ID: ids.New(), Gym: gym}
 	if err := applyInput(&t, in, true); err != nil {
 		return Task{}, err
@@ -271,7 +244,7 @@ func (m *module) createTask(ctx context.Context, gym string, in map[string]strin
 	if err := attachTarget(ctx, m.app.DB, &t, true); err != nil {
 		return Task{}, err
 	}
-	if !m.isManager(ctx, gym) {
+	if !m.perms.Has(ctx, gym, tenancy.PermManageTasks) {
 		restrictToClimberReport(&t)
 	}
 	t.Reporter, t.Status, t.DoneAt, t.DoneBy, t.ResolutionNote = actor, "open", nil, "", ""
@@ -324,14 +297,14 @@ func (m *module) notifyCreated(ctx context.Context, tx pgx.Tx, t Task, actor str
 	if err != nil {
 		return err
 	}
-	board := m.gymPath(ctx, tx, t.Gym, "/manage/tasks")
+	board := tenancy.GymPath(ctx, tx, t.Gym, "/manage/tasks")
 	switch t.Kind {
 	case "defect":
 		g, _ := findGym(ctx, tx, t.Gym)
-		err = publishNotify(ctx, tx, Notify{Type: "task_defect_filed", Users: withoutUser(managers, actor), Gym: t.Gym,
+		err = events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "task_defect_filed", Users: withoutUser(managers, actor), Gym: t.Gym,
 			Params: defectFiledParams(routeName(ctx, tx, t.Route), g.Name), URL: board})
 	case "wish":
-		err = publishNotify(ctx, tx, Notify{Type: "task_wish_filed", Users: withoutUser(managers, actor), Gym: t.Gym,
+		err = events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "task_wish_filed", Users: withoutUser(managers, actor), Gym: t.Gym,
 			Params: wishParams(ctx, tx, t), URL: board})
 	}
 	if err != nil {
@@ -348,11 +321,11 @@ func (m *module) notifyAssignee(ctx context.Context, tx pgx.Tx, t Task, actor st
 	if label == "" {
 		label = routeName(ctx, tx, t.Route)
 	}
-	return publishNotify(ctx, tx, Notify{Type: "task_assigned", Users: []string{t.Assignee}, Gym: t.Gym,
-		Params: map[string]any{"title": label}, URL: m.gymPath(ctx, tx, t.Gym, "/manage/tasks")})
+	return events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "task_assigned", Users: []string{t.Assignee}, Gym: t.Gym,
+		Params: map[string]any{"title": label}, URL: tenancy.GymPath(ctx, tx, t.Gym, "/manage/tasks")})
 }
 
-func wishParams(ctx context.Context, q querier, t Task) map[string]any {
+func wishParams(ctx context.Context, q db.Querier, t Task) map[string]any {
 	return map[string]any{"location": locationName(ctx, q, t.Location)}
 }
 
@@ -361,10 +334,10 @@ func (m *module) updateTask(ctx context.Context, id string, in map[string]string
 	if err != nil {
 		return Task{}, err
 	}
-	if err := m.requireManager(ctx, current.Gym); err != nil {
+	if err := m.perms.Require(ctx, current.Gym, tenancy.PermManageTasks); err != nil {
 		return Task{}, err
 	}
-	actor := actorOf(ctx)
+	actor := auth.UserID(ctx)
 	uploaded := Task{ID: id}
 	if err := m.storePhoto(ctx, &uploaded, photo); err != nil {
 		return Task{}, err
@@ -438,11 +411,11 @@ func (m *module) updateTask(ctx context.Context, id string, in map[string]string
 func (m *module) notifyReporterOfDone(ctx context.Context, tx pgx.Tx, t Task) error {
 	switch t.Kind {
 	case "defect":
-		return publishNotify(ctx, tx, Notify{Type: "task_defect_fixed", Users: []string{t.Reporter}, Gym: t.Gym,
+		return events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "task_defect_fixed", Users: []string{t.Reporter}, Gym: t.Gym,
 			Params: map[string]any{"route": routeName(ctx, tx, t.Route)}, URL: "/route?id=" + t.Route})
 	case "wish":
-		return publishNotify(ctx, tx, Notify{Type: "task_wish_done", Users: []string{t.Reporter}, Gym: t.Gym,
-			Params: wishParams(ctx, tx, t), URL: m.gymPath(ctx, tx, t.Gym, "/routes")})
+		return events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "task_wish_done", Users: []string{t.Reporter}, Gym: t.Gym,
+			Params: wishParams(ctx, tx, t), URL: tenancy.GymPath(ctx, tx, t.Gym, "/routes")})
 	}
 	return nil
 }
@@ -452,7 +425,7 @@ func (m *module) deleteTask(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	if err := m.requireManager(ctx, t.Gym); err != nil {
+	if err := m.perms.Require(ctx, t.Gym, tenancy.PermManageTasks); err != nil {
 		return err
 	}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
@@ -492,7 +465,7 @@ func (m *module) storePhoto(ctx context.Context, t *Task, photo *multipart.FileH
 
 func (m *module) warmPhoto(t Task, photo *multipart.FileHeader) {
 	if photo != nil && m.app.Blob != nil {
-		m.app.Blob.WarmThumbs("tasks/"+t.ID+"/"+t.Photo, "400x0")
+		m.app.Blob.WarmThumbs("tasks/"+t.ID+"/"+t.Photo, blob.ThumbPhoto, blob.ThumbPhotoLarge)
 	}
 }
 
@@ -532,7 +505,7 @@ func (m *module) sendUrgentAlerts(ctx context.Context, job jobs.Job) error {
 	})
 }
 
-func (m *module) sendUrgentDefectAlert(ctx context.Context, q querier, gym string, defects []Task) error {
+func (m *module) sendUrgentDefectAlert(ctx context.Context, q db.Querier, gym string, defects []Task) error {
 	recipients, err := managerMailRecipients(ctx, q, gym)
 	if err != nil {
 		return err

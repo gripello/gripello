@@ -2,28 +2,28 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { ApiError } from '~/api/client'
 import {
     competitionDate,
-    createCategory,
+    createCompetitionCategory,
     createCompetition,
     createCompetitionRoute,
-    createEntry,
-    deleteCategory,
+    createCompetitionEntry,
+    deleteCompetitionCategory,
     deleteCompetition,
     deleteCompetitionRoute,
-    deleteEntry,
-    deleteScore,
+    deleteCompetitionEntry,
+    deleteCompetitionScore,
     getCompetition,
     getCompetitionStandings,
-    listCategories,
+    listCompetitionCategories,
     listCompetitionRoutes,
     listCompetitions,
-    listEntries,
-    listScores,
+    listCompetitionEntries,
+    listCompetitionScores,
     publishCompetition,
-    putScores,
-    updateCategory,
+    upsertCompetitionScores,
+    updateCompetitionCategory,
     updateCompetition,
     updateCompetitionRoute,
-    updateEntry,
+    updateCompetitionEntry,
 } from '~/api/competitions'
 import { jsonResponse, mockApi } from './apiMock'
 
@@ -71,7 +71,7 @@ describe('competitions', () => {
     it('creates in the gym with RFC 3339 dates', async () => {
         await createCompetition('g1', {
             name: 'Cup',
-            starts_at: '2026-10-10 10:00:00.000Z',
+            starts_at: '2026-10-10T10:00:00.000Z',
             ends_at: '',
         })
         expect(calls()).toEqual([
@@ -126,14 +126,14 @@ describe('competitions', () => {
 describe('categories', () => {
     it('lists the categories of a competition', async () => {
         api.respond({ items: [{ id: 'k1' }] })
-        expect(await listCategories('c1')).toEqual([{ id: 'k1' }])
+        expect(await listCompetitionCategories('c1')).toEqual([{ id: 'k1' }])
         expect(api.request().url).toBe('/api/competitions/c1/categories')
     })
 
     it('creates, updates and deletes', async () => {
-        await createCategory('c1', { name: 'Open' })
-        await updateCategory('k1', { sort: 2 })
-        await deleteCategory('k1')
+        await createCompetitionCategory('c1', { name: 'Open' })
+        await updateCompetitionCategory('k1', { sort: 2 })
+        await deleteCompetitionCategory('k1')
         expect(calls()).toEqual([
             ['POST', '/api/competitions/c1/categories', { name: 'Open' }],
             ['PATCH', '/api/competition-categories/k1', { sort: 2 }],
@@ -171,7 +171,7 @@ describe('entries', () => {
     it('lists with status and user filters', async () => {
         api.respond({ items: [{ id: 'e1' }] })
         expect(
-            await listEntries('c1', {
+            await listCompetitionEntries('c1', {
                 status: ['registered', 'checked_in'],
                 user: 'u1',
             }),
@@ -182,9 +182,12 @@ describe('entries', () => {
     })
 
     it('creates, updates and deletes', async () => {
-        await createEntry('c1', { category: 'k1', display_name: 'Ann' })
-        await updateEntry('e1', { status: 'withdrawn' })
-        await deleteEntry('e1')
+        await createCompetitionEntry('c1', {
+            category: 'k1',
+            display_name: 'Ann',
+        })
+        await updateCompetitionEntry('e1', { status: 'withdrawn' })
+        await deleteCompetitionEntry('e1')
         expect(calls()).toEqual([
             [
                 'POST',
@@ -202,8 +205,8 @@ describe('scores', () => {
         api.fetchMock.mockImplementation(async () =>
             jsonResponse({ items: [] }),
         )
-        await listScores('c1')
-        await listScores('c1', { entry: 'e1' })
+        await listCompetitionScores('c1')
+        await listCompetitionScores('c1', { entry: 'e1' })
         expect(calls()).toEqual([
             ['GET', '/api/competitions/c1/scores'],
             ['GET', '/api/competitions/c1/scores?entry=e1'],
@@ -216,7 +219,7 @@ describe('scores', () => {
             { entry: 'e1', comp_route: 'cr2', attempts: 3 },
         ]
         api.respond({ items: [{ id: 's1' }, { id: 's2' }] })
-        expect(await putScores('c1', scores)).toEqual([
+        expect(await upsertCompetitionScores('c1', scores)).toEqual([
             { id: 's1' },
             { id: 's2' },
         ])
@@ -228,12 +231,12 @@ describe('scores', () => {
     it('reports network errors with status 0', async () => {
         api.fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'))
         await expect(
-            putScores('c1', [{ entry: 'e1', comp_route: 'cr1' }]),
+            upsertCompetitionScores('c1', [{ entry: 'e1', comp_route: 'cr1' }]),
         ).rejects.toMatchObject({ status: 0 })
     })
 
     it('deletes a score', async () => {
-        await deleteScore('s1')
+        await deleteCompetitionScore('s1')
         expect(calls()).toEqual([['DELETE', '/api/competition-scores/s1']])
     })
 })

@@ -2,21 +2,14 @@ package tasks
 
 import (
 	"context"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
+	"gripello/internal/platform/apitime"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 )
-
-type querier interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-}
 
 type Task struct {
 	ID             string         `db:"id" json:"id"`
@@ -35,7 +28,7 @@ type Task struct {
 	Photo          string         `db:"photo" json:"photo"`
 	Reporter       string         `db:"reporter" json:"reporter"`
 	Assignee       string         `db:"assignee" json:"assignee"`
-	DueDate        *time.Time     `db:"due_date" json:"due_date"`
+	DueDate        *apitime.Date  `db:"due_date" json:"due_date"`
 	ResolutionNote string         `db:"resolution_note" json:"resolution_note"`
 	DoneAt         *time.Time     `db:"done_at" json:"done_at"`
 	DoneBy         string         `db:"done_by" json:"done_by"`
@@ -80,64 +73,29 @@ const taskColumns = `id, created, updated, gym, kind, title, category, priority,
 	COALESCE(wall, '') AS wall, COALESCE(location, '') AS location, description, photo, COALESCE(reporter, '') AS reporter,
 	COALESCE(assignee, '') AS assignee, due_date, resolution_note, done_at, COALESCE(done_by, '') AS done_by, route_type, grade`
 
-type conditions struct {
-	clauses []string
-	args    []any
+func queryTasks(ctx context.Context, q db.Querier, where *db.Where, tail string) ([]Task, error) {
+	return db.List[Task](ctx, q, `SELECT `+taskColumns+` FROM tasks`+where.SQL()+tail, where.Args...)
 }
 
-func (c *conditions) add(clause string, arg any) {
-	c.args = append(c.args, arg)
-	c.clauses = append(c.clauses, strings.ReplaceAll(clause, "?", "$"+strconv.Itoa(len(c.args))))
-}
-
-func (c *conditions) sql() string {
-	if len(c.clauses) == 0 {
-		return ""
-	}
-	return " WHERE " + strings.Join(c.clauses, " AND ")
-}
-
-func queryTasks(ctx context.Context, q querier, where *conditions, tail string) ([]Task, error) {
-	rows, err := q.Query(ctx, `SELECT `+taskColumns+` FROM tasks`+where.sql()+tail, where.args...)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[Task])
-}
-
-func countTasks(ctx context.Context, q querier, where *conditions) (int, error) {
+func countTasks(ctx context.Context, q db.Querier, where *db.Where) (int, error) {
 	var total int
-	err := q.QueryRow(ctx, `SELECT COUNT(*) FROM tasks`+where.sql(), where.args...).Scan(&total)
+	err := q.QueryRow(ctx, `SELECT COUNT(*) FROM tasks`+where.SQL(), where.Args...).Scan(&total)
 	return total, err
 }
 
-func findTask(ctx context.Context, q querier, id string) (Task, error) {
-	where := &conditions{}
-	where.add("id = ?", id)
-	items, err := queryTasks(ctx, q, where, "")
-	if err != nil {
-		return Task{}, err
-	}
-	if len(items) == 0 {
-		return Task{}, httpx.ErrNotFound
-	}
-	return items[0], nil
+func findTask(ctx context.Context, q db.Querier, id string) (Task, error) {
+	where := &db.Where{}
+	where.Add("id = ?", id)
+	return db.First(queryTasks(ctx, q, where, ""))
 }
 
-func lockTask(ctx context.Context, q querier, id string) (Task, error) {
-	where := &conditions{}
-	where.add("id = ?", id)
-	items, err := queryTasks(ctx, q, where, " FOR UPDATE")
-	if err != nil {
-		return Task{}, err
-	}
-	if len(items) == 0 {
-		return Task{}, httpx.ErrNotFound
-	}
-	return items[0], nil
+func lockTask(ctx context.Context, q db.Querier, id string) (Task, error) {
+	where := &db.Where{}
+	where.Add("id = ?", id)
+	return db.First(queryTasks(ctx, q, where, " FOR UPDATE"))
 }
 
-func insertTask(ctx context.Context, q querier, t Task) error {
+func insertTask(ctx context.Context, q db.Querier, t Task) error {
 	_, err := q.Exec(ctx, `INSERT INTO tasks (id, gym, kind, title, category, priority, status, route, wall, location, description,
 		photo, reporter, assignee, due_date, resolution_note, done_at, done_by, route_type, grade)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, ''), $11, $12, NULLIF($13, ''),
@@ -147,7 +105,7 @@ func insertTask(ctx context.Context, q querier, t Task) error {
 	return err
 }
 
-func saveTask(ctx context.Context, q querier, t Task) error {
+func saveTask(ctx context.Context, q db.Querier, t Task) error {
 	_, err := q.Exec(ctx, `UPDATE tasks SET title = $2, category = $3, priority = $4, status = $5, route = NULLIF($6, ''),
 		wall = NULLIF($7, ''), location = NULLIF($8, ''), description = $9, photo = $10, assignee = NULLIF($11, ''),
 		due_date = $12, resolution_note = $13, done_at = $14, done_by = NULLIF($15, ''), route_type = $16, grade = $17,
@@ -165,19 +123,19 @@ type routeTarget struct {
 	Archived bool
 }
 
-func findRouteTarget(ctx context.Context, q querier, id string) (routeTarget, error) {
+func findRouteTarget(ctx context.Context, q db.Querier, id string) (routeTarget, error) {
 	var r routeTarget
 	err := q.QueryRow(ctx, `SELECT gym, COALESCE(location, ''), COALESCE(wall, ''), name, archived FROM routes WHERE id = $1`, id).
 		Scan(&r.Gym, &r.Location, &r.Wall, &r.Name, &r.Archived)
 	return r, err
 }
 
-func findWallTarget(ctx context.Context, q querier, id string) (gym, location string, err error) {
+func findWallTarget(ctx context.Context, q db.Querier, id string) (gym, location string, err error) {
 	err = q.QueryRow(ctx, `SELECT gym, location FROM walls WHERE id = $1`, id).Scan(&gym, &location)
 	return
 }
 
-func findLocationGym(ctx context.Context, q querier, id string) (string, error) {
+func findLocationGym(ctx context.Context, q db.Querier, id string) (string, error) {
 	var gym string
 	err := q.QueryRow(ctx, `SELECT gym FROM locations WHERE id = $1`, id).Scan(&gym)
 	return gym, err
@@ -187,14 +145,14 @@ type gymInfo struct {
 	Slug, Name, Language, ContactEmail string
 }
 
-func findGym(ctx context.Context, q querier, id string) (gymInfo, error) {
+func findGym(ctx context.Context, q db.Querier, id string) (gymInfo, error) {
 	var g gymInfo
 	err := q.QueryRow(ctx, `SELECT slug, name, language, contact_email FROM gyms WHERE id = $1`, id).
 		Scan(&g.Slug, &g.Name, &g.Language, &g.ContactEmail)
 	return g, err
 }
 
-func platformContactEmail(ctx context.Context, q querier) string {
+func platformContactEmail(ctx context.Context, q db.Querier) string {
 	var email string
 	q.QueryRow(ctx, `SELECT contact_email FROM settings ORDER BY id LIMIT 1`).Scan(&email)
 	return email
@@ -203,7 +161,7 @@ func platformContactEmail(ctx context.Context, q querier) string {
 const managersSQL = `SELECT DISTINCT m."user" FROM memberships m JOIN roles r ON r.id = m.role
 	WHERE m.gym = $1 AND 'manage_tasks' = ANY (r.permissions)`
 
-func taskManagers(ctx context.Context, q querier, gym string) ([]string, error) {
+func taskManagers(ctx context.Context, q db.Querier, gym string) ([]string, error) {
 	rows, err := q.Query(ctx, managersSQL+` ORDER BY 1`, gym)
 	if err != nil {
 		return nil, err
@@ -215,7 +173,7 @@ type mailRecipient struct {
 	ID, Email, Language string
 }
 
-func managerMailRecipients(ctx context.Context, q querier, gym string) ([]mailRecipient, error) {
+func managerMailRecipients(ctx context.Context, q db.Querier, gym string) ([]mailRecipient, error) {
 	rows, err := q.Query(ctx, `SELECT id, email, language FROM users WHERE email <> '' AND id IN (`+managersSQL+`) ORDER BY id`, gym)
 	if err != nil {
 		return nil, err
@@ -227,7 +185,7 @@ func managerMailRecipients(ctx context.Context, q querier, gym string) ([]mailRe
 }
 
 // refuseWhileHidden keeps moderation's hide in force: only a restore brings description and photo back.
-func refuseWhileHidden(ctx context.Context, q querier, id string) error {
+func refuseWhileHidden(ctx context.Context, q db.Querier, id string) error {
 	var hidden bool
 	if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM moderation_items WHERE content_type = 'task' AND content_id = $1
 		AND state = 'hidden')`, id).Scan(&hidden); err != nil {
@@ -239,13 +197,13 @@ func refuseWhileHidden(ctx context.Context, q querier, id string) error {
 	return nil
 }
 
-func holdsManageTasks(ctx context.Context, q querier, user, gym string) (bool, error) {
+func holdsManageTasks(ctx context.Context, q db.Querier, user, gym string) (bool, error) {
 	var ok bool
 	err := q.QueryRow(ctx, `SELECT EXISTS (`+managersSQL+` AND m."user" = $2)`, gym, user).Scan(&ok)
 	return ok, err
 }
 
-func openDefects(ctx context.Context, q querier, gym string, routes []string) ([]OpenDefect, error) {
+func openDefects(ctx context.Context, q db.Querier, gym string, routes []string) ([]OpenDefect, error) {
 	sql := `SELECT id, route, category, created FROM open_route_defects WHERE gym = $1`
 	args := []any{gym}
 	if routes != nil {
@@ -262,7 +220,7 @@ func openDefects(ctx context.Context, q querier, gym string, routes []string) ([
 	})
 }
 
-func listAssignees(ctx context.Context, q querier, gym string) ([]Assignee, error) {
+func listAssignees(ctx context.Context, q db.Querier, gym string) ([]Assignee, error) {
 	rows, err := q.Query(ctx, `SELECT id, "user", gym, name FROM task_assignees WHERE gym = $1 ORDER BY name, id`, gym)
 	if err != nil {
 		return nil, err
@@ -273,7 +231,7 @@ func listAssignees(ctx context.Context, q querier, gym string) ([]Assignee, erro
 	})
 }
 
-func routeSummaries(ctx context.Context, q querier, ids []string) (map[string]RouteSummary, error) {
+func routeSummaries(ctx context.Context, q db.Querier, ids []string) (map[string]RouteSummary, error) {
 	rows, err := q.Query(ctx, `SELECT id, name, grade, grade_system, color, type, COALESCE(location, ''), COALESCE(wall, ''), archived
 		FROM routes WHERE id = ANY ($1)`, ids)
 	if err != nil {
@@ -289,7 +247,7 @@ func routeSummaries(ctx context.Context, q querier, ids []string) (map[string]Ro
 	return out, err
 }
 
-func wallRefs(ctx context.Context, q querier, ids []string) (map[string]WallRef, error) {
+func wallRefs(ctx context.Context, q db.Querier, ids []string) (map[string]WallRef, error) {
 	rows, err := q.Query(ctx, `SELECT id, name, location FROM walls WHERE id = ANY ($1)`, ids)
 	if err != nil {
 		return nil, err
@@ -304,13 +262,13 @@ func wallRefs(ctx context.Context, q querier, ids []string) (map[string]WallRef,
 	return out, err
 }
 
-func locationName(ctx context.Context, q querier, id string) string {
+func locationName(ctx context.Context, q db.Querier, id string) string {
 	var name string
 	q.QueryRow(ctx, `SELECT name FROM locations WHERE id = $1`, id).Scan(&name)
 	return name
 }
 
-func routeName(ctx context.Context, q querier, id string) string {
+func routeName(ctx context.Context, q db.Querier, id string) string {
 	var name string
 	q.QueryRow(ctx, `SELECT name FROM routes WHERE id = $1`, id).Scan(&name)
 	return name

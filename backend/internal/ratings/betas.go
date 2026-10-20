@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
@@ -45,9 +46,9 @@ func betaKey(id, file string) string { return "beta_videos/" + id + "/" + file }
 func stagedKey(id, file string) string { return "moderation_items/" + id + "/" + file }
 
 func (m *module) listBetas(w http.ResponseWriter, r *http.Request) error {
-	where := &conditions{}
-	where.add("route = ?", r.PathValue("id"))
-	where.add("gym_visible(gym, ?)", tenancy.Viewer(r.Context()))
+	where := &db.Where{}
+	where.Add("route = ?", r.PathValue("id"))
+	where.Add("gym_visible(gym, ?)", auth.UserID(r.Context()))
 	items, err := queryBetas(r.Context(), m.app.DB, where, "")
 	if err != nil {
 		return err
@@ -55,8 +56,7 @@ func (m *module) listBetas(w http.ResponseWriter, r *http.Request) error {
 	if err := m.enrichBetas(r.Context(), items); err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 func (m *module) listGymBetas(w http.ResponseWriter, r *http.Request) error {
@@ -67,12 +67,12 @@ func (m *module) listGymBetas(w http.ResponseWriter, r *http.Request) error {
 	}
 	include := r.URL.Query().Get("include")
 	if include != "" && include != "route" {
-		return invalid("include", "Unknown include "+include+".")
+		return httpx.Invalid("include", "Unknown include "+include+".")
 	}
-	page, limit, tail := pageParams(r)
-	where := &conditions{}
-	where.add("gym = ?", gym)
-	items, err := queryBetas(ctx, m.app.DB, where, tail)
+	page := httpx.Page(r, defaultPageSize, maxPageSize)
+	where := &db.Where{}
+	where.Add("gym = ?", gym)
+	items, err := queryBetas(ctx, m.app.DB, where, page.SQL())
 	if err != nil {
 		return err
 	}
@@ -84,8 +84,7 @@ func (m *module) listGymBetas(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "page": page, "limit": limit})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items, "page": page.Page, "limit": page.Limit}, nil)
 }
 
 // expandBetaRoutes fills expand.route with the routes row.
@@ -130,7 +129,7 @@ func (m *module) postBeta(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if route.Archived {
-		return httpx.NewError(http.StatusBadRequest, "Archived routes take no beta videos.")
+		return httpx.BadRequest("Archived routes take no beta videos.")
 	}
 	links, uploads, premoderate, err := gymBetaSettings(ctx, m.app.DB, route.Gym)
 	if err != nil {
@@ -147,16 +146,16 @@ func (m *module) postBeta(w http.ResponseWriter, r *http.Request) error {
 		defer file.Close()
 	}
 	if (file != nil) == (link != "") {
-		return httpx.NewError(http.StatusBadRequest, "Add either a link or a video file.")
+		return httpx.BadRequest("Add either a link or a video file.")
 	}
 	if link != "" && !isBetaVideoLink(link) {
-		return invalid("url", "Only YouTube Shorts, Instagram and TikTok links are allowed.")
+		return httpx.Invalid("url", "Only YouTube Shorts, Instagram and TikTok links are allowed.")
 	}
 	if link != "" && !links {
 		return httpx.NewError(http.StatusForbidden, "Beta video links are not enabled for this gym.")
 	}
 	beta := BetaVideo{ID: ids.New(), Gym: route.Gym, Route: route.ID, User: viewer.UserID, URL: link}
-	if premoderate && !m.can(ctx, route.Gym, permManageComments) {
+	if premoderate && !m.perms.Has(ctx, route.Gym, tenancy.PermManageComments) {
 		pending := BetaPending{ID: beta.ID, Gym: beta.Gym, Route: beta.Route, User: beta.User, URL: beta.URL}
 		if file != nil {
 			if pending.File, err = m.app.Blob.Upload(ctx, stagedKey(beta.ID, file.name), file, betaVideoTypes, maxBetaBytes); err != nil {
@@ -165,7 +164,7 @@ func (m *module) postBeta(w http.ResponseWriter, r *http.Request) error {
 			pending.FileKey = stagedKey(beta.ID, pending.File)
 		}
 		err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-			return events.PublishAs(ctx, tx, actorOf(ctx), TopicBetaPending, TopicBetaPending, pending, events.Audience{})
+			return events.PublishAs(ctx, tx, auth.UserID(ctx), TopicBetaPending, TopicBetaPending, pending, events.Audience{})
 		})
 		if err != nil {
 			if file != nil {
@@ -173,8 +172,7 @@ func (m *module) postBeta(w http.ResponseWriter, r *http.Request) error {
 			}
 			return err
 		}
-		httpx.JSON(w, http.StatusAccepted, map[string]bool{"pending": true})
-		return nil
+		return httpx.Respond(w, http.StatusAccepted, map[string]bool{"pending": true}, nil)
 	}
 	if file != nil {
 		if beta.File, err = m.app.Blob.Upload(ctx, betaKey(beta.ID, file.name), file, betaVideoTypes, maxBetaBytes); err != nil {
@@ -189,11 +187,11 @@ func (m *module) postBeta(w http.ResponseWriter, r *http.Request) error {
 		if saved, err = findBeta(ctx, tx, beta.ID); err != nil {
 			return err
 		}
-		if err := events.PublishAs(ctx, tx, actorOf(ctx), TopicBetaCreated, TopicBetaCreated,
+		if err := events.PublishAs(ctx, tx, auth.UserID(ctx), TopicBetaCreated, TopicBetaCreated,
 			BetaCreated{ID: saved.ID, Gym: saved.Gym, Route: saved.Route, User: saved.User}, events.Audience{}); err != nil {
 			return err
 		}
-		return m.publishBetaChange(ctx, tx, actorOf(ctx), "create", saved)
+		return m.publishBetaChange(ctx, tx, auth.UserID(ctx), "create", saved)
 	})
 	if err != nil {
 		m.dropUpload(ctx, beta)
@@ -203,8 +201,7 @@ func (m *module) postBeta(w http.ResponseWriter, r *http.Request) error {
 	if err := m.enrichBetas(ctx, items); err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusCreated, items[0])
-	return nil
+	return httpx.Respond(w, http.StatusCreated, items[0], nil)
 }
 
 type namedFile struct {
@@ -231,6 +228,9 @@ func betaSubmission(w http.ResponseWriter, r *http.Request) (string, *namedFile,
 	if err := r.ParseMultipartForm(1 << 20); err != nil {
 		return "", nil, httpx.NewError(http.StatusRequestEntityTooLarge, "The file is too large.")
 	}
+	if err := httpx.CheckForm(r); err != nil {
+		return "", nil, err
+	}
 	link := strings.TrimSpace(r.FormValue("url"))
 	file, header, err := r.FormFile("file")
 	if err != nil {
@@ -255,19 +255,18 @@ func (m *module) deleteBeta(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if beta.User != viewer.UserID && !m.can(ctx, beta.Gym, permManageComments) {
+	if beta.User != viewer.UserID && !m.perms.Has(ctx, beta.Gym, tenancy.PermManageComments) {
 		return httpx.ErrForbidden
 	}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		if err := deleteRow(ctx, tx, "beta_videos", beta.ID); err != nil {
 			return err
 		}
-		return m.publishBetaChange(ctx, tx, actorOf(ctx), "delete", beta)
+		return m.publishBetaChange(ctx, tx, auth.UserID(ctx), "delete", beta)
 	})
 	if err != nil {
 		return err
 	}
 	m.dropUpload(ctx, beta)
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }

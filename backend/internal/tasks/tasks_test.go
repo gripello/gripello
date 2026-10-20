@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform"
+	"gripello/internal/platform/apitime"
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
@@ -40,7 +41,7 @@ func TestDefaultTaskPriority(t *testing.T) {
 }
 
 func TestRestrictToClimberReport(t *testing.T) {
-	due := time.Now()
+	due := apitime.DateOf(time.Now())
 	task := Task{Kind: "reset", Title: "Strip wall", Assignee: "someone", DueDate: &due, Priority: 1, Category: "broken_hold"}
 	restrictToClimberReport(&task)
 	if task.Kind != "defect" || task.Priority != urgentTaskPriority {
@@ -209,7 +210,7 @@ func (f *fixture) exec(sql string, args ...any) string {
 func (f *fixture) user(name, gym string, permissions ...string) {
 	f.t.Helper()
 	id := f.exec(`INSERT INTO users (id, username, firstname, email, token_key) VALUES ($1, $2, $2, $3, $4) RETURNING id`,
-		ids.New(), name, name+"@example.com", "key-"+name)
+		ids.New(), name, strings.ToLower(name)+"@example.com", "key-"+name)
 	if gym != "" {
 		role := f.exec(`INSERT INTO roles (id, gym, name, permissions) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), gym, name, permissions)
 		f.exec(`INSERT INTO memberships (id, "user", gym, role) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), id, gym, role)
@@ -294,10 +295,10 @@ func (f *fixture) events(kind string) []eventRow {
 	return out
 }
 
-func (f *fixture) notifications() []Notify {
-	var out []Notify
-	for _, e := range f.events(KindNotify) {
-		var n Notify
+func (f *fixture) notifications() []events.Notify {
+	var out []events.Notify
+	for _, e := range f.events(events.TopicNotify) {
+		var n events.Notify
 		json.Unmarshal(e.Payload, &n)
 		out = append(out, n)
 	}
@@ -508,7 +509,7 @@ func TestUpdateLocksServerFieldsAndStampsDone(t *testing.T) {
 		updated["done_at"] == nil || updated["resolution_note"] != "Fixed" {
 		t.Errorf("updated = %v", updated)
 	}
-	var fixed *Notify
+	var fixed *events.Notify
 	for _, n := range f.notifications() {
 		if n.Type == "task_defect_fixed" {
 			fixed = &n

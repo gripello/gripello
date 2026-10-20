@@ -78,3 +78,26 @@ func TestMatchesNameTheRule(t *testing.T) {
 		t.Errorf("NameMatch term = %q", got)
 	}
 }
+
+func TestEmailMatchFoldsCaseAndUnicodeDomains(t *testing.T) {
+	pattern, ok := NormalizeEmailPattern(" MÜLLER.de ")
+	if !ok || pattern != "xn--mller-kva.de" {
+		t.Fatalf("IDN entry = %q, %v", pattern, ok)
+	}
+	for _, email := range []string{"info@müller.de", "Info@MÜLLER.DE", "info@müller.de", "info@xn--mller-kva.de"} {
+		if !MatchEmail([]string{pattern}, email) || !MatchEmail([]string{"Info@Müller.de"}, email) {
+			t.Errorf("%q should be blocked", email)
+		}
+	}
+	for _, email := range []string{"Max@Example.com", "max@example.com", "MAX@EXAMPLE.COM"} {
+		if !MatchEmail([]string{"example.com"}, email) || !MatchEmail([]string{"max@example.com"}, email) {
+			t.Errorf("%q should be blocked", email)
+		}
+	}
+	if !MatchEmail([]string{"xn--mller-kva.de"}, "info@müller.de") || !MatchEmail([]string{"*.müller.de"}, "a@b.xn--mller-kva.de") {
+		t.Error("punycode and Unicode spellings of a domain must match each other")
+	}
+	if got := DomainAndParents("Info@Sub.MÜLLER.de"); len(got) != 2 || got[1] != "xn--mller-kva.de" {
+		t.Errorf("domains = %v", got)
+	}
+}

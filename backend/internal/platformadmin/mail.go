@@ -67,7 +67,7 @@ func (m *module) putMail(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	body.Host, body.SenderAddress, body.SenderName = strings.TrimSpace(body.Host), strings.TrimSpace(body.SenderAddress), strings.TrimSpace(body.SenderName)
-	invalid := httpx.NewError(http.StatusBadRequest, "Failed to validate.")
+	invalid := httpx.BadRequest("Failed to validate.")
 	if body.Host != "" {
 		if body.Port < 1 || body.Port > 65535 {
 			invalid.Field("smtp_port", "validation_invalid_port", "Must be between 1 and 65535.")
@@ -144,12 +144,11 @@ func (m *module) sendTestMail(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if t.Email == "" {
-		return httpx.NewError(http.StatusBadRequest, "Your account has no email address.")
+		return httpx.BadRequest("Your account has no email address.")
 	}
 	content := gmail.Content{Key: "mailTest", Name: t.Firstname}
 	if _, err := m.app.MailTemplates.Send(ctx, m.app.Mail, m.app.MailTemplates.AppBrand(), content, []gmail.Recipient{{Address: t.Email, Language: t.Language}}); err != nil {
-		return httpx.NewError(http.StatusBadRequest, "Sending failed: "+err.Error()).Field("smtp", gmail.FailedStage(err), err.Error())
+		return httpx.BadRequest("Sending failed: "+err.Error()).Field("smtp", gmail.FailedStage(err), err.Error())
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }

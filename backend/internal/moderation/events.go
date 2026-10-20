@@ -2,7 +2,6 @@ package moderation
 
 import (
 	"context"
-	"encoding/json"
 	"maps"
 	"slices"
 	"time"
@@ -11,6 +10,7 @@ import (
 
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/climbers"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 )
 
@@ -18,8 +18,6 @@ const (
 	TopicModeration        = "moderation"
 	KindContentHidden      = "content.hidden"
 	KindContentRestored    = "content.restored"
-	TopicNotify            = "notify"
-	KindNotify             = "notify"
 	topicBetaCreated       = "beta.created"
 	topicRouteArchived     = "route.archived"
 	kindCompetitionChanged = "competition.changed"
@@ -33,21 +31,13 @@ type ContentChange struct {
 	Author      string `json:"author"`
 }
 
-type Notify struct {
-	Type   string         `json:"type"`
-	Users  []string       `json:"users"`
-	Gym    string         `json:"gym"`
-	Params map[string]any `json:"params"`
-	URL    string         `json:"url"`
-}
-
 type GymChange struct {
 	Collection string `json:"collection"`
 	Action     string `json:"action"`
 	Record     any    `json:"record"`
 }
 
-// CompetitionChange, TaskChange and UserUpdated mirror what the competitions, tasks and account modules publish.
+// CompetitionChange and TaskChange mirror what the competitions and tasks modules publish.
 type CompetitionChange struct {
 	Competition string `json:"competition"`
 	Gym         string `json:"gym"`
@@ -62,11 +52,6 @@ type TaskChange struct {
 	Record map[string]any `json:"record"`
 }
 
-type UserUpdated struct {
-	Record  json.RawMessage `json:"record"`
-	Changed []string        `json:"changed"`
-}
-
 // ItemChange is what the inbox receives on moderation:<gym> and moderation:platform.
 type ItemChange struct {
 	Action string `json:"action"`
@@ -77,18 +62,7 @@ var kindSuffix = map[string]string{"create": "created", "update": "updated", "de
 
 // publish attributes the event to the signed-in caller of a request; event consumers run without one.
 func publish(ctx context.Context, tx pgx.Tx, topic, kind string, payload any, audience events.Audience) error {
-	actor := ""
-	if p, ok := auth.From(ctx); ok {
-		actor = p.UserID
-	}
-	return events.PublishAs(ctx, tx, actor, topic, kind, payload, audience)
-}
-
-func publishNotify(ctx context.Context, tx pgx.Tx, n Notify) error {
-	if len(n.Users) == 0 {
-		return nil
-	}
-	return publish(ctx, tx, TopicNotify, KindNotify, n, events.Audience{})
+	return events.PublishAs(ctx, tx, auth.UserID(ctx), topic, kind, payload, audience)
 }
 
 func publishTopic(ctx context.Context, tx pgx.Tx, topic string, payload any) error {
@@ -111,9 +85,9 @@ func publishItem(ctx context.Context, tx pgx.Tx, action string, it Item) error {
 	}
 	concealed := it
 	concealed.Author = ""
-	// GymPerm also reaches platform admins, who open gym inboxes without a membership.
+	// Platform admins open gym inboxes without a membership.
 	return publish(ctx, tx, "moderation:"+it.Gym, kind, ItemChange{action, concealed},
-		events.Audience{GymPerm: it.Gym + ":manage_comments"})
+		events.Audience{GymPerm: it.Gym + ":manage_comments", PlatformAdmins: true})
 }
 
 const routeColumns = `id, created, updated, gym, name, anchor_point, type, comment, creator, archived, archived_at, color,
@@ -174,7 +148,7 @@ func (m *module) publishGymChange(ctx context.Context, tx pgx.Tx, kindName, acti
 }
 
 // author resolves a climber; reviews leave out authors who chose reviews_anonymous.
-func (m *module) author(ctx context.Context, q querier, userID string, honourAnonymous bool) (climbers.Climber, bool) {
+func (m *module) author(ctx context.Context, q db.Querier, userID string, honourAnonymous bool) (climbers.Climber, bool) {
 	found, err := m.climbers.Get(ctx, []string{userID})
 	c, ok := found[userID]
 	if err != nil || !ok {
@@ -251,9 +225,9 @@ func publishProfileChange(ctx context.Context, tx pgx.Tx, userID string, before 
 		return nil
 	}
 	slices.Sort(changed)
-	var record json.RawMessage
-	if err := tx.QueryRow(ctx, `SELECT to_jsonb(u) - 'password_hash' - 'token_key' FROM users u WHERE id = $1`, userID).Scan(&record); err != nil {
+	record, err := climbers.OwnRecord(ctx, tx, userID)
+	if err != nil {
 		return err
 	}
-	return publish(ctx, tx, "user:"+userID, "user.updated", UserUpdated{record, changed}, events.Audience{Users: []string{userID}})
+	return climbers.PublishUserUpdated(ctx, tx, auth.UserID(ctx), userID, record, changed)
 }

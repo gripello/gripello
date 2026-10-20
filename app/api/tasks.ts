@@ -5,7 +5,7 @@ import type {
     TaskRecord,
     TaskStatus,
 } from '../../types/models'
-import { useApi } from './client'
+import { useApi, type Page } from './client'
 
 export interface TaskQuery {
     status?: TaskStatus[]
@@ -42,13 +42,6 @@ export type TaskInput = {
     ]?: TaskRecord[K] | null
 }
 
-export interface TaskPage {
-    items: TaskRecord[]
-    page: number
-    limit: number
-    total: number
-}
-
 function taskBody(input: TaskInput, photo?: File | null) {
     if (!photo) return input
     const body = new FormData()
@@ -59,7 +52,7 @@ function taskBody(input: TaskInput, photo?: File | null) {
 }
 
 export function listTasks(gym: string, query: TaskQuery = {}) {
-    return useApi()<TaskPage>(`/gyms/${gym}/tasks`, {
+    return useApi()<Page<TaskRecord>>(`/gyms/${gym}/tasks`, {
         query: Object.fromEntries(
             Object.entries(query).filter(
                 ([, value]) =>

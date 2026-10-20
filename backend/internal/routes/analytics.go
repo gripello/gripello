@@ -17,18 +17,18 @@ import (
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 
+	"gripello/internal/platform/apitime"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/tenancy"
 )
 
 const (
-	permViewAnalytics         = "view_analytics"
 	minVotesForFeedback       = 3
 	analyticsListLimit        = 5
 	analyticsOldestLimit      = 10
 	analyticsFeedbackLimit    = 300
 	day                       = 24 * time.Hour
-	isoMillis                 = "2006-01-02T15:04:05.000Z"
 	gradeSystemSuffix         = " · "
 	disciplineBoulder         = "Boulder"
 	disciplineRoute           = "Route"
@@ -200,7 +200,7 @@ func (m *module) getAnalytics(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.require(ctx, gym, permViewAnalytics); err != nil {
+	if err := m.perms.Require(ctx, gym, tenancy.PermViewAnalytics); err != nil {
 		return err
 	}
 	query := r.URL.Query()
@@ -213,11 +213,10 @@ func (m *module) getAnalytics(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, buildAnalytics(routes, ratings, filters, now))
-	return nil
+	return httpx.Respond(w, http.StatusOK, buildAnalytics(routes, ratings, filters, now), nil)
 }
 
-func loadAnalyticsRows(ctx context.Context, q querier, gym string) ([]analyticsRoute, []analyticsRating, error) {
+func loadAnalyticsRows(ctx context.Context, q db.Querier, gym string) ([]analyticsRoute, []analyticsRating, error) {
 	rows, err := q.Query(ctx, `SELECT r.id, r.name, r.type, COALESCE(r.location, '') AS location,
 		COALESCE(l.name, '') AS location_name, r.creator, r.archived, r.archived_at, r.permanent,
 		r.screw_date, r.created, r.grade, r.grade_system, r.grade_index
@@ -275,16 +274,11 @@ func endOfDay(t time.Time) time.Time {
 }
 
 func parseQueryDate(value string) *time.Time {
-	if value == "" {
+	at, err := apitime.ParseTimeOrDay(value)
+	if err != nil {
 		return nil
 	}
-	value = strings.Replace(value, " ", "T", 1)
-	for _, layout := range []string{time.DateOnly, time.RFC3339Nano, "2006-01-02T15:04:05.999999999"} {
-		if at, err := time.Parse(layout, value); err == nil {
-			return &at
-		}
-	}
-	return nil
+	return &at
 }
 
 func resolveAnalyticsFilters(q analyticsQuery, now time.Time) analyticsFilters {
@@ -412,7 +406,7 @@ func roundPtr(value *float64) *float64 {
 }
 
 func isoTime(t time.Time) string {
-	return t.UTC().Format(isoMillis)
+	return apitime.Format(t)
 }
 
 func bucketKey(t time.Time, bucket string) string {

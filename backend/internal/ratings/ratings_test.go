@@ -131,6 +131,8 @@ func TestCreateRatingSetsUserFromAuth(t *testing.T) {
 	}
 	f.call("", "POST", "/routes/"+f.route+"/ratings", `{"rating":6}`, http.StatusBadRequest)
 	f.call("", "POST", "/routes/"+f.route+"/ratings", `{"rating":3,"grade_index":41}`, http.StatusBadRequest)
+	f.call("", "POST", "/routes/"+f.route+"/ratings", `{"rating":3,"grade":"`+strings.Repeat("6", 21)+`"}`, http.StatusBadRequest)
+	f.call("", "POST", "/routes/"+f.route+"/ratings", `{"rating":3,"grade_system":"`+strings.Repeat("x", 31)+`"}`, http.StatusBadRequest)
 	f.call("", "POST", "/routes/"+f.route+"/ratings", `{"comment":"`+strings.Repeat("x", 5001)+`"}`, http.StatusBadRequest)
 	f.call("", "POST", "/routes/missing/ratings", `{"rating":3}`, http.StatusNotFound)
 }
@@ -198,7 +200,8 @@ func TestGymRatingsForModerators(t *testing.T) {
 		t.Errorf("search across comment and route = %v", got)
 	}
 	shy := f.rate("shy", `{"rating":3}`)
-	page := f.call("moderator", "GET", "/gyms/alpha/ratings?total=true&limit=1&since=2026-01-01%2000:00:00.000Z&route="+f.route+",other", "", http.StatusOK)
+	f.call("moderator", "GET", "/gyms/alpha/ratings?since=2026-01-01%2000:00:00.000Z", "", http.StatusBadRequest)
+	page := f.call("moderator", "GET", "/gyms/alpha/ratings?total=true&limit=1&since=2026-01-01T00:00:00.000Z&route="+f.route+",other", "", http.StatusOK)
 	if page["total"] != float64(3) || len(items(page)) != 1 {
 		t.Errorf("total page = %v", page)
 	}
@@ -274,7 +277,7 @@ func TestRatingEventsPerAudience(t *testing.T) {
 func TestImportRatings(t *testing.T) {
 	f := newFixture(t)
 	body := `{"ratings":[
-		{"route_id":"` + f.route + `","rating":4,"comment":"old","created":"2024-03-01 10:00:00.000Z","user":"` + f.users["climber"] + `"},
+		{"route_id":"` + f.route + `","rating":4,"comment":"old","created":"2024-03-01T10:00:00.000Z","user":"` + f.users["climber"] + `"},
 		{"route_id":"` + f.route + `","rating":3,"created":"2999-01-01"},
 		{"route_id":"` + f.routeB + `","rating":2},
 		{"route_id":"` + f.route + `","rating":9}
@@ -514,13 +517,6 @@ func TestGuestRatingsNeedCaptcha(t *testing.T) {
 	guest(token, http.StatusCreated)
 	guest(token, http.StatusBadRequest)
 	f.rate("climber", `{"rating":5}`)
-}
-
-func TestPageParamsCapThePage(t *testing.T) {
-	page, _, tail := pageParams(httptest.NewRequest(http.MethodGet, "/?page=9223372036854775807&limit=500", nil))
-	if page != maxPage || !strings.HasSuffix(tail, " OFFSET 499999500") {
-		t.Errorf("page %d, tail %q", page, tail)
-	}
 }
 
 func TestHiddenGymReviewsReachOnlyMembers(t *testing.T) {

@@ -1,12 +1,8 @@
-import type {
-    GymRecord,
-    MembershipRecord,
-    UserRecord,
-} from '../../types/models'
+import type { GymRecord, UserRecord } from '../../types/models'
 import type { FeatureFlag } from '../../shared/utils/featureFlags'
 import type { PlatformUser, PlatformUserFilter } from '../utils/platformUsers'
 import { toFormData, useApi } from './client'
-import type { PageQuery, RouteList } from './client'
+import type { PageQuery, Page } from './client'
 
 export interface PlatformUserQuery extends PageQuery {
     q?: string
@@ -41,58 +37,32 @@ export interface PlatformStats {
     }
 }
 
-type ApiPlatformUser = UserRecord & {
-    memberships?: Pick<MembershipRecord, 'id' | 'gym' | 'role'>[]
-}
-
-function toPlatformUser({ memberships, ...user }: ApiPlatformUser) {
-    return {
-        ...user,
-        expand: {
-            memberships_via_user: (memberships ?? []).map((membership) => ({
-                ...membership,
-                user: user.id,
-            })) as MembershipRecord[],
+export function listPlatformUsers(query: PlatformUserQuery = {}) {
+    return useApi()<Page<PlatformUser>>('/platform/users', {
+        query: {
+            q: query.q?.trim() || undefined,
+            filter: query.filter || undefined,
+            page: query.page,
+            limit: query.page ? query.limit : 0,
         },
-    } as PlatformUser
+    })
 }
 
-export async function listPlatformUsers(
-    query: PlatformUserQuery = {},
-): Promise<RouteList<PlatformUser>> {
-    const result = await useApi()<RouteList<ApiPlatformUser>>(
-        '/platform/users',
-        {
-            query: {
-                q: query.q?.trim() || undefined,
-                filter: query.filter || undefined,
-                page: query.page,
-                limit: query.page ? query.limit : 0,
-            },
-        },
-    )
-    return { ...result, items: result.items.map(toPlatformUser) }
+export function getPlatformUser(id: string) {
+    return useApi()<PlatformUser>(`/platform/users/${id}`)
 }
 
-export async function getPlatformUser(id: string) {
-    return toPlatformUser(
-        await useApi()<ApiPlatformUser>(`/platform/users/${id}`),
-    )
-}
-
-export async function updatePlatformUser(
+export function updatePlatformUser(
     id: string,
     patch: PlatformUserInput,
     files: PlatformUserFiles = {},
 ) {
     const body = { ...patch, ...files }
     const multipart = Object.values(files).some((file) => file instanceof Blob)
-    return toPlatformUser(
-        await useApi()<ApiPlatformUser>(`/platform/users/${id}`, {
-            method: 'PATCH',
-            body: multipart ? toFormData(body) : body,
-        }),
-    )
+    return useApi()<PlatformUser>(`/platform/users/${id}`, {
+        method: 'PATCH',
+        body: multipart ? toFormData(body) : body,
+    })
 }
 
 export function deletePlatformUser(id: string) {
@@ -163,7 +133,7 @@ export function addBlockedEmails(patterns: string[]) {
     })
 }
 
-export function getPlatformStats() {
+export function platformStats() {
     return useApi()<PlatformStats>('/platform/stats')
 }
 
@@ -181,6 +151,8 @@ export interface TrafficEndpoint extends TrafficTotals {
     pattern: string
     avg_ms: number
 }
+
+export type ReplicaStrain = 'dbWaits' | 'realtimeDropped' | 'busLag' | 'dbFull'
 
 export interface ServerReplica {
     name: string
@@ -201,6 +173,7 @@ export interface ServerReplica {
     realtime_dropped: number
     bus_lag_ms: number
     bus_queue_max: number
+    strain: ReplicaStrain[]
 }
 
 export interface PlatformTraffic {
@@ -265,13 +238,11 @@ export function setGymFeatures(
     })
 }
 
-export async function grantPlatformAdmin(user: string) {
-    return toPlatformUser(
-        await useApi()<ApiPlatformUser>('/platform/admins', {
-            method: 'POST',
-            body: { user },
-        }),
-    )
+export function grantPlatformAdmin(user: string) {
+    return useApi()<PlatformUser>('/platform/admins', {
+        method: 'POST',
+        body: { user },
+    })
 }
 
 export function revokePlatformAdmin(user: string) {
@@ -454,7 +425,7 @@ export function syncEmailSource(id: string) {
 }
 
 export function listEmailSourceDomains(id: string, q: string, page: number) {
-    return useApi()<RouteList<string> & { total: number }>(
+    return useApi()<Page<string> & { total: number }>(
         `/platform/blocklists/sources/${id}/domains`,
         { query: { q, page } },
     )

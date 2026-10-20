@@ -1,13 +1,9 @@
 import type { ApiRecord } from '~/composables/authStore'
-import type {
-    GymRecord,
-    MembershipRecord,
-    RoleRecord,
-    SessionRecord,
-    UserRecord,
-} from '../../types/models'
+import type { SessionRecord, UserRecord } from '../../types/models'
+import type { components as MembersApi } from '../../types/api/members'
+import type { operations as AccountApi } from '../../types/api/account'
 import { useAuthState, type AuthResult } from './auth'
-import { toFormData, useApi } from './client'
+import { apiUrl, toFormData, useApi } from './client'
 
 export { listContributions } from './ratings'
 
@@ -35,43 +31,10 @@ export interface PasswordChange {
 
 export type ProfileInput = Record<string, unknown>
 
-export interface OwnMembership {
-    id: string
-    created: string
-    gym: Pick<GymRecord, 'id' | 'slug' | 'name' | 'unit_name' | 'active'>
-    role: RoleRecord & { permissions: string[] }
-}
+export type OwnMembership = MembersApi['schemas']['OwnMembership']
 
-export function toMembershipRecord(
-    membership: OwnMembership,
-    user: string,
-): MembershipRecord {
-    const { role, gym } = membership
-    return {
-        id: membership.id,
-        created: membership.created,
-        user,
-        gym: gym.id,
-        role: role.id,
-        expand: {
-            gym: gym as GymRecord,
-            role: {
-                ...role,
-                expand: {
-                    permissions: role.permissions.map((name) => ({
-                        name,
-                    })) as never,
-                },
-            },
-        },
-    } as MembershipRecord
-}
-
-export async function listOwnMemberships(
-    user = useAuthState().currentUserId(),
-): Promise<MembershipRecord[]> {
-    const memberships = await useApi()<OwnMembership[]>('/me/memberships')
-    return memberships.map((membership) => toMembershipRecord(membership, user))
+export function listOwnMemberships() {
+    return useApi()<OwnMembership[]>('/me/memberships')
 }
 
 export async function getMe(query: { include?: MeInclude[] } = {}) {
@@ -81,9 +44,7 @@ export async function getMe(query: { include?: MeInclude[] } = {}) {
             ? listOwnMemberships()
             : undefined,
     ])
-    return memberships
-        ? { ...me, expand: { memberships_via_user: memberships } }
-        : me
+    return memberships ? { ...me, memberships } : me
 }
 
 function saveMe(updated: Me) {
@@ -143,8 +104,36 @@ export function deleteMe(password: string) {
     return useApi()('/me', { method: 'DELETE', body: { password } })
 }
 
-export function exportMyData() {
-    return useApi()<Blob>('/me/export', { responseType: 'blob' })
+export function requestDataExport() {
+    return useApi()('/me/export', { method: 'POST' })
+}
+
+export function dataExportUrl(token: string) {
+    return apiUrl(`/account/export/${encodeURIComponent(token)}`)
+}
+
+export function dataExportAvailable(token: string) {
+    return useApi()(`/account/export/${encodeURIComponent(token)}`, {
+        method: 'HEAD',
+    }).then(
+        () => true,
+        (error: unknown) => {
+            if ((error as { status?: number } | null)?.status === 404)
+                return false
+            throw error
+        },
+    )
+}
+
+export type OwnDataExport =
+    AccountApi['getOwnDataExport']['responses']['200']['content']['application/json']
+
+export function getOwnDataExport() {
+    return useApi()<OwnDataExport>('/me/export')
+}
+
+export function ownDataExportUrl() {
+    return apiUrl('/me/export/file')
 }
 
 export function listMFAFactors() {

@@ -109,8 +109,8 @@ func (f *fixture) outbox(topic string) []events.Event {
 }
 
 func (f *fixture) notified(kind, user string) bool {
-	for _, e := range f.outbox(TopicNotify) {
-		var n Notify
+	for _, e := range f.outbox(events.TopicNotify) {
+		var n events.Notify
 		json.Unmarshal(e.Payload, &n)
 		if n.Type == kind && len(n.Users) == 1 && n.Users[0] == f.users[user] {
 			return true

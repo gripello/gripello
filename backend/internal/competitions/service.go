@@ -4,25 +4,22 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
-	"net/http"
 	"net/url"
 	"slices"
-	"strconv"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/apitime"
 	"gripello/internal/platform/auth"
-	"gripello/internal/platform/blocklist"
+	"gripello/internal/platform/db"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
-	permManage         = "manage_competitions"
-	permJudge          = "judge_competitions"
 	guardianConsentAge = 16
 	judgeOnlyFormat    = "lead_height"
 	maxScoringBytes    = 2000
@@ -40,23 +37,6 @@ var (
 	routeTypeByDiscipline = map[string]string{"boulder": "Boulder", "rope": "Route"}
 )
 
-func badRequest(message string) *httpx.Error { return httpx.NewError(http.StatusBadRequest, message) }
-
-func invalid(field, message string) *httpx.Error {
-	return badRequest(message).Field(field, "validation_invalid_value", message)
-}
-
-func required(field string) *httpx.Error {
-	return badRequest("Failed to save record.").Field(field, "validation_required", "Cannot be blank.")
-}
-
-func tooLong(field, value string, limit int) error {
-	if utf8.RuneCountInString(value) > limit {
-		return invalid(field, "Must be no more than "+strconv.Itoa(limit)+" characters.")
-	}
-	return nil
-}
-
 type viewer struct {
 	user    string
 	manager bool
@@ -68,8 +48,8 @@ func (m *module) viewerOf(ctx context.Context, gym string) viewer {
 	if !ok {
 		return viewer{}
 	}
-	v := viewer{user: p.UserID, manager: m.perms.Can(ctx, p.UserID, gym, permManage)}
-	v.staff = v.manager || m.perms.Can(ctx, p.UserID, gym, permJudge)
+	v := viewer{user: p.UserID, manager: m.perms.Has(ctx, gym, tenancy.PermManageCompetitions)}
+	v.staff = v.manager || m.perms.Has(ctx, gym, tenancy.PermJudgeCompetitions)
 	return v
 }
 
@@ -122,7 +102,7 @@ func stampFreezeAt(c *Competition) {
 
 func validateCompetitionFormat(c Competition) error {
 	if !slices.Contains(formatsByDiscipline[c.Discipline], c.ScoringFormat) {
-		return badRequest("This scoring format does not fit the discipline.")
+		return httpx.BadRequest("This scoring format does not fit the discipline.")
 	}
 	return nil
 }
@@ -141,7 +121,7 @@ func validateScoring(raw json.RawMessage) error {
 	if len(raw) == 0 || string(raw) == "null" {
 		return nil
 	}
-	fail := invalid("scoring", "Invalid scoring settings.")
+	fail := httpx.Invalid("scoring", "Invalid scoring settings.")
 	if len(raw) > maxScoringBytes {
 		return fail
 	}
@@ -164,26 +144,26 @@ func validateScoring(raw json.RawMessage) error {
 }
 
 func validateCompetition(c Competition) error {
-	if c.Name == "" {
-		return required("name")
+	if httpx.Blank(c.Name) {
+		return httpx.Required("name")
 	}
-	if err := tooLong("name", c.Name, 200); err != nil {
+	if err := httpx.TooLong("name", c.Name, 200); err != nil {
 		return err
 	}
-	if err := tooLong("description", c.Description, 5000); err != nil {
+	if err := httpx.TooLong("description", c.Description, 5000); err != nil {
 		return err
 	}
 	if !slices.Contains(competitionStatuses, c.Status) {
-		return invalid("status", "Invalid status.")
+		return httpx.Invalid("status", "Invalid status.")
 	}
 	if c.StartsAt.IsZero() {
-		return required("starts_at")
+		return httpx.Required("starts_at")
 	}
 	if c.EndsAt.IsZero() {
-		return required("ends_at")
+		return httpx.Required("ends_at")
 	}
 	if c.EndsAt.Before(c.StartsAt) {
-		return invalid("ends_at", "The end must not be before the start.")
+		return httpx.Invalid("ends_at", "The end must not be before the start.")
 	}
 	if err := validateCompetitionFormat(c); err != nil {
 		return err
@@ -192,38 +172,34 @@ func validateCompetition(c Competition) error {
 		return err
 	}
 	if c.FreezeMinutes < 0 || c.FreezeMinutes > 600 {
-		return invalid("freeze_minutes", "Must be between 0 and 600.")
+		return httpx.Invalid("freeze_minutes", "Must be between 0 and 600.")
 	}
 	if c.RegistrationURL != "" {
 		u, err := url.Parse(c.RegistrationURL)
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-			return invalid("registration_url", "Must be a valid url.")
+			return httpx.Invalid("registration_url", "Must be a valid url.")
 		}
 	}
-	return tooLong("registration_url", c.RegistrationURL, 500)
+	return httpx.TooLong("registration_url", c.RegistrationURL, 500)
 }
 
-func (m *module) checkLocation(ctx context.Context, q querier, c Competition) error {
+func (m *module) checkLocation(ctx context.Context, q db.Querier, c Competition) error {
 	if c.Location == "" {
-		return required("location")
+		return httpx.Required("location")
 	}
 	gym, err := locationGym(ctx, q, c.Location)
 	if err != nil {
-		return invalid("location", "Location not found.")
+		return httpx.Invalid("location", "Location not found.")
 	}
 	if gym != c.Gym {
-		return badRequest("The competition cannot belong to another gym.")
+		return httpx.BadRequest("The competition cannot belong to another gym.")
 	}
 	return nil
 }
 
 func (m *module) createCompetition(ctx context.Context, gym string, raw json.RawMessage) (Competition, error) {
-	p, err := auth.Require(ctx)
-	if err != nil {
+	if err := m.perms.Require(ctx, gym, tenancy.PermManageCompetitions); err != nil {
 		return Competition{}, err
-	}
-	if !m.perms.Can(ctx, p.UserID, gym, permManage) {
-		return Competition{}, httpx.ErrForbidden
 	}
 	c := Competition{Status: "draft"}
 	if err := unmarshalBody(raw, &c); err != nil {
@@ -233,10 +209,11 @@ func (m *module) createCompetition(ctx context.Context, gym string, raw json.Raw
 	if err := m.checkCompetition(ctx, m.app.DB, &c); err != nil {
 		return Competition{}, err
 	}
-	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+	err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		if err := insertCompetition(ctx, tx, c); err != nil {
 			return err
 		}
+		var err error
 		if c, err = findCompetition(ctx, tx, c.ID); err != nil {
 			return err
 		}
@@ -245,7 +222,7 @@ func (m *module) createCompetition(ctx context.Context, gym string, raw json.Raw
 	return c, err
 }
 
-func (m *module) checkCompetition(ctx context.Context, q querier, c *Competition) error {
+func (m *module) checkCompetition(ctx context.Context, q db.Querier, c *Competition) error {
 	stampFreezeAt(c)
 	if err := validateCompetition(*c); err != nil {
 		return err
@@ -302,7 +279,7 @@ func (m *module) deleteCompetition(ctx context.Context, id string) error {
 		if c, err = lockCompetition(ctx, tx, id, "UPDATE"); err != nil {
 			return err
 		}
-		entries, err := list[Entry](ctx, tx, `DELETE FROM competition_entries WHERE competition = $1 RETURNING `+entryColumns, id)
+		entries, err := db.List[Entry](ctx, tx, `DELETE FROM competition_entries WHERE competition = $1 RETURNING `+entryColumns, id)
 		if err != nil {
 			return err
 		}
@@ -325,12 +302,11 @@ func competitionTickType(topAttempt int) string {
 	return "top"
 }
 
-func competitionTickDate(endsAt, now time.Time) time.Time {
-	day := endsAt.UTC()
-	if day.After(now) {
-		day = now.UTC()
+func competitionTickDate(endsAt, now time.Time) apitime.Date {
+	if endsAt.After(now) {
+		return apitime.DateOf(now)
 	}
-	return time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, time.UTC)
+	return apitime.DateOf(endsAt)
 }
 
 // publishResults copies every top into the climbers' logbooks (once per climber, route and competition or day) and notifies the entrants.
@@ -387,19 +363,19 @@ func (m *module) publishResults(ctx context.Context, tx pgx.Tx, c Competition, n
 	if err != nil {
 		return err
 	}
-	return publishNotify(ctx, tx, Notify{Type: "competition_published", Users: users, Gym: c.Gym,
-		Params: map[string]any{"competition": c.Name}, URL: "/" + gymSlug(ctx, tx, c.Gym) + "/competitions/" + c.ID})
+	return events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "competition_published", Users: users, Gym: c.Gym,
+		Params: map[string]any{"competition": c.Name}, URL: tenancy.GymPath(ctx, tx, c.Gym, "/competitions/"+c.ID)})
 }
 
 func validateCategory(c Category) error {
-	if c.Name == "" {
-		return required("name")
+	if httpx.Blank(c.Name) {
+		return httpx.Required("name")
 	}
-	if err := tooLong("name", c.Name, 100); err != nil {
+	if err := httpx.TooLong("name", c.Name, 100); err != nil {
 		return err
 	}
 	if !slices.Contains(genders, c.Gender) {
-		return invalid("gender", "Invalid gender.")
+		return httpx.Invalid("gender", "Invalid gender.")
 	}
 	return nil
 }
@@ -443,7 +419,7 @@ func (m *module) saveCategory(ctx context.Context, competitionID, id string, raw
 	return category, err
 }
 
-var errMoved = badRequest("Records cannot move to another competition.")
+var errMoved = httpx.BadRequest("Records cannot move to another competition.")
 
 func (m *module) deleteCategory(ctx context.Context, id string) error {
 	category, err := findCategory(ctx, m.app.DB, id)
@@ -460,8 +436,8 @@ func (m *module) deleteCategory(ctx context.Context, id string) error {
 		}
 		return publishChange(ctx, tx, c, "categories", "", "")
 	})
-	if isForeignKeyViolation(err) {
-		return badRequest("This category still has entries.")
+	if db.IsFKViolation(err) {
+		return httpx.BadRequest("This category still has entries.")
 	}
 	return err
 }
@@ -470,10 +446,10 @@ func (m *module) validateCompRoute(ctx context.Context, c Competition, r *CompRo
 	var gym, routeType string
 	err := m.app.DB.QueryRow(ctx, `SELECT gym, type FROM routes WHERE id = $1`, r.Route).Scan(&gym, &routeType)
 	if err != nil || routeType != routeTypeByDiscipline[c.Discipline] {
-		return invalid("route", "This route does not fit the discipline.")
+		return httpx.Invalid("route", "This route does not fit the discipline.")
 	}
 	if gym != c.Gym {
-		return invalid("route", "The route belongs to another gym.")
+		return httpx.Invalid("route", "The route belongs to another gym.")
 	}
 	if c.Discipline == "rope" {
 		r.Zone = false
@@ -481,13 +457,13 @@ func (m *module) validateCompRoute(ctx context.Context, c Competition, r *CompRo
 		r.HoldCount = 0
 	}
 	if r.Number < 1 {
-		return invalid("number", "Must be at least 1.")
+		return httpx.Invalid("number", "Must be at least 1.")
 	}
 	if r.Points < 0 {
-		return invalid("points", "Must not be negative.")
+		return httpx.Invalid("points", "Must not be negative.")
 	}
 	if r.HoldCount < 0 || r.HoldCount > 200 {
-		return invalid("hold_count", "Must be between 1 and 200.")
+		return httpx.Invalid("hold_count", "Must be between 1 and 200.")
 	}
 	return nil
 }
@@ -529,10 +505,10 @@ func (m *module) saveCompRoute(ctx context.Context, competitionID, id string, ra
 		return publishChange(ctx, tx, c, "routes", "", "")
 	})
 	switch {
-	case isUniqueViolation(err, "competition_routes_route_idx"):
-		return CompRoute{}, invalid("route", "This route is already part of the competition.")
-	case isUniqueViolation(err, "competition_routes_number_idx"):
-		return CompRoute{}, invalid("number", "This number is already taken.")
+	case db.IsUnique(err, "competition_routes_route_idx"):
+		return CompRoute{}, httpx.Invalid("route", "This route is already part of the competition.")
+	case db.IsUnique(err, "competition_routes_number_idx"):
+		return CompRoute{}, httpx.Invalid("number", "This number is already taken.")
 	}
 	return route, err
 }
@@ -551,425 +527,5 @@ func (m *module) deleteCompRoute(ctx context.Context, id string) error {
 			return err
 		}
 		return publishChange(ctx, tx, c, "routes", "", "")
-	})
-}
-
-func registrationOpen(c Competition, now time.Time) bool {
-	return c.Status == "open" && now.Before(c.EndsAt)
-}
-
-func ownerEntryStatus(current, requested string, registrationOpen bool) string {
-	switch {
-	case requested == current:
-		return current
-	case requested == "withdrawn" && current != "disqualified":
-		return requested
-	case requested == "registered" && current == "withdrawn" && registrationOpen:
-		return requested
-	default:
-		return current
-	}
-}
-
-func needsGuardianConsent(birthYear, currentYear int) bool {
-	return currentYear-birthYear < guardianConsentAge
-}
-
-func categoryFits(c Category, birthYear int) bool {
-	return (c.MinBirthYear == 0 || birthYear >= c.MinBirthYear) && (c.MaxBirthYear == 0 || birthYear <= c.MaxBirthYear)
-}
-
-func checkEntryName(ctx context.Context, q querier, name string) error {
-	if protected, err := blocklist.NameProtected(ctx, q, name); err != nil {
-		return err
-	} else if protected {
-		return badRequest("This name is reserved.").Field("display_name", blocklist.CodeNameProtected, "This name is reserved.")
-	}
-	return nil
-}
-
-func validateEntry(ctx context.Context, q querier, e Entry, currentYear int, enforceCategoryAge bool) error {
-	if e.DisplayName == "" {
-		return required("display_name")
-	}
-	if err := tooLong("display_name", e.DisplayName, 60); err != nil {
-		return err
-	}
-	if !slices.Contains(entryStatuses, e.Status) {
-		return invalid("status", "Invalid status.")
-	}
-	if e.Bib < 0 {
-		return invalid("bib", "Must be at least 1.")
-	}
-	if e.BirthYear < currentYear-120 || e.BirthYear > currentYear {
-		return invalid("birth_year", "Invalid birth year.")
-	}
-	if needsGuardianConsent(e.BirthYear, currentYear) && !e.GuardianConsent {
-		return invalid("guardian_consent", "Participants under 16 need a guardian's consent.")
-	}
-	category, err := findCategory(ctx, q, e.Category)
-	if err != nil || category.Competition != e.Competition {
-		return invalid("category", "Category is not part of this competition.")
-	}
-	if enforceCategoryAge && !categoryFits(category, e.BirthYear) {
-		return invalid("birth_year", "Your birth year does not fit this category.")
-	}
-	return nil
-}
-
-func (m *module) createEntry(ctx context.Context, competitionID string, raw json.RawMessage) (Entry, error) {
-	p, err := auth.Require(ctx)
-	if err != nil {
-		return Entry{}, err
-	}
-	c, v, err := m.loadVisible(ctx, competitionID)
-	if err != nil {
-		return Entry{}, err
-	}
-	now := time.Now()
-	e := Entry{Status: "registered"}
-	if err := unmarshalBody(raw, &e); err != nil {
-		return Entry{}, err
-	}
-	e.ID, e.Competition, e.Expand = ids.New(), c.ID, nil
-	if !v.manager {
-		if !registrationOpen(c, now) {
-			return Entry{}, badRequest("Registration is closed.")
-		}
-		e.User, e.Status, e.Paid, e.Bib = p.UserID, "registered", false, 0
-	}
-	if e.User == "" {
-		e.User = p.UserID
-	}
-	if err := validateEntry(ctx, m.app.DB, e, now.Year(), !v.manager); err != nil {
-		return Entry{}, err
-	}
-	if !v.manager {
-		if err := checkEntryName(ctx, m.app.DB, e.DisplayName); err != nil {
-			return Entry{}, err
-		}
-	}
-	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		if c, err = lockCompetition(ctx, tx, c.ID, "NO KEY UPDATE"); err != nil {
-			return err
-		}
-		if !v.manager && !registrationOpen(c, now) {
-			return badRequest("Registration is closed.")
-		}
-		if e.Bib == 0 {
-			if e.Bib, err = nextBib(ctx, tx, c.ID); err != nil {
-				return err
-			}
-		}
-		if err := saveEntry(ctx, tx, e, true); err != nil {
-			return err
-		}
-		if e, err = findEntry(ctx, tx, e.ID); err != nil {
-			return err
-		}
-		if err := publishEntryCreated(ctx, tx, e, c.Gym); err != nil {
-			return err
-		}
-		if e.User != p.UserID {
-			if err := publishNotify(ctx, tx, Notify{Type: "competition_entry_added", Users: []string{e.User}, Gym: c.Gym,
-				Params: map[string]any{"competition": c.Name}, URL: "/" + gymSlug(ctx, tx, c.Gym) + "/competitions/" + c.ID}); err != nil {
-				return err
-			}
-		}
-		return publishChange(ctx, tx, c, "entries", e.User, e.ID)
-	})
-	return e, entryConflict(err)
-}
-
-func entryConflict(err error) error {
-	switch {
-	case isUniqueViolation(err, "competition_entries_user_idx"):
-		return invalid("user", "Already registered for this competition.")
-	case isUniqueViolation(err, "competition_entries_bib_idx"):
-		return invalid("bib", "This bib is already taken.")
-	case isForeignKeyViolation(err):
-		return invalid("user", "User not found.")
-	}
-	return err
-}
-
-func (m *module) loadOwnedEntry(ctx context.Context, id string) (Entry, Competition, viewer, error) {
-	p, err := auth.Require(ctx)
-	if err != nil {
-		return Entry{}, Competition{}, viewer{}, err
-	}
-	e, err := findEntry(ctx, m.app.DB, id)
-	if err != nil {
-		return e, Competition{}, viewer{}, err
-	}
-	c, err := findVisibleCompetition(ctx, m.app.DB, e.Competition)
-	if err != nil {
-		return e, c, viewer{}, err
-	}
-	v := m.viewerFor(ctx, c)
-	if !v.manager && e.User != p.UserID {
-		if v.staff || (c.Status != "draft" && !e.Hidden) {
-			return e, c, v, httpx.ErrForbidden
-		}
-		return e, c, v, httpx.ErrNotFound
-	}
-	return e, c, v, nil
-}
-
-func (m *module) updateEntry(ctx context.Context, id string, raw json.RawMessage) (Entry, error) {
-	_, c, v, err := m.loadOwnedEntry(ctx, id)
-	if err != nil {
-		return Entry{}, err
-	}
-	var e Entry
-	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		before, err := m.lockEntry(ctx, tx, &c, id)
-		if err != nil {
-			return err
-		}
-		e = before
-		if err := unmarshalBody(raw, &e); err != nil {
-			return err
-		}
-		now := time.Now()
-		if !v.manager {
-			open := registrationOpen(c, now)
-			e.Competition, e.User, e.Bib, e.Paid = before.Competition, before.User, before.Bib, before.Paid
-			e.Status = ownerEntryStatus(before.Status, e.Status, open)
-			if e.Category != before.Category && !open {
-				return invalid("category", "Categories can only change while registration is open.")
-			}
-		}
-		if e.Competition != before.Competition {
-			return errMoved
-		}
-		if e.User != before.User {
-			return invalid("user", "This field can't be changed.")
-		}
-		e.ID, e.Expand = before.ID, nil
-		if err := validateEntry(ctx, tx, e, now.Year(), !v.manager); err != nil {
-			return err
-		}
-		if !v.manager && e.DisplayName != before.DisplayName {
-			if err := checkEntryName(ctx, tx, e.DisplayName); err != nil {
-				return err
-			}
-		}
-		if e.DisplayName != before.DisplayName || e.Hidden != before.Hidden {
-			if err := refuseWhileHidden(ctx, tx, "competition_entry", id); err != nil {
-				return err
-			}
-		}
-		if err := saveEntry(ctx, tx, e, false); err != nil {
-			return err
-		}
-		if e, err = findEntry(ctx, tx, id); err != nil {
-			return err
-		}
-		return publishChange(ctx, tx, c, "entries", e.User, e.ID)
-	})
-	return e, entryConflict(err)
-}
-
-// lockEntry locks the competition before the entry, the order every competition write follows.
-func (m *module) lockEntry(ctx context.Context, tx pgx.Tx, c *Competition, id string) (Entry, error) {
-	var err error
-	if *c, err = lockCompetition(ctx, tx, c.ID, "SHARE"); err != nil {
-		return Entry{}, err
-	}
-	return one[Entry](ctx, tx, `SELECT `+entryColumns+` FROM competition_entries WHERE id = $1 FOR UPDATE`, id)
-}
-
-func (m *module) deleteEntry(ctx context.Context, id string) error {
-	_, c, v, err := m.loadOwnedEntry(ctx, id)
-	if err != nil {
-		return err
-	}
-	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		e, err := m.lockEntry(ctx, tx, &c, id)
-		if err != nil {
-			return err
-		}
-		if !v.manager {
-			var scored bool
-			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM competition_scores WHERE entry = $1)`, id).Scan(&scored); err != nil {
-				return err
-			}
-			if scored || e.Status == "disqualified" {
-				return httpx.NewError(http.StatusForbidden, "This entry can no longer be deleted; withdraw instead.")
-			}
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM competition_entries WHERE id = $1`, id); err != nil {
-			return err
-		}
-		if err := publishEntryDeleted(ctx, tx, e, c.Gym); err != nil {
-			return err
-		}
-		return publishChange(ctx, tx, c, "entries", e.User, e.ID)
-	})
-}
-
-func acceptsScores(c Competition, now time.Time) bool {
-	return c.Status == "open" && !now.Before(c.StartsAt) && !now.After(c.EndsAt)
-}
-
-func normalizeScore(s *Score, r CompRoute, c Competition) {
-	if c.Discipline == "rope" {
-		normalizeRopeScore(s, r.HoldCount, c.ScoringFormat)
-		return
-	}
-	s.Style, s.Height, s.HeightPlus = "", 0, false
-	zone := s.ZoneAttempt
-	if !r.Zone {
-		zone = 0
-	} else if s.TopAttempt > 0 && (zone == 0 || zone > s.TopAttempt) {
-		zone = s.TopAttempt
-	}
-	s.ZoneAttempt = zone
-	s.Attempts = max(s.Attempts, s.TopAttempt, zone)
-}
-
-func normalizeRopeScore(s *Score, holdCount int, format string) {
-	s.ZoneAttempt = 0
-	if format == judgeOnlyFormat {
-		height := max(s.Height, 0)
-		if holdCount > 0 {
-			height = min(height, holdCount)
-		}
-		topped := holdCount > 0 && height == holdCount
-		s.Style, s.Height, s.HeightPlus, s.TopAttempt, s.Attempts = "lead", height, s.HeightPlus && !topped, 0, 1
-		if topped {
-			s.TopAttempt = 1
-		}
-		return
-	}
-	if s.Style != "toprope" {
-		s.Style = "lead"
-	}
-	s.Height, s.HeightPlus = 0, false
-	s.Attempts = max(s.Attempts, s.TopAttempt)
-}
-
-func validateScoreNumbers(s Score) error {
-	for field, value := range map[string]int{"attempts": s.Attempts, "zone_attempt": s.ZoneAttempt, "top_attempt": s.TopAttempt, "height": s.Height} {
-		if value < 0 || value > 999 {
-			return invalid(field, "Must be between 0 and 999.")
-		}
-	}
-	if !slices.Contains([]string{"", "lead", "toprope"}, s.Style) {
-		return invalid("style", "Invalid style.")
-	}
-	return nil
-}
-
-// Judges may still correct a closed competition; published results are already in the logbooks.
-func scoringOpen(c Competition) bool { return c.Status == "open" || c.Status == "closed" }
-
-// guardScore: entry and route must share the competition; climbers score only their own
-// active entry, on open competitions inside the window, never voided routes or judge-only formats.
-func guardScore(s *Score, e Entry, r CompRoute, c Competition, v viewer, now time.Time) error {
-	if e.Competition != c.ID {
-		return invalid("entry", "Entry not found.")
-	}
-	if r.Competition != c.ID {
-		return invalid("comp_route", "Route is not part of this competition.")
-	}
-	if v.staff && !scoringOpen(c) {
-		return badRequest("Scoring is closed.")
-	}
-	if !v.staff {
-		if e.User != v.user {
-			return httpx.ErrForbidden
-		}
-		if c.ScoringFormat == judgeOnlyFormat {
-			return httpx.NewError(http.StatusForbidden, "Only judges can enter scores in this competition.")
-		}
-		if !acceptsScores(c, now) {
-			return badRequest("Scoring is closed.")
-		}
-		if slices.Contains(inactiveEntryStatuses, e.Status) {
-			return httpx.NewError(http.StatusForbidden, "This entry can no longer score.")
-		}
-		if r.Voided {
-			return badRequest("This route was removed from scoring.")
-		}
-	}
-	if err := validateScoreNumbers(*s); err != nil {
-		return err
-	}
-	s.Competition = c.ID
-	normalizeScore(s, r, c)
-	return nil
-}
-
-func (m *module) upsertScores(ctx context.Context, competitionID string, inputs []Score) ([]Score, error) {
-	if _, err := auth.Require(ctx); err != nil {
-		return nil, err
-	}
-	c, err := findVisibleCompetition(ctx, m.app.DB, competitionID)
-	if err != nil {
-		return nil, err
-	}
-	v := m.viewerFor(ctx, c)
-	now := time.Now()
-	saved := []Score{}
-	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		if c, err = lockCompetition(ctx, tx, c.ID, "SHARE"); err != nil {
-			return err
-		}
-		entries := map[string]bool{}
-		for _, s := range inputs {
-			e, err := findEntry(ctx, tx, s.Entry)
-			if err != nil {
-				return invalid("entry", "Entry not found.")
-			}
-			r, err := findCompRoute(ctx, tx, s.CompRoute)
-			if err != nil {
-				return invalid("comp_route", "Route is not part of this competition.")
-			}
-			if err := guardScore(&s, e, r, c, v, now); err != nil {
-				return err
-			}
-			s.ID, s.ScoredBy = ids.New(), v.user
-			stored, err := upsertScore(ctx, tx, s, v.staff)
-			if errors.Is(err, httpx.ErrNotFound) {
-				return httpx.NewError(http.StatusForbidden, "A judge already scored this route.")
-			}
-			if err != nil {
-				return err
-			}
-			saved = append(saved, stored)
-			entries[e.ID] = true
-		}
-		for entry := range entries {
-			if err := publishChange(ctx, tx, c, "scores", "", entry); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return saved, err
-}
-
-func (m *module) deleteScore(ctx context.Context, id string) error {
-	s, err := findScore(ctx, m.app.DB, id)
-	if err != nil {
-		return err
-	}
-	c, err := m.loadManaged(ctx, s.Competition)
-	if err != nil {
-		return err
-	}
-	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		if c, err = lockCompetition(ctx, tx, c.ID, "SHARE"); err != nil {
-			return err
-		}
-		if !scoringOpen(c) {
-			return badRequest("Scoring is closed.")
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM competition_scores WHERE id = $1`, id); err != nil {
-			return err
-		}
-		return publishChange(ctx, tx, c, "scores", "", s.Entry)
 	})
 }

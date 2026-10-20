@@ -2,8 +2,6 @@ package gyms
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/mail"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -11,7 +9,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"gripello/internal/platform/blob"
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/locales"
+	platformmail "gripello/internal/platform/mail"
+	"gripello/internal/platform/tenancy"
 )
 
 // Mirrored in shared/utils/gymSlug.ts (fixture testdata/gymSlug.json).
@@ -49,11 +51,6 @@ var gymAmenities = []string{
 	"public_transport", "kids_area", "training_area", "outdoor_area", "yoga", "sauna", "wheelchair", "wifi",
 }
 
-// Mirrored in shared/utils/featureFlags.ts and the platformadmin module.
-var featureFlags = []string{"beta_links", "beta_uploads"}
-
-var languages = []string{"", "en", "de", "nl", "fr", "es"}
-
 const maxFileSize = 5 << 20
 
 var imageTypes = []string{"image/jpeg", "image/png", "image/svg+xml", "image/webp"}
@@ -65,7 +62,7 @@ var fileTypes = map[string][]string{
 	"cover_image": {"image/jpeg", "image/png", "image/webp"},
 }
 
-var thumbs = map[string][]string{"page_logo": {"0x200", "100x100"}, "cover_image": {"1600x500"}}
+var thumbs = map[string][]string{"page_logo": {blob.ThumbLogo, blob.ThumbSquare}, "cover_image": {blob.ThumbCover, blob.ThumbCoverLarge}}
 
 type field struct {
 	kind     string
@@ -166,7 +163,7 @@ func isNull(raw json.RawMessage) bool { return len(raw) == 0 || string(raw) == "
 // validateFields turns a request body into column → value changes; creating requires every required field.
 func validateFields(body map[string]json.RawMessage, fields map[string]field, creating bool) (map[string]any, error) {
 	changes := map[string]any{}
-	invalid := httpx.NewError(http.StatusBadRequest, "Failed to validate.")
+	invalid := httpx.BadRequest("Failed to validate.")
 	for name, spec := range fields {
 		raw, given := body[name]
 		if !given {
@@ -176,7 +173,7 @@ func validateFields(body map[string]json.RawMessage, fields map[string]field, cr
 			continue
 		}
 		value, message := validateValue(spec, raw)
-		if message == "" && spec.required && value == "" {
+		if text, isText := value.(string); message == "" && spec.required && isText && httpx.Blank(text) {
 			message = "Cannot be blank."
 		}
 		if message != "" {
@@ -280,7 +277,7 @@ func validateValue(spec field, raw json.RawMessage) (any, string) {
 			if _, ok := value.(bool); !ok {
 				return nil, "Feature flags must be an object of true/false values."
 			}
-			if !slices.Contains(featureFlags, flag) {
+			if !slices.Contains(tenancy.FeatureFlags, flag) {
 				return nil, "Unknown feature flag " + flag + "."
 			}
 		}
@@ -324,7 +321,7 @@ func validateString(spec field, s string) string {
 		}
 	case "email":
 		if s != "" {
-			if address, err := mail.ParseAddress(s); err != nil || address.Address != s {
+			if !platformmail.ValidAddress(s) {
 				return "Must be a valid email address."
 			}
 		}
@@ -337,7 +334,7 @@ func validateString(spec field, s string) string {
 	case "slug":
 		return validateGymSlug(s)
 	case "language":
-		if !slices.Contains(languages, s) {
+		if !locales.Allowed(s) {
 			return "Unknown language."
 		}
 	case "file":

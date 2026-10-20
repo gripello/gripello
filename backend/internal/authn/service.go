@@ -2,10 +2,7 @@ package authn
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"log/slog"
-	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -13,12 +10,14 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/crypto/bcrypt"
 
+	"gripello/internal/platform/climbers"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/lockout"
 	"gripello/internal/platform/mail"
+	"gripello/internal/platform/password"
 )
 
 const (
@@ -29,28 +28,24 @@ const (
 
 	sessionUserAgentMax = 300
 
-	passwordMin = 8
-	passwordMax = 71
-
 	verificationTokenTTL  = 7 * 24 * time.Hour
 	passwordResetTokenTTL = 30 * time.Minute
 	emailChangeTokenTTL   = 30 * time.Minute
 )
 
 var (
-	errFailedAuth      = httpx.NewError(http.StatusBadRequest, "Failed to authenticate.")
-	errInvalidMFA      = httpx.NewError(http.StatusBadRequest, "Invalid or expired MFA session.")
+	errFailedAuth      = httpx.BadRequest("Failed to authenticate.")
+	errInvalidMFA      = httpx.BadRequest("Invalid or expired MFA session.")
 	errNotVerified     = httpx.NewError(http.StatusForbidden, "The account is not verified.")
 	errSuspended       = httpx.NewError(http.StatusForbidden, "This account is suspended.")
-	errCeremonyExpired = httpx.NewError(http.StatusBadRequest, "The passkey request expired.")
+	errCeremonyExpired = httpx.BadRequest("The passkey request expired.")
 )
 
 func lockoutKey(user *account, identity string) string {
 	if user != nil {
 		return user.ID
 	}
-	digest := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(identity))))
-	return hex.EncodeToString(digest[:])
+	return ids.Hash(strings.ToLower(strings.TrimSpace(identity)))
 }
 
 func (m *module) recordLoginFailure(ctx context.Context, r *http.Request, key string, user *account, label string) {
@@ -59,7 +54,7 @@ func (m *module) recordLoginFailure(ctx context.Context, r *http.Request, key st
 		slog.Error("authn: counting a failed login failed", "error", err)
 		return
 	}
-	event := AuthEvent{Action: "login_failed", Label: label, IP: clientIP(r)}
+	event := AuthEvent{Action: "login_failed", Label: label, IP: httpx.ClientIP(r)}
 	if user != nil {
 		event.User, event.Label = user.ID, user.label()
 	}
@@ -90,23 +85,32 @@ func maskedIdentity(identity string) string {
 	return "***"
 }
 
-var unknownAccountHash = sync.OnceValue(func() []byte {
-	hash, _ := bcrypt.GenerateFromPassword([]byte(ids.New()), 10)
+var unknownAccountHash = sync.OnceValue(func() string {
+	hash, _ := password.Hash(ids.New())
 	return hash
 })
 
-// checkPassword spends a bcrypt round even without a hash, so timing doesn't tell unknown identities apart.
-func checkPassword(hash, password string) bool {
-	if hash == "" {
-		bcrypt.CompareHashAndPassword(unknownAccountHash(), []byte(password))
-		return false
+// upgradeLegacyHash stores a prefixed hash after a successful check of a plain bcrypt one; a failure only logs.
+func (m *module) upgradeLegacyHash(ctx context.Context, user account, pw string) {
+	if !password.Legacy(user.PasswordHash) {
+		return
 	}
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+	hash, err := password.Hash(pw)
+	if err == nil {
+		_, err = m.db.Exec(ctx, `UPDATE users SET password_hash = $2 WHERE id = $1 AND password_hash = $3`, user.ID, hash, user.PasswordHash)
+	}
+	if err != nil {
+		slog.Error("authn: upgrading a legacy password hash failed", "error", err)
+	}
 }
 
-func hashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-	return string(hash), err
+// checkPassword spends a bcrypt round even without a hash, so timing doesn't tell unknown identities apart.
+func checkPassword(hash, pw string) bool {
+	if hash == "" {
+		password.Matches(unknownAccountHash(), pw)
+		return false
+	}
+	return password.Matches(hash, pw)
 }
 
 // checkAccess mirrors the users auth rule (verified) and the suspension guard.
@@ -138,13 +142,13 @@ func (m *module) signIn(w http.ResponseWriter, r *http.Request, user account, me
 			}
 		}
 		var err error
-		if sessionID, err = insertSession(ctx, tx, user.ID, method, r.UserAgent(), clientIP(r)); err != nil {
+		if sessionID, err = insertSession(ctx, tx, user.ID, method, r.UserAgent(), httpx.ClientIP(r)); err != nil {
 			return err
 		}
 		if err := lockout.Clear(ctx, tx, user.ID); err != nil {
 			return err
 		}
-		return publishAuthEvent(ctx, tx, AuthEvent{Action: "login", User: user.ID, Label: user.label(), Method: method, IP: clientIP(r)})
+		return publishAuthEvent(ctx, tx, AuthEvent{Action: "login", User: user.ID, Label: user.label(), Method: method, IP: httpx.ClientIP(r)})
 	})
 	if err != nil {
 		return err
@@ -158,12 +162,11 @@ func (m *module) respondWithToken(w http.ResponseWriter, r *http.Request, user a
 	if err != nil {
 		return err
 	}
-	record, err := userRecord(r.Context(), m.db, user.ID)
+	record, err := climbers.OwnRecord(r.Context(), m.db, user.ID)
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"token": token, "record": record})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"token": token, "record": record}, nil)
 }
 
 func (m *module) secondFactorMethods(ctx context.Context, userID string) ([]string, error) {
@@ -229,7 +232,7 @@ func (m *module) signMailToken(user account, kind, newEmail string, ttl time.Dur
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(user.TokenKey + m.tokens.Secret))
 }
 
-func (m *module) parseMailToken(ctx context.Context, q querier, token, kind string) (account, mailClaims, bool) {
+func (m *module) parseMailToken(ctx context.Context, q db.Querier, token, kind string) (account, mailClaims, bool) {
 	var claims mailClaims
 	parser := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}))
 	if _, _, err := parser.ParseUnverified(token, &claims); err != nil || claims.ID == "" || claims.Type != kind {
@@ -254,36 +257,6 @@ func (m *module) sendAuthMail(ctx context.Context, user account, to string, cont
 			slog.Error("authn: sending mail failed", "mail", content.Key, "user", user.ID, "error", err)
 		}
 	}()
-}
-
-// clientIP trusts X-Real-IP / X-Forwarded-For because nginx sets them in front of every replica.
-func clientIP(r *http.Request) string {
-	raw := r.Header.Get("X-Real-IP")
-	if raw == "" {
-		raw, _, _ = strings.Cut(r.Header.Get("X-Forwarded-For"), ",")
-	}
-	if raw = strings.TrimSpace(raw); raw == "" {
-		raw = r.RemoteAddr
-		if host, _, err := net.SplitHostPort(raw); err == nil {
-			raw = host
-		}
-	}
-	return displayIP(raw)
-}
-
-func displayIP(raw string) string {
-	if ip := net.ParseIP(raw); ip != nil {
-		return ip.String()
-	}
-	return raw
-}
-
-func truncateRunes(s string, max int) string {
-	runes := []rune(s)
-	if len(runes) <= max {
-		return s
-	}
-	return string(runes[:max])
 }
 
 func firstNonEmpty(values ...string) string {

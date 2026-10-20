@@ -101,7 +101,7 @@ async function drawTag(locale: keyof typeof LOCALES) {
         grade_system: 'uiaa',
         anchor_point: 12,
         creator: ['Александра Константинопольская', 'Gülşen Öztürk', text],
-        screw_date: '2026-12-28 12:00:00.000Z',
+        screw_date: '2026-12-28',
         color: '#ff0000',
     } as unknown as RouteRecord
 

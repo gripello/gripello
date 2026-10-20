@@ -11,7 +11,7 @@ paths:
       parameters:
         - { name: route, in: query, schema: { type: string } }
         - { name: gym, in: query, description: gym id; only ticks on its routes, schema: { type: string } }
-        - { name: since, in: query, description: date at or after, schema: { type: string } }
+        - { name: since, in: query, description: 'day (YYYY-MM-DD) at or after; an RFC 3339 timestamp counts as its UTC day', schema: { type: string } }
         - name: sort
           in: query
           schema: { type: string, enum: ['-date,-created', date, '-created', created, '-grade_index', grade_index], default: '-date,-created' }
@@ -20,8 +20,8 @@ paths:
         - $ref: '#/components/parameters/Total'
       responses:
         '200': { $ref: '#/components/responses/TickPage' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createTick
       tags: [ticks]
@@ -39,13 +39,13 @@ paths:
                 route: { type: string }
                 type: { $ref: '#/components/schemas/TickType' }
                 attempts: { type: integer, minimum: 1, maximum: 999 }
-                date: { type: string }
+                date: { type: string, format: date }
                 note: { type: string, maxLength: 500 }
       responses:
         '201': { $ref: '#/components/responses/Tick' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/ticks/sends:
     get:
       operationId: listSentRoutes
@@ -57,7 +57,7 @@ paths:
           content:
             application/json:
               schema: { type: array, items: { type: string } }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /ticks/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -74,20 +74,20 @@ paths:
               properties:
                 type: { $ref: '#/components/schemas/TickType' }
                 attempts: { type: integer, minimum: 1, maximum: 999 }
-                date: { type: string }
+                date: { type: string, format: date }
                 note: { type: string, maxLength: 500 }
       responses:
         '200': { $ref: '#/components/responses/Tick' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteTick
       tags: [ticks]
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/feed:
     get:
       operationId: listFeed
@@ -101,8 +101,8 @@ paths:
         - $ref: '#/components/parameters/Total'
       responses:
         '200': { $ref: '#/components/responses/TickPage' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /climbers/{id}/ticks:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -116,7 +116,7 @@ paths:
         - $ref: '#/components/parameters/Total'
       responses:
         '200': { $ref: '#/components/responses/TickPage' }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/leaderboard:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -133,7 +133,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Leaderboard' }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/seasons:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -147,7 +147,7 @@ paths:
           content:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/Season' } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createSeason
       tags: [leaderboard]
@@ -159,9 +159,9 @@ paths:
             schema: { $ref: '#/components/schemas/SeasonInput' }
       responses:
         '201': { $ref: '#/components/responses/Season' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /seasons/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -175,18 +175,18 @@ paths:
             schema: { $ref: '#/components/schemas/SeasonInput' }
       responses:
         '200': { $ref: '#/components/responses/Season' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteSeason
       tags: [leaderboard]
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Gym:
@@ -207,11 +207,6 @@ components:
     Total:
       { name: total, in: query, description: 'true adds `total`', schema: { type: string, enum: ['true'] } }
   responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
     Tick:
       description: Tick
       content:
@@ -235,20 +230,6 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Season' }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     TickType:
       type: string
       enum: [flash, top, attempt]
@@ -263,7 +244,7 @@ components:
         route: { type: string, description: empty once the route is deleted }
         type: { $ref: '#/components/schemas/TickType' }
         attempts: { type: integer }
-        date: { type: string, format: date-time }
+        date: { type: string, format: date }
         note: { type: string, description: empty on other climbers' ticks }
         grade: { type: string }
         grade_system: { type: string }
@@ -317,15 +298,15 @@ components:
         updated: { type: string, format: date-time }
         gym: { type: string }
         name: { type: string, maxLength: 60 }
-        starts_at: { type: string, format: date-time }
-        ends_at: { type: string, format: date-time }
+        starts_at: { type: string, format: date }
+        ends_at: { type: string, format: date, description: last day of the season }
     SeasonInput:
       type: object
-      description: ends_at must lie after starts_at; gym can't change.
+      description: ends_at must not lie before starts_at (one-day seasons are fine); gym can't change.
       properties:
         name: { type: string, maxLength: 60 }
-        starts_at: { type: string }
-        ends_at: { type: string }
+        starts_at: { type: string, format: date }
+        ends_at: { type: string, format: date }
     LeaderboardRow:
       type: object
       required: [rank, user, name, avatar, score, sends, flashes, hardest]

@@ -25,7 +25,23 @@ import (
 )
 
 // Thumb sizes the UI requests, plus the 100x100 default.
-var thumbSizes = []string{"16x16", "32x32", "48x48", "80x80", "100x100", "320x320", "0x200", "400x0", "800x300", "1600x400", "1600x500"}
+// Sizes uploads warm; every size the UI requests must be in thumbSizes.
+const (
+	ThumbSquare      = "100x100"
+	ThumbAvatarLarge = "320x320"
+	ThumbLogo        = "0x200"
+	ThumbPhoto       = "400x0"
+	ThumbPhotoLarge  = "1200x0"
+	ThumbBanner      = "1600x400"
+	ThumbBannerLarge = "2400x600"
+	ThumbCover       = "1600x500"
+	ThumbCoverLarge  = "2400x750"
+)
+
+var thumbSizes = []string{"16x16", "32x32", "48x48", "80x80", "100x100", "320x320", "0x200", "400x0", "1200x0", "800x300", "1600x400", "2400x600", "1600x500", "2400x750"}
+
+// UserThumbs are the sizes warmed per users file field.
+var UserThumbs = map[string][]string{"avatar": {ThumbSquare, ThumbAvatarLarge}, "banner": {ThumbBanner, ThumbBannerLarge}}
 
 // A 25 MP source decodes to ~100 MB RGBA; thumbSlots caps how many decode at once on this replica.
 const maxThumbSourcePixels = 25_000_000
@@ -128,7 +144,7 @@ func (s *Store) sourceExists(ctx context.Context, key string) error {
 var vipsOutputs = map[string]struct{ ext, options string }{
 	"image/jpeg": {".jpg", "[Q=85,keep=icc]"},
 	"image/png":  {".png", "[keep=icc]"},
-	"image/webp": {".webp", "[keep=icc]"},
+	"image/webp": {".webp", "[Q=85,keep=icc]"},
 }
 
 func (s *Store) vipsThumb(ctx context.Context, key, thumbKey, format string, width, height int, mode string) error {

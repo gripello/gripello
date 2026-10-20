@@ -4,7 +4,7 @@ import type { LogbookKind } from '../../shared/utils/logbook'
 import { ROLLING_SEASON, type Leaderboard } from '../utils/leaderboard'
 import { updatableFields } from '../utils/tickOutbox'
 import { useApi } from './client'
-import type { PageQuery, RouteList } from './client'
+import type { PageQuery, Page } from './client'
 
 export interface OwnTickQuery extends PageQuery {
     route?: string
@@ -27,11 +27,11 @@ const MAX_LIMIT = 1000
 async function readTicks<T>(
     path: string,
     query: PageQuery & Record<string, unknown>,
-): Promise<RouteList<T>> {
+): Promise<Page<T>> {
     const { total, ...rest } = query
     const api = useApi()
     const read = (page: number, limit: number) =>
-        api<RouteList<T>>(path, {
+        api<Page<T>>(path, {
             query: { ...rest, page, limit, total: total ? 'true' : undefined },
         })
     if (query.page) return read(query.page, query.limit ?? 50)
@@ -46,7 +46,7 @@ async function readTicks<T>(
 
 export function listOwnTicks<T = TickRecord>(
     query: OwnTickQuery = {},
-): Promise<RouteList<T>> {
+): Promise<Page<T>> {
     const { include: _include, since, ...rest } = query
     return readTicks<T>('/me/ticks', {
         ...rest,
@@ -86,7 +86,7 @@ export function deleteTick(id: string) {
 
 export function listFeed<T = FeedTick>(
     query: FeedQuery = {},
-): Promise<RouteList<T>> {
+): Promise<Page<T>> {
     return readTicks<T>('/me/feed', { ...query, sort: query.sort ?? '-date' })
 }
 

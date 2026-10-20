@@ -2,7 +2,6 @@ package account
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/jackc/pgx/v5"
 
@@ -10,16 +9,9 @@ import (
 )
 
 const (
-	KindUserUpdated    = "user.updated"
 	KindUserDeleted    = "user.deleted"
 	kindSessionRevoked = "session.revoked"
 )
-
-// UserUpdated carries the user's own record (no credentials) and the fields that changed.
-type UserUpdated struct {
-	Record  json.RawMessage `json:"record"`
-	Changed []string        `json:"changed"`
-}
 
 type UserDeleted struct {
 	ID string `json:"id"`

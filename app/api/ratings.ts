@@ -1,7 +1,7 @@
 import type { BetaVideoRecord, RatingRecord } from '../../types/models'
 import type { Contribution } from '../utils/timeline'
 import { toFormData, useApi } from './client'
-import type { PageQuery, RouteList } from './client'
+import type { PageQuery, Page } from './client'
 
 export type RatingSort = 'newest' | 'oldest' | 'highest' | 'lowest'
 
@@ -23,12 +23,10 @@ export interface RatingQuery {
     total?: boolean
 }
 
-export type RatingInput = Partial<
-    Pick<
-        RatingRecord,
-        'id' | 'rating' | 'comment' | 'grade' | 'grade_system' | 'grade_index'
-    >
->
+export type RatingInput = {
+    [K in 'rating' | 'comment' | 'grade' | 'grade_system' | 'grade_index']?:
+        RatingRecord[K] | null
+} & { id?: string }
 
 export interface RatingStats {
     total_reviews: number
@@ -47,8 +45,8 @@ const commaList = (values?: string | string[]) =>
 export function listRouteRatings<T = RatingRecord>(
     routeId: string,
     query: PageQuery = {},
-): Promise<RouteList<T>> {
-    return useApi()<RouteList<T>>(`/routes/${routeId}/ratings`, {
+): Promise<Page<T>> {
+    return useApi()<Page<T>>(`/routes/${routeId}/ratings`, {
         query: { page: query.page, limit: query.limit ?? MAX_LIMIT },
     })
 }
@@ -56,11 +54,11 @@ export function listRouteRatings<T = RatingRecord>(
 export async function listGymRatings<T = RatingRecord>(
     gym: string,
     query: RatingQuery = {},
-): Promise<RouteList<T>> {
+): Promise<Page<T>> {
     if (query.ids?.length === 0 || query.route?.length === 0)
         return { items: [], page: 1, limit: query.limit ?? 50 }
     const { include: _include, ids, route, since, total, ...filters } = query
-    return useApi()<RouteList<T>>(`/gyms/${gym}/ratings`, {
+    return useApi()<Page<T>>(`/gyms/${gym}/ratings`, {
         query: {
             ...filters,
             route: commaList(route),
@@ -121,8 +119,8 @@ export async function listBetas(routeId: string) {
 export function listGymBetas<T = BetaVideoRecord>(
     gym: string,
     query: PageQuery & { include?: string[] } = {},
-): Promise<RouteList<T>> {
-    return useApi()<RouteList<T>>(`/gyms/${gym}/betas`, {
+): Promise<Page<T>> {
+    return useApi()<Page<T>>(`/gyms/${gym}/betas`, {
         query: {
             include: query.include?.join(',') || undefined,
             page: query.page,

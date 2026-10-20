@@ -82,7 +82,16 @@ func TestWallDeleteBlockedByActiveRoutes(t *testing.T) {
 	f.call("setter", "DELETE", "/walls/"+wall, "", http.StatusForbidden)
 	f.call("admin", "DELETE", "/walls/"+wall, "", http.StatusBadRequest)
 	f.call("setter", "POST", "/routes/"+route+"/archive", "", http.StatusOK)
+	other := f.wall(f.hall, "Roof")
+	follower := f.exec(`UPDATE users SET followed_walls = ARRAY[$1, $2] WHERE username = 'setter' RETURNING id`, wall, other)
 	f.call("admin", "DELETE", "/walls/"+wall, "", http.StatusNoContent)
+	if followed := f.exec(`SELECT array_to_string(followed_walls, ',') FROM users WHERE id = $1`, follower); followed != other {
+		t.Fatalf("followed walls after delete = %q", followed)
+	}
+	if n := f.exec(`SELECT count(*)::text FROM events WHERE topic = 'user:' || $1 AND kind = 'user.updated' AND payload->'changed' = '["followed_walls"]'
+		AND payload->'record'->'followed_walls' = jsonb_build_array($2::text)`, follower, other); n != "1" {
+		t.Fatalf("%s user.updated events for the follower", n)
+	}
 	if got := f.call("", "GET", "/routes/"+route, "", http.StatusOK)["wall"]; got != "" {
 		t.Fatalf("archived route kept deleted wall %v", got)
 	}

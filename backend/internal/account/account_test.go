@@ -19,7 +19,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"gripello/internal/platform"
+	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/jobs"
 	"gripello/internal/platform/lockout"
 	"gripello/internal/platform/testapp"
 )
@@ -143,8 +145,9 @@ func TestUpdateProfile(t *testing.T) {
 		t.Fatal("platform_admin was set")
 	}
 
-	f.call(f.climber, http.MethodPatch, "/me", `{"username":"Setter","language":"xx","followed_walls":["missing"],"notification_prefs":"no"}`, http.StatusBadRequest,
-		`"username":{"code":"validation_not_unique"`, `"language":{"code":"validation_invalid_value"`, `"followed_walls":{"code":"validation_missing_rel_records"`, `"notification_prefs":{"code":"validation_invalid_value"`)
+	f.call(f.climber, http.MethodPatch, "/me", `{"username":"Setter","language":"xx","notification_prefs":"no"}`, http.StatusBadRequest,
+		`"username":{"code":"validation_not_unique"`, `"language":{"code":"validation_invalid_value"`, `"notification_prefs":{"code":"validation_invalid_value"`)
+	f.call(f.climber, http.MethodPatch, "/me", `{"followed_walls":["missing","`+wall+`"]}`, http.StatusOK, `"followed_walls":["`+wall+`"]`)
 	f.call(f.climber, http.MethodPatch, "/me", `{"username":"a b"}`, http.StatusBadRequest, "validation_invalid_format")
 	f.call(f.climber, http.MethodPatch, "/me", `{"username":"cleo.c"}`, http.StatusOK, `"username":"cleo.c"`)
 }
@@ -152,15 +155,15 @@ func TestUpdateProfile(t *testing.T) {
 func TestProfileUpdatePublishesChangedFields(t *testing.T) {
 	f := newFixture(t)
 	f.call(f.climber, http.MethodPatch, "/me", `{"firstname":"Cleo","ticks_private":false}`, http.StatusOK)
-	var payload UserUpdated
-	if err := f.app.DB.QueryRow(context.Background(), `SELECT payload FROM events WHERE topic = $1 AND kind = $2`, "user:"+f.climber, KindUserUpdated).Scan(&payload); err != nil {
+	var payload climbers.UserUpdated
+	if err := f.app.DB.QueryRow(context.Background(), `SELECT payload FROM events WHERE topic = $1 AND kind = $2`, "user:"+f.climber, "user.updated").Scan(&payload); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Join(payload.Changed, ",") != "firstname" || strings.Contains(string(payload.Record), "secret-hash") || !strings.Contains(string(payload.Record), f.climber) {
 		t.Errorf("payload = %s %v", payload.Record, payload.Changed)
 	}
 	f.call(f.climber, http.MethodPatch, "/me", `{"firstname":"Cleo"}`, http.StatusOK)
-	if n := f.count(`SELECT count(*) FROM events WHERE kind = $1`, KindUserUpdated); n != 1 {
+	if n := f.count(`SELECT count(*) FROM events WHERE kind = $1`, "user.updated"); n != 1 {
 		t.Errorf("%d events for an unchanged profile", n)
 	}
 }
@@ -218,11 +221,15 @@ func TestDeleteAccount(t *testing.T) {
 	f.call(f.admin, http.MethodDelete, "/me", confirmed, http.StatusBadRequest, "at least one admin")
 
 	f.exec(`INSERT INTO sessions (id, "user") VALUES ('sess1', $1)`, f.climber)
+	f.exec(`INSERT INTO audit_logs (id, actor, actor_label, action) VALUES ('audit1', $1, 'climber@example.com', 'login')`, f.climber)
 	f.call(f.climber, http.MethodDelete, "/me", `{}`, http.StatusBadRequest, "validation_invalid_password")
 	f.call(f.climber, http.MethodDelete, "/me", `{"password":"wrong"}`, http.StatusBadRequest, "validation_invalid_password")
 	f.call(f.climber, http.MethodDelete, "/me", confirmed, http.StatusNoContent)
 	if f.count(`SELECT count(*) FROM users WHERE id = $1`, f.climber) != 0 {
 		t.Error("user still exists")
+	}
+	if f.count(`SELECT count(*) FROM audit_logs WHERE id = 'audit1' AND actor IS NULL AND actor_label = 'climber@example.com'`) != 1 {
+		t.Error("the activity log lost the label of the deleted account")
 	}
 	if f.count(`SELECT count(*) FROM events WHERE kind = 'session.revoked' AND payload->>'session' = 'sess1'`) != 1 ||
 		f.count(`SELECT count(*) FROM events WHERE kind = $1 AND topic = $2`, KindUserDeleted, "user:"+f.climber) != 1 {
@@ -249,7 +256,7 @@ func TestDeleteMeHonoursLockoutAndNeedsAPassword(t *testing.T) {
 	}
 }
 
-func TestExportOverTheCapAnswers413(t *testing.T) {
+func TestExportOverTheCapIsNotStored(t *testing.T) {
 	f := newFixture(t)
 	f.exec(`UPDATE users SET avatar = 'big.png' WHERE id = $1`, f.climber)
 	if err := f.app.Blob.Put(context.Background(), "users/"+f.climber+"/big.png", bytes.NewReader(make([]byte, 64<<10))); err != nil {
@@ -257,8 +264,22 @@ func TestExportOverTheCapAnswers413(t *testing.T) {
 	}
 	defer func(max int64) { exportMaxBytes = max }(exportMaxBytes)
 	exportMaxBytes = 32 << 10
-	f.call(f.climber, http.MethodGet, "/me/export", "", http.StatusRequestEntityTooLarge)
-	m := &module{db: f.app.DB, blob: f.app.Blob}
+	m := &module{app: f.app, db: f.app.DB, blob: f.app.Blob}
+	if err := m.runExport(context.Background(), jobs.Job{Kind: exportJob, Key: f.climber}); err != nil {
+		t.Fatal(err)
+	}
+	if n := f.count(`SELECT count(*) FROM account_exports WHERE failure = 'too_large' AND file IS NULL AND token_hash IS NULL`); n != 1 {
+		t.Errorf("%d failures stored for an export over the cap", n)
+	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = 'notify' AND payload->>'type' = 'account_export_failed'
+		AND payload->>'url' = '/account/export' AND payload->'users' ? $1`, f.climber); n != 1 {
+		t.Errorf("%d too-large notifications", n)
+	}
+	if mails := testapp.Mails(f.app); len(mails) != 1 || !strings.Contains(mails[0].Text, "/account/export") || mailedExportLink.MatchString(mails[0].Text) {
+		t.Errorf("too-large mail = %+v", mails)
+	}
+	f.call(f.climber, http.MethodGet, "/me/export", "", http.StatusOK, `"status":"too_large"`)
+	f.call(f.climber, http.MethodGet, "/me/export/file", "", http.StatusNotFound)
 	parts, _, err := m.collectExport(context.Background(), f.climber)
 	if err != nil {
 		t.Fatal(err)
@@ -267,9 +288,11 @@ func TestExportOverTheCapAnswers413(t *testing.T) {
 		t.Errorf("stream past the cap = %v", err)
 	}
 	exportMaxBytes = 1 << 20
-	if rec := f.send(f.climber, http.MethodGet, "/me/export", nil, ""); rec.Code != http.StatusOK || rec.Body.Len() < 64<<10 {
+	token := f.runExport(f.climber)
+	if rec := f.send("", http.MethodGet, "/account/export/"+token, nil, ""); rec.Code != http.StatusOK || rec.Body.Len() < 64<<10 {
 		t.Errorf("export under the cap = %d, %d bytes", rec.Code, rec.Body.Len())
 	}
+	f.call(f.climber, http.MethodGet, "/me/export", "", http.StatusOK, `"status":"ready"`)
 }
 
 func TestContributions(t *testing.T) {
@@ -387,27 +410,128 @@ func TestExportContainsOnlyOwnData(t *testing.T) {
 	}
 }
 
-func TestExportRoute(t *testing.T) {
+var mailedExportLink = regexp.MustCompile(`/account/export/([A-Za-z0-9_-]+)`)
+
+// runExport runs the job and returns the token of the mailed link; the notification must carry no token.
+func (f *fixture) runExport(userID string) string {
+	f.t.Helper()
+	m := &module{app: f.app, db: f.app.DB, blob: f.app.Blob}
+	if err := m.runExport(context.Background(), jobs.Job{Kind: exportJob, Key: userID}); err != nil {
+		f.t.Fatal(err)
+	}
+	var payload string
+	if err := f.app.DB.QueryRow(context.Background(), `SELECT payload::text FROM events WHERE topic = 'notify'
+		AND payload->>'type' = 'account_export_ready' AND payload->'users' ? $1 ORDER BY id DESC LIMIT 1`, userID).Scan(&payload); err != nil {
+		f.t.Fatal(err)
+	}
+	mails := testapp.Mails(f.app)
+	link := mailedExportLink.FindStringSubmatch(mails[len(mails)-1].Text)
+	if link == nil {
+		f.t.Fatalf("export mail without a link: %s", mails[len(mails)-1].Text)
+	}
+	if !strings.Contains(payload, `"url": "/account/export"`) || strings.Contains(payload, link[1]) {
+		f.t.Fatalf("export notification = %s", payload)
+	}
+	return link[1]
+}
+
+func TestExportIsRequestedAndMailedAsALink(t *testing.T) {
 	f := newFixture(t)
-	f.call("", http.MethodGet, "/me/export", "", http.StatusUnauthorized)
+	f.call("", http.MethodPost, "/me/export", "", http.StatusUnauthorized)
 	for range 3 {
-		rec := f.send(f.climber, http.MethodGet, "/me/export", nil, "")
-		if rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "application/zip" || !strings.HasPrefix(rec.Header().Get("Content-Disposition"), `attachment; filename="gripello-data-`) {
-			t.Fatalf("export = %d %v", rec.Code, rec.Header())
+		f.call(f.climber, http.MethodPost, "/me/export", "", http.StatusAccepted)
+	}
+	f.call(f.climber, http.MethodPost, "/me/export", "", http.StatusTooManyRequests)
+	f.call(f.setter, http.MethodPost, "/me/export", "", http.StatusAccepted)
+	if n := f.count(`SELECT count(*) FROM jobs WHERE kind = $1 AND key = $2`, exportJob, f.climber); n != 1 {
+		t.Errorf("%d export jobs for one user, want one coalesced", n)
+	}
+
+	token := f.runExport(f.climber)
+	key := f.id(`SELECT file FROM account_exports WHERE "user" = $1`, f.climber)
+	if f.count(`SELECT count(*) FROM account_exports WHERE token_hash = $1`, ids.Hash(token)) != 1 ||
+		f.count(`SELECT count(*) FROM account_exports WHERE token_hash = $1`, token) != 0 {
+		t.Fatal("the token must be stored as its hash only")
+	}
+	if !strings.HasPrefix(key, "account_exports/") || !strings.HasSuffix(key, ".zip") {
+		t.Errorf("file key = %q", key)
+	}
+	mails := testapp.Mails(f.app)
+	if len(mails) != 1 || mails[0].To[0] != "climber@example.com" || !strings.Contains(mails[0].Text, "/account/export/"+token) {
+		t.Fatalf("export mail = %+v", mails)
+	}
+
+	download := f.send("", http.MethodGet, "/account/export/"+token, nil, "")
+	if download.Code != http.StatusOK || download.Header().Get("Content-Type") != "application/zip" ||
+		!strings.HasPrefix(download.Header().Get("Content-Disposition"), `attachment; filename="gripello-data-`) {
+		t.Fatalf("download = %d %v", download.Code, download.Header())
+	}
+	zr, err := zip.NewReader(bytes.NewReader(download.Body.Bytes()), int64(download.Body.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := map[string]bool{}
+	for _, file := range zr.File {
+		names[file.Name] = true
+	}
+	for name := range f.export(f.climber) {
+		if !names[name] {
+			t.Errorf("the mailed archive lacks %s", name)
 		}
 	}
-	if rec := f.send(f.climber, http.MethodGet, "/me/export", nil, ""); rec.Code != http.StatusTooManyRequests {
-		t.Errorf("fourth export in an hour = %d", rec.Code)
+	ranged := httptest.NewRequest(http.MethodGet, "/api/account/export/"+token, nil)
+	ranged.Header.Set("Range", "bytes=0-1")
+	partial := httptest.NewRecorder()
+	f.handler.ServeHTTP(partial, ranged)
+	if partial.Code != http.StatusPartialContent || partial.Body.String() != "PK" {
+		t.Errorf("range = %d %q", partial.Code, partial.Body.String())
 	}
-	if rec := f.send(f.setter, http.MethodGet, "/me/export", nil, ""); rec.Code != http.StatusOK {
-		t.Errorf("other user's export = %d", rec.Code)
+	f.call("", http.MethodGet, "/account/export/not-a-token", "", http.StatusNotFound)
+	f.call("", http.MethodGet, "/me/export", "", http.StatusUnauthorized)
+	f.call("", http.MethodGet, "/me/export/file", "", http.StatusUnauthorized)
+	f.call(f.climber, http.MethodGet, "/me/export", "", http.StatusOK, `"status":"ready"`, `"expires_at":`)
+	f.call(f.setter, http.MethodGet, "/me/export", "", http.StatusOK, `"status":"none"`)
+	f.call(f.setter, http.MethodGet, "/me/export/file", "", http.StatusNotFound)
+	if own := f.send(f.climber, http.MethodGet, "/me/export/file", nil, ""); own.Code != http.StatusOK || !bytes.Equal(own.Body.Bytes(), download.Body.Bytes()) {
+		t.Errorf("own export download = %d", own.Code)
+	}
+	f.call("", http.MethodGet, "/files/"+key, "", http.StatusNotFound)
+
+	newer := f.runExport(f.climber)
+	f.call("", http.MethodGet, "/account/export/"+token, "", http.StatusNotFound)
+	if _, err := f.app.Blob.Open(context.Background(), key); err == nil {
+		t.Error("the replaced export file is still stored")
+	}
+	f.exec(`UPDATE account_exports SET expires_at = now() - interval '1 second' WHERE "user" = $1`, f.climber)
+	f.call("", http.MethodGet, "/account/export/"+newer, "", http.StatusNotFound)
+
+	setterToken := f.runExport(f.setter)
+	setterKey := f.id(`SELECT file FROM account_exports WHERE "user" = $1`, f.setter)
+	f.exec(`DELETE FROM users WHERE id = $1`, f.setter)
+	f.call("", http.MethodGet, "/account/export/"+setterToken, "", http.StatusNotFound)
+
+	m := &module{app: f.app, db: f.app.DB, blob: f.app.Blob}
+	if err := m.pruneExports(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if n := f.count(`SELECT count(*) FROM account_exports`); n != 0 {
+		t.Errorf("%d expired or orphaned exports left", n)
+	}
+	if _, err := f.app.Blob.Open(context.Background(), setterKey); err == nil {
+		t.Error("the deleted account's export file is still stored")
 	}
 }
 
-func TestExportFailsInsteadOfSendingPartialData(t *testing.T) {
+func TestExportJobFailsInsteadOfStoringPartialData(t *testing.T) {
 	f := newFixture(t)
 	f.exec(`DROP TABLE push_subscriptions`)
-	f.call(f.climber, http.MethodGet, "/me/export", "", http.StatusInternalServerError, "Exporting your data failed.")
+	m := &module{app: f.app, db: f.app.DB, blob: f.app.Blob}
+	if err := m.runExport(context.Background(), jobs.Job{Kind: exportJob, Key: f.climber}); err == nil {
+		t.Fatal("a failing query must fail the job so it retries")
+	}
+	if n := f.count(`SELECT count(*) FROM account_exports`); n != 0 {
+		t.Errorf("%d exports stored after a failure", n)
+	}
 }
 
 var fileColumn = regexp.MustCompile(`^(avatar|banner|photo|file|files|attachments?|.*_(image|logo|icon|file|photo|plan))$`)
@@ -439,11 +563,14 @@ func TestExportCoversEveryUserLink(t *testing.T) {
 		"moderation_items.author":      true,
 		"moderation_items.files":       true,
 		"moderation_items.reviewed_by": false, // moderator identity
+		"competition_scores.scored_by": false, // who typed a score in; results ship with the competition entries
 		"sessions.user":                true,
 		"user_identities.user":         true,
 		"mfa_factors.user":             true,
 		"mfa_recovery_codes.user":      false, // only hashes of one-time secrets
 		"mfa_challenges.user":          false, // sign-in challenges that expire after 10 minutes
+		"account_exports.user":         false, // the export itself, deleted after 7 days
+		"account_exports.file":         false, // the export archive
 	}
 	rows, err := f.app.DB.Query(context.Background(), `
 		SELECT DISTINCT c.table_name, c.column_name, true FROM information_schema.referential_constraints rc
@@ -526,10 +653,10 @@ func TestFollowAndUnfollowWall(t *testing.T) {
 	f.call(f.climber, http.MethodPost, "/me/followed-walls/"+wall, "", http.StatusOK, `"followed_walls":["`+wall+`"]`)
 	f.call(f.climber, http.MethodDelete, "/me/followed-walls/"+wall, "", http.StatusOK, `"followed_walls":[]`)
 
-	rows, _ := f.app.DB.Query(context.Background(), `SELECT payload FROM events WHERE kind = $1 ORDER BY id`, KindUserUpdated)
+	rows, _ := f.app.DB.Query(context.Background(), `SELECT payload FROM events WHERE kind = $1 ORDER BY id`, "user.updated")
 	var changes []string
 	for rows.Next() {
-		var payload UserUpdated
+		var payload climbers.UserUpdated
 		rows.Scan(&payload)
 		changes = append(changes, strings.Join(payload.Changed, ","))
 	}

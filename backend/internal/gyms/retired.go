@@ -2,25 +2,27 @@ package gyms
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/auth"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 )
 
 type retiredSlug struct {
-	ID        string `json:"id"`
-	Slug      string `json:"slug"`
-	GymName   string `json:"gym_name"`
-	RetiredAt string `json:"retired_at"`
+	ID        string    `json:"id"`
+	Slug      string    `json:"slug"`
+	GymName   string    `json:"gym_name"`
+	RetiredAt time.Time `json:"retired_at"`
 }
 
 func (m *module) listRetiredSlugs(w http.ResponseWriter, r *http.Request) error {
-	if _, err := requirePlatformAdmin(r.Context()); err != nil {
+	if _, err := auth.RequirePlatformAdmin(r.Context()); err != nil {
 		return err
 	}
-	rows, err := m.db.Query(r.Context(), `SELECT id, slug, gym_name, to_char(retired_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') FROM retired_slugs ORDER BY retired_at DESC, slug`)
+	rows, err := m.db.Query(r.Context(), `SELECT id, slug, gym_name, retired_at FROM retired_slugs ORDER BY retired_at DESC, slug`)
 	if err != nil {
 		return err
 	}
@@ -31,13 +33,12 @@ func (m *module) listRetiredSlugs(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 // freeRetiredSlug lets a new gym take the slug of a deleted one.
 func (m *module) freeRetiredSlug(w http.ResponseWriter, r *http.Request) error {
-	p, err := requirePlatformAdmin(r.Context())
+	p, err := auth.RequirePlatformAdmin(r.Context())
 	if err != nil {
 		return err
 	}
@@ -55,6 +56,5 @@ func (m *module) freeRetiredSlug(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }

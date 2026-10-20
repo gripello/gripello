@@ -17,8 +17,8 @@ paths:
           content:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/Climber' } }
-        '401': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /climbers/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -32,9 +32,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ClimberProfile' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/follows:
     get:
       operationId: listFollows
@@ -49,8 +49,8 @@ paths:
           content:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/Follow' } }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /follows:
     post:
       operationId: createFollow
@@ -67,9 +67,9 @@ paths:
                 followee: { type: string }
       responses:
         '201': { $ref: '#/components/responses/Follow' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /follows/{id}/accept:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -79,9 +79,9 @@ paths:
       description: Only the followee (404 for anyone else); 400 unless the request is pending.
       responses:
         '200': { $ref: '#/components/responses/Follow' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /follows/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -91,9 +91,9 @@ paths:
       description: Either party (unfollow, decline, remove a follower). Shares the follow limit of POST /follows.
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/blocks:
     get:
       operationId: listBlocks
@@ -105,7 +105,7 @@ paths:
           content:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/Block' } }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /blocks:
     post:
       operationId: createBlock
@@ -126,8 +126,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Block' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /blocks/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -137,8 +137,8 @@ paths:
       description: Own blocks only (404 otherwise).
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Id:
@@ -147,31 +147,12 @@ components:
       required: true
       schema: { type: string }
   responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
     Follow:
       description: Follow
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Follow' }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     FollowStatus:
       type: string
       enum: [pending, accepted]
@@ -199,7 +180,7 @@ components:
       required: [id, name, avatar, banner]
       properties:
         id: { type: string }
-        name: { type: string, description: full "First Last", the username when both are empty }
+        name: { type: string, description: 'full "First Last", the username when both are empty' }
         avatar: { type: string, description: 100x100 thumb URL or empty }
         banner: { type: string, description: 1600x400 thumb URL or empty }
     ClimberProfile:
@@ -221,4 +202,4 @@ components:
                   properties:
                     id: { type: string }
                     status: { $ref: '#/components/schemas/FollowStatus' }
-            sends_visible: { type: boolean, description: yourself, or an accepted follow of a climber whose ticks are not private }
+            sends_visible: { type: boolean, description: 'yourself, or an accepted follow of a climber whose ticks are not private' }

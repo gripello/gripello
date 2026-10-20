@@ -8,14 +8,15 @@ import (
 	"net/http"
 	"path"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 )
 
 func (m *module) listGyms(w http.ResponseWriter, r *http.Request) error {
@@ -24,26 +25,21 @@ func (m *module) listGyms(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 func (m *module) getGym(w http.ResponseWriter, r *http.Request) error {
 	p, _ := auth.From(r.Context())
 	gym, err := findGym(r.Context(), m.db, r.PathValue("gym"), p.UserID)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, gym)
-	return nil
+	return httpx.Respond(w, http.StatusOK, gym, err)
 }
 
 func (m *module) createGym(w http.ResponseWriter, r *http.Request) error {
-	p, err := requirePlatformAdmin(r.Context())
+	p, err := auth.RequirePlatformAdmin(r.Context())
 	if err != nil {
 		return err
 	}
-	body, files, err := readBody(w, r)
+	body, files, err := httpx.ReadBody(w, r, 4*maxFileSize+1<<20, fileTypes)
 	if err != nil {
 		return err
 	}
@@ -52,11 +48,7 @@ func (m *module) createGym(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	gym, err := m.saveGym(r.Context(), p.UserID, ids.New(), nil, changes, files, nil)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusCreated, gym)
-	return nil
+	return httpx.Respond(w, http.StatusCreated, gym, err)
 }
 
 func (m *module) updateGym(w http.ResponseWriter, r *http.Request) error {
@@ -68,10 +60,10 @@ func (m *module) updateGym(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if !canManageGym(r.Context(), m.perms, p, current.ID) {
+	if !m.perms.Has(r.Context(), current.ID, tenancy.PermManageSettings) {
 		return httpx.ErrForbidden
 	}
-	body, files, err := readBody(w, r)
+	body, files, err := httpx.ReadBody(w, r, 4*maxFileSize+1<<20, fileTypes)
 	if err != nil {
 		return err
 	}
@@ -92,15 +84,11 @@ func (m *module) updateGym(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	gym, err := m.saveGym(r.Context(), p.UserID, current.ID, current, changes, files, nil)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, gym)
-	return nil
+	return httpx.Respond(w, http.StatusOK, gym, err)
 }
 
 func (m *module) deleteGym(w http.ResponseWriter, r *http.Request) error {
-	p, err := requirePlatformAdmin(r.Context())
+	p, err := auth.RequirePlatformAdmin(r.Context())
 	if err != nil {
 		return err
 	}
@@ -119,7 +107,7 @@ func (m *module) deleteGym(w http.ResponseWriter, r *http.Request) error {
 		if dirs, err = gymBlobDirs(r.Context(), tx, gym.ID); err != nil {
 			return err
 		}
-		if err := deleteGym(r.Context(), tx, gym); err != nil {
+		if err := deleteGym(r.Context(), tx, p.UserID, gym); err != nil {
 			return err
 		}
 		return publishGym(r.Context(), tx, p.UserID, kindGymDeleted, gym.ID, gym.Active && !gym.Hidden, gymDeleted{ID: gym.ID, Slug: gym.Slug})
@@ -134,21 +122,16 @@ func (m *module) deleteGym(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) getSettings(w http.ResponseWriter, r *http.Request) error {
 	settings, err := settingsJSON(r.Context(), m.db)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, settings)
-	return nil
+	return httpx.Respond(w, http.StatusOK, settings, err)
 }
 
 func (m *module) updateSettings(w http.ResponseWriter, r *http.Request) error {
-	if _, err := requirePlatformAdmin(r.Context()); err != nil {
+	if _, err := auth.RequirePlatformAdmin(r.Context()); err != nil {
 		return err
 	}
 	var body map[string]json.RawMessage
@@ -176,8 +159,7 @@ func (m *module) updateSettings(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		slog.Warn("gyms: settings change not announced", "error", err)
 	}
-	httpx.JSON(w, http.StatusOK, settings)
-	return nil
+	return httpx.Respond(w, http.StatusOK, settings, nil)
 }
 
 func (m *module) listPermissions(w http.ResponseWriter, r *http.Request) error {
@@ -188,8 +170,7 @@ func (m *module) listPermissions(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 // alsoInTx runs inside the write transaction of a new gym, after its roles are seeded.
@@ -201,7 +182,7 @@ func (m *module) saveGym(ctx context.Context, actor, id string, current *gymStat
 			return nil, err
 		}
 		if taken {
-			return nil, httpx.NewError(http.StatusBadRequest, "This slug was used by another gym.").
+			return nil, httpx.BadRequest("This slug was used by another gym.").
 				Field("slug", "validation_slug_used", "This slug was used by another gym.")
 		}
 	}
@@ -215,7 +196,7 @@ func (m *module) saveGym(ctx context.Context, actor, id string, current *gymStat
 				return nil, err
 			}
 			if message := validateGymSlug(added); message != "" || taken {
-				return nil, httpx.NewError(http.StatusBadRequest, "Previous slugs must be valid slugs no other gym uses.").
+				return nil, httpx.BadRequest("Previous slugs must be valid slugs no other gym uses.").
 					Field("previous_slugs", "validation_invalid_previous_slugs", "Previous slugs must be valid slugs no other gym uses.")
 			}
 		}
@@ -225,6 +206,7 @@ func (m *module) saveGym(ctx context.Context, actor, id string, current *gymStat
 	var gym json.RawMessage
 	if err == nil {
 		gym, err = m.writeGym(ctx, actor, id, slug, current == nil, changes, alsoInTx)
+		err = slugConflict(err)
 	}
 	if err != nil {
 		for _, name := range uploaded {
@@ -243,6 +225,15 @@ func (m *module) saveGym(ctx context.Context, actor, id string, current *gymStat
 		}
 	}
 	return gym, nil
+}
+
+// slugConflict turns a gym_slugs collision (a concurrent write that passed slugTaken) into the slug field error.
+func slugConflict(err error) error {
+	if db.IsUnique(err, "gym_slugs_pkey") || db.IsUnique(err, "gyms_slug_idx") {
+		return httpx.BadRequest("This slug was used by another gym.").
+			Field("slug", "validation_slug_used", "This slug was used by another gym.")
+	}
+	return err
 }
 
 func (m *module) writeGym(ctx context.Context, actor, id, slug string, creating bool, changes map[string]any, alsoInTx func(pgx.Tx) error) (gym json.RawMessage, err error) {
@@ -286,36 +277,12 @@ func (m *module) writeGym(ctx context.Context, actor, id, slug string, creating 
 	return gym, err
 }
 
-// readBody accepts JSON or multipart (file parts plus the other fields as JSON in `@jsonPayload`).
-func readBody(w http.ResponseWriter, r *http.Request) (map[string]json.RawMessage, map[string]*multipart.FileHeader, error) {
-	body := map[string]json.RawMessage{}
-	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
-		return body, nil, httpx.Decode(r, &body)
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, 4*maxFileSize+1<<20)
-	if err := r.ParseMultipartForm(8 << 20); err != nil {
-		return nil, nil, httpx.NewError(http.StatusBadRequest, "Invalid multipart body.")
-	}
-	if payload := r.FormValue("@jsonPayload"); payload != "" {
-		if err := json.Unmarshal([]byte(payload), &body); err != nil {
-			return nil, nil, httpx.NewError(http.StatusBadRequest, "Invalid JSON body.")
-		}
-	}
-	files := map[string]*multipart.FileHeader{}
-	for name, headers := range r.MultipartForm.File {
-		if _, ok := fileTypes[name]; ok && len(headers) > 0 {
-			files[name] = headers[0]
-		}
-	}
-	return body, files, nil
-}
-
 func (m *module) storeFiles(ctx context.Context, gymID string, files map[string]*multipart.FileHeader, changes map[string]any) ([]string, error) {
 	if len(files) == 0 {
 		return nil, nil
 	}
 	if m.blob == nil {
-		return nil, httpx.NewError(http.StatusBadRequest, "File uploads are not available.")
+		return nil, httpx.BadRequest("File uploads are not available.")
 	}
 	var stored []string
 	for field, header := range files {

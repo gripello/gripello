@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"gripello/internal/platform/ids"
 	"gripello/internal/platform/tenancy"
 	"gripello/internal/platform/testapp"
 )
@@ -54,7 +55,7 @@ func TestRedeemOnboardingCreatesATrialGymWithAnAdminInvite(t *testing.T) {
 	}
 	var role string
 	f.scalar(`SELECT r.name FROM invites i JOIN roles r ON r.id = i.role JOIN gyms g ON g.id = i.gym
-		WHERE g.slug = 'new-gym' AND i.email = 'owner@gym.test' AND i.token_hash = $1`, &role, hashToken(res["invite"].(string)))
+		WHERE g.slug = 'new-gym' AND i.email = 'owner@gym.test' AND i.token_hash = $1`, &role, ids.Hash(res["invite"].(string)))
 	if role != "admin" {
 		t.Errorf("invite role %q, want admin", role)
 	}

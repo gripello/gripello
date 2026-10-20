@@ -55,7 +55,7 @@ func publishSessionRevoked(ctx context.Context, tx pgx.Tx, userID string, sessio
 	return nil
 }
 
-// Server-only, so every replica drops cached principals of the user even when no session row was deleted (the kept session, legacy tokens).
+// Server-only, so every replica drops cached principals of the user even when no session row was deleted (the kept session).
 func publishTokenRotated(ctx context.Context, tx pgx.Tx, userID string) error {
 	return events.Publish(ctx, tx, "user:"+userID, "user.token_rotated", map[string]string{"user": userID}, events.Audience{})
 }

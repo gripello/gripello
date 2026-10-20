@@ -43,26 +43,26 @@ func parseGymMap(raw json.RawMessage) (*gymMap, error) {
 	}
 	var floorPlan gymMap
 	if json.Unmarshal(raw, &floorPlan) != nil || !validGymMap(&floorPlan) {
-		return nil, httpx.NewError(400, "Invalid floor plan.").Field("map", "validation_invalid_map", "Invalid floor plan.")
+		return nil, httpx.BadRequest("Invalid floor plan.").Field("map", "validation_invalid_map", "Invalid floor plan.")
 	}
 	return &floorPlan, nil
 }
 
 func validateWallShape(w *wallInput, floorPlan *gymMap) error {
 	if floorPlan == nil {
-		return httpx.NewError(400, "Draw the floor plan before adding walls.")
+		return httpx.BadRequest("Draw the floor plan before adding walls.")
 	}
 	var outline, edge []mapPoint
 	if json.Unmarshal(w.Outline, &outline) != nil || !validPath(outline, mapShapeMinPoints, floorPlan) {
-		return httpx.NewError(400, "Invalid wall outline.").Field("outline", "validation_invalid_outline", "Invalid wall outline.")
+		return httpx.BadRequest("Invalid wall outline.").Field("outline", "validation_invalid_outline", "Invalid wall outline.")
 	}
 	if json.Unmarshal(w.Edge, &edge) != nil || !validPath(edge, wallEdgeMinPoints, floorPlan) || pathLength(edge) == 0 {
-		return httpx.NewError(400, "Invalid wall edge.").Field("edge", "validation_invalid_edge", "Invalid wall edge.")
+		return httpx.BadRequest("Invalid wall edge.").Field("edge", "validation_invalid_edge", "Invalid wall edge.")
 	}
 	if !isEmptyJSON(w.Label) {
 		var point mapPoint
 		if json.Unmarshal(w.Label, &point) != nil || !pointInMap(point, floorPlan) {
-			return httpx.NewError(400, "Invalid wall label.").Field("label", "validation_invalid_label", "Invalid wall label.")
+			return httpx.BadRequest("Invalid wall label.").Field("label", "validation_invalid_label", "Invalid wall label.")
 		}
 	}
 	return nil

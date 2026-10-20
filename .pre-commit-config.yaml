@@ -19,3 +19,9 @@ repos:
             entry: yarn prettier --write
             language: system
             types_or: [javascript, ts, vue, html, css, json]
+          - id: api-types
+            name: api types
+            entry: yarn api:types:check
+            language: system
+            files: ^(api/.*\.yaml|types/api/.*)$
+            pass_filenames: false

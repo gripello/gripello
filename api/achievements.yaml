@@ -22,9 +22,9 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Achievement' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Id:
@@ -32,27 +32,7 @@ components:
       in: path
       required: true
       schema: { type: string }
-  responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     Achievement:
       type: object
       required: [key, category, icon, tiers, value, current, tier, earned]
@@ -62,6 +42,6 @@ components:
         icon: { type: string }
         tiers: { type: array, items: { type: integer } }
         value: { type: integer }
-        current: { type: integer, description: Running streak (active_weeks), else 0 }
-        tier: { type: integer, description: Reached tiers, 0 = none }
+        current: { type: integer, description: 'Running streak (active_weeks), else 0' }
+        tier: { type: integer, description: 'Reached tiers, 0 = none' }
         earned: { type: array, items: { type: string, description: 'YYYY-MM-DD or empty' } }

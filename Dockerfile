@@ -20,6 +20,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends postgresql-18 \
  && rm -rf /var/lib/apt/lists/*
 COPY backend/testdata ./testdata
+COPY api /src/api
 COPY i18n/locales/*.json /src/i18n/locales/
 COPY shared /src/shared
 COPY public/.well-known/assetlinks.json /src/public/.well-known/
@@ -76,6 +77,13 @@ RUN --mount=type=cache,target=/root/.npm mkdir /out && { yarn typecheck > /out/t
 
 FROM scratch AS typecheck-results
 COPY --from=typecheck /out /
+
+FROM ui-deps AS api-types
+COPY . .
+RUN --mount=type=cache,target=/root/.npm mkdir /out && { yarn api:types:check > /out/api-types.txt 2>&1; echo $? > /out/exit-code; }; cat /out/api-types.txt
+
+FROM scratch AS api-types-results
+COPY --from=api-types /out /
 
 # Native Android app (Capacitor): debug APK on every build.
 FROM ui-deps AS android

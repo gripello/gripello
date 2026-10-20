@@ -16,8 +16,6 @@ import (
 )
 
 const (
-	TopicNotify            = "notify"
-	KindNotify             = "notify"
 	TopicOwnNotifications  = "own_notifications"
 	TopicPushSubscriptions = "push_subscriptions"
 	pushJob                = "push"
@@ -26,14 +24,6 @@ const (
 	maxRetention    = 90 * 24 * time.Hour
 	wallDigestEvery = 15 * time.Minute
 )
-
-type Notify struct {
-	Type   string         `json:"type"`
-	Users  []string       `json:"users"`
-	Gym    string         `json:"gym"`
-	Params map[string]any `json:"params"`
-	URL    string         `json:"url"`
-}
 
 type Notification struct {
 	ID      string         `json:"id"`
@@ -74,10 +64,10 @@ func notificationID(eventID int64, user string) string {
 }
 
 func (m *module) onNotify(e events.Event) {
-	if e.Kind != KindNotify {
+	if e.Kind != events.TopicNotify {
 		return
 	}
-	var n Notify
+	var n events.Notify
 	if json.Unmarshal(e.Payload, &n) != nil || n.Type == "" || len(n.Users) == 0 {
 		return
 	}
@@ -104,7 +94,7 @@ func withRetries(attempts int, backoff time.Duration, fn func() error) error {
 	return err
 }
 
-func (m *module) deliver(ctx context.Context, eventID int64, n Notify) error {
+func (m *module) deliver(ctx context.Context, eventID int64, n events.Notify) error {
 	notificationIDs := make([]string, len(n.Users))
 	for i, user := range n.Users {
 		notificationIDs[i] = notificationID(eventID, user)
@@ -232,17 +222,17 @@ func (m *module) sendAll(ctx context.Context, subscriptions []subscription, body
 func (m *module) notifyWallNewRoutes(ctx context.Context, now time.Time) error {
 	end := now.UTC().Truncate(wallDigestEvery)
 	rows, err := m.app.DB.Query(ctx, `SELECT r.wall, r.gym, w.name, g.slug, COUNT(*),
-			ARRAY(SELECT id FROM users WHERE r.wall = ANY (followed_walls) AND gym_visible(r.gym, users.id))
+			ARRAY(SELECT id FROM users WHERE followed_walls @> ARRAY[r.wall] AND gym_visible(r.gym, users.id))
 		FROM routes r JOIN walls w ON w.id = r.wall JOIN gyms g ON g.id = r.gym
 		WHERE NOT r.archived AND r.created >= $1 AND r.created < $2
 		GROUP BY r.wall, r.gym, w.name, g.slug`, end.Add(-wallDigestEvery), end)
 	if err != nil {
 		return err
 	}
-	digests, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (Notify, error) {
+	digests, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (events.Notify, error) {
 		var wall, wallName, slug string
 		var count int
-		n := Notify{Type: "wall_new_routes"}
+		n := events.Notify{Type: "wall_new_routes"}
 		err := row.Scan(&wall, &n.Gym, &wallName, &slug, &count, &n.Users)
 		n.Params = map[string]any{"wall": wallName, "count": count}
 		n.URL = "/" + slug + "/map?wall=" + wall
@@ -253,10 +243,7 @@ func (m *module) notifyWallNewRoutes(ctx context.Context, now time.Time) error {
 	}
 	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		for _, n := range digests {
-			if len(n.Users) == 0 {
-				continue
-			}
-			if err := events.PublishAs(ctx, tx, "", TopicNotify, KindNotify, n, events.Audience{}); err != nil {
+			if err := events.PublishNotify(ctx, tx, "", n); err != nil {
 				return err
 			}
 		}

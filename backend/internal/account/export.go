@@ -11,6 +11,9 @@ import (
 	"io/fs"
 	"strconv"
 	"time"
+
+	"gripello/internal/platform/apitime"
+	"gripello/internal/platform/climbers"
 )
 
 type exportFile struct {
@@ -21,7 +24,7 @@ type exportFile struct {
 // exportQueries name every table linked to the user; TestExportCoversEveryUserLink keeps this list complete.
 var exportQueries = []exportFile{
 	{"profile.json", `SELECT jsonb_build_object(
-		'user', to_jsonb(u) - 'password_hash' - 'token_key',
+		'user', ` + climbers.OwnRecordSQL + `,
 		'followed_walls', COALESCE((SELECT jsonb_agg(jsonb_build_object('wall', w.name, 'location', l.name, 'gym', g.name) ORDER BY w.name)
 			FROM walls w JOIN locations l ON l.id = w.location JOIN gyms g ON g.id = w.gym WHERE w.id = ANY (u.followed_walls)), '[]'))
 		FROM users u WHERE u.id = $1`},
@@ -44,7 +47,7 @@ var exportQueries = []exportFile{
 		  ON (rel.field = 'reporter' AND t.reporter = $1) OR (rel.field = 'assignee' AND t.assignee = $1) OR (rel.field = 'done_by' AND t.done_by = $1)
 		ORDER BY t.created`},
 	{"reports.json", `SELECT to_jsonb(r) - 'decided_by' FROM reports r JOIN users u ON u.id = $1
-		WHERE u.verified AND u.email <> '' AND lower(r.notifier_email) = lower(u.email) ORDER BY r.created`},
+		WHERE u.verified AND u.email <> '' AND lower(r.notifier_email) = u.email ORDER BY r.created`},
 	{"follows.json", `SELECT jsonb_build_object('relation', rel.label, 'climber', trim(o.firstname || ' ' || o.name), 'status', f.status, 'since', f.created)
 		FROM follows f JOIN (VALUES ('following'), ('follower')) AS rel(label)
 		  ON (rel.label = 'following' AND f.follower = $1) OR (rel.label = 'follower' AND f.followee = $1)
@@ -92,7 +95,7 @@ func (m *module) collectExport(ctx context.Context, userID string) ([]exportPart
 			return nil, 0, err
 		}
 		var pretty bytes.Buffer
-		if err := json.Indent(&pretty, data, "", "  "); err != nil {
+		if err := json.Indent(&pretty, apitime.Canonical(data), "", "  "); err != nil {
 			return nil, 0, err
 		}
 		pretty.WriteByte('\n')

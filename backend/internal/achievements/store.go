@@ -15,10 +15,10 @@ import (
 
 func loadTicks(ctx context.Context, db *pgxpool.Pool, userID string) ([]achievementTick, error) {
 	rows, err := db.Query(ctx, `
-		SELECT COALESCE(t.route, ''), t.route_name, t.type, t.attempts, to_char(t.date AT TIME ZONE 'UTC', 'YYYY-MM-DD'),
+		SELECT COALESCE(t.route, ''), t.route_name, t.type, t.attempts, t.date::text,
 			t.grade, t.grade_system, t.grade_index,
 			COALESCE(r.gym, ''), COALESCE(r.wall, ''), COALESCE(r.color, ''),
-			COALESCE(to_char(r.screw_date AT TIME ZONE 'UTC', 'YYYY-MM-DD'), ''),
+			COALESCE(r.screw_date::text, ''),
 			COALESCE(to_char(r.archived_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), ''),
 			COALESCE(r.permanent, false)
 		FROM ticks t LEFT JOIN routes r ON r.id = t.route
@@ -76,8 +76,7 @@ func seasonTopTenSQL(seasonFilter string) string {
 	return `
 		WITH s AS (
 			SELECT id, gym, window_from, window_to FROM (
-				SELECT id, gym, date_trunc('day', starts_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS window_from,
-					(date_trunc('day', ends_at AT TIME ZONE 'UTC') + interval '1 day') AT TIME ZONE 'UTC' AS window_to
+				SELECT id, gym, starts_at AS window_from, ends_at + 1 AS window_to
 				FROM seasons) s
 			WHERE ` + seasonFilter + `
 		), sends AS (
@@ -98,7 +97,7 @@ func seasonTopTenSQL(seasonFilter string) string {
 
 // finishedSeasonTopTens returns the top-ten climbers of seasons that ended within the last 48 hours.
 func finishedSeasonTopTens(ctx context.Context, db *pgxpool.Pool, now time.Time) ([]string, error) {
-	rows, err := db.Query(ctx, `SELECT DISTINCT "user" FROM (`+seasonTopTenSQL(`s.window_to <= $1 AND s.window_to >= $1 - interval '48 hours'`)+`) placed`, now)
+	rows, err := db.Query(ctx, `SELECT DISTINCT "user" FROM (`+seasonTopTenSQL(`s.window_to <= $1::timestamptz AND s.window_to >= $1::timestamptz - interval '48 hours'`)+`) placed`, now)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +127,7 @@ type badge struct {
 }
 
 func storedBadges(ctx context.Context, db *pgxpool.Pool, userID string) ([]badge, error) {
-	rows, err := db.Query(ctx, `SELECT key, tier, COALESCE(to_char(earned_on AT TIME ZONE 'UTC', 'YYYY-MM-DD'), '') FROM user_badges WHERE "user" = $1`, userID)
+	rows, err := db.Query(ctx, `SELECT key, tier, COALESCE(earned_on::text, '') FROM user_badges WHERE "user" = $1`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -137,14 +136,6 @@ func storedBadges(ctx context.Context, db *pgxpool.Pool, userID string) ([]badge
 		err := row.Scan(&b.Key, &b.Tier, &b.Earned)
 		return b, err
 	})
-}
-
-type Notify struct {
-	Type   string         `json:"type"`
-	Users  []string       `json:"users"`
-	Gym    string         `json:"gym"`
-	Params map[string]any `json:"params"`
-	URL    string         `json:"url"`
 }
 
 // award stores newly reached tiers and notifies. The first evaluation is silent when it backfills tiers reached before today.
@@ -174,7 +165,7 @@ func award(ctx context.Context, db *pgxpool.Pool, userID string, now time.Time) 
 				if threshold := definition.Tiers[tier-1]; threshold <= len(current.Days) {
 					earnedOn = current.Days[threshold-1]
 				}
-				tag, err := tx.Exec(ctx, `INSERT INTO user_badges (id, "user", key, tier, earned_on) VALUES ($1, $2, $3, $4, ($5::text::date + time '12:00') AT TIME ZONE 'UTC')
+				tag, err := tx.Exec(ctx, `INSERT INTO user_badges (id, "user", key, tier, earned_on) VALUES ($1, $2, $3, $4, $5::date)
 					ON CONFLICT ("user", key, tier) DO NOTHING`, ids.New(), userID, definition.Key, tier, earnedOn)
 				if err != nil {
 					return err
@@ -190,12 +181,12 @@ func award(ctx context.Context, db *pgxpool.Pool, userID string, now time.Time) 
 		if len(earned) == 0 {
 			return nil
 		}
-		return events.Publish(ctx, tx, "notify", "notify", Notify{
+		return events.PublishNotify(ctx, tx, "", events.Notify{
 			Type:   "achievement_earned",
 			Users:  []string{userID},
 			Params: map[string]any{"count": len(earned), "key": earned[len(earned)-1].Key},
 			URL:    "/climber?id=" + userID + "#achievements",
-		}, events.Audience{})
+		})
 	})
 	return earned, err
 }

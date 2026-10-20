@@ -1,6 +1,6 @@
 import type { AuditAction, AuditLogRecord } from '../../types/models'
 import { useApi } from './client'
-import type { RouteList } from './client'
+import type { Page } from './client'
 
 export interface AuditQuery {
     action?: AuditAction | null
@@ -20,8 +20,8 @@ function isoDate(value?: Date | string) {
 function listAudit(
     path: string,
     query: AuditQuery & { gym?: string | null },
-): Promise<RouteList<AuditLogRecord>> {
-    return useApi()<RouteList<AuditLogRecord>>(path, {
+): Promise<Page<AuditLogRecord>> {
+    return useApi()<Page<AuditLogRecord>>(path, {
         query: {
             gym: query.gym || undefined,
             action: query.action || undefined,

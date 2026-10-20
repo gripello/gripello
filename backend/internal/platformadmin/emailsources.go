@@ -303,6 +303,5 @@ func (m *module) listEmailSourceDomains(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "page": page, "limit": emailDomainsPage, "total": total})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items, "page": page, "limit": emailDomainsPage, "total": total}, nil)
 }

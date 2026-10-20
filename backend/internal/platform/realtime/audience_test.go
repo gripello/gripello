@@ -136,6 +136,23 @@ func TestGymTopicsPassTheGymGate(t *testing.T) {
 	}
 }
 
+func TestPlatformAdminsPassGymPermsOnlyForGrantsOrMemberships(t *testing.T) {
+	operator := &auth.Principal{UserID: "op", PlatformAdmin: true}
+	h := &Hub{perms: fakePerms{}}
+	if !h.audience(events.Audience{GymPerm: "g1:manage_settings"})(operator) || !h.audience(events.Audience{GymPerm: "g1:manage_users"})(operator) {
+		t.Fatal("platform admins hold manage_settings and manage_users in every gym")
+	}
+	for _, perm := range []string{"manage_tasks", "manage_comments", "manage_routes", "view_audit_log"} {
+		if h.audience(events.Audience{GymPerm: "g1:" + perm})(operator) {
+			t.Errorf("a platform admin without a membership received a %s event", perm)
+		}
+	}
+	h = &Hub{perms: fakePerms{permissionHolders: []string{"op"}}}
+	if !h.audience(events.Audience{GymPerm: "g1:manage_tasks"})(operator) {
+		t.Fatal("a platform admin who is staff of the gym keeps the staff events")
+	}
+}
+
 func TestPlatformAdminsAudienceFollowsThePrincipal(t *testing.T) {
 	h := &Hub{perms: fakePerms{}}
 	aud := h.audience(events.Audience{PlatformAdmins: true})

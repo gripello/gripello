@@ -8304,6 +8304,7 @@ __metadata:
     "@types/qrcode": "npm:1.5.6"
     "@vitejs/plugin-vue": "npm:6.0.10"
     "@vue/test-utils": "npm:2.5.1"
+    "@vueuse/core": "npm:14.4.0"
     cap-widget: "npm:^0.1.58"
     capjs-core: "npm:^0.1.5"
     concurrently: "npm:10.0.6"

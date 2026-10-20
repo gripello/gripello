@@ -54,6 +54,7 @@ type App struct {
 	Verified      *auth.VerifiedTokens
 	Logs          *logbuf.Buffer
 	Metrics       *metrics.Recorder
+	Routes        []string
 }
 
 type Module interface {
@@ -64,6 +65,7 @@ type Module interface {
 func (a *App) Handle(pattern string, h http.Handler) {
 	method, path, _ := cutSpace(pattern)
 	a.Mux.Handle(method+" /api"+path, h)
+	a.Routes = append(a.Routes, method+" "+path)
 }
 
 func (a *App) Worker(kind string, w jobs.Worker) { a.Workers[kind] = w }

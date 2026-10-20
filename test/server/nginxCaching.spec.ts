@@ -48,9 +48,16 @@ describe('nginx caching', () => {
             /map \$arg_view \$standings_public_view \{\s+default 0;\s+public 1;/,
         )
         expect(nginx).toContain(
-            'map "$standings_public_view|$http_authorization$cookie_pb_auth$cookie_auth" $standings_personal {',
+            'map "$standings_public_view|$http_authorization$cookie_gripello_auth" $standings_personal {',
         )
         expect(nginx).toMatch(/default 1;\s+"~\^1\\\|" 0;\s+"0\|" 0;/)
+    })
+
+    it('serves robots.txt from disk and lets crawlers keep it for an hour', () => {
+        expect(block('= /robots.txt')).toContain('try_files $uri @nuxt')
+        expect(block('= /robots.txt')).toContain(
+            'add_header Cache-Control "public, max-age=3600"',
+        )
     })
 
     it('caches the unhashed app icons for a day', () => {

@@ -8,14 +8,25 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/fs"
+	"math"
 	neturl "net/url"
 	"strconv"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+
+	"gripello/internal/platform/httpx"
 )
+
+// Querier is what a pool and a transaction share.
+type Querier interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
 
 //go:embed migrations/*.sql
 var migrations embed.FS
@@ -56,6 +67,10 @@ func Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 
 // Migrate applies pending migrations; the advisory lock lets every replica call it at startup.
 func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
+	return MigrateTo(ctx, pool, math.MaxInt64)
+}
+
+func MigrateTo(ctx context.Context, pool *pgxpool.Pool, version int64) error {
 	sqlDB := stdlib.OpenDBFromPool(pool)
 	defer sqlDB.Close()
 	return withLock(ctx, sqlDB, func() error {
@@ -64,7 +79,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		if err := goose.SetDialect("postgres"); err != nil {
 			return err
 		}
-		return goose.UpContext(ctx, sqlDB, "migrations")
+		return goose.UpToContext(ctx, sqlDB, "migrations", version)
 	})
 }
 
@@ -99,4 +114,29 @@ func CommandEnv(url string) ([]string, error) {
 		env = append(env, "PGSSLMODE=disable")
 	}
 	return env, nil
+}
+
+// List scans every row into T by column name.
+func List[T any](ctx context.Context, q Querier, sql string, args ...any) ([]T, error) {
+	rows, err := q.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByName[T])
+}
+
+// First answers httpx.ErrNotFound for an empty result.
+func First[T any](items []T, err error) (T, error) {
+	var zero T
+	if err != nil {
+		return zero, err
+	}
+	if len(items) == 0 {
+		return zero, httpx.ErrNotFound
+	}
+	return items[0], nil
+}
+
+func One[T any](ctx context.Context, q Querier, sql string, args ...any) (T, error) {
+	return First(List[T](ctx, q, sql, args...))
 }

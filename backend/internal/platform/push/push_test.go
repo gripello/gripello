@@ -68,6 +68,7 @@ func TestOnlyPushServiceEndpointsAreAllowed(t *testing.T) {
 		"https://evilpush.apple.com/x",
 		"https://fcm.googleapis.com:8443/x",
 		"not a url",
+		"https://fcm.googleapis.com/fcm/send/" + strings.Repeat("a", MaxEndpointLength),
 	} {
 		if AllowedEndpoint(endpoint) {
 			t.Errorf("accepted %s", endpoint)

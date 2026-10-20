@@ -19,7 +19,7 @@ func (m *module) listLogs(w http.ResponseWriter, r *http.Request) error {
 	min := slog.LevelInfo
 	if raw := r.URL.Query().Get("level"); raw != "" {
 		if err := min.UnmarshalText([]byte(raw)); err != nil {
-			return httpx.NewError(http.StatusBadRequest, "Unknown level.")
+			return httpx.BadRequest("Unknown level.")
 		}
 	}
 	items, err := logbuf.Recent(r.Context(), m.app.DB, min, 2000)
@@ -34,8 +34,7 @@ func (m *module) listLogs(w http.ResponseWriter, r *http.Request) error {
 	if m.app.Logs != nil {
 		level = m.app.Logs.Level.Level().String()
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"level": level, "items": items, "replicas": servers})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"level": level, "items": items, "replicas": servers}, nil)
 }
 
 // setLogLevel stores the level; every replica applies it when the platform_config event arrives.
@@ -48,7 +47,7 @@ func (m *module) setLogLevel(w http.ResponseWriter, r *http.Request) error {
 	}
 	name := body.Level
 	if !slices.Contains([]string{"debug", "info", "warn", "error"}, name) {
-		return httpx.NewError(http.StatusBadRequest, "Unknown level.").Field("level", "validation_invalid_value", "Use debug, info, warn or error.")
+		return httpx.BadRequest("Unknown level.").Field("level", "validation_invalid_value", "Use debug, info, warn or error.")
 	}
 	ctx := r.Context()
 	p, _ := auth.From(ctx)
@@ -61,6 +60,5 @@ func (m *module) setLogLevel(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]string{"level": name})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]string{"level": name}, nil)
 }

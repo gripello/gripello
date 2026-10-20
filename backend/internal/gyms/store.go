@@ -10,18 +10,15 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
+	"gripello/internal/platform/climbers"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 )
 
 const settingsID = "platformsetting"
-
-type queryer interface {
-	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
 
 type gymState struct {
 	ID            string
@@ -49,9 +46,11 @@ var seededGymRoles = []seededRole{
 		name:        "routesetter",
 		description: "Can manage routes, comments, and inventory",
 		color:       "#26A69A",
-		permissions: []string{"manage_routes", "view_analytics", "manage_comments", "run_inventory", "manage_tasks", "manage_competitions", "judge_competitions"},
+		permissions: []string{tenancy.PermManageRoutes, tenancy.PermViewAnalytics, tenancy.PermManageComments, tenancy.PermRunInventory, tenancy.PermManageTasks, tenancy.PermManageCompetitions, tenancy.PermJudgeCompetitions},
 	},
 }
+
+const deleteGymWalls = "DELETE FROM walls WHERE gym = $1"
 
 // Competitions, then routes locked first like entry and route writes do, then children first where a foreign key restricts the delete (entries → categories, walls/routes/competitions → locations, memberships → roles).
 var gymDeletionOrder = []string{
@@ -65,7 +64,7 @@ var gymDeletionOrder = []string{
 	"DELETE FROM beta_videos WHERE gym = $1",
 	"DELETE FROM ratings WHERE gym = $1",
 	"DELETE FROM routes WHERE gym = $1",
-	"DELETE FROM walls WHERE gym = $1",
+	deleteGymWalls,
 	"DELETE FROM locations WHERE gym = $1",
 	"DELETE FROM invites WHERE gym = $1",
 	"DELETE FROM memberships WHERE gym = $1",
@@ -73,7 +72,7 @@ var gymDeletionOrder = []string{
 	"DELETE FROM gyms WHERE id = $1",
 }
 
-func loadGym(ctx context.Context, q queryer, id string) (*gymState, error) {
+func loadGym(ctx context.Context, q db.Querier, id string) (*gymState, error) {
 	g := gymState{Files: map[string]string{}}
 	var logo, icon, sign, cover string
 	err := q.QueryRow(ctx, `SELECT id, slug, name, active, hidden, features, previous_slugs, trial_ends_at, page_logo, page_icon, sign_image, cover_image
@@ -92,20 +91,20 @@ func loadGym(ctx context.Context, q queryer, id string) (*gymState, error) {
 	return &g, nil
 }
 
-// findGym resolves a slug, a previous slug (answer carries redirect_to) or an id the viewer may see.
-func findGym(ctx context.Context, q queryer, key, viewer string) (json.RawMessage, error) {
+// findGym resolves an id, a slug or a previous slug (answer carries redirect_to) the viewer may see; an id wins.
+func findGym(ctx context.Context, q db.Querier, key, viewer string) (json.RawMessage, error) {
 	var gym json.RawMessage
 	err := q.QueryRow(ctx, `SELECT `+gymForViewer+` || CASE WHEN slug <> $1 AND id <> $1
 			THEN jsonb_build_object('redirect_to', slug) ELSE '{}'::jsonb END
-		FROM gyms g WHERE (slug = $1 OR id = $1 OR previous_slugs ? $1) AND gym_visible(id, $2)
-		ORDER BY (slug = $1) DESC, (id = $1) DESC LIMIT 1`, key, viewer).Scan(&gym)
+		FROM gyms g WHERE (id = $1 OR id = (SELECT gym FROM gym_slugs WHERE slug = $1)) AND gym_visible(id, $2)
+		ORDER BY (id = $1) DESC LIMIT 1`, key, viewer).Scan(&gym)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
 	return gym, err
 }
 
-func listGyms(ctx context.Context, q queryer, includeAll bool, viewer string) (json.RawMessage, error) {
+func listGyms(ctx context.Context, q db.Querier, includeAll bool, viewer string) (json.RawMessage, error) {
 	var items json.RawMessage
 	err := q.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(`+gymForViewer+` - 'privacy_doc' - 'tv_settings' ORDER BY g.name), '[]') FROM gyms g
 		WHERE $1 OR (active AND gym_visible(id, $2))`, includeAll, viewer).Scan(&items)
@@ -116,22 +115,22 @@ func listGyms(ctx context.Context, q queryer, includeAll bool, viewer string) (j
 const gymForViewer = `(to_jsonb(g) - 'trial_notice' - CASE WHEN EXISTS (SELECT 1 FROM memberships WHERE gym = g.id AND "user" = $2)
 	OR EXISTS (SELECT 1 FROM users WHERE id = $2 AND platform_admin) THEN '' ELSE 'trial_ends_at' END)`
 
-func gymJSON(ctx context.Context, q queryer, id string) (json.RawMessage, error) {
+func gymJSON(ctx context.Context, q db.Querier, id string) (json.RawMessage, error) {
 	var out json.RawMessage
 	err := q.QueryRow(ctx, `SELECT to_jsonb(g) - 'trial_notice' FROM gyms g WHERE id = $1`, id).Scan(&out)
 	return out, err
 }
 
-func publicGymJSON(ctx context.Context, q queryer, id string) (json.RawMessage, error) {
+func publicGymJSON(ctx context.Context, q db.Querier, id string) (json.RawMessage, error) {
 	var out json.RawMessage
 	err := q.QueryRow(ctx, `SELECT to_jsonb(g) - 'trial_notice' - 'trial_ends_at' FROM gyms g WHERE id = $1`, id).Scan(&out)
 	return out, err
 }
 
-func slugTaken(ctx context.Context, q queryer, gymID, slug string) (bool, error) {
+func slugTaken(ctx context.Context, q db.Querier, gymID, slug string) (bool, error) {
 	var taken bool
-	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM gyms WHERE id <> $1 AND (slug = $2 OR previous_slugs ? $2))
-		OR EXISTS (SELECT 1 FROM retired_slugs WHERE slug = $2)`, gymID, slug).Scan(&taken)
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM gym_slugs WHERE slug = $2 AND gym IS DISTINCT FROM $1)
+		OR EXISTS (SELECT 1 FROM gyms WHERE id = $2 AND id <> $1)`, gymID, slug).Scan(&taken)
 	return taken, err
 }
 
@@ -153,13 +152,13 @@ func Create(ctx context.Context, db interface {
 	return id, err
 }
 
-func insertGym(ctx context.Context, q queryer, id, slug, name string) error {
+func insertGym(ctx context.Context, q db.Querier, id, slug, name string) error {
 	_, err := q.Exec(ctx, `INSERT INTO gyms (id, slug, name) VALUES ($1, $2, $3)`, id, slug, name)
 	return err
 }
 
 // updateRow writes changes whose keys come from a field whitelist, never from the request directly.
-func updateRow(ctx context.Context, q queryer, table, id string, changes map[string]any) error {
+func updateRow(ctx context.Context, q db.Querier, table, id string, changes map[string]any) error {
 	if len(changes) == 0 {
 		return nil
 	}
@@ -178,7 +177,7 @@ func updateRow(ctx context.Context, q queryer, table, id string, changes map[str
 	return err
 }
 
-func seedRoles(ctx context.Context, q queryer, gymID string) error {
+func seedRoles(ctx context.Context, q db.Querier, gymID string) error {
 	for _, role := range seededGymRoles {
 		_, err := q.Exec(ctx, `INSERT INTO roles (id, gym, name, description, color, permissions)
 			VALUES ($1, $2, $3, $4, $5, ARRAY(SELECT name FROM permissions WHERE $6::text[] IS NULL OR name = ANY ($6) ORDER BY name))
@@ -203,9 +202,22 @@ func gymBlobDirs(ctx context.Context, q pgx.Tx, gymID string) ([]string, error) 
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
-func deleteGym(ctx context.Context, q queryer, gym *gymState) error {
+func deleteGym(ctx context.Context, tx pgx.Tx, actor string, gym *gymState) error {
 	for _, statement := range gymDeletionOrder {
-		if _, err := q.Exec(ctx, statement, gym.ID); err != nil {
+		if statement == deleteGymWalls {
+			rows, err := tx.Query(ctx, `SELECT id FROM walls WHERE gym = $1`, gym.ID)
+			if err != nil {
+				return err
+			}
+			walls, err := pgx.CollectRows(rows, pgx.RowTo[string])
+			if err != nil {
+				return err
+			}
+			if err := climbers.UnfollowWalls(ctx, tx, actor, walls); err != nil {
+				return err
+			}
+		}
+		if _, err := tx.Exec(ctx, statement, gym.ID); err != nil {
 			return err
 		}
 	}
@@ -213,7 +225,7 @@ func deleteGym(ctx context.Context, q queryer, gym *gymState) error {
 		if slug == "" {
 			continue
 		}
-		if _, err := q.Exec(ctx, `INSERT INTO retired_slugs (id, slug, gym_name) VALUES ($1, $2, $3) ON CONFLICT (slug) DO NOTHING`,
+		if _, err := tx.Exec(ctx, `INSERT INTO retired_slugs (id, slug, gym_name) VALUES ($1, $2, $3) ON CONFLICT (slug) DO NOTHING`,
 			ids.New(), slug, gym.Name); err != nil {
 			return err
 		}
@@ -221,7 +233,7 @@ func deleteGym(ctx context.Context, q queryer, gym *gymState) error {
 	return nil
 }
 
-func settingsJSON(ctx context.Context, q queryer) (json.RawMessage, error) {
+func settingsJSON(ctx context.Context, q db.Querier) (json.RawMessage, error) {
 	if _, err := q.Exec(ctx, `INSERT INTO settings (id) VALUES ($1) ON CONFLICT DO NOTHING`, settingsID); err != nil {
 		return nil, err
 	}
@@ -230,7 +242,7 @@ func settingsJSON(ctx context.Context, q queryer) (json.RawMessage, error) {
 	return out, err
 }
 
-func listPermissions(ctx context.Context, q queryer) (json.RawMessage, error) {
+func listPermissions(ctx context.Context, q db.Querier) (json.RawMessage, error) {
 	var items json.RawMessage
 	err := q.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(jsonb_build_object('id', id, 'name', name, 'label', label) ORDER BY name), '[]')
 		FROM permissions`).Scan(&items)

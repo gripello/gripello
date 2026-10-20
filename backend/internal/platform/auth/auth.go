@@ -200,11 +200,8 @@ func TokenFrom(r *http.Request) string {
 	if h := r.Header.Get("Authorization"); h != "" {
 		return strings.TrimSpace(strings.TrimPrefix(h, "Bearer "))
 	}
-	// pb_auth is read until every client has rewritten it to gripello_auth; drop it in the release after.
-	for _, name := range []string{"gripello_auth", "pb_auth"} {
-		if c, err := r.Cookie(name); err == nil {
-			return cookieToken(c.Value)
-		}
+	if c, err := r.Cookie("gripello_auth"); err == nil {
+		return cookieToken(c.Value)
 	}
 	return ""
 }
@@ -228,9 +225,21 @@ func From(ctx context.Context) (Principal, bool) {
 	return p, ok
 }
 
+// UserID is the signed-in caller's id, empty for guests.
+func UserID(ctx context.Context) string {
+	p, _ := From(ctx)
+	return p.UserID
+}
+
 // WithPrincipal is for tests and internal calls.
 func WithPrincipal(ctx context.Context, p Principal) context.Context {
 	return context.WithValue(ctx, ctxKey{}, p)
+}
+
+// StaleBearer reports a request whose bearer token no longer resolves (revoked session, rotated key): the client still believes it is signed in.
+func StaleBearer(r *http.Request) bool {
+	_, ok := From(r.Context())
+	return !ok && r.Header.Get("Authorization") != ""
 }
 
 // Require returns the signed-in principal or ErrUnauthorized (handlers map it to 401 via httpx).
@@ -256,4 +265,28 @@ func RequireRecentReauth(ctx context.Context, pool *pgxpool.Pool, p Principal) e
 		return ErrReauthRequired
 	}
 	return nil
+}
+
+// RequireCallerReauth is RequireRecentReauth for the principal in ctx.
+func RequireCallerReauth(ctx context.Context, pool *pgxpool.Pool) error {
+	p, _ := From(ctx)
+	return RequireRecentReauth(ctx, pool, p)
+}
+
+// RequirePlatformAdmin answers 401 for guests and 403 for everyone but platform admins.
+func RequirePlatformAdmin(ctx context.Context) (Principal, error) {
+	p, err := Require(ctx)
+	if err == nil && !p.PlatformAdmin {
+		err = httpx.ErrForbidden
+	}
+	return p, err
+}
+
+func PlatformAdminsOnly(next httpx.Handler) httpx.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		if _, err := RequirePlatformAdmin(r.Context()); err != nil {
+			return err
+		}
+		return next(w, r)
+	}
 }

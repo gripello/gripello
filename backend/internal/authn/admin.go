@@ -7,21 +7,19 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
-	"gripello/internal/platform/events"
+	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/lockout"
 	"gripello/internal/platform/mail"
+	pw "gripello/internal/platform/password"
 )
 
 // adminTarget loads the account a platform admin acts on; their own account and other admins are off limits.
 func (m *module) adminTarget(r *http.Request, reauth bool) (auth.Principal, account, error) {
 	ctx := r.Context()
-	p, err := auth.Require(ctx)
+	p, err := auth.RequirePlatformAdmin(ctx)
 	if err != nil {
 		return p, account{}, err
-	}
-	if !p.PlatformAdmin {
-		return p, account{}, httpx.ErrForbidden
 	}
 	id := r.PathValue("id")
 	if id == p.UserID {
@@ -52,12 +50,11 @@ func (m *module) adminChange(ctx context.Context, p auth.Principal, userID, chan
 		if err := mutate(tx); err != nil {
 			return err
 		}
-		record, err := userRecord(ctx, tx, userID)
+		record, err := climbers.OwnRecord(ctx, tx, userID)
 		if err != nil {
 			return err
 		}
-		payload := map[string]any{"record": record, "changed": []string{changed}}
-		return events.PublishAs(ctx, tx, p.UserID, "user:"+userID, "user.updated", payload, events.Audience{Users: []string{userID}})
+		return climbers.PublishUserUpdated(ctx, tx, p.UserID, userID, record, []string{changed})
 	})
 }
 
@@ -82,8 +79,7 @@ func (m *module) adminResetMFA(w http.ResponseWriter, r *http.Request) error {
 	if user.Email != "" {
 		m.sendAuthMail(ctx, user, user.Email, mail.Content{Key: "mfaResetByAdmin", Name: user.Firstname})
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) adminRevokeSessions(w http.ResponseWriter, r *http.Request) error {
@@ -97,8 +93,7 @@ func (m *module) adminRevokeSessions(w http.ResponseWriter, r *http.Request) err
 	}); err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) adminClearLockout(w http.ResponseWriter, r *http.Request) error {
@@ -112,8 +107,7 @@ func (m *module) adminClearLockout(w http.ResponseWriter, r *http.Request) error
 	}); err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) adminSetPassword(w http.ResponseWriter, r *http.Request) error {
@@ -128,12 +122,12 @@ func (m *module) adminSetPassword(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	invalid := httpx.NewError(http.StatusBadRequest, "Failed to validate.")
+	invalid := httpx.BadRequest("Failed to validate.")
 	validatePassword(invalid, "password", body.Password, body.PasswordConfirm)
 	if len(invalid.Data) > 0 {
 		return invalid
 	}
-	hash, err := hashPassword(body.Password)
+	hash, err := pw.Hash(body.Password)
 	if err != nil {
 		return err
 	}
@@ -153,6 +147,5 @@ func (m *module) adminSetPassword(w http.ResponseWriter, r *http.Request) error 
 	if user.Email != "" {
 		m.sendAuthMail(ctx, user, user.Email, mail.Content{Key: "passwordSetByAdmin", Name: user.Firstname})
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }

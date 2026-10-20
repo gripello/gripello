@@ -10,16 +10,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/text/unicode/norm"
+
+	"gripello/internal/platform/db"
+	"gripello/internal/platform/mail"
 )
 
 const (
 	CodeEmailBlocked  = "validation_email_blocked"
 	CodeNameProtected = "validation_name_protected"
 )
-
-type Querier interface {
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
 
 var lookalikes = strings.NewReplacer("0", "o", "1", "i", "3", "e", "4", "a", "5", "s", "7", "t", "@", "a", "$", "s", "!", "i", "|", "l")
 
@@ -35,11 +34,18 @@ func Normalize(s string) string {
 	return b.String()
 }
 
-var emailPatternChars = regexp.MustCompile(`^[a-z0-9.*@+_-]+$`)
+var emailPatternChars = regexp.MustCompile(`^[\p{L}\p{M}\p{N}.*@+_-]+$`)
+
+// foldEmail matches addresses and entries in one form: lowercase NFC with the domain in punycode.
+func foldEmail(s string) string {
+	s = strings.ToLower(norm.NFC.String(strings.TrimSpace(s)))
+	at := strings.LastIndexByte(s, '@')
+	return s[:at+1] + mail.ASCIIDomain(s[at+1:])
+}
 
 // NormalizeEmailPattern lowercases a blocklist entry; ok is false for an entry that can never match a valid address.
 func NormalizeEmailPattern(pattern string) (string, bool) {
-	pattern = strings.ToLower(strings.TrimSpace(pattern))
+	pattern = foldEmail(pattern)
 	if pattern == "" || len(pattern) > 254 || !emailPatternChars.MatchString(pattern) || strings.Count(pattern, "@") > 1 ||
 		strings.Trim(pattern, "*@.") == "" {
 		return pattern, false
@@ -55,9 +61,9 @@ func MatchEmail(patterns []string, email string) bool {
 
 // EmailMatch returns the first entry matching the address, or "".
 func EmailMatch(patterns []string, email string) string {
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = foldEmail(email)
 	for _, entry := range patterns {
-		pattern := entry
+		pattern := foldEmail(entry)
 		if !strings.Contains(pattern, "@") {
 			pattern = "*@" + pattern
 		}
@@ -93,7 +99,7 @@ func NameMatch(terms, gyms []string, name string) string {
 }
 
 // EmailBlocked checks the manual list and the domains synced from enabled sources; the allowlist overrides both.
-func EmailBlocked(ctx context.Context, q Querier, email string) (bool, error) {
+func EmailBlocked(ctx context.Context, q db.Querier, email string) (bool, error) {
 	var blocked, allowed []string
 	var disposable bool
 	if err := q.QueryRow(ctx, `SELECT c.blocked_emails, c.allowed_emails, EXISTS (SELECT 1 FROM disposable_domains d
@@ -105,7 +111,7 @@ func EmailBlocked(ctx context.Context, q Querier, email string) (bool, error) {
 }
 
 // DisposableSource returns the enabled source listing the address's domain or a parent domain, or "".
-func DisposableSource(ctx context.Context, q Querier, email string) (string, error) {
+func DisposableSource(ctx context.Context, q db.Querier, email string) (string, error) {
 	var source string
 	err := q.QueryRow(ctx, `SELECT s.id FROM disposable_domains d JOIN email_blocklist_sources s ON s.id = d.source
 		WHERE s.enabled AND d.domain = ANY($1) ORDER BY s.id LIMIT 1`, DomainAndParents(email)).Scan(&source)
@@ -117,7 +123,7 @@ func DisposableSource(ctx context.Context, q Querier, email string) (string, err
 
 // DomainAndParents lists "a.b.example.com", "b.example.com", "example.com" for an address at a.b.example.com.
 func DomainAndParents(email string) []string {
-	_, domain, _ := strings.Cut(strings.ToLower(strings.TrimSpace(email)), "@")
+	_, domain, _ := strings.Cut(foldEmail(email), "@")
 	domains := []string{}
 	for strings.Contains(domain, ".") {
 		domains = append(domains, domain)
@@ -128,7 +134,7 @@ func DomainAndParents(email string) []string {
 
 // NameProtected checks a whole name (first and last name together, so "North" + "Walls" meets a gym "North Walls").
 // ponytail: reads the lists and every gym per call; cache them per replica if name edits ever get hot.
-func NameProtected(ctx context.Context, q Querier, name string) (bool, error) {
+func NameProtected(ctx context.Context, q db.Querier, name string) (bool, error) {
 	var terms, gyms []string
 	if err := q.QueryRow(ctx, `SELECT protected_names, ARRAY(SELECT name FROM gyms) FROM platform_config`).
 		Scan(&terms, &gyms); err != nil {

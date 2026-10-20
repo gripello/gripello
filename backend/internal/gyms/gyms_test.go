@@ -219,6 +219,15 @@ func TestIsValidTvSettings(t *testing.T) {
 	}
 }
 
+func TestDatabaseAcceptsExactlyTheKnownAmenities(t *testing.T) {
+	f := newFixture(t)
+	gym := f.createGym("amenities", "Amenities", true)
+	f.exec(`UPDATE gyms SET amenities = $2 WHERE id = $1`, gym, gymAmenities)
+	if _, err := f.app.DB.Exec(context.Background(), `UPDATE gyms SET amenities = '{sauna,pool}' WHERE id = $1`, gym); err == nil {
+		t.Error("the database accepted an unknown amenity")
+	}
+}
+
 func TestAmenitiesMirrorTheRegistry(t *testing.T) {
 	raw, err := os.ReadFile("../../../shared/utils/gymAmenities.ts")
 	if err != nil {
@@ -471,6 +480,7 @@ func TestDeleteGymCascadesAndRetiresSlugs(t *testing.T) {
 	location, wall, route, competition, category := ids.New(), ids.New(), ids.New(), ids.New(), ids.New()
 	f.exec(`INSERT INTO locations (id, gym, name) VALUES ($1, $2, 'Hall')`, location, gym)
 	f.exec(`INSERT INTO walls (id, gym, location, name, outline, edge) VALUES ($1, $2, $3, 'Left', '[]', '[]')`, wall, gym, location)
+	f.exec(`UPDATE users SET followed_walls = ARRAY[$2, 'elsewhere'] WHERE id = $1`, climber, wall)
 	f.exec(`INSERT INTO routes (id, gym, name, grade, location, wall) VALUES ($1, $2, 'Crimp', '6a', $3, $4)`, route, gym, location, wall)
 	f.exec(`INSERT INTO ratings (id, gym, route_id, rating) VALUES ($1, $2, $3, 4)`, ids.New(), gym, route)
 	f.exec(`INSERT INTO ticks (id, "user", route, type, attempts, date, route_name) VALUES ($1, $2, $3, 'top', 1, now(), 'Crimp')`, ids.New(), climber, route)
@@ -492,6 +502,16 @@ func TestDeleteGymCascadesAndRetiresSlugs(t *testing.T) {
 	}
 
 	f.call(f.operator, "DELETE", "/gyms/"+gym, "", http.StatusNoContent)
+	var followed string
+	f.scalar(`SELECT array_to_string(followed_walls, ',') FROM users WHERE id = $1`, &followed, climber)
+	if followed != "elsewhere" {
+		t.Errorf("followed walls after the gym delete = %q", followed)
+	}
+	var updates int
+	f.scalar(`SELECT count(*) FROM events WHERE topic = 'user:' || $1 AND kind = 'user.updated' AND payload->'changed' = '["followed_walls"]'`, &updates, climber)
+	if updates != 1 {
+		t.Errorf("%d user.updated events for the wall follower", updates)
+	}
 
 	for _, key := range files {
 		if file, err := f.app.Blob.Open(context.Background(), key); err == nil {
@@ -646,4 +666,16 @@ func TestShortNameIsLimitedForPushTitles(t *testing.T) {
 
 	f.call(admin, "PATCH", "/gyms/"+gym, `{"short_name":"`+strings.Repeat("x", 31)+`"}`, http.StatusBadRequest, "short_name")
 	f.call(admin, "PATCH", "/gyms/"+gym, `{"short_name":"Gym A"}`, http.StatusOK, `"short_name":"Gym A"`)
+}
+
+func TestSlugsNeverShadowAnotherGymsID(t *testing.T) {
+	f := newFixture(t)
+	gym := f.createGym("north", "North", true)
+	other := f.createGym("south", "South", true)
+	f.call(f.operator, "POST", "/gyms", `{"slug":"`+gym+`","name":"Other"}`, http.StatusBadRequest, "validation_slug_used")
+	f.call(f.operator, "PATCH", "/gyms/"+other, `{"slug":"`+gym+`"}`, http.StatusBadRequest, "validation_slug_used")
+	f.call(f.operator, "PATCH", "/gyms/"+other, `{"previous_slugs":["`+gym+`"]}`, http.StatusBadRequest, "validation_invalid_previous_slugs")
+
+	f.exec(`UPDATE gyms SET slug = $1 WHERE id = $2`, gym, other)
+	f.call("", "GET", "/gyms/"+gym, "", http.StatusOK, `"id":"`+gym+`"`, `"slug":"north"`)
 }

@@ -1,14 +1,10 @@
 package ratings
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
-	"gripello/internal/platform/auth"
 	"gripello/internal/platform/events"
 )
 
@@ -50,28 +46,7 @@ type BetaPending struct {
 	FileKey string `json:"file_key,omitempty"`
 }
 
-var derivedFields = map[string]bool{"updated": true, "author": true, "mine": true, "expand": true}
-
-func changedFields(before, after any) []string {
-	var old, updated map[string]json.RawMessage
-	b, _ := json.Marshal(before)
-	a, _ := json.Marshal(after)
-	json.Unmarshal(b, &old)
-	json.Unmarshal(a, &updated)
-	changed := []string{}
-	for field, value := range updated {
-		if !derivedFields[field] && !bytes.Equal(old[field], value) {
-			changed = append(changed, field)
-		}
-	}
-	slices.Sort(changed)
-	return changed
-}
-
-func actorOf(ctx context.Context) string {
-	p, _ := auth.From(ctx)
-	return p.UserID
-}
+var derivedFields = []string{"updated", "author", "mine", "expand"}
 
 var kindSuffix = map[string]string{"create": "created", "update": "updated", "delete": "deleted"}
 

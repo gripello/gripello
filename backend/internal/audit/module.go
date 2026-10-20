@@ -176,7 +176,7 @@ func (m *module) write(ctx context.Context, e events.Event, en entry) error {
 		tag, err := tx.Exec(ctx, `INSERT INTO audit_logs (id, created, updated, actor, actor_label, action, collection_name, record_id, changed_fields, ip, gym)
 			VALUES ($1, $2, $2, (SELECT id FROM users WHERE id = $3), $4, $5, $6, $7, $8, $9, (SELECT id FROM gyms WHERE id = $10))
 			ON CONFLICT (id) DO NOTHING`,
-			id, e.Created, en.Actor, truncate(en.ActorLabel, 255), en.Action, en.Collection, en.RecordID, changed, en.IP, en.Gym)
+			id, e.Created, en.Actor, httpx.Truncate(en.ActorLabel, 255), en.Action, en.Collection, en.RecordID, changed, en.IP, en.Gym)
 		if err != nil || tag.RowsAffected() == 0 {
 			return err
 		}
@@ -211,13 +211,6 @@ func publishCreated(ctx context.Context, tx pgx.Tx, id string) error {
 
 func actsOnOwnRecord(en entry) bool {
 	return en.Collection == "ticks" || (en.Collection == "users" && en.RecordID == en.Actor)
-}
-
-func truncate(value string, limit int) string {
-	if runes := []rune(value); len(runes) > limit {
-		return string(runes[:limit])
-	}
-	return value
 }
 
 func (m *module) prune(ctx context.Context) error {

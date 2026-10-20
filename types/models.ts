@@ -1,305 +1,120 @@
-import type { AUDIT_ACTIONS } from '../app/utils/audit'
-import type { NotificationPrefs } from '../app/utils/notificationPrefs'
-import type { REPORT_REASONS, REPORT_STATUSES } from '../app/utils/reports'
-import type { ROUTE_TYPES } from '../app/utils/routes'
+import type { AUDIT_ACTIONS } from '../shared/utils/audit'
+import type { REPORT_REASONS, REPORT_STATUSES } from '../shared/utils/reports'
+import type { ROUTE_TYPES } from '../shared/utils/routeTypes'
 import type {
     DEFECT_CATEGORIES,
     TASK_KINDS,
     TASK_PRIORITIES,
     TASK_STATUSES,
-} from '../app/utils/tasks'
-import type { RichTextDoc } from '../shared/utils/privacyDoc'
-import type { TickType } from '../shared/utils/ticks'
-import type {
-    ClimbStyle,
-    CompetitionDiscipline,
-    ScoringFormat,
-    ScoringSettings,
-} from '../shared/utils/competitionScoring'
-import type { GymMap, MapPoint } from '../shared/utils/mapGeometry'
+} from '../shared/utils/tasks'
+import type { MapPoint } from '../shared/utils/mapGeometry'
 import type { BoulderBandSetting } from '../shared/utils/gradeReference'
-import type { GymFeatures } from '../shared/utils/featureFlags'
-import type { GymAmenity } from '../shared/utils/gymAmenities'
-import type { GymOpeningHours } from '../shared/utils/openingHours'
-import type { TvSettings } from '../shared/utils/tvSettings'
+import type { components as TicksApi } from './api/ticks'
+import type { components as RatingsApi } from './api/ratings'
+import type { components as SocialApi } from './api/social'
+import type { components as NotificationsApi } from './api/notifications'
+import type { components as AuditApi } from './api/audit'
+import type { components as AuthnApi } from './api/authn'
+import type { components as TasksApi } from './api/tasks'
+import type { components as ModerationApi } from './api/moderation'
+import type { components as MembersApi } from './api/members'
+import type { components as GymsApi } from './api/gyms'
+import type { components as CompetitionsApi } from './api/competitions'
+import type { components as RoutesApi } from './api/routes'
+import type { operations as PlatformApi } from './api/platform'
 
 export type RecordId = string
 
-export interface BaseRecord {
-    id: RecordId
-    created?: string
-    updated?: string
-    expand?: Record<string, unknown>
-}
-
 export type RouteType = (typeof ROUTE_TYPES)[number] | string
 
-type JsonArray<T> = T[] | readonly T[]
-type JsonValue<T> = T | JsonArray<T>
+export type RouteRecord = RoutesApi['schemas']['Route']
 
-export interface RouteRecord extends BaseRecord {
-    gym?: RecordId
-    name: string
-    grade: string
-    grade_system?: string | null
-    grade_index?: number | null
-    anchor_point?: number | null
-    location?: RecordId | null
-    type?: RouteType | null
-    comment?: string | null
-    creator?: JsonValue<string> | null
-    archived?: boolean
-    archived_at?: string | null
-    permanent?: boolean
-    removal_planned_for?: string | null
-    color?: string | null
-    screw_date?: string | null
-    wall?: RecordId | null
-    wall_position?: number | null
-}
+export type LocationRecord = RoutesApi['schemas']['Location']
 
-export interface LocationRecord extends BaseRecord {
-    gym?: RecordId
-    name: string
-    map?: GymMap | null
-    map_trace?: string | null
-}
+export type WallRecord = Omit<
+    RoutesApi['schemas']['Wall'],
+    'outline' | 'edge' | 'label'
+> & { outline: MapPoint[]; edge: MapPoint[]; label: MapPoint | null }
 
-export interface WallRecord extends BaseRecord {
-    gym?: RecordId
-    location: RecordId
-    name: string
-    outline: MapPoint[]
-    edge: MapPoint[]
-    label?: MapPoint | null
-    sort?: number | null
-    anchor_from?: number | null
-    anchor_to?: number | null
-}
-
-export interface RouteListItem extends Omit<RouteRecord, 'creator'> {
-    creator: string[]
+export type RouteListItem = RouteRecord & {
     has_ratings?: boolean
-    average_rating?: number | null
     score?: number | null
 }
 
-export interface RatingRecord extends BaseRecord {
-    gym?: RecordId
-    route_id?: RecordId | null
-    rating?: number | null
-    grade?: string | null
-    grade_system?: string | null
-    grade_index?: number | null
-    comment?: string | null
-    author?: { id: string; name: string; avatar: string }
-    mine?: boolean
-}
+export type RatingRecord = RatingsApi['schemas']['Rating']
 
-export interface TickRecord extends BaseRecord {
-    user: RecordId
-    route?: RecordId | null
-    route_name?: string
-    type: TickType
-    attempts: number
-    date: string
-    note?: string | null
-    grade?: string | null
-    grade_system?: string | null
-    grade_index?: number | null
-}
+type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
 
-export interface RouteComment extends RatingRecord {
-    comment: string
-}
+// Offline ticks are shown before the server has copied the route's snapshot into them.
+export type TickRecord = Optional<
+    TicksApi['schemas']['Tick'],
+    'grade' | 'grade_system' | 'grade_index' | 'route_name'
+>
 
-export interface PermissionRecord extends BaseRecord {
-    name: string
-    label: string
-}
+export type PermissionRecord = GymsApi['schemas']['Permission']
 
-export interface RoleRecord extends BaseRecord {
-    gym?: RecordId
-    name: string
-    description?: string | null
-    color?: string | null
-    permissions?: RecordId[] | null
-}
+export type RoleRecord = MembersApi['schemas']['Role']
 
-export interface UserRecord extends BaseRecord {
-    username: string
-    email?: string
-    emailVisibility?: boolean
-    verified?: boolean
-    firstname?: string | null
-    lastname?: string | null
-    name?: string | null
-    avatar?: string | null
-    banner?: string | null
-    language?: string | null
-    platform_admin?: boolean
-    notification_prefs?: NotificationPrefs | null
-    followed_walls?: string[]
-    leaderboard_hidden?: boolean
-    follow_policy?: FollowPolicy | ''
-    reviews_anonymous?: boolean
-    ticks_private?: boolean
-    suspended_until?: string
-    suspension_reason?: string
-}
+export type UserRecord = AuthnApi['schemas']['User']
 
 export type FollowPolicy = 'approve' | 'open' | 'closed'
 export type FollowStatus = 'pending' | 'accepted'
 
-export interface FollowRecord extends BaseRecord {
-    follower: RecordId
-    followee: RecordId
-    status: FollowStatus
-}
+export type FollowRecord = SocialApi['schemas']['Follow']
 
 export type FriendTickRecord = Omit<TickRecord, 'note'>
 
-export interface SeasonRecord extends BaseRecord {
-    gym: RecordId
-    name: string
-    starts_at: string
-    ends_at: string
-}
+export type SeasonRecord = TicksApi['schemas']['Season']
 
-export interface BetaVideoRecord extends BaseRecord {
-    gym: RecordId
-    route: RecordId
-    user: RecordId
-    url?: string
-    file?: string
-    author?: { id: string; name: string; avatar: string }
-}
+export type BetaVideoRecord = RatingsApi['schemas']['BetaVideo']
 
 export type ModerationContentType =
-    'rating' | 'beta_video' | 'profile' | 'competition_entry' | 'task' | 'route'
-export type ModerationState = 'unreviewed' | 'approved' | 'pending' | 'hidden'
-export type ModerationAction = 'approve' | 'reject' | 'hide' | 'restore'
+    ModerationApi['schemas']['ModerationContentType']
+export type ModerationState = ModerationApi['schemas']['ModerationState']
+export type ModerationAction = ModerationApi['schemas']['ModerationAction']
 
-export interface ModerationItemRecord extends BaseRecord {
-    gym: RecordId | ''
-    content_type: ModerationContentType
-    content_id: RecordId
-    author: RecordId | ''
-    snapshot: Record<string, unknown> | null
-    files: string[]
-    state: ModerationState
-    hidden_by: 'gym' | 'platform' | ''
-    reports_count: number
-    reason: string
-    reviewed_by: RecordId | ''
-    reviewed_at: string
-    context?: ModerationContext
+export type ModerationItemRecord = ModerationApi['schemas']['ModerationItem']
+
+export type ModerationContext = ModerationApi['schemas']['ModerationContext']
+
+export type BlockRecord = SocialApi['schemas']['Block']
+
+export type LegalFields = Partial<
+    Pick<
+        GymRecord,
+        | 'contact_email'
+        | 'imprint_url'
+        | 'privacy_url'
+        | 'legal_address'
+        | 'legal_phone'
+        | 'legal_register'
+        | 'legal_vat_id'
+        | 'legal_editorial'
+        | 'legal_representatives'
+    >
+> & { privacy_doc?: GymsApi['schemas']['PrivacyDoc'] }
+
+export type SettingsRecord = Omit<
+    GymsApi['schemas']['Settings'],
+    'legal_representatives'
+> & { legal_representatives: LegalPerson[] | null }
+
+export type GymRecord = Omit<
+    GymsApi['schemas']['Gym'],
+    'boulder_bands' | 'legal_representatives'
+> & {
+    boulder_bands: BoulderBandSetting[] | null
+    legal_representatives: LegalPerson[] | null
 }
 
-export interface ModerationContext {
-    author?: { id: RecordId; name: string; avatar: string }
-    history?: { items: number; hidden: number }
-    route?: { id: RecordId; name: string; grade: string; color: string }
-    competition?: string
-    gym_name?: string
-    reports: {
-        id: RecordId
-        reason: string
-        explanation: string
-        notifier_name: string
-        status: ReportStatus
-        created: string
-    }[]
-}
+export type GymStatsRecord =
+    PlatformApi['platformStats']['responses'][200]['content']['application/json']['gyms'][number]
 
-export interface BlockRecord extends BaseRecord {
-    blocker: RecordId
-    blocked: RecordId
-}
+export type InviteRecord = MembersApi['schemas']['Invite']
 
-export interface LegalFields {
-    contact_email?: string | null
-    imprint_url?: string | null
-    privacy_url?: string | null
-    legal_address?: string | null
-    legal_phone?: string | null
-    legal_register?: string | null
-    legal_vat_id?: string | null
-    legal_editorial?: string | null
-    legal_representatives?: LegalPerson[] | null
-    privacy_doc?: RichTextDoc | null
-}
+export type InviteDetails = MembersApi['schemas']['InvitePreview']
 
-export interface SettingsRecord extends BaseRecord, LegalFields {
-    legal_name?: string | null
-    audit_retention_days?: number | null
-    allow_registration?: boolean
-}
-
-export interface GymRecord extends BaseRecord, LegalFields {
-    slug: string
-    previous_slugs?: string[] | null
-    name: string
-    unit_name?: string | null
-    short_name?: string | null
-    active?: boolean
-    hidden?: boolean
-    trial_ends_at?: string | null
-    page_logo?: string | null
-    page_icon?: string | null
-    sign_image?: string | null
-    route_grade_system?: string | null
-    boulder_grade_system?: string | null
-    boulder_bands?: BoulderBandSetting[] | null
-    language?: string | null
-    features?: GymFeatures | null
-    premoderate_betas?: boolean
-    cover_image?: string | null
-    description?: string | null
-    address?: string | null
-    latitude?: number | null
-    longitude?: number | null
-    website_url?: string | null
-    opening_hours?: GymOpeningHours | null
-    hours_note?: string | null
-    amenities?: GymAmenity[] | null
-    tv_settings?: TvSettings | null
-}
-
-export interface GymStatsRecord extends BaseRecord {
-    members: number
-    routes: number
-}
-
-export interface InviteRecord extends BaseRecord {
-    gym: RecordId
-    role: RecordId
-    role_name: string
-    email: string
-    firstname: string
-    name: string
-    expires_at: string
-}
-
-export interface InviteDetails {
-    email: string
-    firstname: string
-    name: string
-    gym: { name: string; slug: string }
-    role: string
-    hasAccount: boolean
-}
-
-export interface MembershipRecord extends BaseRecord {
-    user: RecordId
-    gym: RecordId
-    role: RecordId
-    expand?: {
-        user?: UserRecord
-        gym?: GymRecord
-        role?: RoleRecord & { expand?: { permissions?: PermissionRecord[] } }
-    }
-}
+export type MembershipRecord = MembersApi['schemas']['Membership']
 
 export interface LegalPerson {
     name: string
@@ -311,170 +126,40 @@ export type ReportReason = (typeof REPORT_REASONS)[number]
 export type ReportStatus = (typeof REPORT_STATUSES)[number]
 export type ReportDecision = 'content_removed' | 'content_kept'
 
-export interface ReportRecord extends BaseRecord {
-    gym?: RecordId
-    content_type: ReportContentType
-    content_id: RecordId
-    content_url: string
-    content_snapshot?: string | null
-    reason: ReportReason
-    explanation: string
-    notifier_name: string
-    notifier_email: string
-    language?: string | null
-    good_faith: boolean
-    status: ReportStatus
-    decision?: ReportDecision | '' | null
-    decision_reason?: string | null
-    decided_at?: string | null
-    decided_by?: RecordId | null
-    receipt_sent?: boolean
-    notified_at?: string | null
-}
+export type ReportRecord = ModerationApi['schemas']['Report']
 
 export type TaskKind = (typeof TASK_KINDS)[number]
 export type DefectCategory = (typeof DEFECT_CATEGORIES)[number]
 export type TaskPriorityName = (typeof TASK_PRIORITIES)[number]
 export type TaskStatus = (typeof TASK_STATUSES)[number]
 
-export interface TaskRecord extends BaseRecord {
-    gym?: RecordId
-    kind: TaskKind
-    title?: string | null
-    category?: DefectCategory | '' | null
-    priority: number
-    status: TaskStatus
-    route?: RecordId | null
-    wall?: RecordId | null
-    location?: RecordId | null
-    description?: string | null
-    photo?: string | null
-    reporter?: RecordId | null
-    assignee?: RecordId | null
-    route_type?: RouteType | '' | null
-    grade?: string | null
-    due_date?: string | null
-    resolution_note?: string | null
-    done_at?: string | null
-    done_by?: RecordId | null
-}
+export type TaskRecord = TasksApi['schemas']['Task']
 
 export type CompetitionStatus = 'draft' | 'open' | 'closed' | 'published'
 export type CompetitionEntryStatus =
     'registered' | 'checked_in' | 'disqualified' | 'withdrawn'
 
-export interface CompetitionRecord extends BaseRecord {
-    gym?: RecordId
-    name: string
-    description?: string | null
-    location: RecordId
-    status: CompetitionStatus
-    discipline: CompetitionDiscipline
-    registration_url?: string | null
-    requires_payment?: boolean
-    starts_at: string
-    ends_at: string
-    scoring_format: ScoringFormat
-    scoring?: Omit<ScoringSettings, 'format'> | null
-    live_ranking: boolean
-    freeze_minutes?: number | null
-}
+export type CompetitionRecord = CompetitionsApi['schemas']['Competition']
 
-export interface CompetitionCategoryRecord extends BaseRecord {
-    competition: RecordId
-    name: string
-    gender?: 'female' | 'male' | '' | null
-    min_birth_year?: number | null
-    max_birth_year?: number | null
-    sort?: number | null
-}
+export type CompetitionCategoryRecord = CompetitionsApi['schemas']['Category']
 
-export interface CompetitionRouteRecord extends BaseRecord {
-    competition: RecordId
-    route: RecordId
-    number: number
-    points?: number | null
-    hold_count?: number | null
-    zone: boolean
-    voided: boolean
-}
+export type CompetitionRouteRecord = CompetitionsApi['schemas']['CompRoute']
 
-export interface CompetitionEntryRecord extends BaseRecord {
-    competition: RecordId
-    user: RecordId
-    category: RecordId
-    bib: number
-    display_name: string
-    birth_year: number
-    hidden: boolean
-    paid: boolean
-    guardian_consent: boolean
-    status: CompetitionEntryStatus
-}
+export type CompetitionEntryRecord = CompetitionsApi['schemas']['Entry']
 
-export interface CompetitionScoreRecord extends BaseRecord {
-    competition: RecordId
-    entry: RecordId
-    comp_route: RecordId
-    attempts: number
-    zone_attempt?: number | null
-    top_attempt?: number | null
-    style?: ClimbStyle | '' | null
-    height?: number | null
-    height_plus?: boolean | null
-}
+export type CompetitionScoreRecord = CompetitionsApi['schemas']['Score']
 
-export interface OpenRouteDefectRecord extends BaseRecord {
-    gym?: RecordId
-    route: RecordId
-    category: DefectCategory
-}
+export type OpenRouteDefectRecord = TasksApi['schemas']['OpenDefect']
 
-export interface TaskAssigneeRecord extends BaseRecord {
-    user: RecordId
-    gym: RecordId
-    name: string
-}
+export type TaskAssigneeRecord = TasksApi['schemas']['TaskAssignee']
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number]
 
-export interface AuditLogRecord extends BaseRecord {
-    gym?: RecordId
-    actor?: RecordId | null
-    actor_label?: string | null
-    action: AuditAction
-    collection_name?: string | null
-    record_id?: string | null
-    changed_fields?: string[] | null
-    ip?: string | null
-    expand?: { gym?: Pick<GymRecord, 'id' | 'slug'> }
-}
+export type AuditLogRecord = AuditApi['schemas']['AuditEntry']
 
-export interface NotificationRecord extends BaseRecord {
-    user: RecordId
-    type: string
-    params?: Record<string, unknown> | null
-    url?: string | null
-    read: boolean
-}
+export type NotificationRecord = NotificationsApi['schemas']['Notification']
 
-export interface SessionRecord extends BaseRecord {
-    user: string
-    method: string
-    user_agent: string
-    ip: string
-    last_seen: string
-    created: string
-}
+export type SessionRecord = AuthnApi['schemas']['Session']
 
-export interface PushSubscriptionRecord extends BaseRecord {
-    user: RecordId
-    kind?: 'webpush' | 'fcm'
-    endpoint: string
-    device?: string | null
-}
-
-export interface RouteScoreRecord extends RouteRecord {
-    average_rating?: number | null
-    ratings_count?: number
-}
+export type PushSubscriptionRecord =
+    NotificationsApi['schemas']['PushSubscription']

@@ -13,6 +13,7 @@
 !yarn.lock
 !nuxt.config.ts
 !postcss
+!api
 !app
 !server
 !shared

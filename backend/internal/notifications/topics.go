@@ -1,5 +1,7 @@
 package notifications
 
+import "gripello/internal/platform/tenancy"
+
 const pushChannel = "push"
 
 // Not a role permission: the client grants it to platform admins when listing topics.
@@ -19,10 +21,11 @@ var topics = []topic{
 	{Key: "competition_results", Types: []string{"competition_published", "competition_entry_added"}},
 	{Key: "social", Types: []string{"follow_requested", "follow_accepted", "new_follower"}},
 	{Key: "achievements", Types: []string{"achievement_earned"}},
-	{Key: "tasks", Permission: "manage_tasks", Types: []string{"task_defect_filed", "task_wish_filed", "task_assigned"}},
-	{Key: "reports", Permission: "manage_reports", Types: []string{"report_filed", "report_decided_kept", "report_decided_removed"}},
+	{Key: "account", Types: []string{"account_export_ready", "account_export_failed"}},
+	{Key: "tasks", Permission: tenancy.PermManageTasks, Types: []string{"task_defect_filed", "task_wish_filed", "task_assigned"}},
+	{Key: "reports", Permission: tenancy.PermManageReports, Types: []string{"report_filed", "report_decided_kept", "report_decided_removed"}},
 	{Key: "content", Types: []string{"content_hidden", "beta_approved", "beta_rejected"}},
-	{Key: "moderation", Permission: "manage_comments", Types: []string{"moderation_pending"}},
+	{Key: "moderation", Permission: tenancy.PermManageComments, Types: []string{"moderation_pending"}},
 	{Key: "platform_reports", Permission: platformAdminTopicPermission, Types: []string{"report_filed_platform"}},
 	{Key: "platform_issues", Permission: platformAdminTopicPermission, Types: []string{"platform_issue"}},
 }

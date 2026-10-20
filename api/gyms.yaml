@@ -25,6 +25,7 @@ paths:
                   items:
                     type: array
                     items: { $ref: '#/components/schemas/Gym' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createGym
       tags: [gyms]
@@ -45,10 +46,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Gym' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '413': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '413': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}:
     parameters:
       - name: gym
@@ -71,7 +72,7 @@ paths:
                   - type: object
                     properties:
                       redirect_to: { type: string, description: Current slug }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     patch:
       operationId: updateGym
       tags: [gyms]
@@ -89,20 +90,20 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Gym' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '413': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '413': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteGym
       tags: [gyms]
       description: Platform admins only. Deletes the gym's content, then retires its slug and previous slugs.
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/retired-slugs:
     get:
       operationId: listRetiredSlugs
@@ -119,7 +120,7 @@ paths:
                   items:
                     type: array
                     items: { type: object, properties: { id: { type: string }, slug: { type: string }, gym_name: { type: string }, retired_at: { type: string, format: date-time } } }
-        '403': { $ref: '#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/retired-slugs/{id}:
     delete:
       operationId: freeRetiredSlug
@@ -129,8 +130,9 @@ paths:
         - { name: id, in: path, required: true, schema: { type: string } }
       responses:
         '204': { description: Freed }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/gym-onboardings:
     get:
       operationId: listGymOnboardings
@@ -147,7 +149,7 @@ paths:
                   items:
                     type: array
                     items: { type: object, properties: { id: { type: string }, email: { type: string }, created: { type: string, format: date-time }, expires_at: { type: string, format: date-time } } }
-        '403': { $ref: '#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createGymOnboarding
       tags: [gyms]
@@ -159,8 +161,9 @@ paths:
             schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
       responses:
         '202': { description: Sent }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/gym-onboardings/{id}:
     delete:
       operationId: deleteGymOnboarding
@@ -169,7 +172,8 @@ paths:
         - { name: id, in: path, required: true, schema: { type: string } }
       responses:
         '204': { description: Revoked }
-        '403': { $ref: '#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gym-onboardings/{token}:
     get:
       operationId: showGymOnboarding
@@ -182,7 +186,7 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { email: { type: string } } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gym-onboardings/{token}/redeem:
     post:
       operationId: redeemGymOnboarding
@@ -201,8 +205,8 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { gym: { type: string }, invite: { type: string, description: 'Token for /invites/{token}/accept' } } }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /settings:
     get:
       operationId: getSettings
@@ -228,9 +232,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Settings' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /permissions:
     get:
       operationId: listPermissions
@@ -247,29 +251,9 @@ paths:
                   items:
                     type: array
                     items: { $ref: '#/components/schemas/Permission' }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
-  responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     OpeningHours:
       type: [object, 'null']
       description: '{mon…sun, holiday: [["07:00","23:00"]]}; closes < opens runs past midnight'
@@ -333,11 +317,19 @@ components:
         text: { type: string }
         attrs:
           type: object
+          additionalProperties: {}
           properties:
             id:
               type: string
               enum: [controller, contact, storage, rights, scope, serverLogs, accounts, privacySettings, logbook, friends, profiles, leaderboards, ratings, betaVideos, achievements, competitions, defects, reports, notifications, push, dataExport, deletion, auditLog, captcha, map, thirdParties]
-        marks: { type: array, items: { type: object } }
+        marks:
+          type: array
+          items:
+            type: object
+            required: [type]
+            properties:
+              type: { type: string }
+              attrs: { type: object, additionalProperties: {} }
         content: { type: array, items: { $ref: '#/components/schemas/PrivacyDocNode' } }
     Amenity:
       type: string
@@ -354,7 +346,7 @@ components:
         short_name: { type: string, maxLength: 30 }
         active: { type: boolean }
         hidden: { type: boolean }
-        trial_ends_at: { type: string, format: date-time, nullable: true, description: "Set while the gym is on trial; staff are read-only once it passed. Platform admins only." }
+        trial_ends_at: { type: [string, 'null'], format: date-time, description: "Set while the gym is on trial; staff are read-only once it passed. Platform admins only." }
         contact_email: { type: string, format: email }
         route_grade_system: { type: string, maxLength: 50 }
         boulder_grade_system: { type: string, maxLength: 50 }
@@ -409,15 +401,50 @@ components:
       allOf:
         - $ref: '#/components/schemas/GymFields'
         - type: object
-          required: [id, created, updated, slug, name, active, hidden, features, previous_slugs, amenities]
+          description: 'trial_ends_at only for members and platform admins; GET /gyms leaves out privacy_doc and tv_settings'
+          required: [id, created, updated, slug, name, unit_name, short_name, active, hidden, page_logo, page_icon, sign_image, cover_image, contact_email, route_grade_system, boulder_grade_system, boulder_bands, legal_address, legal_phone, legal_register, legal_vat_id, legal_editorial, legal_representatives, imprint_url, privacy_url, previous_slugs, language, features, premoderate_betas, description, address, latitude, longitude, website_url, opening_hours, hours_note, amenities]
           properties:
             id: { type: string }
             created: { type: string, format: date-time }
             updated: { type: string, format: date-time }
+            slug: { type: string }
+            name: { type: string }
+            unit_name: { type: string }
+            short_name: { type: string }
+            active: { type: boolean }
+            hidden: { type: boolean }
             page_logo: { type: string, description: 'File name under /files/gyms/{id}/' }
             page_icon: { type: string }
             sign_image: { type: string }
             cover_image: { type: string }
+            contact_email: { type: string }
+            route_grade_system: { type: string }
+            boulder_grade_system: { type: string }
+            boulder_bands: {}
+            legal_address: { type: string }
+            legal_phone: { type: string }
+            legal_register: { type: string }
+            legal_vat_id: { type: string }
+            legal_editorial: { type: string }
+            legal_representatives: {}
+            imprint_url: { type: string }
+            privacy_url: { type: string }
+            previous_slugs: { type: array, items: { type: string } }
+            language: { $ref: '#/components/schemas/Language' }
+            features:
+              type: object
+              additionalProperties: { type: boolean }
+            premoderate_betas: { type: boolean }
+            description: { type: string }
+            address: { type: string }
+            latitude: { type: number }
+            longitude: { type: number }
+            website_url: { type: string }
+            opening_hours: { $ref: '#/components/schemas/OpeningHours' }
+            hours_note: { type: string }
+            amenities:
+              type: array
+              items: { $ref: '#/components/schemas/Amenity' }
     SettingsFields:
       type: object
       properties:
@@ -440,12 +467,25 @@ components:
       allOf:
         - $ref: '#/components/schemas/SettingsFields'
         - type: object
-          required: [id, created, updated]
+          required: [id, created, updated, imprint_url, privacy_url, contact_email, audit_retention_days, legal_name, legal_address, legal_phone, legal_register, legal_vat_id, legal_editorial, legal_representatives, allow_registration, floor_plan, privacy_doc]
           properties:
             id: { type: string }
             created: { type: string, format: date-time }
             updated: { type: string, format: date-time }
+            imprint_url: { type: string }
+            privacy_url: { type: string }
+            contact_email: { type: string }
+            audit_retention_days: { type: integer }
+            legal_name: { type: string }
+            legal_address: { type: string }
+            legal_phone: { type: string }
+            legal_register: { type: string }
+            legal_vat_id: { type: string }
+            legal_editorial: { type: string }
+            legal_representatives: {}
+            allow_registration: { type: boolean }
             floor_plan: { type: string }
+            privacy_doc: { $ref: '#/components/schemas/PrivacyDoc' }
     Permission:
       type: object
       required: [id, name, label]

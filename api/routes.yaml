@@ -32,7 +32,7 @@ paths:
           schema: { type: string }
         - name: since
           in: query
-          description: created at or after
+          description: created at or after; RFC 3339 timestamp or YYYY-MM-DD (start of that UTC day)
           schema: { type: string }
         - name: ids
           in: query
@@ -62,8 +62,8 @@ paths:
                   page: { type: integer }
                   limit: { type: integer }
                   total: { type: integer }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createRoute
       tags: [routes]
@@ -78,10 +78,10 @@ paths:
                 - required: [name, grade]
       responses:
         '201': { $ref: '#/components/responses/Route' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/routes/colors:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -99,7 +99,7 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { type: string } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/analytics:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -120,9 +120,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Analytics' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/routes/archive:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -142,9 +142,10 @@ paths:
                 archived: { type: boolean, default: true }
       responses:
         '200': { $ref: '#/components/responses/RouteList' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/routes/removal:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -172,10 +173,10 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/Route' } }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/routes/reset-stats:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -207,11 +208,11 @@ paths:
                         last_tick: { $ref: '#/components/schemas/OptionalDateTime' }
                         average_rating: { type: [number, 'null'] }
                         ratings: { type: integer }
-                        grade_deviation: { type: [number, 'null'], description: voted minus set grade index, from 3 votes }
+                        grade_deviation: { type: [number, 'null'], description: 'voted minus set grade index, from 3 votes' }
                         open_defects: { type: integer }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/map/placements:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -238,10 +239,10 @@ paths:
                       wall_position: { type: [number, 'null'], description: 'null or omitted keeps the current position' }
       responses:
         '200': { $ref: '#/components/responses/RouteList' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /routes:
     get:
       operationId: listRoutesById
@@ -252,7 +253,7 @@ paths:
         - $ref: '#/components/parameters/Include'
       responses:
         '200': { $ref: '#/components/responses/RouteList' }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /walls:
     get:
       operationId: listWallsById
@@ -278,7 +279,7 @@ paths:
                           required: [location_name]
                           properties:
                             location_name: { type: string }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /routes/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -290,8 +291,8 @@ paths:
         - $ref: '#/components/parameters/Include'
       responses:
         '200': { $ref: '#/components/responses/Route' }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     patch:
       operationId: updateRoute
       tags: [routes]
@@ -305,10 +306,10 @@ paths:
             schema: { $ref: '#/components/schemas/RouteInput' }
       responses:
         '200': { $ref: '#/components/responses/Route' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteRoute
       tags: [routes]
@@ -319,10 +320,10 @@ paths:
         - { name: force, in: query, schema: { type: boolean } }
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '409': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /routes/{id}/archive:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -339,9 +340,10 @@ paths:
                 archived: { type: boolean, default: true }
       responses:
         '200': { $ref: '#/components/responses/Route' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/locations:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -359,7 +361,7 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/Location' } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createLocation
       tags: [locations]
@@ -374,10 +376,10 @@ paths:
                 - required: [name]
       responses:
         '201': { $ref: '#/components/responses/Location' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /locations/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -392,20 +394,20 @@ paths:
             schema: { $ref: '#/components/schemas/LocationInput' }
       responses:
         '200': { $ref: '#/components/responses/Location' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteLocation
       tags: [locations]
       description: manage_settings. 400 while any route (archived too) or wall uses it.
       responses:
         '204': { description: Deleted }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /locations/{id}/floor-plan:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -442,10 +444,10 @@ paths:
                 properties:
                   location: { $ref: '#/components/schemas/Location' }
                   walls: { type: array, items: { $ref: '#/components/schemas/Wall' } }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /locations/{id}/map-trace:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -464,19 +466,19 @@ paths:
                 map_trace: { type: string, format: binary, description: 'JPEG, PNG, WebP or SVG, max 10 MB' }
       responses:
         '200': { $ref: '#/components/responses/Location' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteMapTrace
       tags: [locations]
       description: manage_settings.
       responses:
         '200': { $ref: '#/components/responses/Location' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/walls:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -496,7 +498,7 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/Wall' } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createWall
       tags: [walls]
@@ -511,10 +513,10 @@ paths:
                 - required: [location, name, outline, edge]
       responses:
         '201': { $ref: '#/components/responses/Wall' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /walls/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -529,20 +531,20 @@ paths:
             schema: { $ref: '#/components/schemas/WallInput' }
       responses:
         '200': { $ref: '#/components/responses/Wall' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteWall
       tags: [walls]
       description: manage_settings. 400 while active routes hang on it; archived routes lose the wall.
       responses:
         '204': { description: Deleted }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Gym:
@@ -568,11 +570,6 @@ components:
       description: 'comma-separated: location, wall, gym; filled into `expand`'
       schema: { type: string }
   responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
     Route:
       description: Route
       content:
@@ -598,20 +595,6 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Wall' }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     DateTime:
       type: string
       format: date-time
@@ -654,7 +637,7 @@ components:
         creator: { type: array, maxItems: 20, items: { type: string, maxLength: 100 } }
         archived: { type: boolean }
         color: { type: string, maxLength: 50 }
-        screw_date: { type: [string, 'null'], description: 'date or date-time; "" or null clears' }
+        screw_date: { type: [string, 'null'], format: date, description: 'YYYY-MM-DD; "" or null clears' }
         anchor_point: { type: integer }
         location: { type: string }
         wall: { type: string }
@@ -676,7 +659,7 @@ components:
         archived: { type: boolean }
         archived_at: { $ref: '#/components/schemas/OptionalDateTime' }
         color: { type: string }
-        screw_date: { $ref: '#/components/schemas/OptionalDateTime' }
+        screw_date: { type: [string, 'null'], format: date }
         location: { type: string, description: '"" when unset' }
         wall: { type: string, description: '"" when unplaced' }
         wall_position: { type: number }
@@ -684,9 +667,10 @@ components:
         grade_system: { type: string }
         grade_index: { type: number }
         permanent: { type: boolean }
-        removal_planned_for: { type: [string, 'null'], format: date, description: planned strip date, cleared on archive }
+        removal_planned_for: { type: [string, 'null'], format: date, description: 'planned strip date, cleared on archive' }
         average_rating: { type: [number, 'null'] }
         ratings_count: { type: integer }
+        sends_count: { type: integer, description: 'distinct climbers with a send; only on GET /routes/{id}' }
         expand:
           type: object
           properties:
@@ -768,7 +752,7 @@ components:
         type: { type: string }
         location: { type: [string, 'null'] }
         creators: { type: array, items: { type: string } }
-        screwDate: { type: string, format: date-time, description: screw date, else created }
+        screwDate: { type: string, format: date-time, description: 'screw date, else created' }
     RatedRoute:
       allOf:
         - $ref: '#/components/schemas/AnalyticsRoute'
@@ -789,7 +773,7 @@ components:
             properties:
               grade: { type: string }
               total: { type: integer }
-              expected: { type: number, description: share among all matching routes incl. archived, scaled to the current count }
+              expected: { type: number, description: 'share among all matching routes incl. archived, scaled to the current count' }
         locationGrades:
           type: array
           items:

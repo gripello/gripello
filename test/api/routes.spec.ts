@@ -13,7 +13,7 @@ import {
     listRouteColors,
     listRoutes,
     listWalls,
-    listWallsByIds,
+    listWallsById,
     placeRoutes,
     saveFloorPlan,
     updateRoute,
@@ -295,11 +295,11 @@ describe('walls', () => {
 
     it('lists followed walls by id with their location name', async () => {
         api.respond({ items: [{ id: 'w1', location_name: 'Hall' }] })
-        expect(await listWallsByIds(['w1', 'w2'])).toEqual([
+        expect(await listWallsById(['w1', 'w2'])).toEqual([
             { id: 'w1', location_name: 'Hall' },
         ])
         expect(api.request().url).toBe('/api/walls?ids=w1,w2')
-        expect(await listWallsByIds([])).toEqual([])
+        expect(await listWallsById([])).toEqual([])
         expect(api.fetchMock).toHaveBeenCalledTimes(1)
     })
 })

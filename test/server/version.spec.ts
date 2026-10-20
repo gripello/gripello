@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { compareSemver, decideUpdate } from '../../server/utils/version'
+import { compareSemver } from '#shared/utils/version'
+import { decideUpdate } from '../../server/utils/version'
 import { parseAppVersion, versionLabel } from '#shared/utils/version'
 
 describe('parseAppVersion', () => {

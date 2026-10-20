@@ -5,7 +5,11 @@ import {
     deleteBanner,
     deleteMe,
     deleteMFAFactor,
-    exportMyData,
+    dataExportAvailable,
+    dataExportUrl,
+    getOwnDataExport,
+    ownDataExportUrl,
+    requestDataExport,
     followWall,
     getMe,
     listLinkedAccounts,
@@ -59,7 +63,7 @@ describe('getMe', () => {
         )
     })
 
-    it('includes memberships shaped like membership records', async () => {
+    it('includes memberships as Go sends them', async () => {
         api.fetchMock.mockImplementation(async (url: string) =>
             jsonResponse(
                 url.endsWith('/me/memberships')
@@ -68,21 +72,9 @@ describe('getMe', () => {
             ),
         )
         const me = await getMe({ include: ['memberships'] })
-        const [membership] = me.expand!.memberships_via_user
-        expect(membership).toMatchObject({
-            id: 'm1',
-            user: 'u1',
-            gym: 'g1',
-            role: 'r1',
-            expand: {
-                gym: { slug: 'gym', active: true },
-                role: {
-                    name: 'admin',
-                    expand: { permissions: [{ name: 'manage_routes' }] },
-                },
-            },
-        })
-        expect(await listOwnMemberships()).toEqual([membership])
+        expect(me).toEqual({ id: 'u1', memberships: [ownMembership] })
+        expect(me).not.toHaveProperty('expand')
+        expect(await listOwnMemberships()).toEqual([ownMembership])
     })
 })
 
@@ -182,7 +174,7 @@ describe('account', () => {
         expect(error.response.data.oldPassword.code).toBe(
             'validation_invalid_old_password',
         )
-        expect(error.data).toEqual(failure)
+        expect(error.response).toEqual(failure)
         expect(useAuthState().isSignedIn()).toBe(true)
     })
 
@@ -219,21 +211,50 @@ describe('account', () => {
     })
 })
 
-describe('exportMyData', () => {
-    it('downloads the zip as a blob', async () => {
-        api.fetchMock.mockResolvedValueOnce(
-            new Response('zip', {
-                headers: { 'content-type': 'application/zip' },
-            }),
-        )
-        const blob = await exportMyData()
-        expect(await blob.text()).toBe('zip')
-        expect(api.request().url).toBe('/api/me/export')
+describe('data export', () => {
+    it('asks for an export to be mailed', async () => {
+        api.fetchMock.mockResolvedValueOnce(new Response(null, { status: 202 }))
+        await requestDataExport()
+        expect(api.request()).toMatchObject({
+            url: '/api/me/export',
+            method: 'POST',
+        })
     })
 
     it('rejects with the status when refused', async () => {
         api.respond({ status: 429, message: 'Too many', data: {} }, 429)
-        await expect(exportMyData()).rejects.toMatchObject({ status: 429 })
+        await expect(requestDataExport()).rejects.toMatchObject({
+            status: 429,
+        })
+    })
+
+    it('links the download and checks it without a body', async () => {
+        expect(dataExportUrl('a/b')).toBe('/api/account/export/a%2Fb')
+        api.fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }))
+        expect(await dataExportAvailable('tok')).toBe(true)
+        expect(api.request()).toMatchObject({
+            url: '/api/account/export/tok',
+            method: 'HEAD',
+        })
+        api.respond({ status: 404, message: 'Not found', data: {} }, 404)
+        expect(await dataExportAvailable('gone')).toBe(false)
+        api.respond({ status: 503, message: 'Down', data: {} }, 503)
+        await expect(dataExportAvailable('tok')).rejects.toMatchObject({
+            status: 503,
+        })
+    })
+
+    it('reads the own export state and links its download without a token', async () => {
+        api.respond({
+            status: 'too_large',
+            created: '2026-01-01T00:00:00.000Z',
+        })
+        expect(await getOwnDataExport()).toEqual({
+            status: 'too_large',
+            created: '2026-01-01T00:00:00.000Z',
+        })
+        expect(api.request()).toMatchObject({ url: '/api/me/export' })
+        expect(ownDataExportUrl()).toBe('/api/me/export/file')
     })
 })
 

@@ -2,17 +2,37 @@ package tenancy
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 )
 
+const (
+	PermJudgeCompetitions  = "judge_competitions"
+	PermManageComments     = "manage_comments"
+	PermManageCompetitions = "manage_competitions"
+	PermManageReports      = "manage_reports"
+	PermManageRoutes       = "manage_routes"
+	PermManageSettings     = "manage_settings"
+	PermManageTasks        = "manage_tasks"
+	PermManageUsers        = "manage_users"
+	PermRunInventory       = "run_inventory"
+	PermViewAnalytics      = "view_analytics"
+	PermViewAuditLog       = "view_audit_log"
+)
+
+// FeatureFlags are the keys of gyms.features, mirrored in shared/utils/featureFlags.ts.
+var FeatureFlags = []string{"beta_links", "beta_uploads"}
+
 // Platform admins hold these on every gym without a membership; other staff pages still need one.
-var PlatformAdminGrants = []string{"manage_settings", "manage_users"}
+var PlatformAdminGrants = []string{PermManageSettings, PermManageUsers}
 
 type Permissions struct {
 	pool *pgxpool.Pool
@@ -20,12 +40,39 @@ type Permissions struct {
 
 func New(pool *pgxpool.Pool) *Permissions { return &Permissions{pool: pool} }
 
-// Can is the rule `memberships_via_user.gym ?= gym && ...role.permissions.name ?= perm` as one query.
+// Can reports whether the user holds perm in gym through a membership role, in one query.
 func (p *Permissions) Can(ctx context.Context, userID, gym, permission string) bool {
+	return p.holdsAny(ctx, userID, gym, []string{permission})
+}
+
+// Has reports whether the signed-in caller holds any of permissions in gym, counting PlatformAdminGrants.
+func (p *Permissions) Has(ctx context.Context, gym string, permissions ...string) bool {
+	principal, ok := auth.From(ctx)
+	if !ok {
+		return false
+	}
+	if principal.PlatformAdmin && slices.ContainsFunc(permissions, func(perm string) bool { return slices.Contains(PlatformAdminGrants, perm) }) {
+		return true
+	}
+	return gym != "" && p.holdsAny(ctx, principal.UserID, gym, permissions)
+}
+
+// Require answers 401 for guests and 403 unless Has holds.
+func (p *Permissions) Require(ctx context.Context, gym string, permissions ...string) error {
+	if _, err := auth.Require(ctx); err != nil {
+		return err
+	}
+	if !p.Has(ctx, gym, permissions...) {
+		return httpx.ErrForbidden
+	}
+	return nil
+}
+
+func (p *Permissions) holdsAny(ctx context.Context, userID, gym string, permissions []string) bool {
 	var ok bool
 	p.pool.QueryRow(ctx, `SELECT EXISTS (
 		SELECT 1 FROM memberships m JOIN roles r ON r.id = m.role
-		WHERE m."user" = $1 AND m.gym = $2 AND $3 = ANY (effective_permissions(m.gym, r.permissions)))`, userID, gym, permission).Scan(&ok)
+		WHERE m."user" = $1 AND m.gym = $2 AND effective_permissions(m.gym, r.permissions) && $3::text[])`, userID, gym, permissions).Scan(&ok)
 	return ok
 }
 
@@ -82,28 +129,20 @@ func (p *Permissions) Memberships(ctx context.Context, userID string) (map[strin
 	return out, rows.Err()
 }
 
-type Querier interface {
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
-
-func Viewer(ctx context.Context) string {
-	p, _ := auth.From(ctx)
-	return p.UserID
-}
-
-// ResolveGym finds a gym by id or slug; gyms the caller may not see (gym_visible) answer 404.
-func ResolveGym(ctx context.Context, q Querier, key string) (string, error) {
+// ResolveGym finds a gym by id, slug or previous slug; gyms the caller may not see (gym_visible) answer 404.
+func ResolveGym(ctx context.Context, q db.Querier, key string) (string, error) {
 	var id string
-	err := q.QueryRow(ctx, `SELECT id FROM gyms WHERE (id = $1 OR slug = $1) AND gym_visible(id, $2) LIMIT 1`, key, Viewer(ctx)).Scan(&id)
+	err := q.QueryRow(ctx, `SELECT id FROM gyms WHERE (id = $1 OR id = (SELECT gym FROM gym_slugs WHERE slug = $1)) AND gym_visible(id, $2)
+		ORDER BY (id = $1) DESC LIMIT 1`, key, auth.UserID(ctx)).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", httpx.ErrNotFound
 	}
 	return id, err
 }
 
-func RequireGym(ctx context.Context, q Querier, gymID string) error {
+func RequireGym(ctx context.Context, q db.Querier, gymID string) error {
 	var ok bool
-	if err := q.QueryRow(ctx, `SELECT gym_visible($1, $2)`, gymID, Viewer(ctx)).Scan(&ok); err != nil {
+	if err := q.QueryRow(ctx, `SELECT gym_visible($1, $2)`, gymID, auth.UserID(ctx)).Scan(&ok); err != nil {
 		return err
 	}
 	if !ok {
@@ -116,4 +155,36 @@ func RequireGym(ctx context.Context, q Querier, gymID string) error {
 func (p *Permissions) GymViewers(ctx context.Context, gym string) ([]string, error) {
 	return p.userIDs(ctx, `SELECT '*' WHERE gym_visible($1, '')
 		UNION ALL SELECT m."user" FROM memberships m WHERE NOT gym_visible($1, '') AND m.gym = $1 AND gym_visible($1, m."user")`, gym)
+}
+
+func GymSlug(ctx context.Context, q db.Querier, gym string) string {
+	var slug string
+	q.QueryRow(ctx, `SELECT slug FROM gyms WHERE id = $1`, gym).Scan(&slug)
+	return slug
+}
+
+// GymPath prefixes path with the gym's slug; an unknown gym leaves path as it is.
+func GymPath(ctx context.Context, q db.Querier, gym, path string) string {
+	if slug := GymSlug(ctx, q, gym); slug != "" {
+		return "/" + slug + path
+	}
+	return path
+}
+
+var ErrGymMove = httpx.BadRequest("Records cannot move to another gym.")
+
+// RejectGymMove refuses a patch whose gym differs from the record's.
+func RejectGymMove(patch map[string]json.RawMessage, current string) error {
+	raw, ok := patch["gym"]
+	if !ok {
+		return nil
+	}
+	var gym string
+	if json.Unmarshal(raw, &gym) != nil {
+		return httpx.Invalid("gym", "Invalid value.")
+	}
+	if gym != current {
+		return ErrGymMove
+	}
+	return nil
 }

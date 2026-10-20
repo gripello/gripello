@@ -7,11 +7,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/apitime"
+	"gripello/internal/platform/auth"
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
@@ -22,15 +23,7 @@ const (
 	defaultPageSize = 50
 	maxPageSize     = 1000
 	maxTraceSize    = 10 << 20
-	maxPage         = 1_000_000
 )
-
-type routePage struct {
-	Items []Route `json:"items"`
-	Page  int     `json:"page"`
-	Limit int     `json:"limit"`
-	Total *int    `json:"total,omitempty"`
-}
 
 var routeSorts = map[string]string{
 	"name": "name", "created": "created", "updated": "updated", "screw_date": "screw_date",
@@ -52,63 +45,67 @@ func routeOrder(sort string) (string, error) {
 		}
 		column, ok := routeSorts[key]
 		if !ok {
-			return "", invalid("sort", "Unknown sort key "+key+".")
+			return "", httpx.Invalid("sort", "Unknown sort key "+key+".")
 		}
 		parts = append(parts, column+" "+direction+" NULLS LAST")
 	}
 	return " ORDER BY " + strings.Join(parts, ", ") + ", id", nil
 }
 
-func routeFilter(gym string, query map[string][]string) (*conditions, error) {
+func routeFilter(gym string, query map[string][]string) (*db.Where, error) {
 	get := func(key string) string {
 		if values := query[key]; len(values) > 0 {
 			return values[0]
 		}
 		return ""
 	}
-	where := &conditions{}
-	where.add("gym = ?", gym)
+	where := &db.Where{}
+	where.Add("gym = ?", gym)
 	switch get("archived") {
 	case "", "false":
-		where.add("archived = ?", false)
+		where.Add("archived = ?", false)
 	case "true":
-		where.add("archived = ?", true)
+		where.Add("archived = ?", true)
 	case "all":
 	default:
-		return nil, invalid("archived", "archived must be true, false or all.")
+		return nil, httpx.Invalid("archived", "archived must be true, false or all.")
 	}
 	if location := get("location"); location != "" {
-		where.add("location = ?", location)
+		where.Add("location = ?", location)
 	}
 	switch wall := get("wall"); wall {
 	case "":
 	case "none":
-		where.clauses = append(where.clauses, "wall IS NULL")
+		where.Clauses = append(where.Clauses, "wall IS NULL")
 	case "any":
-		where.clauses = append(where.clauses, "wall IS NOT NULL")
+		where.Clauses = append(where.Clauses, "wall IS NOT NULL")
 	default:
-		where.add("wall = ?", wall)
+		where.Add("wall = ?", wall)
 	}
 	for _, key := range []string{"type", "color", "grade_system"} {
 		if value := get(key); value != "" {
-			where.add(key+" = ?", value)
+			where.Add(key+" = ?", value)
 		}
 	}
 	if grades := query["grade"]; len(grades) > 0 {
-		where.add("grade = ANY (?)", grades)
+		lowered := make([]string, len(grades))
+		for i, grade := range grades {
+			lowered[i] = strings.ToLower(grade)
+		}
+		where.Add("lower(grade) = ANY (?)", lowered)
 	}
 	if q := strings.TrimSpace(get("q")); q != "" {
-		where.add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (name ILIKE w OR creator::text ILIKE w))", db.WordPatterns(q))
+		where.Add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (name ILIKE w OR creator::text ILIKE w))", db.WordPatterns(q))
 	}
 	if since := get("since"); since != "" {
-		at, ok := parseTime(since)
-		if !ok || at == nil {
-			return nil, invalid("since", "Invalid date.")
+		at, err := apitime.ParseTimeOrDay(since)
+		if err != nil {
+			return nil, httpx.Invalid("since", "Must be an RFC 3339 timestamp or a day as YYYY-MM-DD.")
 		}
-		where.add("created >= ?", *at)
+		where.Add("created >= ?", at)
 	}
 	if list := get("ids"); list != "" {
-		where.add("id = ANY (?)", strings.Split(list, ","))
+		where.Add("id = ANY (?)", strings.Split(list, ","))
 	}
 	return where, nil
 }
@@ -127,17 +124,15 @@ func (m *module) listRoutes(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	page := min(maxPage, max(1, atoi(query.Get("page"), 1)))
-	limit := min(maxPageSize, max(1, atoi(query.Get("limit"), defaultPageSize)))
-	tail := order + " LIMIT " + strconv.Itoa(limit) + " OFFSET " + strconv.Itoa((page-1)*limit)
-	items, err := queryRoutes(r.Context(), m.app.DB, where, tail)
+	page := httpx.Page(r, defaultPageSize, maxPageSize)
+	items, err := queryRoutes(r.Context(), m.app.DB, where, order+page.SQL())
 	if err != nil {
 		return err
 	}
 	if err := m.expand(r.Context(), items, query.Get("include")); err != nil {
 		return err
 	}
-	result := routePage{Items: items, Page: page, Limit: limit}
+	result := httpx.PageOf[Route]{Items: items, Page: page.Page, Limit: page.Limit}
 	if query.Get("total") == "true" {
 		total, err := countRoutes(r.Context(), m.app.DB, where)
 		if err != nil {
@@ -145,15 +140,7 @@ func (m *module) listRoutes(w http.ResponseWriter, r *http.Request) error {
 		}
 		result.Total = &total
 	}
-	httpx.JSON(w, http.StatusOK, result)
-	return nil
-}
-
-func atoi(value string, fallback int) int {
-	if n, err := strconv.Atoi(value); err == nil {
-		return n
-	}
-	return fallback
+	return httpx.Respond(w, http.StatusOK, result, nil)
 }
 
 // expand fills `expand`, so `route.expand.location.name` keeps working.
@@ -181,8 +168,8 @@ func (m *module) expand(ctx context.Context, items []Route, include string) erro
 	for _, relation := range slices.Compact(relations) {
 		switch relation {
 		case "location":
-			where := &conditions{}
-			where.add("id = ANY (?)", collect(func(r Route) string { return r.Location }))
+			where := &db.Where{}
+			where.Add("id = ANY (?)", collect(func(r Route) string { return r.Location }))
 			locations, err := queryLocations(ctx, m.app.DB, where)
 			if err != nil {
 				return err
@@ -197,8 +184,8 @@ func (m *module) expand(ctx context.Context, items []Route, include string) erro
 				}
 			}
 		case "wall":
-			where := &conditions{}
-			where.add("id = ANY (?)", collect(func(r Route) string { return r.Wall }))
+			where := &db.Where{}
+			where.Add("id = ANY (?)", collect(func(r Route) string { return r.Wall }))
 			walls, err := queryWalls(ctx, m.app.DB, where)
 			if err != nil {
 				return err
@@ -221,7 +208,7 @@ func (m *module) expand(ctx context.Context, items []Route, include string) erro
 				set(i, "gym", gyms[route.Gym])
 			}
 		default:
-			return invalid("include", "Unknown include "+relation+".")
+			return httpx.Invalid("include", "Unknown include "+relation+".")
 		}
 	}
 	return nil
@@ -232,7 +219,7 @@ const maxIDs = 200
 func idList(r *http.Request) ([]string, error) {
 	list := strings.Split(r.URL.Query().Get("ids"), ",")
 	if list[0] == "" || len(list) > maxIDs {
-		return nil, invalid("ids", "Pass 1 to 200 comma-separated ids.")
+		return nil, httpx.Invalid("ids", "Pass 1 to 200 comma-separated ids.")
 	}
 	return list, nil
 }
@@ -242,9 +229,9 @@ func (m *module) listRoutesByID(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	where := &conditions{}
-	where.add("id = ANY (?)", list)
-	where.add("gym_visible(gym, ?)", tenancy.Viewer(r.Context()))
+	where := &db.Where{}
+	where.Add("id = ANY (?)", list)
+	where.Add("gym_visible(gym, ?)", auth.UserID(r.Context()))
 	items, err := queryRoutes(r.Context(), m.app.DB, where, " ORDER BY created DESC, id")
 	if err != nil {
 		return err
@@ -252,8 +239,7 @@ func (m *module) listRoutesByID(w http.ResponseWriter, r *http.Request) error {
 	if err := m.expand(r.Context(), items, r.URL.Query().Get("include")); err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 func (m *module) listWallsByID(w http.ResponseWriter, r *http.Request) error {
@@ -261,12 +247,11 @@ func (m *module) listWallsByID(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	walls, err := wallsWithLocation(r.Context(), m.app.DB, list, tenancy.Viewer(r.Context()))
+	walls, err := wallsWithLocation(r.Context(), m.app.DB, list, auth.UserID(r.Context()))
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": walls})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": walls}, nil)
 }
 
 func (m *module) getRoute(w http.ResponseWriter, r *http.Request) error {
@@ -277,12 +262,15 @@ func (m *module) getRoute(w http.ResponseWriter, r *http.Request) error {
 	if err := tenancy.RequireGym(r.Context(), m.app.DB, route.Gym); err != nil {
 		return err
 	}
+	route.SendsCount = new(int)
+	if err := m.app.DB.QueryRow(r.Context(), `SELECT COUNT(DISTINCT "user") FROM ticks WHERE route = $1 AND type <> 'attempt'`, route.ID).Scan(route.SendsCount); err != nil {
+		return err
+	}
 	items := []Route{route}
 	if err := m.expand(r.Context(), items, r.URL.Query().Get("include")); err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, items[0])
-	return nil
+	return httpx.Respond(w, http.StatusOK, items[0], nil)
 }
 
 func (m *module) postRoute(w http.ResponseWriter, r *http.Request) error {
@@ -320,8 +308,7 @@ func (m *module) archiveRoute(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, routes[0])
-	return nil
+	return httpx.Respond(w, http.StatusOK, routes[0], nil)
 }
 
 func (m *module) archiveGymRoutes(w http.ResponseWriter, r *http.Request) error {
@@ -337,16 +324,11 @@ func (m *module) archiveGymRoutes(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": routes})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": routes}, nil)
 }
 
 func (m *module) deleteRouteHandler(w http.ResponseWriter, r *http.Request) error {
-	if err := m.deleteRoute(r.Context(), r.PathValue("id"), r.URL.Query().Get("force") == "true"); err != nil {
-		return err
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, m.deleteRoute(r.Context(), r.PathValue("id"), r.URL.Query().Get("force") == "true"))
 }
 
 func (m *module) listColors(w http.ResponseWriter, r *http.Request) error {
@@ -358,8 +340,7 @@ func (m *module) listColors(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": colors})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": colors}, nil)
 }
 
 func (m *module) putPlacements(w http.ResponseWriter, r *http.Request) error {
@@ -377,8 +358,7 @@ func (m *module) putPlacements(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": routes})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": routes}, nil)
 }
 
 func (m *module) listLocations(w http.ResponseWriter, r *http.Request) error {
@@ -386,14 +366,13 @@ func (m *module) listLocations(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	where := &conditions{}
-	where.add("gym = ?", gym)
+	where := &db.Where{}
+	where.Add("gym = ?", gym)
 	locations, err := queryLocations(r.Context(), m.app.DB, where)
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": locations})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": locations}, nil)
 }
 
 func (m *module) postLocation(w http.ResponseWriter, r *http.Request) error {
@@ -405,11 +384,7 @@ func (m *module) patchLocation(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) deleteLocationHandler(w http.ResponseWriter, r *http.Request) error {
-	if err := m.deleteLocation(r.Context(), r.PathValue("id")); err != nil {
-		return err
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, m.deleteLocation(r.Context(), r.PathValue("id")))
 }
 
 func (m *module) putFloorPlan(w http.ResponseWriter, r *http.Request) error {
@@ -418,11 +393,7 @@ func (m *module) putFloorPlan(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	result, err := m.saveFloorPlan(r.Context(), r.PathValue("id"), body)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, result)
-	return nil
+	return httpx.Respond(w, http.StatusOK, result, err)
 }
 
 var traceTypes = map[string]string{".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml"}
@@ -437,12 +408,12 @@ func (m *module) putMapTrace(w http.ResponseWriter, r *http.Request) error {
 	r.Body = http.MaxBytesReader(w, r.Body, maxTraceSize+1<<20)
 	file, header, err := r.FormFile("map_trace")
 	if err != nil {
-		return required("map_trace")
+		return httpx.Required("map_trace")
 	}
 	defer file.Close()
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	if _, ok := traceTypes[ext]; !ok || header.Size > maxTraceSize || !traceContentMatches(file, ext) {
-		return invalid("map_trace", "Upload a JPEG, PNG, WebP or SVG image up to 10 MB.")
+		return httpx.Invalid("map_trace", "Upload a JPEG, PNG, WebP or SVG image up to 10 MB.")
 	}
 	base := unsafeFileChars.ReplaceAllString(strings.ToLower(strings.TrimSuffix(header.Filename, filepath.Ext(header.Filename))), "_")
 	name := strings.Trim(base[:min(len(base), 50)], "_") + "_" + ids.New()[:10] + ext
@@ -452,11 +423,7 @@ func (m *module) putMapTrace(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	updated, err := m.replaceMapTrace(r.Context(), location, name)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, updated)
-	return nil
+	return httpx.Respond(w, http.StatusOK, updated, err)
 }
 
 func traceContentMatches(file io.ReadSeeker, ext string) bool {
@@ -475,11 +442,7 @@ func (m *module) deleteMapTrace(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	updated, err := m.replaceMapTrace(r.Context(), location, "")
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, updated)
-	return nil
+	return httpx.Respond(w, http.StatusOK, updated, err)
 }
 
 func (m *module) replaceMapTrace(ctx context.Context, location Location, file string) (Location, error) {
@@ -508,17 +471,16 @@ func (m *module) listWalls(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	where := &conditions{}
-	where.add("gym = ?", gym)
+	where := &db.Where{}
+	where.Add("gym = ?", gym)
 	if location := r.URL.Query().Get("location"); location != "" {
-		where.add("location = ?", location)
+		where.Add("location = ?", location)
 	}
 	walls, err := queryWalls(r.Context(), m.app.DB, where)
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": walls})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": walls}, nil)
 }
 
 func (m *module) postWall(w http.ResponseWriter, r *http.Request) error {
@@ -530,11 +492,7 @@ func (m *module) patchWall(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) deleteWallHandler(w http.ResponseWriter, r *http.Request) error {
-	if err := m.deleteWall(r.Context(), r.PathValue("id")); err != nil {
-		return err
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, m.deleteWall(r.Context(), r.PathValue("id")))
 }
 
 func (m *module) createInGym(w http.ResponseWriter, r *http.Request, create func(context.Context, string, patch) (any, error)) error {
@@ -547,11 +505,7 @@ func (m *module) createInGym(w http.ResponseWriter, r *http.Request, create func
 		return err
 	}
 	record, err := create(r.Context(), gym, body)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusCreated, record)
-	return nil
+	return httpx.Respond(w, http.StatusCreated, record, err)
 }
 
 func (m *module) patchByID(w http.ResponseWriter, r *http.Request, update func(context.Context, string, patch) (any, error)) error {
@@ -560,9 +514,5 @@ func (m *module) patchByID(w http.ResponseWriter, r *http.Request, update func(c
 		return err
 	}
 	record, err := update(r.Context(), r.PathValue("id"), body)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, record)
-	return nil
+	return httpx.Respond(w, http.StatusOK, record, err)
 }

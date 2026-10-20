@@ -108,11 +108,10 @@ export interface OAuth2Provider {
     displayName: string
 }
 
-export async function listOAuth2Providers() {
-    const methods = await useApi()<{ oauth2: { providers: OAuth2Provider[] } }>(
+export function listAuthMethods() {
+    return useApi()<{ oauth2: { providers: OAuth2Provider[] } }>(
         '/auth/methods',
     )
-    return methods.oauth2.providers
 }
 
 export function startOAuth2(

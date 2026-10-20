@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"net/mail"
 	"net/url"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -17,8 +17,11 @@ import (
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/db"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/locales"
+	platformmail "gripello/internal/platform/mail"
 	"gripello/internal/platform/tenancy"
 )
 
@@ -30,37 +33,8 @@ const (
 var (
 	reportTypes   = []string{"rating", "route", "beta_video", "profile"}
 	reportReasons = []string{"hate_speech", "harassment", "violence_threat", "sexual_content", "personal_data", "ip_infringement", "spam_fraud", "other"}
-	languages     = []string{"", "en", "de", "nl", "fr", "es"}
 	states        = []string{"unreviewed", "approved", "pending", "hidden"}
 )
-
-func invalid(field, message string) *httpx.Error {
-	return badRequest(message).Field(field, "validation_invalid_value", message)
-}
-
-func page(r *http.Request) (int, int, string) {
-	atoi := func(value string, fallback int) int {
-		if n, err := strconv.Atoi(value); err == nil {
-			return n
-		}
-		return fallback
-	}
-	p := min(1_000_000, max(1, atoi(r.URL.Query().Get("page"), 1)))
-	limit := min(maxPageSize, max(1, atoi(r.URL.Query().Get("limit"), defaultPageSize)))
-	return p, limit, " LIMIT " + strconv.Itoa(limit) + " OFFSET " + strconv.Itoa((p-1)*limit)
-}
-
-func (m *module) can(ctx context.Context, p auth.Principal, gym string, permissions ...string) bool {
-	if gym == "" {
-		return false
-	}
-	for _, perm := range permissions {
-		if m.perms.Can(ctx, p.UserID, gym, perm) {
-			return true
-		}
-	}
-	return false
-}
 
 type reportInput struct {
 	ContentType   string `json:"content_type"`
@@ -74,33 +48,28 @@ type reportInput struct {
 }
 
 func (in *reportInput) validate() error {
-	in.Explanation, in.NotifierName, in.NotifierEmail = strings.TrimSpace(in.Explanation), strings.TrimSpace(in.NotifierName), strings.TrimSpace(in.NotifierEmail)
+	in.Explanation, in.NotifierName, in.NotifierEmail = strings.TrimSpace(in.Explanation), strings.TrimSpace(in.NotifierName), platformmail.NormalizeAddress(in.NotifierEmail)
 	switch {
 	case !slices.Contains(reportTypes, in.ContentType):
-		return invalid("content_type", "This content cannot be reported.")
+		return httpx.Invalid("content_type", "This content cannot be reported.")
 	case !slices.Contains(reportReasons, in.Reason):
-		return invalid("reason", "Pick a reason.")
-	case in.Explanation == "" || len([]rune(in.Explanation)) > 2000:
-		return invalid("explanation", "Explain the report in at most 2000 characters.")
-	case in.NotifierName == "" || len([]rune(in.NotifierName)) > 100:
-		return invalid("notifier_name", "Enter your name.")
-	case !validEmail(in.NotifierEmail):
-		return invalid("notifier_email", "Enter a valid email address.")
+		return httpx.Invalid("reason", "Pick a reason.")
+	case httpx.Blank(in.Explanation) || len([]rune(in.Explanation)) > 2000:
+		return httpx.Invalid("explanation", "Explain the report in at most 2000 characters.")
+	case httpx.Blank(in.NotifierName) || len([]rune(in.NotifierName)) > 100:
+		return httpx.Invalid("notifier_name", "Enter your name.")
+	case !platformmail.ValidAddress(in.NotifierEmail):
+		return httpx.Invalid("notifier_email", "Enter a valid email address.")
 	case !in.GoodFaith:
-		return invalid("good_faith", "Confirm that the report is made in good faith.")
-	case !slices.Contains(languages, in.Language):
+		return httpx.Invalid("good_faith", "Confirm that the report is made in good faith.")
+	case !locales.Allowed(in.Language):
 		in.Language = ""
 	}
 	return nil
 }
 
-func validEmail(address string) bool {
-	parsed, err := mail.ParseAddress(address)
-	return err == nil && parsed.Address == address
-}
-
 // reported returns the gym, a text snapshot and the link of reported content.
-func reported(ctx context.Context, q querier, contentType, id string) (gym, snapshot, link string, err error) {
+func reported(ctx context.Context, q db.Querier, contentType, id string) (gym, snapshot, link string, err error) {
 	escaped := url.QueryEscape(id)
 	switch contentType {
 	case "profile":
@@ -119,9 +88,9 @@ func reported(ctx context.Context, q querier, contentType, id string) (gym, snap
 		link = "/route?id=" + url.QueryEscape(route) + "#comment-" + escaped
 	}
 	if err == pgx.ErrNoRows {
-		err = badRequest("The reported content does not exist.")
+		err = httpx.BadRequest("The reported content does not exist.")
 	}
-	return gym, truncate(snapshot, 5000), link, err
+	return gym, httpx.Truncate(snapshot, 5000), link, err
 }
 
 func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
@@ -136,7 +105,7 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 	if blocked, err := blocklist.EmailBlocked(ctx, m.app.DB, in.NotifierEmail); err != nil {
 		return err
 	} else if blocked {
-		return badRequest("This e-mail address can't be used.").Field("notifier_email", blocklist.CodeEmailBlocked, "This e-mail address can't be used.")
+		return httpx.BadRequest("This e-mail address can't be used.").Field("notifier_email", blocklist.CodeEmailBlocked, "This e-mail address can't be used.")
 	}
 	if err := captcha.Request(ctx, m.app.DB, r, "report"); err != nil {
 		return err
@@ -161,13 +130,13 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 			report.Explanation, report.NotifierName, report.NotifierEmail, report.Language); err != nil {
 			return err
 		}
-		snippet := map[string]any{"snippet": truncate(report.ContentSnapshot, 140)}
-		staff, err := usersWith(ctx, w.tx, report.Gym, permReports)
+		snippet := map[string]any{"snippet": httpx.Truncate(report.ContentSnapshot, 140)}
+		staff, err := usersWith(ctx, w.tx, report.Gym, tenancy.PermManageReports)
 		if err != nil {
 			return err
 		}
-		if err := publishNotify(ctx, w.tx, Notify{
-			Type: "report_filed", Users: staff, Gym: report.Gym, Params: snippet, URL: gymPath(ctx, w.tx, report.Gym, "/manage/moderation"),
+		if err := events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
+			Type: "report_filed", Users: staff, Gym: report.Gym, Params: snippet, URL: tenancy.GymPath(ctx, w.tx, report.Gym, "/manage/moderation"),
 		}); err != nil {
 			return err
 		}
@@ -176,7 +145,7 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
-			if err := publishNotify(ctx, w.tx, Notify{
+			if err := events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
 				Type: "report_filed_platform", Users: admins, Gym: report.Gym, Params: snippet, URL: "/platform/moderation",
 			}); err != nil {
 				return err
@@ -188,8 +157,7 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusCreated, map[string]string{"id": report.ID})
-	return nil
+	return httpx.Respond(w, http.StatusCreated, map[string]string{"id": report.ID}, nil)
 }
 
 // countReport raises the content's case; content that is already hidden gets that decision instead of a case nobody can act on.
@@ -215,13 +183,9 @@ func (m *module) listReports(w http.ResponseWriter, r *http.Request, gym string)
 		args = append(args, status)
 		where += " AND status = $" + strconv.Itoa(len(args))
 	}
-	p, limit, tail := page(r)
-	items, err := queryReports(r.Context(), m.app.DB, `SELECT `+reportColumns+` FROM reports `+where+` ORDER BY created DESC, id`+tail, args...)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "page": p, "limit": limit})
-	return nil
+	page := httpx.Page(r, defaultPageSize, maxPageSize)
+	items, err := queryReports(r.Context(), m.app.DB, `SELECT `+reportColumns+` FROM reports `+where+` ORDER BY created DESC, id`+page.SQL(), args...)
+	return httpx.Respond(w, http.StatusOK, httpx.PageOf[Report]{Items: items, Page: page.Page, Limit: page.Limit}, err)
 }
 
 func (m *module) listGymReports(w http.ResponseWriter, r *http.Request) error {
@@ -234,19 +198,15 @@ func (m *module) listGymReports(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if !p.PlatformAdmin && !m.can(ctx, p, gym, permReports) {
+	if !p.PlatformAdmin && !m.perms.Has(ctx, gym, tenancy.PermManageReports) {
 		return httpx.ErrForbidden
 	}
 	return m.listReports(w, r, gym)
 }
 
 func (m *module) listPlatformReports(w http.ResponseWriter, r *http.Request) error {
-	p, err := auth.Require(r.Context())
-	if err != nil {
+	if _, err := auth.RequirePlatformAdmin(r.Context()); err != nil {
 		return err
-	}
-	if !p.PlatformAdmin {
-		return httpx.ErrForbidden
 	}
 	return m.listReports(w, r, "")
 }
@@ -265,13 +225,13 @@ func (m *module) decide(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if (body.Action == "hide" || body.Action == "reject") && strings.TrimSpace(body.Reason) == "" {
-		return badRequest("Hiding or declining needs a reason.")
+		return httpx.BadRequest("Hiding or declining needs a reason.")
 	}
 	it, err := findItem(ctx, m.app.DB, r.PathValue("id"))
 	if err != nil {
 		return err
 	}
-	gymStaff := m.can(ctx, p, it.Gym, permComments)
+	gymStaff := m.perms.Has(ctx, it.Gym, tenancy.PermManageComments)
 	if !p.PlatformAdmin && !gymStaff {
 		return httpx.ErrNotFound
 	}
@@ -294,8 +254,7 @@ func (m *module) decide(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]string{"id": it.ID, "state": it.State, "hidden_by": it.HiddenBy})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]string{"id": it.ID, "state": it.State, "hidden_by": it.HiddenBy}, nil)
 }
 
 func (m *module) hideAuthor(w http.ResponseWriter, r *http.Request) error {
@@ -314,7 +273,7 @@ func (m *module) hideAuthor(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if strings.TrimSpace(body.Reason) == "" {
-		return badRequest("Hiding needs a reason.")
+		return httpx.BadRequest("Hiding needs a reason.")
 	}
 	authorID := r.PathValue("id")
 	var hidden []Item
@@ -358,15 +317,14 @@ func (m *module) hideAuthor(w http.ResponseWriter, r *http.Request) error {
 			return nil
 		}
 		w.after = append(w.after, func(ctx context.Context) { m.sendStatement(ctx, authorID, hidden) })
-		return publishNotify(ctx, w.tx, Notify{
-			Type: "content_hidden", Users: []string{authorID}, Params: map[string]any{"reason": truncate(hidden[0].Reason, 140)}, URL: "/",
+		return events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
+			Type: "content_hidden", Users: []string{authorID}, Params: map[string]any{"reason": httpx.Truncate(hidden[0].Reason, 140)}, URL: "/",
 		})
 	})
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]int{"hidden": len(hidden)})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]int{"hidden": len(hidden)}, nil)
 }
 
 // openCase opens a case for content from before the inbox existed.
@@ -384,13 +342,13 @@ func (m *module) openCase(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if _, ok := kinds[body.ContentType]; !ok {
-		return badRequest("This content cannot be moderated.")
+		return httpx.BadRequest("This content cannot be moderated.")
 	}
 	c, err := loadContent(ctx, m.app.DB, body.ContentType, body.ContentID)
 	if err != nil {
 		return err
 	}
-	if !p.PlatformAdmin && !m.can(ctx, p, c.Gym, permComments) {
+	if !p.PlatformAdmin && !m.perms.Has(ctx, c.Gym, tenancy.PermManageComments) {
 		return httpx.ErrNotFound
 	}
 	var it Item
@@ -401,13 +359,12 @@ func (m *module) openCase(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]string{"id": it.ID, "state": it.State})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]string{"id": it.ID, "state": it.State}, nil)
 }
 
 // mayView mirrors the inbox rule: platform admins, or the gym's comment and report handlers.
 func (m *module) mayView(ctx context.Context, p auth.Principal, gym string) bool {
-	return p.PlatformAdmin || m.can(ctx, p, gym, permComments, permReports)
+	return p.PlatformAdmin || m.perms.Has(ctx, gym, tenancy.PermManageComments, tenancy.PermManageReports)
 }
 
 func (m *module) getCase(w http.ResponseWriter, r *http.Request) error {
@@ -424,8 +381,7 @@ func (m *module) getCase(w http.ResponseWriter, r *http.Request) error {
 		return httpx.ErrNotFound
 	}
 	m.enrich(ctx, &it, p)
-	httpx.JSON(w, http.StatusOK, it)
-	return nil
+	return httpx.Respond(w, http.StatusOK, it, nil)
 }
 
 func (m *module) listCases(w http.ResponseWriter, r *http.Request) error {
@@ -465,7 +421,7 @@ func (m *module) listCases(w http.ResponseWriter, r *http.Request) error {
 	if picked := append(query["state"], query["state[]"]...); len(picked) > 0 {
 		for _, s := range picked {
 			if !slices.Contains(states, s) {
-				return invalid("state", "Unknown state "+s+".")
+				return httpx.Invalid("state", "Unknown state "+s+".")
 			}
 		}
 		arg("state = ANY (?)", picked)
@@ -482,27 +438,26 @@ func (m *module) listCases(w http.ResponseWriter, r *http.Request) error {
 	}
 	order, ok := caseSorts[query.Get("sort")]
 	if !ok {
-		return invalid("sort", "Unknown sort key "+query.Get("sort")+".")
+		return httpx.Invalid("sort", "Unknown sort key "+query.Get("sort")+".")
 	}
 	filter := "WHERE " + strings.Join(where, " AND ")
-	pg, limit, tail := page(r)
-	items, err := queryItems(ctx, m.app.DB, filter+" ORDER BY "+order+", id"+tail, args...)
+	page := httpx.Page(r, defaultPageSize, maxPageSize)
+	items, err := queryItems(ctx, m.app.DB, filter+" ORDER BY "+order+", id"+page.SQL(), args...)
 	if err != nil {
 		return err
 	}
 	for i := range items {
 		m.enrich(ctx, &items[i], p)
 	}
-	body := map[string]any{"items": items, "page": pg, "limit": limit}
+	body := httpx.PageOf[Item]{Items: items, Page: page.Page, Limit: page.Limit}
 	if query.Get("total") == "true" {
 		var total int
 		if err := m.app.DB.QueryRow(ctx, `SELECT count(*) FROM moderation_items `+filter, args...).Scan(&total); err != nil {
 			return err
 		}
-		body["total"] = total
+		body.Total = &total
 	}
-	httpx.JSON(w, http.StatusOK, body)
-	return nil
+	return httpx.Respond(w, http.StatusOK, body, nil)
 }
 
 var caseSorts = map[string]string{
@@ -539,11 +494,11 @@ func (m *module) summary(w http.ResponseWriter, r *http.Request) error {
 		return httpx.ErrForbidden
 	}
 	type backlog struct {
-		Gym    string `json:"gym"`
-		Open   int    `json:"open"`
-		Oldest string `json:"oldest"`
+		Gym    string    `json:"gym"`
+		Open   int       `json:"open"`
+		Oldest time.Time `json:"oldest"`
 	}
-	rows, err := m.app.DB.Query(ctx, `SELECT gym, count(*), to_char(min(created) AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS.MSZ')
+	rows, err := m.app.DB.Query(ctx, `SELECT gym, count(*), min(created)
 		FROM moderation_items WHERE gym IS NOT NULL AND state IN ('unreviewed', 'pending') GROUP BY gym ORDER BY gym`)
 	if err != nil {
 		return err
@@ -590,18 +545,19 @@ type RouteSummary struct {
 }
 
 type CaseReport struct {
-	ID           string `json:"id"`
-	Reason       string `json:"reason"`
-	Explanation  string `json:"explanation"`
-	NotifierName string `json:"notifier_name"`
-	Status       string `json:"status"`
-	Created      string `json:"created"`
+	ID           string    `json:"id"`
+	Reason       string    `json:"reason"`
+	Explanation  string    `json:"explanation"`
+	NotifierName string    `json:"notifier_name"`
+	Status       string    `json:"status"`
+	Created      time.Time `json:"created"`
 }
 
 // enrich adds the context a decision needs. Gym staff don't learn who wrote an anonymous review,
 // and only report handlers see who reported and why.
 func (m *module) enrich(ctx context.Context, it *Item, viewer auth.Principal) {
 	db := m.app.DB
+	it.Actions = allowedActions(*it, viewer.PlatformAdmin, m.perms.Has(ctx, it.Gym, tenancy.PermManageComments))
 	c := &Context{Reports: []CaseReport{}}
 	if it.Author != "" {
 		if author, ok := m.author(ctx, db, it.Author, it.ContentType == "rating" && !viewer.PlatformAdmin); ok {
@@ -636,8 +592,8 @@ func (m *module) enrich(ctx context.Context, it *Item, viewer auth.Principal) {
 		}
 	}
 	db.QueryRow(ctx, `SELECT name FROM gyms WHERE id = $1`, it.Gym).Scan(&c.GymName)
-	reportHandler := viewer.PlatformAdmin || m.can(ctx, viewer, it.Gym, permReports)
-	rows, err := db.Query(ctx, `SELECT id, reason, explanation, notifier_name, status, to_char(created AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS.MSZ')
+	reportHandler := viewer.PlatformAdmin || m.perms.Has(ctx, it.Gym, tenancy.PermManageReports)
+	rows, err := db.Query(ctx, `SELECT id, reason, explanation, notifier_name, status, created
 		FROM reports WHERE content_type = $1 AND content_id = $2 ORDER BY created DESC LIMIT 20`, it.ContentType, it.ContentID)
 	if err == nil {
 		reports, _ := pgx.CollectRows(rows, func(row pgx.CollectableRow) (CaseReport, error) {

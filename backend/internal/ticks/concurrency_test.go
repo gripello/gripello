@@ -30,7 +30,7 @@ func TestTickEditKeepsAConcurrentDateChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tx.Exec(ctx, `UPDATE ticks SET date = '2026-01-01T12:00:00Z' WHERE id = $1`, tick.ID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE ticks SET date = '2026-01-01' WHERE id = $1`, tick.ID); err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan string)
@@ -48,13 +48,13 @@ func TestTickEditKeepsAConcurrentDateChange(t *testing.T) {
 	}
 	var updated Tick
 	if body := <-done; json.Unmarshal([]byte(body), &updated) != nil || updated.Note != "later" ||
-		!updated.Date.Equal(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)) {
+		updated.Date != "2026-01-01" {
 		t.Fatalf("edit undid the concurrent date change: %s", body)
 	}
 	changed := f.outbox(TopicTickChanged)
 	var last TickChanged
 	json.Unmarshal(changed[len(changed)-1].Payload, &last)
-	if !last.Date.Equal(updated.Date) {
+	if last.Date != updated.Date {
 		t.Fatalf("tick.changed names %v, want the stored day", last.Date)
 	}
 }
@@ -70,7 +70,7 @@ func TestTickDeleteNamesTheDayItHadMeanwhile(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(ctx)
-	if _, err := tx.Exec(ctx, `UPDATE ticks SET date = '2026-01-01T12:00:00Z' WHERE id = $1`, tick.ID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE ticks SET date = '2026-01-01' WHERE id = $1`, tick.ID); err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan int)
@@ -91,7 +91,7 @@ func TestTickDeleteNamesTheDayItHadMeanwhile(t *testing.T) {
 	changed := f.outbox(TopicTickChanged)
 	var last TickChanged
 	json.Unmarshal(changed[len(changed)-1].Payload, &last)
-	if !last.Date.Equal(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)) {
+	if last.Date != "2026-01-01" {
 		t.Fatalf("tick.changed names %v, want the day the tick had when deleted", last.Date)
 	}
 }

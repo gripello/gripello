@@ -59,10 +59,10 @@ paths:
                   page: { type: integer }
                   limit: { type: integer }
                   total: { type: integer }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createTask
       tags: [tasks]
@@ -96,15 +96,15 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
+                anyOf:
                   - $ref: '#/components/schemas/Task'
                   - type: object
                     required: [id]
                     properties:
                       id: { type: string }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '413': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '413': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/tasks/assignees:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -122,8 +122,8 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/TaskAssignee' } }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/defects/open:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -135,7 +135,7 @@ paths:
         - { name: route, in: query, schema: { type: string } }
       responses:
         '200': { $ref: '#/components/responses/OpenDefects' }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /routes/{id}/defects:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -145,7 +145,7 @@ paths:
       description: Public. Open defects of one route.
       responses:
         '200': { $ref: '#/components/responses/OpenDefects' }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /tasks/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -155,9 +155,9 @@ paths:
       description: manage_tasks in the task's gym.
       responses:
         '200': { $ref: '#/components/responses/Task' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     patch:
       operationId: updateTask
       tags: [tasks]
@@ -186,19 +186,19 @@ paths:
                     resolution_note: { type: string, maxLength: 1000 }
       responses:
         '200': { $ref: '#/components/responses/Task' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteTask
       tags: [tasks]
       description: manage_tasks.
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /tasks/{id}/assign:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -217,9 +217,10 @@ paths:
                 assignee: { type: [string, 'null'] }
       responses:
         '200': { $ref: '#/components/responses/Task' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /tasks/{id}/status:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -239,9 +240,10 @@ paths:
                 resolution_note: { type: string, maxLength: 1000 }
       responses:
         '200': { $ref: '#/components/responses/Task' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Gym:
@@ -256,11 +258,6 @@ components:
       required: true
       schema: { type: string }
   responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
     Task:
       description: Task
       content:
@@ -276,20 +273,6 @@ components:
             properties:
               items: { type: array, items: { $ref: '#/components/schemas/OpenDefect' } }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     TaskKind:
       type: string
       enum: [defect, reset, maintenance, other, wish]
@@ -310,7 +293,7 @@ components:
         location: { type: string }
         description: { type: string, maxLength: 2000 }
         assignee: { type: [string, 'null'] }
-        due_date: { type: [string, 'null'] }
+        due_date: { type: [string, 'null'], format: date }
         route_type: { type: string, enum: ['', Route, Boulder] }
         grade: { type: string, maxLength: 10 }
     Task:
@@ -334,7 +317,7 @@ components:
         photo: { type: string, description: 'protected file: /files/tasks/{id}/{photo}?token=' }
         reporter: { type: string }
         assignee: { type: string }
-        due_date: { type: [string, 'null'], format: date-time }
+        due_date: { type: [string, 'null'], format: date }
         resolution_note: { type: string }
         done_at: { type: [string, 'null'], format: date-time }
         done_by: { type: string }

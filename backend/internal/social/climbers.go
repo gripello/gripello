@@ -43,7 +43,7 @@ func scanClimber(row pgx.Row, extra ...any) (Climber, error) {
 	var c Climber
 	var username, firstname, name, avatar, banner string
 	err := row.Scan(append([]any{&c.ID, &username, &firstname, &name, &avatar, &banner}, extra...)...)
-	c.Name = person{username: username, firstname: firstname, name: name}.fullName()
+	c.Name = climbers.FullName(username, firstname, name)
 	c.Avatar = climbers.AvatarURL(c.ID, avatar)
 	if banner != "" {
 		c.Banner = "/api/files/users/" + c.ID + "/" + banner + "?thumb=1600x400"
@@ -72,8 +72,7 @@ func (m *module) listClimbers(w http.ResponseWriter, r *http.Request) error {
 	args := []any{principal.UserID}
 	if term := strings.TrimSpace(query.Get("q")); term != "" {
 		if len([]rune(term)) < minSearchLength {
-			httpx.JSON(w, http.StatusOK, []Climber{})
-			return nil
+			return httpx.Respond(w, http.StatusOK, []Climber{}, nil)
 		}
 		if err := m.searches.Check(w, principal.UserID); err != nil {
 			return err
@@ -102,8 +101,7 @@ func (m *module) listClimbers(w http.ResponseWriter, r *http.Request) error {
 	if found == nil {
 		found = []Climber{}
 	}
-	httpx.JSON(w, http.StatusOK, found)
-	return nil
+	return httpx.Respond(w, http.StatusOK, found, nil)
 }
 
 func (m *module) getClimber(w http.ResponseWriter, r *http.Request) error {
@@ -133,6 +131,5 @@ func (m *module) getClimber(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	httpx.JSON(w, http.StatusOK, p)
-	return nil
+	return httpx.Respond(w, http.StatusOK, p, nil)
 }

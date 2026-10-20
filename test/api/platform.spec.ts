@@ -3,7 +3,7 @@ import {
     clearUserLockout,
     deletePlatformUser,
     getMailSettings,
-    getPlatformStats,
+    platformStats,
     getPlatformSystem,
     getPlatformTraffic,
     getPlatformUser,
@@ -35,20 +35,14 @@ const apiUser = {
     memberships: [{ id: 'm1', gym: 'g1', role: 'r1' }],
 }
 
-const platformUser = {
-    id: 'u1',
-    email: 'ada@example.com',
-    expand: {
-        memberships_via_user: [{ id: 'm1', user: 'u1', gym: 'g1', role: 'r1' }],
-    },
-}
+const platformUser = apiUser
 
 beforeEach(() => {
     api = mockApi()
 })
 
 describe('platform users', () => {
-    it('pages a search with memberships shaped like membership records', async () => {
+    it('pages a search and keeps the memberships as Go sends them', async () => {
         api.respond({ items: [apiUser], page: 2, limit: 20, total: 21 })
         const result = await listPlatformUsers({
             q: ' ada@ ',
@@ -235,7 +229,7 @@ describe('platform stats and features', () => {
             },
         }
         api.respond(stats)
-        expect(await getPlatformStats()).toEqual(stats)
+        expect(await platformStats()).toEqual(stats)
         expect(api.request().url).toBe('/api/platform/stats')
     })
 

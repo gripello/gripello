@@ -19,6 +19,7 @@ import (
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 )
 
 const (
@@ -260,8 +261,8 @@ func (h *Hub) dropSession(e events.Event) {
 
 // live drops a principal whose session this hub saw revoked.
 func (h *Hub) live(p *auth.Principal) *auth.Principal {
-	if p == nil || p.SessionID == "" {
-		return p
+	if p == nil {
+		return nil
 	}
 	h.revokedMu.Lock()
 	defer h.revokedMu.Unlock()
@@ -361,7 +362,7 @@ func (h *Hub) audience(a events.Audience) func(*auth.Principal) bool {
 			return true
 		}
 		if hasGymPerm {
-			if p.PlatformAdmin {
+			if p.PlatformAdmin && slices.Contains(tenancy.PlatformAdminGrants, perm) {
 				return true
 			}
 			if gymPermUsers == nil {

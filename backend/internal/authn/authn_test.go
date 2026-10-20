@@ -24,6 +24,7 @@ import (
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/lockout"
 	"gripello/internal/platform/mail"
+	pw "gripello/internal/platform/password"
 	"gripello/internal/platform/testapp"
 )
 
@@ -40,7 +41,7 @@ func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	app := testapp.App(t)
 	Register(app)
-	hash, err := hashPassword(testPassword)
+	hash, err := pw.Hash(testPassword)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,8 +73,7 @@ func (f *fixture) user(email string) string {
 	return id
 }
 
-// legacyToken is a token from before sessions existed (no sid).
-func (f *fixture) legacyToken(userID string) string {
+func (f *fixture) sessionToken(userID string) string {
 	f.t.Helper()
 	user, err := findAccount(context.Background(), f.app.DB, userID)
 	if err != nil {
@@ -177,6 +177,10 @@ func TestPasswordLogin(t *testing.T) {
 	}
 	if status, _ := f.login("Plain", testPassword); status != http.StatusOK {
 		t.Errorf("login by username = %d", status)
+	}
+	f.exec(`UPDATE users SET username = 'plain@old' WHERE id = $1`, id)
+	if status, _ := f.login("Plain@old", testPassword); status != http.StatusOK {
+		t.Errorf("login by a username with @ = %d", status)
 	}
 	if status, body := f.login("plain@example.com", "wrong"); status != http.StatusBadRequest || body["message"] != "Failed to authenticate." {
 		t.Errorf("wrong password = %d %v", status, body)
@@ -363,7 +367,7 @@ func TestSessionsTrackAndRevokeLogins(t *testing.T) {
 		t.Errorf("revoked token refresh = %d", status)
 	}
 	third := f.loginToken("session@example.com")
-	legacy := f.legacyToken(id)
+	legacy := f.sessionToken(id)
 	for _, token := range []string{third, legacy} {
 		if status, _ := f.send(http.MethodGet, "/me/sessions", token, nil); status != http.StatusOK {
 			t.Fatalf("token before signing out the others = %d", status)
@@ -387,7 +391,7 @@ func TestSessionsTrackAndRevokeLogins(t *testing.T) {
 		t.Errorf("other devices heard of %d session changes, want logins, the revoke and signing out the others", n)
 	}
 	if status, _ := f.send(http.MethodGet, "/me/sessions", legacy, nil); status != http.StatusUnauthorized {
-		t.Errorf("token without a session survived signing out the others: %d", status)
+		t.Errorf("token of another session survived signing out the others: %d", status)
 	}
 	if status, _ := f.send(http.MethodPost, "/auth/logout", second, nil); status != http.StatusNoContent {
 		t.Errorf("logout = %d", status)
@@ -425,13 +429,22 @@ func TestRevokedSessionsReachTheBus(t *testing.T) {
 	})
 }
 
-func TestLegacyTokenStartsSessionOnRefresh(t *testing.T) {
+func TestTokenWithoutSessionIsRejected(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t)
-	id := f.user("legacy@example.com")
-	status, body := f.send(http.MethodPost, "/auth/refresh", f.legacyToken(id), nil)
-	if status != http.StatusOK || sidOf(body["token"].(string)) == "" {
-		t.Errorf("refresh = %d %v", status, body)
+	id := f.user("nosid@example.com")
+	user, err := findAccount(context.Background(), f.app.DB, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, err := f.app.Tokens.Sign(id, user.TokenKey, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/auth/refresh", "/me/sessions/sign-out-others"} {
+		if status, _ := f.send(http.MethodPost, path, token, nil); status != http.StatusUnauthorized {
+			t.Errorf("%s with a sid-less token = %d", path, status)
+		}
 	}
 }
 
@@ -677,7 +690,7 @@ func TestSecondFactorMethodsFollowTheAccount(t *testing.T) {
 	if got, _ := m.secondFactorMethods(ctx, id); strings.Join(got, ",") != "passkey" {
 		t.Errorf("passkey only = %v", got)
 	}
-	f.enableTOTP(f.legacyToken(id))
+	f.enableTOTP(f.sessionToken(id))
 	if got, _ := m.secondFactorMethods(ctx, id); strings.Join(got, ",") != "totp,passkey,recovery" {
 		t.Errorf("all factors = %v", got)
 	}
@@ -695,25 +708,6 @@ func TestAddingFactorsNeedsPassword(t *testing.T) {
 	}
 	if status, _ := f.send(http.MethodPost, "/me/passkeys/options", token, map[string]string{"password": testPassword}); status != http.StatusOK {
 		t.Errorf("passkey options with password = %d", status)
-	}
-}
-
-func TestDisplayIPCompressesIPv6(t *testing.T) {
-	t.Parallel()
-	for raw, want := range map[string]string{"0000:0000:0000:0000:0000:0000:0000:0001": "::1", "10.0.0.1": "10.0.0.1", "garbage": "garbage"} {
-		if got := displayIP(raw); got != want {
-			t.Errorf("displayIP(%q) = %q, want %q", raw, got, want)
-		}
-	}
-}
-
-func TestTruncateRunes(t *testing.T) {
-	t.Parallel()
-	if got := truncateRunes("äöü", 2); got != "äö" {
-		t.Fatalf("truncateRunes() = %q", got)
-	}
-	if got := truncateRunes("ab", 5); got != "ab" {
-		t.Fatalf("truncateRunes() = %q", got)
 	}
 }
 
@@ -797,7 +791,8 @@ func TestPasswordResetFlow(t *testing.T) {
 	if status, body := f.send(http.MethodPost, "/auth/password-reset/confirm", "", map[string]string{"token": token + "x", "password": "new-password-1", "passwordConfirm": "new-password-1"}); status != http.StatusBadRequest || !strings.Contains(mustJSON(body), "validation_invalid_token") {
 		t.Errorf("tampered token = %d %v", status, body)
 	}
-	if status, _ := f.send(http.MethodPost, "/auth/password-reset/confirm", "", map[string]string{"token": token, "password": "new-password-1", "passwordConfirm": "new-password-1"}); status != http.StatusNoContent {
+	long := strings.Repeat("ü", 200)
+	if status, _ := f.send(http.MethodPost, "/auth/password-reset/confirm", "", map[string]string{"token": token, "password": long, "passwordConfirm": long}); status != http.StatusNoContent {
 		t.Fatalf("confirm = %d", status)
 	}
 	if status, _ := f.send(http.MethodPost, "/auth/password-reset/confirm", "", map[string]string{"token": token, "password": "new-password-2", "passwordConfirm": "new-password-2"}); status != http.StatusBadRequest {
@@ -806,7 +801,10 @@ func TestPasswordResetFlow(t *testing.T) {
 	if status, _ := f.send(http.MethodGet, "/me/sessions", session, nil); status != http.StatusUnauthorized {
 		t.Errorf("session survived the reset = %d", status)
 	}
-	if status, _ := f.login("reset@example.com", "new-password-1"); status != http.StatusOK {
+	if status, _ := f.login("reset@example.com", long[:len(long)-2]+"u"); status == http.StatusOK {
+		t.Error("a change past byte 72 signed in")
+	}
+	if status, _ := f.login("reset@example.com", long); status != http.StatusOK {
 		t.Errorf("login after reset (lockout cleared) = %d", status)
 	}
 }
@@ -847,7 +845,7 @@ func TestVerificationFlow(t *testing.T) {
 
 func TestUnknownIdentitiesCostABcryptRound(t *testing.T) {
 	t.Parallel()
-	if cost, err := bcrypt.Cost(unknownAccountHash()); err != nil || cost != 10 {
+	if cost, err := bcrypt.Cost([]byte(strings.TrimPrefix(unknownAccountHash(), "sha256$"))); err != nil || cost != 10 {
 		t.Fatalf("dummy hash cost = %d, %v", cost, err)
 	}
 	start := time.Now()
@@ -875,7 +873,7 @@ func TestEmailChangeFlow(t *testing.T) {
 	if status, _ := f.send(http.MethodPost, "/auth/email-change/request", "", map[string]string{"newEmail": "after@example.com"}); status != http.StatusUnauthorized {
 		t.Errorf("guest request = %d", status)
 	}
-	if status, _ := f.send(http.MethodPost, "/auth/email-change/request", token, map[string]string{"newEmail": "after@example.com"}); status != http.StatusNoContent {
+	if status, _ := f.send(http.MethodPost, "/auth/email-change/request", token, map[string]string{"newEmail": "After@Example.com"}); status != http.StatusNoContent {
 		t.Fatalf("request = %d", status)
 	}
 	mailToken, to := f.lastMailToken(2)
@@ -899,13 +897,17 @@ func TestEmailChangeFlow(t *testing.T) {
 func TestRegistration(t *testing.T) {
 	f := newFixture(t)
 	f.user("existing@example.com")
-	body := map[string]string{"email": "new@example.com", "username": "newbie", "password": testPassword, "passwordConfirm": testPassword, "firstname": "Nia", "language": "de"}
+	body := map[string]string{"email": " New@Example.com ", "username": "newbie", "password": testPassword, "passwordConfirm": testPassword, "firstname": "Nia", "language": "de"}
 
 	if status, _ := f.send(http.MethodPost, "/auth/register", "", body); status != http.StatusForbidden {
 		t.Errorf("registration while disabled = %d", status)
 	}
 	f.exec(`INSERT INTO settings (id, allow_registration) VALUES ('platformsetting', true)`)
 
+	tooLong := map[string]string{"email": strings.Repeat("a", 250) + "@example.com", "password": testPassword, "passwordConfirm": testPassword}
+	if status, res := f.send(http.MethodPost, "/auth/register", "", tooLong); status != http.StatusBadRequest || !strings.Contains(mustJSON(res), `"email":{"code":"validation_is_email"`) {
+		t.Errorf("over-long address = %d %v", status, res)
+	}
 	invalid := map[string]string{"email": "not-an-email", "username": "x", "password": "short", "passwordConfirm": "other", "language": "xx"}
 	status, res := f.send(http.MethodPost, "/auth/register", "", invalid)
 	for _, code := range []string{`"email":{"code":"validation_is_email"`, `"username":{"code":"validation_length_out_of_range"`, `"password":{"code":"validation_length_out_of_range"`, `"passwordConfirm":{"code":"validation_values_mismatch"`, `"language":{"code":"validation_invalid_value"`} {
@@ -922,7 +924,7 @@ func TestRegistration(t *testing.T) {
 	if len(mails) != 1 || mails[0].To[0] != "new@example.com" || !strings.Contains(mails[0].Text, "/auth/confirm-verification/") {
 		t.Errorf("verification mail = %v", mails)
 	}
-	taken := map[string]string{"email": "existing@example.com", "password": testPassword, "passwordConfirm": testPassword}
+	taken := map[string]string{"email": "EXISTING@example.com", "password": testPassword, "passwordConfirm": testPassword}
 	if status, _ := f.send(http.MethodPost, "/auth/register", "", taken); status != http.StatusAccepted {
 		t.Errorf("taken address = %d, want the same answer as a free one", status)
 	}
@@ -1104,7 +1106,7 @@ func TestAdminSetsPasswordRevokesSessionsAndUnlocks(t *testing.T) {
 
 	_, login := f.login("climber@example.com", "brand-new-pass")
 	fresh, _ := login["token"].(string)
-	legacy := f.legacyToken(climber)
+	legacy := f.sessionToken(climber)
 	for _, token := range []string{fresh, legacy} {
 		if status, _ := f.send(http.MethodGet, "/me/sessions", token, nil); status != http.StatusOK {
 			t.Fatalf("token before the revocation = %d", status)
@@ -1200,5 +1202,75 @@ func TestBlocklistReadFailuresAreServerErrors(t *testing.T) {
 	body := map[string]string{"email": "new@example.com", "username": "newbie", "password": testPassword, "passwordConfirm": testPassword}
 	if status, res := f.send(http.MethodPost, "/auth/register", "", body); status != http.StatusInternalServerError {
 		t.Errorf("register without platform_config = %d %v", status, res)
+	}
+}
+
+func TestLegacyBcryptHashIsUpgradedOnSuccessfulChecks(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	legacy, err := bcrypt.GenerateFromPassword([]byte(testPassword), bcrypt.MinCost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	storedHash := func(id string) string {
+		var hash string
+		f.app.DB.QueryRow(context.Background(), `SELECT password_hash FROM users WHERE id = $1`, id).Scan(&hash)
+		return hash
+	}
+
+	id := f.user("legacy-login@example.com")
+	f.exec(`UPDATE users SET password_hash = $2 WHERE id = $1`, id, string(legacy))
+	if status, _ := f.login("legacy-login@example.com", "wrong-password"); status == http.StatusOK {
+		t.Fatal("wrong password accepted")
+	}
+	if storedHash(id) != string(legacy) {
+		t.Fatal("a failed check must not touch the hash")
+	}
+	if status, _ := f.login("legacy-login@example.com", testPassword); status != http.StatusOK {
+		t.Fatalf("legacy login = %d", status)
+	}
+	if hash := storedHash(id); !strings.HasPrefix(hash, "sha256$") {
+		t.Fatalf("hash not upgraded: %q", hash)
+	}
+	if status, _ := f.login("legacy-login@example.com", testPassword); status != http.StatusOK {
+		t.Fatalf("login after the upgrade = %d", status)
+	}
+
+	other := f.user("legacy-reauth@example.com")
+	token := f.loginToken("legacy-reauth@example.com")
+	f.exec(`UPDATE users SET password_hash = $2 WHERE id = $1`, other, string(legacy))
+	if status, _ := f.send(http.MethodPost, "/me/reauthenticate", token, map[string]string{"password": testPassword}); status != http.StatusNoContent {
+		t.Fatalf("reauthenticate = %d", status)
+	}
+	if hash := storedHash(other); !strings.HasPrefix(hash, "sha256$") {
+		t.Fatalf("reauthentication left the legacy hash: %q", hash)
+	}
+}
+
+func TestUnicodeAndPunycodeDomainsAreOneAddress(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`INSERT INTO settings (id, allow_registration) VALUES ('platformsetting', true)`)
+	body := map[string]string{"email": "Max@Müller.de", "username": "maxidn", "password": testPassword, "passwordConfirm": testPassword}
+	if status, _ := f.send(http.MethodPost, "/auth/register", "", body); status != http.StatusAccepted {
+		t.Fatalf("register = %d", status)
+	}
+	if n := f.count(`SELECT count(*) FROM users WHERE email = 'max@xn--mller-kva.de'`); n != 1 {
+		t.Fatalf("stored %d punycode addresses", n)
+	}
+	f.exec(`UPDATE users SET verified = true WHERE username = 'maxidn'`)
+	for _, identity := range []string{"max@xn--mller-kva.de", "MAX@MÜLLER.DE"} {
+		if status, _ := f.login(identity, testPassword); status != http.StatusOK {
+			t.Errorf("login as %s = %d", identity, status)
+		}
+	}
+	body["email"], body["username"] = "max@xn--mller-kva.de", "maxtwin"
+	f.send(http.MethodPost, "/auth/register", "", body)
+	if n := f.count(`SELECT count(*) FROM users WHERE username = 'maxtwin'`); n != 0 {
+		t.Error("the punycode spelling registered a second account")
+	}
+	f.exec(`UPDATE platform_config SET blocked_emails = ARRAY['bücher.de']`)
+	body["email"], body["username"] = "a@xn--bcher-kva.de", "bookish"
+	if status, res := f.send(http.MethodPost, "/auth/register", "", body); status != http.StatusBadRequest || !strings.Contains(mustJSON(res), "validation_email_blocked") {
+		t.Errorf("blocked IDN domain in punycode = %d %v", status, res)
 	}
 }

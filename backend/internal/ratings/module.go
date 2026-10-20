@@ -12,11 +12,6 @@ import (
 	"gripello/internal/platform/tenancy"
 )
 
-const (
-	permManageComments = "manage_comments"
-	permManageRoutes   = "manage_routes"
-)
-
 type module struct {
 	app      *platform.App
 	perms    *tenancy.Permissions
@@ -55,21 +50,6 @@ func (m *module) forgetClimber(e events.Event) {
 	if json.Unmarshal(e.Payload, &change) == nil && change.Record.ID != "" {
 		m.climbers.Forget(change.Record.ID)
 	}
-}
-
-func (m *module) can(ctx context.Context, gym, permission string) bool {
-	p, ok := auth.From(ctx)
-	return ok && m.perms.Can(ctx, p.UserID, gym, permission)
-}
-
-func (m *module) require(ctx context.Context, gym, permission string) error {
-	if _, err := auth.Require(ctx); err != nil {
-		return err
-	}
-	if !m.can(ctx, gym, permission) {
-		return httpx.ErrForbidden
-	}
-	return nil
 }
 
 // authors resolves climbers for user ids; reviews drop authors who chose reviews_anonymous, betas never do.

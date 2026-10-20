@@ -1,0 +1,110 @@
+openapi: 3.1.0
+info:
+  title: Gripello platform endpoints (health, files, realtime subscriptions)
+  version: 1.0.0
+  description: Served by cmd/gripello and internal/platform. The realtime stream (GET /realtime, server-sent events) is not described here.
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [system]
+      description: Pings the database within 2 s; never cached.
+      responses:
+        '200': { $ref: '#/components/responses/Health' }
+        '503': { $ref: '#/components/responses/Health' }
+  /mail-status:
+    get:
+      operationId: getMailStatus
+      tags: [system]
+      responses:
+        '200':
+          description: Whether outgoing mail is configured
+          content:
+            application/json:
+              schema: { type: object, required: [configured], properties: { configured: { type: boolean } } }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+  /online:
+    get:
+      operationId: getOnline
+      tags: [system]
+      description: Realtime clients connected to the replica answering.
+      responses:
+        '200':
+          description: Online count
+          content:
+            application/json:
+              schema: { type: object, required: [clients], properties: { clients: { type: integer } } }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+  /realtime/{clientId}/subscriptions:
+    put:
+      operationId: setRealtimeSubscriptions
+      tags: [system]
+      description: The auth of this request becomes the stream's principal; `since` replays what the previous principal couldn't receive.
+      parameters:
+        - { name: clientId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                topics: { type: array, items: { type: string } }
+                since: { type: integer }
+      responses:
+        '204': { description: Applied by the replica holding the stream }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+  /files/token:
+    post:
+      operationId: issueFileToken
+      tags: [system]
+      description: A token for the files of one record; protected tables (tasks, moderation_items) need staff rights in the record's gym (404 otherwise).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [table, id]
+              properties:
+                table: { type: string }
+                id: { type: string }
+      responses:
+        '200':
+          description: File token
+          content:
+            application/json:
+              schema: { type: object, required: [token], properties: { token: { type: string } } }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+  /files/{table}/{id}/{name}:
+    get:
+      operationId: getFile
+      tags: [system]
+      description: Immutable file URL; protected tables need `token`.
+      parameters:
+        - { name: table, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: name, in: path, required: true, schema: { type: string } }
+        - { name: thumb, in: query, description: 'e.g. 100x100', schema: { type: string } }
+        - { name: token, in: query, schema: { type: string } }
+      responses:
+        '200': { description: The file or its thumbnail }
+        '206': { description: Partial content (Range) }
+        '304': { description: Not modified (ETag) }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '416': { description: Range not satisfiable }
+components:
+  responses:
+    Health:
+      description: Health
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [version, status, database]
+            properties:
+              version: { type: string }
+              status: { type: string, enum: [ok, unavailable] }
+              database: { type: string, enum: [ok, down] }

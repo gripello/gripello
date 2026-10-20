@@ -9,16 +9,12 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
+	"gripello/internal/platform/db"
+	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	platformmail "gripello/internal/platform/mail"
 )
-
-type querier interface {
-	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
 
 type account struct {
 	ID             string
@@ -43,37 +39,35 @@ func scanAccount(row pgx.Row) (account, error) {
 	return a, err
 }
 
-func findAccount(ctx context.Context, q querier, id string) (account, error) {
+func findAccount(ctx context.Context, q db.Querier, id string) (account, error) {
 	return scanAccount(q.QueryRow(ctx, `SELECT `+accountColumns+` FROM users WHERE id = $1`, id))
 }
 
-// The identity is an email or a username: email matched exactly, username case-insensitively.
-func findAccountByIdentity(ctx context.Context, q querier, identity string) (account, error) {
-	return scanAccount(q.QueryRow(ctx, `SELECT `+accountColumns+` FROM users
-		WHERE (email <> '' AND lower(email) = lower($1)) OR lower(username) = lower($1)
-		ORDER BY (lower(email) = lower($1)) DESC LIMIT 1`, identity))
+// The identity is an email when it contains "@", else a username; an "@" identity no e-mail matches is tried as a
+// username too (imported accounts may have one). Usernames match case-insensitively.
+func findAccountByIdentity(ctx context.Context, q db.Querier, identity string) (account, error) {
+	if strings.Contains(identity, "@") {
+		if a, err := findAccountByEmail(ctx, q, identity); !errors.Is(err, pgx.ErrNoRows) {
+			return a, err
+		}
+	}
+	return scanAccount(q.QueryRow(ctx, `SELECT `+accountColumns+` FROM users WHERE lower(username) = lower($1)`, identity))
 }
 
-func findAccountByEmail(ctx context.Context, q querier, email string) (account, error) {
-	return scanAccount(q.QueryRow(ctx, `SELECT `+accountColumns+` FROM users WHERE email <> '' AND lower(email) = lower($1)`, email))
+func findAccountByEmail(ctx context.Context, q db.Querier, email string) (account, error) {
+	return scanAccount(q.QueryRow(ctx, `SELECT `+accountColumns+` FROM users WHERE email <> '' AND email = $1`, platformmail.NormalizeAddress(email)))
 }
 
-func emailTaken(ctx context.Context, q querier, email, exceptID string) (bool, error) {
+func emailTaken(ctx context.Context, q db.Querier, email, exceptID string) (bool, error) {
 	var taken bool
-	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE lower(email) = lower($1) AND id <> $2)`, email, exceptID).Scan(&taken)
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE email = $1 AND id <> $2)`, platformmail.NormalizeAddress(email), exceptID).Scan(&taken)
 	return taken, err
 }
 
-func usernameTaken(ctx context.Context, q querier, username string) (bool, error) {
+func usernameTaken(ctx context.Context, q db.Querier, username string) (bool, error) {
 	var taken bool
 	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE lower(username) = lower($1))`, username).Scan(&taken)
 	return taken, err
-}
-
-func userRecord(ctx context.Context, q querier, id string) (json.RawMessage, error) {
-	var record json.RawMessage
-	err := q.QueryRow(ctx, `SELECT to_jsonb(u) - 'password_hash' - 'token_key' FROM users u WHERE id = $1`, id).Scan(&record)
-	return record, err
 }
 
 const tokenKeyAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
@@ -124,14 +118,14 @@ type session struct {
 	Current   bool       `json:"current"`
 }
 
-func insertSession(ctx context.Context, q querier, userID, method, userAgent, ip string) (string, error) {
+func insertSession(ctx context.Context, q db.Querier, userID, method, userAgent, ip string) (string, error) {
 	id := ids.New()
 	_, err := q.Exec(ctx, `INSERT INTO sessions (id, "user", method, user_agent, ip, last_seen) VALUES ($1, $2, $3, $4, $5, now())`,
-		id, userID, method, truncateRunes(userAgent, sessionUserAgentMax), ip)
+		id, userID, method, httpx.Truncate(userAgent, sessionUserAgentMax), ip)
 	return id, err
 }
 
-func listSessions(ctx context.Context, q querier, userID, currentID string) ([]session, error) {
+func listSessions(ctx context.Context, q db.Querier, userID, currentID string) ([]session, error) {
 	rows, err := q.Query(ctx, `SELECT id, created, method, user_agent, ip, last_seen FROM sessions WHERE "user" = $1 ORDER BY last_seen DESC NULLS LAST`, userID)
 	if err != nil {
 		return nil, err
@@ -179,7 +173,7 @@ func scanFactor(row pgx.Row) (factor, error) {
 	return f, err
 }
 
-func listFactors(ctx context.Context, q querier, userID string) ([]factor, error) {
+func listFactors(ctx context.Context, q db.Querier, userID string) ([]factor, error) {
 	rows, err := q.Query(ctx, `SELECT `+factorColumns+` FROM mfa_factors WHERE "user" = $1 ORDER BY created`, userID)
 	if err != nil {
 		return nil, err
@@ -191,15 +185,15 @@ func listFactors(ctx context.Context, q querier, userID string) ([]factor, error
 	return factors, err
 }
 
-func findOwnFactor(ctx context.Context, q querier, userID, id string) (factor, error) {
+func findOwnFactor(ctx context.Context, q db.Querier, userID, id string) (factor, error) {
 	return scanFactor(q.QueryRow(ctx, `SELECT `+factorColumns+` FROM mfa_factors WHERE id = $1 AND "user" = $2`, id, userID))
 }
 
-func findPasskey(ctx context.Context, q querier, credentialID string) (factor, error) {
+func findPasskey(ctx context.Context, q db.Querier, credentialID string) (factor, error) {
 	return scanFactor(q.QueryRow(ctx, `SELECT `+factorColumns+` FROM mfa_factors WHERE credential_id = $1 AND kind = 'passkey'`, credentialID))
 }
 
-func insertFactor(ctx context.Context, q querier, userID string, f factor) (factor, error) {
+func insertFactor(ctx context.Context, q db.Querier, userID string, f factor) (factor, error) {
 	transports, _ := json.Marshal(f.Transports)
 	algorithm, digits, period, userHandle := "", 0, 0, ""
 	if f.Kind == methodTOTP {
@@ -216,30 +210,30 @@ func insertFactor(ctx context.Context, q querier, userID string, f factor) (fact
 }
 
 // claimTOTPStep is atomic: a code is accepted once even when the same step arrives in parallel.
-func claimTOTPStep(ctx context.Context, q querier, factorID string, step int64) bool {
+func claimTOTPStep(ctx context.Context, q db.Querier, factorID string, step int64) bool {
 	tag, err := q.Exec(ctx, `UPDATE mfa_factors SET last_step = $2, last_used = now() WHERE id = $1 AND last_step < $2`, factorID, step)
 	return err == nil && tag.RowsAffected() == 1
 }
 
-func recoveryCodesLeft(ctx context.Context, q querier, userID string) int {
+func recoveryCodesLeft(ctx context.Context, q db.Querier, userID string) int {
 	var left int
 	q.QueryRow(ctx, `SELECT COALESCE((SELECT jsonb_array_length(codes) FROM mfa_recovery_codes WHERE "user" = $1), 0)`, userID).Scan(&left)
 	return left
 }
 
-func storeRecoveryCodes(ctx context.Context, q querier, userID string, hashes []string) error {
+func storeRecoveryCodes(ctx context.Context, q db.Querier, userID string, hashes []string) error {
 	codes, _ := json.Marshal(hashes)
 	_, err := q.Exec(ctx, `INSERT INTO mfa_recovery_codes (id, "user", codes) VALUES ($1, $2, $3)
 		ON CONFLICT ("user") DO UPDATE SET codes = EXCLUDED.codes`, ids.New(), userID, codes)
 	return err
 }
 
-func useRecoveryCode(ctx context.Context, q querier, userID, hash string) bool {
+func useRecoveryCode(ctx context.Context, q db.Querier, userID, hash string) bool {
 	tag, err := q.Exec(ctx, `UPDATE mfa_recovery_codes SET codes = codes - $2::text WHERE "user" = $1 AND codes ? $2::text`, userID, hash)
 	return err == nil && tag.RowsAffected() == 1
 }
 
-func restoreRecoveryCode(ctx context.Context, q querier, userID, hash string) error {
+func restoreRecoveryCode(ctx context.Context, q db.Querier, userID, hash string) error {
 	_, err := q.Exec(ctx, `UPDATE mfa_recovery_codes SET codes = codes || to_jsonb($2::text) WHERE "user" = $1`, userID, hash)
 	return err
 }
@@ -253,7 +247,7 @@ type challenge struct {
 	Data   []byte
 }
 
-func insertChallenge(ctx context.Context, q querier, kind, userID, method string, data []byte) (string, error) {
+func insertChallenge(ctx context.Context, q db.Querier, kind, userID, method string, data []byte) (string, error) {
 	id := ids.New() + ids.New()
 	var user *string
 	if userID != "" {
@@ -263,7 +257,7 @@ func insertChallenge(ctx context.Context, q querier, kind, userID, method string
 	return id, err
 }
 
-func findChallenge(ctx context.Context, q querier, kind, id string) (challenge, error) {
+func findChallenge(ctx context.Context, q db.Querier, kind, id string) (challenge, error) {
 	c := challenge{ID: id}
 	err := q.QueryRow(ctx, `SELECT COALESCE("user", ''), method, data FROM mfa_challenges
 		WHERE id = $1 AND kind = $2 AND created > now() - $3::interval`, id, kind, challengeTTL.String()).Scan(&c.User, &c.Method, &c.Data)
@@ -271,7 +265,7 @@ func findChallenge(ctx context.Context, q querier, kind, id string) (challenge, 
 }
 
 // takeChallenge consumes the challenge so it can't be replayed.
-func takeChallenge(ctx context.Context, q querier, kind, id string) (challenge, error) {
+func takeChallenge(ctx context.Context, q db.Querier, kind, id string) (challenge, error) {
 	c := challenge{ID: id}
 	err := q.QueryRow(ctx, `DELETE FROM mfa_challenges WHERE id = $1 AND kind = $2 AND created > now() - $3::interval
 		RETURNING COALESCE("user", ''), method, data`, id, kind, challengeTTL.String()).Scan(&c.User, &c.Method, &c.Data)
@@ -279,8 +273,3 @@ func takeChallenge(ctx context.Context, q querier, kind, id string) (challenge, 
 }
 
 func isNoRows(err error) bool { return errors.Is(err, pgx.ErrNoRows) }
-
-func isUniqueViolation(err error, index string) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505" && strings.Contains(pgErr.ConstraintName, index)
-}

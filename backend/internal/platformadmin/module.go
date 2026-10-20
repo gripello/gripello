@@ -3,7 +3,6 @@ package platformadmin
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -14,14 +13,13 @@ import (
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	gmail "gripello/internal/platform/mail"
 	"gripello/internal/platform/ratelimit"
+	"gripello/internal/platform/tenancy"
 )
-
-// Mirrored in shared/utils/featureFlags.ts; the gyms module only checks that flags are booleans.
-var featureFlags = []string{"beta_links", "beta_uploads"}
 
 type module struct {
 	app          *platform.App
@@ -62,7 +60,7 @@ func Register(app *platform.App) {
 		"GET /platform/issues":                          m.listIssues,
 		"GET /platform/issues/{fingerprint}":            m.issueOccurrences,
 	} {
-		app.Handle(pattern, onlyPlatformAdmins(handler))
+		app.Handle(pattern, auth.PlatformAdminsOnly(handler))
 	}
 	app.Handle("POST /client-errors", httpx.Handler(m.reportClientError))
 	if app.Bus != nil {
@@ -72,26 +70,6 @@ func Register(app *platform.App) {
 	}
 	app.Cron.Add("issueAlerts", "*/5 * * * *", m.alertIssues)
 	app.Cron.Add("emailSourcesSync", "37 3 * * *", m.syncEnabledEmailSources)
-}
-
-func onlyPlatformAdmins(next httpx.Handler) httpx.Handler {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		p, err := auth.Require(r.Context())
-		if err != nil {
-			return err
-		}
-		if !p.PlatformAdmin {
-			return httpx.ErrForbidden
-		}
-		return next(w, r)
-	}
-}
-
-func notFoundIfNoRows(err error) error {
-	if errors.Is(err, pgx.ErrNoRows) {
-		return httpx.ErrNotFound
-	}
-	return err
 }
 
 func (m *module) stats(w http.ResponseWriter, r *http.Request) error {
@@ -129,13 +107,11 @@ func (m *module) stats(w http.ResponseWriter, r *http.Request) error {
 	if gyms == nil {
 		gyms = []gymStats{}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"gyms": gyms, "totals": totals})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"gyms": gyms, "totals": totals}, nil)
 }
 
 func (m *module) features(w http.ResponseWriter, r *http.Request) error {
-	httpx.JSON(w, http.StatusOK, map[string]any{"flags": featureFlags})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"flags": tenancy.FeatureFlags}, nil)
 }
 
 func (m *module) setFeatures(w http.ResponseWriter, r *http.Request) error {
@@ -144,10 +120,10 @@ func (m *module) setFeatures(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	features := map[string]bool{}
-	invalid := httpx.NewError(http.StatusBadRequest, "Invalid feature flags.")
+	invalid := httpx.BadRequest("Invalid feature flags.")
 	for flag, raw := range body {
 		var on bool
-		if !slices.Contains(featureFlags, flag) {
+		if !slices.Contains(tenancy.FeatureFlags, flag) {
 			invalid.Field(flag, "validation_invalid_value", "Unknown feature flag.")
 		} else if json.Unmarshal(raw, &on) != nil {
 			invalid.Field(flag, "validation_invalid_value", "Must be true or false.")
@@ -162,7 +138,7 @@ func (m *module) setFeatures(w http.ResponseWriter, r *http.Request) error {
 		var active bool
 		err := tx.QueryRow(r.Context(), `UPDATE gyms g SET features = $2 WHERE id = $1 RETURNING to_jsonb(g), active`, r.PathValue("id"), features).Scan(&gym, &active)
 		if err != nil {
-			return notFoundIfNoRows(err)
+			return db.NotFound(err)
 		}
 		audience := events.Audience{Public: true}
 		if !active {
@@ -175,8 +151,7 @@ func (m *module) setFeatures(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, gym)
-	return nil
+	return httpx.Respond(w, http.StatusOK, gym, nil)
 }
 
 func (m *module) addAdmin(w http.ResponseWriter, r *http.Request) error {
@@ -186,8 +161,7 @@ func (m *module) addAdmin(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
 	}
-	p, _ := auth.From(r.Context())
-	if err := auth.RequireRecentReauth(r.Context(), m.app.DB, p); err != nil {
+	if err := auth.RequireCallerReauth(r.Context(), m.app.DB); err != nil {
 		return err
 	}
 	record, err := m.setPlatformAdmin(r.Context(), body.User, true)
@@ -195,8 +169,7 @@ func (m *module) addAdmin(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	m.mailUser(r.Context(), body.User, "platformAdminGranted")
-	httpx.JSON(w, http.StatusOK, record)
-	return nil
+	return httpx.Respond(w, http.StatusOK, record, nil)
 }
 
 // removeAdmin locks every admin row: of two admins revoking each other, the second finds itself no longer admin.
@@ -205,7 +178,7 @@ func (m *module) removeAdmin(w http.ResponseWriter, r *http.Request) error {
 	p, _ := auth.From(ctx)
 	userID := r.PathValue("user")
 	if userID == p.UserID {
-		return httpx.NewError(http.StatusBadRequest, "You can't remove your own platform admin rights.")
+		return httpx.BadRequest("You can't remove your own platform admin rights.")
 	}
 	if err := auth.RequireRecentReauth(ctx, m.app.DB, p); err != nil {
 		return err
@@ -226,7 +199,7 @@ func (m *module) removeAdmin(w http.ResponseWriter, r *http.Request) error {
 			return httpx.ErrForbidden
 		}
 		if !slices.Contains(admins, userID) {
-			return httpx.NewError(http.StatusBadRequest, "This user is not a platform admin.")
+			return httpx.BadRequest("This user is not a platform admin.")
 		}
 		_, err := tx.Exec(ctx, `UPDATE users SET platform_admin = false WHERE id = $1`, userID)
 		return err
@@ -235,8 +208,7 @@ func (m *module) removeAdmin(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	m.mailUser(ctx, userID, "platformAdminRevoked")
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) mailUser(ctx context.Context, userID, key string) {

@@ -13,6 +13,7 @@ export class ApiError extends Error {
     readonly status: number
     readonly response: ApiErrorBody
     readonly isAbort: boolean
+    sessionEnded = false
 
     constructor(context: FetchContext) {
         const body = context.response?._data
@@ -30,10 +31,6 @@ export class ApiError extends Error {
         this.status = context.response?.status ?? 0
         this.response = response
         this.isAbort = isAbort
-    }
-
-    get data() {
-        return this.response
     }
 }
 
@@ -85,8 +82,10 @@ export function useApi() {
                 error.status === 401 &&
                 sentCurrentToken &&
                 !error.response.mfaId
-            )
+            ) {
+                error.sessionEnded = true
                 store.clear()
+            }
             throw error
         },
     })
@@ -112,7 +111,7 @@ export function fileUrl(
     )
 }
 
-export async function fileToken(table: string, id: string) {
+export async function issueFileToken(table: string, id: string) {
     const { token } = await useApi()<{ token: string }>('/files/token', {
         method: 'POST',
         body: { table, id },
@@ -133,7 +132,7 @@ export function toFormData(input: Record<string, unknown> | FormData) {
     return form
 }
 
-export interface RouteList<T> {
+export interface Page<T> {
     items: T[]
     page: number
     limit: number
