@@ -78,7 +78,7 @@ describe('manage routes page', () => {
             'if (!background || routes.value.length === 0) listFailed.value = true',
         )
         expect(manage).toMatch(
-            /queueReload = coalesce\(\s+\(\) => reloadRoutes\(\{ background: true \}\)/,
+            /queueReload = coalesce\(\s*\(\) => reloadRoutes\(\{ background: true \}\)/,
         )
         expect(manage).toContain('{ resync: queueReload }')
     })

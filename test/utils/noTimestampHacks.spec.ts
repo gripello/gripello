@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -23,10 +23,13 @@ describe('timestamp parsing', () => {
 
     it('never rewrites API timestamps by hand', () => {
         const files = [
-            ...['app', 'shared', 'server', 'e2e/support'].flatMap((dir) =>
-                sourceFiles(path.join(root, dir)),
-            ),
-            ...sourceFiles(path.join(root, 'loadtest'), false),
+            ...['app', 'shared', 'server', 'e2e/support']
+                .map((dir) => path.join(root, dir))
+                .filter(existsSync)
+                .flatMap((dir) => sourceFiles(dir)),
+            ...(existsSync(path.join(root, 'loadtest'))
+                ? sourceFiles(path.join(root, 'loadtest'), false)
+                : []),
         ]
         expect(files.length).toBeGreaterThan(100)
         const offenders = files

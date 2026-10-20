@@ -1,4 +1,6 @@
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './app/utils/locales.ts'
+import { THEME_MODE_COOKIE } from './shared/utils/cookies.ts'
+import { skipHeavyPrefetches } from './shared/utils/lazyChunks.ts'
 
 const apiBase =
     process.env.NODE_ENV === 'production'
@@ -34,12 +36,20 @@ export default defineNuxtConfig({
         },
     },
     ssr: true,
+    hooks: {
+        'build:manifest': skipHeavyPrefetches,
+    },
     routeRules: {
         '/logbook': { ssr: false },
     },
     experimental: {
         viewTransition: true,
         routeTypedFetch: false,
+        defaults: {
+            nuxtLink: {
+                prefetchOn: { visibility: false, interaction: true },
+            },
+        },
     },
     nitro: {
         compressPublicAssets: { gzip: true, brotli: true },
@@ -75,7 +85,7 @@ export default defineNuxtConfig({
         preference: 'system',
         fallback: 'light',
         storage: 'cookie',
-        storageKey: 'theme-mode',
+        storageKey: THEME_MODE_COOKIE,
     },
     icon: {
         // /api/* belongs to the Go backend, so the default /api/_nuxt_icon can never answer.

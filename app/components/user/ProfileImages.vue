@@ -74,7 +74,7 @@
                     : $t('account.changeAvatar')
             "
             :aspect="pending?.kind === 'banner' ? BANNER_ASPECT : 1"
-            :output-width="pending?.kind === 'banner' ? 1600 : 640"
+            :output-width="pending?.kind === 'banner' ? 2400 : 640"
             :round="pending?.kind === 'avatar'"
             :avatar-marker="pending?.kind === 'banner'"
             @cropped="onCropped"
