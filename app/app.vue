@@ -17,7 +17,18 @@
 </template>
 
 <script setup lang="ts">
-const { locale } = useI18n()
-useHead({ htmlAttrs: { lang: locale } })
+import robotsTxt from '~~/public/robots.txt?raw'
+import { robotsAllows } from '#shared/utils/robots'
+
+const { locale, t } = useI18n()
+const route = useRoute()
+useHead({
+    htmlAttrs: { lang: locale },
+    meta: () =>
+        robotsAllows(robotsTxt, route.fullPath)
+            ? []
+            : [{ name: 'robots', content: 'noindex' }],
+})
+useSeoMeta({ description: () => t('seo.default') })
 useBrowserChrome()
 </script>

@@ -46,11 +46,13 @@
         --app-bottom: 0px;
         --ui-bg: #ffffff;
         --ui-bg-muted: #edf1e6;
+        --ui-text-dimmed: #737373;
+        --ui-text-muted: #636363;
         --ui-primary: #38741c;
         --ui-secondary: #38656a;
-        --ui-success: #2e7d32;
+        --ui-success: #236628;
         --ui-info: #0061a4;
-        --ui-warning: #9a5b00;
+        --ui-warning: #875000;
         --ui-error: #ba1a1a;
         --ui-radius: 0.5rem;
     }
@@ -61,9 +63,11 @@
         --ui-bg-muted: #1c2128;
         --ui-bg-elevated: #1c2128;
         --ui-text: #dddddd;
+        --ui-text-dimmed: #8b8b8b;
+        --ui-text-muted: var(--ui-color-neutral-400);
         --ui-primary: #238636;
         --ui-secondary: #58a6ff;
-        --ui-success: #238636;
+        --ui-success: #3fb950;
         --ui-info: #58a6ff;
         --ui-warning: #e3b341;
         --ui-error: #f85149;
@@ -249,13 +253,6 @@
         transform: translateX(-16px);
     }
 
-    .surface-card {
-        border-radius: 14px;
-        border: 1px solid
-            color-mix(in oklab, var(--ui-text-highlighted) 7%, transparent);
-        background: var(--ui-bg);
-    }
-
     /* List card: the shell behind RouteCard and CommentCard. Both render the same
    anatomy (header · divider · meta rows · pill row · actions); only the
    contents differ, so the structure lives here and each component keeps just
@@ -330,7 +327,7 @@
         align-items: center;
         gap: 4px;
         font-size: 0.75rem;
-        color: color-mix(in oklab, var(--ui-text-highlighted) 70%, transparent);
+        color: var(--ui-text-toned);
         background: color-mix(
             in oklab,
             var(--ui-text-highlighted) 6%,
@@ -556,7 +553,7 @@
     }
 
     .legal-doc dt {
-        color: color-mix(in oklab, var(--ui-text-highlighted) 60%, transparent);
+        color: var(--ui-text-muted);
     }
 
     .legal-doc a {
