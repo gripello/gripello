@@ -27,7 +27,9 @@ describe('timestamp parsing', () => {
                 .map((dir) => path.join(root, dir))
                 .filter(existsSync)
                 .flatMap((dir) => sourceFiles(dir)),
-            ...sourceFiles(path.join(root, 'loadtest'), false),
+            ...(existsSync(path.join(root, 'loadtest'))
+                ? sourceFiles(path.join(root, 'loadtest'), false)
+                : []),
         ]
         expect(files.length).toBeGreaterThan(100)
         const offenders = files
