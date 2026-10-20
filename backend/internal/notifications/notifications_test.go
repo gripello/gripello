@@ -122,7 +122,7 @@ func (f *fixture) exec(sql string, args ...any) string {
 
 func (f *fixture) user(name string) {
 	f.t.Helper()
-	id := f.exec(`INSERT INTO users (id, username, email, token_key) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), name, name+"@example.com", "key-"+name)
+	id := f.exec(`INSERT INTO users (id, username, email, token_key) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), name, strings.ToLower(name)+"@example.com", "key-"+name)
 	token := testapp.Token(f.t, f.app, id, "key-"+name)
 	f.users[name], f.tokens[name] = id, token
 }
@@ -153,10 +153,10 @@ func (f *fixture) count(sql string, args ...any) int {
 	return n
 }
 
-func (f *fixture) notify(n Notify) {
+func (f *fixture) notify(n events.Notify) {
 	f.t.Helper()
 	err := pgx.BeginFunc(context.Background(), f.app.DB, func(tx pgx.Tx) error {
-		return events.PublishAs(context.Background(), tx, "", TopicNotify, KindNotify, n, events.Audience{})
+		return events.PublishAs(context.Background(), tx, "", events.TopicNotify, events.TopicNotify, n, events.Audience{})
 	})
 	if err != nil {
 		f.t.Fatal(err)
@@ -213,7 +213,7 @@ func TestNotifyEventStoresPublishesAndPushes(t *testing.T) {
 	f.subscribe("climber", alive.URL+"/a")
 	f.subscribe("climber", gone.URL+"/b")
 
-	f.notify(Notify{Type: "task_defect_fixed", Users: []string{f.users["climber"], "unknownuser0000"}, Gym: f.gym,
+	f.notify(events.Notify{Type: "task_defect_fixed", Users: []string{f.users["climber"], "unknownuser0000"}, Gym: f.gym,
 		Params: map[string]any{"route": "Crimp"}, URL: "/route?id=x"})
 	testapp.WaitFor(t, func() bool { return f.count(`SELECT COUNT(*) FROM jobs WHERE kind = 'push'`) == 1 })
 
@@ -249,10 +249,10 @@ func TestNotifyEventStoresPublishesAndPushes(t *testing.T) {
 		t.Errorf("gone subscription delete events = %d", n)
 	}
 
-	f.m.onNotify(events.Event{ID: 0, Kind: KindNotify})
+	f.m.onNotify(events.Event{ID: 0, Kind: events.TopicNotify})
 	var lastID int64
-	f.app.DB.QueryRow(context.Background(), `SELECT id FROM events WHERE topic = $1`, TopicNotify).Scan(&lastID)
-	if err := f.m.deliver(context.Background(), lastID, Notify{Type: "task_defect_fixed", Users: []string{f.users["climber"]}}); err != nil {
+	f.app.DB.QueryRow(context.Background(), `SELECT id FROM events WHERE topic = $1`, events.TopicNotify).Scan(&lastID)
+	if err := f.m.deliver(context.Background(), lastID, events.Notify{Type: "task_defect_fixed", Users: []string{f.users["climber"]}}); err != nil {
 		t.Fatal(err)
 	}
 	if n := f.count(`SELECT COUNT(*) FROM notifications`); n != 1 {
@@ -272,8 +272,8 @@ func TestMutedPushTopicStillLandsInTheBell(t *testing.T) {
 		t.Errorf("prefs change reached %d user events", n)
 	}
 
-	f.notify(Notify{Type: "task_assigned", Users: []string{f.users["climber"]}, Gym: f.gym})
-	f.notify(Notify{Type: "task_defect_fixed", Users: []string{f.users["climber"]}, Gym: f.gym})
+	f.notify(events.Notify{Type: "task_assigned", Users: []string{f.users["climber"]}, Gym: f.gym})
+	f.notify(events.Notify{Type: "task_defect_fixed", Users: []string{f.users["climber"]}, Gym: f.gym})
 	testapp.WaitFor(t, func() bool { return f.count(`SELECT COUNT(*) FROM jobs WHERE kind = 'push'`) == 2 })
 	f.runPushJobs()
 	if pushed.Load() != 1 {
@@ -292,7 +292,7 @@ func TestMutedPushTopicStillLandsInTheBell(t *testing.T) {
 
 func TestPushDisabledQueuesNothing(t *testing.T) {
 	f := newFixture(t, false)
-	f.notify(Notify{Type: "task_assigned", Users: []string{f.users["climber"]}, Gym: f.gym})
+	f.notify(events.Notify{Type: "task_assigned", Users: []string{f.users["climber"]}, Gym: f.gym})
 	testapp.WaitFor(t, func() bool { return f.count(`SELECT COUNT(*) FROM notifications`) == 1 })
 	if n := f.count(`SELECT COUNT(*) FROM jobs`); n != 0 {
 		t.Errorf("jobs = %d", n)
@@ -436,7 +436,7 @@ func TestWallDigestNotifiesFollowersOncePerWall(t *testing.T) {
 	if err := f.m.notifyWallNewRoutes(context.Background(), time.Now().Add(3*wallDigestEvery)); err != nil {
 		t.Fatal(err)
 	}
-	if n := f.count(`SELECT COUNT(*) FROM events WHERE topic = $1`, TopicNotify); n != 1 {
+	if n := f.count(`SELECT COUNT(*) FROM events WHERE topic = $1`, events.TopicNotify); n != 1 {
 		t.Errorf("later window repeated the digest: %d", n)
 	}
 }
@@ -488,7 +488,7 @@ func TestWallDigestSkipsFollowersWhoCannotSeeTheGym(t *testing.T) {
 	if err := f.m.notifyWallNewRoutes(context.Background(), time.Now().Add(wallDigestEvery)); err != nil {
 		t.Fatal(err)
 	}
-	if n := f.count(`SELECT COUNT(*) FROM events WHERE topic = $1`, TopicNotify); n != 0 {
+	if n := f.count(`SELECT COUNT(*) FROM events WHERE topic = $1`, events.TopicNotify); n != 0 {
 		t.Errorf("a hidden gym's digest reached a non-member: %d", n)
 	}
 }

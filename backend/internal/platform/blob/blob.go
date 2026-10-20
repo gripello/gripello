@@ -38,6 +38,9 @@ type Store struct {
 
 var ProtectedTables = []string{"tasks", "moderation_items"}
 
+// PrivateTables are never served under /files; their owners stream them with their own checks (account exports).
+var PrivateTables = []string{"account_exports"}
+
 // Public tables whose files moderation can take down; a moderation test fails when a kind with files is missing.
 var ModeratedTables = []string{"beta_videos", "users"}
 
@@ -56,7 +59,7 @@ func StaffView(pool *pgxpool.Pool, perms *tenancy.Permissions) func(context.Cont
 			return true
 		}
 		for _, gym := range gyms {
-			if gym != "" && (perms.Can(ctx, p.UserID, gym, "manage_comments") || perms.Can(ctx, p.UserID, gym, "manage_reports")) {
+			if gym != "" && (perms.Can(ctx, p.UserID, gym, tenancy.PermManageComments) || perms.Can(ctx, p.UserID, gym, tenancy.PermManageReports)) {
 				return true
 			}
 		}
@@ -66,7 +69,7 @@ func StaffView(pool *pgxpool.Pool, perms *tenancy.Permissions) func(context.Cont
 		switch table {
 		case "tasks":
 			var gym string
-			if pool.QueryRow(ctx, `SELECT gym FROM tasks WHERE id = $1`, id).Scan(&gym) == nil && perms.Can(ctx, p.UserID, gym, "manage_tasks") {
+			if pool.QueryRow(ctx, `SELECT gym FROM tasks WHERE id = $1`, id).Scan(&gym) == nil && perms.Can(ctx, p.UserID, gym, tenancy.PermManageTasks) {
 				return true
 			}
 			return moderates(ctx, p, `SELECT COALESCE(gym, '') FROM moderation_items WHERE content_type = 'task' AND content_id = $1`, id)

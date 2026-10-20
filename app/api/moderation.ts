@@ -8,7 +8,7 @@ import type {
 } from '../../types/models'
 import type { ModerationSummary } from '../utils/moderation'
 import { useApi } from './client'
-import type { PageQuery, RouteList } from './client'
+import type { PageQuery, Page } from './client'
 
 export type ReportInput = Pick<
     ReportRecord,
@@ -56,7 +56,7 @@ export function createReport(
 }
 
 function listReports(path: string, query: ReportQuery) {
-    return useApi()<RouteList<ReportRecord>>(path, {
+    return useApi()<Page<ReportRecord>>(path, {
         query: {
             status: query.status || undefined,
             page: query.page,
@@ -73,16 +73,16 @@ export function listPlatformReports(query: ReportQuery = {}) {
     return listReports('/platform/reports', query)
 }
 
-export function getModerationSummary(gym?: string) {
+export function moderationSummary(gym?: string) {
     return useApi()<ModerationSummary>('/moderation/summary', {
         query: { gym: gym || undefined },
     })
 }
 
-export function listCases(
+export function listModerationCases(
     query: CaseQuery = {},
-): Promise<RouteList<ModerationItemRecord>> {
-    return useApi()<RouteList<ModerationItemRecord>>('/moderation/cases', {
+): Promise<Page<ModerationItemRecord>> {
+    return useApi()<Page<ModerationItemRecord>>('/moderation/cases', {
         query: {
             gym: query.gym || undefined,
             state: query.state?.length ? query.state : undefined,
@@ -98,7 +98,7 @@ export function listCases(
     })
 }
 
-export function openCase(input: {
+export function openModerationCase(input: {
     content_type: ModerationContentType
     content_id: string
 }) {
@@ -108,11 +108,11 @@ export function openCase(input: {
     })
 }
 
-export function getCase(id: string) {
+export function getModerationCase(id: string) {
     return useApi()<ModerationItemRecord>(`/moderation/${id}`)
 }
 
-export function decideCase(
+export function decideModerationCase(
     id: string,
     decision: { action: ModerationAction; reason: string },
 ) {
@@ -122,7 +122,7 @@ export function decideCase(
     })
 }
 
-export function hideAuthor(id: string, reason: string) {
+export function hideAuthorContent(id: string, reason: string) {
     return useApi()<{ hidden: number }>(`/moderation/authors/${id}/hide`, {
         method: 'POST',
         body: { reason },

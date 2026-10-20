@@ -37,14 +37,14 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '401':
-          description: Second factor required
+          description: Second factor required, or an error
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/MFARequired' }
-        '403': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+              schema: { anyOf: [{ $ref: '#/components/schemas/MFARequired' }, { $ref: 'shared/error.yaml#/components/schemas/Error' }] }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/totp:
     post:
       operationId: loginWithTOTP
@@ -61,9 +61,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/recovery:
     post:
       operationId: loginWithRecoveryCode
@@ -80,9 +80,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/passkey/options:
     post:
       operationId: passkeyLoginOptions
@@ -94,6 +94,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PasskeyCeremony' }
+        '503': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/passkey:
     post:
       operationId: passkeyLogin
@@ -110,8 +111,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/refresh:
     post:
       operationId: refreshAuth
@@ -123,8 +124,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/logout:
     post:
       operationId: logout
@@ -132,7 +133,7 @@ paths:
       description: Ends the current session.
       responses:
         '204': { description: Done }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/register:
     post:
       operationId: register
@@ -145,8 +146,8 @@ paths:
             schema: { $ref: '#/components/schemas/RegisterInput' }
       responses:
         '202': { description: Accepted }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/password-reset/request:
     post:
       operationId: requestPasswordReset
@@ -159,7 +160,7 @@ paths:
             schema: { type: object, required: [email], properties: { email: { type: string } } }
       responses:
         '204': { description: Done }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/password-reset/confirm:
     post:
       operationId: confirmPasswordReset
@@ -172,7 +173,7 @@ paths:
             schema: { type: object, required: [token, password, passwordConfirm], properties: { token: { type: string }, password: { type: string }, passwordConfirm: { type: string } } }
       responses:
         '204': { description: Done }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/verification/request:
     post:
       operationId: requestVerification
@@ -185,7 +186,7 @@ paths:
             schema: { type: object, required: [email], properties: { email: { type: string } } }
       responses:
         '204': { description: Done }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/verification/confirm:
     post:
       operationId: confirmVerification
@@ -198,7 +199,7 @@ paths:
             schema: { type: object, required: [token], properties: { token: { type: string } } }
       responses:
         '204': { description: Done }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/email-change/request:
     post:
       operationId: requestEmailChange
@@ -211,8 +212,8 @@ paths:
             schema: { type: object, required: [newEmail], properties: { newEmail: { type: string } } }
       responses:
         '204': { description: Done }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/email-change/confirm:
     post:
       operationId: confirmEmailChange
@@ -225,7 +226,8 @@ paths:
             schema: { type: object, required: [token, password], properties: { token: { type: string }, password: { type: string } } }
       responses:
         '204': { description: Done }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/password:
     post:
       operationId: changePassword
@@ -242,8 +244,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/oauth2/{provider}/start:
     parameters:
       - { name: provider, in: path, required: true, schema: { type: string, enum: [google, apple, microsoft, oidc] } }
@@ -261,9 +264,11 @@ paths:
           content:
             application/json:
               schema: { type: object, required: [url], properties: { url: { type: string } } }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '502': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '502': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/oauth2/{provider}/callback:
     parameters:
       - { name: provider, in: path, required: true, schema: { type: string } }
@@ -271,6 +276,16 @@ paths:
       operationId: oauth2Callback
       tags: [authn]
       description: Provider redirect target (Apple posts the same fields as a form). Verifies the id_token and redirects to /auth/login?oauth2=<ticket>[&redirect=], to /account/settings?tab=security after linking, or to /auth/login?oauth2Error=failed|registration_disabled|account_exists|already_linked|email_unverified (errors of a link flow go to /account/settings?tab=security). Native flows use `app.gripello:` in place of the app URL. Accounts are linked by email only for provider-verified addresses on verified accounts, never for Microsoft.
+      responses:
+        '302': { description: Redirect back to the app }
+    post:
+      operationId: oauth2CallbackFormPost
+      tags: [authn]
+      description: Apple's form_post variant of the callback (application/x-www-form-urlencoded with code, state, id_token).
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema: { type: object, properties: { code: { type: string }, state: { type: string }, id_token: { type: string }, user: { type: string } } }
       responses:
         '302': { description: Redirect back to the app }
   /auth/oauth2/finish:
@@ -289,10 +304,14 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401':
+          description: Second factor required, or an error
+          content:
+            application/json:
+              schema: { anyOf: [{ $ref: '#/components/schemas/MFARequired' }, { $ref: 'shared/error.yaml#/components/schemas/Error' }] }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/oauth2/link:
     post:
       operationId: finishOAuth2Link
@@ -305,8 +324,9 @@ paths:
             schema: { type: object, required: [ticket], properties: { ticket: { type: string } } }
       responses:
         '204': { description: Linked }
-        '401': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '409': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/identities:
     get:
       operationId: listLinkedAccounts
@@ -333,8 +353,9 @@ paths:
         - { name: id, in: path, required: true, schema: { type: string } }
       responses:
         '204': { description: Unlinked }
-        '404': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '409': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/reauthenticate:
     post:
       operationId: reauthenticate
@@ -347,9 +368,9 @@ paths:
             schema: { type: object, required: [password], properties: { password: { type: string } } }
       responses:
         '204': { description: Confirmed }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/mfa:
     get:
       operationId: listMFAFactors
@@ -361,7 +382,7 @@ paths:
           content:
             application/json:
               schema: { type: object, required: [factors, recoveryCodesLeft], properties: { factors: { type: array, items: { $ref: '#/components/schemas/Factor' } }, recoveryCodesLeft: { type: integer } } }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/mfa/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
@@ -380,8 +401,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Factor' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteMFAFactor
       tags: [authn]
@@ -393,10 +415,10 @@ paths:
             schema: { type: object, required: [password], properties: { password: { type: string } } }
       responses:
         '204': { description: Done }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/totp/setup:
     post:
       operationId: totpSetup
@@ -413,9 +435,9 @@ paths:
           content:
             application/json:
               schema: { type: object, required: [secret, uri], properties: { secret: { type: string }, uri: { type: string } } }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/totp:
     post:
       operationId: totpEnable
@@ -432,9 +454,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/FactorAdded' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/recovery-codes:
     post:
       operationId: regenerateRecoveryCodes
@@ -451,9 +473,9 @@ paths:
           content:
             application/json:
               schema: { type: object, required: [recoveryCodes], properties: { recoveryCodes: { type: array, items: { type: string } } } }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/passkeys/options:
     post:
       operationId: passkeyRegistrationOptions
@@ -470,9 +492,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PasskeyCeremony' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/passkeys:
     post:
       operationId: passkeyRegister
@@ -489,8 +511,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/FactorAdded' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/sessions:
     get:
       operationId: listSessions
@@ -502,7 +524,7 @@ paths:
           content:
             application/json:
               schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Session' } } } }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/sessions/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
@@ -512,42 +534,26 @@ paths:
       description: Revokes the token and drops the session's realtime auth.
       responses:
         '204': { description: Done }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/sessions/sign-out-others:
     post:
       operationId: signOutOtherSessions
       tags: [authn]
       description: Revokes every session but the current one.
       responses:
-        '204': { description: Done }
-        '401': { $ref: '#/components/responses/Error' }
+        '200':
+          description: The kept session's fresh token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
-  responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     User:
       type: object
       description: Own user record (no password hash or token key)
-      required: [id, email, username, verified, platform_admin]
+      required: [id, created, updated, email, email_visibility, verified, username, firstname, name, avatar, banner, language, platform_admin, notification_prefs, followed_walls, leaderboard_hidden, follow_policy, reviews_anonymous, ticks_private, suspended_until, suspension_reason]
       properties:
         id: { type: string }
         created: { type: string, format: date-time }
@@ -562,7 +568,12 @@ components:
         banner: { type: string }
         language: { type: string, enum: ['', en, de, nl, fr, es] }
         platform_admin: { type: boolean }
-        notification_prefs: { type: [object, 'null'] }
+        notification_prefs:
+          type: [object, 'null']
+          description: '{channel: {topic: false}}'
+          additionalProperties:
+            type: object
+            additionalProperties: { type: boolean }
         followed_walls: { type: array, items: { type: string } }
         leaderboard_hidden: { type: boolean }
         follow_policy: { type: string, enum: ['', approve, open, closed] }
@@ -588,7 +599,7 @@ components:
       properties:
         email: { type: string, format: email }
         username: { type: string, minLength: 3, maxLength: 150, pattern: '^[\w][\w.\-]*$' }
-        password: { type: string, minLength: 8, maxLength: 71 }
+        password: { type: string, minLength: 8 }
         passwordConfirm: { type: string }
         firstname: { type: string, maxLength: 5000 }
         name: { type: string, maxLength: 5000 }

@@ -1,12 +1,14 @@
 package events
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,6 +16,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"gripello/internal/platform/apitime"
 )
 
 const channel = "gripello_events"
@@ -63,6 +67,42 @@ type Event struct {
 	Created  time.Time       `json:"created"`
 }
 
+// ChangedFields lists, sorted, the top-level JSON fields whose values differ between before and after, except ignored ones.
+func ChangedFields(before, after any, ignored ...string) []string {
+	var old, updated map[string]json.RawMessage
+	b, _ := json.Marshal(before)
+	a, _ := json.Marshal(after)
+	json.Unmarshal(b, &old)
+	json.Unmarshal(a, &updated)
+	changed := []string{}
+	for field, value := range updated {
+		if !slices.Contains(ignored, field) && !bytes.Equal(old[field], value) {
+			changed = append(changed, field)
+		}
+	}
+	slices.Sort(changed)
+	return changed
+}
+
+// TopicNotify is server-only: the notifications module turns each Notify into rows and pushes.
+const TopicNotify = "notify"
+
+type Notify struct {
+	Type   string         `json:"type"`
+	Users  []string       `json:"users"`
+	Gym    string         `json:"gym"`
+	Params map[string]any `json:"params"`
+	URL    string         `json:"url"`
+}
+
+// PublishNotify skips notices without recipients.
+func PublishNotify(ctx context.Context, tx pgx.Tx, actor string, n Notify) error {
+	if len(n.Users) == 0 {
+		return nil
+	}
+	return PublishAs(ctx, tx, actor, TopicNotify, TopicNotify, n, Audience{})
+}
+
 // Publish writes to the outbox inside the caller's transaction; the NOTIFY fires only when that commits.
 func Publish(ctx context.Context, tx pgx.Tx, topic, kind string, payload any, audience Audience) error {
 	return PublishAs(ctx, tx, "", topic, kind, payload, audience)
@@ -74,6 +114,7 @@ func PublishAs(ctx context.Context, tx pgx.Tx, actor, topic, kind string, payloa
 	if err != nil {
 		return err
 	}
+	body = apitime.Canonical(body)
 	aud, _ := json.Marshal(audience)
 	if _, err := tx.Exec(ctx, `INSERT INTO events (topic, kind, payload, audience, actor) VALUES ($1, $2, $3, $4, $5)`, topic, kind, body, aud, actor); err != nil {
 		return err

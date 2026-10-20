@@ -14,15 +14,7 @@ import (
 const (
 	defaultPageSize = 50
 	maxPageSize     = 1000
-	maxPage         = 1_000_000
 )
-
-type tickPage struct {
-	Items []Tick `json:"items"`
-	Page  int    `json:"page"`
-	Limit int    `json:"limit"`
-	Total *int   `json:"total,omitempty"`
-}
 
 var ownTickOrders = map[string]string{
 	"": "date DESC, created DESC", "-date,-created": "date DESC, created DESC", "date": "date, created",
@@ -34,41 +26,27 @@ var feedOrders = map[string]string{"": "date DESC, created DESC", "-date": "date
 func orderBy(r *http.Request, orders map[string]string) (string, error) {
 	order, ok := orders[r.URL.Query().Get("sort")]
 	if !ok {
-		return "", invalid("sort", "Unknown sort.")
+		return "", httpx.Invalid("sort", "Unknown sort.")
 	}
 	return " ORDER BY " + order + ", id", nil
 }
 
 // pageOf runs sql (a SELECT of tick columns) for one page; total=true adds the row count.
-func (m *module) pageOf(r *http.Request, sql, order string, args ...any) (tickPage, error) {
-	page, limit, tail := paging(r)
-	items, err := queryTicks(r.Context(), m.app.DB, sql+order+tail, args...)
+func (m *module) pageOf(r *http.Request, sql, order string, args ...any) (httpx.PageOf[Tick], error) {
+	page := httpx.Page(r, defaultPageSize, maxPageSize)
+	items, err := queryTicks(r.Context(), m.app.DB, sql+order+page.SQL(), args...)
 	if err != nil {
-		return tickPage{}, err
+		return httpx.PageOf[Tick]{}, err
 	}
-	result := tickPage{Items: nonNil(items), Page: page, Limit: limit}
+	result := httpx.PageOf[Tick]{Items: nonNil(items), Page: page.Page, Limit: page.Limit}
 	if r.URL.Query().Get("total") == "true" {
 		var total int
 		if err := m.app.DB.QueryRow(r.Context(), `SELECT COUNT(*) FROM (`+sql+`) AS page`, args...).Scan(&total); err != nil {
-			return tickPage{}, err
+			return httpx.PageOf[Tick]{}, err
 		}
 		result.Total = &total
 	}
 	return result, nil
-}
-
-func atoi(value string, fallback int) int {
-	if n, err := strconv.Atoi(value); err == nil {
-		return n
-	}
-	return fallback
-}
-
-func paging(r *http.Request) (page, limit int, tail string) {
-	query := r.URL.Query()
-	page = min(maxPage, max(1, atoi(query.Get("page"), 1)))
-	limit = min(maxPageSize, max(1, atoi(query.Get("limit"), defaultPageSize)))
-	return page, limit, " LIMIT " + strconv.Itoa(limit) + " OFFSET " + strconv.Itoa((page-1)*limit)
 }
 
 func (m *module) listOwnTicks(w http.ResponseWriter, r *http.Request) error {
@@ -89,9 +67,9 @@ func (m *module) listOwnTicks(w http.ResponseWriter, r *http.Request) error {
 		sql += ` AND route IN (SELECT id FROM routes WHERE gym = $` + strconv.Itoa(len(args)) + `)`
 	}
 	if since := query.Get("since"); since != "" {
-		at, ok := parseTime(since)
+		at, ok := parseDay(since)
 		if !ok {
-			return invalid("since", "Invalid date.")
+			return httpx.Invalid("since", "Invalid date.")
 		}
 		args = append(args, at)
 		sql += ` AND date >= $` + strconv.Itoa(len(args))
@@ -107,8 +85,7 @@ func (m *module) listOwnTicks(w http.ResponseWriter, r *http.Request) error {
 	if err := expandRoutes(r.Context(), m.app.DB, result.Items); err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, result)
-	return nil
+	return httpx.Respond(w, http.StatusOK, result, nil)
 }
 
 func (m *module) listSends(w http.ResponseWriter, r *http.Request) error {
@@ -132,8 +109,7 @@ func (m *module) listSends(w http.ResponseWriter, r *http.Request) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, routes)
-	return nil
+	return httpx.Respond(w, http.StatusOK, routes, nil)
 }
 
 func decodePatch(r *http.Request) (patch, error) {
@@ -150,11 +126,7 @@ func (m *module) postTick(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	tick, err := m.createTick(r.Context(), p)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusCreated, tick)
-	return nil
+	return httpx.Respond(w, http.StatusCreated, tick, err)
 }
 
 func (m *module) patchTick(w http.ResponseWriter, r *http.Request) error {
@@ -163,19 +135,11 @@ func (m *module) patchTick(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	tick, err := m.updateTick(r.Context(), r.PathValue("id"), p)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, tick)
-	return nil
+	return httpx.Respond(w, http.StatusOK, tick, err)
 }
 
 func (m *module) deleteTickHandler(w http.ResponseWriter, r *http.Request) error {
-	if err := m.deleteTick(r.Context(), r.PathValue("id")); err != nil {
-		return err
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, m.deleteTick(r.Context(), r.PathValue("id")))
 }
 
 func (m *module) listFeed(w http.ResponseWriter, r *http.Request) error {
@@ -201,8 +165,7 @@ func (m *module) listFeed(w http.ResponseWriter, r *http.Request) error {
 	if err := m.withClimbersAndRoutes(r.Context(), result.Items); err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, result)
-	return nil
+	return httpx.Respond(w, http.StatusOK, result, nil)
 }
 
 func (m *module) withClimbersAndRoutes(ctx context.Context, items []Tick) error {
@@ -230,7 +193,7 @@ func (m *module) listClimberTicks(w http.ResponseWriter, r *http.Request) error 
 	}
 	climber := r.PathValue("id")
 	const order = ` ORDER BY date DESC, created DESC, id`
-	var result tickPage
+	var result httpx.PageOf[Tick]
 	if climber == principal.UserID {
 		result, err = m.pageOf(r, `SELECT `+tickColumns+` FROM ticks WHERE "user" = $1`, order, climber)
 	} else {
@@ -242,8 +205,7 @@ func (m *module) listClimberTicks(w http.ResponseWriter, r *http.Request) error 
 	if err := expandRoutes(r.Context(), m.app.DB, result.Items); err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, result)
-	return nil
+	return httpx.Respond(w, http.StatusOK, result, nil)
 }
 
 func (m *module) getLeaderboard(w http.ResponseWriter, r *http.Request) error {
@@ -270,11 +232,7 @@ func (m *module) getLeaderboard(w http.ResponseWriter, r *http.Request) error {
 		viewer = principal.UserID
 	}
 	result, err := m.leaderboard(r.Context(), gym, kind, seasonID, viewer, from, to)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, result)
-	return nil
+	return httpx.Respond(w, http.StatusOK, result, err)
 }
 
 func (m *module) listSeasons(w http.ResponseWriter, r *http.Request) error {
@@ -289,8 +247,7 @@ func (m *module) listSeasons(w http.ResponseWriter, r *http.Request) error {
 	if items == nil {
 		items = []Season{}
 	}
-	httpx.JSON(w, http.StatusOK, items)
-	return nil
+	return httpx.Respond(w, http.StatusOK, items, nil)
 }
 
 func (m *module) postSeason(w http.ResponseWriter, r *http.Request) error {
@@ -303,11 +260,7 @@ func (m *module) postSeason(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	season, err := m.createSeason(r.Context(), gym, p)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusCreated, season)
-	return nil
+	return httpx.Respond(w, http.StatusCreated, season, err)
 }
 
 func (m *module) patchSeason(w http.ResponseWriter, r *http.Request) error {
@@ -316,19 +269,11 @@ func (m *module) patchSeason(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	season, err := m.updateSeason(r.Context(), r.PathValue("id"), p)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, season)
-	return nil
+	return httpx.Respond(w, http.StatusOK, season, err)
 }
 
 func (m *module) deleteSeasonHandler(w http.ResponseWriter, r *http.Request) error {
-	if err := m.deleteSeason(r.Context(), r.PathValue("id")); err != nil {
-		return err
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, m.deleteSeason(r.Context(), r.PathValue("id")))
 }
 
 func nonNil(items []Tick) []Tick {

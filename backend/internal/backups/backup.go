@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/blob"
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
@@ -42,11 +43,7 @@ type settings struct {
 	Hour           int  `json:"hour"`
 }
 
-type querier interface {
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
-
-func loadSettings(ctx context.Context, q querier) (settings, error) {
+func loadSettings(ctx context.Context, q db.Querier) (settings, error) {
 	var s settings
 	err := q.QueryRow(ctx, `SELECT keep, include_storage, hour FROM backup_settings`).Scan(&s.Keep, &s.IncludeStorage, &s.Hour)
 	return s, err
@@ -106,7 +103,7 @@ func prune(dir string, keep int) error {
 	return nil
 }
 
-// run dumps the database with pg_dump and packs it, plus storage without regenerable thumbnails, into one tar.
+// run dumps the database with pg_dump and packs it, plus storage without regenerable thumbnails and private tables (account exports), into one tar.
 func (m *module) run(ctx context.Context) error {
 	s, err := loadSettings(ctx, m.app.DB)
 	if err != nil {
@@ -177,7 +174,7 @@ func writeArchive(path, dump, storage string, includeStorage bool) error {
 			if err != nil {
 				return err
 			}
-			if entry.IsDir() && strings.HasPrefix(entry.Name(), "thumbs_") {
+			if entry.IsDir() && (strings.HasPrefix(entry.Name(), "thumbs_") || filepath.Dir(path) == filepath.Clean(storage) && slices.Contains(blob.PrivateTables, entry.Name())) {
 				return filepath.SkipDir
 			}
 			if !entry.Type().IsRegular() {
@@ -231,8 +228,7 @@ func addFile(tw *tar.Writer, path, name string) error {
 
 func (m *module) list(w http.ResponseWriter, r *http.Request) error {
 	if m.dir == "" {
-		httpx.JSON(w, http.StatusOK, map[string]any{"enabled": false, "items": []archive{}})
-		return nil
+		return httpx.Respond(w, http.StatusOK, map[string]any{"enabled": false, "items": []archive{}}, nil)
 	}
 	items, err := archives(m.dir)
 	if err != nil {
@@ -257,8 +253,7 @@ func (m *module) list(w http.ResponseWriter, r *http.Request) error {
 		out["disk_free"] = disk.Bavail * uint64(disk.Bsize)
 		out["disk_total"] = disk.Blocks * uint64(disk.Bsize)
 	}
-	httpx.JSON(w, http.StatusOK, out)
-	return nil
+	return httpx.Respond(w, http.StatusOK, out, nil)
 }
 
 func (m *module) runNow(w http.ResponseWriter, r *http.Request) error {
@@ -293,7 +288,7 @@ func (m *module) download(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.requireReauth(r); err != nil {
+	if err := auth.RequireCallerReauth(r.Context(), m.app.DB); err != nil {
 		return err
 	}
 	f, err := os.Open(path)
@@ -317,7 +312,7 @@ func (m *module) remove(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.requireReauth(r); err != nil {
+	if err := auth.RequireCallerReauth(r.Context(), m.app.DB); err != nil {
 		return err
 	}
 	if err := os.Remove(path); err != nil {
@@ -331,8 +326,7 @@ func (m *module) remove(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) saveSettings(w http.ResponseWriter, r *http.Request) error {
@@ -343,7 +337,7 @@ func (m *module) saveSettings(w http.ResponseWriter, r *http.Request) error {
 	if err := m.requireDir(); err != nil {
 		return err
 	}
-	invalid := httpx.NewError(http.StatusBadRequest, "Failed to validate.")
+	invalid := httpx.BadRequest("Failed to validate.")
 	if body.Keep < 0 || body.Keep > 365 {
 		invalid.Field("keep", "validation_out_of_range", "Must be between 0 and 365.")
 	}
@@ -353,7 +347,7 @@ func (m *module) saveSettings(w http.ResponseWriter, r *http.Request) error {
 	if len(invalid.Data) > 0 {
 		return invalid
 	}
-	if err := m.requireReauth(r); err != nil {
+	if err := auth.RequireCallerReauth(r.Context(), m.app.DB); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -367,6 +361,5 @@ func (m *module) saveSettings(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, body)
-	return nil
+	return httpx.Respond(w, http.StatusOK, body, nil)
 }

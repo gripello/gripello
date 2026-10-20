@@ -65,8 +65,7 @@ func (m *module) listIdentities(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "hasPassword": user.PasswordHash != ""})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items, "hasPassword": user.PasswordHash != ""}, nil)
 }
 
 // unlinkIdentity refuses to remove the last way into the account.
@@ -101,8 +100,7 @@ func (m *module) unlinkIdentity(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	m.announceAccount(ctx, p.UserID, "identities")
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 type providerSettings struct {
@@ -120,12 +118,9 @@ type providerSettings struct {
 }
 
 func (m *module) requirePlatformAdmin(r *http.Request, reauth bool) (auth.Principal, error) {
-	p, err := auth.Require(r.Context())
+	p, err := auth.RequirePlatformAdmin(r.Context())
 	if err != nil {
 		return p, err
-	}
-	if !p.PlatformAdmin {
-		return p, httpx.ErrForbidden
 	}
 	if reauth {
 		return p, auth.RequireRecentReauth(r.Context(), m.db, p)
@@ -148,8 +143,7 @@ func (m *module) listProviderSettings(w http.ResponseWriter, r *http.Request) er
 			DisplayName: c.DisplayName, IssuerURL: c.IssuerURL, Tenant: c.Tenant, TeamID: c.TeamID, KeyID: c.KeyID, PrivateKeySet: c.PrivateKey != "",
 			RedirectURI: m.appURL + "/api/auth/oauth2/" + name + "/callback"})
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 // saveProviderSettings upserts one provider; client_secret and private_key left out keep the stored values.
@@ -176,7 +170,7 @@ func (m *module) saveProviderSettings(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	invalid := httpx.NewError(http.StatusBadRequest, "Failed to validate.")
+	invalid := httpx.BadRequest("Failed to validate.")
 	body.ClientID, body.IssuerURL = strings.TrimSpace(body.ClientID), strings.TrimSpace(body.IssuerURL)
 	if body.Enabled && body.ClientID == "" {
 		invalid.Field("client_id", "validation_required", "Cannot be blank.")

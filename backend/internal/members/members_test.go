@@ -464,7 +464,7 @@ func TestInviteNewAccount(t *testing.T) {
 	if total := f.count(`SELECT count(*) FROM invites`); total != 1 {
 		t.Fatalf("resend created %d invites", total)
 	}
-	if f.count(`SELECT count(*) FROM invites WHERE token_hash = $1 AND expires_at > now() + interval '6 days'`, hashToken(token)) != 1 {
+	if f.count(`SELECT count(*) FROM invites WHERE token_hash = $1 AND expires_at > now() + interval '6 days'`, ids.Hash(token)) != 1 {
 		t.Error("invite token not stored as sha256 with 7 days validity")
 	}
 	for _, action := range []string{"created", "updated"} {

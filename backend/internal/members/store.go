@@ -7,17 +7,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/ids"
+	platformmail "gripello/internal/platform/mail"
 )
-
-type querier interface {
-	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
 
 type role struct {
 	ID          string    `json:"id"`
@@ -91,55 +85,55 @@ func roleFields(r *role) []any {
 	return []any{&r.ID, &r.Gym, &r.Name, &r.Description, &r.Permissions, &r.Color, &r.Created, &r.Updated}
 }
 
-func findRole(ctx context.Context, q querier, id string) (role, error) {
+func findRole(ctx context.Context, q db.Querier, id string) (role, error) {
 	var r role
 	err := q.QueryRow(ctx, `SELECT `+roleColumns+` FROM roles r WHERE r.id = $1`, id).Scan(roleFields(&r)...)
 	return r, err
 }
 
-func memberRole(ctx context.Context, q querier, userID, gymID string) (role, bool) {
+func memberRole(ctx context.Context, q db.Querier, userID, gymID string) (role, bool) {
 	var r role
 	err := q.QueryRow(ctx, `SELECT `+roleColumns+` FROM memberships m JOIN roles r ON r.id = m.role
 		WHERE m."user" = $1 AND m.gym = $2`, userID, gymID).Scan(roleFields(&r)...)
 	return r, err == nil
 }
 
-func isMember(ctx context.Context, q querier, userID, gymID string) bool {
+func isMember(ctx context.Context, q db.Querier, userID, gymID string) bool {
 	var ok bool
 	q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM memberships WHERE "user" = $1 AND gym = $2)`, userID, gymID).Scan(&ok)
 	return ok
 }
 
-func findMembership(ctx context.Context, q querier, id string) (membership, error) {
+func findMembership(ctx context.Context, q db.Querier, id string) (membership, error) {
 	var m membership
 	err := q.QueryRow(ctx, `SELECT id, "user", gym, role FROM memberships WHERE id = $1`, id).Scan(&m.ID, &m.User, &m.Gym, &m.Role)
 	return m, err
 }
 
-func lockGym(ctx context.Context, q querier, gymID string) error {
+func lockGym(ctx context.Context, q db.Querier, gymID string) error {
 	_, err := q.Exec(ctx, `SELECT 1 FROM gyms WHERE id = $1 FOR UPDATE`, gymID)
 	return err
 }
 
-func lockedMembership(ctx context.Context, q querier, m membership) (membership, error) {
+func lockedMembership(ctx context.Context, q db.Querier, m membership) (membership, error) {
 	if err := lockGym(ctx, q, m.Gym); err != nil {
 		return m, err
 	}
 	locked, err := findMembership(ctx, q, m.ID)
 	if err != nil {
-		return m, notFound(err)
+		return m, db.NotFound(err)
 	}
 	return locked, nil
 }
 
-func otherAdminCount(ctx context.Context, q querier, gymID, exceptMembershipID string) (int, error) {
+func otherAdminCount(ctx context.Context, q db.Querier, gymID, exceptMembershipID string) (int, error) {
 	var n int
 	err := q.QueryRow(ctx, `SELECT count(*) FROM memberships m JOIN roles r ON r.id = m.role
 		WHERE m.gym = $1 AND m.id <> $2 AND r.name = $3`, gymID, exceptMembershipID, adminRoleName).Scan(&n)
 	return n, err
 }
 
-func roleMemberIDs(ctx context.Context, q querier, roleID string) ([]string, error) {
+func roleMemberIDs(ctx context.Context, q db.Querier, roleID string) ([]string, error) {
 	rows, err := q.Query(ctx, `SELECT "user" FROM memberships WHERE role = $1 ORDER BY "user"`, roleID)
 	if err != nil {
 		return nil, err
@@ -175,7 +169,7 @@ func likePattern(search string) string {
 	return "%" + strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(search) + "%"
 }
 
-func listMembers(ctx context.Context, q querier, gymID string, query memberQuery) ([]member, error) {
+func listMembers(ctx context.Context, q db.Querier, gymID string, query memberQuery) ([]member, error) {
 	sql := `SELECT m.id, m.gym, m.created, m.updated,
 			u.id, u.username, u.firstname, u.name, u.avatar, CASE WHEN u.email_visibility THEN u.email ELSE '' END,
 			` + roleColumns + memberFrom + ` ORDER BY ` + memberSorts[query.Sort]
@@ -196,13 +190,13 @@ func listMembers(ctx context.Context, q querier, gymID string, query memberQuery
 	})
 }
 
-func countMembers(ctx context.Context, q querier, gymID string, query memberQuery) (int, error) {
+func countMembers(ctx context.Context, q db.Querier, gymID string, query memberQuery) (int, error) {
 	var n int
 	err := q.QueryRow(ctx, `SELECT count(*)`+memberFrom, gymID, query.Role, db.WordPatterns(query.Search)).Scan(&n)
 	return n, err
 }
 
-func listOwnMemberships(ctx context.Context, q querier, userID string) ([]ownMembership, error) {
+func listOwnMemberships(ctx context.Context, q db.Querier, userID string) ([]ownMembership, error) {
 	rows, err := q.Query(ctx, `SELECT m.id, m.created, g.id, g.slug, g.name, g.unit_name, g.active, `+effectiveRoleColumns+`
 		FROM memberships m JOIN gyms g ON g.id = m.gym JOIN roles r ON r.id = m.role
 		WHERE m."user" = $1 ORDER BY g.name`, userID)
@@ -223,7 +217,7 @@ type listedRole struct {
 	GymName string `json:"gym_name,omitempty"`
 }
 
-func listRoles(ctx context.Context, q querier, gymID, search string, limit int) ([]listedRole, error) {
+func listRoles(ctx context.Context, q db.Querier, gymID, search string, limit int) ([]listedRole, error) {
 	sql := `SELECT ` + roleColumns + `, (SELECT count(*) FROM memberships m WHERE m.role = r.id), g.slug, g.name
 		FROM roles r JOIN gyms g ON g.id = r.gym
 		WHERE ($1 = '' OR r.gym = $1) AND ($2 = '' OR r.name ILIKE $2) ORDER BY r.name, g.name`
@@ -246,7 +240,7 @@ func listRoles(ctx context.Context, q querier, gymID, search string, limit int) 
 	})
 }
 
-func knownPermissions(ctx context.Context, q querier, names []string) (bool, error) {
+func knownPermissions(ctx context.Context, q db.Querier, names []string) (bool, error) {
 	var n int
 	err := q.QueryRow(ctx, `SELECT count(*) FROM permissions WHERE name = ANY ($1)`, names).Scan(&n)
 	return n == len(names), err
@@ -258,7 +252,7 @@ func inviteFields(i *invite) []any {
 	return []any{&i.ID, &i.Gym, &i.Role, &i.RoleName, &i.Email, &i.Firstname, &i.Name, &i.ExpiresAt, &i.Created}
 }
 
-func listInvites(ctx context.Context, q querier, gymID string) ([]invite, error) {
+func listInvites(ctx context.Context, q db.Querier, gymID string) ([]invite, error) {
 	rows, err := q.Query(ctx, `SELECT `+inviteColumns+` FROM invites i JOIN roles r ON r.id = i.role
 		WHERE i.gym = $1 AND i.expires_at > now() ORDER BY i.created DESC`, gymID)
 	if err != nil {
@@ -270,20 +264,20 @@ func listInvites(ctx context.Context, q querier, gymID string) ([]invite, error)
 	})
 }
 
-func findInviteByID(ctx context.Context, q querier, id string) (invite, error) {
+func findInviteByID(ctx context.Context, q db.Querier, id string) (invite, error) {
 	var i invite
 	err := q.QueryRow(ctx, `SELECT `+inviteColumns+` FROM invites i JOIN roles r ON r.id = i.role WHERE i.id = $1`, id).Scan(inviteFields(&i)...)
 	return i, err
 }
 
-func findInviteByTokenHash(ctx context.Context, q querier, hash string) (invite, error) {
+func findInviteByTokenHash(ctx context.Context, q db.Querier, hash string) (invite, error) {
 	var i invite
 	err := q.QueryRow(ctx, `SELECT `+inviteColumns+` FROM invites i JOIN roles r ON r.id = i.role
 		WHERE i.token_hash = $1 AND i.expires_at > now()`, hash).Scan(inviteFields(&i)...)
 	return i, err
 }
 
-func upsertInvite(ctx context.Context, q querier, id string, i invite, tokenHash string) (string, bool, error) {
+func upsertInvite(ctx context.Context, q db.Querier, id string, i invite, tokenHash string) (string, bool, error) {
 	var inserted bool
 	err := q.QueryRow(ctx, `INSERT INTO invites (id, gym, role, email, firstname, name, token_hash, expires_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -293,27 +287,21 @@ func upsertInvite(ctx context.Context, q querier, id string, i invite, tokenHash
 	return id, inserted, err
 }
 
-func pruneExpiredInvites(ctx context.Context, q querier) error {
+func pruneExpiredInvites(ctx context.Context, q db.Querier) error {
 	_, err := q.Exec(ctx, `DELETE FROM invites WHERE expires_at < now()`)
 	return err
 }
 
-func userIDByEmail(ctx context.Context, q querier, email string) (string, bool) {
+func userIDByEmail(ctx context.Context, q db.Querier, email string) (string, bool) {
 	var id string
-	err := q.QueryRow(ctx, `SELECT id FROM users WHERE lower(email) = lower($1) AND email <> ''`, email).Scan(&id)
+	err := q.QueryRow(ctx, `SELECT id FROM users WHERE email = $1 AND email <> ''`, platformmail.NormalizeAddress(email)).Scan(&id)
 	return id, err == nil
 }
 
-func userEmail(ctx context.Context, q querier, userID string) string {
+func userEmail(ctx context.Context, q db.Querier, userID string) string {
 	var email string
 	q.QueryRow(ctx, `SELECT email FROM users WHERE id = $1`, userID).Scan(&email)
 	return email
-}
-
-func gymSlug(ctx context.Context, q querier, gymID string) string {
-	var slug string
-	q.QueryRow(ctx, `SELECT slug FROM gyms WHERE id = $1`, gymID).Scan(&slug)
-	return slug
 }
 
 // SetMembership is the admin CLI's upsert (roleID "" removes the membership); it publishes like the API so caches and staff pages follow.

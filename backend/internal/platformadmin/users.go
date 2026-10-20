@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"mime/multipart"
 	"net/http"
-	"net/mail"
 	"path"
 	"regexp"
 	"slices"
@@ -18,12 +16,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/apitime"
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/blob"
 	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/locales"
 	gmail "gripello/internal/platform/mail"
 )
 
@@ -37,20 +38,17 @@ const (
 
 var (
 	usernamePattern = regexp.MustCompile(`^[\w][\w.\-]*$`)
-	languages       = []string{"", "en", "de", "nl", "fr", "es"}
 	fileTypes       = map[string][]string{
 		"avatar": {"image/jpeg", "image/png", "image/svg+xml", "image/gif", "image/webp"},
 		"banner": {"image/jpeg", "image/png", "image/webp"},
 	}
-	thumbs = map[string][]string{"avatar": {"100x100"}, "banner": {"1600x400"}}
 	// The user's own settings, rights and credentials never change through the platform tools.
 	lockedFields = []string{"notification_prefs", "followed_walls", "leaderboard_hidden", "follow_policy", "reviews_anonymous", "ticks_private",
 		"platform_admin", "suspended_until", "suspension_reason", "password", "password_hash", "token_key"}
 	permanentSuspension = time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC)
-	timeLayouts         = []string{time.RFC3339Nano, "2006-01-02 15:04:05.999Z07:00", "2006-01-02 15:04:05.999Z"}
 )
 
-const userJSON = `to_jsonb(u) - 'password_hash' - 'token_key' || jsonb_build_object('memberships', COALESCE(
+const userJSON = climbers.OwnRecordSQL + ` || jsonb_build_object('memberships', COALESCE(
 	(SELECT jsonb_agg(jsonb_build_object('id', m.id, 'gym', m.gym, 'role', m.role) ORDER BY m.created) FROM memberships m WHERE m."user" = u.id), '[]'),
 	'mfa_enabled', EXISTS (SELECT 1 FROM mfa_factors f WHERE f."user" = u.id),
 	'session_count', (SELECT count(*) FROM sessions s WHERE s."user" = u.id),
@@ -71,7 +69,7 @@ func (m *module) loadTarget(r *http.Request, allowSelf bool) (target, error) {
 	err := m.app.DB.QueryRow(r.Context(), `SELECT id, email, firstname, language, platform_admin FROM users WHERE id = $1`, r.PathValue("id")).
 		Scan(&t.ID, &t.Email, &t.Firstname, &t.Language, &t.PlatformAdmin)
 	if err != nil {
-		return t, notFoundIfNoRows(err)
+		return t, db.NotFound(err)
 	}
 	if t.ID == p.UserID && !allowSelf {
 		return t, httpx.NewError(http.StatusForbidden, "You can't do this to your own account.")
@@ -99,13 +97,12 @@ func (m *module) listUsers(w http.ResponseWriter, r *http.Request) error {
 	case "suspended":
 		where = append(where, "u.suspended_until > now()")
 	default:
-		return httpx.NewError(http.StatusBadRequest, "Unknown filter.")
+		return httpx.BadRequest("Unknown filter.")
 	}
-	page := max(1, atoi(params.Get("page"), 1))
-	limit := min(maxPageSize, max(1, atoi(params.Get("limit"), defaultPageSize)))
-	paging := ` LIMIT ` + strconv.Itoa(limit) + ` OFFSET ` + strconv.Itoa((page-1)*limit)
+	page := httpx.Page(r, defaultPageSize, maxPageSize)
+	paging := page.SQL()
 	if params.Get("limit") == "0" {
-		page, limit, paging = 1, 0, ""
+		page, paging = httpx.Paging{Page: 1}, ""
 	}
 	from := ` FROM users u WHERE ` + strings.Join(where, " AND ")
 	var total int
@@ -123,17 +120,15 @@ func (m *module) listUsers(w http.ResponseWriter, r *http.Request) error {
 	if items == nil {
 		items = []json.RawMessage{}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "page": page, "limit": limit, "total": total})
-	return nil
+	return httpx.Respond(w, http.StatusOK, httpx.PageOf[json.RawMessage]{Items: items, Page: page.Page, Limit: page.Limit, Total: &total}, nil)
 }
 
 func (m *module) getUser(w http.ResponseWriter, r *http.Request) error {
 	var record json.RawMessage
 	if err := m.app.DB.QueryRow(r.Context(), `SELECT `+userJSON+` FROM users u WHERE id = $1`, r.PathValue("id")).Scan(&record); err != nil {
-		return notFoundIfNoRows(err)
+		return db.NotFound(err)
 	}
-	httpx.JSON(w, http.StatusOK, record)
-	return nil
+	return httpx.Respond(w, http.StatusOK, record, nil)
 }
 
 // changeUser runs mutate on a locked user row and publishes the change; lockFirst runs before that lock,
@@ -147,30 +142,21 @@ func (m *module) changeUser(ctx context.Context, userID string, mutate func(tx p
 			}
 		}
 		var before map[string]json.RawMessage
-		if err := tx.QueryRow(ctx, `SELECT to_jsonb(u) - 'password_hash' - 'token_key' FROM users u WHERE id = $1 FOR UPDATE`, userID).Scan(&before); err != nil {
-			return notFoundIfNoRows(err)
+		if err := tx.QueryRow(ctx, `SELECT `+climbers.OwnRecordSQL+` FROM users u WHERE id = $1 FOR UPDATE`, userID).Scan(&before); err != nil {
+			return db.NotFound(err)
 		}
 		if err := mutate(tx); err != nil {
 			return err
 		}
 		var own json.RawMessage
-		if err := tx.QueryRow(ctx, `SELECT to_jsonb(u) - 'password_hash' - 'token_key', `+userJSON+` FROM users u WHERE id = $1`, userID).Scan(&own, record); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT `+climbers.OwnRecordSQL+`, `+userJSON+` FROM users u WHERE id = $1`, userID).Scan(&own, record); err != nil {
 			return err
 		}
-		var after map[string]json.RawMessage
-		json.Unmarshal(own, &after)
-		changed := []string{}
-		for field, value := range after {
-			if field != "updated" && string(before[field]) != string(value) {
-				changed = append(changed, field)
-			}
-		}
+		changed := events.ChangedFields(before, own, "updated")
 		if len(changed) == 0 {
 			return nil
 		}
-		slices.Sort(changed)
-		payload := map[string]any{"record": own, "changed": changed}
-		return events.PublishAs(ctx, tx, p.UserID, "user:"+userID, "user.updated", payload, events.Audience{Users: []string{userID}})
+		return climbers.PublishUserUpdated(ctx, tx, p.UserID, userID, own, changed)
 	})
 }
 
@@ -179,7 +165,7 @@ func (m *module) updateUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	body, files, err := readBody(w, r)
+	body, files, err := httpx.ReadBody(w, r, 2*maxFileSize+1<<20, fileTypes)
 	if err != nil {
 		return err
 	}
@@ -193,7 +179,7 @@ func (m *module) updateUser(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if email, ok := changes["email"]; ok && email != t.Email {
-		if err := m.requireRecentReauth(r); err != nil {
+		if err := auth.RequireCallerReauth(r.Context(), m.app.DB); err != nil {
 			return err
 		}
 	}
@@ -235,7 +221,7 @@ func (m *module) updateUser(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	for field := range files {
-		m.app.Blob.WarmThumbs("users/"+t.ID+"/"+changes[field].(string), thumbs[field]...)
+		m.app.Blob.WarmThumbs("users/"+t.ID+"/"+changes[field].(string), blob.UserThumbs[field]...)
 	}
 	if _, rotated := changes["token_key"]; rotated && t.Email != "" {
 		content := gmail.Content{Key: "emailChangedByAdmin", Name: t.Firstname, Params: map[string]any{"email": changes["email"]}}
@@ -249,13 +235,12 @@ func (m *module) updateUser(w http.ResponseWriter, r *http.Request) error {
 			m.deleteBlobs(r.Context(), t.ID, []string{old})
 		}
 	}
-	httpx.JSON(w, http.StatusOK, record)
-	return nil
+	return httpx.Respond(w, http.StatusOK, record, nil)
 }
 
 func (m *module) validate(ctx context.Context, userID string, body map[string]json.RawMessage) (map[string]any, error) {
 	changes := map[string]any{}
-	invalid := httpx.NewError(http.StatusBadRequest, "Failed to update record.")
+	invalid := httpx.BadRequest("Failed to update record.")
 	text := func(field string) (string, bool) {
 		var s string
 		if json.Unmarshal(body[field], &s) != nil {
@@ -292,7 +277,7 @@ func (m *module) validate(ctx context.Context, userID string, body map[string]js
 		}
 	}
 	if _, ok := body["language"]; ok {
-		if s, ok := text("language"); ok && !slices.Contains(languages, s) {
+		if s, ok := text("language"); ok && !locales.Allowed(s) {
 			invalid.Field("language", "validation_invalid_value", "Invalid value "+s+".")
 		} else if ok {
 			changes["language"] = s
@@ -300,12 +285,12 @@ func (m *module) validate(ctx context.Context, userID string, body map[string]js
 	}
 	if _, ok := body["email"]; ok {
 		if s, ok := text("email"); ok {
-			s = strings.ToLower(s)
+			s = gmail.NormalizeAddress(s)
 			var taken bool
 			if err := m.app.DB.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE email = $1 AND id <> $2)`, s, userID).Scan(&taken); err != nil {
 				return nil, err
 			}
-			if address, err := mail.ParseAddress(s); err != nil || address.Address != s {
+			if !gmail.ValidAddress(s) {
 				invalid.Field("email", "validation_is_email", "Must be a valid email address.")
 			} else if taken {
 				invalid.Field("email", "validation_not_unique", "Value must be unique.")
@@ -359,29 +344,6 @@ func writeColumns(ctx context.Context, tx pgx.Tx, id string, changes map[string]
 	return err
 }
 
-func readBody(w http.ResponseWriter, r *http.Request) (map[string]json.RawMessage, map[string]*multipart.FileHeader, error) {
-	body := map[string]json.RawMessage{}
-	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
-		return body, nil, httpx.Decode(r, &body)
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, 2*maxFileSize+1<<20)
-	if err := r.ParseMultipartForm(8 << 20); err != nil {
-		return nil, nil, httpx.NewError(http.StatusBadRequest, "Invalid multipart body.")
-	}
-	if payload := r.FormValue("@jsonPayload"); payload != "" {
-		if err := json.Unmarshal([]byte(payload), &body); err != nil {
-			return nil, nil, httpx.NewError(http.StatusBadRequest, "Invalid JSON body.")
-		}
-	}
-	files := map[string]*multipart.FileHeader{}
-	for name, headers := range r.MultipartForm.File {
-		if _, ok := fileTypes[name]; ok && len(headers) > 0 {
-			files[name] = headers[0]
-		}
-	}
-	return body, files, nil
-}
-
 func (m *module) deleteBlobs(ctx context.Context, userID string, names []string) {
 	for _, name := range names {
 		m.deleteKey(ctx, "users/"+userID+"/"+name)
@@ -394,17 +356,12 @@ func (m *module) deleteKey(ctx context.Context, key string) {
 	}
 }
 
-func (m *module) requireRecentReauth(r *http.Request) error {
-	p, _ := auth.From(r.Context())
-	return auth.RequireRecentReauth(r.Context(), m.app.DB, p)
-}
-
 func (m *module) deleteUser(w http.ResponseWriter, r *http.Request) error {
 	t, err := m.loadTarget(r, false)
 	if err != nil {
 		return err
 	}
-	if err := m.requireRecentReauth(r); err != nil {
+	if err := auth.RequireCallerReauth(r.Context(), m.app.DB); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -424,7 +381,7 @@ func (m *module) deleteUser(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		if soleAdmin {
-			return httpx.NewError(http.StatusBadRequest, "A gym needs at least one admin.")
+			return httpx.BadRequest("A gym needs at least one admin.")
 		}
 		rows, err := tx.Query(ctx, `SELECT 'beta_videos/' || id FROM beta_videos WHERE "user" = $1 AND file <> ''
 			UNION ALL SELECT 'moderation_items/' || id FROM moderation_items WHERE author = $1 AND cardinality(files) > 0`, t.ID)
@@ -455,8 +412,7 @@ func (m *module) deleteUser(w http.ResponseWriter, r *http.Request) error {
 	for _, key := range append(keys, "users/"+t.ID) {
 		m.deleteKey(ctx, key)
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 // revokeSessions deletes the session rows and tells every replica to drop their realtime connections.
@@ -483,7 +439,7 @@ func (m *module) suspend(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.requireRecentReauth(r); err != nil {
+	if err := auth.RequireCallerReauth(r.Context(), m.app.DB); err != nil {
 		return err
 	}
 	var body struct {
@@ -496,10 +452,12 @@ func (m *module) suspend(w http.ResponseWriter, r *http.Request) error {
 	}
 	until, ok := permanentSuspension, true
 	if !body.Permanent {
-		until, ok = parseTime(body.Until)
+		var err error
+		until, err = apitime.Parse(body.Until)
+		ok = err == nil
 	}
 	if !ok || !until.After(time.Now()) {
-		return httpx.NewError(http.StatusBadRequest, "A suspension needs an end date in the future.").
+		return httpx.BadRequest("A suspension needs an end date in the future.").
 			Field("until", "validation_invalid_date", "Must be a date in the future.")
 	}
 	reason := strings.TrimSpace(body.Reason)
@@ -524,8 +482,7 @@ func (m *module) suspend(w http.ResponseWriter, r *http.Request) error {
 			slog.Error("platformadmin: suspension mail failed", "user", t.ID, "error", err)
 		}
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) sendSuspensionMail(ctx context.Context, t target, until time.Time, reason string) error {
@@ -554,22 +511,5 @@ func (m *module) liftSuspension(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
-}
-
-func parseTime(value string) (time.Time, bool) {
-	for _, layout := range timeLayouts {
-		if at, err := time.Parse(layout, value); err == nil {
-			return at, true
-		}
-	}
-	return time.Time{}, false
-}
-
-func atoi(value string, fallback int) int {
-	if n, err := strconv.Atoi(value); err == nil {
-		return n
-	}
-	return fallback
+	return httpx.NoContent(w, nil)
 }

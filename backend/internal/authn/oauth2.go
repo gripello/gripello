@@ -2,11 +2,8 @@ package authn
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
 	"crypto/subtle"
 	"crypto/x509"
-	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -27,9 +24,11 @@ import (
 
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/blocklist"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/lockout"
+	platformmail "gripello/internal/platform/mail"
 	"gripello/internal/platform/secretbox"
 )
 
@@ -58,7 +57,7 @@ type providerConfig struct {
 	Updated      time.Time
 }
 
-func loadProvider(ctx context.Context, q querier, secret, provider string) (providerConfig, error) {
+func loadProvider(ctx context.Context, q db.Querier, secret, provider string) (providerConfig, error) {
 	var c providerConfig
 	var sealedSecret, sealedKey string
 	err := q.QueryRow(ctx, `SELECT provider, enabled, client_id, client_secret, display_name, issuer_url, tenant, team_id, key_id, private_key, updated
@@ -181,17 +180,6 @@ type oauthState struct {
 	Native      bool `json:"native,omitempty"`
 }
 
-func randomToken() string {
-	b := make([]byte, 32)
-	rand.Read(b)
-	return hex.EncodeToString(b)
-}
-
-func hashFlow(flow string) string {
-	sum := sha256.Sum256([]byte(flow))
-	return hex.EncodeToString(sum[:])
-}
-
 // oauth2Start stores state, PKCE verifier and nonce, binds the flow to this browser with a cookie and returns the provider URL.
 func (m *module) oauth2Start(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
@@ -237,8 +225,8 @@ func (m *module) oauth2Start(w http.ResponseWriter, r *http.Request) error {
 		slog.Error("authn: OAuth2 provider unavailable", "provider", c.Provider, "error", err)
 		return httpx.NewError(http.StatusBadGateway, "The sign-in provider is not reachable.")
 	}
-	flow := randomToken()
-	state := oauthState{Verifier: oauth2.GenerateVerifier(), Nonce: randomToken(), FlowHash: hashFlow(flow), Redirect: body.Redirect, Link: body.Link,
+	flow := ids.Secret(32)
+	state := oauthState{Verifier: oauth2.GenerateVerifier(), Nonce: ids.Secret(32), FlowHash: ids.Hash(flow), Redirect: body.Redirect, Link: body.Link,
 		SessionOnly: body.Persistent != nil && !*body.Persistent, Native: body.Native}
 	data, _ := json.Marshal(state)
 	stateID, err := insertChallenge(ctx, m.db, "oauth2_state", linkUser, c.Provider, data)
@@ -251,8 +239,7 @@ func (m *module) oauth2Start(w http.ResponseWriter, r *http.Request) error {
 	}
 	http.SetCookie(w, &http.Cookie{Name: flowCookie, Value: flow, Path: "/api/auth/oauth2", MaxAge: int(challengeTTL.Seconds()),
 		HttpOnly: true, Secure: strings.HasPrefix(m.appURL, "https://"), SameSite: http.SameSiteLaxMode})
-	httpx.JSON(w, http.StatusOK, map[string]string{"url": cfg.AuthCodeURL(stateID, options...)})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]string{"url": cfg.AuthCodeURL(stateID, options...)}, nil)
 }
 
 type identityClaims struct {
@@ -426,7 +413,7 @@ func (m *module) resolveIdentity(r *http.Request, c providerConfig, claims ident
 	if !isNoRows(err) {
 		return "", err
 	}
-	email := strings.TrimSpace(claims.Email)
+	email := platformmail.NormalizeAddress(claims.Email)
 	if email != "" && claims.verified() && provider != "microsoft" {
 		existing, err := findAccountByEmail(ctx, m.db, email)
 		if err == nil {
@@ -447,7 +434,7 @@ func (m *module) resolveIdentity(r *http.Request, c providerConfig, claims ident
 		return "", oauthError("registration_disabled")
 	}
 	// New accounts need an address the provider verified: without one they could never pass checkAccess.
-	if email == "" || !newAccountEmailVerified(c, claims) {
+	if !platformmail.ValidAddress(email) || !newAccountEmailVerified(c, claims) {
 		return "", oauthError("email_unverified")
 	}
 	if blocked, err := blocklist.EmailBlocked(ctx, m.db, email); err != nil || blocked {
@@ -479,10 +466,10 @@ func (m *module) resolveIdentity(r *http.Request, c providerConfig, claims ident
 	return userID, err
 }
 
-func (m *module) insertIdentity(ctx context.Context, q querier, userID, provider string, claims identityClaims) error {
+func (m *module) insertIdentity(ctx context.Context, q db.Querier, userID, provider string, claims identityClaims) error {
 	_, err := q.Exec(ctx, `INSERT INTO user_identities (id, "user", provider, subject, email) VALUES ($1, $2, $3, $4, $5)`,
-		ids.New(), userID, provider, claims.Subject, claims.Email)
-	if isUniqueViolation(err, "user_identities") {
+		ids.New(), userID, provider, claims.Subject, platformmail.NormalizeAddress(claims.Email))
+	if db.IsUnique(err, "user_identities") {
 		return oauthError("already_linked")
 	}
 	return err
@@ -512,7 +499,7 @@ func (m *module) oauth2Finish(w http.ResponseWriter, r *http.Request) error {
 	}
 	var data linkTicket
 	json.Unmarshal(ticket.Data, &data)
-	if data.Link || subtle.ConstantTimeCompare([]byte(hashFlow(cookie.Value)), []byte(data.FlowHash)) != 1 {
+	if data.Link || subtle.ConstantTimeCompare([]byte(ids.Hash(cookie.Value)), []byte(data.FlowHash)) != 1 {
 		return errFailedAuth
 	}
 	user, err := findAccount(ctx, m.db, ticket.User)
@@ -563,7 +550,7 @@ func (m *module) oauth2FinishLink(w http.ResponseWriter, r *http.Request) error 
 	}
 	var data linkTicket
 	json.Unmarshal(ticket.Data, &data)
-	if !data.Link || ticket.User != p.UserID || subtle.ConstantTimeCompare([]byte(hashFlow(cookie.Value)), []byte(data.FlowHash)) != 1 {
+	if !data.Link || ticket.User != p.UserID || subtle.ConstantTimeCompare([]byte(ids.Hash(cookie.Value)), []byte(data.FlowHash)) != 1 {
 		return errFailedAuth
 	}
 	var owner string
@@ -572,8 +559,7 @@ func (m *module) oauth2FinishLink(w http.ResponseWriter, r *http.Request) error 
 		return httpx.NewError(http.StatusConflict, "This sign-in is already linked to another account.").Field("ticket", "already_linked", "Already linked to another account.")
 	}
 	if err == nil {
-		w.WriteHeader(http.StatusNoContent)
-		return nil
+		return httpx.NoContent(w, nil)
 	}
 	if !isNoRows(err) {
 		return err
@@ -585,6 +571,5 @@ func (m *module) oauth2FinishLink(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	m.announceAccount(ctx, p.UserID, "identities")
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }

@@ -293,9 +293,7 @@ describe('docker ui build', () => {
         expect(nginx).toMatch(
             /location = \/api\/realtime \{[^}]*limit_conn realtime_conn \d+;/,
         )
-        expect(nginx).toMatch(
-            /location \/api\/v1\/ \{\s*rewrite \^\/api\/v1\/\(\.\*\)\$ \/api\/\$1 last;\s*\}/,
-        )
+        expect(nginx).not.toContain('location /api/v1/')
         expect(nginx).not.toContain('location /_/')
         const zones = [
             ...nginx.matchAll(/limit_req_zone \S+ +zone=(\w+):/g),

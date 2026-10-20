@@ -3,22 +3,13 @@ package ratings
 import (
 	"context"
 	"errors"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"gripello/internal/platform/climbers"
-	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/db"
 )
-
-type querier interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-}
 
 type Rating struct {
 	ID          string            `db:"id" json:"id"`
@@ -67,92 +58,64 @@ const ratingColumns = `id, created, updated, gym, route_id, COALESCE("user", '')
 
 const betaColumns = `id, created, updated, gym, route, "user", url, file`
 
-type conditions struct {
-	clauses []string
-	args    []any
+func queryRatings(ctx context.Context, q db.Querier, where *db.Where, tail string) ([]Rating, error) {
+	return db.List[Rating](ctx, q, `SELECT `+ratingColumns+` FROM ratings`+where.SQL()+tail, where.Args...)
 }
 
-func (c *conditions) add(clause string, arg any) {
-	c.args = append(c.args, arg)
-	c.clauses = append(c.clauses, strings.ReplaceAll(clause, "?", "$"+strconv.Itoa(len(c.args))))
+func findRating(ctx context.Context, q db.Querier, id string) (Rating, error) {
+	where := &db.Where{}
+	where.Add("id = ?", id)
+	return db.First(queryRatings(ctx, q, where, ""))
 }
 
-func (c *conditions) sql() string {
-	if len(c.clauses) == 0 {
-		return ""
-	}
-	return " WHERE " + strings.Join(c.clauses, " AND ")
-}
-
-func queryRatings(ctx context.Context, q querier, where *conditions, tail string) ([]Rating, error) {
-	rows, err := q.Query(ctx, `SELECT `+ratingColumns+` FROM ratings`+where.sql()+tail, where.args...)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[Rating])
-}
-
-func findRating(ctx context.Context, q querier, id string) (Rating, error) {
-	where := &conditions{}
-	where.add("id = ?", id)
-	return one(queryRatings(ctx, q, where, ""))
-}
-
-func insertRating(ctx context.Context, q querier, r Rating) error {
+func insertRating(ctx context.Context, q db.Querier, r Rating) error {
 	_, err := q.Exec(ctx, `INSERT INTO ratings (id, gym, route_id, "user", rating, comment, grade, grade_system, grade_index, created, updated)
 		VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6, $7, $8, $9, $10, $10)`,
 		r.ID, r.Gym, r.RouteID, r.User, r.Rating, r.Comment, r.Grade, r.GradeSystem, r.GradeIndex, r.Created)
 	return err
 }
 
-func updateRating(ctx context.Context, q querier, r Rating) error {
+func updateRating(ctx context.Context, q db.Querier, r Rating) error {
 	_, err := q.Exec(ctx, `UPDATE ratings SET rating = $2, comment = $3, grade = $4, grade_system = $5, grade_index = $6, updated = now() WHERE id = $1`,
 		r.ID, r.Rating, r.Comment, r.Grade, r.GradeSystem, r.GradeIndex)
 	return err
 }
 
-func queryBetas(ctx context.Context, q querier, where *conditions, tail string) ([]BetaVideo, error) {
-	rows, err := q.Query(ctx, `SELECT `+betaColumns+` FROM beta_videos`+where.sql()+` ORDER BY created DESC, id`+tail, where.args...)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[BetaVideo])
+func queryBetas(ctx context.Context, q db.Querier, where *db.Where, tail string) ([]BetaVideo, error) {
+	return db.List[BetaVideo](ctx, q, `SELECT `+betaColumns+` FROM beta_videos`+where.SQL()+` ORDER BY created DESC, id`+tail, where.Args...)
 }
 
-func findBeta(ctx context.Context, q querier, id string) (BetaVideo, error) {
-	where := &conditions{}
-	where.add("id = ?", id)
-	return one(queryBetas(ctx, q, where, ""))
+func findBeta(ctx context.Context, q db.Querier, id string) (BetaVideo, error) {
+	where := &db.Where{}
+	where.Add("id = ?", id)
+	return db.First(queryBetas(ctx, q, where, ""))
 }
 
-func insertBeta(ctx context.Context, q querier, b BetaVideo) error {
+func insertBeta(ctx context.Context, q db.Querier, b BetaVideo) error {
 	_, err := q.Exec(ctx, `INSERT INTO beta_videos (id, gym, route, "user", url, file) VALUES ($1, $2, $3, $4, $5, $6)`,
 		b.ID, b.Gym, b.Route, b.User, b.URL, b.File)
 	return err
 }
 
-func deleteRow(ctx context.Context, q querier, table, id string) error {
+func deleteRow(ctx context.Context, q db.Querier, table, id string) error {
 	_, err := q.Exec(ctx, `DELETE FROM `+table+` WHERE id = $1`, id)
 	return err
 }
 
-func findRoute(ctx context.Context, q querier, id string) (routeRef, error) {
+func findRoute(ctx context.Context, q db.Querier, id string) (routeRef, error) {
 	var r routeRef
 	err := q.QueryRow(ctx, `SELECT id, gym, archived FROM routes WHERE id = $1`, id).Scan(&r.ID, &r.Gym, &r.Archived)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return r, httpx.ErrNotFound
-	}
-	return r, err
+	return r, db.NotFound(err)
 }
 
-func gymBetaSettings(ctx context.Context, q querier, gym string) (links, uploads, premoderate bool, err error) {
+func gymBetaSettings(ctx context.Context, q db.Querier, gym string) (links, uploads, premoderate bool, err error) {
 	err = q.QueryRow(ctx, `SELECT COALESCE((features->>'beta_links')::boolean, false), COALESCE((features->>'beta_uploads')::boolean, false),
 		premoderate_betas FROM gyms WHERE id = $1`, gym).
 		Scan(&links, &uploads, &premoderate)
 	return
 }
 
-func ratingStats(ctx context.Context, q querier, gym string) (Stats, error) {
+func ratingStats(ctx context.Context, q db.Querier, gym string) (Stats, error) {
 	var s Stats
 	err := q.QueryRow(ctx, `SELECT total_reviews, avg_rating::float8, low_rated, this_week FROM ratings_stats WHERE gym = $1`, gym).
 		Scan(&s.TotalReviews, &s.AvgRating, &s.LowRated, &s.ThisWeek)
@@ -162,7 +125,7 @@ func ratingStats(ctx context.Context, q querier, gym string) (Stats, error) {
 	return s, err
 }
 
-func anonymousAuthors(ctx context.Context, q querier, ids []string) (map[string]bool, error) {
+func anonymousAuthors(ctx context.Context, q db.Querier, ids []string) (map[string]bool, error) {
 	rows, err := q.Query(ctx, `SELECT id FROM users WHERE id = ANY ($1) AND reviews_anonymous`, ids)
 	if err != nil {
 		return nil, err
@@ -173,15 +136,4 @@ func anonymousAuthors(ctx context.Context, q querier, ids []string) (map[string]
 		out[id] = true
 	}
 	return out, err
-}
-
-func one[T any](items []T, err error) (T, error) {
-	var zero T
-	if err != nil {
-		return zero, err
-	}
-	if len(items) == 0 {
-		return zero, httpx.ErrNotFound
-	}
-	return items[0], nil
 }

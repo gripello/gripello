@@ -6,6 +6,15 @@ import (
 	_ "expvar"
 	"flag"
 	"fmt"
+	"log/slog"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
+
 	"gripello/internal/account"
 	"gripello/internal/achievements"
 	"gripello/internal/audit"
@@ -22,14 +31,6 @@ import (
 	"gripello/internal/social"
 	"gripello/internal/tasks"
 	"gripello/internal/ticks"
-	"log/slog"
-	"net/http"
-	_ "net/http/pprof"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
-	"time"
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/auth"
@@ -169,6 +170,9 @@ func serve(ctx context.Context, args []string) error {
 		return err
 	}
 	defer app.DB.Close()
+	if err := punycodeEmails(ctx, app.DB); err != nil {
+		slog.Error("punycode: converting stored addresses failed", "error", err)
+	}
 	if *role != "" {
 		cfg.Role = *role
 	}
@@ -186,7 +190,6 @@ func serve(ctx context.Context, args []string) error {
 			}
 		}()
 	}
-	app.Handle("GET /health", healthHandler(app.DB))
 	mailer := app.Mail.(*mail.Client)
 	reloadMail := func() {
 		if err := mailer.Reload(ctx, app.DB, cfg, app.Tokens.Secret); err != nil {
@@ -210,39 +213,7 @@ func serve(ctx context.Context, args []string) error {
 			reloadLogLevel()
 		}
 	})
-	app.Handle("GET /mail-status", httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
-		if _, err := auth.Require(r.Context()); err != nil {
-			return err
-		}
-		httpx.JSON(w, 200, map[string]bool{"configured": mailer.Configured()})
-		return nil
-	}))
-	app.Handle("GET /online", httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
-		if _, err := auth.Require(r.Context()); err != nil {
-			return err
-		}
-		httpx.JSON(w, 200, map[string]int{"clients": app.Realtime.Clients()})
-		return nil
-	}))
-	app.Handle("GET /realtime", httpx.Handler(app.Realtime.Connect))
-	app.Handle("PUT /realtime/{clientId}/subscriptions", httpx.Handler(app.Realtime.Subscriptions))
-	// Dependency order: a module may only consume events of modules registered before it.
-	gyms.Register(app)
-	authn.Register(app)
-	account.Register(app)
-	members.Register(app)
-	routes.Register(app)
-	ratings.Register(app)
-	tasks.Register(app)
-	ticks.Register(app)
-	competitions.Register(app)
-	social.Register(app)
-	notifications.Register(app)
-	achievements.Register(app)
-	audit.Register(app)
-	moderation.Register(app)
-	platformadmin.Register(app)
-	backups.Register(app)
+	mount(app, mailer.Configured)
 
 	app.Cron.Add("eventsPrune", "*/10 * * * *", func(ctx context.Context) error {
 		return app.Bus.Prune(ctx, time.Hour)
@@ -291,4 +262,40 @@ func serve(ctx context.Context, args []string) error {
 	}
 	slog.Info("listening", "addr", cfg.HTTPAddr, "role", cfg.Role, "version", config.Version)
 	return app.Serve(ctx)
+}
+
+// mount registers every HTTP route; api/*.yaml documents them (TestEveryRouteIsDocumented).
+func mount(app *platform.App, mailConfigured func() bool) {
+	app.Handle("GET /health", healthHandler(app.DB))
+	app.Handle("GET /mail-status", httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
+		if _, err := auth.Require(r.Context()); err != nil {
+			return err
+		}
+		return httpx.Respond(w, 200, map[string]bool{"configured": mailConfigured()}, nil)
+	}))
+	app.Handle("GET /online", httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
+		if _, err := auth.Require(r.Context()); err != nil {
+			return err
+		}
+		return httpx.Respond(w, 200, map[string]int{"clients": app.Realtime.Clients()}, nil)
+	}))
+	app.Handle("GET /realtime", httpx.Handler(app.Realtime.Connect))
+	app.Handle("PUT /realtime/{clientId}/subscriptions", httpx.Handler(app.Realtime.Subscriptions))
+	// Dependency order: a module may only consume events of modules registered before it.
+	gyms.Register(app)
+	authn.Register(app)
+	account.Register(app)
+	members.Register(app)
+	routes.Register(app)
+	ratings.Register(app)
+	tasks.Register(app)
+	ticks.Register(app)
+	competitions.Register(app)
+	social.Register(app)
+	notifications.Register(app)
+	achievements.Register(app)
+	audit.Register(app)
+	moderation.Register(app)
+	platformadmin.Register(app)
+	backups.Register(app)
 }

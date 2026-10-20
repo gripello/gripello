@@ -106,6 +106,7 @@ func TestArchiveSkipsThumbnailsAndKeepsStorageLayout(t *testing.T) {
 	touch(t, filepath.Join(dir, "database.dump"), "dump", 0)
 	touch(t, filepath.Join(storage, "gyms", "g1", "logo.png"), "logo", 0)
 	touch(t, filepath.Join(storage, "gyms", "g1", "thumbs_logo.png", "100x100_logo.png"), "thumb", 0)
+	touch(t, filepath.Join(storage, "account_exports", "e1", "gripello-data.zip"), "zip", 0)
 	out := filepath.Join(dir, "out.tar")
 	if err := writeArchive(out, filepath.Join(dir, "database.dump"), storage, true); err != nil {
 		t.Fatal(err)

@@ -113,7 +113,7 @@ func (f *fixture) rows() []row {
 	return out
 }
 
-func (f *fixture) get(url, caller string, status int) map[string]any {
+func (f *fixture) request(url, caller string) *httptest.ResponseRecorder {
 	f.t.Helper()
 	request := httptest.NewRequest(http.MethodGet, "/api"+url, nil)
 	if caller != "" {
@@ -122,6 +122,12 @@ func (f *fixture) get(url, caller string, status int) map[string]any {
 	}
 	recorder := httptest.NewRecorder()
 	f.handler.ServeHTTP(recorder, request)
+	return recorder
+}
+
+func (f *fixture) get(url, caller string, status int) map[string]any {
+	f.t.Helper()
+	recorder := f.request(url, caller)
 	if recorder.Code != status {
 		f.t.Fatalf("GET %s = %d, want %d: %s", url, recorder.Code, status, recorder.Body)
 	}
@@ -397,6 +403,13 @@ func TestDeletedAccountsKeepTheirLabel(t *testing.T) {
 			t.Errorf("row of a deleted account = %+v", r)
 		}
 	}
+	f.exec(`UPDATE audit_logs SET created = now() - interval '100 days'`)
+	if err := f.m.prune(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if n := f.count(`SELECT count(*) FROM audit_logs`); n != 0 {
+		t.Errorf("retention kept %d rows of the deleted account", n)
+	}
 	if got[2].Action != "delete" || got[2].Record != alice {
 		t.Errorf("deletion row = %+v", got[2])
 	}
@@ -437,4 +450,26 @@ func TestPlatformChangesAreAuditedWithoutAGym(t *testing.T) {
 		len(got[0].Changed) != 1 || got[1].Collection != "retired_slugs" || got[1].Action != "delete" || got[1].Record != "slug1" {
 		t.Errorf("rows = %+v", got)
 	}
+}
+
+func TestHiddenAndUnknownGymsAnswerAlike(t *testing.T) {
+	f := newFixture(t)
+	hidden := f.gym("hideout")
+	f.exec(`UPDATE gyms SET hidden = true, previous_slugs = '["old-hideout"]' WHERE id = $1`, hidden)
+	stranger := f.user("stranger@example.com", false)
+	member := f.user("member@example.com", false)
+	f.member(member, hidden, "view_audit_log")
+
+	unknown := f.request("/gyms/nowhere/audit", stranger)
+	for _, key := range []string{"hideout", hidden, "old-hideout"} {
+		got := f.request("/gyms/"+key+"/audit", stranger)
+		if got.Code != unknown.Code || got.Body.String() != unknown.Body.String() {
+			t.Errorf("hidden gym %s answers %d %s, unknown gym %d %s", key, got.Code, got.Body, unknown.Code, unknown.Body)
+		}
+	}
+	if unknown.Code != http.StatusNotFound {
+		t.Errorf("unknown gym = %d", unknown.Code)
+	}
+	f.get("/gyms/hideout/audit", member, http.StatusOK)
+	f.get("/gyms/old-hideout/audit", member, http.StatusOK)
 }

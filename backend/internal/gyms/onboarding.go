@@ -2,19 +2,16 @@ package gyms
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"net/mail"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	gmail "gripello/internal/platform/mail"
@@ -30,19 +27,8 @@ const (
 
 const invalidOnboarding = "This link is invalid or has expired."
 
-func newToken() string {
-	b := make([]byte, 30)
-	rand.Read(b)
-	return hex.EncodeToString(b)
-}
-
-func hashToken(token string) string {
-	sum := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(sum[:])
-}
-
 func (m *module) createOnboarding(w http.ResponseWriter, r *http.Request) error {
-	if _, err := requirePlatformAdmin(r.Context()); err != nil {
+	if _, err := auth.RequirePlatformAdmin(r.Context()); err != nil {
 		return err
 	}
 	var body struct {
@@ -51,14 +37,14 @@ func (m *module) createOnboarding(w http.ResponseWriter, r *http.Request) error 
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
 	}
-	email := strings.ToLower(strings.TrimSpace(body.Email))
-	if address, err := mail.ParseAddress(email); err != nil || address.Address != email {
-		return httpx.NewError(http.StatusBadRequest, "Must be a valid email address.").Field("email", "validation_is_email", "Must be a valid email address.")
+	email := gmail.NormalizeAddress(body.Email)
+	if !gmail.ValidAddress(email) {
+		return httpx.BadRequest("Must be a valid email address.").Field("email", "validation_is_email", "Must be a valid email address.")
 	}
-	token := newToken()
+	token := ids.Secret(30)
 	_, err := m.db.Exec(r.Context(), `INSERT INTO gym_onboardings (id, email, token_hash, expires_at) VALUES ($1, $2, $3, $4)
 		ON CONFLICT (email) DO UPDATE SET token_hash = EXCLUDED.token_hash, expires_at = EXCLUDED.expires_at, created = now()`,
-		ids.New(), email, hashToken(token), time.Now().Add(onboardingLifetime))
+		ids.New(), email, ids.Hash(token), time.Now().Add(onboardingLifetime))
 	if err != nil {
 		return err
 	}
@@ -73,7 +59,7 @@ func (m *module) createOnboarding(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (m *module) listOnboardings(w http.ResponseWriter, r *http.Request) error {
-	if _, err := requirePlatformAdmin(r.Context()); err != nil {
+	if _, err := auth.RequirePlatformAdmin(r.Context()); err != nil {
 		return err
 	}
 	var items json.RawMessage
@@ -82,36 +68,33 @@ func (m *module) listOnboardings(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 func (m *module) deleteOnboarding(w http.ResponseWriter, r *http.Request) error {
-	if _, err := requirePlatformAdmin(r.Context()); err != nil {
+	if _, err := auth.RequirePlatformAdmin(r.Context()); err != nil {
 		return err
 	}
 	if _, err := m.db.Exec(r.Context(), `DELETE FROM gym_onboardings WHERE id = $1`, r.PathValue("id")); err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) showOnboarding(w http.ResponseWriter, r *http.Request) error {
 	var email string
 	err := m.db.QueryRow(r.Context(), `SELECT email FROM gym_onboardings WHERE token_hash = $1 AND expires_at > now()`,
-		hashToken(r.PathValue("token"))).Scan(&email)
+		ids.Hash(r.PathValue("token"))).Scan(&email)
 	if err != nil {
 		return httpx.NewError(http.StatusNotFound, invalidOnboarding)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"email": email})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"email": email}, nil)
 }
 
 // redeemOnboarding creates the trial gym and hands back an admin invite, so /auth/invite does sign-in or sign-up.
 func (m *module) redeemOnboarding(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	tokenHash := hashToken(r.PathValue("token"))
+	tokenHash := ids.Hash(r.PathValue("token"))
 	var onboardingID, email string
 	err := m.db.QueryRow(ctx, `SELECT id, email FROM gym_onboardings WHERE token_hash = $1 AND expires_at > now()`, tokenHash).Scan(&onboardingID, &email)
 	if err != nil {
@@ -133,7 +116,7 @@ func (m *module) redeemOnboarding(w http.ResponseWriter, r *http.Request) error 
 	}
 	changes["active"] = true
 	changes["trial_ends_at"] = time.Now().Add(trialLength)
-	invite := newToken()
+	invite := ids.Secret(30)
 	gymID := ids.New()
 	_, err = m.saveGym(ctx, "", gymID, nil, changes, nil, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `DELETE FROM gym_onboardings WHERE id = $1 AND token_hash = $2 AND expires_at > now()`, onboardingID, tokenHash)
@@ -145,17 +128,16 @@ func (m *module) redeemOnboarding(w http.ResponseWriter, r *http.Request) error 
 		}
 		_, err = tx.Exec(ctx, `INSERT INTO invites (id, gym, role, email, token_hash, expires_at)
 			SELECT $1, $2, id, $3, $4, $5 FROM roles WHERE gym = $2 AND name = 'admin'`,
-			ids.New(), gymID, email, hashToken(invite), changes["trial_ends_at"])
+			ids.New(), gymID, email, ids.Hash(invite), changes["trial_ends_at"])
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusCreated, map[string]any{"gym": changes["slug"], "invite": invite})
-	return nil
+	return httpx.Respond(w, http.StatusCreated, map[string]any{"gym": changes["slug"], "invite": invite}, nil)
 }
 
-func pruneOnboardings(ctx context.Context, q queryer) error {
+func pruneOnboardings(ctx context.Context, q db.Querier) error {
 	_, err := q.Exec(ctx, `DELETE FROM gym_onboardings WHERE expires_at < now()`)
 	return err
 }

@@ -15,8 +15,6 @@ import (
 const (
 	TopicFollowChanges = "follow_changes"
 	TopicFollowChanged = "follow.changed"
-	TopicNotify        = "notify"
-	KindNotify         = "notify"
 	TopicClimbers      = "climbers"
 )
 
@@ -35,14 +33,6 @@ type FollowChanged struct {
 	Action   string `json:"action"`
 }
 
-type Notify struct {
-	Type   string         `json:"type"`
-	Users  []string       `json:"users"`
-	Gym    string         `json:"gym"`
-	Params map[string]any `json:"params"`
-	URL    string         `json:"url"`
-}
-
 var followKinds = map[string]string{"create": "follow.created", "update": "follow.updated", "delete": "follow.deleted"}
 
 func publishFollow(ctx context.Context, tx pgx.Tx, action string, f Follow) error {
@@ -53,10 +43,6 @@ func publishFollow(ctx context.Context, tx pgx.Tx, action string, f Follow) erro
 	}
 	return events.Publish(ctx, tx, TopicFollowChanged, kind,
 		FollowChanged{Follower: f.Follower, Followee: f.Followee, Status: f.Status, Action: action}, events.Audience{})
-}
-
-func publishNotify(ctx context.Context, tx pgx.Tx, n Notify) error {
-	return events.Publish(ctx, tx, TopicNotify, KindNotify, n, events.Audience{})
 }
 
 // Blocks are private: only the blocker's own devices learn about them.

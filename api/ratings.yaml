@@ -26,8 +26,9 @@ paths:
             schema: { $ref: '#/components/schemas/RatingInput' }
       responses:
         '201': { $ref: '#/components/responses/Rating' }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /ratings/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -42,18 +43,19 @@ paths:
             schema: { $ref: '#/components/schemas/RatingInput' }
       responses:
         '200': { $ref: '#/components/responses/Rating' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteRating
       tags: [ratings]
       description: The author or manage_comments in the rating's gym.
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/ratings:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -71,16 +73,16 @@ paths:
         - { name: rating, in: query, schema: { type: integer, minimum: 0, maximum: 5 } }
         - { name: min_rating, in: query, schema: { type: integer, minimum: 0, maximum: 5 } }
         - { name: max_rating, in: query, schema: { type: integer, minimum: 0, maximum: 5 } }
-        - { name: since, in: query, description: 'RFC 3339 or `2006-01-02 15:04:05.000Z`', schema: { type: string } }
+        - { name: since, in: query, description: 'RFC 3339 timestamp or YYYY-MM-DD (start of that UTC day)', schema: { type: string } }
         - { name: q, in: query, description: case-insensitive substring of comment or route name, schema: { type: string } }
         - { name: sort, in: query, schema: { type: string, enum: [newest, oldest, highest, lowest], default: newest } }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Limit'
       responses:
         '200': { $ref: '#/components/responses/RatingPage' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/ratings/stats:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -98,7 +100,7 @@ paths:
                 required: [total_reviews, avg_rating, low_rated, this_week]
                 properties:
                   total_reviews: { type: integer }
-                  avg_rating: { type: [number, 'null'], description: mean of non-zero ratings, one decimal }
+                  avg_rating: { type: [number, 'null'], description: 'mean of non-zero ratings, one decimal' }
                   low_rated: { type: integer, description: ratings 1–2 }
                   this_week: { type: integer }
   /gyms/{gym}/ratings/import:
@@ -126,7 +128,7 @@ paths:
                         required: [route_id]
                         properties:
                           route_id: { type: string }
-                          created: { type: string }
+                          created: { type: string, description: 'RFC 3339 timestamp or YYYY-MM-DD; unparsable or future values become now' }
       responses:
         '200':
           description: Import result
@@ -137,8 +139,9 @@ paths:
                 required: [failed]
                 properties:
                   failed: { type: integer }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/betas:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -162,8 +165,8 @@ paths:
                   items: { type: array, items: { $ref: '#/components/schemas/BetaVideo' } }
                   page: { type: integer }
                   limit: { type: integer }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /routes/{id}/betas:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -215,11 +218,11 @@ paths:
                 required: [pending]
                 properties:
                   pending: { type: boolean, const: true }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '413': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '413': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /betas/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -229,9 +232,9 @@ paths:
       description: The uploader or manage_comments in the video's gym; removes the file.
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Gym:
@@ -254,11 +257,6 @@ components:
       in: query
       schema: { type: integer, minimum: 1, maximum: 500, default: 50 }
   responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
     Rating:
       description: Rating
       content:
@@ -277,27 +275,13 @@ components:
               limit: { type: integer }
               total: { type: integer }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     Climber:
       type: object
       required: [id, name, avatar]
       properties:
         id: { type: string }
         name: { type: string, description: '"First L."' }
-        avatar: { type: string, description: file URL with a 100x100 thumb, or empty }
+        avatar: { type: string, description: 'file URL with a 100x100 thumb, or empty' }
     RatingInput:
       type: object
       properties:

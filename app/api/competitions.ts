@@ -57,7 +57,7 @@ interface Items<T> {
 
 export function competitionDate(value: string) {
     if (!value) return value
-    const date = new Date(value.replace(' ', 'T'))
+    const date = new Date(value)
     return Number.isNaN(date.getTime()) ? value : date.toISOString()
 }
 
@@ -131,13 +131,16 @@ export function deleteCompetition(id: string) {
     return remove(`/competitions/${id}`)
 }
 
-export function listCategories(competitionId: string) {
+export function listCompetitionCategories(competitionId: string) {
     return items<CompetitionCategoryRecord>(
         `/competitions/${competitionId}/categories`,
     )
 }
 
-export function createCategory(competitionId: string, input: CategoryInput) {
+export function createCompetitionCategory(
+    competitionId: string,
+    input: CategoryInput,
+) {
     return send<CompetitionCategoryRecord>(
         `/competitions/${competitionId}/categories`,
         'POST',
@@ -145,7 +148,7 @@ export function createCategory(competitionId: string, input: CategoryInput) {
     )
 }
 
-export function updateCategory(id: string, patch: CategoryInput) {
+export function updateCompetitionCategory(id: string, patch: CategoryInput) {
     return send<CompetitionCategoryRecord>(
         `/competition-categories/${id}`,
         'PATCH',
@@ -153,7 +156,7 @@ export function updateCategory(id: string, patch: CategoryInput) {
     )
 }
 
-export function deleteCategory(id: string) {
+export function deleteCompetitionCategory(id: string) {
     return remove(`/competition-categories/${id}`)
 }
 
@@ -193,7 +196,7 @@ export function deleteCompetitionRoute(id: string) {
     return remove(`/competition-routes/${id}`)
 }
 
-export function listEntries(
+export function listCompetitionEntries(
     competitionId: string,
     query: CompetitionEntryQuery = {},
 ) {
@@ -203,7 +206,10 @@ export function listEntries(
     )
 }
 
-export function createEntry(competitionId: string, input: EntryInput) {
+export function createCompetitionEntry(
+    competitionId: string,
+    input: EntryInput,
+) {
     return send<CompetitionEntryRecord>(
         `/competitions/${competitionId}/entries`,
         'POST',
@@ -211,7 +217,7 @@ export function createEntry(competitionId: string, input: EntryInput) {
     )
 }
 
-export function updateEntry(id: string, patch: EntryInput) {
+export function updateCompetitionEntry(id: string, patch: EntryInput) {
     return send<CompetitionEntryRecord>(
         `/competition-entries/${id}`,
         'PATCH',
@@ -219,11 +225,11 @@ export function updateEntry(id: string, patch: EntryInput) {
     )
 }
 
-export function deleteEntry(id: string) {
+export function deleteCompetitionEntry(id: string) {
     return remove(`/competition-entries/${id}`)
 }
 
-export function listScores(
+export function listCompetitionScores(
     competitionId: string,
     query: CompetitionScoreQuery = {},
 ) {
@@ -233,7 +239,10 @@ export function listScores(
     )
 }
 
-export async function putScores(competitionId: string, scores: ScoreInput[]) {
+export async function upsertCompetitionScores(
+    competitionId: string,
+    scores: ScoreInput[],
+) {
     return (
         await send<Items<CompetitionScoreRecord>>(
             `/competitions/${competitionId}/scores`,
@@ -243,7 +252,7 @@ export async function putScores(competitionId: string, scores: ScoreInput[]) {
     ).items
 }
 
-export function deleteScore(id: string) {
+export function deleteCompetitionScore(id: string) {
     return remove(`/competition-scores/${id}`)
 }
 

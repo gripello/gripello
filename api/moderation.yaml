@@ -26,7 +26,8 @@ paths:
           content:
             application/json:
               schema: { type: object, required: [id], properties: { id: { type: string } } }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/reports:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -40,9 +41,9 @@ paths:
         - $ref: '#/components/parameters/Limit'
       responses:
         '200': { $ref: '#/components/responses/ReportPage' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/reports:
     get:
       operationId: listPlatformReports
@@ -54,8 +55,8 @@ paths:
         - $ref: '#/components/parameters/Limit'
       responses:
         '200': { $ref: '#/components/responses/ReportPage' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /moderation/summary:
     get:
       operationId: moderationSummary
@@ -93,9 +94,9 @@ paths:
                           properties:
                             gym: { type: string }
                             open: { type: integer }
-                            oldest: { type: string }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+                            oldest: { type: string, format: date-time }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /moderation/cases:
     get:
       operationId: listModerationCases
@@ -141,9 +142,10 @@ paths:
                   page: { type: integer }
                   limit: { type: integer }
                   total: { type: integer, description: only with total=true }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: openModerationCase
       tags: [moderation]
@@ -160,9 +162,9 @@ paths:
                 content_id: { type: string }
       responses:
         '200': { $ref: '#/components/responses/Decision' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /moderation/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -176,8 +178,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ModerationItem' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: decideModerationCase
       tags: [moderation]
@@ -196,14 +198,14 @@ paths:
               type: object
               required: [action]
               properties:
-                action: { type: string, enum: [approve, reject, hide, restore] }
+                action: { $ref: '#/components/schemas/ModerationAction' }
                 reason: { type: string, maxLength: 2000 }
       responses:
         '200': { $ref: '#/components/responses/Decision' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /moderation/authors/{id}/hide:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -226,9 +228,9 @@ paths:
           content:
             application/json:
               schema: { type: object, required: [hidden], properties: { hidden: { type: integer } } }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Gym:
@@ -251,11 +253,6 @@ components:
       in: query
       schema: { type: integer, minimum: 1, maximum: 200, default: 30 }
   responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
     Decision:
       description: Case state after the call
       content:
@@ -279,25 +276,12 @@ components:
               page: { type: integer }
               limit: { type: integer }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     ReportStatus: { type: string, enum: [open, actioned, rejected] }
     ReportReason:
       type: string
       enum: [hate_speech, harassment, violence_threat, sexual_content, personal_data, ip_infringement, spam_fraud, other]
     ModerationState: { type: string, enum: [unreviewed, approved, pending, hidden] }
+    ModerationAction: { type: string, enum: [approve, reject, hide, restore] }
     ModerationContentType: { type: string, enum: [rating, beta_video, profile, competition_entry, task, route] }
     ReportInput:
       type: object
@@ -340,6 +324,7 @@ components:
       description: >
         Realtime: topic `moderation:<gym>` (manage_comments; author left out) and `moderation:platform` (platform admins)
         carry {action: create|update|delete, record}. `author` and `snapshot.user` are blank when the viewer may not know the author.
+      required: [id, created, updated, gym, content_type, content_id, author, snapshot, files, state, hidden_by, reports_count, reason, reviewed_by, reviewed_at, actions]
       properties:
         id: { type: string }
         created: { type: string, format: date-time }
@@ -348,7 +333,7 @@ components:
         content_type: { $ref: '#/components/schemas/ModerationContentType' }
         content_id: { type: string }
         author: { type: string }
-        snapshot: { type: [object, 'null'], description: 'moderated fields; `_files` maps file fields to quarantined names, `_pending` marks a hidden held upload' }
+        snapshot: { type: [object, 'null'], additionalProperties: {}, description: 'moderated fields; `_files` maps file fields to quarantined names, `_pending` marks a hidden held upload' }
         files: { type: array, items: { type: string }, description: 'protected; served from /files/moderation_items/{id}/{name} with a file token' }
         state: { $ref: '#/components/schemas/ModerationState' }
         hidden_by: { type: string, enum: ['', gym, platform] }
@@ -357,18 +342,25 @@ components:
         reviewed_by: { type: string }
         reviewed_at: { type: [string, 'null'], format: date-time }
         context: { $ref: '#/components/schemas/ModerationContext' }
+        actions:
+          type: [array, 'null']
+          description: decisions POST /moderation/{id} accepts from the viewer right now, in button order; null in realtime records
+          items: { $ref: '#/components/schemas/ModerationAction' }
     ModerationContext:
       type: object
       required: [reports]
       properties:
         author:
           type: object
+          required: [id, name, avatar]
           properties: { id: { type: string }, name: { type: string }, avatar: { type: string } }
         history:
           type: object
+          required: [items, hidden]
           properties: { items: { type: integer }, hidden: { type: integer } }
         route:
           type: object
+          required: [id, name, grade, color]
           properties: { id: { type: string }, name: { type: string }, grade: { type: string }, color: { type: string } }
         competition: { type: string }
         gym_name: { type: string }
@@ -377,10 +369,11 @@ components:
           description: newest 20; explanation and notifier_name only for manage_reports holders and platform admins
           items:
             type: object
+            required: [id, reason, explanation, notifier_name, status, created]
             properties:
               id: { type: string }
               reason: { $ref: '#/components/schemas/ReportReason' }
               explanation: { type: string }
               notifier_name: { type: string }
               status: { $ref: '#/components/schemas/ReportStatus' }
-              created: { type: string }
+              created: { type: string, format: date-time }

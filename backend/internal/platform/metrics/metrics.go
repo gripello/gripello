@@ -10,12 +10,13 @@ import (
 	"crypto/sha256"
 	"log/slog"
 	"maps"
-	"net"
 	"net/http"
 	"slices"
 	"strings"
 	"sync"
 	"time"
+
+	"gripello/internal/platform/httpx"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -88,7 +89,7 @@ func (rec *Recorder) Middleware(next http.Handler) http.Handler {
 		start := time.Now()
 		sw := &statusWriter{ResponseWriter: w}
 		next.ServeHTTP(sw, r)
-		rec.Record(r.Method, r.Pattern, sw.status, time.Since(start), ClientIP(r))
+		rec.Record(r.Method, r.Pattern, sw.status, time.Since(start), httpx.ClientIP(r))
 	})
 }
 
@@ -232,19 +233,4 @@ func Prune(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	_, err := pool.Exec(ctx, `DELETE FROM visitor_salts WHERE day < $1`, time.Now().UTC().Format(time.DateOnly))
 	return err
-}
-
-// ClientIP trusts X-Real-IP / X-Forwarded-For because nginx sets them in front of every replica.
-func ClientIP(r *http.Request) string {
-	raw := r.Header.Get("X-Real-IP")
-	if raw == "" {
-		raw, _, _ = strings.Cut(r.Header.Get("X-Forwarded-For"), ",")
-	}
-	if raw = strings.TrimSpace(raw); raw == "" {
-		raw = r.RemoteAddr
-		if host, _, err := net.SplitHostPort(raw); err == nil {
-			raw = host
-		}
-	}
-	return raw
 }

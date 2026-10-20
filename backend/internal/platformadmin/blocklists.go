@@ -44,8 +44,7 @@ func (m *module) getBlocklists(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	lists.Sources = sources
-	httpx.JSON(w, http.StatusOK, lists)
-	return nil
+	return httpx.Respond(w, http.StatusOK, lists, nil)
 }
 
 func (m *module) putBlocklists(w http.ResponseWriter, r *http.Request) error {
@@ -53,7 +52,7 @@ func (m *module) putBlocklists(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
 	}
-	invalid := httpx.NewError(http.StatusBadRequest, "Failed to validate.")
+	invalid := httpx.BadRequest("Failed to validate.")
 	emails := cleanEmailPatterns(invalid, "blocked_emails", body.BlockedEmails)
 	allowed := cleanEmailPatterns(invalid, "allowed_emails", body.AllowedEmails)
 	names := cleanProtectedNames(invalid, body.ProtectedNames)
@@ -74,7 +73,7 @@ func (m *module) addBlockedEmails(w http.ResponseWriter, r *http.Request) error 
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
 	}
-	invalid := httpx.NewError(http.StatusBadRequest, "Failed to validate.")
+	invalid := httpx.BadRequest("Failed to validate.")
 	added := cleanEmailPatterns(invalid, "patterns", body.Patterns)
 	if len(invalid.Data) > 0 {
 		return invalid
@@ -101,7 +100,7 @@ func (m *module) saveBlocklists(r *http.Request, change func(blocklists) blockli
 		}
 		after := change(before)
 		if len(after.BlockedEmails) > blocklistMax || len(after.AllowedEmails) > blocklistMax {
-			return httpx.NewError(http.StatusBadRequest, "Failed to validate.").
+			return httpx.BadRequest("Failed to validate.").
 				Field("blocked_emails", "validation_too_many_values", fmt.Sprintf("Enter no more than %d.", blocklistMax))
 		}
 		changed := []string{}
@@ -197,8 +196,7 @@ func (m *module) blockSuggestions(w http.ResponseWriter, r *http.Request) error 
 			return err
 		}
 	}
-	httpx.JSON(w, http.StatusOK, s)
-	return nil
+	return httpx.Respond(w, http.StatusOK, s, nil)
 }
 
 type blocklistCheck struct {
@@ -252,8 +250,7 @@ func (m *module) checkBlocklists(w http.ResponseWriter, r *http.Request) error {
 		match := blocklist.NameMatch(body.ProtectedNames, gyms, name)
 		result.Name = &nameResult{Protected: match != "", Match: match}
 	}
-	httpx.JSON(w, http.StatusOK, result)
-	return nil
+	return httpx.Respond(w, http.StatusOK, result, nil)
 }
 
 func lowered(patterns []string) []string {

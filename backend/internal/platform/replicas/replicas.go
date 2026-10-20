@@ -38,6 +38,7 @@ type Replica struct {
 	RealtimeDropped int       `json:"realtime_dropped"`
 	BusLagMS        float64   `json:"bus_lag_ms"`
 	BusQueueMax     int       `json:"bus_queue_max"`
+	Strain          []string  `json:"strain"`
 }
 
 // Probes reads this replica's live numbers; the counters are totals since start, Run turns them into per-heartbeat deltas.
@@ -90,16 +91,48 @@ func sample(pool *pgxpool.Pool, probes Probes) counters {
 	return counters{waits: stat.EmptyAcquireCount(), waitTime: stat.EmptyAcquireWaitTime(), dropped: probes.RealtimeDropped()}
 }
 
-// warnIfStrained puts capacity problems into the server log, where issue alerts pick them up.
-func warnIfStrained(r Replica) {
-	if r.DBWaitMS > 1000 {
-		slog.Warn("replicas: requests waited for a database connection", "waits", r.DBWaits, "wait_ms", r.DBWaitMS, "max_conns", r.DBConnsMax)
+const (
+	strainDBWaitMS = 1000
+	strainBusLagMS = 10_000
+	StrainDBWaits  = "dbWaits"
+	StrainDBFull   = "dbFull"
+	StrainDropped  = "realtimeDropped"
+	StrainBusLag   = "busLag"
+)
+
+// Strain names the capacity problems of an online replica's last heartbeat.
+func Strain(r Replica) []string {
+	strain := []string{}
+	if !r.Online {
+		return strain
+	}
+	if r.DBWaitMS > strainDBWaitMS {
+		strain = append(strain, StrainDBWaits)
+	}
+	if r.DBConnsMax > 0 && r.DBConnsInUse >= r.DBConnsMax {
+		strain = append(strain, StrainDBFull)
 	}
 	if r.RealtimeDropped > 0 {
-		slog.Warn("replicas: realtime events dropped for slow clients", "dropped", r.RealtimeDropped)
+		strain = append(strain, StrainDropped)
 	}
-	if r.BusLagMS > 10_000 {
-		slog.Warn("replicas: event bus is behind", "lag_ms", r.BusLagMS, "queue_max", r.BusQueueMax)
+	if r.BusLagMS > strainBusLagMS {
+		strain = append(strain, StrainBusLag)
+	}
+	return strain
+}
+
+// warnIfStrained puts capacity problems into the server log, where issue alerts pick them up.
+func warnIfStrained(r Replica) {
+	r.Online = true
+	for _, strain := range Strain(r) {
+		switch strain {
+		case StrainDBWaits:
+			slog.Warn("replicas: requests waited for a database connection", "waits", r.DBWaits, "wait_ms", r.DBWaitMS, "max_conns", r.DBConnsMax)
+		case StrainDropped:
+			slog.Warn("replicas: realtime events dropped for slow clients", "dropped", r.RealtimeDropped)
+		case StrainBusLag:
+			slog.Warn("replicas: event bus is behind", "lag_ms", r.BusLagMS, "queue_max", r.BusQueueMax)
+		}
 	}
 }
 
@@ -138,6 +171,7 @@ func List(ctx context.Context, pool *pgxpool.Pool) ([]Replica, error) {
 			&r.BusLagMS, &r.BusQueueMax); err != nil {
 			return nil, err
 		}
+		r.Strain = Strain(r)
 		out = append(out, r)
 	}
 	return out, rows.Err()

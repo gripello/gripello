@@ -23,9 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"gripello/internal/platform/config"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/secretbox"
 )
 
@@ -87,12 +86,8 @@ func (c *Client) Configured() bool {
 	return c.current.Load().configured
 }
 
-type querier interface {
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
-
 // Settings reads the platform's mail settings; an empty host means the environment applies.
-func Settings(ctx context.Context, q querier, secret string) (SMTP, error) {
+func Settings(ctx context.Context, q db.Querier, secret string) (SMTP, error) {
 	var s SMTP
 	var port int
 	var sealed string
@@ -110,7 +105,7 @@ func Settings(ctx context.Context, q querier, secret string) (SMTP, error) {
 }
 
 // Reload applies the platform's mail settings, or the environment when none are stored.
-func (c *Client) Reload(ctx context.Context, q querier, cfg config.Config, secret string) error {
+func (c *Client) Reload(ctx context.Context, q db.Querier, cfg config.Config, secret string) error {
 	s, err := Settings(ctx, q, secret)
 	if err != nil {
 		return err

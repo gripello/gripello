@@ -128,7 +128,12 @@ func (s *Sender) Send(ctx context.Context, sub Subscription, payload []byte) (go
 	return false, nil
 }
 
+const MaxEndpointLength = 2048
+
 func AllowedEndpoint(endpoint string) bool {
+	if len(endpoint) > MaxEndpointLength {
+		return false
+	}
 	parsed, err := url.Parse(endpoint)
 	if err != nil || parsed.Scheme != "https" || parsed.Port() != "" {
 		return false

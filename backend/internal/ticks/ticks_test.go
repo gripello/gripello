@@ -3,6 +3,7 @@ package ticks
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,7 +14,9 @@ import (
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/events"
+	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/jobs"
 	"gripello/internal/platform/testapp"
 )
 
@@ -106,7 +109,7 @@ func (f *fixture) call(user, method, path, body string, status int, contains ...
 
 func (f *fixture) tick(user, route, kind string, date time.Time) Tick {
 	f.t.Helper()
-	body, _ := json.Marshal(map[string]any{"route": route, "type": kind, "attempts": 3, "date": date.UTC().Format(time.RFC3339Nano), "note": "secret beta"})
+	body, _ := json.Marshal(map[string]any{"route": route, "type": kind, "attempts": 3, "date": date.UTC().Format(time.DateOnly), "note": "secret beta"})
 	var tick Tick
 	json.Unmarshal([]byte(f.call(user, "POST", "/me/ticks", string(body), http.StatusCreated)), &tick)
 	return tick
@@ -139,7 +142,10 @@ func TestTickCreateCopiesTheRouteSnapshot(t *testing.T) {
 	if tick.Attempts != 1 {
 		t.Fatalf("a flash takes one attempt, got %d", tick.Attempts)
 	}
-	f.call("climber", "POST", "/me/ticks", `{"route":"`+route+`","type":"top","attempts":2,"date":"2026-01-01 00:00:00.000Z","grade":"9A","grade_index":30}`, http.StatusCreated, `"grade":"7A"`, `"grade_index":18.5`)
+	f.call("climber", "POST", "/me/ticks", `{"route":"`+route+`","type":"top","attempts":2,"date":"2026-01-01","grade":"9A","grade_index":30}`, http.StatusCreated, `"grade":"7A"`, `"grade_index":18.5`, `"date":"2026-01-01"`)
+	for _, old := range []string{"2026-01-01 12:00:00.000Z", "2026-01-01T12:00:00.000Z"} {
+		f.call("climber", "POST", "/me/ticks", `{"route":"`+route+`","type":"top","attempts":2,"date":"`+old+`"}`, http.StatusBadRequest, `"date":{"code":"validation_invalid_value"`)
+	}
 	f.call("", "POST", "/me/ticks", `{"route":"`+route+`","type":"top","attempts":1,"date":"2026-01-01"}`, http.StatusUnauthorized)
 	f.call("climber", "POST", "/me/ticks", `{"user":"`+f.users["friend"]+`","route":"`+route+`","type":"top","attempts":1,"date":"2026-01-01"}`, http.StatusForbidden)
 	f.call("climber", "POST", "/me/ticks", `{"type":"top","attempts":1,"date":"2026-01-01"}`, http.StatusBadRequest, `"route"`)
@@ -151,13 +157,14 @@ func TestTickCreateCopiesTheRouteSnapshot(t *testing.T) {
 
 func TestTickDatesMayNotLieFarInTheFuture(t *testing.T) {
 	t.Parallel()
-	now := time.Now()
-	if tickDateInFuture(now.Add(35*time.Hour), now) || !tickDateInFuture(now.Add(37*time.Hour), now) {
-		t.Fatal("leeway is 36 h")
+	now := time.Date(2026, 10, 20, 23, 0, 0, 0, time.UTC)
+	if tickDateInFuture("2026-10-21", now) || !tickDateInFuture("2026-10-22", now) {
+		t.Fatal("ticks may be logged up to tomorrow in UTC")
 	}
+	now = time.Now()
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "6A", 15.7)
-	future := now.Add(48 * time.Hour).UTC().Format(time.RFC3339)
+	future := now.Add(48 * time.Hour).UTC().Format(time.DateOnly)
 	f.call("climber", "POST", "/me/ticks", `{"route":"`+route+`","type":"top","attempts":1,"date":"`+future+`"}`, http.StatusBadRequest, "in the future")
 	tick := f.tick("climber", route, "top", now)
 	f.call("climber", "PATCH", "/ticks/"+tick.ID, `{"date":"`+future+`"}`, http.StatusBadRequest, "in the future")
@@ -243,7 +250,7 @@ func TestLogbookListsOwnTicksWithTheRoute(t *testing.T) {
 	f.tick("friend", route, "top", time.Now())
 	f.exec(`DELETE FROM routes WHERE id = $1 RETURNING id`, gone)
 
-	var page tickPage
+	var page httpx.PageOf[Tick]
 	json.Unmarshal([]byte(f.call("climber", "GET", "/me/ticks", "", http.StatusOK)), &page)
 	if len(page.Items) != 2 || page.Items[0].Route != "" || page.Items[0].RouteName != "7A" || page.Items[0].Expand != nil {
 		t.Fatalf("a deleted route keeps the snapshot: %+v", page.Items)
@@ -286,7 +293,7 @@ func TestFeedShowsAcceptedFollowsOnly(t *testing.T) {
 	f.follow("friend", "climber", "accepted")
 	f.follow("stranger", "climber", "pending")
 
-	var page tickPage
+	var page httpx.PageOf[Tick]
 	json.Unmarshal([]byte(f.call("friend", "GET", "/me/feed", "", http.StatusOK)), &page)
 	if len(page.Items) != 2 || page.Items[0].Route != routeB || page.Items[0].Note != "" || page.Items[0].Climber == nil || page.Items[0].Climber.Name != "Cleo Climber" {
 		t.Fatalf("feed = %+v", page.Items)
@@ -303,14 +310,6 @@ func TestFeedShowsAcceptedFollowsOnly(t *testing.T) {
 	f.exec(`UPDATE users SET ticks_private = true WHERE id = $1 RETURNING id`, f.users["climber"])
 	f.call("friend", "GET", "/climbers/"+f.users["climber"]+"/ticks", "", http.StatusOK, `"items":[]`)
 	f.call("friend", "GET", "/me/feed", "", http.StatusOK, `"items":[]`)
-}
-
-func TestPagingCapsThePage(t *testing.T) {
-	t.Parallel()
-	page, _, tail := paging(httptest.NewRequest(http.MethodGet, "/?page=9223372036854775807&limit=1000", nil))
-	if page != maxPage || !strings.HasSuffix(tail, " OFFSET 999999000") {
-		t.Errorf("page %d, tail %q", page, tail)
-	}
 }
 
 func TestHiddenGymTicksStayWithItsMembers(t *testing.T) {
@@ -331,11 +330,53 @@ func TestHiddenGymTicksStayWithItsMembers(t *testing.T) {
 	}
 	f.call("climber", "GET", "/me/ticks", "", http.StatusOK, `"route":"`+routeA+`"`)
 	f.call("friend", "GET", "/gyms/alpha/leaderboard", "", http.StatusNotFound)
-	f.call("friend", "POST", "/me/ticks", `{"route":"`+routeA+`","type":"top","attempts":1,"date":"`+time.Now().UTC().Format(time.RFC3339)+`"}`, http.StatusBadRequest, "Unknown route.")
+	f.call("friend", "POST", "/me/ticks", `{"route":"`+routeA+`","type":"top","attempts":1,"date":"`+time.Now().UTC().Format(time.DateOnly)+`"}`, http.StatusBadRequest, "Unknown route.")
 
 	f.tick("memberA", routeA, "top", time.Now())
 	followed := f.outbox(TopicFollowedTicks)
 	if last := followed[len(followed)-1].Audience; last.Gym != f.gymA {
 		t.Errorf("followed tick in a hidden gym without its gym: %+v", last)
+	}
+}
+
+func TestARouteGradeCorrectionRewritesAndRepublishesItsTicks(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	route := f.boulder(f.hallA, "6A", 15.7)
+	day := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	f.tick("climber", route, "flash", day)
+	f.tick("climber", route, "top", day)
+	f.tick("friend", route, "top", day)
+	f.exec(`UPDATE users SET ticks_private = true WHERE id = $1 RETURNING id`, f.users["friend"])
+	f.exec(`UPDATE routes SET grade = '6B', grade_index = 17.1 WHERE id = $1 RETURNING id`, route)
+	before := map[string]int{}
+	for _, topic := range []string{TopicOwnTicks, TopicFollowedTicks, TopicTickChanged} {
+		before[topic] = len(f.outbox(topic))
+	}
+
+	payload, _ := json.Marshal(map[string]any{"record": map[string]string{"id": route}, "changed": []string{"grade", "grade_index"}})
+	f.module.onRouteChange(events.Event{Kind: "route.updated", Payload: payload})
+	var key string
+	if err := f.app.DB.QueryRow(context.Background(), `SELECT key FROM jobs WHERE kind = $1`, routeGradesJob).Scan(&key); err != nil || key != route {
+		t.Fatalf("route grade job = %q, %v", key, err)
+	}
+	if err := f.module.syncRouteGrades(context.Background(), jobs.Job{Kind: routeGradesJob, Key: route}); err != nil {
+		t.Fatal(err)
+	}
+
+	var stale int
+	f.app.DB.QueryRow(context.Background(), `SELECT count(*) FROM ticks WHERE route = $1 AND (grade, grade_index) <> ('6B', 17.1)`, route).Scan(&stale)
+	if stale != 0 {
+		t.Errorf("%d ticks keep the old grade", stale)
+	}
+	published := map[string]int{}
+	for _, topic := range []string{TopicOwnTicks, TopicFollowedTicks, TopicTickChanged} {
+		published[topic] = len(f.outbox(topic)) - before[topic]
+	}
+	if want := map[string]int{TopicOwnTicks: 3, TopicFollowedTicks: 2, TopicTickChanged: 2}; !maps.Equal(published, want) {
+		t.Errorf("republished %v, want %v (followers only for public ticks, one tick.changed per climber and day)", published, want)
+	}
+	if err := f.module.syncRouteGrades(context.Background(), jobs.Job{Kind: routeGradesJob, Key: route}); err != nil || len(f.outbox(TopicOwnTicks))-before[TopicOwnTicks] != 3 {
+		t.Errorf("a second run republished unchanged ticks: %v", err)
 	}
 }

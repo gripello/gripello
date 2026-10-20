@@ -54,11 +54,7 @@ func (s *Store) IssueToken(secret string) http.Handler {
 			Record:           body.ID,
 		}
 		token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(fileTokenKey(secret))
-		if err != nil {
-			return err
-		}
-		httpx.JSON(w, http.StatusOK, map[string]string{"token": token})
-		return nil
+		return httpx.Respond(w, http.StatusOK, map[string]string{"token": token}, err)
 	})
 }
 
@@ -76,7 +72,7 @@ const AccelHeader = "X-Blob-Accel"
 func (s *Store) ServeFile(secret string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		table, id, name := r.PathValue("table"), r.PathValue("id"), r.PathValue("name")
-		if !validKey(table, id, name) {
+		if !validKey(table, id, name) || slices.Contains(PrivateTables, table) {
 			httpx.Fail(w, httpx.ErrNotFound)
 			return
 		}

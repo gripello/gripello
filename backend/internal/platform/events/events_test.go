@@ -549,3 +549,18 @@ func TestSkippedIdsAreCapped(t *testing.T) {
 		t.Fatalf("%d skipped ids remembered", len(bus.skipped))
 	}
 }
+
+func TestPayloadTimestampsTravelInTheAPIFormat(t *testing.T) {
+	ctx := context.Background()
+	pool := testkit.Pool(t)
+	tx, _ := pool.Begin(ctx)
+	at := time.Date(2026, 10, 20, 12, 36, 12, 123456789, time.FixedZone("CEST", 2*3600))
+	if err := Publish(ctx, tx, "own_ticks", "tick.updated", map[string]any{"updated": at}, Audience{}); err != nil {
+		t.Fatal(err)
+	}
+	var updated string
+	if err := tx.QueryRow(ctx, `SELECT payload->>'updated' FROM events`).Scan(&updated); err != nil || updated != "2026-10-20T10:36:12.123Z" {
+		t.Fatalf("payload timestamp = %q %v", updated, err)
+	}
+	tx.Rollback(ctx)
+}

@@ -9,7 +9,7 @@ import type {
 } from '../utils/notificationPrefs'
 import { useAuthState } from './auth'
 import { useApi } from './client'
-import type { PageQuery, RouteList } from './client'
+import type { PageQuery, Page } from './client'
 
 export interface NotificationQuery extends PageQuery {
     unread?: boolean
@@ -36,8 +36,8 @@ const MAX_NOTIFICATIONS = 200
 
 export function listNotifications(
     query: NotificationQuery = {},
-): Promise<RouteList<NotificationRecord>> {
-    return useApi()<RouteList<NotificationRecord>>('/me/notifications', {
+): Promise<Page<NotificationRecord>> {
+    return useApi()<Page<NotificationRecord>>('/me/notifications', {
         query: {
             unread: query.unread || undefined,
             page: query.page,
@@ -62,7 +62,7 @@ export function getNotificationPrefs() {
     return useApi()<NotificationPrefs>('/me/notification-prefs')
 }
 
-export async function updateNotificationPrefs(
+export async function putNotificationPrefs(
     prefs: NotificationPrefs,
 ): Promise<NotificationPrefs> {
     const updated = await useApi()<NotificationPrefs>(

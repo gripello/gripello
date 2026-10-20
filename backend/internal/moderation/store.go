@@ -2,22 +2,13 @@ package moderation
 
 import (
 	"context"
-	"errors"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
-	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/db"
 )
-
-type querier interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
-}
 
 const (
 	filesKey   = "_files"
@@ -68,7 +59,7 @@ type content struct {
 }
 
 // loadContent snapshots the moderated fields; the author stays in moderation_items.author only, so snapshots don't reveal it.
-func loadContent(ctx context.Context, q querier, kindName, id string) (content, error) {
+func loadContent(ctx context.Context, q db.Querier, kindName, id string) (content, error) {
 	k := kinds[kindName]
 	snapshot := "to_jsonb(t) - '" + k.author + "'"
 	if k.fields != nil {
@@ -85,13 +76,10 @@ func loadContent(ctx context.Context, q querier, kindName, id string) (content, 
 	var c content
 	err := q.QueryRow(ctx, `SELECT COALESCE(`+k.gym+`, ''), `+author+`, `+snapshot+` FROM `+k.table+` t WHERE t.id = $1`, id).
 		Scan(&c.Gym, &c.Author, &c.Snapshot)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return c, httpx.ErrNotFound
-	}
-	return c, err
+	return c, db.NotFound(err)
 }
 
-func exposed(ctx context.Context, q querier, kindName, id string) (bool, error) {
+func exposed(ctx context.Context, q db.Querier, kindName, id string) (bool, error) {
 	k := kinds[kindName]
 	if k.exposed == "" {
 		return true, nil
@@ -118,6 +106,7 @@ type Item struct {
 	ReviewedBy   string         `db:"reviewed_by" json:"reviewed_by"`
 	ReviewedAt   *time.Time     `db:"reviewed_at" json:"reviewed_at"`
 	Context      *Context       `db:"-" json:"context,omitempty"`
+	Actions      []string       `db:"-" json:"actions"`
 }
 
 func (it Item) quarantined() bool { return it.State == "hidden" || it.State == "pending" }
@@ -125,42 +114,28 @@ func (it Item) quarantined() bool { return it.State == "hidden" || it.State == "
 const itemColumns = `id, created, updated, COALESCE(gym, '') AS gym, content_type, content_id, COALESCE(author, '') AS author,
 	snapshot, files, state, hidden_by, reports_count, reason, COALESCE(reviewed_by, '') AS reviewed_by, reviewed_at`
 
-func queryItems(ctx context.Context, q querier, where string, args ...any) ([]Item, error) {
+func queryItems(ctx context.Context, q db.Querier, where string, args ...any) ([]Item, error) {
 	return scanItems(ctx, q, `SELECT `+itemColumns+` FROM moderation_items `+where, args...)
 }
 
-func scanItems(ctx context.Context, q querier, sql string, args ...any) ([]Item, error) {
-	rows, err := q.Query(ctx, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[Item])
+func scanItems(ctx context.Context, q db.Querier, sql string, args ...any) ([]Item, error) {
+	return db.List[Item](ctx, q, sql, args...)
 }
 
-func oneItem(items []Item, err error) (Item, error) {
-	if err != nil {
-		return Item{}, err
-	}
-	if len(items) == 0 {
-		return Item{}, httpx.ErrNotFound
-	}
-	return items[0], nil
-}
-
-func findItem(ctx context.Context, q querier, id string) (Item, error) {
-	return oneItem(queryItems(ctx, q, `WHERE id = $1`, id))
+func findItem(ctx context.Context, q db.Querier, id string) (Item, error) {
+	return db.First(queryItems(ctx, q, `WHERE id = $1`, id))
 }
 
 func lockItem(ctx context.Context, tx pgx.Tx, id string) (Item, error) {
-	return oneItem(queryItems(ctx, tx, `WHERE id = $1 FOR UPDATE`, id))
+	return db.First(queryItems(ctx, tx, `WHERE id = $1 FOR UPDATE`, id))
 }
 
 // itemOf returns the case of a piece of content, or ErrNotFound.
-func itemOf(ctx context.Context, q querier, kindName, contentID string) (Item, error) {
-	return oneItem(queryItems(ctx, q, `WHERE content_type = $1 AND content_id = $2 FOR UPDATE`, kindName, contentID))
+func itemOf(ctx context.Context, q db.Querier, kindName, contentID string) (Item, error) {
+	return db.First(queryItems(ctx, q, `WHERE content_type = $1 AND content_id = $2 FOR UPDATE`, kindName, contentID))
 }
 
-func insertItem(ctx context.Context, q querier, it Item) (Item, bool, error) {
+func insertItem(ctx context.Context, q db.Querier, it Item) (Item, bool, error) {
 	if it.Files == nil {
 		it.Files = []string{}
 	}
@@ -174,11 +149,11 @@ func insertItem(ctx context.Context, q querier, it Item) (Item, bool, error) {
 	return saved[0], true, nil
 }
 
-func updateItem(ctx context.Context, q querier, it Item) (Item, error) {
+func updateItem(ctx context.Context, q db.Querier, it Item) (Item, error) {
 	if it.Files == nil {
 		it.Files = []string{}
 	}
-	return oneItem(scanItems(ctx, q, `UPDATE moderation_items SET gym = NULLIF($2, ''), author = NULLIF($3, ''), snapshot = $4,
+	return db.First(scanItems(ctx, q, `UPDATE moderation_items SET gym = NULLIF($2, ''), author = NULLIF($3, ''), snapshot = $4,
 		files = $5, state = $6, hidden_by = $7, reports_count = $8, reason = $9, reviewed_by = NULLIF($10, ''), reviewed_at = $11,
 		updated = now() WHERE id = $1 RETURNING `+itemColumns,
 		it.ID, it.Gym, it.Author, it.Snapshot, it.Files, it.State, it.HiddenBy, it.ReportsCount, it.Reason, it.ReviewedBy, it.ReviewedAt))
@@ -212,15 +187,11 @@ const reportColumns = `id, created, updated, COALESCE(gym, '') AS gym, content_t
 	explanation, notifier_name, notifier_email, good_faith, status, decision, decision_reason, decided_at,
 	COALESCE(decided_by, '') AS decided_by, receipt_sent, notified_at, language`
 
-func queryReports(ctx context.Context, q querier, sql string, args ...any) ([]Report, error) {
-	rows, err := q.Query(ctx, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToStructByName[Report])
+func queryReports(ctx context.Context, q db.Querier, sql string, args ...any) ([]Report, error) {
+	return db.List[Report](ctx, q, sql, args...)
 }
 
-func usersWith(ctx context.Context, q querier, gym, permission string) ([]string, error) {
+func usersWith(ctx context.Context, q db.Querier, gym, permission string) ([]string, error) {
 	if gym == "" {
 		return nil, nil
 	}
@@ -232,7 +203,7 @@ func usersWith(ctx context.Context, q querier, gym, permission string) ([]string
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
-func platformAdmins(ctx context.Context, q querier) ([]string, error) {
+func platformAdmins(ctx context.Context, q db.Querier) ([]string, error) {
 	rows, err := q.Query(ctx, `SELECT id FROM users WHERE platform_admin ORDER BY id`)
 	if err != nil {
 		return nil, err
@@ -240,28 +211,9 @@ func platformAdmins(ctx context.Context, q querier) ([]string, error) {
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
-func gymPath(ctx context.Context, q querier, gym, path string) string {
-	var slug string
-	q.QueryRow(ctx, `SELECT slug FROM gyms WHERE id = $1`, gym).Scan(&slug)
-	if slug == "" {
-		return path
-	}
-	return "/" + slug + path
-}
-
-func contactEmail(ctx context.Context, q querier, gym string) string {
+func contactEmail(ctx context.Context, q db.Querier, gym string) string {
 	var email string
 	q.QueryRow(ctx, `SELECT COALESCE(NULLIF((SELECT contact_email FROM gyms WHERE id = $1), ''),
 		(SELECT contact_email FROM settings ORDER BY id LIMIT 1), '')`, gym).Scan(&email)
 	return email
-}
-
-func badRequest(message string) *httpx.Error { return httpx.NewError(http.StatusBadRequest, message) }
-
-func truncate(value string, limit int) string {
-	runes := []rune(value)
-	if len(runes) <= limit {
-		return value
-	}
-	return string(runes[:limit])
 }

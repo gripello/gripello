@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { ApiError } from '~/api/client'
 import {
     createReport,
-    decideCase,
-    getCase,
-    getModerationSummary,
-    hideAuthor,
-    listCases,
+    decideModerationCase,
+    getModerationCase,
+    moderationSummary,
+    hideAuthorContent,
+    listModerationCases,
     listGymReports,
     listPlatformReports,
-    openCase,
+    openModerationCase,
 } from '~/api/moderation'
 import { mockApi } from './apiMock'
 
@@ -61,9 +61,9 @@ describe('reports', () => {
 describe('moderation summary', () => {
     it('reads the gym summary or the platform one', async () => {
         api.respond({ decide: 1, waiting: 0, hidden: 0 })
-        await getModerationSummary('g1')
+        await moderationSummary('g1')
         expect(api.request().url).toBe('/api/moderation/summary?gym=g1')
-        await getModerationSummary()
+        await moderationSummary()
         expect(api.request().url).toBe('/api/moderation/summary')
     })
 })
@@ -71,7 +71,7 @@ describe('moderation summary', () => {
 describe('cases', () => {
     it('sends every filter as a query parameter', async () => {
         api.respond({ items: [{ id: 'c1' }], page: 1, limit: 30, total: 1 })
-        const result = await listCases({
+        const result = await listModerationCases({
             gym: 'g1',
             state: ['unreviewed', 'pending'],
             content_type: 'rating',
@@ -91,23 +91,23 @@ describe('cases', () => {
 
     it('leaves out empty filters', async () => {
         api.respond({ items: [], page: 1, limit: 30 })
-        await listCases({ state: [], content_type: null, q: '  ' })
+        await listModerationCases({ state: [], content_type: null, q: '  ' })
         expect(api.request().url).toBe('/api/moderation/cases')
     })
 
     it('opens, reads and decides a case', async () => {
-        await openCase({ content_type: 'rating', content_id: 'r1' })
+        await openModerationCase({ content_type: 'rating', content_id: 'r1' })
         expect(api.request()).toMatchObject({
             url: '/api/moderation/cases',
             method: 'POST',
             body: { content_type: 'rating', content_id: 'r1' },
         })
-        await getCase('c1')
+        await getModerationCase('c1')
         expect(api.request()).toMatchObject({
             url: '/api/moderation/c1',
             method: 'GET',
         })
-        await decideCase('c1', { action: 'hide', reason: 'spam' })
+        await decideModerationCase('c1', { action: 'hide', reason: 'spam' })
         expect(api.request()).toMatchObject({
             url: '/api/moderation/c1',
             method: 'POST',
@@ -117,7 +117,7 @@ describe('cases', () => {
 
     it('hides every item of an author', async () => {
         api.respond({ hidden: 3 })
-        expect(await hideAuthor('u1', 'spam')).toEqual({ hidden: 3 })
+        expect(await hideAuthorContent('u1', 'spam')).toEqual({ hidden: 3 })
         expect(api.request()).toMatchObject({
             url: '/api/moderation/authors/u1/hide',
             method: 'POST',
@@ -127,7 +127,7 @@ describe('cases', () => {
 
     it('rejects with an ApiError carrying the status', async () => {
         api.respond({ status: 404, message: 'Not found.', data: {} }, 404)
-        const error = await decideCase('c1', {
+        const error = await decideModerationCase('c1', {
             action: 'approve',
             reason: '',
         }).catch((err) => err)

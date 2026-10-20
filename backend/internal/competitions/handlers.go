@@ -13,7 +13,8 @@ import (
 
 	"golang.org/x/sync/singleflight"
 
-	"gripello/internal/platform/auth"
+	"gripello/internal/platform/apitime"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/tenancy"
@@ -26,16 +27,29 @@ func readBody(r *http.Request) (json.RawMessage, error) {
 }
 
 // unmarshalBody applies only the fields present in the body onto target, which makes PATCH and create share one path.
+var timestampFields = []string{"starts_at", "ends_at"}
+
 func unmarshalBody(raw json.RawMessage, target any) error {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(raw, &fields) == nil {
+		for _, field := range timestampFields {
+			var value string
+			if json.Unmarshal(fields[field], &value) == nil {
+				if _, err := apitime.Parse(value); err != nil {
+					return httpx.Invalid(field, "Must be an RFC 3339 timestamp.")
+				}
+			}
+		}
+	}
 	err := json.Unmarshal(raw, target)
 	var typeErr *json.UnmarshalTypeError
 	switch {
 	case err == nil:
 		return nil
 	case errors.As(err, &typeErr) && typeErr.Field != "":
-		return invalid(typeErr.Field, "Invalid value.")
+		return httpx.Invalid(typeErr.Field, "Invalid value.")
 	default:
-		return badRequest("Invalid JSON body.")
+		return httpx.BadRequest("Invalid JSON body.")
 	}
 }
 
@@ -52,27 +66,7 @@ func multi(r *http.Request, key string) []string {
 }
 
 func respondItems[T any](w http.ResponseWriter, items []T, err error) error {
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
-}
-
-func respond(w http.ResponseWriter, status int, v any, err error) error {
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, status, v)
-	return nil
-}
-
-func noContent(w http.ResponseWriter, err error) error {
-	if err != nil {
-		return err
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, err)
 }
 
 func (m *module) expandLocations(ctx context.Context, r *http.Request, items []Competition) error {
@@ -110,7 +104,7 @@ func (m *module) listCompetitions(w http.ResponseWriter, r *http.Request) error 
 	statuses := multi(r, "status")
 	for _, status := range statuses {
 		if !slices.Contains(competitionStatuses, status) {
-			return invalid("status", "Invalid value "+status+".")
+			return httpx.Invalid("status", "Invalid value "+status+".")
 		}
 	}
 	sql := `SELECT ` + competitionColumns + ` FROM competitions WHERE gym = $1 AND ($2::text[] IS NULL OR status = ANY ($2))`
@@ -120,9 +114,9 @@ func (m *module) listCompetitions(w http.ResponseWriter, r *http.Request) error 
 	order := map[string]string{"": ` ORDER BY starts_at, id`, "starts_at": ` ORDER BY starts_at, id`, "-starts_at": ` ORDER BY starts_at DESC, id`}
 	sort, ok := order[r.URL.Query().Get("sort")]
 	if !ok {
-		return invalid("sort", "Unknown sort.")
+		return httpx.Invalid("sort", "Unknown sort.")
 	}
-	items, err := list[Competition](r.Context(), m.app.DB, sql+sort, gym, statuses)
+	items, err := db.List[Competition](r.Context(), m.app.DB, sql+sort, gym, statuses)
 	if err != nil {
 		return err
 	}
@@ -136,7 +130,7 @@ func (m *module) getCompetition(w http.ResponseWriter, r *http.Request) error {
 	}
 	items := []Competition{c}
 	err = m.expandLocations(r.Context(), r, items)
-	return respond(w, http.StatusOK, items[0], err)
+	return httpx.Respond(w, http.StatusOK, items[0], err)
 }
 
 func (m *module) withExpandedCompetition(w http.ResponseWriter, r *http.Request, status int, c Competition, err error) error {
@@ -145,7 +139,7 @@ func (m *module) withExpandedCompetition(w http.ResponseWriter, r *http.Request,
 	}
 	items := []Competition{c}
 	err = m.expandLocations(r.Context(), r, items)
-	return respond(w, status, items[0], err)
+	return httpx.Respond(w, status, items[0], err)
 }
 
 func (m *module) postCompetition(w http.ResponseWriter, r *http.Request) error {
@@ -172,11 +166,11 @@ func (m *module) patchCompetition(w http.ResponseWriter, r *http.Request) error 
 
 func (m *module) publishCompetition(w http.ResponseWriter, r *http.Request) error {
 	c, err := m.updateCompetition(r.Context(), r.PathValue("id"), json.RawMessage(`{"status":"published"}`))
-	return respond(w, http.StatusOK, c, err)
+	return httpx.Respond(w, http.StatusOK, c, err)
 }
 
 func (m *module) deleteCompetitionHandler(w http.ResponseWriter, r *http.Request) error {
-	return noContent(w, m.deleteCompetition(r.Context(), r.PathValue("id")))
+	return httpx.NoContent(w, m.deleteCompetition(r.Context(), r.PathValue("id")))
 }
 
 func (m *module) listCategories(w http.ResponseWriter, r *http.Request) error {
@@ -189,7 +183,7 @@ func (m *module) listCategories(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) categories(ctx context.Context, competition string) ([]Category, error) {
-	return list[Category](ctx, m.app.DB, `SELECT `+categoryColumns+` FROM competition_categories
+	return db.List[Category](ctx, m.app.DB, `SELECT `+categoryColumns+` FROM competition_categories
 		WHERE competition = $1 ORDER BY sort, name, id`, competition)
 }
 
@@ -199,7 +193,7 @@ func (m *module) postCategory(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	c, err := m.saveCategory(r.Context(), r.PathValue("id"), "", raw)
-	return respond(w, http.StatusCreated, c, err)
+	return httpx.Respond(w, http.StatusCreated, c, err)
 }
 
 func (m *module) patchCategory(w http.ResponseWriter, r *http.Request) error {
@@ -208,11 +202,11 @@ func (m *module) patchCategory(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	c, err := m.saveCategory(r.Context(), "", r.PathValue("id"), raw)
-	return respond(w, http.StatusOK, c, err)
+	return httpx.Respond(w, http.StatusOK, c, err)
 }
 
 func (m *module) deleteCategoryHandler(w http.ResponseWriter, r *http.Request) error {
-	return noContent(w, m.deleteCategory(r.Context(), r.PathValue("id")))
+	return httpx.NoContent(w, m.deleteCategory(r.Context(), r.PathValue("id")))
 }
 
 func (m *module) listRoutes(w http.ResponseWriter, r *http.Request) error {
@@ -227,7 +221,7 @@ func (m *module) listRoutes(w http.ResponseWriter, r *http.Request) error {
 	case "true":
 		sql += ` AND voided`
 	}
-	items, err := list[CompRoute](r.Context(), m.app.DB, sql+` ORDER BY number, id`, c.ID)
+	items, err := db.List[CompRoute](r.Context(), m.app.DB, sql+` ORDER BY number, id`, c.ID)
 	if err != nil {
 		return err
 	}
@@ -254,7 +248,7 @@ func (m *module) respondRoute(w http.ResponseWriter, r *http.Request, status int
 	}
 	items := []CompRoute{route}
 	err = m.expandRoutes(r.Context(), items)
-	return respond(w, status, items[0], err)
+	return httpx.Respond(w, status, items[0], err)
 }
 
 func (m *module) postRoute(w http.ResponseWriter, r *http.Request) error {
@@ -276,7 +270,7 @@ func (m *module) patchRoute(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *module) deleteRouteHandler(w http.ResponseWriter, r *http.Request) error {
-	return noContent(w, m.deleteCompRoute(r.Context(), r.PathValue("id")))
+	return httpx.NoContent(w, m.deleteCompRoute(r.Context(), r.PathValue("id")))
 }
 
 // listEntries: staff and judges see every entry; others their own plus visible ones of a non-draft competition,
@@ -294,7 +288,7 @@ func (m *module) listEntries(w http.ResponseWriter, r *http.Request) error {
 	sql := `SELECT ` + entryColumns + ` FROM competition_entries WHERE competition = $1
 		AND ($2::text[] IS NULL OR status = ANY ($2)) AND ($3 = '' OR "user" = $3)
 		AND ($6 OR "user" = $4 OR ($5 AND NOT hidden)) ORDER BY bib, id`
-	items, err := list[Entry](r.Context(), m.app.DB, sql, c.ID, statuses, r.URL.Query().Get("user"),
+	items, err := db.List[Entry](r.Context(), m.app.DB, sql, c.ID, statuses, r.URL.Query().Get("user"),
 		v.user, c.Status != "draft", v.staff)
 	if err != nil {
 		return err
@@ -323,7 +317,7 @@ func (m *module) postEntry(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	e, err := m.createEntry(r.Context(), r.PathValue("id"), raw)
-	return respond(w, http.StatusCreated, e, err)
+	return httpx.Respond(w, http.StatusCreated, e, err)
 }
 
 func (m *module) patchEntry(w http.ResponseWriter, r *http.Request) error {
@@ -332,11 +326,11 @@ func (m *module) patchEntry(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	e, err := m.updateEntry(r.Context(), r.PathValue("id"), raw)
-	return respond(w, http.StatusOK, e, err)
+	return httpx.Respond(w, http.StatusOK, e, err)
 }
 
 func (m *module) deleteEntryHandler(w http.ResponseWriter, r *http.Request) error {
-	return noContent(w, m.deleteEntry(r.Context(), r.PathValue("id")))
+	return httpx.NoContent(w, m.deleteEntry(r.Context(), r.PathValue("id")))
 }
 
 func scoresPublic(c Competition, now time.Time) bool {
@@ -353,7 +347,7 @@ func (m *module) listScores(w http.ResponseWriter, r *http.Request) error {
 	v := m.viewerFor(r.Context(), c)
 	sql := `SELECT ` + scoreColumns + ` FROM competition_scores WHERE competition = $1 AND ($2 = '' OR entry = $2)
 		AND ($3 OR entry IN (SELECT id FROM competition_entries WHERE competition = $1 AND "user" = $4))`
-	items, err := list[Score](r.Context(), m.app.DB, sql+` ORDER BY created, id`, c.ID, r.URL.Query().Get("entry"),
+	items, err := db.List[Score](r.Context(), m.app.DB, sql+` ORDER BY created, id`, c.ID, r.URL.Query().Get("entry"),
 		v.staff || scoresPublic(c, time.Now()), v.user)
 	return respondItems(w, items, err)
 }
@@ -366,22 +360,22 @@ func (m *module) putScores(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if len(body.Scores) == 0 || len(body.Scores) > 500 {
-		return invalid("scores", "Send between 1 and 500 scores.")
+		return httpx.Invalid("scores", "Send between 1 and 500 scores.")
 	}
 	items, err := m.upsertScores(r.Context(), r.PathValue("id"), body.Scores)
 	return respondItems(w, items, err)
 }
 
 func (m *module) deleteScoreHandler(w http.ResponseWriter, r *http.Request) error {
-	return noContent(w, m.deleteScore(r.Context(), r.PathValue("id")))
+	return httpx.NoContent(w, m.deleteScore(r.Context(), r.PathValue("id")))
 }
 
 func (m *module) standings(ctx context.Context, competition string, staff bool) ([]Standing, error) {
 	if staff {
-		return list[Standing](ctx, m.app.DB, `SELECT id, competition, category, bib, display_name FROM competition_entries
+		return db.List[Standing](ctx, m.app.DB, `SELECT id, competition, category, bib, display_name FROM competition_entries
 			WHERE competition = $1 AND status IN ('registered', 'checked_in') ORDER BY bib, id`, competition)
 	}
-	return list[Standing](ctx, m.app.DB, `SELECT id, competition, category, bib, display_name FROM competition_standings
+	return db.List[Standing](ctx, m.app.DB, `SELECT id, competition, category, bib, display_name FROM competition_standings
 		WHERE competition = $1 ORDER BY bib, id`, competition)
 }
 
@@ -417,18 +411,16 @@ func (m *module) getStandings(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	if p, ok := auth.From(ctx); ok && r.URL.Query().Get("view") != "public" {
-		if m.perms.Can(ctx, p.UserID, gym, permManage) {
-			c, err := findCompetition(ctx, m.app.DB, id)
-			if err != nil {
-				return err
-			}
-			standings, err := m.computeStandings(ctx, c, true)
-			return respond(w, http.StatusOK, standings, err)
+	if r.URL.Query().Get("view") != "public" && m.perms.Has(ctx, gym, tenancy.PermManageCompetitions) {
+		c, err := findCompetition(ctx, m.app.DB, id)
+		if err != nil {
+			return err
 		}
+		standings, err := m.computeStandings(ctx, c, true)
+		return httpx.Respond(w, http.StatusOK, standings, err)
 	}
 	standings, err := m.publicStandings(ctx, id)
-	return respond(w, http.StatusOK, standings, err)
+	return httpx.Respond(w, http.StatusOK, standings, err)
 }
 
 func (m *module) computeStandings(ctx context.Context, c Competition, manager bool) (Standings, error) {
@@ -448,12 +440,12 @@ func (m *module) computeStandings(ctx context.Context, c Competition, manager bo
 	if err != nil {
 		return out, err
 	}
-	routes, err := list[CompRoute](ctx, m.app.DB, `SELECT `+routeColumns+` FROM competition_routes
+	routes, err := db.List[CompRoute](ctx, m.app.DB, `SELECT `+routeColumns+` FROM competition_routes
 		WHERE competition = $1 ORDER BY number, id`, c.ID)
 	if err != nil {
 		return out, err
 	}
-	scores, err := list[Score](ctx, m.app.DB, `SELECT `+scoreColumns+` FROM competition_scores
+	scores, err := db.List[Score](ctx, m.app.DB, `SELECT `+scoreColumns+` FROM competition_scores
 		WHERE competition = $1 ORDER BY created, id`, c.ID)
 	if err != nil {
 		return out, err

@@ -20,21 +20,24 @@ paths:
                   enabled: { type: boolean }
                   running: { type: boolean }
                   last_run: { type: [string, 'null'], format: date-time }
-                  dir: { type: string, description: Backup folder on the server, for the restore command. }
+                  dir: { type: string, description: 'Backup folder on the server, for the restore command.' }
                   disk_free: { type: integer, description: Free bytes on the backup volume. }
                   disk_total: { type: integer, description: Size of the backup volume in bytes. }
-                  last_error: { type: string, description: Error of the last run, empty when it succeeded. }
+                  last_error: { type: string, description: 'Error of the last run, empty when it succeeded.' }
                   pg_dump: { type: boolean, description: Whether pg_dump is installed on the replica that answered. }
                   items: { type: array, items: { $ref: '#/components/schemas/Archive' } }
                   settings: { $ref: '#/components/schemas/Settings' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: runBackup
       tags: [backups]
       description: Queues a backup (pg_dump custom format, plus storage without thumbnails when enabled); repeated clicks coalesce.
       responses:
         '202': { description: Queued }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/backups/settings:
     put:
       operationId: saveBackupSettings
@@ -51,8 +54,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Settings' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/backups/{name}:
     parameters:
       - { name: name, in: path, required: true, schema: { type: string, pattern: '^gripello-\d{8}-\d{6}\.tar$' } }
@@ -65,23 +70,19 @@ paths:
           description: The tar archive
           content:
             application/x-tar: { schema: { type: string, format: binary } }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteBackup
       tags: [backups]
       description: Deletes the archive. Needs a recent password confirmation; audited.
       responses:
         '204': { description: Deleted }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
-  responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
   schemas:
     Archive:
       type: object
@@ -95,10 +96,3 @@ components:
         keep: { type: integer, minimum: 0, maximum: 365 }
         include_storage: { type: boolean }
         hour: { type: integer, minimum: 0, maximum: 23, description: UTC hour of the daily run (at :30). }
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data: { type: object }

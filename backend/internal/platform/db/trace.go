@@ -62,3 +62,22 @@ func compactSQL(sql string) string {
 	}
 	return sql
 }
+
+// IsUnique reports a unique violation on a constraint whose name contains constraint ("" matches any).
+func IsUnique(err error, constraint string) bool {
+	var pg *pgconn.PgError
+	return errors.As(err, &pg) && pg.Code == "23505" && strings.Contains(pg.ConstraintName, constraint)
+}
+
+// IsFKViolation includes ON DELETE RESTRICT, which PostgreSQL 18 reports as 23001 instead of 23503.
+func IsFKViolation(err error) bool {
+	var pg *pgconn.PgError
+	return errors.As(err, &pg) && (pg.Code == "23503" || pg.Code == "23001")
+}
+
+func NotFound(err error) error {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return httpx.ErrNotFound
+	}
+	return err
+}

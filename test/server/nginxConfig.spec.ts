@@ -1,5 +1,6 @@
 import { globSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { NUXT_API_PREFIXES } from '#shared/utils/apiVersion'
 
 describe('docker nginx config', () => {
     it('accepts request bodies as large as the largest upload the api allows', () => {
@@ -39,5 +40,18 @@ describe('docker nginx config', () => {
             ) ?? []
 
         expect(Number(count) * Number(sizeKb)).toBeGreaterThanOrEqual(512)
+    })
+
+    it('sends exactly the Nuxt api prefixes to Nuxt', () => {
+        const config = readFileSync('.docker/nginx.conf', 'utf8')
+        const toNuxt = [
+            ...config.matchAll(/location (?:= )?(\/api\/[^\s{]*) \{([^}]*)\}/g),
+        ]
+            .filter(([, , body]) =>
+                /proxy_pass http:\/\/(nuxt|127\.0\.0\.1:3000)/.test(body!),
+            )
+            .map(([, path]) => path)
+
+        expect(toNuxt.sort()).toEqual([...NUXT_API_PREFIXES].sort())
     })
 })

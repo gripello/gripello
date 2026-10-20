@@ -29,7 +29,7 @@ func Register(app *platform.App) {
 		"DELETE /platform/backups/{name}": m.remove,
 		"PUT /platform/backups/settings":  m.saveSettings,
 	} {
-		app.Handle(pattern, onlyPlatformAdmins(handler))
+		app.Handle(pattern, auth.PlatformAdminsOnly(handler))
 	}
 	if m.dir == "" {
 		return
@@ -44,28 +44,10 @@ func Register(app *platform.App) {
 	})
 }
 
-func onlyPlatformAdmins(next httpx.Handler) httpx.Handler {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		p, err := auth.Require(r.Context())
-		if err != nil {
-			return err
-		}
-		if !p.PlatformAdmin {
-			return httpx.ErrForbidden
-		}
-		return next(w, r)
-	}
-}
-
 // requireDir answers 404 on deployments without BACKUP_DIR, so the page can tell the feature is off.
 func (m *module) requireDir() error {
 	if m.dir == "" {
 		return httpx.NewError(http.StatusNotFound, "Backups are not enabled on this server (BACKUP_DIR).")
 	}
 	return nil
-}
-
-func (m *module) requireReauth(r *http.Request) error {
-	p, _ := auth.From(r.Context())
-	return auth.RequireRecentReauth(r.Context(), m.app.DB, p)
 }

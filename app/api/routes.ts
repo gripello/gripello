@@ -1,7 +1,6 @@
 import type {
     LocationRecord,
     RouteRecord,
-    RouteScoreRecord,
     WallRecord,
 } from '../../types/models'
 import type { GymMap } from '../../shared/utils/mapGeometry'
@@ -10,7 +9,7 @@ import type {
     AnalyticsQuery,
 } from '../../shared/utils/analytics'
 import { useApi } from './client'
-import type { RouteList } from './client'
+import type { Page } from './client'
 
 export type RouteInclude = 'location' | 'wall' | 'gym'
 
@@ -96,10 +95,10 @@ async function listByIds<T>(
     return pages.flatMap((page) => page.items)
 }
 
-export async function listRoutes<T = RouteScoreRecord>(
+export async function listRoutes<T = RouteRecord>(
     gym: string | null,
     query: RouteQuery = {},
-): Promise<RouteList<T>> {
+): Promise<Page<T>> {
     if (query.ids?.length === 0 || query.grade?.length === 0)
         return { items: [], page: 1, limit: query.limit ?? DEFAULT_LIMIT }
     if (gym === null) {
@@ -116,7 +115,7 @@ export async function listRoutes<T = RouteScoreRecord>(
     const params = routeParams(query)
     if (query.page) {
         const limit = query.limit ?? DEFAULT_LIMIT
-        return api<RouteList<T>>(path, {
+        return api<Page<T>>(path, {
             query: {
                 ...params,
                 page: query.page,
@@ -127,7 +126,7 @@ export async function listRoutes<T = RouteScoreRecord>(
     }
     const items: T[] = []
     for (let page = 1; ; page++) {
-        const result = await api<RouteList<T>>(path, {
+        const result = await api<Page<T>>(path, {
             query: { ...params, page, limit: MAX_LIMIT },
         })
         items.push(...result.items)
@@ -309,9 +308,9 @@ export async function listWalls<T = WallRecord>(
     return items
 }
 
-export async function listWallsByIds<
-    T = WallRecord & { location_name: string },
->(ids: string[]) {
+export async function listWallsById<T = WallRecord & { location_name: string }>(
+    ids: string[],
+) {
     if (!ids.length) return [] as T[]
     return listByIds<T>('/walls', ids)
 }

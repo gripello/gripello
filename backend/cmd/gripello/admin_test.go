@@ -87,7 +87,7 @@ func TestAdminTruncatePrefixDeletesOnlyPrefixedTestRows(t *testing.T) {
 			{`INSERT INTO routes (id, gym, name, grade, location, wall) VALUES ($1, $2, 'Crimp', '6a', $3, $4)`, []any{route, gym, location, wall}},
 			{`INSERT INTO ratings (id, gym, route_id, rating, comment) VALUES ($1, $2, $3, 4, 'nice')`, []any{ids.New(), gym, route}},
 			{`INSERT INTO ticks (id, "user", route, type, attempts, date, route_name) VALUES ($1, $2, $3, 'top', 1, now(), 'Crimp')`, []any{ids.New(), user, route}},
-			{`INSERT INTO seasons (id, gym, name, starts_at, ends_at) VALUES ($1, $2, $3, now(), now())`, []any{ids.New(), gym, prefix + " season"}},
+			{`INSERT INTO seasons (id, gym, name, starts_at, ends_at) VALUES ($1, $2, $3, now(), now() + interval '1 day')`, []any{ids.New(), gym, prefix + " season"}},
 		} {
 			if _, err := pool.Exec(ctx, statement.sql, statement.args...); err != nil {
 				t.Fatalf("%s: %v", statement.sql, err)

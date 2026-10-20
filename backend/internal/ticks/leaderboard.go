@@ -159,11 +159,7 @@ func rollingLeaderboardWindow(now time.Time) (time.Time, time.Time) {
 }
 
 func seasonWindow(season Season) (time.Time, time.Time) {
-	day := func(at time.Time) time.Time {
-		at = at.UTC()
-		return time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, time.UTC)
-	}
-	return day(season.StartsAt), day(season.EndsAt).AddDate(0, 0, 1)
+	return season.StartsAt.Time(), season.EndsAt.Time().AddDate(0, 0, 1)
 }
 
 func pointsToNextRank(rows []leaderboardRow, index int) *int {

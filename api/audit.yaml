@@ -21,9 +21,9 @@ paths:
         - $ref: '#/components/parameters/Limit'
       responses:
         '200': { $ref: '#/components/responses/AuditPage' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/audit:
     get:
       operationId: listOwnAudit
@@ -40,8 +40,8 @@ paths:
         - $ref: '#/components/parameters/Limit'
       responses:
         '200': { $ref: '#/components/responses/AuditPage' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/audit:
     get:
       operationId: listPlatformAudit
@@ -62,9 +62,9 @@ paths:
         - $ref: '#/components/parameters/Limit'
       responses:
         '200': { $ref: '#/components/responses/AuditPage' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Gym:
@@ -89,7 +89,7 @@ components:
     From:
       name: from
       in: query
-      description: inclusive lower bound on created (RFC 3339, `YYYY-MM-DD HH:MM:SS.sssZ` or `YYYY-MM-DD`)
+      description: inclusive lower bound on created (RFC 3339 timestamp or YYYY-MM-DD)
       schema: { type: string }
     To:
       name: to
@@ -122,26 +122,7 @@ components:
               page: { type: integer }
               limit: { type: integer }
               total: { type: integer }
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     AuditAction:
       type: string
       enum: [create, update, delete, login, login_failed, password_reset_request, password_reset, email_change_request, email_change]

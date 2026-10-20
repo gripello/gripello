@@ -72,7 +72,7 @@ func (f *fixture) count(sql string, args ...any) int {
 func (f *fixture) user(name, gym string, permissions ...string) {
 	f.t.Helper()
 	id := f.exec(`INSERT INTO users (id, username, firstname, email, token_key) VALUES ($1, $2, $2, $3, $4) RETURNING id`,
-		ids.New(), name, name+"@example.com", "key-"+name)
+		ids.New(), name, strings.ToLower(name)+"@example.com", "key-"+name)
 	if gym != "" {
 		role := f.exec(`INSERT INTO roles (id, gym, name, permissions) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), gym, name, permissions)
 		f.exec(`INSERT INTO memberships (id, "user", gym, role) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), id, gym, role)
@@ -344,7 +344,7 @@ func TestReportsAreValidatedAndAcknowledged(t *testing.T) {
 	var receipt, alert bool
 	for _, m := range testapp.Mails(f.app) {
 		receipt = receipt || slices.Contains(m.To, "n@example.com")
-		alert = alert || slices.Contains(m.To, "adminA@example.com")
+		alert = alert || slices.Contains(m.To, "admina@example.com")
 	}
 	if !receipt || !alert {
 		t.Errorf("receipt sent %v, alert sent %v", receipt, alert)
@@ -454,6 +454,21 @@ func TestQuarantineExpires(t *testing.T) {
 	}
 }
 
+func TestDecidedReportsExpireAfterThreeYears(t *testing.T) {
+	f := newFixture(t)
+	rating := f.rating("climber", "rude")
+	old, recent, open := f.report("rating", rating, "harassment"), f.report("rating", rating, "harassment"), f.report("rating", rating, "spam_fraud")
+	f.exec(`UPDATE reports SET status = 'rejected', decided_at = now() - interval '3 years 1 day' WHERE id = $1 RETURNING id`, old)
+	f.exec(`UPDATE reports SET status = 'rejected', decided_at = now() - interval '2 years' WHERE id = $1 RETURNING id`, recent)
+	f.exec(`UPDATE reports SET created = now() - interval '5 years' WHERE id = $1 RETURNING id`, open)
+	if err := (&module{app: f.app}).pruneReports(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if f.count(`SELECT count(*) FROM reports WHERE id = ANY ($1)`, []string{old, recent, open}) != 2 || f.count(`SELECT count(*) FROM reports WHERE id = $1`, old) != 0 {
+		t.Error("retention pruned the wrong reports")
+	}
+}
+
 func TestDecisionsCloseReports(t *testing.T) {
 	f := newFixture(t)
 	rating := f.rating("climber", "rude")
@@ -513,7 +528,7 @@ func TestInboxContextAndSummary(t *testing.T) {
 		t.Errorf("unknown gym filter listed %d cases", len(items))
 	}
 	f.call("operator", "GET", "/moderation/cases?queue=platform&state=unreviewed", "", http.StatusOK, rating)
-	if f.count(`SELECT count(*) FROM events WHERE topic = $1 AND audience->>'gym_perm' = $2`, "moderation:"+f.gymA, f.gymA+":manage_comments") == 0 ||
+	if f.count(`SELECT count(*) FROM events WHERE topic = $1 AND audience->>'gym_perm' = $2 AND audience->'platform_admins' = 'true'`, "moderation:"+f.gymA, f.gymA+":manage_comments") == 0 ||
 		f.count(`SELECT count(*) FROM events WHERE topic = 'moderation:platform' AND audience->'platform_admins' = 'true'`) == 0 {
 		t.Error("inbox got no realtime events")
 	}
@@ -759,7 +774,7 @@ func TestContactAddressGetsNoNotifierIdentity(t *testing.T) {
 		var desk, handler bool
 		for _, m := range testapp.Mails(f.app) {
 			desk = desk || slices.Contains(m.To, "desk@example.com")
-			handler = handler || slices.Contains(m.To, "adminA@example.com")
+			handler = handler || slices.Contains(m.To, "admina@example.com")
 		}
 		return desk && handler
 	})
@@ -767,7 +782,7 @@ func TestContactAddressGetsNoNotifierIdentity(t *testing.T) {
 		if slices.Contains(m.To, "desk@example.com") && strings.Contains(m.Text, "n@example.com") {
 			t.Error("contact address got the notifier's e-mail")
 		}
-		if slices.Contains(m.To, "adminA@example.com") && !strings.Contains(m.Text, "n@example.com") {
+		if slices.Contains(m.To, "admina@example.com") && !strings.Contains(m.Text, "n@example.com") {
 			t.Error("report handler lost the notifier's e-mail")
 		}
 	}
@@ -864,4 +879,79 @@ func TestHiddenGymContentCannotBeReportedByOutsiders(t *testing.T) {
 	body := `{"content_type":"rating","content_id":"` + rating + `","reason":"spam_fraud","explanation":"x","notifier_name":"N","notifier_email":"n@example.com","good_faith":true}`
 	f.call("", "POST", "/reports", body, http.StatusNotFound)
 	f.call("setterA", "POST", "/reports", body, http.StatusCreated)
+}
+
+func TestCasesListTheActionsDecideAccepts(t *testing.T) {
+	f := newFixture(t)
+	f.user("staffOperator", f.gymA, "manage_comments")
+	f.exec(`UPDATE users SET platform_admin = true WHERE id = $1 RETURNING id`, f.users["staffOperator"])
+	f.user("reportsOnlyA", f.gymA, "manage_reports")
+	f.exec(`INSERT INTO moderation_items (id, gym, content_type, content_id, author, state, snapshot) VALUES ($1, $2, 'beta_video', 'pendingbeta0002', $3, 'pending', $4) RETURNING id`,
+		"pendingitem0002", f.gymA, f.users["climber"], map[string]any{"gym": f.gymA, "route": f.route, "url": "https://youtube.com/shorts/2"})
+	visible := f.item("rating", f.rating("climber", "spam")).ID
+	f.exec(`INSERT INTO moderation_items (id, gym, content_type, content_id, author, state, hidden_by, snapshot) VALUES ($1, $2, 'rating', 'gonerating00001', $3, 'hidden', 'platform', '{}') RETURNING id`,
+		"platformhidden1", f.gymA, f.users["climber"])
+
+	actionsOf := func(user, id string) []string {
+		body := f.call(user, "GET", "/moderation/"+id, "", http.StatusOK)
+		actions := []string{}
+		for _, action := range body["actions"].([]any) {
+			actions = append(actions, action.(string))
+		}
+		return actions
+	}
+	inGymInbox := func(user, id string) []string {
+		for _, raw := range f.call(user, "GET", "/moderation/cases?gym=alpha", "", http.StatusOK)["items"].([]any) {
+			item := raw.(map[string]any)
+			if item["id"] == id {
+				actions := []string{}
+				for _, action := range item["actions"].([]any) {
+					actions = append(actions, action.(string))
+				}
+				return actions
+			}
+		}
+		t.Fatalf("%s missing from the gym inbox of %s", id, user)
+		return nil
+	}
+	for _, c := range []struct {
+		user, id string
+		want     []string
+	}{
+		{"setterA", "pendingitem0002", []string{"reject", "approve"}},
+		{"operator", "pendingitem0002", []string{"hide"}},
+		{"staffOperator", "pendingitem0002", []string{"reject", "approve", "hide"}},
+		{"reportsOnlyA", "pendingitem0002", []string{}},
+		{"setterA", visible, []string{"approve", "hide"}},
+		{"operator", visible, []string{"approve", "hide"}},
+		{"setterA", "platformhidden1", []string{}},
+		{"operator", "platformhidden1", []string{"restore"}},
+		{"staffOperator", "platformhidden1", []string{"restore"}},
+	} {
+		got := actionsOf(c.user, c.id)
+		if !slices.Equal(got, c.want) {
+			t.Errorf("%s on %s: actions %v, want %v", c.user, c.id, got, c.want)
+		}
+		if inbox := inGymInbox(c.user, c.id); !slices.Equal(inbox, c.want) {
+			t.Errorf("%s on %s in the gym inbox: actions %v, want %v", c.user, c.id, inbox, c.want)
+		}
+	}
+
+	for _, state := range []string{"unreviewed", "approved", "pending", "hidden"} {
+		for _, hiddenBy := range []string{"", "gym", "platform"} {
+			for _, who := range [][2]bool{{false, false}, {false, true}, {true, false}, {true, true}} {
+				it := Item{State: state, HiddenBy: hiddenBy}
+				listed := allowedActions(it, who[0], who[1])
+				for _, action := range decisionActions {
+					accepted := (who[0] || who[1]) && allowed(it, action, who[0], who[1]) == nil
+					if slices.Contains(listed, action) != accepted {
+						t.Errorf("%s/%s platform=%v staff=%v: %s listed=%v accepted=%v", state, hiddenBy, who[0], who[1], action, !accepted, accepted)
+					}
+				}
+			}
+		}
+	}
+
+	f.call("staffOperator", "POST", "/moderation/pendingitem0002", action("hide"), http.StatusOK, `"hidden_by":"platform"`)
+	f.call("reportsOnlyA", "POST", "/moderation/"+visible, action("hide"), http.StatusNotFound)
 }

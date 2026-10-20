@@ -13,6 +13,7 @@ import (
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
@@ -48,7 +49,7 @@ func Register(app *platform.App) {
 	}
 	app.Worker(pushJob, m.pushWorker)
 	if app.Bus != nil {
-		app.Bus.Subscribe(TopicNotify, m.onNotify)
+		app.Bus.Subscribe(events.TopicNotify, m.onNotify)
 	}
 	app.Cron.Add("wallNewRoutes", "*/15 * * * *", func(ctx context.Context) error {
 		return m.notifyWallNewRoutes(ctx, time.Now())
@@ -57,7 +58,7 @@ func Register(app *platform.App) {
 }
 
 func invalid(field, message string) error {
-	return httpx.NewError(http.StatusBadRequest, "Failed to process the request.").Field(field, "validation_invalid", message)
+	return httpx.BadRequest("Failed to process the request.").Field(field, "validation_invalid", message)
 }
 
 func (m *module) list(w http.ResponseWriter, r *http.Request) error {
@@ -74,13 +75,16 @@ func (m *module) list(w http.ResponseWriter, r *http.Request) error {
 	}
 	limit = min(limit, maxPageSize)
 	unread := query.Get("unread") == "true" || query.Get("unread") == "1"
+	where := ` FROM notifications WHERE "user" = $1`
+	if unread {
+		where += ` AND NOT read`
+	}
 	var total int
-	if err := m.app.DB.QueryRow(r.Context(), `SELECT COUNT(*) FROM notifications WHERE "user" = $1 AND (NOT $2 OR NOT read)`, p.UserID, unread).Scan(&total); err != nil {
+	if err := m.app.DB.QueryRow(r.Context(), `SELECT COUNT(*)`+where, p.UserID).Scan(&total); err != nil {
 		return err
 	}
-	rows, err := m.app.DB.Query(r.Context(), `SELECT `+notificationColumns+` FROM notifications
-		WHERE "user" = $1 AND (NOT $2 OR NOT read) ORDER BY created DESC, id LIMIT $3 OFFSET $4`,
-		p.UserID, unread, limit, (page-1)*limit)
+	rows, err := m.app.DB.Query(r.Context(), `SELECT `+notificationColumns+where+` ORDER BY created DESC, id LIMIT $2 OFFSET $3`,
+		p.UserID, limit, (page-1)*limit)
 	if err != nil {
 		return err
 	}
@@ -91,8 +95,7 @@ func (m *module) list(w http.ResponseWriter, r *http.Request) error {
 	if items == nil {
 		items = []Notification{}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "page": page, "limit": limit, "total": total})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items, "page": page, "limit": limit, "total": total}, nil)
 }
 
 func (m *module) markRead(w http.ResponseWriter, r *http.Request) error {
@@ -130,8 +133,7 @@ func (m *module) markRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) delete(w http.ResponseWriter, r *http.Request) error {
@@ -156,13 +158,11 @@ func (m *module) delete(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) settings(w http.ResponseWriter, r *http.Request) error {
-	httpx.JSON(w, http.StatusOK, map[string]any{"enabled": m.app.Push.WebPushEnabled(), "native": m.app.Push.NativeEnabled(), "publicKey": m.app.Push.PublicKey(), "topics": topics})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"enabled": m.app.Push.WebPushEnabled(), "native": m.app.Push.NativeEnabled(), "publicKey": m.app.Push.PublicKey(), "topics": topics}, nil)
 }
 
 func (m *module) getPrefs(w http.ResponseWriter, r *http.Request) error {
@@ -177,8 +177,7 @@ func (m *module) getPrefs(w http.ResponseWriter, r *http.Request) error {
 	if current == nil {
 		current = prefs{}
 	}
-	httpx.JSON(w, http.StatusOK, current)
-	return nil
+	return httpx.Respond(w, http.StatusOK, current, nil)
 }
 
 func (m *module) putPrefs(w http.ResponseWriter, r *http.Request) error {
@@ -207,18 +206,16 @@ func (m *module) putPrefs(w http.ResponseWriter, r *http.Request) error {
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		var record json.RawMessage
 		if err := tx.QueryRow(ctx, `UPDATE users u SET notification_prefs = $2, updated = now() WHERE id = $1
-			RETURNING to_jsonb(u) - 'password_hash' - 'token_key'`, p.UserID, next).Scan(&record); err != nil {
+			RETURNING `+climbers.OwnRecordSQL, p.UserID, next).Scan(&record); err != nil {
 			return err
 		}
 		// other devices of the user adopt the record, like after any profile save
-		return events.PublishAs(ctx, tx, p.UserID, "user:"+p.UserID, "user.updated",
-			map[string]any{"record": record, "changed": []string{"notification_prefs"}}, events.Audience{Users: []string{p.UserID}})
+		return climbers.PublishUserUpdated(ctx, tx, p.UserID, p.UserID, record, []string{"notification_prefs"})
 	})
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, next)
-	return nil
+	return httpx.Respond(w, http.StatusOK, next, nil)
 }
 
 func knownTopic(key string) bool {
@@ -263,8 +260,7 @@ func (m *module) listSubscriptions(w http.ResponseWriter, r *http.Request) error
 	if items == nil {
 		items = []PushSubscription{}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 func (m *module) subscribe(w http.ResponseWriter, r *http.Request) error {
@@ -292,7 +288,7 @@ func (m *module) subscribe(w http.ResponseWriter, r *http.Request) error {
 	case "", push.KindWebPush:
 		body.Kind = push.KindWebPush
 		if !push.AllowedEndpoint(body.Endpoint) {
-			return httpx.NewError(http.StatusBadRequest, "Unknown push service.")
+			return httpx.BadRequest("Unknown push service.")
 		}
 		if body.P256dh == "" || body.Auth == "" || len(body.P256dh) > 200 || len(body.Auth) > 100 {
 			return invalid("p256dh", "Missing or invalid subscription keys.")
@@ -344,8 +340,7 @@ func (m *module) subscribe(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusCreated, created)
-	return nil
+	return httpx.Respond(w, http.StatusCreated, created, nil)
 }
 
 func publishSubscription(ctx context.Context, tx pgx.Tx, actor, action string, s PushSubscription) error {
@@ -380,8 +375,7 @@ func (m *module) unsubscribe(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) testPush(w http.ResponseWriter, r *http.Request) error {
@@ -421,8 +415,7 @@ func (m *module) testPush(w http.ResponseWriter, r *http.Request) error {
 		Tag:   "test",
 	})
 	m.sendAll(r.Context(), subscriptions, payload)
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 // ponytail: per-replica limiter, so N replicas allow N×max; move to a Postgres counter if that matters.

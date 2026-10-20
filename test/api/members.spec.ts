@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
     acceptInvite,
     changeMembershipRole,
-    createMembership,
+    addMembership,
     createRole,
     deleteMembership,
     deleteRole,
@@ -55,7 +55,7 @@ describe('listMembers', () => {
 describe('memberships', () => {
     it('adds an existing user to a gym', async () => {
         api.respond({ id: 'm1' })
-        await createMembership({ user: 'u1', gym: 'g1', role: 'r1' })
+        await addMembership({ user: 'u1', gym: 'g1', role: 'r1' })
         expect(api.request()).toMatchObject({
             url: '/api/gyms/g1/memberships',
             method: 'POST',

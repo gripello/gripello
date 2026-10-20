@@ -363,7 +363,7 @@ func TestRouteTextLimits(t *testing.T) {
 	f := newFixture(t)
 	long := strings.Repeat("x", 101)
 	for _, body := range []string{`{"name":"` + long + `"}`, `{"comment":"` + strings.Repeat("x", 2001) + `"}`,
-		`{"creator":["` + long + `"]}`, `{"creator":["a"` + strings.Repeat(`,"a"`, 20) + `]}`} {
+		`{"creator":["` + long + `"]}`, `{"creator":["a"` + strings.Repeat(`,"a"`, 20) + `]}`, `{"grade_index":40.5}`, `{"grade_index":-1}`} {
 		f.call("setter", "POST", "/gyms/"+f.gymA+"/routes", `{"grade":"6a","name":"N","location":"`+f.hall+`",`+body[1:], http.StatusBadRequest)
 	}
 	f.call("admin", "POST", "/gyms/"+f.gymA+"/locations", `{"name":"`+long+`"}`, http.StatusBadRequest)
@@ -415,6 +415,34 @@ func TestHiddenGymRoutesReachOnlyMembers(t *testing.T) {
 		f.call(user, "GET", "/gyms/alpha/routes", "", http.StatusOK)
 		if got := items(f.call(user, "GET", "/walls?ids="+wall, "", http.StatusOK)); len(got) != 1 {
 			t.Errorf("walls by id for %q = %v", user, got)
+		}
+	}
+}
+
+func TestRouteDetailCountsDistinctSenders(t *testing.T) {
+	f := newFixture(t)
+	id := f.route("")
+	climber := f.exec(`SELECT id FROM users WHERE username = 'climber'`)
+	setter := f.exec(`SELECT id FROM users WHERE username = 'setter'`)
+	admin := f.exec(`UPDATE users SET ticks_private = true WHERE username = 'admin' RETURNING id`)
+	for _, tick := range []struct{ user, kind string }{{climber, "top"}, {climber, "flash"}, {setter, "attempt"}, {admin, "top"}} {
+		f.exec(`INSERT INTO ticks (id, "user", route, type, attempts, date) VALUES ($1, $2, $3, $4, 1, now()) RETURNING id`, ids.New(), tick.user, id, tick.kind)
+	}
+	if got := f.call("", "GET", "/routes/"+id, "", http.StatusOK)["sends_count"]; got != 2.0 {
+		t.Fatalf("sends_count = %v, want 2", got)
+	}
+	if route := items(f.call("", "GET", "/gyms/"+f.gymA+"/routes", "", http.StatusOK))[0].(map[string]any); route["sends_count"] != nil {
+		t.Fatalf("list carries sends_count: %v", route)
+	}
+}
+
+func TestGradesAreStoredInTheirSystemsSpelling(t *testing.T) {
+	f := newFixture(t)
+	boulder := f.route(`,"grade":"6b+","grade_system":"font"`)
+	sport := f.route(`,"type":"Route","grade":"6B","grade_system":"french"`)
+	for id, want := range map[string]string{boulder: "6B+", sport: "6b"} {
+		if got := f.exec(`SELECT grade FROM routes WHERE id = $1`, id); got != want {
+			t.Errorf("route %s grade = %q, want %q", id, got, want)
 		}
 	}
 }

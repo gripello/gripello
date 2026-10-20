@@ -5,10 +5,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
 const Default = "en"
+
+// Supported mirrors app/utils/locales.ts.
+var Supported = []string{"en", "de", "nl", "fr", "es"}
+
+// Allowed accepts a supported language or "" (unset).
+func Allowed(language string) bool { return language == "" || slices.Contains(Supported, language) }
 
 type Messages map[string]map[string]any
 

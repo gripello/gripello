@@ -45,7 +45,7 @@ func newModule(app *platform.App) *module {
 		app.Bus.Subscribe(topic, m.queueField("user"))
 	}
 	app.Bus.Subscribe("follow.changed", m.onFollow)
-	app.Bus.Subscribe("notify", m.onNotify)
+	app.Bus.Subscribe(events.TopicNotify, m.onNotify)
 	app.Cron.Add("achievementsSeasons", "30 3 * * *", func(ctx context.Context) error { return m.queueSeasonPlacements(ctx, time.Now()) })
 	return m
 }
@@ -83,8 +83,8 @@ func (m *module) onFollow(e events.Event) {
 }
 
 func (m *module) onNotify(e events.Event) {
-	var n Notify
-	if e.Kind == "notify" && json.Unmarshal(e.Payload, &n) == nil && n.Type == "task_defect_fixed" {
+	var n events.Notify
+	if e.Kind == events.TopicNotify && json.Unmarshal(e.Payload, &n) == nil && n.Type == "task_defect_fixed" {
 		for _, userID := range n.Users {
 			m.queue(userID)
 		}
@@ -141,8 +141,7 @@ func (m *module) getAchievements(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, views)
-	return nil
+	return httpx.Respond(w, http.StatusOK, views, nil)
 }
 
 // publicViews leaves out the running streak and earned dates; computing is costly, so other viewers share a short per-climber cache.

@@ -1,0 +1,18 @@
+{
+    "hosts": ["youtube.com", "instagram.com", "tiktok.com"],
+    "types": ["video/mp4", "video/webm", "video/quicktime"],
+    "maxBytes": 31457280,
+    "links": {
+        "https://youtube.com/shorts/1": true,
+        "https://m.youtube.com/shorts/1": true,
+        "https://www.instagram.com/reel/a": true,
+        "https://vm.tiktok.com/a": true,
+        "https://www.tiktok.com/@a/video/1": true,
+        "http://youtube.com/shorts/1": false,
+        "https://www.youtube.com/watch?v=a": false,
+        "https://youtu.be/a": false,
+        "https://youtube.com.evil.example/shorts/1": false,
+        "https://example.com/a.mp4": false,
+        "youtube": false
+    }
+}

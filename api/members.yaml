@@ -10,7 +10,7 @@ paths:
       operationId: listMembers
       tags: [members]
       parameters:
-        - { name: q, in: query, description: Matches username, first name, name and visible e-mails, schema: { type: string } }
+        - { name: q, in: query, description: 'Matches username, first name, name and visible e-mails', schema: { type: string } }
         - { name: role, in: query, schema: { type: string } }
         - { name: sort, in: query, schema: { type: string, enum: [name, -name, created, -created], default: name } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
@@ -22,9 +22,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MemberPage' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: inviteMember
       tags: [members]
@@ -36,10 +36,10 @@ paths:
             schema: { $ref: '#/components/schemas/InviteRequest' }
       responses:
         '202': { description: Invitation stored and mailed }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '409': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/memberships:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -63,10 +63,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Membership' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '409': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/roles:
     get:
       operationId: listAllRoles
@@ -83,8 +83,8 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/ListedRole' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/memberships:
     get:
       operationId: listOwnMemberships
@@ -97,7 +97,7 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/OwnMembership' }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /memberships/{id}/role:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -119,10 +119,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Membership' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /memberships/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -132,10 +132,10 @@ paths:
       description: Removes a member, or leaves the gym when it is the caller's own membership.
       responses:
         '204': { description: Deleted }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/roles:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -153,8 +153,8 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/ListedRole' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createRole
       tags: [members]
@@ -169,10 +169,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Role' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /roles/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -190,10 +190,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Role' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteRole
       tags: [members]
@@ -204,15 +204,15 @@ paths:
           schema: { type: string }
       responses:
         '204': { description: Deleted }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '409':
           description: The role is still assigned to members
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: { $ref: 'shared/error.yaml#/components/schemas/Error' }
   /roles/{id}/permissions:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -236,10 +236,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Role' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /gyms/{gym}/invites:
     parameters:
       - $ref: '#/components/parameters/Gym'
@@ -254,8 +254,8 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Invite' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /invites/{key}:
     parameters:
       - name: key
@@ -268,8 +268,9 @@ paths:
       tags: [members]
       responses:
         '204': { description: Revoked }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     get:
       operationId: showInvite
       tags: [members]
@@ -280,7 +281,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/InvitePreview' }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /invites/{token}/accept:
     parameters:
       - $ref: '#/components/parameters/Token'
@@ -288,7 +289,6 @@ paths:
       operationId: acceptInvite
       tags: [members]
       description: Signed in, the account e-mail must match the invitation. Signed out, creates a verified account for an e-mail without one.
-      security: [{}, { bearerAuth: [] }]
       requestBody:
         content:
           application/json:
@@ -299,10 +299,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AcceptInviteResponse' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '409': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Gym:
@@ -329,27 +329,7 @@ components:
       in: path
       required: true
       schema: { type: string }
-  responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     Role:
       type: object
       required: [id, gym, name, description, permissions, color, created, updated]
@@ -482,7 +462,7 @@ components:
     AcceptInviteRequest:
       type: object
       properties:
-        password: { type: string, minLength: 8, maxLength: 71 }
+        password: { type: string, minLength: 8 }
         passwordConfirm: { type: string }
         firstname: { type: string }
         name: { type: string }

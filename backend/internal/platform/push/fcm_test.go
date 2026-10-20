@@ -119,7 +119,7 @@ func TestFCMTokensAreValidated(t *testing.T) {
 	if !ValidFCMToken("dQw4w9WgXcQ:APA91bHun4MxP5egoKMwt2KZFBaFUH-1RYqx") {
 		t.Error("real-looking token rejected")
 	}
-	for _, token := range []string{"", "short", "https://evil.example/x", strings.Repeat("a", 5000)} {
+	for _, token := range []string{"", "short", "https://evil.example/x", strings.Repeat("a", MaxEndpointLength+1)} {
 		if ValidFCMToken(token) {
 			t.Errorf("accepted %q", token)
 		}

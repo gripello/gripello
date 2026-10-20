@@ -198,7 +198,7 @@ func (p *phone) tick(route string, burst bool) {
 	}
 	p.write(name, "POST", "/api/me/ticks", map[string]any{
 		"id": id, "user": p.acct.id, "route": route, "type": pick(p, []string{"flash", "top", "top", "attempt"}),
-		"attempts": 1 + p.rng.IntN(5), "date": time.Now().UTC().Format("2006-01-02") + " 12:00:00.000Z", "note": "",
+		"attempts": 1 + p.rng.IntN(5), "date": time.Now().UTC().Format(time.DateOnly), "note": "",
 	}, nil)
 }
 
@@ -570,7 +570,7 @@ func (p *phone) createRoute() string {
 	p.write("POST /gyms/{gym}/routes", "POST", p.gymAPI("/routes"), map[string]any{
 		"name": runMarker + " " + newID(p)[:6], "type": "Boulder", "grade": grade.grade, "grade_system": "font", "grade_index": grade.index,
 		"location": w.Location, "wall": w.ID, "color": pick(p, []string{"#e53935", "#1e88e5", "#43a047"}), "creator": []string{"loadtest setter"},
-		"screw_date": time.Now().UTC().Format(time.RFC3339), "wall_position": p.rng.Float64(),
+		"screw_date": time.Now().UTC().Format(time.DateOnly), "wall_position": p.rng.Float64(),
 	}, &created)
 	return created.ID
 }

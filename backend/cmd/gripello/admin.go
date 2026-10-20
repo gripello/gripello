@@ -18,7 +18,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/bcrypt"
 
 	"gripello/internal/gyms"
 	"gripello/internal/members"
@@ -26,6 +25,8 @@ import (
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
+	platformmail "gripello/internal/platform/mail"
+	pw "gripello/internal/platform/password"
 )
 
 const adminUsage = "usage: gripello admin create-user|set-user|delete-user|create-gym|add-membership|create-notification|truncate-prefix|restore [flags]"
@@ -81,13 +82,14 @@ func adminCreateUser(ctx context.Context, pool *pgxpool.Pool, args []string) (st
 	verified := fs.Bool("verified", false, "mark the e-mail as verified")
 	platformAdmin := fs.Bool("platform-admin", false, "grant platform admin")
 	fs.Parse(args)
-	if *email == "" || len(*password) < 8 {
-		return "", errors.New("create-user needs --email and a --password of at least 8 characters")
+	*email = platformmail.NormalizeAddress(*email)
+	if !platformmail.ValidAddress(*email) || pw.TooShort(*password) {
+		return "", errors.New("create-user needs a valid --email and a --password of at least 8 characters")
 	}
 	if *username == "" {
 		*username = ids.New()
 	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(*password), 10)
+	hash, err := pw.Hash(*password)
 	if err != nil {
 		return "", err
 	}
@@ -97,7 +99,7 @@ func adminCreateUser(ctx context.Context, pool *pgxpool.Pool, args []string) (st
 		ON CONFLICT (email) WHERE email <> '' DO UPDATE SET verified = EXCLUDED.verified, password_hash = EXCLUDED.password_hash,
 			platform_admin = EXCLUDED.platform_admin, updated = now()
 		RETURNING id`,
-		ids.New(), *email, *verified, string(hash), rand.Text()+rand.Text(), *username, *firstname, *name, *platformAdmin).Scan(&id)
+		ids.New(), *email, *verified, hash, rand.Text()+rand.Text(), *username, *firstname, *name, *platformAdmin).Scan(&id)
 	return id, err
 }
 
@@ -131,7 +133,7 @@ func adminAddMembership(ctx context.Context, pool *pgxpool.Pool, args []string) 
 		return "", errors.New("add-membership needs --user and --gym")
 	}
 	var userID, gymID string
-	if err := pool.QueryRow(ctx, `SELECT id FROM users WHERE id = $1 OR email = $1`, *user).Scan(&userID); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT id FROM users WHERE id = $1 OR email = lower($1)`, *user).Scan(&userID); err != nil {
 		return "", fmt.Errorf("user %q: %w", *user, err)
 	}
 	if err := pool.QueryRow(ctx, `SELECT id FROM gyms WHERE id = $1 OR slug = $1`, *gym).Scan(&gymID); err != nil {
@@ -151,7 +153,7 @@ func adminAddMembership(ctx context.Context, pool *pgxpool.Pool, args []string) 
 
 func findUserID(ctx context.Context, pool *pgxpool.Pool, user string) (string, error) {
 	var id string
-	if err := pool.QueryRow(ctx, `SELECT id FROM users WHERE id = $1 OR email = $1`, user).Scan(&id); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT id FROM users WHERE id = $1 OR email = lower($1)`, user).Scan(&id); err != nil {
 		return "", fmt.Errorf("user %q: %w", user, err)
 	}
 	return id, nil
@@ -174,10 +176,10 @@ func adminSetUser(ctx context.Context, pool *pgxpool.Pool, args []string) (strin
 	}
 	set := map[string]bool{}
 	fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
-	if set["password"] && len(*password) < 8 {
+	if set["password"] && pw.TooShort(*password) {
 		return "", errors.New("--password needs at least 8 characters")
 	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(*password), 10)
+	hash, err := pw.Hash(*password)
 	if err != nil {
 		return "", err
 	}
@@ -199,7 +201,7 @@ func adminSetUser(ctx context.Context, pool *pgxpool.Pool, args []string) (strin
 				updated = now()
 			WHERE id = $1`,
 			id, set["verified"], *verified, set["platform-admin"], *platformAdmin,
-			set["suspended-until"], until, set["password"], string(hash), rand.Text()+rand.Text()); err != nil {
+			set["suspended-until"], until, set["password"], hash, rand.Text()+rand.Text()); err != nil {
 			return err
 		}
 		// The running replicas cache verified tokens per user; any user:<id> event makes them check the new state.
@@ -215,7 +217,7 @@ func adminDeleteUser(ctx context.Context, pool *pgxpool.Pool, args []string) (st
 	if *user == "" {
 		return "", errors.New("delete-user needs --user")
 	}
-	_, err := pool.Exec(ctx, `DELETE FROM users WHERE id = $1 OR email = $1`, *user)
+	_, err := pool.Exec(ctx, `DELETE FROM users WHERE id = $1 OR email = lower($1)`, *user)
 	return "", err
 }
 

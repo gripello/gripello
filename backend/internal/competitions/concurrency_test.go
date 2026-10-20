@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
 )
 
@@ -73,7 +74,7 @@ func TestConcurrentPublishCopiesResultsOnce(t *testing.T) {
 	if code := f.whileStatusChanges(id, "published", "manager", "POST", "/competitions/"+id+"/publish", ""); code != http.StatusOK {
 		t.Fatalf("publish = %d", code)
 	}
-	if notes := f.events(TopicNotify); len(notes) != 0 {
+	if notes := f.events(events.TopicNotify); len(notes) != 0 {
 		t.Fatalf("an already published competition notified again: %v", notes)
 	}
 }

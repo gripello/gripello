@@ -142,6 +142,13 @@ pipeline {
                         }
                     }
                 }
+                stage('API Types') {
+                    steps {
+                        script {
+                            reportCheck('API Types') { runTestSuite('api-types-results', false) }
+                        }
+                    }
+                }
                 stage('Go Tests') {
                     when { expression { env.SKIP_TESTS != 'true' } }
                     steps {

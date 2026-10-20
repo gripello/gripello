@@ -9,7 +9,7 @@ import {
     listPushSubscriptions,
     markNotificationsRead,
     sendTestPush,
-    updateNotificationPrefs,
+    putNotificationPrefs,
 } from '~/api/notifications'
 import { useAuthState } from '~/api/auth'
 import { ApiError } from '~/api/client'
@@ -76,7 +76,7 @@ describe('settings and prefs', () => {
         expect(await getNotificationPrefs()).toEqual({ push: { tasks: false } })
         const prefs = { push: { social: false } }
         api.respond(prefs)
-        expect(await updateNotificationPrefs(prefs)).toEqual(prefs)
+        expect(await putNotificationPrefs(prefs)).toEqual(prefs)
         expect(calls()).toEqual([
             ['GET', '/api/me/notification-prefs', undefined],
             ['PUT', '/api/me/notification-prefs', prefs],

@@ -3,17 +3,21 @@ package ratings
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/apitime"
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
+	"gripello/internal/platform/grades"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/tenancy"
@@ -22,18 +26,9 @@ import (
 const (
 	defaultPageSize    = 50
 	maxPageSize        = 500
-	maxPage            = 1_000_000
 	maxCommentLength   = 5000
-	maxGradeIndex      = 40
 	maxImportedRatings = 500
 )
-
-type ratingPage struct {
-	Items []Rating `json:"items"`
-	Page  int      `json:"page"`
-	Limit int      `json:"limit"`
-	Total *int     `json:"total,omitempty"`
-}
 
 type ratingInput struct {
 	Rating      *int     `json:"rating"`
@@ -41,10 +36,6 @@ type ratingInput struct {
 	Grade       *string  `json:"grade"`
 	GradeSystem *string  `json:"grade_system"`
 	GradeIndex  *float64 `json:"grade_index"`
-}
-
-func invalid(field, message string) *httpx.Error {
-	return httpx.NewError(http.StatusBadRequest, message).Field(field, "validation_invalid_value", message)
 }
 
 func (in ratingInput) applyTo(r *Rating) error {
@@ -63,44 +54,38 @@ func (in ratingInput) applyTo(r *Rating) error {
 	if in.GradeIndex != nil {
 		r.GradeIndex = *in.GradeIndex
 	}
+	r.Grade = grades.Canonical(r.GradeSystem, r.Grade)
 	if r.Rating < 0 || r.Rating > 5 {
-		return invalid("rating", "Rating must be between 0 and 5.")
+		return httpx.Invalid("rating", "Rating must be between 0 and 5.")
 	}
 	if len([]rune(r.Comment)) > maxCommentLength {
-		return invalid("comment", "Comment must be at most 5000 characters.")
+		return httpx.Invalid("comment", "Comment must be at most 5000 characters.")
 	}
-	if r.GradeIndex < 0 || r.GradeIndex > maxGradeIndex {
-		return invalid("grade_index", "Grade index must be between 0 and 40.")
+	if r.GradeIndex < 0 || r.GradeIndex > grades.MaxIndex {
+		return httpx.Invalid("grade_index", "Grade index must be between 0 and 40.")
+	}
+	if utf8.RuneCountInString(r.Grade) > grades.MaxLength {
+		return httpx.Invalid("grade", fmt.Sprintf("Grade must be at most %d characters.", grades.MaxLength))
+	}
+	if utf8.RuneCountInString(r.GradeSystem) > grades.MaxSystemLength {
+		return httpx.Invalid("grade_system", fmt.Sprintf("Grade system must be at most %d characters.", grades.MaxSystemLength))
 	}
 	return nil
 }
 
-func pageParams(r *http.Request) (int, int, string) {
-	atoi := func(value string, fallback int) int {
-		if n, err := strconv.Atoi(value); err == nil {
-			return n
-		}
-		return fallback
-	}
-	page := min(maxPage, max(1, atoi(r.URL.Query().Get("page"), 1)))
-	limit := min(maxPageSize, max(1, atoi(r.URL.Query().Get("limit"), defaultPageSize)))
-	return page, limit, " LIMIT " + strconv.Itoa(limit) + " OFFSET " + strconv.Itoa((page-1)*limit)
-}
-
 func (m *module) listRouteRatings(w http.ResponseWriter, r *http.Request) error {
-	page, limit, tail := pageParams(r)
-	where := &conditions{}
-	where.add("route_id = ?", r.PathValue("id"))
-	where.add("gym_visible(gym, ?)", tenancy.Viewer(r.Context()))
-	items, err := queryRatings(r.Context(), m.app.DB, where, " ORDER BY created DESC, id"+tail)
+	page := httpx.Page(r, defaultPageSize, maxPageSize)
+	where := &db.Where{}
+	where.Add("route_id = ?", r.PathValue("id"))
+	where.Add("gym_visible(gym, ?)", auth.UserID(r.Context()))
+	items, err := queryRatings(r.Context(), m.app.DB, where, " ORDER BY created DESC, id"+page.SQL())
 	if err != nil {
 		return err
 	}
 	if err := m.enrichRatings(r.Context(), items, true); err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, ratingPage{Items: items, Page: page, Limit: limit})
-	return nil
+	return httpx.Respond(w, http.StatusOK, httpx.PageOf[Rating]{Items: items, Page: page.Page, Limit: page.Limit}, nil)
 }
 
 var gymRatingSorts = map[string]string{
@@ -116,20 +101,20 @@ func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 	if _, err := auth.Require(ctx); err != nil {
 		return err
 	}
-	moderator := m.can(ctx, gym, permManageComments)
-	if !moderator && !m.can(ctx, gym, permManageRoutes) {
+	moderator := m.perms.Has(ctx, gym, tenancy.PermManageComments)
+	if !moderator && !m.perms.Has(ctx, gym, tenancy.PermManageRoutes) {
 		return httpx.ErrForbidden
 	}
 	query := r.URL.Query()
-	where := &conditions{}
-	where.add("gym = ?", gym)
+	where := &db.Where{}
+	where.Add("gym = ?", gym)
 	for key, clause := range map[string]string{"rating": "rating = ?", "min_rating": "rating >= ?", "max_rating": "rating <= ?"} {
 		if value := query.Get(key); value != "" {
 			n, err := strconv.Atoi(value)
 			if err != nil {
-				return invalid(key, "Must be a number.")
+				return httpx.Invalid(key, "Must be a number.")
 			}
-			where.add(clause, n)
+			where.Add(clause, n)
 		}
 	}
 	for key, clause := range map[string]string{
@@ -137,23 +122,23 @@ func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 		"location": "route_id IN (SELECT id FROM routes WHERE location = ?)",
 	} {
 		if value := query.Get(key); value != "" {
-			where.add(clause, value)
+			where.Add(clause, value)
 		}
 	}
 	for key, clause := range map[string]string{"route": "route_id = ANY (?)", "ids": "id = ANY (?)"} {
 		if value := query.Get(key); value != "" {
-			where.add(clause, strings.Split(value, ","))
+			where.Add(clause, strings.Split(value, ","))
 		}
 	}
 	if since := query.Get("since"); since != "" {
-		at, ok := parseDate(since)
-		if !ok {
-			return invalid("since", "Invalid date.")
+		at, err := apitime.ParseTimeOrDay(since)
+		if err != nil {
+			return httpx.Invalid("since", "Must be an RFC 3339 timestamp or a day as YYYY-MM-DD.")
 		}
-		where.add("created >= ?", at)
+		where.Add("created >= ?", at)
 	}
 	if q := strings.TrimSpace(query.Get("q")); q != "" {
-		where.add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (comment ILIKE w OR EXISTS (SELECT 1 FROM routes WHERE routes.id = ratings.route_id AND routes.name ILIKE w)))", db.WordPatterns(q))
+		where.Add("NOT EXISTS (SELECT 1 FROM unnest(?::text[]) w WHERE NOT (comment ILIKE w OR EXISTS (SELECT 1 FROM routes WHERE routes.id = ratings.route_id AND routes.name ILIKE w)))", db.WordPatterns(q))
 	}
 	sort := query.Get("sort")
 	if sort == "" {
@@ -161,10 +146,10 @@ func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 	}
 	order, ok := gymRatingSorts[sort]
 	if !ok {
-		return invalid("sort", "Unknown sort key "+sort+".")
+		return httpx.Invalid("sort", "Unknown sort key "+sort+".")
 	}
-	page, limit, tail := pageParams(r)
-	items, err := queryRatings(ctx, m.app.DB, where, " ORDER BY "+order+", id"+tail)
+	page := httpx.Page(r, defaultPageSize, maxPageSize)
+	items, err := queryRatings(ctx, m.app.DB, where, " ORDER BY "+order+", id"+page.SQL())
 	if err != nil {
 		return err
 	}
@@ -174,16 +159,15 @@ func (m *module) listGymRatings(w http.ResponseWriter, r *http.Request) error {
 	if err := m.expandRoutes(ctx, items); err != nil {
 		return err
 	}
-	result := ratingPage{Items: items, Page: page, Limit: limit}
+	result := httpx.PageOf[Rating]{Items: items, Page: page.Page, Limit: page.Limit}
 	if query.Get("total") == "true" {
 		var total int
-		if err := m.app.DB.QueryRow(ctx, `SELECT COUNT(*) FROM ratings`+where.sql(), where.args...).Scan(&total); err != nil {
+		if err := m.app.DB.QueryRow(ctx, `SELECT COUNT(*) FROM ratings`+where.SQL(), where.Args...).Scan(&total); err != nil {
 			return err
 		}
 		result.Total = &total
 	}
-	httpx.JSON(w, http.StatusOK, result)
-	return nil
+	return httpx.Respond(w, http.StatusOK, result, nil)
 }
 
 // expandRoutes fills the shape the reviews page reads: expand.route_id.{id,name,expand.location.name}.
@@ -223,11 +207,7 @@ func (m *module) getStats(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	stats, err := ratingStats(r.Context(), m.app.DB, gym)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, stats)
-	return nil
+	return httpx.Respond(w, http.StatusOK, stats, err)
 }
 
 func (m *module) postRating(w http.ResponseWriter, r *http.Request) error {
@@ -246,24 +226,29 @@ func (m *module) postRating(w http.ResponseWriter, r *http.Request) error {
 	rating := Rating{ID: ids.New(), Gym: route.Gym, RouteID: route.ID, Created: time.Now()}
 	if viewer, ok := auth.From(ctx); ok {
 		rating.User = viewer.UserID
+	} else if auth.StaleBearer(r) {
+		return httpx.ErrUnauthorized
 	} else if err := captcha.Request(ctx, m.app.DB, r, "rating"); err != nil {
 		return err
 	}
 	if err := in.applyTo(&rating); err != nil {
 		return err
 	}
+	if rating.User == "" && rating.Rating == 0 && httpx.Blank(rating.Comment) && strings.TrimSpace(rating.Grade) == "" {
+		return httpx.BadRequest("A review needs stars, a comment or a grade.").
+			Field("rating", "validation_required", "A review needs stars, a comment or a grade.")
+	}
 	created, err := m.saveRating(ctx, nil, func(tx pgx.Tx) error {
 		if err := insertRating(ctx, tx, rating); err != nil {
 			return err
 		}
-		return events.PublishAs(ctx, tx, actorOf(ctx), TopicRatingCreated, TopicRatingCreated,
+		return events.PublishAs(ctx, tx, auth.UserID(ctx), TopicRatingCreated, TopicRatingCreated,
 			RatingCreated{ID: rating.ID, Gym: rating.Gym, Route: rating.RouteID, User: rating.User}, events.Audience{})
 	}, rating.ID)
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusCreated, created)
-	return nil
+	return httpx.Respond(w, http.StatusCreated, created, nil)
 }
 
 func (m *module) patchRating(w http.ResponseWriter, r *http.Request) error {
@@ -276,7 +261,7 @@ func (m *module) patchRating(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.require(ctx, rating.Gym, permManageComments); err != nil {
+	if err := m.perms.Require(ctx, rating.Gym, tenancy.PermManageComments); err != nil {
 		return err
 	}
 	before := rating
@@ -284,11 +269,7 @@ func (m *module) patchRating(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	updated, err := m.saveRating(ctx, &before, func(tx pgx.Tx) error { return updateRating(ctx, tx, rating) }, rating.ID)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, updated)
-	return nil
+	return httpx.Respond(w, http.StatusOK, updated, err)
 }
 
 func (m *module) deleteRating(w http.ResponseWriter, r *http.Request) error {
@@ -301,20 +282,19 @@ func (m *module) deleteRating(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if rating.User != viewer.UserID && !m.can(ctx, rating.Gym, permManageComments) {
+	if rating.User != viewer.UserID && !m.perms.Has(ctx, rating.Gym, tenancy.PermManageComments) {
 		return httpx.ErrForbidden
 	}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		if err := deleteRow(ctx, tx, "ratings", rating.ID); err != nil {
 			return err
 		}
-		return m.publishRatingChange(ctx, tx, actorOf(ctx), "delete", rating, nil)
+		return m.publishRatingChange(ctx, tx, auth.UserID(ctx), "delete", rating, nil)
 	})
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 // saveRating publishes a create when before is nil, otherwise an update with the fields that changed.
@@ -329,9 +309,9 @@ func (m *module) saveRating(ctx context.Context, before *Rating, write func(pgx.
 			return err
 		}
 		if before == nil {
-			return m.publishRatingChange(ctx, tx, actorOf(ctx), "create", saved, nil)
+			return m.publishRatingChange(ctx, tx, auth.UserID(ctx), "create", saved, nil)
 		}
-		return m.publishRatingChange(ctx, tx, actorOf(ctx), "update", saved, changedFields(*before, saved))
+		return m.publishRatingChange(ctx, tx, auth.UserID(ctx), "update", saved, events.ChangedFields(*before, saved, derivedFields...))
 	})
 	if err != nil {
 		return saved, err
@@ -353,7 +333,7 @@ func (m *module) importRatings(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.require(ctx, gym, permManageRoutes); err != nil {
+	if err := m.perms.Require(ctx, gym, tenancy.PermManageRoutes); err != nil {
 		return err
 	}
 	var body struct {
@@ -363,7 +343,7 @@ func (m *module) importRatings(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if len(body.Ratings) > maxImportedRatings {
-		return httpx.NewError(http.StatusBadRequest, "Too many ratings in one request.")
+		return httpx.BadRequest("Too many ratings in one request.")
 	}
 	failed := 0
 	for _, raw := range body.Ratings {
@@ -371,8 +351,7 @@ func (m *module) importRatings(w http.ResponseWriter, r *http.Request) error {
 			failed++
 		}
 	}
-	httpx.JSON(w, http.StatusOK, map[string]int{"failed": failed})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]int{"failed": failed}, nil)
 }
 
 func (m *module) importRating(ctx context.Context, gym string, raw json.RawMessage) error {
@@ -399,23 +378,14 @@ func (m *module) importRating(ctx context.Context, gym string, raw json.RawMessa
 		if err != nil {
 			return err
 		}
-		return m.publishRatingChange(ctx, tx, actorOf(ctx), "create", saved, nil)
+		return m.publishRatingChange(ctx, tx, auth.UserID(ctx), "create", saved, nil)
 	})
 }
 
 // importedDate keeps a past review date; missing, unparsable or future dates become now.
 func importedDate(value string, now time.Time) time.Time {
-	if at, ok := parseDate(value); ok && !at.IsZero() && at.Before(now) {
+	if at, err := apitime.ParseTimeOrDay(strings.TrimSpace(value)); err == nil && !at.IsZero() && at.Before(now) {
 		return at
 	}
 	return now
-}
-
-func parseDate(value string) (time.Time, bool) {
-	for _, layout := range []string{time.RFC3339Nano, "2006-01-02 15:04:05.000Z", "2006-01-02 15:04:05Z", "2006-01-02 15:04:05", "2006-01-02"} {
-		if at, err := time.Parse(layout, strings.TrimSpace(value)); err == nil {
-			return at, true
-		}
-	}
-	return time.Time{}, false
 }

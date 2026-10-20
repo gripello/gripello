@@ -46,7 +46,72 @@ func newModule(app *platform.App) *module {
 	app.Bus.Subscribe(TopicTickChanged, m.onTickChanged)
 	app.Worker(leaderboardJob, m.announceLeaderboard)
 	app.Bus.Subscribe("user:", m.onUserEvent)
+	app.Bus.SubscribeOnce("gym_changes:", "ticks.route_grades", m.onRouteChange)
+	app.Worker(routeGradesJob, m.syncRouteGrades)
 	return m
+}
+
+var gradeFields = []string{"grade", "grade_system", "grade_index"}
+
+const routeGradesJob = "ticks.route_grades"
+
+// A corrected route grade rewrites the snapshot on its ticks (a coalesced job per route, so a popular route's ticks
+// don't run inside the bus handler); ticks keep their own copy only once the route is deleted.
+func (m *module) onRouteChange(e events.Event) {
+	var change struct {
+		Record  struct{ ID string } `json:"record"`
+		Changed []string            `json:"changed"`
+	}
+	if e.Kind != "route.updated" || json.Unmarshal(e.Payload, &change) != nil ||
+		!slices.ContainsFunc(change.Changed, func(field string) bool { return slices.Contains(gradeFields, field) }) {
+		return
+	}
+	if err := jobs.Enqueue(context.Background(), m.app.DB, routeGradesJob, change.Record.ID, nil, 0); err != nil {
+		slog.Error("ticks: queueing the route grade sync failed", "route", change.Record.ID, "error", err)
+	}
+}
+
+func (m *module) syncRouteGrades(ctx context.Context, job jobs.Job) error {
+	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error { return syncRouteGrade(ctx, tx, job.Key) })
+}
+
+func syncRouteGrade(ctx context.Context, tx pgx.Tx, route string) error {
+	gym := routeGym(ctx, tx, route)
+	if gym == "" {
+		return nil
+	}
+	updated, err := queryTicks(ctx, tx, `UPDATE ticks t SET grade = r.grade, grade_system = r.grade_system, grade_index = r.grade_index, updated = now()
+		FROM routes r WHERE r.id = $1 AND t.route = r.id
+		AND (t.grade, t.grade_system, t.grade_index) IS DISTINCT FROM (r.grade, r.grade_system, r.grade_index)
+		RETURNING `+qualifiedTickColumns, route)
+	if err != nil || len(updated) == 0 {
+		return err
+	}
+	climbers := make([]string, 0, len(updated))
+	for _, tick := range updated {
+		climbers = append(climbers, tick.User)
+	}
+	rows, err := tx.Query(ctx, `SELECT id FROM users WHERE id = ANY($1) AND ticks_private`, climbers)
+	if err != nil {
+		return err
+	}
+	private, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return err
+	}
+	changed := map[TickChanged]bool{}
+	for _, tick := range updated {
+		if err := publishTickRecord(ctx, tx, "update", tick, slices.Contains(private, tick.User), gym); err != nil {
+			return err
+		}
+		changed[TickChanged{User: tick.User, Route: tick.Route, Gym: gym, Date: tick.Date}] = true
+	}
+	for change := range changed {
+		if err := publishTickChanged(ctx, tx, "update", change); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (m *module) onTickChanged(e events.Event) {

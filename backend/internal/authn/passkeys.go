@@ -143,8 +143,7 @@ func (m *module) ceremonyResponse(w http.ResponseWriter, r *http.Request, sessio
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"ceremony": id, "options": options})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"ceremony": id, "options": options}, nil)
 }
 
 func (m *module) takeCeremony(ctx context.Context, id, userID string) (webauthn.SessionData, error) {
@@ -217,11 +216,11 @@ func (m *module) passkeyRegister(w http.ResponseWriter, r *http.Request) error {
 	}
 	parsed, err := protocol.ParseCredentialCreationResponseBytes(body.Credential)
 	if err != nil {
-		return httpx.NewError(http.StatusBadRequest, "Invalid passkey.")
+		return httpx.BadRequest("Invalid passkey.")
 	}
 	credential, err := rp.CreateCredential(pu, session, parsed)
 	if err != nil {
-		return httpx.NewError(http.StatusBadRequest, "Invalid passkey.")
+		return httpx.BadRequest("Invalid passkey.")
 	}
 	transports := []string{}
 	for _, t := range credential.Transport {
@@ -229,7 +228,7 @@ func (m *module) passkeyRegister(w http.ResponseWriter, r *http.Request) error {
 	}
 	return m.saveFactor(w, r, user, factor{
 		Kind:           methodPasskey,
-		Name:           truncateRunes(body.Name, 60),
+		Name:           httpx.Truncate(body.Name, 60),
 		CredentialID:   b64url.EncodeToString(credential.ID),
 		PublicKey:      b64url.EncodeToString(credential.PublicKey),
 		SignCount:      int64(credential.Authenticator.SignCount),
@@ -295,7 +294,7 @@ func (m *module) passkeyLogin(w http.ResponseWriter, r *http.Request) error {
 		return errFailedAuth
 	}
 	if credential.Authenticator.CloneWarning {
-		m.audit(ctx, AuthEvent{Action: "passkey_clone_rejected", User: user.ID, Label: user.label(), IP: clientIP(r)})
+		m.audit(ctx, AuthEvent{Action: "passkey_clone_rejected", User: user.ID, Label: user.label(), IP: httpx.ClientIP(r)})
 		return errFailedAuth
 	}
 	if _, err := m.db.Exec(ctx, `UPDATE mfa_factors SET sign_count = $2, backup_state = $3, last_used = now() WHERE id = $1`,

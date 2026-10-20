@@ -2,6 +2,8 @@ package ids
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"regexp"
 )
 
@@ -20,3 +22,16 @@ func New() string {
 }
 
 func Valid(id string) bool { return valid.MatchString(id) }
+
+// Secret returns n random bytes as hex, for tokens handed out once and stored only as Hash.
+func Secret(n int) string {
+	b := make([]byte, n)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// Hash is the hex sha256 stored instead of a token.
+func Hash(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
+}

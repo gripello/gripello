@@ -393,8 +393,8 @@ function drawCertificate(
 function dateRange(competition: CompetitionRecord, locale: string) {
     return new Intl.DateTimeFormat(locale, { dateStyle: 'long' })
         .formatRange(
-            new Date(competition.starts_at.replace(' ', 'T')),
-            new Date(competition.ends_at.replace(' ', 'T')),
+            new Date(competition.starts_at),
+            new Date(competition.ends_at),
         )
         .replace(/\s/g, ' ')
 }

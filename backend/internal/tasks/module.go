@@ -70,7 +70,7 @@ func (m *module) onPermissionsChanged(e events.Event) {
 		Users   []string `json:"users"`
 		Removed []string `json:"removed"`
 	}
-	if json.Unmarshal(e.Payload, &payload) != nil || len(payload.Users) == 0 || !slices.Contains(payload.Removed, permManageTasks) {
+	if json.Unmarshal(e.Payload, &payload) != nil || len(payload.Users) == 0 || !slices.Contains(payload.Removed, tenancy.PermManageTasks) {
 		return
 	}
 	ctx, cancel := handlerContext()

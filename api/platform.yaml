@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Gripello platform administration
   version: 1.0.0
-description: Every operation needs a platform admin (401 for guests, 403 otherwise).
+  description: Every operation needs a platform admin (401 for guests, 403 otherwise).
 paths:
   /platform/users:
     get:
@@ -34,9 +34,9 @@ paths:
                   page: { type: integer }
                   limit: { type: integer }
                   total: { type: integer }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/users/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -45,9 +45,9 @@ paths:
       tags: [platform]
       responses:
         '200': { $ref: '#/components/responses/User' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     patch:
       operationId: updatePlatformUser
       tags: [platform]
@@ -70,20 +70,20 @@ paths:
                 '@jsonPayload': { type: string, description: PlatformUserInput as JSON }
       responses:
         '200': { $ref: '#/components/responses/User' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deletePlatformUser
       tags: [platform]
       description: Not yourself (DELETE /me) or another platform admin (403), not the only admin of a gym (400). Needs a password confirmation from the last five minutes (POST /me/reauthenticate, else 403 reauth_required). Revokes every session and sends user.deleted {id, actor}.
       responses:
         '204': { description: Deleted }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/users/{id}/suspension:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -98,23 +98,23 @@ paths:
             schema:
               type: object
               properties:
-                until: { type: string, description: future date (RFC 3339 or `YYYY-MM-DD HH:MM:SS.sssZ`) }
+                until: { type: string, format: date-time, description: a future RFC 3339 timestamp }
                 permanent: { type: boolean, description: stores 9999-12-31 }
                 reason: { type: string, maxLength: 2000 }
       responses:
         '204': { description: Suspended }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: liftSuspension
       tags: [platform]
       responses:
         '204': { description: Lifted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/traffic:
     get:
       operationId: getPlatformTraffic
@@ -157,8 +157,9 @@ paths:
                             pattern: { type: string }
                             avg_ms: { type: number }
                   people: { type: object, additionalProperties: true }
-                  system: { type: object, additionalProperties: true, description: 'Database, jobs, backup and mail state plus replicas: every server seen within 15 minutes (name, version, role, started, last_seen, online, realtime_clients, memory_bytes).' }
-        '403': { $ref: '#/components/responses/Error' }
+                  system: { type: object, additionalProperties: true, description: 'Database, jobs, backup and mail state plus replicas: every server seen within 15 minutes (name, version, role, started, last_seen, online, realtime_clients, memory_bytes, strain: capacity problems of an online replica).' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/system:
     get:
       operationId: getPlatformSystem
@@ -170,8 +171,8 @@ paths:
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/stats:
     get:
       operationId: platformStats
@@ -206,8 +207,8 @@ paths:
                       members: { type: integer }
                       routes: { type: integer }
                       users: { type: integer }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/features:
     get:
       operationId: listFeatureFlags
@@ -222,8 +223,8 @@ paths:
                 required: [flags]
                 properties:
                   flags: { type: array, items: { type: string } }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/gyms/{id}/features:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -244,10 +245,10 @@ paths:
           content:
             application/json:
               schema: { type: object }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/admins:
     post:
       operationId: grantPlatformAdmin
@@ -263,9 +264,10 @@ paths:
                 user: { type: string }
       responses:
         '200': { $ref: '#/components/responses/User' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/users/{id}/mfa:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
@@ -275,8 +277,9 @@ paths:
       description: Served by authn. Deletes the user's second factors and recovery codes, ends every session and emails the user. Needs a recent password confirmation; refuses yourself and other platform admins (403).
       responses:
         '204': { description: Reset }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/users/{id}/sessions:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
@@ -286,8 +289,9 @@ paths:
       description: Served by authn. Ends every session of the user (realtime connections lose their auth). Refuses yourself and other platform admins.
       responses:
         '204': { description: Revoked }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/users/{id}/lockout:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
@@ -297,8 +301,9 @@ paths:
       description: Served by authn. Clears failed sign-in attempts and an active lockout. Refuses yourself and other platform admins.
       responses:
         '204': { description: Cleared }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/users/{id}/password:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
@@ -313,9 +318,10 @@ paths:
             schema: { type: object, required: [password, passwordConfirm], properties: { password: { type: string }, passwordConfirm: { type: string } } }
       responses:
         '204': { description: Set }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/blocklists:
     get:
       operationId: getBlocklists
@@ -327,7 +333,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Blocklists' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
     put:
       operationId: updateBlocklists
       tags: [platform]
@@ -343,8 +350,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Blocklists' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/blocklists/check:
     post:
       operationId: checkBlocklists
@@ -370,19 +378,19 @@ paths:
                 type: object
                 properties:
                   email:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     properties:
                       blocked: { type: boolean }
                       rule: { type: string, enum: ['', allowed, blocked, source] }
                       match: { type: string }
                   name:
-                    type: object
-                    nullable: true
+                    type: [object, 'null']
                     properties:
                       protected: { type: boolean }
                       match: { type: string }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/blocklists/emails:
     post:
       operationId: addBlockedEmails
@@ -403,8 +411,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Blocklists' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/blocklists/sources/{id}:
     put:
       operationId: setEmailSource
@@ -427,8 +436,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Blocklists' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/blocklists/sources/{id}/sync:
     post:
       operationId: syncEmailSource
@@ -442,8 +452,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Blocklists' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/blocklists/sources/{id}/domains:
     get:
       operationId: listEmailSourceDomains
@@ -465,8 +476,9 @@ paths:
                   page: { type: integer }
                   limit: { type: integer }
                   total: { type: integer }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/users/{id}/block-suggestions:
     get:
       operationId: getBlockSuggestions
@@ -489,8 +501,9 @@ paths:
                   domain_suspended: { type: integer }
                   email_blocked: { type: boolean }
                   domain_blocked: { type: boolean }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/mail:
     get:
       operationId: getMailSettings
@@ -502,7 +515,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MailSettings' }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
     put:
       operationId: updateMailSettings
       tags: [platform]
@@ -527,8 +541,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MailSettings' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/mail/test:
     post:
       operationId: sendTestMail
@@ -536,9 +551,11 @@ paths:
       description: Sends a test email to the caller over the live transport; 5 per minute per admin, 409 when mail is not configured, 400 carries the SMTP error.
       responses:
         '204': { description: Sent }
-        '400': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '409': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/logs:
     get:
       operationId: listServerLogs
@@ -559,7 +576,9 @@ paths:
                   items:
                     type: array
                     items: { type: object, properties: { time: { type: string, format: date-time }, replica: { type: string }, level: { type: string }, message: { type: string }, attrs: { type: object } } }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/logs/level:
     put:
       operationId: setLogLevel
@@ -572,7 +591,9 @@ paths:
             schema: { type: object, required: [level], properties: { level: { type: string, enum: [debug, info, warn, error] } } }
       responses:
         '200': { description: OK }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/issues:
     get:
       operationId: listIssues
@@ -591,7 +612,8 @@ paths:
                   items:
                     type: array
                     items: { type: object, properties: { fingerprint: { type: string }, level: { type: string }, message: { type: string }, sample: { type: object }, count: { type: integer }, users: { type: integer }, first_seen: { type: string, format: date-time }, last_seen: { type: string, format: date-time } } }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/issues/{fingerprint}:
     get:
       operationId: listIssueOccurrences
@@ -601,7 +623,8 @@ paths:
         - { name: fingerprint, in: path, required: true, schema: { type: string } }
       responses:
         '200': { description: OK }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /client-errors:
     post:
       operationId: reportClientError
@@ -618,11 +641,13 @@ paths:
                 kind: { type: string, enum: [vue, window, promise, chunk, nuxt] }
                 message: { type: string, maxLength: 500 }
                 stack: { type: string, maxLength: 2000 }
-                route: { type: string, description: Matched route pattern, e.g. /:gym/routes }
+                route: { type: string, description: 'Matched route pattern, e.g. /:gym/routes' }
                 version: { type: string }
       responses:
         '204': { description: Logged }
-        '400': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/oauth2:
     get:
       operationId: listOAuthProviderSettings
@@ -630,7 +655,8 @@ paths:
       description: Served by authn. Every provider with its settings, client_secret_set/private_key_set instead of the secrets, and the redirect URI to register at the provider.
       responses:
         '200': { description: OK }
-        '403': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/oauth2/{provider}:
     put:
       operationId: saveOAuthProviderSettings
@@ -656,8 +682,9 @@ paths:
                 private_key: { type: string }
       responses:
         '200': { description: OK }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/admins/{user}:
     parameters:
       - name: user
@@ -670,10 +697,10 @@ paths:
       description: Needs a password confirmation from the last five minutes (POST /me/reauthenticate, else 403 reauth_required). Removing your own rights or a non-admin answers 400; admin rows are locked, so of two admins revoking each other the second gets 403. The user gets an email.
       responses:
         '204': { description: Revoked }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Id:
@@ -687,11 +714,6 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/PlatformUser' }
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
   schemas:
     TrafficTotals:
       type: object
@@ -716,10 +738,10 @@ components:
               name: { type: string }
               homepage: { type: string, format: uri }
               license: { type: string }
-              notice: { type: string, description: Upstream license notice downloaded with the list (MIT), empty for CC0. }
+              notice: { type: string, description: 'Upstream license notice downloaded with the list (MIT), empty for CC0.' }
               enabled: { type: boolean }
-              synced_at: { type: string, format: date-time, nullable: true }
-              attempted_at: { type: string, format: date-time, nullable: true }
+              synced_at: { type: [string, 'null'], format: date-time }
+              attempted_at: { type: [string, 'null'], format: date-time }
               domain_count: { type: integer }
               last_error: { type: string }
     MailSettings:
@@ -733,20 +755,6 @@ components:
         sender_address: { type: string }
         sender_name: { type: string }
         source: { type: string, enum: [database, environment, none] }
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     PlatformUserInput:
       type: object
       properties:

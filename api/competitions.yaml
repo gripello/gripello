@@ -29,8 +29,8 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/Competition' } }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createCompetition
       tags: [competitions]
@@ -44,9 +44,9 @@ paths:
             schema: { $ref: '#/components/schemas/CompetitionInput' }
       responses:
         '201': { $ref: '#/components/responses/Competition' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competitions/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -58,7 +58,7 @@ paths:
         - $ref: '#/components/parameters/IncludeLocation'
       responses:
         '200': { $ref: '#/components/responses/Competition' }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     patch:
       operationId: updateCompetition
       tags: [competitions]
@@ -72,19 +72,19 @@ paths:
             schema: { $ref: '#/components/schemas/CompetitionInput' }
       responses:
         '200': { $ref: '#/components/responses/Competition' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteCompetition
       tags: [competitions]
       description: manage_competitions. Deletes entries (and their scores) first, then categories and routes.
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competitions/{id}/publish:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -97,9 +97,9 @@ paths:
         climber already has a tick on that route that day) and every non-withdrawn entrant gets competition_published.
       responses:
         '200': { $ref: '#/components/responses/Competition' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competitions/{id}/categories:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -117,7 +117,7 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/Category' } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createCompetitionCategory
       tags: [competitions]
@@ -129,10 +129,10 @@ paths:
             schema: { $ref: '#/components/schemas/CategoryInput' }
       responses:
         '201': { $ref: '#/components/responses/Category' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competition-categories/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -147,20 +147,20 @@ paths:
             schema: { $ref: '#/components/schemas/CategoryInput' }
       responses:
         '200': { $ref: '#/components/responses/Category' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteCompetitionCategory
       tags: [competitions]
       description: manage_competitions. 400 while entries use it.
       responses:
         '204': { description: Deleted }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competitions/{id}/routes:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -180,7 +180,7 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/CompRoute' } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createCompetitionRoute
       tags: [competitions]
@@ -194,10 +194,10 @@ paths:
             schema: { $ref: '#/components/schemas/CompRouteInput' }
       responses:
         '201': { $ref: '#/components/responses/CompRoute' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competition-routes/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -212,19 +212,19 @@ paths:
             schema: { $ref: '#/components/schemas/CompRouteInput' }
       responses:
         '200': { $ref: '#/components/responses/CompRoute' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteCompetitionRoute
       tags: [competitions]
       description: manage_competitions. Deletes its scores.
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competitions/{id}/entries:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -254,7 +254,7 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/Entry' } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createCompetitionEntry
       tags: [competitions]
@@ -270,9 +270,9 @@ paths:
             schema: { $ref: '#/components/schemas/EntryInput' }
       responses:
         '201': { $ref: '#/components/responses/Entry' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competition-entries/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -291,19 +291,19 @@ paths:
             schema: { $ref: '#/components/schemas/EntryInput' }
       responses:
         '200': { $ref: '#/components/responses/Entry' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: deleteCompetitionEntry
       tags: [competitions]
       description: manage_competitions, or the owner while the entry is not disqualified and has no scores (403; withdraw instead).
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competitions/{id}/scores:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -325,7 +325,7 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/Score' } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     put:
       operationId: upsertCompetitionScores
       tags: [competitions]
@@ -352,10 +352,10 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/Score' } }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competition-scores/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -365,9 +365,10 @@ paths:
       description: manage_competitions.
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /competitions/{id}/standings:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -396,7 +397,7 @@ paths:
                   format: { type: string, enum: [dynamic, fixed, ifsc, tops, route_points, lead_height] }
                   updated: { type: string, format: date-time }
                   categories: { type: array, items: { $ref: '#/components/schemas/CategoryStanding' } }
-        '404': { $ref: '#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Gym:
@@ -416,11 +417,6 @@ components:
       description: '`location` adds expand.location {id, name, gym}'
       schema: { type: string, enum: [location] }
   responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
     Competition:
       description: Competition
       content:
@@ -442,20 +438,6 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Entry' }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     CompetitionStatus: { type: string, enum: [draft, open, closed, published] }
     EntryStatus: { type: string, enum: [registered, checked_in, disqualified, withdrawn] }
     Scoring:
@@ -492,13 +474,26 @@ components:
       allOf:
         - $ref: '#/components/schemas/CompetitionInput'
         - type: object
-          required: [id, created, updated, gym, name, location, status, starts_at, ends_at, discipline, scoring_format]
+          required: [id, created, updated, gym, name, description, location, status, starts_at, ends_at, discipline, scoring_format, scoring, live_ranking, freeze_minutes, freeze_at, registration_url, requires_payment]
           properties:
             id: { type: string }
             created: { type: string, format: date-time }
             updated: { type: string, format: date-time }
             gym: { type: string }
+            name: { type: string }
+            description: { type: string }
+            location: { type: string }
+            status: { $ref: '#/components/schemas/CompetitionStatus' }
+            starts_at: { type: string, format: date-time }
+            ends_at: { type: string, format: date-time }
+            discipline: { type: string }
+            scoring_format: { type: string }
+            scoring: { $ref: '#/components/schemas/Scoring' }
+            live_ranking: { type: boolean }
+            freeze_minutes: { type: integer }
             freeze_at: { type: [string, 'null'], format: date-time }
+            registration_url: { type: string }
+            requires_payment: { type: boolean }
             expand: { type: object }
     CategoryInput:
       type: object
@@ -512,12 +507,17 @@ components:
       allOf:
         - $ref: '#/components/schemas/CategoryInput'
         - type: object
-          required: [id, created, updated, competition, name]
+          required: [id, created, updated, competition, name, gender, min_birth_year, max_birth_year, sort]
           properties:
             id: { type: string }
             created: { type: string, format: date-time }
             updated: { type: string, format: date-time }
             competition: { type: string }
+            name: { type: string }
+            gender: { type: string }
+            min_birth_year: { type: integer }
+            max_birth_year: { type: integer }
+            sort: { type: integer }
     CompRouteInput:
       type: object
       properties:
@@ -531,12 +531,18 @@ components:
       allOf:
         - $ref: '#/components/schemas/CompRouteInput'
         - type: object
-          required: [id, created, updated, competition, route, number]
+          required: [id, created, updated, competition, route, number, points, zone, voided, hold_count]
           properties:
             id: { type: string }
             created: { type: string, format: date-time }
             updated: { type: string, format: date-time }
             competition: { type: string }
+            route: { type: string }
+            number: { type: integer }
+            points: { type: number }
+            zone: { type: boolean }
+            voided: { type: boolean }
+            hold_count: { type: integer }
             expand: { type: object, description: 'route: route summary with expand.wall' }
     EntryInput:
       type: object
@@ -554,12 +560,21 @@ components:
       allOf:
         - $ref: '#/components/schemas/EntryInput'
         - type: object
-          required: [id, created, updated, competition, user, category, bib, display_name, status]
+          required: [id, created, updated, competition, user, category, bib, display_name, birth_year, hidden, guardian_consent, status, paid]
           properties:
             id: { type: string }
             created: { type: string, format: date-time }
             updated: { type: string, format: date-time }
             competition: { type: string }
+            user: { type: string }
+            category: { type: string }
+            bib: { type: integer }
+            display_name: { type: string }
+            birth_year: { type: integer }
+            hidden: { type: boolean }
+            guardian_consent: { type: boolean }
+            status: { $ref: '#/components/schemas/EntryStatus' }
+            paid: { type: boolean }
             expand: { type: object, description: 'category: Category' }
     ScoreInput:
       type: object

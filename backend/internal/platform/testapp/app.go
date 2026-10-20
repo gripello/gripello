@@ -60,6 +60,8 @@ func App(t *testing.T) *platform.App {
 	app.Cfg.BlobDir = blobDir
 	app.Handle("GET /files/{table}/{id}/{name}", store.ServeFile(app.Cfg.TokenSecret))
 	app.Handle("POST /files/token", store.IssueToken(app.Cfg.TokenSecret))
+	testsByApp.Store(app, t)
+	t.Cleanup(func() { testsByApp.Delete(app) })
 	return app
 }
 
@@ -92,9 +94,13 @@ func Mails(app *platform.App) []mail.Message {
 	return slices.Clone(r.sent)
 }
 
-// Handler wraps the mux with the middleware chain, exactly as serve does.
+// Handler wraps the mux with the middleware chain, exactly as serve does, and checks every response against api/*.yaml.
 func Handler(app *platform.App) http.Handler {
-	return app.Handler()
+	t, ok := testsByApp.Load(app)
+	if !ok {
+		return app.Handler()
+	}
+	return validateResponses(t.(testing.TB), app, app.Handler())
 }
 
 // WaitFor polls until cond is true, for event-driven assertions.

@@ -15,13 +15,17 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/crypto/bcrypt"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/blob"
 	"gripello/internal/platform/blocklist"
 	"gripello/internal/platform/climbers"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
+	"gripello/internal/platform/jobs"
+	"gripello/internal/platform/locales"
 	"gripello/internal/platform/lockout"
+	"gripello/internal/platform/password"
 )
 
 const (
@@ -33,13 +37,11 @@ const (
 
 var (
 	usernamePattern = regexp.MustCompile(`^[\w][\w.\-]*$`)
-	languages       = []string{"", "en", "de", "nl", "fr", "es"}
 	followPolicies  = []string{"", "approve", "open", "closed"}
 	fileTypes       = map[string][]string{
 		"avatar": {"image/jpeg", "image/png", "image/svg+xml", "image/gif", "image/webp"},
 		"banner": {"image/jpeg", "image/png", "image/webp"},
 	}
-	thumbs = map[string][]string{"avatar": {"100x100"}, "banner": {"1600x400"}}
 	// Credentials, verification and suspension change only through their own flows (authn, platform admin).
 	serverOwnedFields = []string{"platform_admin", "verified", "email", "suspended_until", "suspension_reason", "password", "password_hash", "token_key"}
 	profileFields     = map[string]string{
@@ -64,15 +66,14 @@ func (m *module) getMe(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	record, err := userRecord(r.Context(), m.db, p.UserID)
+	record, err := climbers.OwnRecord(r.Context(), m.db, p.UserID)
 	if err == nil && r.URL.Query().Get("include") == "memberships" {
 		record, err = withMemberships(r.Context(), m.db, p.UserID, record)
 	}
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, record)
-	return nil
+	return httpx.Respond(w, http.StatusOK, record, nil)
 }
 
 func (m *module) updateMe(w http.ResponseWriter, r *http.Request) error {
@@ -80,7 +81,7 @@ func (m *module) updateMe(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	body, files, err := readBody(w, r)
+	body, files, err := httpx.ReadBody(w, r, 2*maxFileSize+1<<20, fileTypes)
 	if err != nil {
 		return err
 	}
@@ -99,7 +100,7 @@ func (m *module) updateMe(w http.ResponseWriter, r *http.Request) error {
 func (m *module) validateProfile(r *http.Request, userID string, body map[string]json.RawMessage) (map[string]any, error) {
 	ctx := r.Context()
 	changes := map[string]any{}
-	invalid := httpx.NewError(http.StatusBadRequest, "Failed to update record.")
+	invalid := httpx.BadRequest("Failed to update record.")
 	for field, kind := range profileFields {
 		raw, ok := body[field]
 		if !ok {
@@ -121,7 +122,7 @@ func (m *module) validateProfile(r *http.Request, userID string, body map[string
 				fail("validation_invalid_format", "Invalid value format.")
 			case kind == "text" && utf8.RuneCountInString(s) > nameMax:
 				fail("validation_max_text_constraint", fmt.Sprintf("Must be no more than %d character(s).", nameMax))
-			case kind == "language" && !slices.Contains(languages, s), kind == "policy" && !slices.Contains(followPolicies, s):
+			case kind == "language" && !locales.Allowed(s), kind == "policy" && !slices.Contains(followPolicies, s):
 				fail("validation_invalid_value", "Invalid value "+s+".")
 			default:
 				if kind == "username" {
@@ -168,13 +169,11 @@ func (m *module) validateProfile(r *http.Request, userID string, body map[string
 				fail("validation_too_many_values", fmt.Sprintf("Select no more than %d.", followedWallsMax))
 				continue
 			}
-			if missing, err := missingWalls(ctx, m.db, walls); err != nil {
+			existing, err := existingWalls(ctx, m.db, walls)
+			if err != nil {
 				return nil, err
-			} else if missing {
-				fail("validation_missing_rel_records", "Failed to find all relation records with the provided ids.")
-				continue
 			}
-			changes[field] = walls
+			changes[field] = existing
 		case "file":
 			if string(raw) != "null" && string(raw) != `""` {
 				fail("validation_invalid_value", "Files can only be uploaded or cleared.")
@@ -254,15 +253,14 @@ func (m *module) saveProfile(w http.ResponseWriter, r *http.Request, userID stri
 		return err
 	}
 	for field := range files {
-		m.blob.WarmThumbs(blobKey(userID, changes[field].(string)), thumbs[field]...)
+		m.blob.WarmThumbs(blobKey(userID, changes[field].(string)), blob.UserThumbs[field]...)
 	}
 	for field, old := range map[string]string{"avatar": previous.avatar, "banner": previous.banner} {
 		if replaced, ok := changes[field]; ok && old != "" && replaced != old {
 			m.deleteBlobs(r, userID, []string{old})
 		}
 	}
-	httpx.JSON(w, http.StatusOK, record)
-	return nil
+	return httpx.Respond(w, http.StatusOK, record, nil)
 }
 
 func (m *module) clearFile(field string) httpx.Handler {
@@ -291,18 +289,18 @@ func (m *module) writeProfile(ctx context.Context, userID string, update func(tx
 		if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR UPDATE`, userID); err != nil {
 			return err
 		}
-		before, err := userRecord(ctx, tx, userID)
+		before, err := climbers.OwnRecord(ctx, tx, userID)
 		if err != nil {
 			return err
 		}
 		if err := update(tx); err != nil {
 			return err
 		}
-		if record, err = userRecord(ctx, tx, userID); err != nil {
+		if record, err = climbers.OwnRecord(ctx, tx, userID); err != nil {
 			return err
 		}
-		if changed := changedFields(before, record); len(changed) > 0 {
-			return publishUser(ctx, tx, userID, KindUserUpdated, UserUpdated{Record: record, Changed: changed})
+		if changed := events.ChangedFields(before, record, "updated"); len(changed) > 0 {
+			return climbers.PublishUserUpdated(ctx, tx, "", userID, record, changed)
 		}
 		return nil
 	})
@@ -315,9 +313,9 @@ func (m *module) followWall(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	ctx, wall := r.Context(), r.PathValue("wall")
-	if missing, err := missingWalls(ctx, m.db, []string{wall}); err != nil {
+	if existing, err := existingWalls(ctx, m.db, []string{wall}); err != nil {
 		return err
-	} else if missing {
+	} else if len(existing) == 0 {
 		return httpx.ErrNotFound
 	}
 	record, err := m.writeProfile(ctx, p.UserID, func(tx pgx.Tx) error {
@@ -327,8 +325,7 @@ func (m *module) followWall(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, record)
-	return nil
+	return httpx.Respond(w, http.StatusOK, record, nil)
 }
 
 func (m *module) unfollowWall(w http.ResponseWriter, r *http.Request) error {
@@ -344,32 +341,7 @@ func (m *module) unfollowWall(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, record)
-	return nil
-}
-
-// readBody accepts JSON or multipart (avatar/banner parts plus the other fields as JSON in `@jsonPayload`).
-func readBody(w http.ResponseWriter, r *http.Request) (map[string]json.RawMessage, map[string]*multipart.FileHeader, error) {
-	body := map[string]json.RawMessage{}
-	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
-		return body, nil, httpx.Decode(r, &body)
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, 2*maxFileSize+1<<20)
-	if err := r.ParseMultipartForm(8 << 20); err != nil {
-		return nil, nil, httpx.NewError(http.StatusBadRequest, "Invalid multipart body.")
-	}
-	if payload := r.FormValue("@jsonPayload"); payload != "" {
-		if err := json.Unmarshal([]byte(payload), &body); err != nil {
-			return nil, nil, httpx.NewError(http.StatusBadRequest, "Invalid JSON body.")
-		}
-	}
-	files := map[string]*multipart.FileHeader{}
-	for name, headers := range r.MultipartForm.File {
-		if _, ok := fileTypes[name]; ok && len(headers) > 0 {
-			files[name] = headers[0]
-		}
-	}
-	return body, files, nil
+	return httpx.Respond(w, http.StatusOK, record, nil)
 }
 
 func (m *module) deleteMe(w http.ResponseWriter, r *http.Request) error {
@@ -392,16 +364,16 @@ func (m *module) deleteMe(w http.ResponseWriter, r *http.Request) error {
 		if lockout.IsLocked(ctx, m.db, p.UserID) {
 			return lockout.ErrLocked
 		}
-		return httpx.NewError(http.StatusBadRequest, "Set a password first.").Field("password", "password_required", "Set a password first.")
+		return httpx.BadRequest("Set a password first.").Field("password", "password_required", "Set a password first.")
 	}
 	if err := lockout.Reserve(ctx, m.db, p.UserID); err != nil {
 		return err
 	}
-	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.Password)) != nil {
+	if !password.Matches(hash, body.Password) {
 		if _, err := lockout.Failed(ctx, m.db, p.UserID); err != nil {
 			return err
 		}
-		return httpx.NewError(http.StatusBadRequest, "Failed to validate.").Field("password", "validation_invalid_password", "Missing or invalid password.")
+		return httpx.BadRequest("Failed to validate.").Field("password", "validation_invalid_password", "Missing or invalid password.")
 	}
 	if err := lockout.Release(ctx, m.db, p.UserID); err != nil {
 		return err
@@ -416,7 +388,7 @@ func (m *module) deleteMe(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		if len(gyms) > 0 {
-			return httpx.NewError(http.StatusBadRequest, "A gym needs at least one admin.")
+			return httpx.BadRequest("A gym needs at least one admin.")
 		}
 		sessions, err := idsOf(ctx, tx, `SELECT id FROM sessions WHERE "user" = $1`, p.UserID)
 		if err != nil {
@@ -458,8 +430,7 @@ func (m *module) deleteMe(w http.ResponseWriter, r *http.Request) error {
 			slog.Warn("account: deleting files of a deleted account failed", "key", key, "error", err)
 		}
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 func (m *module) contributions(w http.ResponseWriter, r *http.Request) error {
@@ -471,11 +442,10 @@ func (m *module) contributions(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"reviews": reviews, "betas": betas})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"reviews": reviews, "betas": betas}, nil)
 }
 
-func (m *module) export(w http.ResponseWriter, r *http.Request) error {
+func (m *module) requestExport(w http.ResponseWriter, r *http.Request) error {
 	p, err := auth.Require(r.Context())
 	if err != nil {
 		return err
@@ -484,20 +454,9 @@ func (m *module) export(w http.ResponseWriter, r *http.Request) error {
 		w.Header().Set("Retry-After", "3600")
 		return httpx.NewError(http.StatusTooManyRequests, "Too many requests.")
 	}
-	parts, size, err := m.collectExport(r.Context(), p.UserID)
-	if err != nil {
-		slog.Error("account: export failed", "user", p.UserID, "error", err)
-		return httpx.NewError(http.StatusInternalServerError, "Exporting your data failed.")
+	if err := jobs.Enqueue(r.Context(), m.db, exportJob, p.UserID, nil, 0); err != nil {
+		return err
 	}
-	if size > exportMaxBytes {
-		return httpx.NewError(http.StatusRequestEntityTooLarge, "Your data is too large to export at once. Please contact us.")
-	}
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", `attachment; filename="gripello-data-`+time.Now().UTC().Format(time.DateOnly)+`.zip"`)
-	w.WriteHeader(http.StatusOK)
-	if err := m.streamExport(r.Context(), w, parts); err != nil {
-		slog.Error("account: export stream failed", "user", p.UserID, "error", err)
-		panic(http.ErrAbortHandler)
-	}
+	w.WriteHeader(http.StatusAccepted)
 	return nil
 }

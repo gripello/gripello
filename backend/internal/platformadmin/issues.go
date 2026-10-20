@@ -15,7 +15,6 @@ import (
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/logbuf"
-	"gripello/internal/platform/metrics"
 )
 
 var issueRanges = map[string]time.Duration{"1h": time.Hour, "24h": 24 * time.Hour, "7d": 7 * 24 * time.Hour}
@@ -29,8 +28,7 @@ func (m *module) listIssues(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 func (m *module) issueOccurrences(w http.ResponseWriter, r *http.Request) error {
@@ -38,8 +36,7 @@ func (m *module) issueOccurrences(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, nil)
 }
 
 const (
@@ -102,12 +99,12 @@ func (m *module) alertIssues(ctx context.Context) error {
 			if detail, _ := issue.attrs["error"].(string); detail != "" {
 				summary += " · " + truncate(detail, 120)
 			}
-			err := events.Publish(ctx, tx, "notify", "notify", map[string]any{
-				"type": "platform_issue", "users": admins,
-				"params": map[string]any{"level": issue.level, "summary": summary, "count": issue.count, "new": time.Since(issue.firstSeen) < 2*alertWindow,
+			err := events.PublishNotify(ctx, tx, "", events.Notify{
+				Type: "platform_issue", Users: admins,
+				Params: map[string]any{"level": issue.level, "summary": summary, "count": issue.count, "new": time.Since(issue.firstSeen) < 2*alertWindow,
 					"escalated": issue.escalated != nil && *issue.escalated},
-				"url": "/platform/logs?issue=" + issue.fingerprint,
-			}, events.Audience{})
+				URL: "/platform/logs?issue=" + issue.fingerprint,
+			})
 			if err != nil {
 				return err
 			}
@@ -141,16 +138,15 @@ type clientError struct {
 var clientErrorKinds = map[string]bool{"vue": true, "window": true, "promise": true, "chunk": true, "nuxt": true}
 
 func (m *module) reportClientError(w http.ResponseWriter, r *http.Request) error {
-	if !m.clientIPs.Allow(metrics.ClientIP(r), time.Now()) || !m.clientErrors.Allow("all", time.Now()) {
-		w.WriteHeader(http.StatusNoContent)
-		return nil
+	if !m.clientIPs.Allow(httpx.ClientIP(r), time.Now()) || !m.clientErrors.Allow("all", time.Now()) {
+		return httpx.NoContent(w, nil)
 	}
 	var body clientError
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
 	}
 	if !clientErrorKinds[body.Kind] || body.Message == "" {
-		return httpx.NewError(http.StatusBadRequest, "Unknown error report.")
+		return httpx.BadRequest("Unknown error report.")
 	}
 	route, _, _ := strings.Cut(body.Route, "?")
 	user := ""
@@ -159,6 +155,5 @@ func (m *module) reportClientError(w http.ResponseWriter, r *http.Request) error
 	}
 	slog.Error("client error", "source", "client", "kind", body.Kind, "route", truncate(route, 200), "error", truncate(body.Message, 500),
 		"stack", truncate(body.Stack, 2000), "version", truncate(body.Version, 40), "user", user, "req", httpx.RequestID(r.Context()))
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }

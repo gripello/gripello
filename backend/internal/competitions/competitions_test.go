@@ -15,6 +15,7 @@ import (
 	"gripello/internal/platform"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 	"gripello/internal/platform/testapp"
 )
 
@@ -176,10 +177,10 @@ func TestCompetitionTickFields(t *testing.T) {
 		t.Error("tick type not derived from the top attempt")
 	}
 	now := at("2026-10-03T09:00:00Z")
-	if got := competitionTickDate(at("2026-10-02T21:00:00Z"), now); !got.Equal(at("2026-10-02T12:00:00Z")) {
+	if got := competitionTickDate(at("2026-10-02T21:00:00Z"), now); got != "2026-10-02" {
 		t.Errorf("past competition date = %s", got)
 	}
-	if got := competitionTickDate(at("2026-10-09T21:00:00Z"), now); !got.Equal(at("2026-10-03T12:00:00Z")) {
+	if got := competitionTickDate(at("2026-10-09T21:00:00Z"), now); got != "2026-10-03" {
 		t.Errorf("future end not clamped to today: %s", got)
 	}
 }
@@ -225,9 +226,9 @@ func newFixture(t *testing.T) *fixture {
 	f := &fixture{t: t, app: app, m: register(app), handler: testapp.Handler(app), users: map[string]string{}, tokens: map[string]string{}}
 	f.gymA = f.exec(`INSERT INTO gyms (id, slug, name, active) VALUES ($1, 'alpha', 'Alpha', true) RETURNING id`, ids.New())
 	f.gymB = f.exec(`INSERT INTO gyms (id, slug, name, active) VALUES ($1, 'beta', 'Beta', true) RETURNING id`, ids.New())
-	f.user("manager", f.gymA, permManage)
-	f.user("judge", f.gymA, permJudge)
-	f.user("managerB", f.gymB, permManage)
+	f.user("manager", f.gymA, tenancy.PermManageCompetitions)
+	f.user("judge", f.gymA, tenancy.PermJudgeCompetitions)
+	f.user("managerB", f.gymB, tenancy.PermManageCompetitions)
 	f.user("climber", "")
 	f.user("other", "")
 	f.hall = f.exec(`INSERT INTO locations (id, gym, name) VALUES ($1, $2, 'Hall') RETURNING id`, ids.New(), f.gymA)
@@ -251,7 +252,7 @@ func (f *fixture) exec(sql string, args ...any) string {
 func (f *fixture) user(name, gym string, permissions ...string) {
 	f.t.Helper()
 	id := f.exec(`INSERT INTO users (id, username, firstname, email, token_key) VALUES ($1, $2, $2, $3, $4) RETURNING id`,
-		ids.New(), name, name+"@example.com", "key-"+name)
+		ids.New(), name, strings.ToLower(name)+"@example.com", "key-"+name)
 	if gym != "" {
 		role := f.exec(`INSERT INTO roles (id, gym, name, permissions) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), gym, name, permissions)
 		f.exec(`INSERT INTO memberships (id, "user", gym, role) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), id, gym, role)
@@ -368,6 +369,10 @@ func TestCompetitionLifecycleAndVisibility(t *testing.T) {
 	}
 	if got := items(f.call("", "GET", "/gyms/alpha/competitions?status=open,closed", "", http.StatusOK)); len(got) != 1 {
 		t.Errorf("open competitions = %v", got)
+	}
+	pocketBaseStyle := time.Now().Add(30 * time.Minute).UTC().Format("2006-01-02 15:04:05.000Z")
+	if rejected := f.call("manager", "POST", "/gyms/alpha/competitions", `{"name":"Later",`+strings.Replace(base, starts, pocketBaseStyle, 1)+`}`, http.StatusBadRequest); rejected["data"].(map[string]any)["starts_at"] == nil {
+		t.Errorf("old timestamp format = %v", rejected)
 	}
 	later := f.call("manager", "POST", "/gyms/alpha/competitions", `{"name":"Later",`+strings.Replace(base, starts, time.Now().Add(30*time.Minute).UTC().Format(time.RFC3339), 1)+`,"status":"open"}`, http.StatusCreated)["id"].(string)
 	if got := items(f.call("", "GET", "/gyms/alpha/competitions?sort=-starts_at", "", http.StatusOK)); len(got) != 2 || got[0].(map[string]any)["id"] != later {
@@ -575,8 +580,8 @@ func TestPublishCopiesTopsToTheLogbook(t *testing.T) {
 	if got := f.events(TopicTickChanged); len(got) != 1 {
 		t.Errorf("tick.changed events = %v", got)
 	}
-	notes := f.events(TopicNotify)
-	var n Notify
+	notes := f.events(events.TopicNotify)
+	var n events.Notify
 	if len(notes) != 1 || json.Unmarshal(notes[0].Payload, &n) != nil || len(n.Users) != 1 || n.Users[0] != f.users["climber"] ||
 		n.Type != "competition_published" || n.URL != "/alpha/competitions/"+id || n.Params["competition"] != "Jam" {
 		t.Errorf("notify = %+v", notes)
@@ -752,13 +757,13 @@ func TestChangeAudiences(t *testing.T) {
 	draft := f.call("manager", "POST", "/gyms/alpha/competitions", `{"name":"Draft","location":"`+f.hall+`","discipline":"boulder",
 		"scoring_format":"dynamic","starts_at":"`+starts+`","ends_at":"`+ends+`"}`, http.StatusCreated)["id"].(string)
 	drafted := f.events("competition_changes:" + draft)
-	if len(drafted) != 1 || drafted[0].Audience.Public || drafted[0].Audience.GymPerm != f.gymA+":"+permManage ||
+	if len(drafted) != 1 || drafted[0].Audience.Public || drafted[0].Audience.GymPerm != f.gymA+":"+tenancy.PermManageCompetitions ||
 		len(drafted[0].Audience.Users) != 0 {
 		t.Errorf("draft change audience = %+v", drafted)
 	}
 
 	listed := f.events("competitions:" + f.gymA)
-	if len(listed) != 1 || listed[0].Audience.Public || listed[0].Audience.GymPerm != f.gymA+":"+permManage {
+	if len(listed) != 1 || listed[0].Audience.Public || listed[0].Audience.GymPerm != f.gymA+":"+tenancy.PermManageCompetitions {
 		t.Errorf("draft list change = %+v", listed)
 	}
 	f.call("manager", "PATCH", "/competitions/"+draft, `{"status":"open"}`, http.StatusOK)
@@ -829,6 +834,9 @@ func TestClimberCannotOverwriteAJudgesScore(t *testing.T) {
 	f.call("climber", "PUT", "/competitions/"+id+"/scores", `{"scores":[{"entry":"`+entry+`","comp_route":"`+route2+`","top_attempt":2}]}`, http.StatusOK)
 	f.call("climber", "PUT", "/competitions/"+id+"/scores", `{"scores":[{"entry":"`+entry+`","comp_route":"`+route2+`","top_attempt":1}]}`, http.StatusOK)
 	f.call("judge", "PUT", "/competitions/"+id+"/scores", `{"scores":[{"entry":"`+entry+`","comp_route":"`+route2+`","top_attempt":3}]}`, http.StatusOK)
+
+	f.exec(`DELETE FROM users WHERE id = $1 RETURNING id`, f.users["judge"])
+	f.call("climber", "PUT", "/competitions/"+id+"/scores", `{"scores":[{"entry":"`+entry+`","comp_route":"`+route1+`","top_attempt":1}]}`, http.StatusForbidden)
 }
 
 func TestManagerRegistrationNotifiesAndHidesUserIDs(t *testing.T) {
@@ -836,14 +844,14 @@ func TestManagerRegistrationNotifiesAndHidesUserIDs(t *testing.T) {
 	id, category, _, _ := f.competition("")
 	entry := f.call("manager", "POST", "/competitions/"+id+"/entries",
 		`{"category":"`+category+`","display_name":"O","birth_year":1990,"user":"`+f.users["other"]+`"}`, http.StatusCreated)["id"].(string)
-	var n Notify
-	notes := f.events(TopicNotify)
+	var n events.Notify
+	notes := f.events(events.TopicNotify)
 	if len(notes) != 1 || json.Unmarshal(notes[0].Payload, &n) != nil || n.Type != "competition_entry_added" || n.Users[0] != f.users["other"] {
 		t.Errorf("notify = %+v", notes)
 	}
 	f.call("other", "PATCH", "/competition-entries/"+entry, `{"status":"withdrawn"}`, http.StatusOK)
 	f.register("climber", id, category, "")
-	if len(f.events(TopicNotify)) != 1 {
+	if len(f.events(events.TopicNotify)) != 1 {
 		t.Error("own registration notified")
 	}
 	for _, viewer := range []string{"", "climber"} {

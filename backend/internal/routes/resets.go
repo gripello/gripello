@@ -8,6 +8,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/apitime"
+	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/tenancy"
@@ -16,14 +19,6 @@ import (
 type removalBody struct {
 	IDs        []string `json:"ids"`
 	PlannedFor *string  `json:"planned_for"`
-}
-
-type Notify struct {
-	Type   string         `json:"type"`
-	Users  []string       `json:"users"`
-	Gym    string         `json:"gym"`
-	Params map[string]any `json:"params"`
-	URL    string         `json:"url"`
 }
 
 func (m *module) planRemovalHandler(w http.ResponseWriter, r *http.Request) error {
@@ -39,18 +34,17 @@ func (m *module) planRemovalHandler(w http.ResponseWriter, r *http.Request) erro
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": routes})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": routes}, nil)
 }
 
 // planRemoval sets or clears the planned strip date of active routes; followers of a wall hear once per new date.
 func (m *module) planRemoval(ctx context.Context, gym string, body removalBody) ([]Route, error) {
-	if err := m.require(ctx, gym, permManageRoutes); err != nil {
+	if err := m.perms.Require(ctx, gym, tenancy.PermManageRoutes); err != nil {
 		return nil, err
 	}
 	if body.PlannedFor != nil {
-		if _, err := time.Parse(time.DateOnly, *body.PlannedFor); err != nil {
-			return nil, invalid("planned_for", "Must be a date.")
+		if _, err := apitime.ParseDate(*body.PlannedFor); err != nil {
+			return nil, httpx.Invalid("planned_for", "Must be a date.")
 		}
 	}
 	out := []Route{}
@@ -85,16 +79,16 @@ func (m *module) planRemoval(ctx context.Context, gym string, body removalBody) 
 }
 
 func notifyWallFollowers(ctx context.Context, tx pgx.Tx, gym, wall, date string, count int) error {
-	n := Notify{Type: "wall_reset_planned", Gym: gym}
+	n := events.Notify{Type: "wall_reset_planned", Gym: gym}
 	var slug, wallName string
-	err := tx.QueryRow(ctx, `SELECT g.slug, w.name, ARRAY(SELECT id FROM users WHERE w.id = ANY (followed_walls) AND gym_visible(w.gym, users.id))
+	err := tx.QueryRow(ctx, `SELECT g.slug, w.name, ARRAY(SELECT id FROM users WHERE followed_walls @> ARRAY[w.id] AND gym_visible(w.gym, users.id))
 		FROM walls w JOIN gyms g ON g.id = w.gym WHERE w.id = $1`, wall).Scan(&slug, &wallName, &n.Users)
 	if err != nil || len(n.Users) == 0 {
 		return err
 	}
 	n.Params = map[string]any{"wall": wallName, "date": date, "count": count}
 	n.URL = "/" + slug + "/map?wall=" + wall
-	return events.PublishAs(ctx, tx, actor(ctx), "notify", "notify", n, events.Audience{})
+	return events.PublishNotify(ctx, tx, auth.UserID(ctx), n)
 }
 
 type resetStat struct {
@@ -116,19 +110,18 @@ func (m *module) resetStatsHandler(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	if err := m.require(r.Context(), gym, permManageRoutes); err != nil {
+	if err := m.perms.Require(r.Context(), gym, tenancy.PermManageRoutes); err != nil {
 		return err
 	}
 	stats, err := resetStats(r.Context(), m.app.DB, gym, r.URL.Query().Get("location"), time.Now().Add(-recentTickWindow))
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": stats})
-	return nil
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": stats}, nil)
 }
 
 // resetStats gathers what a setter weighs before stripping a route: traffic, stars, grade feedback and open defects.
-func resetStats(ctx context.Context, q querier, gym, location string, recentSince time.Time) ([]resetStat, error) {
+func resetStats(ctx context.Context, q db.Querier, gym, location string, recentSince time.Time) ([]resetStat, error) {
 	rows, err := q.Query(ctx, `SELECT r.id AS route,
 			COALESCE(t.ticks, 0) AS ticks, COALESCE(t.recent_ticks, 0) AS recent_ticks,
 			COALESCE(t.climbers, 0) AS climbers, t.last_tick,

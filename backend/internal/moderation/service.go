@@ -13,14 +13,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/auth"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/mail"
-)
-
-const (
-	permComments = "manage_comments"
-	permReports  = "manage_reports"
+	"gripello/internal/platform/tenancy"
 )
 
 // work is one moderation transaction plus what must happen to files and mail once it commits.
@@ -113,6 +111,22 @@ func (m *module) queue(ctx context.Context, w *work, kindName, contentID string,
 	return it, m.save(ctx, w, &it)
 }
 
+var decisionActions = []string{"reject", "approve", "hide", "restore"}
+
+// allowedActions lists what decide would accept from this viewer, in button order.
+func allowedActions(it Item, platform, gymStaff bool) []string {
+	actions := []string{}
+	if !platform && !gymStaff {
+		return actions
+	}
+	for _, action := range decisionActions {
+		if allowed(it, action, platform, gymStaff) == nil {
+			actions = append(actions, action)
+		}
+	}
+	return actions
+}
+
 func allowed(it Item, action string, platform, gymStaff bool) error {
 	ok := false
 	switch action {
@@ -125,7 +139,7 @@ func allowed(it Item, action string, platform, gymStaff bool) error {
 	case "restore":
 		ok = it.State == "hidden" && (it.HiddenBy != "platform" || platform)
 	default:
-		return badRequest("Unknown moderation action.")
+		return httpx.BadRequest("Unknown moderation action.")
 	}
 	if !ok {
 		return httpx.NewError(http.StatusForbidden, "This action is not allowed on this item.")
@@ -135,7 +149,7 @@ func allowed(it Item, action string, platform, gymStaff bool) error {
 
 func (m *module) apply(ctx context.Context, w *work, it *Item, action, reason string, platform bool, reviewer string) error {
 	now := time.Now()
-	it.ReviewedBy, it.ReviewedAt, it.Reason = reviewer, &now, truncate(reason, 2000)
+	it.ReviewedBy, it.ReviewedAt, it.Reason = reviewer, &now, httpx.Truncate(reason, 2000)
 	if it.Snapshot == nil {
 		it.Snapshot = map[string]any{}
 	}
@@ -209,7 +223,7 @@ func (m *module) quarantine(ctx context.Context, w *work, it *Item) error {
 	k := kinds[it.ContentType]
 	c, err := loadContent(ctx, w.tx, it.ContentType, it.ContentID)
 	if errors.Is(err, httpx.ErrNotFound) {
-		return badRequest("The content no longer exists.")
+		return httpx.BadRequest("The content no longer exists.")
 	}
 	if err != nil {
 		return err
@@ -301,12 +315,12 @@ func (m *module) release(ctx context.Context, w *work, it *Item) error {
 		list := strings.Join(columns, ", ")
 		if _, err := w.tx.Exec(ctx, `INSERT INTO `+k.table+` (`+list+`) SELECT `+list+` FROM jsonb_populate_record(NULL::`+k.table+`, $1)`, values); err != nil {
 			slog.Warn("moderation: restoring content failed", "item", it.ID, "error", err)
-			return badRequest("The content could not be restored.")
+			return httpx.BadRequest("The content could not be restored.")
 		}
 	} else {
 		var err error
 		if hidden, err = loadContent(ctx, w.tx, it.ContentType, it.ContentID); errors.Is(err, httpx.ErrNotFound) {
-			return badRequest("The content no longer exists.")
+			return httpx.BadRequest("The content no longer exists.")
 		} else if err != nil {
 			return err
 		}
@@ -321,10 +335,10 @@ func (m *module) release(ctx context.Context, w *work, it *Item) error {
 			FROM jsonb_populate_record(NULL::`+k.table+`, $2) s WHERE t.id = $1`, it.ContentID, values)
 		if err != nil {
 			slog.Warn("moderation: restoring content failed", "item", it.ID, "error", err)
-			return badRequest("The content could not be restored.")
+			return httpx.BadRequest("The content could not be restored.")
 		}
 		if tag.RowsAffected() == 0 {
-			return badRequest("The content no longer exists.")
+			return httpx.BadRequest("The content no longer exists.")
 		}
 	}
 	fresh, err := loadContent(ctx, w.tx, it.ContentType, it.ContentID)
@@ -366,13 +380,13 @@ func (m *module) closeReports(ctx context.Context, w *work, contentType, content
 		notification = "report_decided_removed"
 	}
 	for _, report := range reports {
-		staff, err := usersWith(ctx, w.tx, report.Gym, permReports)
+		staff, err := usersWith(ctx, w.tx, report.Gym, tenancy.PermManageReports)
 		if err != nil {
 			return err
 		}
 		staff = slices.DeleteFunc(staff, func(id string) bool { return id == reviewer })
-		if err := publishNotify(ctx, w.tx, Notify{
-			Type: notification, Users: staff, Gym: report.Gym, URL: gymPath(ctx, w.tx, report.Gym, "/manage/moderation"),
+		if err := events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
+			Type: notification, Users: staff, Gym: report.Gym, URL: tenancy.GymPath(ctx, w.tx, report.Gym, "/manage/moderation"),
 		}); err != nil {
 			return err
 		}
@@ -385,10 +399,10 @@ func (m *module) notifyAuthor(ctx context.Context, w *work, it Item, action stri
 	if it.Author == "" {
 		return nil
 	}
-	n := Notify{Users: []string{it.Author}, Gym: it.Gym, URL: "/"}
+	n := events.Notify{Users: []string{it.Author}, Gym: it.Gym, URL: "/"}
 	switch {
 	case action == "hide":
-		n.Type, n.Params = "content_hidden", map[string]any{"reason": truncate(it.Reason, 140)}
+		n.Type, n.Params = "content_hidden", map[string]any{"reason": httpx.Truncate(it.Reason, 140)}
 		w.after = append(w.after, func(ctx context.Context) { m.sendStatement(ctx, it.Author, []Item{it}) })
 	case action == "approve" && wasPending:
 		n.Type = "beta_approved"
@@ -396,11 +410,11 @@ func (m *module) notifyAuthor(ctx context.Context, w *work, it Item, action stri
 			n.URL = "/route?id=" + route + "#beta-" + it.ContentID
 		}
 	case action == "reject":
-		n.Type, n.Params = "beta_rejected", map[string]any{"reason": truncate(it.Reason, 140)}
+		n.Type, n.Params = "beta_rejected", map[string]any{"reason": httpx.Truncate(it.Reason, 140)}
 	default:
 		return nil
 	}
-	return publishNotify(ctx, w.tx, n)
+	return events.PublishNotify(ctx, w.tx, auth.UserID(ctx), n)
 }
 
 func publishRouteArchived(ctx context.Context, tx pgx.Tx, route, gym string) error {
@@ -454,7 +468,7 @@ func (m *module) sendStatement(ctx context.Context, authorID string, items []Ite
 			gym = ""
 		}
 	}
-	details := []mail.Detail{detail, {Label: "reference", Value: truncate(strings.Join(references, ", "), 1000)}}
+	details := []mail.Detail{detail, {Label: "reference", Value: httpx.Truncate(strings.Join(references, ", "), 1000)}}
 	if first.Reason != "" {
 		details = append(details, mail.Detail{Label: "reasoning", Value: first.Reason})
 	}
@@ -478,7 +492,7 @@ func (m *module) sendReceipt(ctx context.Context, report Report) {
 	}
 	var to []mail.Recipient
 	rows, err := m.app.DB.Query(ctx, `SELECT email, language FROM users WHERE email <> '' AND id IN (
-		SELECT m."user" FROM memberships m JOIN roles r ON r.id = m.role WHERE m.gym = $1 AND $2 = ANY (r.permissions))`, report.Gym, permReports)
+		SELECT m."user" FROM memberships m JOIN roles r ON r.id = m.role WHERE m.gym = $1 AND $2 = ANY (r.permissions))`, report.Gym, tenancy.PermManageReports)
 	if err == nil {
 		to, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (mail.Recipient, error) {
 			var r mail.Recipient
@@ -497,7 +511,7 @@ func (m *module) sendReceipt(ctx context.Context, report Report) {
 			{Label: "explanation", Value: report.Explanation},
 			{Label: "snapshot", Value: report.ContentSnapshot},
 		},
-		Action: gymPath(ctx, m.app.DB, report.Gym, "/manage/moderation"),
+		Action: tenancy.GymPath(ctx, m.app.DB, report.Gym, "/manage/moderation"),
 	}
 	// The contact address is whatever manage_settings typed in; the notifier's identity stays with the report handlers.
 	if contact := contactEmail(ctx, m.app.DB, report.Gym); contact != "" &&
@@ -626,3 +640,13 @@ func (m *module) pruneQuarantine(ctx context.Context) error {
 }
 
 const hiddenRetentionDays = 180
+
+const decidedReportRetentionYears = 3
+
+func (m *module) pruneReports(ctx context.Context) error {
+	tag, err := m.app.DB.Exec(ctx, `DELETE FROM reports WHERE decided_at < now() - make_interval(years => $1)`, decidedReportRetentionYears)
+	if err == nil {
+		slog.Info("moderation: pruned decided reports", "rows", tag.RowsAffected())
+	}
+	return err
+}

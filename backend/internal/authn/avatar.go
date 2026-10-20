@@ -10,6 +10,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"gripello/internal/platform/blob"
 )
 
 var (
@@ -77,5 +79,5 @@ func (m *module) importAvatar(ctx context.Context, provider, userID string, clai
 		m.blob.Delete(context.WithoutCancel(ctx), key)
 		return
 	}
-	m.blob.WarmThumbs(key, "100x100")
+	m.blob.WarmThumbs(key, blob.UserThumbs["avatar"]...)
 }

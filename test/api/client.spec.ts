@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fileToken, fileUrl, useApi } from '~/api/client'
+import { issueFileToken, fileUrl, useApi } from '~/api/client'
+import { endedSession } from '~/utils/errors'
 import { useAuthState } from '~/api/auth'
 import { jsonResponse, mockApi } from './apiMock'
 
@@ -92,12 +93,15 @@ describe('useApi', () => {
         await vi.waitFor(() => expect(answer).toBeTypeOf('function'))
         auth.saveAuth({ token: newToken, record: { id: 'u1' } as never })
         answer(jsonResponse({ status: 401, data: {} }, 401))
-        expect((await late).status).toBe(401)
+        const lateError = await late
+        expect(lateError.status).toBe(401)
+        expect(endedSession(lateError)).toBe(false)
         expect(auth.token()).toBe(newToken)
 
         api.respond({ status: 401, data: {} }, 401)
-        await useApi()('/me').catch(() => {})
+        const ended = await useApi()('/me').catch((e) => e)
         expect(auth.isSignedIn()).toBe(false)
+        expect(endedSession(ended)).toBe(true)
     })
 
     it('keeps a non-JSON error body out of the response', async () => {
@@ -137,7 +141,7 @@ describe('files', () => {
 
     it('fetches a file token', async () => {
         api.respond({ token: 'ft' })
-        expect(await fileToken('tasks', 't1')).toBe('ft')
+        expect(await issueFileToken('tasks', 't1')).toBe('ft')
         expect(api.request()).toMatchObject({
             url: '/api/files/token',
             method: 'POST',

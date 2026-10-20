@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"gripello/internal/platform"
+	"gripello/internal/platform/auth"
 	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
@@ -52,6 +53,7 @@ func Register(app *platform.App) {
 	}
 	if app.Cron != nil {
 		app.Cron.Add("moderationRetention", "29 3 * * *", m.pruneQuarantine)
+		app.Cron.Add("reportRetention", "31 3 * * *", m.pruneReports)
 	}
 }
 
@@ -119,7 +121,7 @@ func (m *module) onBetaPending(e events.Event) {
 		if p.File != "" {
 			staged := "moderation_items/" + p.ID + "/" + p.File
 			if p.FileKey != staged {
-				return badRequest("Unexpected staging key.")
+				return httpx.BadRequest("Unexpected staging key.")
 			}
 			if err := m.copyFile(ctx, w, staged, "moderation_items/"+it.ID+"/"+p.File); err != nil {
 				return err
@@ -129,12 +131,12 @@ func (m *module) onBetaPending(e events.Event) {
 		if err := publishItem(ctx, w.tx, "create", it); err != nil {
 			return err
 		}
-		staff, err := usersWith(ctx, w.tx, p.Gym, permComments)
+		staff, err := usersWith(ctx, w.tx, p.Gym, tenancy.PermManageComments)
 		if err != nil {
 			return err
 		}
-		return publishNotify(ctx, w.tx, Notify{
-			Type: "moderation_pending", Users: staff, Gym: p.Gym, URL: gymPath(ctx, w.tx, p.Gym, "/manage/moderation"),
+		return events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
+			Type: "moderation_pending", Users: staff, Gym: p.Gym, URL: tenancy.GymPath(ctx, w.tx, p.Gym, "/manage/moderation"),
 		})
 	}))
 }

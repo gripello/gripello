@@ -104,6 +104,9 @@ func TestThumbSizes(t *testing.T) {
 		"400x0":    {400, 200},
 		"100x100f": {100, 50},
 		"100x100t": {100, 100},
+		"1200x0":   {1200, 600},
+		"2400x600": {2400, 600},
+		"2400x750": {2400, 750},
 	} {
 		key, err := s.Thumb(ctx, "gyms/g1/logo_abc.png", size)
 		if err != nil {
@@ -385,5 +388,46 @@ func TestThumbOfADeletedOriginalIsNotServed(t *testing.T) {
 	}
 	if _, err := s.Open(ctx, thumb); err == nil {
 		t.Error("orphaned thumb still stored")
+	}
+}
+
+func TestPrivateTablesAreNeverServed(t *testing.T) {
+	s, _ := newStore(t)
+	s.Put(context.Background(), "account_exports/e1/data_abc.zip", bytes.NewReader([]byte("PK")))
+	m := mux(s)
+	_, token := requestToken(t, s, "secret", "staff", "account_exports", "e1")
+	for _, target := range []string{"/files/account_exports/e1/data_abc.zip", "/files/account_exports/e1/data_abc.zip?token=" + token} {
+		rec := httptest.NewRecorder()
+		m.ServeHTTP(rec, httptest.NewRequest("GET", target, nil))
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("%s = %d", target, rec.Code)
+		}
+	}
+}
+
+func TestWarmedThumbsAreRendered(t *testing.T) {
+	for _, size := range []string{ThumbSquare, ThumbLogo, ThumbPhoto, ThumbBanner, ThumbCover} {
+		if !slices.Contains(thumbSizes, size) {
+			t.Errorf("%s is warmed but not in thumbSizes", size)
+		}
+	}
+}
+
+func TestLossyThumbsKeepQuality(t *testing.T) {
+	for _, format := range []string{"image/jpeg", "image/webp"} {
+		if !strings.Contains(vipsOutputs[format].options, "Q=85") {
+			t.Errorf("%s thumbs use the encoder default quality: %s", format, vipsOutputs[format].options)
+		}
+	}
+}
+
+func TestUploadsWarmEveryRequestedSize(t *testing.T) {
+	for _, size := range []string{ThumbAvatarLarge, ThumbPhotoLarge, ThumbBannerLarge, ThumbCoverLarge} {
+		if !slices.Contains(thumbSizes, size) {
+			t.Errorf("%s is not rendered", size)
+		}
+	}
+	if !slices.Contains(UserThumbs["avatar"], ThumbAvatarLarge) || !slices.Contains(UserThumbs["banner"], ThumbBannerLarge) {
+		t.Errorf("user uploads skip the large sizes: %v", UserThumbs)
 	}
 }

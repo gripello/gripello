@@ -25,7 +25,7 @@ paths:
                   page: { type: integer }
                   limit: { type: integer }
                   total: { type: integer }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/notifications/read:
     post:
       operationId: markNotificationsRead
@@ -42,8 +42,8 @@ paths:
                 all: { type: boolean }
       responses:
         '204': { description: Marked }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/notifications/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -52,8 +52,8 @@ paths:
       tags: [notifications]
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /notifications/settings:
     get:
       operationId: getNotificationSettings
@@ -87,7 +87,7 @@ paths:
       tags: [notifications]
       responses:
         '200': { $ref: '#/components/responses/NotificationPrefs' }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
     put:
       operationId: putNotificationPrefs
       tags: [notifications]
@@ -99,8 +99,8 @@ paths:
             schema: { $ref: '#/components/schemas/NotificationPrefs' }
       responses:
         '200': { $ref: '#/components/responses/NotificationPrefs' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/push-subscriptions:
     get:
       operationId: listPushSubscriptions
@@ -115,7 +115,7 @@ paths:
                 required: [items]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/PushSubscription' } }
-        '401': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
     post:
       operationId: createPushSubscription
       tags: [notifications]
@@ -143,9 +143,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PushSubscription' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '409': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/push-subscriptions/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -154,8 +154,8 @@ paths:
       tags: [notifications]
       responses:
         '204': { description: Deleted }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /me/push/test:
     post:
       operationId: sendTestPush
@@ -172,11 +172,11 @@ paths:
                 endpoint: { type: string }
       responses:
         '204': { description: Sent }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '429': { $ref: '#/components/responses/Error' }
-        '503': { $ref: '#/components/responses/Error' }
+        '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '503': { $ref: 'shared/error.yaml#/components/responses/Error' }
 components:
   parameters:
     Id:
@@ -185,31 +185,12 @@ components:
       required: true
       schema: { type: string }
   responses:
-    Error:
-      description: Error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
     NotificationPrefs:
       description: Opt-outs
       content:
         application/json:
           schema: { $ref: '#/components/schemas/NotificationPrefs' }
   schemas:
-    Error:
-      type: object
-      required: [status, message, data]
-      properties:
-        status: { type: integer }
-        message: { type: string }
-        data:
-          type: object
-          additionalProperties:
-            type: object
-            required: [code, message]
-            properties:
-              code: { type: string }
-              message: { type: string }
     Notification:
       type: object
       required: [id, created, updated, user, type, params, url, read]
@@ -219,7 +200,7 @@ components:
         updated: { type: string, format: date-time }
         user: { type: string }
         type: { type: string, description: 'bell text key notifications.center.types.<type>' }
-        params: { type: object, additionalProperties: true }
+        params: { type: [object, 'null'], additionalProperties: true }
         url: { type: string }
         read: { type: boolean }
     NotificationPrefs:

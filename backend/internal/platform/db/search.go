@@ -1,6 +1,9 @@
 package db
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 const maxSearchWords = 8
 
@@ -14,4 +17,26 @@ func WordPatterns(term string) []string {
 		patterns = append(patterns, "%"+likeEscaper.Replace(word)+"%")
 	}
 	return patterns
+}
+
+// Where collects AND-ed conditions; each Add binds its arg to every ? of the clause.
+type Where struct {
+	Clauses []string
+	Args    []any
+}
+
+func (w *Where) Add(clause string, arg any) {
+	w.Clauses = append(w.Clauses, strings.ReplaceAll(clause, "?", w.Next(arg)))
+}
+
+func (w *Where) Next(arg any) string {
+	w.Args = append(w.Args, arg)
+	return "$" + strconv.Itoa(len(w.Args))
+}
+
+func (w *Where) SQL() string {
+	if len(w.Clauses) == 0 {
+		return ""
+	}
+	return " WHERE " + strings.Join(w.Clauses, " AND ")
 }

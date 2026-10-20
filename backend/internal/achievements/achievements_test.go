@@ -405,13 +405,13 @@ func TestEventsQueueTheClimber(t *testing.T) {
 	}
 
 	publish("follow.changed", "follow.changed", map[string]string{"follower": climber, "followee": setter, "status": "pending", "action": "create"})
-	publish("notify", "notify", Notify{Type: "task_wish_done", Users: []string{admin}})
+	publish("notify", "notify", events.Notify{Type: "task_wish_done", Users: []string{admin}})
 	publish("follow.changed", "follow.changed", map[string]string{"follower": climber, "followee": setter, "status": "accepted", "action": "update"})
 	testapp.WaitFor(t, func() bool { return f.queued(climber) && f.queued(setter) })
 	if f.queued(admin) {
 		t.Fatal("only defect fixes queue the notified reporter")
 	}
-	publish("notify", "notify", Notify{Type: "task_defect_fixed", Users: []string{admin}})
+	publish("notify", "notify", events.Notify{Type: "task_defect_fixed", Users: []string{admin}})
 	testapp.WaitFor(t, func() bool { return f.queued(admin) })
 
 	f.tick(climber, f.route("6a", 14, nil), "flash", time.Now())

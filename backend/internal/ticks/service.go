@@ -3,24 +3,23 @@ package ticks
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"time"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/apitime"
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/tenancy"
 )
 
 const (
-	tickDateLeeway     = 36 * time.Hour
 	maxAttempts        = 999
 	maxNoteLength      = 500
 	maxSeasonName      = 60
-	permManageSeasons  = "manage_competitions"
 	duplicateIDCode    = "validation_pk_invalid"
 	lockedFieldMessage = "This field can't be changed."
 )
@@ -33,21 +32,14 @@ func (p patch) decode(field string, target any) error {
 		return nil
 	}
 	if err := json.Unmarshal(raw, target); err != nil {
-		return invalid(field, "Invalid value.")
+		return httpx.Invalid(field, "Invalid value.")
 	}
 	return nil
 }
 
-func invalid(field, message string) *httpx.Error {
-	return httpx.NewError(http.StatusBadRequest, message).Field(field, "validation_invalid_value", message)
-}
-
-func required(field string) *httpx.Error {
-	return httpx.NewError(http.StatusBadRequest, "Failed to save record.").Field(field, "validation_required", "Cannot be blank.")
-}
-
-func tickDateInFuture(date, now time.Time) bool {
-	return date.After(now.Add(tickDateLeeway))
+// A climber east of UTC may log their today while it is still yesterday in UTC.
+func tickDateInFuture(date apitime.Date, now time.Time) bool {
+	return date > apitime.DateOf(now.AddDate(0, 0, 1))
 }
 
 // applyEditable sets type, attempts, date and note from the body and enforces the tick rules.
@@ -66,9 +58,9 @@ func (p patch) applyEditable(t *Tick) error {
 		return err
 	}
 	if _, ok := p["date"]; ok {
-		parsed, ok := parseTime(date)
-		if !ok {
-			return required("date")
+		parsed, err := apitime.ParseDate(date)
+		if err != nil {
+			return httpx.Invalid("date", "Must be a day as YYYY-MM-DD.")
 		}
 		t.Date = parsed
 	}
@@ -77,21 +69,21 @@ func (p patch) applyEditable(t *Tick) error {
 		t.Attempts = 1
 	case "top", "attempt":
 	case "":
-		return required("type")
+		return httpx.Required("type")
 	default:
-		return invalid("type", "Invalid type.")
+		return httpx.Invalid("type", "Invalid type.")
 	}
 	if t.Attempts < 1 || t.Attempts > maxAttempts {
-		return invalid("attempts", "Attempts must be between 1 and 999.")
+		return httpx.Invalid("attempts", "Attempts must be between 1 and 999.")
 	}
 	if utf8.RuneCountInString(t.Note) > maxNoteLength {
-		return invalid("note", "The note is too long.")
+		return httpx.Invalid("note", "The note is too long.")
 	}
-	if t.Date.IsZero() {
-		return required("date")
+	if t.Date == "" {
+		return httpx.Required("date")
 	}
 	if tickDateInFuture(t.Date, time.Now()) {
-		return httpx.NewError(http.StatusBadRequest, "An ascent can't be logged in the future.").
+		return httpx.BadRequest("An ascent can't be logged in the future.").
 			Field("date", "validation_invalid_value", "An ascent can't be logged in the future.")
 	}
 	return nil
@@ -116,13 +108,13 @@ func (m *module) createTick(ctx context.Context, p patch) (Tick, error) {
 	if tick.ID == "" {
 		tick.ID = ids.New()
 	} else if !ids.Valid(tick.ID) {
-		return Tick{}, invalid("id", "Invalid id.")
+		return Tick{}, httpx.Invalid("id", "Invalid id.")
 	}
 	if err := p.decode("route", &tick.Route); err != nil {
 		return Tick{}, err
 	}
 	if tick.Route == "" {
-		return Tick{}, required("route")
+		return Tick{}, httpx.Required("route")
 	}
 	if err := p.applyEditable(&tick); err != nil {
 		return Tick{}, err
@@ -133,12 +125,12 @@ func (m *module) createTick(ctx context.Context, p patch) (Tick, error) {
 			err = tenancy.RequireGym(ctx, tx, route.Gym)
 		}
 		if err != nil {
-			return invalid("route", "Unknown route.")
+			return httpx.Invalid("route", "Unknown route.")
 		}
 		tick.Grade, tick.GradeSystem, tick.GradeIndex, tick.RouteName = route.Grade, route.GradeSystem, route.GradeIndex, route.Name
 		if err := insertTick(ctx, tx, tick); err != nil {
-			if isUniqueViolation(err) {
-				return httpx.NewError(http.StatusBadRequest, "Failed to create record.").Field("id", duplicateIDCode, "The id is invalid or already exists.")
+			if db.IsUnique(err, "") {
+				return httpx.BadRequest("Failed to create record.").Field("id", duplicateIDCode, "The id is invalid or already exists.")
 			}
 			return err
 		}
@@ -163,11 +155,11 @@ func rejectLockedChanges(p patch, current Tick) error {
 		want, _ := json.Marshal(values[field])
 		var got any
 		if json.Unmarshal(raw, &got) != nil {
-			return invalid(field, lockedFieldMessage)
+			return httpx.Invalid(field, lockedFieldMessage)
 		}
 		normalized, _ := json.Marshal(got)
 		if string(normalized) != string(want) {
-			return invalid(field, lockedFieldMessage)
+			return httpx.Invalid(field, lockedFieldMessage)
 		}
 	}
 	return nil
@@ -219,55 +211,44 @@ func (m *module) deleteTick(ctx context.Context, id string) error {
 	})
 }
 
-func (m *module) requireSeasonManager(ctx context.Context, gym string) error {
-	principal, err := auth.Require(ctx)
-	if err != nil {
-		return err
-	}
-	if !m.perms.Can(ctx, principal.UserID, gym, permManageSeasons) {
-		return httpx.ErrForbidden
-	}
-	return nil
-}
-
 func (p patch) applySeason(s *Season) error {
 	if err := p.decode("name", &s.Name); err != nil {
 		return err
 	}
-	for field, target := range map[string]*time.Time{"starts_at": &s.StartsAt, "ends_at": &s.EndsAt} {
+	for field, target := range map[string]*apitime.Date{"starts_at": &s.StartsAt, "ends_at": &s.EndsAt} {
 		var value string
 		if err := p.decode(field, &value); err != nil {
 			return err
 		}
 		if _, ok := p[field]; ok {
-			parsed, ok := parseTime(value)
-			if !ok {
-				return required(field)
+			parsed, err := apitime.ParseDate(value)
+			if err != nil {
+				return httpx.Invalid(field, "Must be a day as YYYY-MM-DD.")
 			}
 			*target = parsed
 		}
 	}
 	switch {
-	case s.Name == "":
-		return required("name")
+	case httpx.Blank(s.Name):
+		return httpx.Required("name")
 	case utf8.RuneCountInString(s.Name) > maxSeasonName:
-		return invalid("name", "The name is too long.")
-	case s.StartsAt.IsZero():
-		return required("starts_at")
-	case s.EndsAt.IsZero():
-		return required("ends_at")
-	case !s.EndsAt.After(s.StartsAt):
-		return invalid("ends_at", "A season has to end after it starts.")
+		return httpx.Invalid("name", "The name is too long.")
+	case s.StartsAt == "":
+		return httpx.Required("starts_at")
+	case s.EndsAt == "":
+		return httpx.Required("ends_at")
+	case s.EndsAt < s.StartsAt:
+		return httpx.Invalid("ends_at", "A season can't end before it starts.")
 	}
 	return nil
 }
 
 func (m *module) createSeason(ctx context.Context, gym string, p patch) (Season, error) {
-	if err := m.requireSeasonManager(ctx, gym); err != nil {
+	if err := m.perms.Require(ctx, gym, tenancy.PermManageCompetitions); err != nil {
 		return Season{}, err
 	}
 	season := Season{Gym: gym}
-	if err := p.rejectGymMove(gym); err != nil {
+	if err := tenancy.RejectGymMove(p, gym); err != nil {
 		return Season{}, err
 	}
 	if err := p.applySeason(&season); err != nil {
@@ -293,10 +274,10 @@ func (m *module) updateSeason(ctx context.Context, id string, p patch) (Season, 
 	if err != nil {
 		return Season{}, err
 	}
-	if err := m.requireSeasonManager(ctx, season.Gym); err != nil {
+	if err := m.perms.Require(ctx, season.Gym, tenancy.PermManageCompetitions); err != nil {
 		return Season{}, err
 	}
-	if err := p.rejectGymMove(season.Gym); err != nil {
+	if err := tenancy.RejectGymMove(p, season.Gym); err != nil {
 		return Season{}, err
 	}
 	if err := p.applySeason(&season); err != nil {
@@ -320,7 +301,7 @@ func (m *module) deleteSeason(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	if err := m.requireSeasonManager(ctx, season.Gym); err != nil {
+	if err := m.perms.Require(ctx, season.Gym, tenancy.PermManageCompetitions); err != nil {
 		return err
 	}
 	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
@@ -329,15 +310,4 @@ func (m *module) deleteSeason(ctx context.Context, id string) error {
 		}
 		return publishSeason(ctx, tx, "delete", season)
 	})
-}
-
-func (p patch) rejectGymMove(current string) error {
-	var gym string
-	if err := p.decode("gym", &gym); err != nil {
-		return err
-	}
-	if _, ok := p["gym"]; ok && gym != current {
-		return httpx.NewError(http.StatusBadRequest, "Records cannot move to another gym.")
-	}
-	return nil
 }

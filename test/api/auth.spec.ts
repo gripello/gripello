@@ -18,7 +18,7 @@ import {
     useAuthState,
     finishOAuth2,
     finishOAuth2Link,
-    listOAuth2Providers,
+    listAuthMethods,
     startOAuth2,
 } from '~/api/auth'
 import { mockApi } from './apiMock'
@@ -221,9 +221,9 @@ describe('oauth2', () => {
         api.respond({
             oauth2: { providers: [{ name: 'google', displayName: '' }] },
         })
-        expect(await listOAuth2Providers()).toEqual([
-            { name: 'google', displayName: '' },
-        ])
+        expect(await listAuthMethods()).toEqual({
+            oauth2: { providers: [{ name: 'google', displayName: '' }] },
+        })
         api.respond({ url: 'https://accounts.google.com/o?x' })
         await startOAuth2('google', { redirect: '/hall/routes' })
         expect(api.request()).toMatchObject({

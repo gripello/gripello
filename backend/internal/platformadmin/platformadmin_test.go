@@ -26,6 +26,7 @@ import (
 	"gripello/internal/platform/logbuf"
 	"gripello/internal/platform/metrics"
 	"gripello/internal/platform/replicas"
+	"gripello/internal/platform/tenancy"
 	"gripello/internal/platform/testapp"
 )
 
@@ -246,9 +247,13 @@ func TestDeleteUser(t *testing.T) {
 	f.callToken(http.MethodDelete, "/platform/users/"+f.climber, "", op, http.StatusBadRequest)
 	f.adminOf(f.operator)
 	session := f.session(f.climber)
+	f.exec(`INSERT INTO audit_logs (id, actor, actor_label, action) VALUES ('audit1', $1, 'climber@example.com', 'login')`, f.climber)
 	f.callToken(http.MethodDelete, "/platform/users/"+f.climber, "", op, http.StatusNoContent)
 	if n := f.count(`SELECT count(*) FROM users WHERE id = $1`, f.climber); n != 0 {
 		t.Error("user still exists")
+	}
+	if n := f.count(`SELECT count(*) FROM audit_logs WHERE id = 'audit1' AND actor IS NULL AND actor_label = 'climber@example.com'`); n != 1 {
+		t.Error("the activity log lost the label of the deleted account")
 	}
 	if e := f.lastEvent("user.deleted"); e["id"] != f.climber || e["actor"] != nil || f.lastActor("user.deleted") != f.operator {
 		t.Errorf("user.deleted = %v", e)
@@ -351,14 +356,14 @@ func TestFeatureFlagsMirrorTheFrontendRegistry(t *testing.T) {
 	for _, match := range regexp.MustCompile(`'([a-z_]+)'`).FindAllSubmatch(list[1], -1) {
 		registry = append(registry, string(match[1]))
 	}
-	if !slices.Equal(featureFlags, registry) {
-		t.Errorf("featureFlags = %v, frontend registry %v", featureFlags, registry)
+	if !slices.Equal(tenancy.FeatureFlags, registry) {
+		t.Errorf("tenancy.FeatureFlags = %v, frontend registry %v", tenancy.FeatureFlags, registry)
 	}
 }
 
 func TestSetFeatures(t *testing.T) {
 	f := newFixture(t)
-	if flags := f.call(http.MethodGet, "/platform/features", "", f.operator, http.StatusOK)["flags"].([]any); len(flags) != len(featureFlags) {
+	if flags := f.call(http.MethodGet, "/platform/features", "", f.operator, http.StatusOK)["flags"].([]any); len(flags) != len(tenancy.FeatureFlags) {
 		t.Errorf("flags = %v", flags)
 	}
 	f.call(http.MethodPut, "/platform/gyms/"+f.gym+"/features", `{"teleport": true}`, f.operator, http.StatusBadRequest)

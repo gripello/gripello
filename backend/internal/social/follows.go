@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/climbers"
+	"gripello/internal/platform/db"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 )
@@ -36,16 +38,11 @@ type Block struct {
 	Blocked string    `json:"blocked"`
 }
 
-type querier interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
-
 func invalid(field, code, message string) *httpx.Error {
-	return httpx.NewError(http.StatusBadRequest, message).Field(field, code, message)
+	return httpx.BadRequest(message).Field(field, code, message)
 }
 
-func queryFollows(ctx context.Context, q querier, sql string, args ...any) ([]Follow, error) {
+func queryFollows(ctx context.Context, q db.Querier, sql string, args ...any) ([]Follow, error) {
 	rows, err := q.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
@@ -60,18 +57,11 @@ func queryFollows(ctx context.Context, q querier, sql string, args ...any) ([]Fo
 	return follows, err
 }
 
-func findFollow(ctx context.Context, q querier, sql string, args ...any) (Follow, error) {
-	follows, err := queryFollows(ctx, q, sql, args...)
-	if err != nil {
-		return Follow{}, err
-	}
-	if len(follows) == 0 {
-		return Follow{}, httpx.ErrNotFound
-	}
-	return follows[0], nil
+func findFollow(ctx context.Context, q db.Querier, sql string, args ...any) (Follow, error) {
+	return db.First(queryFollows(ctx, q, sql, args...))
 }
 
-func blockedEitherWay(ctx context.Context, q querier, a, b string) (bool, error) {
+func blockedEitherWay(ctx context.Context, q db.Querier, a, b string) (bool, error) {
 	var blocked bool
 	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM blocks WHERE (blocker = $1 AND blocked = $2) OR (blocker = $2 AND blocked = $1))`, a, b).Scan(&blocked)
 	return blocked, err
@@ -81,20 +71,15 @@ type person struct {
 	username, firstname, name, policy string
 }
 
-func findPerson(ctx context.Context, q querier, id string) (person, bool, error) {
+func (p person) fullName() string { return climbers.FullName(p.username, p.firstname, p.name) }
+
+func findPerson(ctx context.Context, q db.Querier, id string) (person, bool, error) {
 	var p person
 	err := q.QueryRow(ctx, `SELECT username, firstname, name, follow_policy FROM users WHERE id = $1`, id).Scan(&p.username, &p.firstname, &p.name, &p.policy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return p, false, nil
 	}
 	return p, err == nil, err
-}
-
-func (p person) fullName() string {
-	if full := strings.TrimSpace(p.firstname + " " + p.name); full != "" {
-		return full
-	}
-	return p.username
 }
 
 func (m *module) listFollows(w http.ResponseWriter, r *http.Request) error {
@@ -124,11 +109,7 @@ func (m *module) listFollows(w http.ResponseWriter, r *http.Request) error {
 		return invalid("status", "validation_invalid_value", "status must be pending or accepted.")
 	}
 	follows, err := queryFollows(r.Context(), m.app.DB, sql+` ORDER BY created DESC, id`, args...)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, follows)
-	return nil
+	return httpx.Respond(w, http.StatusOK, follows, err)
 }
 
 func (m *module) postFollow(w http.ResponseWriter, r *http.Request) error {
@@ -193,17 +174,16 @@ func (m *module) postFollow(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		n := Notify{Type: "follow_requested", Users: []string{follow.Followee}, Params: map[string]any{"name": follower.fullName()}, URL: "/friends?tab=requests"}
+		n := events.Notify{Type: "follow_requested", Users: []string{follow.Followee}, Params: map[string]any{"name": follower.fullName()}, URL: "/friends?tab=requests"}
 		if status == "accepted" {
 			n.Type, n.URL = "new_follower", "/climber?id="+principal.UserID
 		}
-		return publishNotify(r.Context(), tx, n)
+		return events.PublishNotify(r.Context(), tx, "", n)
 	})
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusCreated, follow)
-	return nil
+	return httpx.Respond(w, http.StatusCreated, follow, nil)
 }
 
 func (m *module) acceptFollow(w http.ResponseWriter, r *http.Request) error {
@@ -218,7 +198,7 @@ func (m *module) acceptFollow(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		if follow.Status != "pending" {
-			return httpx.NewError(http.StatusBadRequest, "Only pending follow requests can be accepted.")
+			return httpx.BadRequest("Only pending follow requests can be accepted.")
 		}
 		follow, err = findFollow(r.Context(), tx, `UPDATE follows SET status = 'accepted' WHERE id = $1 RETURNING `+followColumns, follow.ID)
 		if err != nil {
@@ -231,14 +211,13 @@ func (m *module) acceptFollow(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		return publishNotify(r.Context(), tx, Notify{Type: "follow_accepted", Users: []string{follow.Follower},
+		return events.PublishNotify(r.Context(), tx, "", events.Notify{Type: "follow_accepted", Users: []string{follow.Follower},
 			Params: map[string]any{"name": followee.fullName()}, URL: "/climber?id=" + principal.UserID})
 	})
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusOK, follow)
-	return nil
+	return httpx.Respond(w, http.StatusOK, follow, nil)
 }
 
 func (m *module) deleteFollow(w http.ResponseWriter, r *http.Request) error {
@@ -260,8 +239,7 @@ func (m *module) deleteFollow(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
 
 // lockPair serializes follows and blocks between two climbers, so a follow can't slip in next to a new block.
@@ -270,7 +248,7 @@ func lockPair(ctx context.Context, tx pgx.Tx, a, b string) error {
 	return err
 }
 
-func queryBlocks(ctx context.Context, q querier, sql string, args ...any) ([]Block, error) {
+func queryBlocks(ctx context.Context, q db.Querier, sql string, args ...any) ([]Block, error) {
 	rows, err := q.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
@@ -291,11 +269,7 @@ func (m *module) listBlocks(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	blocks, err := queryBlocks(r.Context(), m.app.DB, `SELECT `+blockColumns+` FROM blocks WHERE blocker = $1 ORDER BY created DESC, id`, principal.UserID)
-	if err != nil {
-		return err
-	}
-	httpx.JSON(w, http.StatusOK, blocks)
-	return nil
+	return httpx.Respond(w, http.StatusOK, blocks, err)
 }
 
 // postBlock ends follows both ways; the blocked climber then no longer finds the blocker in search or profiles.
@@ -354,8 +328,7 @@ func (m *module) postBlock(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.JSON(w, http.StatusCreated, block)
-	return nil
+	return httpx.Respond(w, http.StatusCreated, block, nil)
 }
 
 func (m *module) deleteBlock(w http.ResponseWriter, r *http.Request) error {
@@ -377,6 +350,5 @@ func (m *module) deleteBlock(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
+	return httpx.NoContent(w, nil)
 }
