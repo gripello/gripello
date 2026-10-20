@@ -1,19 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
     backupHourOptions,
-    formatBytes,
     nextBackupRun,
     syncCleanForm,
     timeZoneName,
 } from '~/utils/backups'
-
-describe('formatBytes', () => {
-    it('picks a binary unit with one decimal above bytes', () => {
-        expect(formatBytes(512, 'en')).toBe('512 byte')
-        expect(formatBytes(1536, 'en')).toBe('1.5 kB')
-        expect(formatBytes(5 * 1024 ** 3, 'en')).toBe('5 GB')
-    })
-})
 
 describe('backupHourOptions', () => {
     it('labels each UTC hour in the viewer time zone', () => {

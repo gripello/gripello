@@ -1,10 +1,7 @@
+import { gymChangesTopic } from '#shared/utils/topics'
 import { labelAnalytics, type AnalyticsQuery } from '#shared/utils/analytics'
 import { getAnalytics } from '~/api/routes'
-import {
-    coalesce,
-    gymChangesTopic,
-    type GymChange,
-} from '~/utils/realtimeCache'
+import { coalesce, type GymChange } from '~/utils/realtimeCache'
 
 const QUERY_KEYS = [
     'range',

@@ -1,3 +1,4 @@
+import { isAbortOrNetworkError } from '~/utils/errors'
 import type { RecordChange } from '~/composables/useRealtime'
 import type { NotificationRecord } from '~/types/models'
 import {
@@ -28,10 +29,6 @@ export function useNotificationQueue() {
         () => items.value.filter((item) => !item.read).length,
     )
 
-    function isAutoCancelled(err: any) {
-        return !!err?.isAbort || err?.status === 0
-    }
-
     async function refresh() {
         if (!authStore.isValid) {
             items.value = []
@@ -46,7 +43,7 @@ export function useNotificationQueue() {
             items.value = seen.reduce(applyChange, listed)
             loaded.value = true
         } catch (err) {
-            if (isAutoCancelled(err)) return
+            if (isAbortOrNetworkError(err)) return
             console.error('Failed to load notifications:', err)
             loaded.value = true
         } finally {

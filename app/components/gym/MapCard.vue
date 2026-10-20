@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { THUMBS } from '#shared/utils/thumbs'
 import { fileUrl } from '~/api/client'
 import type { GymRecord } from '~/types/models'
 import { hasLocation } from '~/utils/gymInfo'
@@ -9,7 +10,9 @@ defineEmits<{ close: [] }>()
 
 const logoUrl = computed(() =>
     props.gym.page_logo
-        ? fileUrl('gyms', props.gym, props.gym.page_logo, { thumb: '0x200' })
+        ? fileUrl('gyms', props.gym, props.gym.page_logo, {
+              thumb: THUMBS.logo,
+          })
         : '',
 )
 const { status, label } = useOpenStatus(() => props.gym.opening_hours)

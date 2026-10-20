@@ -1,5 +1,9 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
+    BETA_VIDEO_HOSTS,
+    BETA_VIDEO_MAX_BYTES,
+    BETA_VIDEO_TYPES,
     betaPlatformIcon,
     betaVideoPlatform,
     videoClock,
@@ -47,5 +51,28 @@ describe('videoClock', () => {
         expect(videoClock(7.9)).toBe('0:07')
         expect(videoClock(83)).toBe('1:23')
         expect(videoClock(Number.NaN)).toBe('0:00')
+    })
+})
+
+describe('beta video fixture shared with Go', () => {
+    const fixture = JSON.parse(
+        readFileSync('backend/testdata/betaVideos.json', 'utf8'),
+    ) as {
+        hosts: string[]
+        types: string[]
+        maxBytes: number
+        links: Record<string, boolean>
+    }
+
+    it('accepts the same hosts, types and size', () => {
+        expect(Object.keys(BETA_VIDEO_HOSTS)).toEqual(fixture.hosts)
+        expect(BETA_VIDEO_TYPES).toEqual(fixture.types)
+        expect(BETA_VIDEO_MAX_BYTES).toBe(fixture.maxBytes)
+    })
+
+    it('judges every fixture link like the server', () => {
+        for (const [link, accepted] of Object.entries(fixture.links)) {
+            expect(betaVideoPlatform(link) !== null, link).toBe(accepted)
+        }
     })
 })

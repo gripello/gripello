@@ -1,12 +1,13 @@
 import { useTemplateRef } from 'vue'
-import { mount } from '@vue/test-utils'
-import ImageCropDialog from '~/components/ImageCropDialog.vue'
+import { flushPromises, mount } from '@vue/test-utils'
+import ImageCropDialog from '~/components/image/CropDialog.vue'
+import { dialogShellStub } from '../__stubs__/dialogShell'
 
 vi.stubGlobal('useTemplateRef', useTemplateRef)
 
 const shellStub = {
-    props: ['modelValue'],
-    template: '<div v-if="modelValue"><slot /><slot name="actions" /></div>',
+    ...dialogShellStub,
+    template: `<div v-if="modelValue">${dialogShellStub.template}</div>`,
 }
 
 function mountDialog(props: Record<string, unknown>) {
@@ -93,5 +94,37 @@ describe('ImageCropDialog', () => {
             .trigger('click')
 
         expect(wrapper.emitted('cancel')).toHaveLength(1)
+    })
+    it('exports a wide banner as a smooth, opaque jpeg', async () => {
+        const context = {
+            imageSmoothingQuality: 'low',
+            fillRect: vi.fn(),
+            drawImage: vi.fn(),
+        }
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+            context as unknown as CanvasRenderingContext2D,
+        )
+        const toBlob = vi
+            .spyOn(HTMLCanvasElement.prototype, 'toBlob')
+            .mockImplementation(function (this: HTMLCanvasElement, done) {
+                done(new Blob(['x']))
+            })
+        const wrapper = mountDialog({ aspect: 4, outputWidth: 2400 })
+        const image = wrapper.get('img').element as HTMLImageElement
+        Object.defineProperty(image, 'naturalWidth', { value: 4000 })
+        Object.defineProperty(image, 'naturalHeight', { value: 1000 })
+        await wrapper.get('img').trigger('load')
+
+        await wrapper.get('[data-testid="image-crop-save"]').trigger('click')
+        await flushPromises()
+
+        const canvas = toBlob.mock.contexts[0] as HTMLCanvasElement
+        expect([canvas.width, canvas.height]).toEqual([2400, 600])
+        expect(context.imageSmoothingQuality).toBe('high')
+        expect(context.fillRect).toHaveBeenCalled()
+        expect(toBlob.mock.calls[0]?.[1]).toBe('image/jpeg')
+        const [file] = wrapper.emitted('cropped')![0] as [File]
+        expect(file.name).toBe('a.jpg')
+        vi.restoreAllMocks()
     })
 })

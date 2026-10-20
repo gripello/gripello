@@ -6,8 +6,6 @@ import { createReport, reportAs } from '../../support/reports'
 import { mailCount, mailbox, waitForMail } from '../../support/mail'
 import { decide, openCase } from '../../support/moderation'
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 2000))
-
 test('hiding a review sends its author one statement of reasons', async ({
     adminPage,
     route,
@@ -30,8 +28,7 @@ test('hiding a review sends its author one statement of reasons', async ({
     })
     expect(`${mail.HTML}${mail.Text}`).toContain('Review')
     expect(`${mail.HTML}${mail.Text}`).toMatch(/out-of-court|dispute/i)
-    await settle()
-    expect(await mailCount(adminPage, author.email)).toBe(1)
+    await expect.poll(() => mailCount(adminPage, author.email)).toBe(1)
 })
 
 test('hiding everything of one person sends a single statement', async ({
@@ -62,8 +59,7 @@ test('hiding everything of one person sends a single statement', async ({
     await platformPage.getByTestId('moderation-decision-confirm').click()
 
     await waitForMail(platformPage, spammer.email, { subject: /hidden/i })
-    await settle()
-    expect(await mailCount(platformPage, spammer.email)).toBe(1)
+    await expect.poll(() => mailCount(platformPage, spammer.email)).toBe(1)
 })
 
 test('every reporter gets a receipt and exactly one decision', async ({
@@ -97,9 +93,8 @@ test('every reporter gets a receipt and exactly one decision', async ({
         })
         expect(`${decision.HTML}${decision.Text}`).toContain('Insulting.')
     }
-    await settle()
-    expect(await mailCount(adminPage, first)).toBe(2)
-    expect(await mailCount(adminPage, second)).toBe(2)
+    await expect.poll(() => mailCount(adminPage, first)).toBe(2)
+    await expect.poll(() => mailCount(adminPage, second)).toBe(2)
 })
 
 test('a lifetime suspension is announced as permanent', async ({
@@ -140,8 +135,10 @@ test('authors get the statement in their own language', async ({
     await openCase(adminPage, text)
     await decide(adminPage, 'hide', 'Beleidigend.')
 
-    await waitForMail(adminPage, author.email, {
+    const statement = await waitForMail(adminPage, author.email, {
         subject: /ausgeblendet/i,
         bodyIncludes: 'Beleidigend.',
     })
+    expect(statement.Subject).toMatch(/ausgeblendet/i)
+    expect(`${statement.HTML}${statement.Text}`).not.toMatch(/has been hidden/i)
 })

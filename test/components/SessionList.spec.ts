@@ -1,5 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import SessionList from '~/components/account/SessionList.vue'
+import LayoutListGroup from '~/components/layout/ListGroup.vue'
+import LayoutListRow from '~/components/layout/ListRow.vue'
 
 const token = `x.${btoa(JSON.stringify({ sid: 'here' }))}.y`
 const getFullList = vi.fn()
@@ -23,8 +25,8 @@ const session = (id: string, userAgent: string, lastSeen: string) => ({
 function mountList() {
     return mount(SessionList, {
         global: {
+            components: { LayoutListGroup, LayoutListRow },
             stubs: {
-                UPageCard: { template: '<div><slot /></div>' },
                 UIcon: true,
                 UBadge: {
                     props: ['label'],
@@ -53,12 +55,12 @@ describe('SessionList', () => {
                 session(
                     'other',
                     'Mozilla/5.0 (iPhone) Safari/604.1',
-                    '2026-10-08 10:00:00Z',
+                    '2026-10-08T10:00:00Z',
                 ),
                 session(
                     'here',
                     'Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0',
-                    '2026-10-07 10:00:00Z',
+                    '2026-10-07T10:00:00Z',
                 ),
             ])
         remove.mockReset().mockResolvedValue(true)

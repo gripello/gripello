@@ -189,16 +189,14 @@
             :title="t('users.delete')"
             :message="
                 t('platform.users.deleteConfirm', {
-                    name: deletingUser ? userDisplayName(deletingUser) : '',
+                    name: displayName(deletingUser),
                 })
             "
             :loading="removing"
             @confirm="deleteUser"
         >
-            <UserPasswordField
+            <UserReauthField
                 v-model="adminPassword"
-                :label="t('platform.users.adminPassword')"
-                icon="i-lucide-shield-check"
                 class="mt-3"
                 data-testid="platform-delete-admin-password"
             />
@@ -207,23 +205,20 @@
 </template>
 
 <script setup lang="ts">
-import { reauthenticate } from '~/api/account'
+import { useTimeoutFn } from '@vueuse/core'
 import { listGyms } from '~/api/gyms'
 import { listRoles } from '~/api/members'
 import { deletePlatformUser, listPlatformUsers } from '~/api/platform'
-import { fileUrl } from '~/api/client'
-import { nameInitials } from '~/utils/avatar'
+import { avatarUrl, displayName, nameInitials } from '~/utils/avatar'
 import { formatDate } from '#shared/utils/formatting'
 import {
     isPermanentlySuspended,
     isSuspended,
     membershipChips,
-    userDisplayName,
     userKeptThroughReload,
     type PlatformUser,
     type PlatformUserFilter,
 } from '~/utils/platformUsers'
-import { isWrongPassword } from '~/utils/reauth'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
@@ -288,28 +283,25 @@ await prefetch('platform-users')
 
 const rows = computed(() =>
     users.value.map((user) => {
-        const displayName = userDisplayName(user) || '?'
+        const userName = displayName(user, '?')
         return {
             ...user,
             chips: membershipChips(user, gyms.value, roles.value),
             identity: {
                 user: user.id,
-                displayName,
+                displayName: userName,
                 email: user.email ?? '',
-                initials: nameInitials(displayName),
-                avatarUrl:
-                    fileUrl('users', user, user.avatar, { thumb: '100x100' }) ||
-                    null,
+                initials: nameInitials(userName),
+                avatarUrl: avatarUrl(user) || null,
             },
         }
     }),
 )
 
-let searchDebounce: ReturnType<typeof setTimeout> | undefined
-watch(search, () => {
-    clearTimeout(searchDebounce)
-    searchDebounce = setTimeout(() => void reloadUsers(), 300)
+const { start: reloadUsersSoon } = useTimeoutFn(() => void reloadUsers(), 300, {
+    immediate: false,
 })
+watch(search, () => reloadUsersSoon())
 watch(kind, () => reloadUsers())
 
 function reloadAll() {
@@ -361,11 +353,14 @@ const deletingUser = computed(
     () => users.value.find((user) => user.id === deletingId.value) ?? null,
 )
 const deleteOpen = ref(false)
-const adminPassword = ref('')
+const {
+    password: adminPassword,
+    confirm: reauthenticate,
+    errorText: reauthError,
+} = useReauth(deleteOpen)
 
 function openDelete(id: string) {
     deletingId.value = id
-    adminPassword.value = ''
     deleteOpen.value = true
 }
 const { pending: removing, run: runRemove } = useAsyncAction()
@@ -375,7 +370,7 @@ async function deleteUser() {
     if (!id) return
     await runRemove(
         async () => {
-            await reauthenticate(adminPassword.value)
+            await reauthenticate()
             await deletePlatformUser(id)
             users.value = users.value.filter((user) => user.id !== id)
             deleteOpen.value = false
@@ -383,13 +378,11 @@ async function deleteUser() {
         },
         {
             success: t('users.deleteSuccess'),
-            error: (error) => {
-                if (isWrongPassword(error))
-                    return t('platform.users.adminPasswordWrong')
-                return (error as { status?: number })?.status === 400
+            error: reauthError((error) =>
+                (error as { status?: number })?.status === 400
                     ? t('platform.users.lastAdmin')
-                    : t('users.deleteError')
-            },
+                    : t('users.deleteError'),
+            ),
         },
     )
 }

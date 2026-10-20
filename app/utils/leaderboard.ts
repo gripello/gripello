@@ -54,14 +54,12 @@ export function gradePyramid(grades: LeaderboardGrade[]): PyramidRow[] {
     }))
 }
 
-const seasonDay = (value: string) => value.slice(0, 10)
-
 export function seasonState(
     season: Pick<SeasonRecord, 'starts_at' | 'ends_at'>,
     today: string,
 ): 'upcoming' | 'running' | 'over' {
-    if (today < seasonDay(season.starts_at)) return 'upcoming'
-    if (today > seasonDay(season.ends_at)) return 'over'
+    if (today < season.starts_at) return 'upcoming'
+    if (today > season.ends_at) return 'over'
     return 'running'
 }
 
@@ -91,9 +89,6 @@ export function keepSelectableSeason(
         ? selected
         : defaultSeason(seasons, today)
 }
-
-export const leaderboardTopic = (gymId: string) =>
-    gymId ? `leaderboard:${gymId}` : null
 
 // many screens watch one board: spread their refetches
 export const LEADERBOARD_REFRESH_MS = 2000

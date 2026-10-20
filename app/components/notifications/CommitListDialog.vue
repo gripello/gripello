@@ -121,12 +121,12 @@ const parsedCommits = computed(() =>
 
 .commit-date {
     font-size: 12px;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 55%, transparent);
+    color: var(--ui-text-muted);
 }
 
 .commit-message {
     font-size: 13px;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 85%, transparent);
+    color: var(--ui-text-toned);
     word-break: break-word;
 }
 </style>

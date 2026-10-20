@@ -1,8 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import ExportOptionsDialog from '~/components/ExportOptionsDialog.vue'
+import ExportOptionsDialog from '~/components/export/OptionsDialog.vue'
+import { dialogShellStub } from '../__stubs__/dialogShell'
 
 const slotStub = { template: '<div><slot /></div>' }
-const dialogStub = { template: '<div><slot /><slot name="actions" /></div>' }
+const dialogStub = dialogShellStub
 const buttonStub = {
     props: ['disabled', 'icon'],
     template:

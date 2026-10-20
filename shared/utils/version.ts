@@ -6,7 +6,34 @@ export interface InstalledVersion {
 }
 
 const DESCRIBE = /^(\d+\.\d+\.\d+)-(\d+)-g([0-9a-f]{7,40})$/i
-const TRIPLE = /^(\d+)\.(\d+)\.(\d+)$/
+export interface Semver {
+    major: number
+    minor: number
+    patch: number
+}
+
+export function parseSemver(
+    value: unknown,
+    { exact = false } = {},
+): Semver | null {
+    const match = (
+        exact ? /^v?(\d+)\.(\d+)\.(\d+)$/ : /^v?(\d+)\.(\d+)\.(\d+)/
+    ).exec(String(value ?? '').trim())
+    if (!match) return null
+    return { major: +match[1]!, minor: +match[2]!, patch: +match[3]! }
+}
+
+export function compareSemver(a: unknown, b: unknown): number | null {
+    const left = parseSemver(a, { exact: true })
+    const right = parseSemver(b, { exact: true })
+    if (!left || !right) return null
+    return (
+        Math.sign(left.major - right.major) ||
+        Math.sign(left.minor - right.minor) ||
+        Math.sign(left.patch - right.patch)
+    )
+}
+
 const SHA = /^[0-9a-f]{7,40}$/i
 
 export function parseAppVersion(raw: unknown): InstalledVersion {
@@ -23,7 +50,7 @@ export function parseAppVersion(raw: unknown): InstalledVersion {
             sha: describe[3]!,
         }
 
-    if (TRIPLE.test(value))
+    if (parseSemver(value, { exact: true }))
         return { raw: value, base: value, ahead: 0, sha: null }
 
     if (SHA.test(value)) return { raw: value, base: null, ahead: 0, sha: value }

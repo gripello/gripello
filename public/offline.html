@@ -66,6 +66,33 @@
             </button>
         </main>
         <script>
+            const unreachable = {
+                en: [
+                    "Can't reach Gripello",
+                    "The server isn't responding right now. The page reloads as soon as it's back.",
+                    'Retry',
+                ],
+                de: [
+                    'Gripello ist nicht erreichbar',
+                    'Der Server antwortet gerade nicht. Die Seite lädt neu, sobald er wieder da ist.',
+                    'Erneut versuchen',
+                ],
+                nl: [
+                    'Gripello is niet bereikbaar',
+                    'De server reageert nu niet. De pagina laadt opnieuw zodra hij terug is.',
+                    'Opnieuw proberen',
+                ],
+                fr: [
+                    'Gripello est injoignable',
+                    'Le serveur ne répond pas pour le moment. La page se recharge dès son retour.',
+                    'Réessayer',
+                ],
+                es: [
+                    'No se puede conectar con Gripello',
+                    'El servidor no responde ahora mismo. La página se recargará en cuanto vuelva.',
+                    'Reintentar',
+                ],
+            }
             const translations = {
                 de: [
                     'Du bist offline',
@@ -88,13 +115,17 @@
                     'Reintentar',
                 ],
             }
-            const language = navigator.language.slice(0, 2)
-            const texts = translations[language]
-            if (texts) {
+            const texts = navigator.onLine ? unreachable : translations
+            const preferred = navigator.language.slice(0, 2)
+            const language = texts[preferred] ? preferred : texts.en && 'en'
+            if (language) {
                 document.documentElement.lang = language
-                document.getElementById('offline-title').textContent = texts[0]
-                document.getElementById('offline-text').textContent = texts[1]
-                document.getElementById('offline-retry').textContent = texts[2]
+                document.getElementById('offline-title').textContent =
+                    texts[language][0]
+                document.getElementById('offline-text').textContent =
+                    texts[language][1]
+                document.getElementById('offline-retry').textContent =
+                    texts[language][2]
             }
 
             const healthy = () =>

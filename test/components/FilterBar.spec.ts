@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import FilterBar from '~/components/FilterBar.vue'
+import FilterBar from '~/components/filter/Bar.vue'
 
 const sheetStub = {
     props: ['modelValue', 'title'],
@@ -46,6 +46,14 @@ describe('FilterBar sheet', () => {
         expect(
             wrapper.find('[data-testid="filter-sheet-clear"]').exists(),
         ).toBe(false)
+    })
+
+    it('gives the icon-only sheet button the full touch target', () => {
+        const wrapper = createWrapper(0)
+
+        expect(
+            wrapper.get('[data-testid="filter-open-sheet"]').classes(),
+        ).toContain('icon-btn')
     })
 
     it('clears from the sheet footer when filters are active', async () => {

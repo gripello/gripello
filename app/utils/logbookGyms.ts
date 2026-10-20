@@ -1,10 +1,8 @@
-import type { GymRecord, RouteRecord, TickRecord } from '~/types/models'
+import type { TickRecord } from '~/types/models'
 
 export const ALL_GYMS = 'all'
 
-type GymTick = TickRecord & {
-    expand?: { route?: RouteRecord & { expand?: { gym?: GymRecord } } }
-}
+type GymTick = Pick<TickRecord, 'expand'>
 
 export function gymsInTicks(ticks: GymTick[]) {
     const gyms = new Map<string, string>()

@@ -1,5 +1,5 @@
-import type { ExportOptions } from '~/components/ExportOptionsDialog.vue'
-import { ROUTE_TYPES } from '~/utils/routes'
+import { ROUTE_TYPES } from '#shared/utils/routeTypes'
+import type { ExportOptions } from '~/components/export/OptionsDialog.vue'
 import { saveBlob } from '~/utils/download'
 
 type ExportFormat = 'pdf' | 'xlsx' | 'json'

@@ -1,3 +1,8 @@
+import {
+    gymChangesTopic,
+    gymDefectsTopic,
+    liveTopics,
+} from '#shared/utils/topics'
 import { listRoutes } from '~/api/routes'
 import { routeMatchesQuery } from '~/utils/routeSearch'
 import {
@@ -12,7 +17,6 @@ import type {
     OpenRouteDefectRecord,
     RatingRecord,
     RouteRecord,
-    RouteScoreRecord,
     SeasonRecord,
     SettingsRecord,
     TickRecord,
@@ -26,9 +30,6 @@ import {
     coalesce,
     defectsScope,
     detailRouteId,
-    gymChangesTopic,
-    gymDefectsTopic,
-    liveTopics,
     servedStaleFromSsrCache,
     showsClimber,
     splitFollowRefresh,
@@ -106,9 +107,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
 
     type RouteRowsPatch = (
-        rows: RouteScoreRecord[],
+        rows: RouteRecord[],
         inScope: (route: RouteRecord) => boolean | null,
-    ) => RouteScoreRecord[]
+    ) => RouteRecord[]
 
     function patchRouteRows(
         patch: RouteRowsPatch,
@@ -123,9 +124,7 @@ export default defineNuxtPlugin((nuxtApp) => {
                 keyQueries.value,
             )
             if (!inScope) continue
-            const data = read<RowsData<RouteScoreRecord> | null | undefined>(
-                key,
-            )
+            const data = read<RowsData<RouteRecord> | null | undefined>(key)
             if (!data) continue
             const next = mapRows(data, (rows) => patch(rows, inScope))
             if (next !== data) write(key, next)
@@ -162,7 +161,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         return loadedKeys().some(
             (key) =>
                 !!routeRowsScope(key, keyLocations.value) &&
-                rowsOf(read<RowsData<RouteScoreRecord>>(key)).some(
+                rowsOf(read<RowsData<RouteRecord>>(key)).some(
                     (row) => row.id === routeId,
                 ),
         )
@@ -182,7 +181,7 @@ export default defineNuxtPlugin((nuxtApp) => {
             patchRouteRows((rows) =>
                 patchList(
                     rows,
-                    { id, average_rating, ratings_count } as RouteScoreRecord,
+                    { id, average_rating, ratings_count } as RouteRecord,
                     null,
                 ),
             )
@@ -293,9 +292,9 @@ export default defineNuxtPlugin((nuxtApp) => {
         if (action === 'delete' || !query) return action === 'create'
         return (
             routeMatchesQuery(record, query) &&
-            !rowsOf(
-                read<RowsData<RouteScoreRecord>>(cacheKeys.routesList),
-            ).some((row) => row.id === record.id)
+            !rowsOf(read<RowsData<RouteRecord>>(cacheKeys.routesList)).some(
+                (row) => row.id === record.id,
+            )
         )
     }
 
@@ -320,7 +319,7 @@ export default defineNuxtPlugin((nuxtApp) => {
             routesListNeedsRow(record, action)
         patchRouteRows((rows, inScope) =>
             relinkRow(
-                patchList<RouteScoreRecord>(
+                patchList<RouteRecord>(
                     rows,
                     record,
                     removed ? false : inScope(record),
@@ -439,6 +438,11 @@ export default defineNuxtPlugin((nuxtApp) => {
         if (record.user !== authStore.record?.id) return
         refreshOwnTicksSoon()
         refreshOwnAchievementsSoon()
+        if (
+            record.route &&
+            loadedKeys().includes(cacheKeys.route(record.route))
+        )
+            refreshRouteDetailSoon(record.route)
     }
 
     function onOwnNotification({

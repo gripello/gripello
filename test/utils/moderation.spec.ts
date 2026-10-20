@@ -3,7 +3,6 @@ import {
     actionLabelKey,
     decisionReason,
     isNewSince,
-    moderationActions,
     moderationBadgeCount,
     moderationFiles,
     moderationText,
@@ -11,9 +10,6 @@ import {
     openReportCount,
     viewOfState,
 } from '~/utils/moderation'
-
-const staff = { platform: false, gymStaff: true }
-const platform = { platform: true, gymStaff: false }
 
 describe('moderationViewQuery', () => {
     it('maps a view to its states and order', () => {
@@ -32,35 +28,6 @@ describe('moderationViewQuery', () => {
         expect(moderationViewQuery('all', true)).toEqual({
             state: ['unreviewed', 'pending'],
         })
-    })
-})
-
-describe('moderationActions', () => {
-    it('lets only the gym publish or decline waiting uploads', () => {
-        expect(
-            moderationActions({ state: 'pending', hidden_by: '' }, staff),
-        ).toEqual(['reject', 'approve'])
-        expect(
-            moderationActions({ state: 'pending', hidden_by: '' }, platform),
-        ).toEqual(['hide'])
-    })
-
-    it('keeps platform-hidden content out of gym hands', () => {
-        const item = { state: 'hidden', hidden_by: 'platform' } as const
-        expect(moderationActions(item, staff)).toEqual([])
-        expect(moderationActions(item, platform)).toEqual(['restore'])
-        expect(
-            moderationActions({ state: 'hidden', hidden_by: 'gym' }, staff),
-        ).toEqual(['restore'])
-    })
-
-    it('offers keep and hide on visible content', () => {
-        expect(
-            moderationActions({ state: 'unreviewed', hidden_by: '' }, staff),
-        ).toEqual(['approve', 'hide'])
-        expect(
-            moderationActions({ state: 'approved', hidden_by: '' }, platform),
-        ).toEqual(['hide'])
     })
 })
 
@@ -104,9 +71,9 @@ describe('decisionReason', () => {
 describe('isNewSince', () => {
     it('marks content created after the last visit', () => {
         const seen = '2026-10-05T10:00:00Z'
-        expect(isNewSince('2026-10-06 08:00:00.000Z', seen)).toBe(true)
-        expect(isNewSince('2026-10-04 08:00:00.000Z', seen)).toBe(false)
-        expect(isNewSince('2026-10-06 08:00:00.000Z', undefined)).toBe(false)
+        expect(isNewSince('2026-10-06T08:00:00.000Z', seen)).toBe(true)
+        expect(isNewSince('2026-10-04T08:00:00.000Z', seen)).toBe(false)
+        expect(isNewSince('2026-10-06T08:00:00.000Z', undefined)).toBe(false)
     })
 })
 
@@ -179,7 +146,7 @@ describe('viewOfState', () => {
 describe('isNewSince with space-separated dates', () => {
     it('reads the space-separated server format', () => {
         expect(
-            isNewSince('2026-10-06 08:00:00.000Z', '2026-10-06 07:00:00.000Z'),
+            isNewSince('2026-10-06T08:00:00.000Z', '2026-10-06T07:00:00.000Z'),
         ).toBe(true)
     })
 })

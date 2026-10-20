@@ -86,14 +86,11 @@ import {
     competitionPhase,
     competitionShareUrl,
 } from '~/utils/competitions'
-import { getCompetition } from '~/api/competitions'
 import { qrDataUrl } from '~/utils/qrDataUrl'
-import { coalesce } from '~/utils/realtimeCache'
 
 definePageMeta({ layout: false })
 
 const { t } = useI18n()
-const route = useRoute()
 const requestUrl = useRequestURL({
     xForwardedHost: true,
     xForwardedProto: true,
@@ -101,24 +98,13 @@ const requestUrl = useRequestURL({
 
 const { gym } = useGym()
 
-const competitionId = computed(() => String(route.params.id ?? ''))
 const qrUrl = ref('')
-const now = ref<Date | null>(null)
+const now = useMountedNow(1000)
 
-const { data: competition, refresh } = await useAsyncData(
-    () => `tv-competition:${competitionId.value}`,
-    () => getCompetition(competitionId.value),
-    { enabled: () => !!competitionId.value },
-)
-
-if (!competition.value || competition.value.gym !== useCurrentGymId().value)
-    throw createError({ status: 404, fatal: true })
+const { data: competition, competitionId } = await useCompetitionRecord()
+if (!competition.value) throw createError({ status: 404, fatal: true })
 
 const { data: results } = useCompetitionResults(competitionId)
-const refreshCompetitionSoon = coalesce(() => refresh(), 300)
-useCompetitionLive(competitionId, ({ kind }) => {
-    if (kind === 'competition' || kind === 'resync') refreshCompetitionSoon()
-})
 
 const phase = computed(() =>
     competition.value
@@ -147,11 +133,7 @@ function timeUntil(target: string) {
     if (!now.value) return ''
     const seconds = Math.max(
         0,
-        Math.floor(
-            (new Date(target.replace(' ', 'T')).getTime() -
-                now.value.getTime()) /
-                1000,
-        ),
+        Math.floor((new Date(target).getTime() - now.value.getTime()) / 1000),
     )
     const pad = (value: number) => String(value).padStart(2, '0')
     const days = Math.floor(seconds / 86_400)
@@ -175,10 +157,7 @@ useHead({
     ),
 })
 
-let clockTimer: ReturnType<typeof setInterval> | undefined
 onMounted(async () => {
-    now.value = new Date()
-    clockTimer = setInterval(() => (now.value = new Date()), 1000)
     qrUrl.value = await qrDataUrl(
         competitionShareUrl(
             requestUrl.origin,
@@ -187,5 +166,4 @@ onMounted(async () => {
         ),
     )
 })
-onBeforeUnmount(() => clearInterval(clockTimer))
 </script>

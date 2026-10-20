@@ -12,6 +12,7 @@ const PROVIDER_NAMES: Record<string, string> = {
     google: 'Google',
     apple: 'Apple',
     microsoft: 'Microsoft',
+    oidc: 'OpenID Connect',
 }
 
 // Brand names stay untranslated; the generic OIDC provider shows the name the platform admin gave it.

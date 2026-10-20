@@ -1,6 +1,9 @@
+import type { ROUTE_TYPES } from '#shared/utils/routeTypes'
 import { gradeIndex, type ImportedGrading } from '#shared/utils/grades'
 import { normalizeHexColor } from '#shared/utils/color'
-import { localDateYYYYMMDD } from '#shared/utils/formatting'
+import { localDateYYYYMMDD, parseDate } from '#shared/utils/formatting'
+
+type ImportedRouteType = (typeof ROUTE_TYPES)[number]
 
 export interface ImportedRating extends ImportedGrading {
     rating?: unknown
@@ -12,7 +15,7 @@ export interface ImportedRoute extends ImportedGrading {
     name?: unknown
     anchor_point?: unknown
     location?: unknown
-    type?: string | null
+    type?: ImportedRouteType | null
     comment?: unknown
     creator?: unknown
     screw_date?: string | null
@@ -222,7 +225,7 @@ function xlsxCellValue(cell: XlsxCell): unknown {
             cell.fill?.type === 'pattern' ? cell.fill.fgColor?.argb : ''
         return argb ? normalizeHexColor(argb.slice(-6)) : ''
     }
-    if (value instanceof Date) return value.toISOString()
+    if (value instanceof Date) return value.toISOString().slice(0, 19)
     if (typeof value === 'object') return cell.text ?? ''
     return value
 }
@@ -251,7 +254,7 @@ const textOf = (row: Record<string, unknown>, header: string | undefined) => {
 }
 
 export interface RouteImportContext {
-    typeByLabel: Map<string, string>
+    typeByLabel: Map<string, ImportedRouteType>
     gradeSystemFor: (type: string | null | undefined) => string
     locale: string
 }
@@ -391,8 +394,7 @@ export function parseImportDateTime(
     if (value instanceof Date) return value.toISOString()
     const raw = String(value ?? '').trim()
     if (/^\d{4}-\d{2}-\d{2}[T ]\d{1,2}:\d{2}/.test(raw)) {
-        const parsed = new Date(raw.replace(' ', 'T'))
-        return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
+        return parseDate(raw)?.toISOString() ?? null
     }
     const [datePart = '', timePart = '0:00'] = raw.split(/[ T,]+/)
     const day = parseImportDate(datePart, locale)
@@ -410,7 +412,7 @@ export function parseImportDateTime(
 }
 
 export function parseImportDate(value: unknown, locale: string): string | null {
-    if (value instanceof Date) return value.toISOString().slice(0, 10)
+    if (value instanceof Date) return localDateYYYYMMDD(value)
     const raw = String(value ?? '').trim()
     if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10)
     const match = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(raw)

@@ -13,10 +13,13 @@ import {
 import { config } from '@vue/test-utils'
 import { useVersionCheck } from '~/composables/useVersionCheck'
 import { useAuthStore } from '~/composables/authStore'
+import { useOfflineData } from '~/composables/useOfflineData'
+import { useDraft } from '~/composables/useDraft'
 import LayoutDialogShell from '~/components/layout/DialogShell.vue'
 import LayoutPageHeader from '~/components/layout/PageHeader.vue'
 import LayoutEmptyState from '~/components/layout/EmptyState.vue'
 import LayoutLoadingState from '~/components/layout/LoadingState.vue'
+import LayoutLoadError from '~/components/layout/LoadError.vue'
 
 type VitestMock = ReturnType<typeof vi.fn>
 type RuntimeConfig = { public?: Record<string, unknown> }
@@ -123,7 +126,9 @@ vi.stubGlobal('useI18n', i18nGetter)
 vi.stubGlobal('useNuxtApp', nuxtAppGetter)
 vi.stubGlobal('useState', useStateGetter)
 vi.stubGlobal('useAsyncData', useAsyncDataGetter)
+vi.stubGlobal('useOfflineData', useOfflineData)
 vi.stubGlobal('useVersionCheck', useVersionCheck)
+vi.stubGlobal('useDraft', useDraft)
 vi.stubGlobal('useId', vueUseId)
 vi.stubGlobal('shallowRef', vueShallowRef)
 vi.stubGlobal('useDisplay', () => ({
@@ -170,12 +175,7 @@ beforeEach(() => {
     delete (globalThis as Record<string, unknown>)._authStore
     globalThis.__AUTH_STORE__ = undefined
     if (typeof document !== 'undefined') {
-        for (const name of [
-            'gripello_auth',
-            'gripello_auth_session',
-            'pb_auth',
-            'pb_auth_session',
-        ])
+        for (const name of ['gripello_auth', 'gripello_auth_session'])
             document.cookie = `${name}=; Path=/; Max-Age=0`
     }
     globalThis.__NUXT_RUNTIME_CONFIG__ = undefined
@@ -195,4 +195,5 @@ config.global.components = {
     LayoutPageHeader,
     LayoutEmptyState,
     LayoutLoadingState,
+    LayoutLoadError,
 }

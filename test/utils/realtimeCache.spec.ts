@@ -1,3 +1,8 @@
+import {
+    gymChangesTopic,
+    gymDefectsTopic,
+    liveTopics,
+} from '#shared/utils/topics'
 import { describe, it, expect, vi } from 'vitest'
 import {
     applyRatingChange,
@@ -25,22 +30,14 @@ import {
     type RatingLedger,
     patchExpanded,
     relinkRow,
-    gymChangesTopic,
-    gymDefectsTopic,
-    liveTopics,
 } from '~/utils/realtimeCache'
-import type {
-    RatingRecord,
-    RouteRecord,
-    RouteScoreRecord,
-    WallRecord,
-} from '~/types/models'
+import type { RatingRecord, RouteRecord, WallRecord } from '~/types/models'
 
 const route = (
     id: string,
     average_rating: number | null,
     ratings_count: number,
-) => ({ id, average_rating, ratings_count }) as RouteScoreRecord
+) => ({ id, average_rating, ratings_count }) as RouteRecord
 
 const rating = (id: string, route_id: string, stars: number) =>
     ({ id, route_id, rating: stars }) as RatingRecord

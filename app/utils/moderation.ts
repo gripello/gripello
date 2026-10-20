@@ -40,29 +40,6 @@ export function moderationViewQuery(view: ModerationView, platform = false) {
     }
 }
 
-// Mirrors allowed in backend/internal/moderation/service.go.
-export function moderationActions(
-    item: Pick<ModerationItemRecord, 'state' | 'hidden_by'>,
-    who: { platform: boolean; gymStaff: boolean },
-): ModerationAction[] {
-    switch (item.state) {
-        case 'pending':
-            return [
-                ...(who.gymStaff ? (['reject', 'approve'] as const) : []),
-                ...(!who.gymStaff && who.platform ? (['hide'] as const) : []),
-            ]
-        case 'unreviewed':
-            return ['approve', 'hide']
-        case 'approved':
-            return ['hide']
-        case 'hidden':
-            return item.hidden_by !== 'platform' || who.platform
-                ? ['restore']
-                : []
-    }
-    return []
-}
-
 export function actionLabelKey(
     item: Pick<ModerationItemRecord, 'state'>,
     action: ModerationAction,

@@ -8,7 +8,6 @@ import {
     oauthProviderForm,
     oauthProviderPayload,
     oauthProviderStatus,
-    reloadedForm,
 } from '~/utils/oauthSettings'
 
 describe('oauth2 helpers', () => {
@@ -19,6 +18,7 @@ describe('oauth2 helpers', () => {
         expect(
             oauth2ProviderName({ name: 'oidc', displayName: 'Club login' }),
         ).toBe('Club login')
+        expect(oauth2ProviderName({ name: 'oidc' })).toBe('OpenID Connect')
         expect(oauth2ProviderIcon('microsoft')).toBe('i-simple-icons-microsoft')
         expect(oauth2ProviderIcon('oidc')).toBe('i-lucide-log-in')
     })
@@ -101,31 +101,5 @@ describe('oauth provider status', () => {
                 client_secret_set: true,
             }),
         ).toBe('missing')
-    })
-})
-
-describe('reloadedForm', () => {
-    const item = {
-        provider: 'google' as const,
-        enabled: false,
-        client_id: 'old',
-        client_secret_set: false,
-        display_name: '',
-        issuer_url: '',
-        tenant: '',
-        team_id: '',
-        key_id: '',
-        private_key_set: false,
-        redirect_uri: '',
-    }
-
-    it('keeps unsaved edits and refreshes untouched forms', () => {
-        const fresh = { ...item, client_id: 'new' }
-        const edited = { ...oauthProviderForm(item), client_id: 'typing' }
-        expect(reloadedForm(edited, item, fresh).client_id).toBe('typing')
-        expect(
-            reloadedForm(oauthProviderForm(item), item, fresh).client_id,
-        ).toBe('new')
-        expect(reloadedForm(undefined, undefined, fresh).client_id).toBe('new')
     })
 })

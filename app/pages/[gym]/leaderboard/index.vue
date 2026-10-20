@@ -41,24 +41,7 @@
             </template>
         </LayoutPageHeader>
 
-        <LayoutEmptyState
-            v-if="error"
-            variant="error"
-            :title="t('errors.loadFailed')"
-            data-testid="load-error"
-        >
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-refresh-cw"
-                    data-testid="load-error-retry"
-                    @click="refresh()"
-                >
-                    {{ t('errors.retry') }}
-                </UButton>
-            </template>
-        </LayoutEmptyState>
+        <LayoutLoadError v-if="error" @retry="refresh()" />
 
         <template v-else>
             <p
@@ -136,6 +119,8 @@
 </template>
 
 <script setup lang="ts">
+import { translatedItems } from '~/utils/translatedItems'
+import { leaderboardTopic } from '#shared/utils/topics'
 import { getLeaderboard, listSeasons } from '~/api/ticks'
 import { localDay } from '#shared/utils/ticks'
 import { formatDate } from '#shared/utils/formatting'
@@ -146,7 +131,6 @@ import {
     ROLLING_SEASON,
     defaultSeason,
     keepSelectableSeason,
-    leaderboardTopic,
     selectableSeasons,
 } from '~/utils/leaderboard'
 import { cacheKeys } from '~/utils/realtimeCache'
@@ -160,7 +144,11 @@ const canManage = computed(() => can('manage_competitions'))
 const myId = authStore.record?.id ?? ''
 const hidden = !!authStore.record?.leaderboard_hidden
 
-useHead({ title: t('page.title.leaderboard') })
+const { gym } = useGym()
+useSeoMeta({
+    title: () => t('page.title.leaderboard'),
+    description: () => t('seo.leaderboard', { name: gym.value?.name ?? '' }),
+})
 
 const { data: seasons, refresh: refreshSeasons } = await useAsyncData(
     cacheKeys.seasons,
@@ -177,10 +165,7 @@ watch(seasons, (list) => {
     season.value = keepSelectableSeason(list, season.value, today)
 })
 const kindItems = computed(() =>
-    LEADERBOARD_KINDS.map((value) => ({
-        value,
-        label: t(`ticks.kind.${value}`),
-    })),
+    translatedItems(LEADERBOARD_KINDS, 'ticks.kind', t),
 )
 const seasonItems = computed(() => [
     { value: ROLLING_SEASON, label: t('leaderboard.rolling') },

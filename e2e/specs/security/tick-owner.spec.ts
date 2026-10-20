@@ -10,7 +10,7 @@ import {
 import { uiaa } from '../../support/seed'
 import type { TickRecord } from '../../../types/models'
 
-const DAY = '2026-09-26T12:00:00.000Z'
+const DAY = '2026-09-26'
 
 test('ticks stay private to their owner and keep the grade they were logged at', async ({
     adminApi,
@@ -43,7 +43,7 @@ test('ticks stay private to their owner and keep the grade they were logged at',
         createTick(ownerApi, {
             route: route.id,
             type: 'top',
-            date: '2099-01-01T12:00:00.000Z',
+            date: '2099-01-01',
         }),
     ).rejects.toMatchObject({ status: 400 })
 

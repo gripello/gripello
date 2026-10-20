@@ -39,5 +39,6 @@ const auditRetentionDays = computed(
 useSeoMeta({
     title: () => t('legal.privacy'),
     ogTitle: () => t('legal.privacy'),
+    description: () => t('seo.privacy', { name: 'Gripello' }),
 })
 </script>

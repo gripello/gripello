@@ -32,19 +32,14 @@ vi.stubGlobal('useCurrentGymId', () => currentGym)
 
 function membership(gym: string, role: string, permissions: string[]) {
     return {
-        gym,
-        role: `${role}-${gym}`,
-        expand: {
-            role: {
-                name: role,
-                expand: { permissions: permissions.map((name) => ({ name })) },
-            },
-        },
+        id: `m-${gym}`,
+        gym: { id: gym, slug: gym, active: true },
+        role: { id: `${role}-${gym}`, name: role, permissions },
     }
 }
 
 function userWith(...memberships: ReturnType<typeof membership>[]) {
-    return { expand: { memberships_via_user: memberships } }
+    return { memberships }
 }
 
 function memberOf(role: string, permissions: string[], gym = 'gymA') {
@@ -367,7 +362,7 @@ describe('usePermissions', () => {
         await refreshPermissions()
 
         expect(authRejected.value).toBe(false)
-        expect(verifiedUser.value?.expand).toBeUndefined()
+        expect(verifiedUser.value).not.toHaveProperty('memberships')
         consoleError.mockRestore()
     })
 

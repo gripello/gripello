@@ -1,8 +1,7 @@
 <template>
-    <UPageCard
+    <LayoutPanel
         :title="$t('settings.locations')"
-        :description="$t('settings.locationsIntro')"
-        variant="outline"
+        :subtitle="$t('settings.locationsIntro')"
         data-testid="settings-locations"
     >
         <div class="location-list">
@@ -60,7 +59,7 @@
                 {{ $t('settings.locationAdd') }}
             </UButton>
         </form>
-    </UPageCard>
+    </LayoutPanel>
 </template>
 
 <script setup lang="ts">

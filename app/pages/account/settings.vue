@@ -1,87 +1,22 @@
 <template>
-    <div
-        class="w-full px-4 pt-4"
-        :class="{ 'max-lg:pb-24': sectionChanged[activeTab] }"
-        data-testid="settings-page"
-    >
+    <div class="w-full px-4 pt-4 pb-8" data-testid="settings-page">
         <div data-testid="profile-header">
             <LayoutPageHeader :title="t('accountSettings.title')" />
-            <LayoutListGroup
-                v-if="!tabChosen"
-                class="mb-4 lg:hidden"
-                :aria-label="t('settings.sections')"
-            >
-                <LayoutListRow
-                    v-for="tab in tabs"
-                    :key="tab.value"
-                    :to="{ query: { tab: tab.value } }"
-                    :data-testid="`profile-drill-${tab.value}`"
-                >
-                    <UIcon :name="tab.icon" class="size-5 text-muted" />
-                    <span class="flex-1 text-highlighted">{{ tab.label }}</span>
-                    <UChip
-                        v-if="tab.value === 'security' && showSecurityWarning"
-                        color="warning"
-                        size="sm"
-                        standalone
-                        inset
-                    />
-                    <UIcon
-                        name="i-lucide-chevron-right"
-                        class="size-5 text-dimmed"
-                    />
-                </LayoutListRow>
-            </LayoutListGroup>
-            <UButton
-                v-else
-                :to="{ query: {} }"
-                icon="i-lucide-arrow-left"
-                color="neutral"
-                variant="ghost"
-                class="mb-2 -ml-2 min-h-11 lg:hidden"
-                data-testid="profile-drill-back"
-            >
-                {{ t(`account.tabs.${activeTab}`) }}
-            </UButton>
-            <div ref="tabNav" class="mb-4 max-lg:hidden">
-                <LayoutTabs
-                    v-model="selectedTab"
-                    :items="tabs"
-                    :content="false"
-                >
-                    <template #default="{ item }">
-                        <UChip
-                            :show="
-                                item.value === 'security' && showSecurityWarning
-                            "
-                            color="warning"
-                            size="sm"
-                        >
-                            <span :data-testid="`profile-tab-${item.value}`">
-                                {{ item.label }}
-                            </span>
-                        </UChip>
-                    </template>
-                </LayoutTabs>
-            </div>
         </div>
-
-        <div
-            class="flex flex-col gap-4 sm:gap-6 pb-8"
-            :class="{ 'max-lg:hidden': !tabChosen }"
+        <SettingsLayout
+            :sections="sections"
+            query-key="tab"
+            drill-down
+            desktop-tabs
+            test-id-prefix="profile"
+            :has-changes="sectionChanged[activeTab]"
+            :unsaved-changes="hasChanges"
+            :saving="saving"
+            :save-disabled="!canSave(activeTab) || saving"
+            @save="saveUser(activeTab)"
+            @cancel="resetSection(activeTab)"
         >
-            <LayoutSaveBar
-                :show="sectionChanged[activeTab]"
-                :loading="saving"
-                :disabled="!canSave(activeTab) || saving"
-                test-id-prefix="profile"
-                class="lg:-mb-6"
-                cancelable
-                @save="saveUser(activeTab)"
-                @cancel="resetSection(activeTab)"
-            />
-
-            <UPageCard v-if="activeTab === 'profile'" variant="outline">
+            <LayoutPanel v-if="activeTab === 'profile'">
                 <UForm
                     ref="profileForm"
                     :state="user"
@@ -147,73 +82,73 @@
                         />
                     </UFormField>
                 </UForm>
-            </UPageCard>
+            </LayoutPanel>
 
-            <UPageCard
-                v-else-if="activeTab === 'preferences'"
-                variant="outline"
-                :ui="{ container: 'lg:grid-cols-2 gap-y-5' }"
-            >
-                <UFormField :label="t('accountSettings.language')">
-                    <UPopover :content="{ align: 'start', sideOffset: 4 }">
-                        <UButton
-                            color="neutral"
-                            variant="outline"
-                            icon="i-lucide-languages"
-                            trailing-icon="i-lucide-chevron-down"
-                            size="lg"
-                            block
-                            :ui="{ trailingIcon: 'ms-auto text-dimmed' }"
-                            class="justify-start"
-                            data-testid="profile-language"
-                        >
-                            {{ currentLocale.name }}
-                        </UButton>
-
-                        <template #content="{ close }">
-                            <div
-                                class="flex min-w-[170px] flex-col gap-0.5 p-1"
+            <LayoutPanel v-else-if="activeTab === 'preferences'">
+                <div class="grid gap-5 lg:grid-cols-2">
+                    <UFormField :label="t('accountSettings.language')">
+                        <UPopover :content="{ align: 'start', sideOffset: 4 }">
+                            <UButton
+                                color="neutral"
+                                variant="outline"
+                                icon="i-lucide-languages"
+                                trailing-icon="i-lucide-chevron-down"
+                                size="lg"
+                                block
+                                :ui="{ trailingIcon: 'ms-auto text-dimmed' }"
+                                class="justify-start"
+                                data-testid="profile-language"
                             >
-                                <button
-                                    v-for="loc in SUPPORTED_LOCALES"
-                                    :key="loc.code"
-                                    type="button"
-                                    class="flex items-center rounded-lg px-2.5 py-1.5 text-sm text-start hover:bg-elevated"
-                                    :class="{
-                                        'bg-primary/10 text-primary':
-                                            user.language === loc.code,
-                                    }"
-                                    :aria-pressed="user.language === loc.code"
-                                    :data-testid="`profile-language-${loc.code}`"
-                                    @click="selectLanguage(loc.code, close)"
+                                {{ currentLocale.name }}
+                            </UButton>
+
+                            <template #content="{ close }">
+                                <div
+                                    class="flex min-w-[170px] flex-col gap-0.5 p-1"
                                 >
-                                    <span class="locale-code mr-3">{{
-                                        loc.code.toUpperCase()
-                                    }}</span>
-                                    {{ loc.name }}
-                                </button>
-                            </div>
-                        </template>
-                    </UPopover>
-                </UFormField>
-                <UFormField :label="t('accountSettings.theme')">
-                    <USelect
-                        :model-value="themeMode"
-                        :items="themeOptions"
-                        :icon="themeIcon"
-                        class="w-full"
-                        data-testid="profile-theme"
-                        @update:model-value="setThemeMode($event)"
-                    />
-                </UFormField>
-            </UPageCard>
+                                    <button
+                                        v-for="loc in SUPPORTED_LOCALES"
+                                        :key="loc.code"
+                                        type="button"
+                                        class="flex items-center rounded-lg px-2.5 py-1.5 text-sm text-start hover:bg-elevated"
+                                        :class="{
+                                            'bg-primary/10 text-primary':
+                                                user.language === loc.code,
+                                        }"
+                                        :aria-pressed="
+                                            user.language === loc.code
+                                        "
+                                        :data-testid="`profile-language-${loc.code}`"
+                                        @click="selectLanguage(loc.code, close)"
+                                    >
+                                        <span class="locale-code mr-3">{{
+                                            loc.code.toUpperCase()
+                                        }}</span>
+                                        {{ loc.name }}
+                                    </button>
+                                </div>
+                            </template>
+                        </UPopover>
+                    </UFormField>
+                    <UFormField :label="t('accountSettings.theme')">
+                        <USelect
+                            :model-value="themeMode"
+                            :items="themeOptions"
+                            :icon="themeIcon"
+                            class="w-full"
+                            data-testid="profile-theme"
+                            @update:model-value="setThemeMode($event)"
+                        />
+                    </UFormField>
+                </div>
+            </LayoutPanel>
 
             <AccountPushSettings v-else-if="activeTab === 'notifications'" />
 
             <AccountPrivacySettings v-else-if="activeTab === 'privacy'" />
 
             <template v-else>
-                <UPageCard variant="outline" :ui="{ container: 'gap-y-4' }">
+                <LayoutPanel>
                     <UserPasswordChangeFields
                         class="lg:grid lg:grid-cols-2 lg:gap-x-6 lg:[&>*:nth-child(2)]:col-start-1"
                         v-model:old-password="user.oldPassword"
@@ -222,7 +157,7 @@
                         :require-old-password="true"
                         @validity="passwordFieldsValid = $event"
                     />
-                </UPageCard>
+                </LayoutPanel>
 
                 <AccountTwoFactorSettings ref="twoFactor" />
 
@@ -230,46 +165,56 @@
 
                 <AccountSessionList />
 
-                <UPageCard
-                    :title="t('account.exportData')"
-                    :description="t('account.exportDataHint')"
-                    variant="outline"
-                    orientation="horizontal"
-                >
-                    <UButton
-                        color="neutral"
-                        variant="soft"
-                        icon="i-lucide-download"
-                        class="w-fit lg:ms-auto"
-                        data-testid="account-export"
-                        :loading="exportPending"
-                        @click="downloadExport"
-                    >
-                        {{ t('account.exportDataDownload') }}
-                    </UButton>
-                </UPageCard>
+                <LayoutPanel :title="t('account.exportData')">
+                    <template #actions>
+                        <UButton
+                            color="neutral"
+                            variant="soft"
+                            :icon="
+                                exportRequested
+                                    ? 'i-lucide-mail-check'
+                                    : 'i-lucide-download'
+                            "
+                            class="w-fit"
+                            data-testid="account-export"
+                            :loading="exportPending"
+                            :disabled="exportRequested"
+                            @click="requestExport"
+                        >
+                            {{
+                                exportRequested
+                                    ? t('account.exportDataRequested')
+                                    : t('account.exportDataRequest')
+                            }}
+                        </UButton>
+                    </template>
+                    <p class="text-sm text-muted">
+                        {{ t('account.exportDataHint') }}
+                    </p>
+                </LayoutPanel>
 
-                <UPageCard
+                <LayoutPanel
                     :title="t('account.deleteAccount')"
-                    :description="t('account.deleteAccountHint')"
-                    variant="outline"
-                    orientation="horizontal"
-                    highlight
-                    highlight-color="error"
+                    class="ring-error/40!"
                 >
-                    <UButton
-                        color="error"
-                        variant="soft"
-                        icon="i-lucide-trash-2"
-                        class="w-fit lg:ms-auto"
-                        data-testid="profile-delete-open"
-                        @click="deleteDialog = true"
-                    >
-                        {{ t('account.deleteAccount') }}
-                    </UButton>
-                </UPageCard>
+                    <template #actions>
+                        <UButton
+                            color="error"
+                            variant="soft"
+                            icon="i-lucide-trash-2"
+                            class="w-fit"
+                            data-testid="profile-delete-open"
+                            @click="deleteDialog = true"
+                        >
+                            {{ t('account.deleteAccount') }}
+                        </UButton>
+                    </template>
+                    <p class="text-sm text-muted">
+                        {{ t('account.deleteAccountHint') }}
+                    </p>
+                </LayoutPanel>
             </template>
-        </div>
+        </SettingsLayout>
 
         <ConfirmDialog
             v-model="deleteDialog"
@@ -289,18 +234,11 @@
                 />
             </UFormField>
         </ConfirmDialog>
-
-        <ConfirmDialog
-            v-model="discardDialogOpen"
-            :title="t('account.unsavedChanges')"
-            :message="t('mapEditor.discard')"
-            :confirm-text="t('mapPlacement.discard')"
-            @confirm="settleDiscard(true)"
-        />
     </div>
 </template>
 
 <script setup lang="ts">
+import { THUMBS } from '#shared/utils/thumbs'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import { needsPasswordFirst } from '~/utils/reauth'
 import { blockedFieldError } from '~/utils/fieldErrors'
@@ -312,12 +250,14 @@ import type { UserRecord } from '~/types/models'
 import { requestEmailChange, useAuthState } from '~/api/auth'
 import { changePassword, deleteMe, updateMe } from '~/api/account'
 
-type EditableSelf = UserRecord & {
-    language: string
-    oldPassword: string
-    password: string
-    passwordConfirm: string
-}
+type EditableSelf = Partial<Omit<UserRecord, 'language' | 'avatar'>> &
+    Pick<UserRecord, 'id' | 'username' | 'firstname' | 'name' | 'email'> & {
+        avatar: string | null
+        language: string
+        oldPassword: string
+        password: string
+        passwordConfirm: string
+    }
 
 const SECTIONS = [
     'profile',
@@ -339,10 +279,13 @@ const route = useRoute()
 const activeTab = computed<Section>(
     () => SECTIONS.find((section) => section === route.query.tab) ?? 'profile',
 )
-const tabChosen = computed(() => !!route.query.tab)
 
 const auth = useAuthState()
-const { pending: exportPending, download: downloadExport } = useAccountExport()
+const {
+    pending: exportPending,
+    requested: exportRequested,
+    request: requestExport,
+} = useAccountExport()
 const authRecord = auth.currentUser<UserRecord>()
 
 const user = reactive<EditableSelf>({
@@ -387,7 +330,7 @@ const avatarPreview = ref<string | null>(null)
 
 const savedAvatarUrl = () =>
     user.avatar
-        ? fileUrl('users', user, user.avatar, { thumb: '100x100' })
+        ? fileUrl('users', user, user.avatar, { thumb: THUMBS.avatar })
         : null
 
 onMounted(() => {
@@ -400,7 +343,7 @@ const bannerPreview = ref<string | null>(null)
 
 const savedBannerUrl = () =>
     user.banner
-        ? fileUrl('users', user, user.banner, { thumb: '1600x400' })
+        ? fileUrl('users', user, user.banner, { thumb: THUMBS.banner })
         : null
 
 onMounted(() => {
@@ -460,26 +403,13 @@ const tabIcons: Record<Section, string> = {
     privacy: 'i-lucide-eye',
     security: 'i-lucide-shield-check',
 }
-const tabs = computed(() =>
+const sections = computed(() =>
     SECTIONS.map((section) => ({
+        id: section,
         label: t(`account.tabs.${section}`),
         icon: tabIcons[section],
-        value: section,
+        badge: section === 'security' && showSecurityWarning.value,
     })),
-)
-const selectedTab = computed({
-    get: () => activeTab.value,
-    set: (tab: Section) => navigateTo({ query: { tab } }),
-})
-
-const tabNav = useTemplateRef<HTMLElement>('tabNav')
-watch(
-    [activeTab, tabNav],
-    () =>
-        tabNav.value
-            ?.querySelector('[data-state="active"]')
-            ?.scrollIntoView({ block: 'nearest', inline: 'center' }),
-    { flush: 'post' },
 )
 
 const validateProfile = (state: Record<string, unknown>) =>
@@ -558,11 +488,6 @@ const canSave = (section: Section) =>
     (section !== 'security' ||
         !passwordChangeRequested.value ||
         passwordFieldsValid.value)
-
-const { discardDialogOpen, confirmDiscard, settleDiscard } = useDiscardConfirm(
-    () => hasChanges.value,
-)
-onBeforeRouteLeave(() => confirmDiscard())
 
 const { notify, error: notifyError } = useNotification()
 
@@ -715,6 +640,6 @@ async function deleteAccount() {
     font-weight: 600;
     letter-spacing: 0.04em;
     text-align: center;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 70%, transparent);
+    color: var(--ui-text-muted);
 }
 </style>

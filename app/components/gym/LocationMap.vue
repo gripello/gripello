@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import 'maplibre-gl/dist/maplibre-gl.css'
-import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import type { Map as MapLibreMap, Marker } from 'maplibre-gl'
 import { MAP_CONSENT_KEY } from '~/utils/clientStorage'
 import type { GymMapMarker } from '~/utils/gymInfo'
@@ -53,9 +52,14 @@ function consent() {
 }
 
 async function showMap() {
-    maplibre = await import('maplibre-gl')
+    const [lib, { default: workerUrl }] = await Promise.all([
+        import('maplibre-gl'),
+        import('maplibre-gl/dist/maplibre-gl-worker.mjs?url'),
+    ])
+    maplibre = lib
     // Bundling moves maplibre away from the worker file it looks for next to itself.
-    maplibre.setWorkerUrl(workerUrl)
+    // The query skips browser copies cached for a year while nginx sent .mjs as octet-stream.
+    maplibre.setWorkerUrl(`${workerUrl}?type=module`)
     await nextTick()
     if (!container.value || map) return
     map = new maplibre.Map({

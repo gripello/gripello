@@ -11,9 +11,11 @@
                 data-testid="me-profile"
             >
                 <ClimberBanner
-                    :banner="climberFileUrl(user.id, user.banner, '1600x400')"
+                    :banner="
+                        climberFileUrl(user.id, user.banner, THUMBS.banner)
+                    "
                     :avatar="avatar"
-                    :name="displayName"
+                    :name="userName"
                     :id="user.id"
                     class="aspect-[4/1] max-h-60 w-full"
                 />
@@ -21,15 +23,16 @@
                     <ClimberAvatar
                         :id="user.id"
                         :src="avatar"
-                        :name="displayName"
+                        :name="userName"
                         size="lg"
                         class="-mt-8 ring-4 ring-(--ui-bg)"
+                        data-testid="me-avatar"
                     />
                     <span class="native-row__text pb-1">
                         <span
                             class="block truncate text-lg font-semibold"
                             data-testid="me-name"
-                            >{{ displayName }}</span
+                            >{{ userName }}</span
                         >
                         <span class="native-row__subtitle">{{
                             $t('me.profileHint')
@@ -138,29 +141,22 @@
                         style="--native-tint: var(--ui-primary)"
                     >
                         <NuxtLink
-                            :to="`/${membership.expand?.gym?.slug}`"
+                            :to="`/${membership.gym.slug}`"
                             class="flex min-w-0 flex-1 items-center gap-3.5"
-                            :data-testid="`me-gym-${membership.expand?.gym?.slug}`"
+                            :data-testid="`me-gym-${membership.gym.slug}`"
                         >
                             <span class="native-row__icon">
                                 <UIcon name="i-lucide-building-2" />
                             </span>
                             <span class="native-row__text truncate">{{
-                                membership.expand?.gym
-                                    ? gymTitle(membership.expand.gym)
-                                    : ''
+                                gymTitle(membership.gym)
                             }}</span>
                             <UBadge
                                 color="neutral"
                                 variant="soft"
                                 data-testid="me-gym-role"
                             >
-                                {{
-                                    roleLabel(
-                                        membership.expand?.role?.name ?? '',
-                                        t,
-                                    )
-                                }}
+                                {{ roleLabel(membership.role.name, t) }}
                             </UBadge>
                         </NuxtLink>
                         <UDropdownMenu
@@ -180,12 +176,10 @@
                                 variant="ghost"
                                 :aria-label="
                                     t('account.leaveGym', {
-                                        gym: membership.expand?.gym
-                                            ? gymTitle(membership.expand.gym)
-                                            : '',
+                                        gym: gymTitle(membership.gym),
                                     })
                                 "
-                                :data-testid="`me-gym-leave-${membership.expand?.gym?.slug}`"
+                                :data-testid="`me-gym-leave-${membership.gym.slug}`"
                             />
                         </UDropdownMenu>
                     </div>
@@ -195,9 +189,7 @@
                 v-model="leaveDialog"
                 :title="
                     t('account.leaveGym', {
-                        gym: leaving?.expand?.gym
-                            ? gymTitle(leaving.expand.gym)
-                            : '',
+                        gym: leaving ? gymTitle(leaving.gym) : '',
                     })
                 "
                 :message="t('account.leaveGymConfirm')"
@@ -223,10 +215,12 @@
 </template>
 
 <script setup lang="ts">
-import { fileUrl } from '~/api/client'
+import { displayName, avatarUrl } from '~/utils/avatar'
+import { THUMBS } from '#shared/utils/thumbs'
 import { logout as signOut } from '~/api/auth'
+import type { OwnMembership } from '~/api/account'
 import { deleteMembership } from '~/api/members'
-import type { MembershipRecord, SettingsRecord } from '~/types/models'
+import type { SettingsRecord } from '~/types/models'
 import { gymTitle } from '~/utils/gymNames'
 import { roleLabel } from '~/utils/roles'
 import { staffSections } from '~/utils/navigation'
@@ -244,16 +238,10 @@ useSeoMeta({ title: () => t('page.title.me') })
 
 const user = useAuthRecord()
 
-const displayName = computed(
-    () =>
-        [user.value?.firstname, user.value?.name].filter(Boolean).join(' ') ||
-        user.value?.username ||
-        user.value?.email ||
-        t('account.unknownUser'),
+const userName = computed(() =>
+    displayName(user.value, t('account.unknownUser')),
 )
-const avatar = computed(() =>
-    fileUrl('users', user.value, user.value?.avatar, { thumb: '100x100' }),
-)
+const avatar = computed(() => avatarUrl(user.value))
 
 const { gym, slug } = useGym()
 const staffHub = computed(() =>
@@ -262,7 +250,7 @@ const staffHub = computed(() =>
         : null,
 )
 
-const leaving = ref<MembershipRecord | null>(null)
+const leaving = ref<OwnMembership | null>(null)
 const leaveDialog = computed({
     get: () => !!leaving.value,
     set: (open) => {

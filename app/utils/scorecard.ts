@@ -153,3 +153,21 @@ export function replaceEntryScores<T extends { entry: string }>(
     const replaced = new Set(entries)
     return [...scores.filter((score) => !replaced.has(score.entry)), ...fresh]
 }
+
+export const scoreKey = (entry: string, compRoute: string) =>
+    `${entry}:${compRoute}`
+
+export function supersededUnsavedKeys(
+    unsaved: Map<string, { base: string | undefined }>,
+    scores: { entry: string; comp_route: string; updated: string }[],
+): string[] {
+    const updatedByKey = new Map(
+        scores.map((score) => [
+            scoreKey(score.entry, score.comp_route),
+            score.updated,
+        ]),
+    )
+    return [...unsaved]
+        .filter(([key, { base }]) => updatedByKey.get(key) !== base)
+        .map(([key]) => key)
+}

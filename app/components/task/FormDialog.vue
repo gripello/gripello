@@ -6,6 +6,12 @@
         scrollable
         sheet-on-mobile
         data-testid="task-form-dialog"
+        :submit-label="$t('actions.save')"
+        submit-icon="i-lucide-check"
+        :submit-loading="pending"
+        submit-test-id="task-form-save"
+        cancel-test-id="task-form-cancel"
+        @submit="save"
     >
         <template #title>
             <div class="flex min-w-0 items-center gap-3">
@@ -43,26 +49,13 @@
             @submit.prevent
         >
             <UFormField v-if="task" :label="$t('tasks.status')">
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                    <UButton
-                        v-for="status in TASK_STATUSES"
-                        :key="status"
-                        :icon="TASK_STATUS_ICONS[status]"
-                        :color="
-                            form.status === status
-                                ? taskStatusColor(status)
-                                : 'neutral'
-                        "
-                        :variant="form.status === status ? 'soft' : 'outline'"
-                        :aria-pressed="form.status === status"
-                        size="sm"
-                        class="justify-center"
-                        :data-testid="`task-form-status-${status}`"
-                        @click="form.status = status"
-                    >
-                        {{ $t(`tasks.statuses.${status}`) }}
-                    </UButton>
-                </div>
+                <OptionGrid
+                    v-model="form.status"
+                    :items="statusItems"
+                    cols="grid-cols-2 sm:grid-cols-5"
+                    :label="$t('tasks.status')"
+                    test-id-prefix="task-form-status"
+                />
             </UFormField>
 
             <USeparator :label="$t('tasks.sections.task')" />
@@ -72,22 +65,13 @@
                 :label="$t('tasks.kind')"
                 data-testid="task-form-kind"
             >
-                <div class="grid grid-cols-3 gap-2">
-                    <UButton
-                        v-for="kind in STAFF_TASK_KINDS"
-                        :key="kind"
-                        :icon="KIND_ICONS[kind]"
-                        :color="form.kind === kind ? 'primary' : 'neutral'"
-                        :variant="form.kind === kind ? 'soft' : 'outline'"
-                        :aria-pressed="form.kind === kind"
-                        size="sm"
-                        class="justify-center"
-                        :data-testid="`task-form-kind-${kind}`"
-                        @click="form.kind = kind"
-                    >
-                        {{ $t(`tasks.kinds.${kind}`) }}
-                    </UButton>
-                </div>
+                <OptionGrid
+                    v-model="form.kind"
+                    :items="kindItems"
+                    cols="grid-cols-3"
+                    :label="$t('tasks.kind')"
+                    test-id-prefix="task-form-kind"
+                />
             </UFormField>
 
             <UFormField
@@ -103,7 +87,7 @@
                     data-testid="task-form-title"
                 />
             </UFormField>
-            <UFormField v-else :label="$t('tasks.category')">
+            <UFormField v-else :label="$t('tasks.category')" name="category">
                 <USelectMenu
                     v-model="form.category"
                     :items="categoryItems"
@@ -116,32 +100,13 @@
             </UFormField>
 
             <UFormField :label="$t('tasks.priority')">
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <UButton
-                        v-for="name in TASK_PRIORITIES"
-                        :key="name"
-                        :icon="PRIORITY_ICONS[name]"
-                        :color="
-                            form.priority === taskPriorityLevel(name)
-                                ? taskPriorityColor(taskPriorityLevel(name))
-                                : 'neutral'
-                        "
-                        :variant="
-                            form.priority === taskPriorityLevel(name)
-                                ? 'soft'
-                                : 'outline'
-                        "
-                        :aria-pressed="
-                            form.priority === taskPriorityLevel(name)
-                        "
-                        size="sm"
-                        class="justify-center"
-                        :data-testid="`task-form-priority-${name}`"
-                        @click="form.priority = taskPriorityLevel(name)"
-                    >
-                        {{ $t(`tasks.priorities.${name}`) }}
-                    </UButton>
-                </div>
+                <OptionGrid
+                    v-model="form.priority"
+                    :items="priorityItems"
+                    cols="grid-cols-2 sm:grid-cols-4"
+                    :label="$t('tasks.priority')"
+                    test-id-prefix="task-form-priority"
+                />
             </UFormField>
 
             <UFormField :label="$t('tasks.description')" name="description">
@@ -186,7 +151,7 @@
                 {{ $t('tasks.forThisRoute') }}
             </p>
             <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <UFormField :label="$t('tasks.location')">
+                <UFormField :label="$t('tasks.location')" name="location">
                     <USelect
                         v-model="form.location"
                         :items="locationItems"
@@ -195,7 +160,7 @@
                         data-testid="task-form-location"
                     />
                 </UFormField>
-                <UFormField :label="$t('tasks.wall')">
+                <UFormField :label="$t('tasks.wall')" name="wall">
                     <USelectMenu
                         v-model="form.wall"
                         :items="wallItems"
@@ -213,7 +178,7 @@
             <USeparator :label="$t('tasks.sections.assignment')" />
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <UFormField :label="$t('tasks.assignee')">
+                <UFormField :label="$t('tasks.assignee')" name="assignee">
                     <template #hint>
                         <UButton
                             v-if="
@@ -240,7 +205,7 @@
                         data-testid="task-form-assignee"
                     />
                 </UFormField>
-                <UFormField :label="$t('tasks.dueDate')">
+                <UFormField :label="$t('tasks.dueDate')" name="dueDate">
                     <UInput
                         v-model="form.dueDate"
                         type="date"
@@ -279,6 +244,10 @@
                 >
                     <img
                         :src="existingThumbUrl"
+                        :srcset="
+                            thumbSrcset(existingThumbUrl, THUMB_SETS.photo)
+                        "
+                        sizes="(min-width: 640px) 640px, 100vw"
                         :alt="$t('tasks.photo')"
                         class="max-h-56 w-full object-cover"
                         data-testid="task-form-photo-preview"
@@ -297,29 +266,17 @@
                 />
             </UFormField>
         </UForm>
-
-        <template #actions>
-            <UButton
-                color="neutral"
-                variant="ghost"
-                data-testid="task-form-cancel"
-                @click="open = false"
-                >{{ $t('actions.cancel') }}</UButton
-            >
-            <div class="flex-1" />
-            <UButton
-                color="primary"
-                icon="i-lucide-check"
-                :loading="pending"
-                data-testid="task-form-save"
-                @click="save"
-                >{{ $t('actions.save') }}</UButton
-            >
-        </template>
     </LayoutDialogShell>
 </template>
 
 <script setup lang="ts">
+import { THUMBS, THUMB_SETS, thumbSrcset } from '#shared/utils/thumbs'
+import {
+    DEFECT_CATEGORIES,
+    STAFF_TASK_KINDS,
+    TASK_PRIORITIES,
+    TASK_STATUSES,
+} from '#shared/utils/tasks'
 import { listWalls } from '~/api/routes'
 import {
     createTask,
@@ -328,15 +285,12 @@ import {
     type TaskInput,
 } from '~/api/tasks'
 import { fileUrl } from '~/api/client'
+import { formFieldErrors } from '~/utils/fieldErrors'
 import { maxLength, nonBlank, validateRules } from '~/utils/validation'
 import {
-    DEFECT_CATEGORIES,
     DEFECT_CATEGORY_ICONS,
     NORMAL_TASK_PRIORITY,
-    STAFF_TASK_KINDS,
-    TASK_PRIORITIES,
     TASK_STATUS_ICONS,
-    TASK_STATUSES,
     taskPriorityColor,
     taskPriorityLevel,
     taskStatusColor,
@@ -384,12 +338,40 @@ const open = defineModel<boolean>({ default: false })
 const authStore = useAuthStore()
 const gymId = useCurrentGymId()
 const { t, locale } = useI18n()
+
+const statusItems = computed(() =>
+    TASK_STATUSES.map((status) => ({
+        value: status,
+        label: t(`tasks.statuses.${status}`),
+        icon: TASK_STATUS_ICONS[status],
+        color: taskStatusColor(status),
+    })),
+)
+
+const kindItems = computed(() =>
+    STAFF_TASK_KINDS.map((kind) => ({
+        value: kind,
+        label: t(`tasks.kinds.${kind}`),
+        icon: KIND_ICONS[kind],
+    })),
+)
+
+const priorityItems = computed(() =>
+    TASK_PRIORITIES.map((name) => ({
+        value: taskPriorityLevel(name),
+        id: name,
+        label: t(`tasks.priorities.${name}`),
+        icon: PRIORITY_ICONS[name],
+        color: taskPriorityColor(taskPriorityLevel(name)),
+    })),
+)
 const { warning } = useNotification()
 const { pending, run } = useAsyncAction()
-const { data: locationRecords } = useLocations()
+const { data: locationRecords, items: locationItems } = useLocations()
 
 const formRef = ref<{
     validate: (opts: { silent: boolean }) => Promise<unknown>
+    setErrors: (errors: { name: string; message: string }[]) => void
 }>()
 const walls = ref<WallRecord[]>([])
 const assignees = ref<TaskAssigneeRecord[]>([])
@@ -426,12 +408,6 @@ const categoryItems = computed(() =>
         value,
         label: t(`tasks.categories.${value}`),
         icon: DEFECT_CATEGORY_ICONS[value],
-    })),
-)
-const locationItems = computed(() =>
-    locationRecords.value.map((location) => ({
-        value: location.id,
-        label: location.name,
     })),
 )
 const wallItems = computed(() =>
@@ -496,7 +472,7 @@ const existingThumbUrl = computed(() =>
     fileToken.value
         ? fileUrl('tasks', props.task, props.task?.photo, {
               token: fileToken.value,
-              thumb: '400x0',
+              thumb: THUMBS.photo,
           })
         : '',
 )
@@ -521,7 +497,7 @@ watch(open, async (isOpen) => {
         location: task?.location || locationRecords.value[0]?.id || '',
         wall: task?.wall || undefined,
         assignee: task?.assignee || undefined,
-        dueDate: task?.due_date?.slice(0, 10) ?? '',
+        dueDate: task?.due_date ?? '',
         description: task?.description ?? '',
         resolutionNote: task?.resolution_note ?? '',
     })
@@ -557,8 +533,31 @@ function buildInput(): TaskInput {
     }
 }
 
+const API_FORM_FIELDS: Record<string, string> = {
+    title: 'title',
+    category: 'category',
+    description: 'description',
+    location: 'location',
+    wall: 'wall',
+    assignee: 'assignee',
+    due_date: 'dueDate',
+    resolution_note: 'resolutionNote',
+}
+
+function showFieldErrors(error: unknown) {
+    const errors = formFieldErrors(error, Object.keys(API_FORM_FIELDS), t).map(
+        ({ name, message }) => ({ name: API_FORM_FIELDS[name]!, message }),
+    )
+    if (errors.length) formRef.value?.setErrors(errors)
+    return errors.length > 0
+}
+
 async function save() {
-    if ((await formRef.value?.validate({ silent: true })) === false) return
+    if (pending.value) return
+    pending.value = true
+    const valid = (await formRef.value?.validate({ silent: true })) !== false
+    pending.value = false
+    if (!valid) return
     if (photo.value && photo.value.size > MAX_PHOTO_BYTES) {
         warning(t('tasks.photoTooLarge'))
         return
@@ -575,7 +574,7 @@ async function save() {
             emit('saved', saved)
             open.value = false
         },
-        { success: t('tasks.saved') },
+        { success: t('tasks.saved'), handled: showFieldErrors },
     )
 }
 </script>

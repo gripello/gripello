@@ -1,6 +1,6 @@
 <template>
     <div>
-        <AnalyticsBaseEchart
+        <ChartEchart
             :option="option"
             :height="320"
             testid="analytics-chart-grade-feedback"

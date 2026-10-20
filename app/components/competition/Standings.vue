@@ -73,11 +73,11 @@
                         class="shrink-0 text-right font-semibold tabular-nums text-highlighted"
                         :data-testid="`standing-points-${row.bib}`"
                     >
-                        {{ formatScore(row) }}
+                        {{ formatStandingPoints(row, locale) }}
                     </span>
                 </li>
             </ol>
-            <p class="text-xs text-dimmed">
+            <p class="text-xs text-muted">
                 {{
                     results.visibility === 'final'
                         ? $t('competitions.standings.final')
@@ -91,11 +91,9 @@
 </template>
 
 <script setup lang="ts">
-import type {
-    CompetitionResults,
-    StandingRow,
-} from '#shared/utils/competitionResults'
+import type { CompetitionResults } from '#shared/utils/competitionResults'
 import { MEDALS, PODIUM_ROWS, podiumRank } from '~/utils/themeColors'
+import { formatStandingPoints } from '~/utils/competitions'
 
 const props = defineProps<{
     results: CompetitionResults | null | undefined
@@ -139,11 +137,4 @@ const updatedTime = computed(() =>
           )
         : '',
 )
-
-function formatScore(row: StandingRow) {
-    const lead = row.rankPoints !== undefined
-    return new Intl.NumberFormat(locale.value, {
-        maximumFractionDigits: lead ? 3 : 2,
-    }).format(lead ? row.rankPoints! : row.points)
-}
 </script>

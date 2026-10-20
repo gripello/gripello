@@ -10,8 +10,8 @@ const route = (gym: string) => ({
 })
 const tick = {
     id: 't1',
-    date: '2026-10-03 12:00:00.000Z',
-    created: '2026-10-03 18:00:00.000Z',
+    date: '2026-10-03',
+    created: '2026-10-03T18:00:00.000Z',
     type: 'flash' as const,
     route: 'r1',
     expand: { route: { name: 'Crimp', gym: 'g1' } },
@@ -60,7 +60,7 @@ describe('timelineDays', () => {
     it('groups timestamps with a space separator', () => {
         const days = timelineDays(
             [],
-            [{ ...review, created: '2026-10-03 19:00:00.000Z' }],
+            [{ ...review, created: '2026-10-03T19:00:00.000Z' }],
             [],
             'all',
         )
@@ -81,7 +81,7 @@ describe('timelineDays', () => {
     })
 
     it('dates backdated sends by their tick date', () => {
-        const backdated = { ...tick, created: '2026-10-05 08:00:00.000Z' }
+        const backdated = { ...tick, created: '2026-10-05T08:00:00.000Z' }
         expect(
             timelineDays([backdated], [], [], 'all')[0]!.entries[0],
         ).toMatchObject({

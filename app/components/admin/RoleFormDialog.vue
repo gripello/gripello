@@ -6,6 +6,13 @@
         sheet-on-mobile
         closable
         data-testid="role-form-dialog"
+        :submit-label="isEdit ? t('actions.save') : t('permissions.createRole')"
+        submit-icon="i-lucide-check"
+        :submit-loading="saving"
+        :submit-disabled="!valid || (isEdit && !hasChanges)"
+        submit-test-id="role-form-submit"
+        cancel-test-id="role-form-cancel"
+        @submit="save"
     >
         <UForm ref="form" :state="draft" :validate="validateForm">
             <UFormField
@@ -44,39 +51,12 @@
                 {{ t('permissions.roleColor') }}
             </div>
 
-            <div class="flex flex-wrap gap-2 items-center">
-                <button
-                    v-for="c in ROLE_COLORS"
-                    :key="c"
-                    type="button"
-                    class="color-dot"
-                    :aria-label="c"
-                    :aria-pressed="isSelected(c)"
-                    :style="{
-                        backgroundColor: c,
-                        boxShadow: isSelected(c)
-                            ? '0 0 0 2px var(--ui-bg), 0 0 0 4px ' + c
-                            : 'none',
-                    }"
-                    :data-testid="`role-form-swatch-${c.slice(1)}`"
-                    @click="pickSwatch(c)"
-                />
-
-                <UButton
-                    color="neutral"
-                    :variant="customOpen ? 'soft' : 'ghost'"
-                    size="sm"
-                    icon="i-lucide-pipette"
-                    data-testid="role-form-color-custom"
-                    @click="toggleCustom"
-                >
-                    {{ t('permissions.customColor') }}
-                </UButton>
-            </div>
-
-            <div v-if="customOpen" class="color-picker-section mt-3">
-                <UColorPicker v-model="draft.color" />
-            </div>
+            <ColorSwatchPicker
+                v-model="draft.color"
+                :swatches="ROLE_COLORS"
+                :label="t('permissions.roleColor')"
+                test-id-prefix="role-form"
+            />
 
             <div class="mt-4">
                 <div class="text-xs text-muted mb-1">
@@ -99,28 +79,6 @@
                 </UBadge>
             </div>
         </UForm>
-
-        <template #actions>
-            <UButton
-                color="neutral"
-                variant="ghost"
-                data-testid="role-form-cancel"
-                @click="close"
-            >
-                {{ t('actions.cancel') }}
-            </UButton>
-            <div class="flex-1" />
-            <UButton
-                :disabled="!valid || (isEdit && !hasChanges)"
-                :loading="saving"
-                color="primary"
-                icon="i-lucide-check"
-                data-testid="role-form-submit"
-                @click="save"
-            >
-                {{ isEdit ? t('actions.save') : t('permissions.createRole') }}
-            </UButton>
-        </template>
     </LayoutDialogShell>
 </template>
 
@@ -131,7 +89,8 @@ import type { Form } from '@nuxt/ui'
 import { required, maxLength, validateRules } from '~/utils/validation'
 import type { RoleRecord } from '~/types/models'
 import { isProtectedRole } from '~/utils/roles'
-import { toHex6, readableTextOn } from '~/utils/color'
+import { toHex6 } from '#shared/utils/color'
+import { readableTextOn } from '~/utils/color'
 
 const ROLE_COLORS = [
     '#EF5350',
@@ -169,7 +128,6 @@ const form = ref<Form<{
     color: string
 }> | null>(null)
 const saving = ref(false)
-const customOpen = ref(false)
 const nameError = ref('')
 
 const draft = reactive({ name: '', description: '', color: '' })
@@ -194,20 +152,6 @@ const hasChanges = computed(
         draft.color !== original.color,
 )
 
-function isSelected(hex: string) {
-    return toHex6(draft.color) === toHex6(hex)
-}
-
-function pickSwatch(hex: string) {
-    draft.color = hex
-    customOpen.value = false
-}
-
-function toggleCustom() {
-    if (!customOpen.value && !draft.color) draft.color = ROLE_COLORS[0]!
-    customOpen.value = !customOpen.value
-}
-
 watch(
     () => props.role,
     (role) => {
@@ -222,8 +166,6 @@ watch(
         })
         Object.assign(original, { ...draft })
         nameError.value = ''
-        customOpen.value =
-            !!draft.color && !ROLE_COLORS.some((c) => isSelected(c))
         dialog.value = true
     },
     { immediate: true },
@@ -272,19 +214,3 @@ async function save() {
     }
 }
 </script>
-
-<style scoped>
-.color-dot {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: box-shadow 0.15s;
-}
-
-.color-dot:hover {
-    box-shadow: 0 0 0 2px rgba(128, 128, 128, 0.5);
-}
-</style>

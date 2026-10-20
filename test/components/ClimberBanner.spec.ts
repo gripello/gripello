@@ -13,6 +13,16 @@ describe('ClimberBanner', () => {
         expect(wrapper.get('img').attributes('src')).toBe('b.jpg')
     })
 
+    it('offers the wide banner thumb to large screens', () => {
+        const wrapper = mount(ClimberBanner, {
+            props: { banner: '/api/files/users/u1/b.jpg?thumb=1600x400' },
+        })
+        expect(wrapper.get('img').attributes('srcset')).toContain(
+            '/api/files/users/u1/b.jpg?thumb=2400x600 2400w',
+        )
+        expect(wrapper.get('img').attributes('sizes')).toBe('100vw')
+    })
+
     it('paints the avatar colours as a gradient', async () => {
         vi.stubGlobal(
             'fetch',

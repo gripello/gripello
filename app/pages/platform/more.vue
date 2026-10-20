@@ -3,7 +3,9 @@
         <LayoutPageHeader :title="t('nav.more')" />
 
         <section>
-            <LayoutEyebrow>{{ t('platform.more.operations') }}</LayoutEyebrow>
+            <LayoutEyebrow as="h2">{{
+                t('platform.more.operations')
+            }}</LayoutEyebrow>
             <LayoutListGroup data-testid="platform-more-links">
                 <LayoutListRow
                     v-for="link in links"
@@ -31,13 +33,10 @@
         </section>
 
         <section v-if="system?.replicas.length">
-            <LayoutEyebrow>
+            <LayoutEyebrow as="h2">
                 {{ t('platform.overview.servers.title') }}
             </LayoutEyebrow>
-            <PlatformServerList
-                :servers="system.replicas"
-                class="overflow-hidden rounded-lg bg-default ring ring-default"
-            />
+            <PlatformServerList :servers="system.replicas" />
         </section>
 
         <LayoutListGroup>

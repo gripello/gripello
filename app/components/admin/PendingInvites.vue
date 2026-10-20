@@ -53,6 +53,7 @@
 </template>
 
 <script setup lang="ts">
+import { gymTopic } from '#shared/utils/topics'
 import type { GymEvent } from '~/composables/useRealtime'
 import { formatDate } from '#shared/utils/formatting'
 import type { InviteRecord } from '~/types/models'
@@ -103,7 +104,7 @@ const revoke = (invite: InviteRecord) =>
 
 defineExpose({ refresh })
 
-useLiveRefresh(() => `gym:${props.gymId}`, refresh, {
+useLiveRefresh(() => gymTopic(props.gymId), refresh, {
     when: (event: GymEvent) => event.kind === 'invite.changed',
 })
 </script>

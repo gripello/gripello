@@ -41,7 +41,7 @@ test('a season ranks the best sends and leaves out hidden climbers', async ({
             route,
             type,
             attempts: 1,
-            date: `${today()}T12:00:00Z`,
+            date: today(),
         })
     await tick(leader, hard.id, 'flash')
     await tick(leader, easy.id, 'top')
@@ -50,8 +50,8 @@ test('a season ranks the best sends and leaves out hidden climbers', async ({
 
     const season = await createSeason(adminApi, {
         name: `${testPrefix} season`,
-        starts_at: `${daysAgo(3)}T00:00:00Z`,
-        ends_at: `${daysAgo(-3)}T00:00:00Z`,
+        starts_at: daysAgo(3),
+        ends_at: daysAgo(-3),
     })
 
     await signInAs(page, leader.email, leader.password)
@@ -113,7 +113,7 @@ test('staff manage seasons and the TV view shows the board', async ({
     await dialog.getByTestId('season-start').fill(daysAgo(10))
     await dialog.getByTestId('season-end').fill(daysAgo(20))
     await dialog.getByTestId('season-save').click()
-    await expect(dialog).toContainText('end has to be after')
+    await expect(dialog).toContainText("end can't be before")
 
     await dialog.getByTestId('season-end').fill(daysAgo(1))
     await dialog.getByTestId('season-save').click()

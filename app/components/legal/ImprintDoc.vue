@@ -1,5 +1,5 @@
 <template>
-    <div class="surface-card legal-doc">
+    <LayoutPanel flush as="div" class="legal-doc">
         <section>
             <h2>{{ $t('legal.imprintPage.provider') }}</h2>
             <address>
@@ -22,7 +22,7 @@
             <h2>{{ $t('legal.imprintPage.disputeTitle') }}</h2>
             <p>{{ $t('legal.imprintPage.dispute') }}</p>
         </section>
-    </div>
+    </LayoutPanel>
 </template>
 
 <script setup lang="ts">

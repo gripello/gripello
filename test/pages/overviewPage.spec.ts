@@ -1,3 +1,4 @@
+import { leaderboardTopic } from '#shared/utils/topics'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 

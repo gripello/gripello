@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     gradeSpread,
+    isNewRoute,
     newRoutes,
     popularRoutes,
     sentShare,
@@ -17,15 +18,24 @@ const route = (id: string, patch: Record<string, unknown> = {}) => ({
 describe('newRoutes', () => {
     it('keeps routes set in the last two weeks, newest first', () => {
         const routes = [
-            route('old', { screw_date: '2026-08-01 00:00:00.000Z' }),
-            route('week', { screw_date: '2026-09-20 00:00:00.000Z' }),
-            route('today', { screw_date: '2026-09-27 00:00:00.000Z' }),
+            route('old', { screw_date: '2026-08-01' }),
+            route('week', { screw_date: '2026-09-20' }),
+            route('today', { screw_date: '2026-09-27' }),
             route('undated'),
         ]
         expect(newRoutes(routes, NOW).map((r) => r.id)).toEqual([
             'today',
             'week',
         ])
+    })
+})
+
+describe('isNewRoute', () => {
+    it('flags routes set within 14 days, not far-future dates', () => {
+        expect(isNewRoute({ screw_date: '2026-09-14' }, NOW)).toBe(true)
+        expect(isNewRoute({ screw_date: '2026-09-13' }, NOW)).toBe(false)
+        expect(isNewRoute({ screw_date: '2026-10-05' }, NOW)).toBe(false)
+        expect(isNewRoute({ screw_date: null }, NOW)).toBe(false)
     })
 })
 

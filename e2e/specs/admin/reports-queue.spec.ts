@@ -87,13 +87,6 @@ test('keeping a reported comment rejects the report and leaves it in place', asy
     expect(ratings.map((rating) => rating.id)).toContain(commentId)
 })
 
-test('the old reports address leads to the inbox', async ({
-    adminPage: page,
-}) => {
-    await gotoSettled(page, '/manage/reports')
-    await page.waitForURL(/\/manage\/moderation/)
-})
-
 test('a user without moderation rights cannot reach the inbox or reports', async ({
     userPage: page,
 }) => {

@@ -106,9 +106,10 @@
                             </div>
                             <span
                                 v-if="results?.format !== 'tops'"
+                                :data-testid="`tv-standing-points-${row.bib}`"
                                 class="w-16 shrink-0 text-right text-2xl font-black text-highlighted tabular-nums lg:w-24 lg:text-3xl"
                             >
-                                {{ formatScore(row) }}
+                                {{ formatStandingPoints(row, locale) }}
                             </span>
                         </li>
                     </TransitionGroup>
@@ -118,7 +119,7 @@
 
         <div
             v-if="results"
-            class="relative flex items-center justify-between text-sm text-dimmed"
+            class="relative flex items-center justify-between text-sm text-muted"
         >
             <span>{{
                 results.visibility === 'final'
@@ -140,11 +141,10 @@
 </template>
 
 <script setup lang="ts">
-import type {
-    CompetitionResults,
-    StandingRow,
-} from '#shared/utils/competitionResults'
+import { useIntervalFn } from '@vueuse/core'
+import type { CompetitionResults } from '#shared/utils/competitionResults'
 import { MEDALS, PODIUM_ROWS, podiumRank } from '~/utils/themeColors'
+import { formatStandingPoints } from '~/utils/competitions'
 
 const CATEGORIES_PER_PAGE = 3
 const ROTATE_MS = 20_000
@@ -179,13 +179,6 @@ const updatedTime = computed(() =>
         : '',
 )
 
-function formatScore(row: StandingRow) {
-    const lead = row.rankPoints !== undefined
-    return new Intl.NumberFormat(locale.value, {
-        maximumFractionDigits: lead ? 3 : 1,
-    }).format(lead ? row.rankPoints! : row.points)
-}
-
 const scrollers = new Map<string, HTMLElement>()
 const pausedUntil = new Map<string, number>()
 const rewinds = new Set<ReturnType<typeof setTimeout>>()
@@ -214,18 +207,21 @@ function scrollStep() {
     }
 }
 
-const timers: ReturnType<typeof setInterval>[] = []
+const rotation = useIntervalFn(
+    () => {
+        if (pageCount.value > 1) page.value = (page.value + 1) % pageCount.value
+    },
+    ROTATE_MS,
+    { immediate: false },
+)
+const scrolling = useIntervalFn(scrollStep, SCROLL_STEP_MS, {
+    immediate: false,
+})
 onMounted(() => {
-    timers.push(
-        setInterval(() => {
-            if (pageCount.value > 1)
-                page.value = (page.value + 1) % pageCount.value
-        }, ROTATE_MS),
-        setInterval(scrollStep, SCROLL_STEP_MS),
-    )
+    rotation.resume()
+    scrolling.resume()
 })
 onBeforeUnmount(() => {
-    timers.forEach(clearInterval)
     rewinds.forEach(clearTimeout)
     scrollers.clear()
 })

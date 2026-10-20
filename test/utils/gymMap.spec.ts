@@ -3,7 +3,6 @@ import {
     applyPlacements,
     clearOfDots,
     dotColors,
-    isNewRoute,
     placeRoutes,
     placementChanges,
     routesOnWall,
@@ -88,11 +87,17 @@ describe('placeRoutes', () => {
         expect(dots.map((dot) => dot.grade)).toEqual(['6A+', '', ''])
     })
 
-    it('flags routes set within the last week', () => {
+    it('marks routes new by the shared 14-day screw date rule', () => {
         const now = new Date('2026-09-27T12:00:00Z')
-        expect(isNewRoute('2026-09-25 10:00:00.000Z', now)).toBe(true)
-        expect(isNewRoute('2026-09-01 10:00:00.000Z', now)).toBe(false)
-        expect(isNewRoute(null, now)).toBe(false)
+        const dots = placeRoutes(
+            walls,
+            [
+                { ...routes[0]!, screw_date: '2026-09-17' },
+                { ...routes[2]!, screw_date: '2026-09-10' },
+            ],
+            now,
+        )
+        expect(dots.map((dot) => dot.isNew)).toEqual([true, false])
     })
 })
 

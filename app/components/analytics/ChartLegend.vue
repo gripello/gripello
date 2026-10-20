@@ -19,7 +19,7 @@ defineProps<{ items: { color: string; label: string }[] }>()
     gap: 6px 16px;
     margin-top: 12px;
     font-size: 11px;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 60%, transparent);
+    color: var(--ui-text-muted);
 }
 
 .legend-item {

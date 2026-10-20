@@ -1,3 +1,4 @@
+import { useEventListener } from '@vueuse/core'
 import { haptic } from '~/utils/haptics'
 import type { Ref } from 'vue'
 
@@ -122,11 +123,10 @@ export function useQrScanner(
     }
 
     onMounted(() =>
-        document.addEventListener('visibilitychange', onVisibilityChange),
+        useEventListener(document, 'visibilitychange', onVisibilityChange),
     )
 
     onBeforeUnmount(() => {
-        document.removeEventListener('visibilitychange', onVisibilityChange)
         window.removeEventListener('pointerdown', ensureAudio)
         stop()
         void audioContext?.close()

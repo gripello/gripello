@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { keepWhenOffline } from '~/utils/errors'
+import {
+    isAbortOrNetworkError,
+    isOfflineError,
+    isRetryableSaveError,
+    keepWhenOffline,
+    requestErrorKey,
+} from '~/utils/errors'
 
 const store = (
     value: unknown,
@@ -86,5 +92,43 @@ describe('keepWhenOffline', () => {
             ),
         ).rejects.toBe(notFound)
         onLine.mockRestore()
+    })
+})
+
+describe('requestErrorKey', () => {
+    it('names a rate limit instead of the generic failure', () => {
+        expect(requestErrorKey({ status: 429 }, 'fallback')).toBe(
+            'errors.rateLimited',
+        )
+        expect(requestErrorKey({ status: 500 }, 'fallback')).toBe('fallback')
+        expect(requestErrorKey(null, 'fallback')).toBe('fallback')
+    })
+})
+
+describe('isAbortOrNetworkError', () => {
+    it('matches aborted and unreachable requests only', () => {
+        expect(isAbortOrNetworkError({ isAbort: true })).toBe(true)
+        expect(isAbortOrNetworkError({ status: 0 })).toBe(true)
+        expect(isAbortOrNetworkError({ status: 500 })).toBe(false)
+        expect(isAbortOrNetworkError(null)).toBe(false)
+    })
+})
+
+describe('isOfflineError', () => {
+    it('treats status 0 as offline but never an abort', () => {
+        expect(isOfflineError({ status: 0 })).toBe(true)
+        expect(isOfflineError({ status: 0, isAbort: true })).toBe(false)
+        expect(isOfflineError({ status: 503 })).toBe(false)
+    })
+})
+
+describe('isRetryableSaveError', () => {
+    it('retries network, rate limit and server failures, not rejections', () => {
+        expect(isRetryableSaveError({ status: 0 })).toBe(true)
+        expect(isRetryableSaveError({ isAbort: true })).toBe(true)
+        expect(isRetryableSaveError({ status: 429 })).toBe(true)
+        expect(isRetryableSaveError({ status: 503 })).toBe(true)
+        expect(isRetryableSaveError({ status: 400 })).toBe(false)
+        expect(isRetryableSaveError({ status: 403 })).toBe(false)
     })
 })

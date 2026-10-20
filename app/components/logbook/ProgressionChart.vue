@@ -1,9 +1,5 @@
 <template>
-    <AnalyticsBaseEchart
-        :option="option"
-        :height="300"
-        testid="logbook-progression"
-    />
+    <ChartEchart :option="option" :height="300" testid="logbook-progression" />
 </template>
 
 <script setup lang="ts">

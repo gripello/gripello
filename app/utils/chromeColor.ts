@@ -1,20 +1,7 @@
-export type Rgba = [number, number, number, number]
+import { parseHexColor, type Rgba } from '#shared/utils/color'
 
 export function parseColor(value: string): Rgba | null {
-    const hex = value.trim().match(/^#([0-9a-f]{3,8})$/i)?.[1]
-    if (hex) {
-        const full =
-            hex.length <= 4
-                ? [...hex].map((digit) => digit + digit).join('')
-                : hex
-        const channels = full.match(/../g)!.map((pair) => parseInt(pair, 16))
-        return [
-            channels[0]!,
-            channels[1]!,
-            channels[2]!,
-            channels[3] === undefined ? 1 : channels[3] / 255,
-        ]
-    }
+    if (value.trim().startsWith('#')) return parseHexColor(value)
     const rgb = value.match(/rgba?\(([^)]+)\)/i)?.[1]
     if (!rgb) return null
     const [r, g, b, a] = rgb

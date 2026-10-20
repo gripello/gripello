@@ -3,14 +3,10 @@ import { activeMemberships, canGrantRole } from '#shared/utils/memberships'
 
 describe('activeMemberships', () => {
     it('keeps only memberships of active gyms', () => {
-        const active = { expand: { gym: { active: true } } }
-        expect(
-            activeMemberships([
-                active,
-                { expand: { gym: { active: false } } },
-                { expand: {} },
-            ]),
-        ).toEqual([active])
+        const active = { gym: { active: true } }
+        expect(activeMemberships([active, { gym: { active: false } }])).toEqual(
+            [active],
+        )
     })
 })
 

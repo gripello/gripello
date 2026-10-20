@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, it, expect } from 'vitest'
 import {
     PROTECTED_ROLE_NAME,
@@ -7,6 +8,10 @@ import {
     groupPermissions,
     revokesOwnAccess,
     roleLabel,
+    permissionGroupState,
+    roleHasPermission,
+    toggleGroupPermissions,
+    togglePermissionName,
 } from '~/utils/roles'
 import type { RoleRecord } from '~/types/models'
 
@@ -25,8 +30,17 @@ const USER = role('r_user', 'helper', '#78909C', ['p1'])
 const ALL = [ADMIN, SETTER, USER]
 
 describe('isProtectedRole', () => {
+    it('protects the role the backend keeps per gym', () => {
+        const service = readFileSync(
+            'backend/internal/members/service.go',
+            'utf8',
+        )
+        expect(/adminRoleName\s*=\s*"([^"]+)"/.exec(service)?.[1]).toBe(
+            PROTECTED_ROLE_NAME,
+        )
+    })
+
     it('protects only the admin role', () => {
-        expect(PROTECTED_ROLE_NAME).toBe('admin')
         expect(isProtectedRole(ADMIN)).toBe(true)
         expect(isProtectedRole(SETTER)).toBe(false)
         expect(isProtectedRole(USER)).toBe(false)
@@ -180,5 +194,38 @@ describe('roleLabel', () => {
 
     it('keeps custom role names', () => {
         expect(roleLabel('Kids coach', t)).toBe('Kids coach')
+    })
+})
+
+describe('role permission toggles', () => {
+    const role = { permissions: ['manage_routes', 'manage_tasks'] }
+
+    it('reports a group as all, some or none granted', () => {
+        expect(permissionGroupState(role, ['manage_routes'])).toBe(true)
+        expect(
+            permissionGroupState(role, ['manage_routes', 'view_analytics']),
+        ).toBe('indeterminate')
+        expect(permissionGroupState(role, ['view_analytics'])).toBe(false)
+        expect(roleHasPermission({ permissions: undefined }, 'x')).toBe(false)
+    })
+
+    it('grants a partly granted group and revokes a fully granted one', () => {
+        expect(
+            toggleGroupPermissions(role, ['manage_routes', 'view_analytics']),
+        ).toEqual(['manage_routes', 'manage_tasks', 'view_analytics'])
+        expect(
+            toggleGroupPermissions(role, ['manage_routes', 'manage_tasks']),
+        ).toEqual([])
+    })
+
+    it('flips one permission', () => {
+        expect(togglePermissionName(role, 'manage_tasks')).toEqual([
+            'manage_routes',
+        ])
+        expect(togglePermissionName(role, 'view_analytics')).toEqual([
+            'manage_routes',
+            'manage_tasks',
+            'view_analytics',
+        ])
     })
 })

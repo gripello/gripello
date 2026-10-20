@@ -9,7 +9,7 @@ const invite = {
     email: 'new@example.com',
     firstname: 'New',
     name: 'Setter',
-    expires_at: '2026-10-11 12:00:00.000Z',
+    expires_at: '2026-10-11T12:00:00.000Z',
     role_name: 'routesetter',
 }
 

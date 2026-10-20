@@ -1,6 +1,7 @@
+import { isOfflineError } from '~/utils/errors'
 import { listSentRoutes } from '~/api/ticks'
 import { cacheKeys } from '~/utils/realtimeCache'
-import { isOfflineError, opsOfUser } from '~/utils/tickOutbox'
+import { opsOfUser } from '~/utils/tickOutbox'
 
 export function useTickedRoutes() {
     const authStore = useAuthStore()

@@ -134,6 +134,7 @@
 </template>
 
 <script setup lang="ts">
+import { useNow } from '@vueuse/core'
 import {
     COMPETITION_PHASES,
     COMPETITION_PHASE_COLORS,
@@ -184,7 +185,7 @@ const requestUrl = useRequestURL({
 const confirmOpen = ref(false)
 const pendingAction = ref<LifecycleAction | null>(null)
 const qrDataUrl = ref('')
-const now = ref(new Date())
+const now = useNow({ interval: 60_000 })
 
 const phase = computed(() => competitionPhase(props.competition, now.value))
 const actions = computed(() => lifecycleActions(props.competition.status))
@@ -217,12 +218,6 @@ const shareUrl = computed(() =>
               props.competition.id,
           ),
 )
-
-let clock: ReturnType<typeof setInterval> | undefined
-onMounted(() => {
-    clock = setInterval(() => (now.value = new Date()), 60_000)
-})
-onBeforeUnmount(() => clearInterval(clock))
 
 function request(action: LifecycleAction) {
     pendingAction.value = action

@@ -66,6 +66,7 @@
 </template>
 
 <script setup lang="ts">
+import { THUMBS } from '#shared/utils/thumbs'
 import { fileUrl } from '~/api/client'
 import type { GymRecord } from '~/types/models'
 import { avatarColor, nameInitials } from '~/utils/avatar'
@@ -78,6 +79,6 @@ const trial = computed(() => (hydrated.value ? gymTrial(props.gym) : null))
 
 const title = computed(() => gymTitle(props.gym))
 const logoUrl = computed(() =>
-    fileUrl('gyms', props.gym, props.gym.page_logo, { thumb: '0x200' }),
+    fileUrl('gyms', props.gym, props.gym.page_logo, { thumb: THUMBS.logo }),
 )
 </script>

@@ -2,24 +2,7 @@
     <div class="mx-auto w-full p-4">
         <LayoutPageHeader :title="t('feed.title')" />
 
-        <LayoutEmptyState
-            v-if="error"
-            variant="error"
-            :title="t('errors.loadFailed')"
-            data-testid="load-error"
-        >
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-refresh-cw"
-                    data-testid="load-error-retry"
-                    @click="refresh()"
-                >
-                    {{ t('errors.retry') }}
-                </UButton>
-            </template>
-        </LayoutEmptyState>
+        <LayoutLoadError v-if="error" @retry="refresh()" />
 
         <template v-else-if="data">
             <div class="grid items-start gap-8 lg:grid-cols-3">
@@ -163,16 +146,15 @@
 
 <script setup lang="ts">
 import { deleteBeta, listGymBetas } from '~/api/ratings'
-import { keepWhenOffline } from '~/utils/errors'
 import { listFeed } from '~/api/ticks'
 import { listRoutes } from '~/api/routes'
 import { timeAgo } from '#shared/utils/formatting'
 import type { FeedBeta, FeedRoute } from '~/utils/feed'
 import type { FeedTick } from '~/utils/friends'
 import { cacheKeys } from '~/utils/realtimeCache'
+import { NEW_ROUTE_WINDOW_DAYS } from '~/utils/overview'
 import { reportContentUrl } from '~/utils/reports'
 
-const NEW_ROUTE_DAYS = 30
 const BETA_LIMIT = 20
 const ROUTE_PREVIEW = 8
 const SEND_LIMIT = 100
@@ -185,14 +167,14 @@ const signedIn = authStore.isValid
 
 useHead({ title: t('page.title.feed') })
 
-const { data, error, refresh } = await useAsyncData(
+const { data, error, refresh } = await useOfflineData(
     cacheKeys.communityFeed,
-    (nuxtApp) => keepWhenOffline(nuxtApp, cacheKeys.communityFeed, loadFeed),
+    loadFeed,
 )
 
 async function loadFeed() {
     const gym = gymId.value
-    const since = new Date(Date.now() - NEW_ROUTE_DAYS * 86_400_000)
+    const since = new Date(Date.now() - NEW_ROUTE_WINDOW_DAYS * 86_400_000)
     const [routes, betas, ticks] = await Promise.all([
         listRoutes<FeedRoute>(gym, {
             since,

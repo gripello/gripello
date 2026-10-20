@@ -7,7 +7,6 @@ import {
     joinableGyms,
     membershipChips,
     rolesOfGym,
-    userDisplayName,
     userKeptThroughReload,
     userSecurityState,
     type PlatformUser,
@@ -29,25 +28,11 @@ const user = {
     id: 'u1',
     username: 'ada',
     email: 'ada@example.com',
-    expand: {
-        memberships_via_user: [
-            { id: 'm1', user: 'u1', gym: 'g1', role: 'r1' },
-            { id: 'm2', user: 'u1', gym: 'g2', role: 'r2' },
-        ],
-    },
+    memberships: [
+        { id: 'm1', gym: 'g1', role: 'r1' },
+        { id: 'm2', gym: 'g2', role: 'r2' },
+    ],
 } as PlatformUser
-
-describe('userDisplayName', () => {
-    it('prefers the full name, then username, then email', () => {
-        expect(
-            userDisplayName({ ...user, firstname: 'Ada', name: 'Lovelace' }),
-        ).toBe('Ada Lovelace')
-        expect(userDisplayName(user)).toBe('ada')
-        expect(userDisplayName({ ...user, username: '' })).toBe(
-            'ada@example.com',
-        )
-    })
-})
 
 describe('membershipChips', () => {
     it('labels memberships with gym title and role, sorted by gym', () => {
@@ -69,9 +54,9 @@ describe('membershipChips', () => {
                 roleColor: '#ff0000',
             },
         ])
-        expect(membershipChips({ ...user, expand: {} }, gyms, roles)).toEqual(
-            [],
-        )
+        expect(
+            membershipChips({ ...user, memberships: [] }, gyms, roles),
+        ).toEqual([])
     })
 
     it('offers only gyms the user has not joined and their roles', () => {
@@ -89,10 +74,10 @@ describe('isSuspended', () => {
 
     it('only counts suspensions that have not ended', () => {
         expect(
-            isSuspended({ suspended_until: '2026-10-07 00:00:00.000Z' }, now),
+            isSuspended({ suspended_until: '2026-10-07T00:00:00.000Z' }, now),
         ).toBe(true)
         expect(
-            isSuspended({ suspended_until: '2026-10-01 00:00:00.000Z' }, now),
+            isSuspended({ suspended_until: '2026-10-01T00:00:00.000Z' }, now),
         ).toBe(false)
         expect(isSuspended({ suspended_until: '' }, now)).toBe(false)
         expect(isSuspended({}, now)).toBe(false)
@@ -103,12 +88,12 @@ describe('isPermanentlySuspended', () => {
     it('recognises the lifetime end date', () => {
         expect(
             isPermanentlySuspended({
-                suspended_until: '9999-12-31 00:00:00.000Z',
+                suspended_until: '9999-12-31T00:00:00.000Z',
             }),
         ).toBe(true)
         expect(
             isPermanentlySuspended({
-                suspended_until: '2027-01-01 00:00:00.000Z',
+                suspended_until: '2027-01-01T00:00:00.000Z',
             }),
         ).toBe(false)
     })
@@ -118,10 +103,10 @@ describe('suspensionEnd', () => {
     const now = new Date('2026-10-06T12:00:00.000Z')
 
     it('turns presets into an end date', () => {
-        expect(suspensionEnd('week', '', now)).toBe('2026-10-13 12:00:00.000Z')
-        expect(suspensionEnd('month', '', now)).toBe('2026-11-05 12:00:00.000Z')
+        expect(suspensionEnd('week', '', now)).toBe('2026-10-13T12:00:00.000Z')
+        expect(suspensionEnd('month', '', now)).toBe('2026-11-05T12:00:00.000Z')
         expect(suspensionEnd('until', '2026-12-24', now)).toBe(
-            new Date('2026-12-24T23:59:59.999').toISOString().replace('T', ' '),
+            new Date('2026-12-24T23:59:59.999').toISOString(),
         )
     })
 
@@ -152,7 +137,7 @@ describe('userSecurityState', () => {
         id: 'u1',
         mfa_enabled: true,
         session_count: 2,
-        locked_until: '2026-10-10 12:00:00Z',
+        locked_until: '2026-10-10T12:00:00Z',
     } as PlatformUser
 
     it('lets admins act on climbers and reports their state', () => {

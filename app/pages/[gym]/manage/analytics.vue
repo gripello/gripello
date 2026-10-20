@@ -14,7 +14,7 @@
                 :key="card.key"
                 class="col-span-6 md:col-span-4 xl:col-span-2 flex"
             >
-                <AnalyticsStatsCard
+                <LayoutStatCard
                     class="w-full"
                     :data-testid="`analytics-stat-${card.key}`"
                     :title="t(`analytics.cards.${card.key}`)"
@@ -36,7 +36,6 @@
                 <AnalyticsSection
                     :title="gradeTitle('grades')"
                     icon="i-lucide-chart-column"
-                    color="info"
                     :loading="initialLoading"
                     :empty="!grades?.gradeDistribution.length"
                 >
@@ -57,7 +56,6 @@
                 <AnalyticsSection
                     :title="gradeTitle('gradeBalance')"
                     icon="i-lucide-scale"
-                    color="warning"
                     :loading="initialLoading"
                     :empty="!hasGradeImbalance"
                     empty-icon="i-lucide-circle-check"
@@ -82,7 +80,6 @@
                 <AnalyticsSection
                     :title="t('analytics.sections.activity')"
                     icon="i-lucide-chart-spline"
-                    color="success"
                     :loading="initialLoading"
                     :empty="!hasActivity"
                 >
@@ -97,7 +94,6 @@
                 <AnalyticsSection
                     :title="t('analytics.sections.ratingDistribution')"
                     icon="i-lucide-star"
-                    color="warning"
                     :loading="initialLoading"
                     :empty="!analytics?.summary.ratings.value"
                 >
@@ -113,7 +109,6 @@
                 <AnalyticsSection
                     :title="gradeTitle('gradeFeedback')"
                     icon="i-lucide-target"
-                    color="error"
                     :loading="initialLoading"
                     :empty="!grades?.gradeFeedback.length"
                     :empty-text="t('analytics.empty.gradeFeedback')"
@@ -134,7 +129,6 @@
                 <AnalyticsSection
                     :title="t('analytics.sections.setters')"
                     icon="i-lucide-hard-hat"
-                    color="warning"
                     testid="analytics-setters"
                     :loading="initialLoading"
                     :empty="!analytics?.setters.length"
@@ -149,7 +143,6 @@
                 <AnalyticsSection
                     :title="t('analytics.sections.ratedRoutes')"
                     icon="i-lucide-thumbs-up"
-                    color="success"
                     :loading="initialLoading"
                     :empty="!analytics?.topRated.length"
                     :empty-text="t('analytics.empty.ratedRoutes')"
@@ -165,7 +158,6 @@
                 <AnalyticsSection
                     :title="t('analytics.sections.oldestActive')"
                     icon="i-lucide-history"
-                    color="warning"
                     :loading="initialLoading"
                     :empty="!analytics?.oldestActive.length"
                 >
@@ -179,7 +171,6 @@
                 <AnalyticsSection
                     :title="gradeTitle('locationGrades')"
                     icon="i-lucide-map-pin"
-                    color="info"
                     :loading="initialLoading"
                     :empty="!grades?.locationGrades.length"
                 >
@@ -199,7 +190,6 @@
                 <AnalyticsSection
                     :title="t('analytics.sections.latestComments')"
                     icon="i-lucide-messages-square"
-                    color="secondary"
                     testid="analytics-latest-comments"
                     flush
                     :loading="initialLoading"
@@ -267,7 +257,6 @@
                 <AnalyticsSection
                     :title="t('analytics.sections.activityHeatmap')"
                     icon="i-lucide-calendar-days"
-                    color="success"
                     :loading="initialLoading"
                     :empty="!analytics?.dailyRouteActivity.length"
                 >

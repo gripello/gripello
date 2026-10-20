@@ -1,5 +1,5 @@
 <template>
-    <AnalyticsBaseEchart
+    <ChartEchart
         :option="option"
         :height="Math.max(200, rows.length * 32 + 60)"
         testid="logbook-pyramid"

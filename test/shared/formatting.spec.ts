@@ -4,10 +4,11 @@ import {
     hasAnchorPoint,
     formatScore,
     normalizeCreators,
-    formatDateToYYYYMMDD,
     formatDate,
+    parseDate,
     localDateYYYYMMDD,
 } from '#shared/utils/formatting'
+import { formatNumber } from '#shared/utils/number'
 
 describe('formatAnchorPoint', () => {
     it('returns "—" for null', () => {
@@ -124,37 +125,6 @@ describe('normalizeCreators', () => {
     })
 })
 
-describe('formatDateToYYYYMMDD', () => {
-    it('returns "" for null', () => {
-        expect(formatDateToYYYYMMDD(null)).toBe('')
-    })
-
-    it('returns "" for undefined', () => {
-        expect(formatDateToYYYYMMDD(undefined)).toBe('')
-    })
-
-    it('returns "" for empty string', () => {
-        expect(formatDateToYYYYMMDD('')).toBe('')
-    })
-
-    it('returns "" for an invalid date string', () => {
-        expect(formatDateToYYYYMMDD('not-a-date')).toBe('')
-    })
-
-    it('formats a full ISO datetime string to YYYY-MM-DD', () => {
-        // Use a date-only part to avoid timezone shifts in the test runner.
-        const result = formatDateToYYYYMMDD('2024-06-15')
-        // Result must be YYYY-MM-DD shaped and contain the correct year and month.
-        expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-        expect(result.startsWith('2024')).toBe(true)
-    })
-
-    it('zero-pads single-digit month and day', () => {
-        const result = formatDateToYYYYMMDD('2024-01-05')
-        expect(result).toMatch(/^\d{4}-01-\d{2}$/)
-    })
-})
-
 describe('dates west of UTC', () => {
     const originalTimeZone = process.env.TZ
     beforeEach(() => {
@@ -164,33 +134,45 @@ describe('dates west of UTC', () => {
         process.env.TZ = originalTimeZone
     })
 
-    it('keeps the stored day when editing', () => {
-        expect(formatDateToYYYYMMDD('2024-06-15 00:00:00.000Z')).toBe(
-            '2024-06-15',
-        )
+    it('displays a calendar day on its own day', () => {
         expect(
-            formatDateToYYYYMMDD(
-                formatDateToYYYYMMDD('2024-06-15 00:00:00.000Z'),
-            ),
-        ).toBe('2024-06-15')
-    })
-
-    it('displays a date-only value on its own day', () => {
-        expect(
-            formatDate('2024-06-15 00:00:00.000Z', {
-                locale: 'en-US',
-                dateStyle: 'medium',
-            }),
+            formatDate('2024-06-15', { locale: 'en-US', dateStyle: 'medium' }),
         ).toBe('Jun 15, 2024')
+        expect(parseDate('2024-06-15')?.getDate()).toBe(15)
     })
 
-    it('still shows timestamps in local time', () => {
+    it('shows timestamps in local time, also at UTC midnight', () => {
         expect(
-            formatDate('2024-06-15 02:00:00.000Z', {
+            formatDate('2024-06-15T02:00:00.000Z', {
                 locale: 'en-US',
                 dateStyle: 'medium',
             }),
         ).toBe('Jun 14, 2024')
+        expect(
+            formatDate('2024-06-15T00:00:00.000Z', {
+                locale: 'en-US',
+                dateStyle: 'medium',
+            }),
+        ).toBe('Jun 14, 2024')
+    })
+})
+
+describe('parseDate', () => {
+    it('reads RFC 3339 timestamps', () => {
+        expect(parseDate('2026-10-20T10:36:12.123Z')?.toISOString()).toBe(
+            '2026-10-20T10:36:12.123Z',
+        )
+    })
+
+    it('still reads the old space-separated form from cached records', () => {
+        expect(parseDate('2026-10-20 10:36:12.123Z')?.toISOString()).toBe(
+            '2026-10-20T10:36:12.123Z',
+        )
+    })
+
+    it('returns null for empty or invalid input', () => {
+        expect(parseDate('')).toBeNull()
+        expect(parseDate('not-a-date')).toBeNull()
     })
 })
 
@@ -200,9 +182,9 @@ describe('formatDate', () => {
         expect(formatDate('nope', { fallback: '—' })).toBe('—')
     })
 
-    it('parses space-separated dates', () => {
+    it('parses RFC 3339 timestamps', () => {
         expect(
-            formatDate('2024-03-05 10:00:00.000Z', {
+            formatDate('2024-03-05T10:00:00.000Z', {
                 locale: 'en-US',
                 timeZone: 'UTC',
             }),
@@ -250,5 +232,27 @@ describe('hasAnchorPoint', () => {
         ['A3', true],
     ])('%s → %s', (value, expected) => {
         expect(hasAnchorPoint(value)).toBe(expected)
+    })
+})
+
+describe.each([
+    ['en', '3.5', '0.0'],
+    ['de', '3,5', '0,0'],
+    ['nl', '3,5', '0,0'],
+    ['fr', '3,5', '0,0'],
+    ['es', '3,5', '0,0'],
+])('numbers in %s', (locale, half, zero) => {
+    it('uses the locale decimal separator', () => {
+        expect(formatNumber(3.5, locale)).toBe(half)
+        expect(formatNumber(0, locale)).toBe(zero)
+        expect(formatScore({ score: 3.5 }, locale)).toBe(`${half}/5`)
+        expect(formatScore({ score: 0 }, locale)).toBe(`${zero}/5`)
+    })
+
+    it('shows a dash for missing values', () => {
+        for (const missing of [NaN, null, undefined, Infinity]) {
+            expect(formatNumber(missing, locale)).toBe('—')
+        }
+        expect(formatScore({ score: NaN }, locale)).toBe('—')
     })
 })

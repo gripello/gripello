@@ -3,24 +3,7 @@
         <LayoutPageHeader :title="t('competitions.public.title')" />
 
         <LayoutLoadingState v-if="status === 'pending' && !competitions" />
-        <LayoutEmptyState
-            v-else-if="error"
-            variant="error"
-            :title="t('errors.loadFailed')"
-            data-testid="load-error"
-        >
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-refresh-cw"
-                    data-testid="load-error-retry"
-                    @click="refresh()"
-                >
-                    {{ t('errors.retry') }}
-                </UButton>
-            </template>
-        </LayoutEmptyState>
+        <LayoutLoadError v-else-if="error" @retry="refresh()" />
         <LayoutEmptyState
             v-else-if="!competitions?.length"
             icon="i-lucide-trophy"
@@ -84,5 +67,9 @@ const current = computed(() =>
 )
 const past = computed(() => (competitions.value ?? []).filter(isPast).reverse())
 
-useHead({ title: t('page.title.competitions') })
+const { gym } = useGym()
+useSeoMeta({
+    title: () => t('page.title.competitions'),
+    description: () => t('seo.competitions', { name: gym.value?.name ?? '' }),
+})
 </script>

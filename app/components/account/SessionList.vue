@@ -19,36 +19,20 @@
             </template>
         </LayoutEmptyState>
         <LayoutLoadingState v-else-if="!loaded" :count="2" />
-        <UPageCard
-            v-else
-            variant="outline"
-            :ui="{ container: LIST }"
-            data-testid="sessions"
-        >
-            <div
+        <LayoutListGroup v-else data-testid="sessions">
+            <LayoutListRow
                 v-for="session in sessions"
                 :key="session.id"
-                class="flex items-center gap-3 py-1 ps-4 pe-1"
+                dense
+                :icon="
+                    isMobileDevice(label(session))
+                        ? 'i-lucide-smartphone'
+                        : 'i-lucide-monitor'
+                "
+                :icon-active="session.id === currentId"
                 data-testid="session-row"
             >
-                <span
-                    class="session-icon"
-                    :class="
-                        session.id === currentId
-                            ? 'bg-primary/10 text-primary'
-                            : 'bg-elevated text-muted'
-                    "
-                >
-                    <UIcon
-                        :name="
-                            isMobileDevice(label(session))
-                                ? 'i-lucide-smartphone'
-                                : 'i-lucide-monitor'
-                        "
-                        class="size-4"
-                    />
-                </span>
-                <div class="min-w-0 flex-1 py-2">
+                <div class="min-w-0 flex-1">
                     <p
                         class="flex items-center gap-2 text-sm font-medium text-highlighted"
                     >
@@ -84,8 +68,8 @@
                     data-testid="session-revoke"
                     @click="revoke(session)"
                 />
-            </div>
-            <div v-if="sessions.length > 1" class="flex justify-end px-4 py-3">
+            </LayoutListRow>
+            <li v-if="sessions.length > 1" class="flex justify-end px-4 py-3">
                 <UButton
                     color="error"
                     variant="soft"
@@ -96,8 +80,8 @@
                 >
                     {{ t('account.sessions.signOutOthers') }}
                 </UButton>
-            </div>
-        </UPageCard>
+            </li>
+        </LayoutListGroup>
 
         <ConfirmDialog
             v-model="confirmOthers"
@@ -121,8 +105,6 @@ import {
     signOutOtherSessions,
 } from '~/api/account'
 import { useAuthState } from '~/api/auth'
-
-const LIST = 'min-w-0 p-0 sm:p-0 gap-y-0 divide-y divide-default'
 
 const { t, locale } = useI18n()
 const { token } = useAuthState()
@@ -182,11 +164,3 @@ function revokeOthers() {
     })
 }
 </script>
-
-<style scoped>
-@reference "~/assets/css/main.css";
-
-.session-icon {
-    @apply inline-flex size-9 shrink-0 items-center justify-center rounded-lg;
-}
-</style>

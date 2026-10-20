@@ -39,4 +39,43 @@ describe('offline page', () => {
             cache: 'no-store',
         })
     })
+
+    it.each([
+        ['de-DE', 'de', 'Gripello ist nicht erreichbar'],
+        ['pt-BR', 'en', "Can't reach Gripello"],
+    ])(
+        'tells online visitors in %s that the server is unreachable',
+        (browserLanguage, lang, title) => {
+            document.body.innerHTML = /<body>([\s\S]*)<script>/.exec(html)![1]!
+            document.documentElement.lang = 'xx'
+            vi.stubGlobal('navigator', {
+                onLine: true,
+                language: browserLanguage,
+            })
+            vi.stubGlobal(
+                'fetch',
+                vi.fn(() => new Promise(() => {})),
+            )
+            vi.useFakeTimers()
+            new Function(script)()
+
+            expect(document.getElementById('offline-title')!.textContent).toBe(
+                title,
+            )
+            expect(document.documentElement.lang).toBe(lang)
+        },
+    )
+
+    it('keeps the English page for offline visitors in other languages', () => {
+        document.body.innerHTML = /<body>([\s\S]*)<script>/.exec(html)![1]!
+        document.documentElement.lang = 'en'
+        vi.stubGlobal('navigator', { onLine: false, language: 'pt-BR' })
+        vi.useFakeTimers()
+        new Function(script)()
+
+        expect(document.getElementById('offline-title')!.textContent).toBe(
+            'You are offline',
+        )
+        expect(document.documentElement.lang).toBe('en')
+    })
 })

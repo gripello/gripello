@@ -1,5 +1,5 @@
 import type { WallRecord } from '~/types/models'
-import { localDateYYYYMMDD } from '#shared/utils/formatting'
+import { localDateYYYYMMDD, parseDate } from '#shared/utils/formatting'
 
 const DAY_MS = 86_400_000
 
@@ -97,8 +97,8 @@ const disciplineOf = (route: PlannableRoute): Discipline =>
     route.type === 'Route' ? 'Route' : 'Boulder'
 
 export function routeAgeDays(route: PlannableRoute, now = new Date()) {
-    const set = Date.parse(route.screw_date || route.created || '')
-    return Number.isNaN(set)
+    const set = parseDate(route.screw_date || route.created)?.getTime()
+    return set === undefined
         ? null
         : Math.max(0, Math.floor((now.getTime() - set) / DAY_MS))
 }

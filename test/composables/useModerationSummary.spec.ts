@@ -1,8 +1,8 @@
 import { ref } from 'vue'
 import { useModerationSummary } from '~/composables/useModerationSummary'
-import { getModerationSummary } from '~/api/moderation'
+import { moderationSummary } from '~/api/moderation'
 
-vi.mock('~/api/moderation', () => ({ getModerationSummary: vi.fn() }))
+vi.mock('~/api/moderation', () => ({ moderationSummary: vi.fn() }))
 vi.mock('~/api/auth', () => ({
     useAuthState: () => ({ isSignedIn: () => true }),
 }))
@@ -21,7 +21,7 @@ describe('useModerationSummary', () => {
             (params: { gym?: string }) => params.gym ?? '',
         )
         const answers: ((summary: unknown) => void)[] = []
-        vi.mocked(getModerationSummary).mockImplementation(
+        vi.mocked(moderationSummary).mockImplementation(
             () => new Promise((resolve) => answers.push(resolve as never)),
         )
 
@@ -43,7 +43,7 @@ describe('useModerationSummary', () => {
             currentRoute: ref({ path: '/platform/moderation', params: {} }),
         }))
         const answers: ((summary: unknown) => void)[] = []
-        vi.mocked(getModerationSummary).mockImplementation(
+        vi.mocked(moderationSummary).mockImplementation(
             () => new Promise((resolve) => answers.push(resolve as never)),
         )
         const moderation = useModerationSummary()

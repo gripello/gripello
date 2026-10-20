@@ -67,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+import { useTimeoutFn } from '@vueuse/core'
 import { listEmailSourceDomains, type EmailSource } from '~/api/platform'
 
 const open = defineModel<boolean>({ default: false })
@@ -118,12 +119,13 @@ watch(open, (isOpen) => {
 })
 watch(page, load)
 
-let searchDebounce: ReturnType<typeof setTimeout> | undefined
-watch(search, () => {
-    clearTimeout(searchDebounce)
-    searchDebounce = setTimeout(() => {
+const { start: searchSoon } = useTimeoutFn(
+    () => {
         if (page.value === 1) load()
         else page.value = 1
-    }, 300)
-})
+    },
+    300,
+    { immediate: false },
+)
+watch(search, () => searchSoon())
 </script>

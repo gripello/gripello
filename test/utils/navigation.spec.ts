@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { PLATFORM_ADMIN } from '#shared/utils/permissions'
 import {
-    PLATFORM_ADMIN,
     gymLink,
     sectionTabs,
     sidebarSections,
@@ -15,6 +15,7 @@ import {
     navContext,
     requestedSection,
     parentPath,
+    staffExitPath,
     navDirection,
 } from '~/utils/navigation'
 
@@ -607,5 +608,18 @@ describe('navDirection', () => {
         expect(navDirection(3, 4, '/e2e/routes', '/e2e/feed')).toBeNull()
         expect(navDirection(4, 3, '/e2e/feed', '/e2e/routes')).toBeNull()
         expect(navDirection(undefined, 1, '/', '/e2e/route')).toBeNull()
+    })
+})
+
+describe('staffExitPath', () => {
+    it('returns to the page staff tools were opened from', () => {
+        expect(staffExitPath('/account', 'kz')).toBe('/account')
+        expect(staffExitPath('/kz/map?wall=w1', 'kz')).toBe('/kz/map?wall=w1')
+    })
+
+    it('falls back to the gym routes without a usable origin', () => {
+        expect(staffExitPath(null, 'kz')).toBe('/kz/routes')
+        expect(staffExitPath('/kz/manage/tasks', 'kz')).toBe('/kz/routes')
+        expect(staffExitPath('/other-gym/map', 'kz')).toBe('/kz/routes')
     })
 })

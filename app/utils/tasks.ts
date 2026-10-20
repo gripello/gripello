@@ -1,3 +1,5 @@
+import { TASK_PRIORITIES } from '#shared/utils/tasks'
+import { localDateYYYYMMDD } from '#shared/utils/formatting'
 import type {
     DefectCategory,
     OpenRouteDefectRecord,
@@ -5,28 +7,6 @@ import type {
     TaskRecord,
     TaskStatus,
 } from '~/types/models'
-
-export const TASK_KINDS = [
-    'defect',
-    'wish',
-    'reset',
-    'maintenance',
-    'other',
-] as const
-
-export const STAFF_TASK_KINDS = ['reset', 'maintenance', 'other'] as const
-
-export const DEFECT_CATEGORIES = [
-    'loose_bolt',
-    'loose_hold',
-    'spinning_hold',
-    'broken_hold',
-    'damaged_volume',
-    'sharp_edge',
-    'missing_hold',
-    'label_tag',
-    'other',
-] as const
 
 export const DEFECT_CATEGORY_ICONS: Record<DefectCategory, string> = {
     loose_bolt: 'i-lucide-wrench',
@@ -47,8 +27,6 @@ export const URGENT_DEFECT_CATEGORIES: readonly DefectCategory[] = [
     'broken_hold',
 ]
 
-export const TASK_PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const
-
 export const NORMAL_TASK_PRIORITY = 2
 
 export const URGENT_TASK_PRIORITY = 4
@@ -60,14 +38,6 @@ export function taskPriorityName(priority: number): TaskPriorityName {
 export function taskPriorityLevel(name: TaskPriorityName): number {
     return TASK_PRIORITIES.indexOf(name) + 1
 }
-
-export const TASK_STATUSES = [
-    'open',
-    'in_progress',
-    'waiting',
-    'done',
-    'dismissed',
-] as const
 
 export const TASK_STATUS_ICONS: Record<TaskStatus, string> = {
     open: 'i-lucide-circle-dashed',
@@ -127,9 +97,7 @@ export function isTaskOverdue(
     now = new Date(),
 ): boolean {
     if (!task.due_date || !isTaskActive(task.status)) return false
-    const due = new Date(task.due_date)
-    due.setHours(23, 59, 59, 999)
-    return due < now
+    return task.due_date < localDateYYYYMMDD(now)
 }
 
 export function taskPriorityColor(

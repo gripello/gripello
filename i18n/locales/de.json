@@ -77,7 +77,6 @@
         },
         "requirements": {
             "minLength": "Mindestens 8 Zeichen",
-            "maxLength": "Maximal 72 Zeichen",
             "uppercase": "Großbuchstabe (A–Z)",
             "lowercase": "Kleinbuchstabe (a–z)",
             "number": "Zahl (0–9)",
@@ -114,9 +113,9 @@
         "emailChangeSent": "Bestätigungslink an die neue Adresse gesendet. Deine aktuelle Adresse bleibt aktiv, bis du ihn öffnest.",
         "emailChangeFailed": "Der Bestätigungslink konnte nicht gesendet werden. Deine E-Mail-Adresse wurde nicht geändert.",
         "exportData": "Deine Daten herunterladen",
-        "exportDataHint": "Eine ZIP-Datei mit deinem Profil, Logbuch, Mitgliedschaften, Wettkampfanmeldungen, Benachrichtigungen, gemeldeten Mängeln und Kontoaktivitäten.",
+        "exportDataHint": "Eine ZIP-Datei mit deinem Profil, Logbuch, Mitgliedschaften, Wettkampfanmeldungen, Benachrichtigungen, gemeldeten Mängeln und Kontoaktivitäten, die du als Download-Link per E-Mail bekommst.",
         "exportDataDownload": "Herunterladen",
-        "exportDataRateLimited": "Du kannst deine Daten 3-mal pro Stunde herunterladen. Bitte versuche es später erneut.",
+        "exportDataRateLimited": "Du kannst deine Daten 3-mal pro Stunde anfordern. Bitte versuche es später erneut.",
         "deleteAccount": "Konto löschen",
         "deleteAccountHint": "Löscht dein Konto endgültig und meldet dich ab. Von dir erstellte Routen und Bewertungen bleiben erhalten.",
         "deleteAccountConfirm": "Damit wird dein Konto endgültig gelöscht und du wirst abgemeldet. Das kann nicht rückgängig gemacht werden.",
@@ -198,7 +197,16 @@
             "linked": "Anmeldung verknüpft",
             "linkConfirm": "Eine verknüpfte Anmeldung öffnet dein Konto auch nach einer Passwortänderung. Bestätige mit deinem Passwort."
         },
-        "noAccount": "Noch kein Konto?"
+        "noAccount": "Noch kein Konto?",
+        "exportDataRequest": "Link per E-Mail senden",
+        "exportDataRequested": "Wir schicken dir einen Link per E-Mail",
+        "exportReady": "Deine Daten sind bereit",
+        "exportReadyHint": "Dieser Download-Link funktioniert 7 Tage lang.",
+        "exportExpired": "Dieser Download-Link ist abgelaufen oder wurde durch einen neueren Export ersetzt.",
+        "exportAgain": "Neuen Export anfordern",
+        "exportTooLarge": "Dein Datenexport ist zu groß",
+        "exportTooLargeHint": "Er überschreitet 2 GB. Kontaktiere uns, um deine Daten auf anderem Weg zu erhalten.",
+        "exportNone": "Kein Datenexport bereit"
     },
     "routes": {
         "generate_name": "Namen generieren",
@@ -239,7 +247,9 @@
         "info": "Info",
         "outSoon": "Raus am {date}",
         "mapWork": "Routen & Resets",
-        "removed": "Diese Route wurde entfernt."
+        "removed": "Diese Route wurde entfernt.",
+        "sends": "Begehungen",
+        "screwedShort": "Geschraubt"
     },
     "dashboard": {
         "online": "{0} online"
@@ -361,11 +371,13 @@
         "score": "Ø Sterne",
         "comment": "Kommentar",
         "climber_reviews": "Bewertungen",
-        "felt": "gefühlt",
         "perceived_difficulty": "Gefühlter Grad",
         "loadError": "Bewertungen konnten nicht geladen werden.",
         "deleteOwn": "Meine Bewertung löschen",
-        "deleteOwnConfirm": "Deine Bewertung wird endgültig entfernt."
+        "deleteOwnConfirm": "Deine Bewertung wird endgültig entfernt.",
+        "perceived": "Gefühlt",
+        "votes": "1 Stimme | {n} Stimmen",
+        "ratingCount": "1 Bewertung | {n} Bewertungen"
     },
     "table": {
         "actions": "Aktionen",
@@ -547,7 +559,9 @@
                 "beta_approved": "Dein Beta-Video wurde freigegeben",
                 "beta_rejected": "Dein Beta-Video wurde abgelehnt: {reason}",
                 "wall_reset_planned": "{wall}: {count} Routen werden am {date} abgeschraubt",
-                "platform_issue": "{level}: {summary} ({count}×)"
+                "platform_issue": "{level}: {summary} ({count}×)",
+                "account_export_ready": "Dein Datenexport steht zum Download bereit",
+                "account_export_failed": "Dein Datenexport ist zu groß zum Herunterladen"
             }
         }
     },
@@ -633,7 +647,7 @@
             },
             "reports": {
                 "title": "Meldungen von Inhalten",
-                "body": "Wenn du Inhalte wie Kommentare oder Beta-Videos meldest, verarbeiten wir Name, E-Mail-Adresse, Meldegrund und deine Begründung, um die Meldung zu prüfen, zu entscheiden und dich über die Entscheidung zu informieren (Art. 6 Abs. 1 lit. c DSGVO i. V. m. Art. 16 DSA). Meldungen bearbeitet die Moderation der Halle; sie und die Kontaktadresse der Halle erhalten deinen Namen und deine E-Mail-Adresse mit der Meldung. Wer den gemeldeten Inhalt erstellt hat, erfährt nicht, wer gemeldet hat, außer das Gesetz verlangt es. Meldungen werden so lange aufbewahrt, wie es zur Dokumentation und zur Abwehr von Missbrauch erforderlich ist; Name und E-Mail-Adresse der meldenden Person bleiben dafür auch nach einer Kontolöschung erhalten."
+                "body": "Wenn du Inhalte wie Kommentare oder Beta-Videos meldest, verarbeiten wir Name, E-Mail-Adresse, Meldegrund und deine Begründung, um die Meldung zu prüfen, zu entscheiden und dich über die Entscheidung zu informieren (Art. 6 Abs. 1 lit. c DSGVO i. V. m. Art. 16 DSA). Meldungen bearbeitet die Moderation der Halle; sie und die Kontaktadresse der Halle erhalten deinen Namen und deine E-Mail-Adresse mit der Meldung. Wer den gemeldeten Inhalt erstellt hat, erfährt nicht, wer gemeldet hat, außer das Gesetz verlangt es. Meldungen werden drei Jahre nach der Entscheidung gelöscht; Name und E-Mail-Adresse der meldenden Person bleiben bis dahin auch nach einer Kontolöschung erhalten."
             },
             "notifications": {
                 "title": "Benachrichtigungen",
@@ -645,15 +659,15 @@
             },
             "dataExport": {
                 "title": "Datenexport",
-                "body": "Unter „Deine Daten herunterladen“ in den Kontoeinstellungen erhältst du eine ZIP-Datei mit allen Daten, die mit deinem Konto verknüpft sind: Profil, Profilbild und Banner, Logbuch, Bewertungen, Beta-Videos, Folgebeziehungen, Erfolge, Benachrichtigungen, Mitgliedschaften, Aufgaben und Wettkampfteilnahmen. Damit kommen wir deinem Recht auf Auskunft und Datenübertragbarkeit (Art. 15 und 20 DSGVO) nach. Der Export ist auf wenige Abrufe pro Stunde begrenzt; die Datei wird nicht auf dem Server gespeichert."
+                "body": "Unter „Deine Daten herunterladen“ in den Kontoeinstellungen erhältst du eine ZIP-Datei mit allen Daten, die mit deinem Konto verknüpft sind: Profil, Profilbild und Banner, Logbuch, Bewertungen, Beta-Videos, Folgebeziehungen, Erfolge, Benachrichtigungen, Mitgliedschaften, Aufgaben und Wettkampfteilnahmen. Damit kommen wir deinem Recht auf Auskunft und Datenübertragbarkeit (Art. 15 und 20 DSGVO) nach. Der Export ist auf wenige Abrufe pro Stunde begrenzt. Die ZIP-Datei wird im Hintergrund erstellt und 7 Tage auf unserem Server gespeichert; den Download-Link bekommst du per E-Mail und als Benachrichtigung, ein neuer Export ersetzt den alten."
             },
             "deletion": {
                 "title": "Konto löschen",
-                "body": "Du kannst dein Konto in den Einstellungen jederzeit selbst löschen. Gelöscht werden Konto, Profilbild und Banner, Logbuch, Folgebeziehungen, Beta-Videos, Erfolge, Push-Registrierungen, Benachrichtigungen, Mitgliedschaften und Wettkampfteilnahmen. Ohne Verknüpfung zu dir bleiben erhalten: Bewertungen und Kommentare (anonym), gemeldete Routenprobleme und daraus entstandene Aufgaben sowie Meldungen von Inhalten mit Name und E-Mail-Adresse der meldenden Person, soweit das zur Bearbeitung und Dokumentation nach dem DSA erforderlich ist. Server-Logfiles und Audit-Log werden nach den oben genannten Fristen gelöscht."
+                "body": "Du kannst dein Konto in den Einstellungen jederzeit selbst löschen. Gelöscht werden Konto, Profilbild und Banner, Logbuch, Folgebeziehungen, Beta-Videos, Erfolge, Push-Registrierungen, Benachrichtigungen, Mitgliedschaften und Wettkampfteilnahmen. Ohne Verknüpfung zu dir bleiben erhalten: Bewertungen und Kommentare (anonym), gemeldete Routenprobleme und daraus entstandene Aufgaben sowie Meldungen von Inhalten mit Name und E-Mail-Adresse der meldenden Person bis drei Jahre nach der Entscheidung. Server-Logfiles und Audit-Log werden nach den oben genannten Fristen gelöscht."
             },
             "auditLog": {
                 "title": "Audit-Log",
-                "body": "Um Sicherheit und Nachvollziehbarkeit zu gewährleisten, protokollieren wir jede Änderung, die jemand über die App vornimmt (z. B. Logbuch-Einträge, Folgebeziehungen, Bewertungen, Beta-Videos, Problem- und Inhaltsmeldungen, Wettkampfanmeldungen und Änderungen durch Mitarbeitende), sowie Anmeldungen, fehlgeschlagene Anmeldeversuche (die eingegebene Adresse nur als kurzer Hash), Passwort-Zurücksetzungen und Änderungen der E-Mail-Adresse, jeweils mit der E-Mail-Adresse des Kontos, der Aktion, dem betroffenen Datensatz und der IP-Adresse (Art. 6 Abs. 1 lit. f DSGVO). Mitarbeitende einer Halle mit Zugriff auf das Audit-Log sehen die Einträge ihrer Halle, die Administratorinnen und Administratoren der Plattform alle Einträge und du deine eigenen. Einträge werden nach {auditDays} Tagen automatisch gelöscht."
+                "body": "Um Sicherheit und Nachvollziehbarkeit zu gewährleisten, protokollieren wir jede Änderung, die jemand über die App vornimmt (z. B. Logbuch-Einträge, Folgebeziehungen, Bewertungen, Beta-Videos, Problem- und Inhaltsmeldungen, Wettkampfanmeldungen und Änderungen durch Mitarbeitende), sowie Anmeldungen, fehlgeschlagene Anmeldeversuche (die eingegebene Adresse nur als kurzer Hash), Passwort-Zurücksetzungen und Änderungen der E-Mail-Adresse, jeweils mit der E-Mail-Adresse des Kontos, der Aktion, dem betroffenen Datensatz und der IP-Adresse (Art. 6 Abs. 1 lit. f DSGVO). Mitarbeitende einer Halle mit Zugriff auf das Audit-Log sehen die Einträge ihrer Halle, die Administratorinnen und Administratoren der Plattform alle Einträge und du deine eigenen. Einträge behalten deinen Benutzernamen oder deine E-Mail-Adresse auch nach dem Löschen deines Kontos und werden nach {auditDays} Tagen automatisch gelöscht."
             },
             "captcha": {
                 "title": "Spamschutz",
@@ -710,9 +724,10 @@
             "kept": {
                 "reviews": "Bewertungen und Grad-Stimmen bleiben ohne deinen Namen an der Route.",
                 "reports": "Gemeldete Mängel bleiben ohne deinen Namen bei der Halle, damit sie behoben werden können.",
-                "activity": "Einträge im Aktivitätsprotokoll bleiben bis zu {days} Tage ohne deinen Namen erhalten; Einträge zu deinem Konto selbst (etwa Anmeldungen) behalten bis dahin deine E-Mail-Adresse.",
+                "activity": "Einträge im Aktivitätsprotokoll behalten deinen Benutzernamen, bei Einträgen zum Konto selbst deine E-Mail-Adresse, bis sie nach der Aufbewahrungsfrist von {days} Tagen gelöscht werden.",
                 "logs": "Server-Logs enthalten deine Konto-ID bis zu 7 Tage lang.",
-                "backups": "Tägliche Sicherungen enthalten deine Daten, bis sie ersetzt werden, standardmäßig nach 7 Tagen."
+                "backups": "Tägliche Sicherungen enthalten deine Daten, bis sie ersetzt werden, standardmäßig nach 7 Tagen.",
+                "exports": "Ein angeforderter Datenexport wird innerhalb einer Stunde gelöscht, sein 7 Tage gültiger Download-Link funktioniert sofort nicht mehr."
             },
             "noAccessTitle": "Du kannst dich nicht mehr anmelden?",
             "noAccess": "Schreib uns von der E-Mail-Adresse deines Kontos, dann löschen wir es innerhalb eines Monats:"
@@ -797,7 +812,8 @@
             "climber": "{name} - Gripello",
             "feed": "Feed",
             "info": "Halleninfo - Gripello",
-            "gymOnboarding": "Halle einrichten - Gripello"
+            "gymOnboarding": "Halle einrichten - Gripello",
+            "dataExport": "Deine Daten - Gripello"
         },
         "content": {
             "settings": "Einstellungen",
@@ -818,7 +834,8 @@
         "passwordMismatch": "Passwörter stimmen nicht überein.",
         "integerRange": "Gib eine ganze Zahl von {min} bis {max} ein.",
         "passwordTooWeak": "Passwort muss mindestens „Gut“ sein.",
-        "email": "Bitte gib eine gültige E-Mail-Adresse ein."
+        "email": "Bitte gib eine gültige E-Mail-Adresse ein.",
+        "invalid": "Dieser Wert ist ungültig."
     },
     "captcha": {
         "verifying": "Überprüfung… {progress}%"
@@ -925,7 +942,6 @@
         "roleName": "Rollenname",
         "roleDescription": "Beschreibung",
         "roleColor": "Farbe",
-        "customColor": "Eigene",
         "preview": "Vorschau",
         "nameTaken": "Eine Rolle mit diesem Namen existiert bereits.",
         "noRoles": "Noch keine Rollen",
@@ -1107,7 +1123,9 @@
         },
         "loadFailed": "Die Inhalte konnten nicht geladen werden.",
         "emailBlocked": "Diese E-Mail-Adresse kann nicht verwendet werden.",
-        "nameProtected": "Dieser Name ist reserviert. Bitte wähle einen anderen."
+        "nameProtected": "Dieser Name ist reserviert. Bitte wähle einen anderen.",
+        "sessionEnded": "Deine Sitzung ist abgelaufen. Melde dich erneut an, um zu speichern.",
+        "rateLimited": "Zu viele Anfragen. Warte einen Moment und versuche es erneut."
     },
     "export": {
         "title": "Als Excel exportieren",
@@ -1474,6 +1492,7 @@
         "removedRoute": "Entfernte Route",
         "logAscent": "Begehung eintragen",
         "edit": "Begehung bearbeiten",
+        "type": "Art der Begehung",
         "attempts": "Versuche",
         "attemptsInvalid": "Gib eine ganze Zahl von 1 bis 999 ein.",
         "date": "Datum",
@@ -1774,7 +1793,8 @@
                 "platform_reports": "Inhaltsmeldungen aller Hallen",
                 "content": "Moderation meiner Inhalte",
                 "moderation": "Zu prüfende Inhalte",
-                "platform_issues": "Serverfehler und Warnungen"
+                "platform_issues": "Serverfehler und Warnungen",
+                "account": "Mein Konto"
             },
             "devices": "Geräte",
             "thisDevice": "Dieses Gerät",
@@ -2035,7 +2055,8 @@
                 "allFlashes": "Alles geflasht",
                 "uniqueTop": "Einziges Top einer Route"
             },
-            "competition": "Wettkampf"
+            "competition": "Wettkampf",
+            "unsaved": "Nicht gespeichert"
         },
         "export": {
             "menu": "Exportieren",
@@ -2682,6 +2703,18 @@
             "subject": "Deine Testphase von {app} ist beendet",
             "body": "Die Testphase von {gym} endete am {date}. Kletternde können die Halle weiter nutzen, aber dein Team kann nichts mehr ändern.",
             "note": "Antworte auf diese E-Mail, um mit {app} weiterzumachen."
+        },
+        "accountExport": {
+            "subject": "Deine {app}-Daten sind bereit",
+            "body": "Der Export deines {app}-Kontos steht zum Download bereit. Der Link funktioniert 7 Tage lang und nur für diesen Export.",
+            "action": "Daten herunterladen",
+            "note": "Falls du das nicht angefordert hast, ändere dein Passwort."
+        },
+        "accountExportTooLarge": {
+            "subject": "Dein {app}-Datenexport konnte nicht erstellt werden",
+            "body": "Dein {app}-Konto enthält mehr Daten, als in einen Download passen (2 GB), deshalb wurde kein Export erstellt. Antworte auf diese E-Mail oder wende dich an den Betreiber von {app}, um deine Daten auf anderem Weg zu erhalten.",
+            "action": "Datenexport öffnen",
+            "note": "Falls du das nicht angefordert hast, ändere dein Passwort."
         }
     },
     "leaderboard": {
@@ -2702,7 +2735,7 @@
             "end": "Ende",
             "add": "Saison anlegen",
             "deleteConfirm": "Diese Saison löschen? Die Begehungen bleiben in den Logbüchern.",
-            "endBeforeStart": "Das Ende muss nach dem Beginn liegen"
+            "endBeforeStart": "Das Ende darf nicht vor dem Beginn liegen"
         },
         "points": "{n} Pkt.",
         "stats": {
@@ -3174,5 +3207,15 @@
         "browser": "Gripello braucht einen neueren Browser, um richtig angezeigt zu werden.",
         "webview": "Android System WebView ist veraltet, deshalb wird Gripello nicht richtig angezeigt.",
         "update": "Aktualisieren"
+    },
+    "seo": {
+        "default": "Gripello zeigt die aktuellen Boulder und Routen einer Kletterhalle mit Schwierigkeitsgraden, Hallenplan, Logbuch und Wettkämpfen.",
+        "landing": "Finde deine Kletterhalle und sieh dir ihre aktuellen Boulder und Routen, den Hallenplan und Wettkämpfe an.",
+        "routes": "Alle aktuellen Boulder und Routen in {name} mit Schwierigkeitsgraden, Griffarben und Bewertungen.",
+        "info": "Öffnungszeiten, Adresse und Kontakt von {name}.",
+        "competitions": "Kletterwettkämpfe in {name}: Termine, Anmeldung und Ergebnisse.",
+        "competition": "{name}: Ablauf, Kategorien und Live-Ergebnisse.",
+        "leaderboard": "Bestenliste von {name}: Kletternde nach ihren besten Begehungen.",
+        "privacy": "Wie {name} personenbezogene Daten verarbeitet."
     }
 }

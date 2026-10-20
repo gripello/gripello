@@ -1,5 +1,6 @@
+import { useEventListener, useIntervalFn, useTimeoutFn } from '@vueuse/core'
 import { getCompetitionStandings } from '~/api/competitions'
-import { keepWhenOffline } from '~/utils/errors'
+import { useOfflineData } from '~/composables/useOfflineData'
 
 const RESULT_KINDS = ['competition', 'routes', 'entries', 'scores', 'resync']
 // Later than nginx's shared 1 s standings cache can live (up to 2 s), so a refetch never gets the pre-change copy.
@@ -15,43 +16,37 @@ export function useCompetitionResults(
 ) {
     const key = () =>
         `competition-results:${staff ? 'staff' : 'public'}:${competitionId.value}`
-    const result = useAsyncData(
+    const result = useOfflineData(
         key,
-        (nuxtApp) =>
-            keepWhenOffline(nuxtApp, key(), () =>
-                getCompetitionStandings(
-                    competitionId.value,
-                    staff ? {} : { view: 'public' },
-                ),
+        () =>
+            getCompetitionStandings(
+                competitionId.value,
+                staff ? {} : { view: 'public' },
             ),
         { enabled: () => !!competitionId.value },
     )
 
-    let liveRefresh: ReturnType<typeof setTimeout> | undefined
+    const liveRefresh = useTimeoutFn(
+        () => void result.refresh(),
+        () => LIVE_REFRESH_DELAY_MS + Math.random() * LIVE_REFRESH_JITTER_MS,
+        { immediate: false },
+    )
     useCompetitionLive(competitionId, (change) => {
-        if (!RESULT_KINDS.includes(change.kind) || liveRefresh) return
-        liveRefresh = setTimeout(
-            () => {
-                liveRefresh = undefined
-                void result.refresh()
-            },
-            LIVE_REFRESH_DELAY_MS + Math.random() * LIVE_REFRESH_JITTER_MS,
-        )
+        if (!RESULT_KINDS.includes(change.kind) || liveRefresh.isPending.value)
+            return
+        liveRefresh.start()
     })
 
-    let timer: ReturnType<typeof setInterval> | undefined
     const poll = () => {
         if (document.visibilityState === 'visible' && navigator.onLine)
             void result.refresh()
     }
-    onMounted(() => {
-        timer = setInterval(poll, pollMs)
-        document.addEventListener('visibilitychange', poll)
+    const { resume: startPolling } = useIntervalFn(poll, pollMs, {
+        immediate: false,
     })
-    onBeforeUnmount(() => {
-        clearInterval(timer)
-        clearTimeout(liveRefresh)
-        document.removeEventListener('visibilitychange', poll)
+    onMounted(() => {
+        startPolling()
+        useEventListener(document, 'visibilitychange', poll)
     })
 
     return result

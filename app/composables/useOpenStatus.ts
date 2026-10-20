@@ -17,18 +17,11 @@ export function weekdayName(
     return new Intl.DateTimeFormat(locale, { weekday: format }).format(monday)
 }
 
-// The clock only starts after mount, so SSR and hydration render the same markup.
 export function useOpenStatus(
     hours: MaybeRefOrGetter<GymOpeningHours | null | undefined>,
 ) {
     const { t, locale } = useI18n()
-    const now = ref<Date | null>(null)
-    let timer: ReturnType<typeof setInterval> | undefined
-    onMounted(() => {
-        now.value = new Date()
-        timer = setInterval(() => (now.value = new Date()), 60_000)
-    })
-    onBeforeUnmount(() => clearInterval(timer))
+    const now = useMountedNow(60_000)
 
     const status = computed(() => {
         const value = toValue(hours)

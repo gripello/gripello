@@ -11,7 +11,6 @@ import type {
 import { competitionPhase } from '~/utils/competitions'
 import { newRoutes, type OverviewRoute } from '~/utils/overview'
 
-export const TV_NEW_ROUTE_DAYS = 7
 export const TV_ROUTE_PAGES = 2
 export const TV_ROUTES_PER_PAGE = { landscape: 8, portrait: 10 } as const
 export const TV_BOARD_ROWS = 10
@@ -132,7 +131,7 @@ export function buildPlaylist<Route extends TvRoute>(
     const slides: TvSlide<Route>[] = []
     if (enabled.has('new_routes')) {
         const perPage = TV_ROUTES_PER_PAGE[orientation]
-        const fresh = newRoutes(data.routes, now, TV_NEW_ROUTE_DAYS).slice(
+        const fresh = newRoutes(data.routes, now).slice(
             0,
             perPage * TV_ROUTE_PAGES,
         )

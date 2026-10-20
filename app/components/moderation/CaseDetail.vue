@@ -216,6 +216,7 @@
 </template>
 
 <script setup lang="ts">
+import { THUMBS } from '#shared/utils/thumbs'
 import { fileUrl as apiFileUrl } from '~/api/client'
 import type { ModerationAction, ModerationItemRecord } from '~/types/models'
 import {
@@ -266,7 +267,7 @@ const authorAvatar = computed(() =>
         ? climberFileUrl(
               context.value.author.id,
               context.value.author.avatar,
-              '100x100',
+              THUMBS.avatar,
           )
         : null,
 )

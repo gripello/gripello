@@ -4,7 +4,7 @@ import path from 'node:path'
 const source = readFileSync(
     path.resolve(
         import.meta.dirname,
-        '../../app/pages/[gym]/manage/inventory.vue',
+        '../../app/composables/useInventorySession.ts',
     ),
     'utf8',
 )

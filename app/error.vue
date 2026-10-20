@@ -84,6 +84,7 @@
 </template>
 
 <script setup lang="ts">
+import { useEventListener } from '@vueuse/core'
 import type { NuxtError } from '#app'
 
 const props = defineProps<{ error: NuxtError }>()
@@ -115,12 +116,8 @@ const markOffline = () => (offline.value = true)
 
 onMounted(() => {
     offline.value = !navigator.onLine
-    window.addEventListener('offline', markOffline)
-    if (!isNotFound.value) window.addEventListener('online', retry)
-})
-onBeforeUnmount(() => {
-    window.removeEventListener('offline', markOffline)
-    window.removeEventListener('online', retry)
+    useEventListener('offline', markOffline)
+    if (!isNotFound.value) useEventListener('online', retry)
 })
 const goBack = () =>
     window.history.length > 1

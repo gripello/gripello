@@ -87,10 +87,10 @@
                                         : 'neutral'
                                 "
                                 :aria-pressed="sessionLocation === item.value"
-                                :data-testid="`inventory-location-${item.title}`"
+                                :data-testid="`inventory-location-${item.label}`"
                                 @click="sessionLocation = item.value"
                             >
-                                {{ item.title }}
+                                {{ item.label }}
                             </UButton>
                         </div>
                         <UButton
@@ -394,6 +394,19 @@
             :title="$t('inventory.reviewTitle')"
             :subtitle="sessionLocation || undefined"
             data-testid="inventory-finish-dialog"
+            :submit-label="
+                archiveIds.length
+                    ? $t('inventory.archiveSelected', {
+                          count: archiveIds.length,
+                      })
+                    : $t('inventory.archiveNone')
+            "
+            submit-color="warning"
+            submit-icon="i-lucide-archive"
+            :submit-loading="archiving"
+            submit-test-id="inventory-finish-confirm"
+            cancel-test-id="inventory-finish-cancel"
+            @submit="confirmFinish"
         >
             <div class="text-sm font-semibold mb-1">
                 {{ $t('inventory.reviewMissingTitle') }}
@@ -439,33 +452,6 @@
                     })
                 }}
             </p>
-
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    data-testid="inventory-finish-cancel"
-                    @click="finishDialog = false"
-                >
-                    {{ $t('actions.cancel') }}
-                </UButton>
-                <div class="flex-1" />
-                <UButton
-                    color="warning"
-                    icon="i-lucide-archive"
-                    :loading="archiving"
-                    data-testid="inventory-finish-confirm"
-                    @click="confirmFinish"
-                >
-                    {{
-                        archiveIds.length
-                            ? $t('inventory.archiveSelected', {
-                                  count: archiveIds.length,
-                              })
-                            : $t('inventory.archiveNone')
-                    }}
-                </UButton>
-            </template>
         </LayoutDialogShell>
 
         <ConfirmDialog
@@ -485,50 +471,23 @@
 </template>
 
 <script setup lang="ts">
-import { archiveRoute, archiveRoutes, listRoutes } from '~/api/routes'
-import { formatAnchorPoint, locationName } from '#shared/utils/formatting'
-import {
-    clearSession,
-    countUnlocated,
-    extractRouteId,
-    loadSession,
-    missingRoutes,
-    persistSession,
-    scopedRoutes,
-    sortByAnchor,
-} from '~/utils/inventory'
+import { archiveRoutes } from '~/api/routes'
+import { locationName } from '#shared/utils/formatting'
+import { extractRouteId } from '~/utils/inventory'
 import type { RouteRecord } from '~/types/models'
-import {
-    coalesce,
-    gymChangesTopic,
-    staffRouteChange,
-    type GymChange,
-} from '~/utils/realtimeCache'
 
 definePageMeta({
     middleware: 'auth',
     requiredPermission: 'run_inventory',
 })
 
-const SCAN_COOLDOWN_MS = 2000
-
 const { t, locale } = useI18n()
 const gymId = useCurrentGymId()
 const { mdAndUp } = useDisplay()
-const { data: locationRecords } = useLocations()
-const {
-    success: notifySuccess,
-    error: notifyError,
-    warning: notifyWarning,
-} = useNotification()
+const { items: locationItems } = useLocations()
+const { success: notifySuccess } = useNotification()
 
 const isWideLayout = computed(() => mdAndUp.value)
-
-const allRoutes = ref<RouteRecord[]>([])
-const loadingRoutes = ref(false)
-const scannedRouteIds = ref<string[]>([])
-const sessionLocation = ref<string | null>(null)
-const restoredUnscoped = ref(false)
 
 const viewportRef = useTemplateRef<HTMLElement>('viewportRef')
 const {
@@ -546,6 +505,28 @@ const {
     signalDuplicate,
     signalRejected,
 } = useQrScanner(viewportRef, () => t('inventory.cameraError'))
+
+const {
+    allRoutes,
+    loadingRoutes,
+    scannedRouteIds,
+    sessionLocation,
+    restoredUnscoped,
+    locationLocked,
+    scoped,
+    missing,
+    foundRoutes,
+    progress,
+    unlocatedCount,
+    scan,
+    markFound: markRouteFound,
+    undoScan,
+    loadRoutes,
+    reset: resetSession,
+} = useInventorySession({
+    gymId,
+    onLoadError: () => (scannerError.value = t('inventory.loadError')),
+})
 
 const instructionsDialog = ref(false)
 const manualDialog = ref(false)
@@ -585,47 +566,11 @@ const cameraConstraints = {
     height: { ideal: 1080 },
 }
 
-const locationItems = computed(() =>
-    (locationRecords.value ?? []).map((location) => ({
-        title: location.name,
-        value: location.id,
-    })),
-)
-
 const sessionLocationName = computed(
     () =>
         locationItems.value.find((item) => item.value === sessionLocation.value)
-            ?.title ?? '',
+            ?.label ?? '',
 )
-
-const locationLocked = computed(
-    () => scannedRouteIds.value.length > 0 && !!sessionLocation.value,
-)
-
-const scoped = computed(() =>
-    scopedRoutes(allRoutes.value, sessionLocation.value),
-)
-
-const missing = computed(() =>
-    missingRoutes(
-        allRoutes.value,
-        scannedRouteIds.value,
-        sessionLocation.value,
-    ),
-)
-
-const foundRoutes = computed(() => {
-    const scanned = new Set(scannedRouteIds.value)
-    return sortByAnchor(scoped.value.filter((route) => scanned.has(route.id)))
-})
-
-const progress = computed(() =>
-    scoped.value.length
-        ? (foundRoutes.value.length / scoped.value.length) * 100
-        : 0,
-)
-
-const unlocatedCount = computed(() => countUnlocated(allRoutes.value))
 
 const missingEmptyTitle = computed(() =>
     sessionLocation.value
@@ -651,73 +596,6 @@ useHead(() => ({
     title: t('page.title.inventory'),
     meta: [{ name: 'description', content: t('page.content.inventory') }],
 }))
-
-// ── Storage ─────────────────────────────────────────────────────────────
-let storageWarningShown = false
-const warnStorageUnavailable = () => {
-    if (storageWarningShown) return
-    storageWarningShown = true
-    notifyWarning(t('inventory.storageWarning'))
-}
-
-const restoreSession = () => {
-    try {
-        const session = loadSession()
-        scannedRouteIds.value = session.ids
-        sessionLocation.value = session.location
-        restoredUnscoped.value = session.ids.length > 0 && !session.location
-    } catch (error) {
-        console.warn('Failed to restore inventory session:', error)
-        warnStorageUnavailable()
-    }
-}
-
-watch(
-    [scannedRouteIds, sessionLocation],
-    () => {
-        if (!import.meta.client) return
-        try {
-            persistSession({
-                location: sessionLocation.value,
-                ids: scannedRouteIds.value,
-            })
-        } catch (error) {
-            console.warn('Failed to persist inventory session:', error)
-            warnStorageUnavailable()
-        }
-    },
-    { flush: 'post' },
-)
-
-const reconcileScannedIds = () => {
-    if (!allRoutes.value.length) return
-
-    const byId = new Map(allRoutes.value.map((route) => [route.id, route]))
-    const resolved = scannedRouteIds.value.filter((id) => byId.has(id))
-
-    const kept = sessionLocation.value
-        ? resolved.filter(
-              (id) => byId.get(id)?.location === sessionLocation.value,
-          )
-        : resolved
-
-    const wrongLocation = resolved.length - kept.length
-    if (wrongLocation > 0) {
-        notifyWarning(
-            t(
-                'inventory.droppedForLocation',
-                { count: wrongLocation },
-                wrongLocation,
-            ),
-        )
-    }
-    if (kept.length !== scannedRouteIds.value.length) {
-        scannedRouteIds.value = kept
-    }
-    if (sessionLocation.value) restoredUnscoped.value = false
-}
-
-watch(sessionLocation, () => reconcileScannedIds())
 
 const acceptingScans = computed(
     () => !finishDialog.value && !manualDialog.value,
@@ -804,10 +682,19 @@ const codeTag = (rawValue: string) => {
     }
 }
 
+const signals = {
+    accepted: signalAccepted,
+    duplicate: signalDuplicate,
+    rejected: signalRejected,
+}
+
 const onDetect = (detectedCodes: { rawValue: string }[]) => {
     if (!Array.isArray(detectedCodes) || !acceptingScans.value) return
     for (const code of detectedCodes) {
-        if (code.rawValue) void handleScanResult(code.rawValue)
+        if (code.rawValue)
+            void scan(code.rawValue).then(
+                (outcome) => outcome && signals[outcome](),
+            )
     }
 }
 
@@ -815,101 +702,12 @@ const startScanner = () => {
     if (sessionLocation.value) startCamera()
 }
 
-const recentScans = new Map<string, number>()
-
-const addScannedRoute = async (id: string) => {
-    const route = allRoutes.value.find((entry) => entry.id === id)
-
-    if (!route) {
-        signalRejected()
-        return
-    }
-
-    if (route.location !== sessionLocation.value) {
-        signalRejected()
-        return
-    }
-
-    if (scannedRouteIds.value.includes(id)) {
-        signalDuplicate()
-        return
-    }
-
-    if (route.archived) {
-        try {
-            await archiveRoute(id, false)
-            allRoutes.value = allRoutes.value.map((entry) =>
-                entry.id === id ? { ...entry, archived: false } : entry,
-            )
-            notifySuccess(
-                t('inventory.restoreSuccess', { name: route.name || route.id }),
-            )
-        } catch (error) {
-            console.error('Failed to restore archived route:', error)
-            signalRejected()
-            notifyError(t('inventory.restoreError'))
-            return
-        }
-    }
-
-    scannedRouteIds.value = [...scannedRouteIds.value, id]
-    signalAccepted()
-}
-
-const handleScanResult = async (text: string) => {
-    const id = extractRouteId(text)
-
-    const key = id ?? `raw:${text}`
-    const now = Date.now()
-    if (now - (recentScans.get(key) ?? 0) < SCAN_COOLDOWN_MS) return
-    recentScans.set(key, now)
-
-    if (!id) {
-        signalRejected()
-        return
-    }
-
-    await addScannedRoute(id)
-}
-
 const markFound = (
     route: RouteRecord,
     options: { closeManual?: boolean } = {},
 ) => {
-    if (!scannedRouteIds.value.includes(route.id)) {
-        scannedRouteIds.value = [...scannedRouteIds.value, route.id]
-        notifySuccess(
-            t('inventory.markedFound', { name: route.name || route.id }),
-        )
-    }
+    markRouteFound(route)
     if (options.closeManual) manualDialog.value = false
-}
-
-const undoScan = (route: RouteRecord) => {
-    scannedRouteIds.value = scannedRouteIds.value.filter(
-        (id) => id !== route.id,
-    )
-    recentScans.delete(route.id)
-    notifySuccess(t('inventory.undone', { name: route.name || route.id }))
-}
-
-const loadRoutes = async () => {
-    loadingRoutes.value = allRoutes.value.length === 0
-    try {
-        const { items } = await listRoutes<RouteRecord>(gymId.value, {
-            archived: 'all',
-            include: ['location'],
-        })
-        allRoutes.value = items
-        reconcileScannedIds()
-    } catch (error) {
-        const message = (error as { message?: string })?.message
-        if (message?.includes('autocancelled')) return
-        console.error('Failed to load routes for inventory:', error)
-        scannerError.value = t('inventory.loadError')
-    } finally {
-        loadingRoutes.value = false
-    }
 }
 
 const openManualDialog = () => {
@@ -931,16 +729,9 @@ const toggleArchive = (id: string, selected: unknown) => {
 
 const resetInventory = () => {
     stopScanner()
-    recentScans.clear()
     finishDialog.value = false
     archiveSelection.value = new Set()
-    scannedRouteIds.value = []
-    restoredUnscoped.value = false
-    try {
-        clearSession()
-    } catch (error) {
-        console.warn('Failed to clear inventory session:', error)
-    }
+    resetSession()
 }
 
 const confirmReset = () => {
@@ -988,23 +779,6 @@ const { data: initial } = await useAsyncData('inventory-routes', async () => {
 if (initial.value) {
     allRoutes.value = initial.value
 }
-
-const loadRoutesSoon = coalesce(loadRoutes)
-useRealtime(
-    () => gymChangesTopic(gymId.value),
-    (change: GymChange) => {
-        if (change.collection === 'ratings') return
-        const next = staffRouteChange(allRoutes.value, change)
-        allRoutes.value = next.rows
-        if (next.reload) loadRoutesSoon()
-    },
-    { resync: loadRoutesSoon },
-)
-
-onMounted(() => {
-    restoreSession()
-    reconcileScannedIds()
-})
 </script>
 
 <style scoped>

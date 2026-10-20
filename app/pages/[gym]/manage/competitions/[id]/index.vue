@@ -4,24 +4,7 @@
             v-if="status === 'pending' && !competition"
             variant="page"
         />
-        <LayoutEmptyState
-            v-else-if="error || !competition"
-            variant="error"
-            :title="t('errors.loadFailed')"
-            data-testid="load-error"
-        >
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-refresh-cw"
-                    data-testid="load-error-retry"
-                    @click="refresh()"
-                >
-                    {{ t('errors.retry') }}
-                </UButton>
-            </template>
-        </LayoutEmptyState>
+        <LayoutLoadError v-else-if="error || !competition" @retry="refresh()" />
         <template v-else>
             <LayoutPageHeader
                 :title="competition.name"
@@ -152,16 +135,14 @@
 
 <script setup lang="ts">
 import {
-    createCategory,
+    createCompetitionCategory,
     createCompetition,
     deleteCompetition,
-    getCompetition,
-    listCategories,
+    listCompetitionCategories,
     listCompetitionRoutes,
     publishCompetition,
     updateCompetition,
 } from '~/api/competitions'
-import { keepWhenOffline } from '~/utils/errors'
 import type { LocaleCode } from '~/utils/locales'
 import type {
     CompetitionExportFormat,
@@ -184,7 +165,6 @@ definePageMeta({
 })
 
 const { t, locale } = useI18n()
-const route = useRoute()
 const { pending, run } = useAsyncAction()
 const { pending: exporting, download } = useCompetitionExport()
 
@@ -192,52 +172,30 @@ const formOpen = ref(false)
 const deleteOpen = ref(false)
 const copying = ref(false)
 
-const competitionId = computed(() => String(route.params.id ?? ''))
-
+const refreshSetupSoon = coalesce(() => refreshSetup(), 400)
 const {
     data: competition,
     status,
     error,
     refresh,
-} = await useAsyncData(
-    () => `manage-competition:${competitionId.value}`,
-    (nuxtApp) =>
-        keepWhenOffline(
-            nuxtApp,
-            `manage-competition:${competitionId.value}`,
-            () => getCompetition(competitionId.value),
-        ),
-    { enabled: () => !!competitionId.value },
-)
-
-if (competition.value && competition.value.gym !== useCurrentGymId().value)
-    throw createError({ status: 404, fatal: true })
-
-const { data: setup, refresh: refreshSetup } = useAsyncData(
-    () => `manage-competition-setup:${competitionId.value}`,
-    (nuxtApp) =>
-        keepWhenOffline(
-            nuxtApp,
-            `manage-competition-setup:${competitionId.value}`,
-            async () => {
-                const [categories, routes] = await Promise.all([
-                    listCategories(competitionId.value),
-                    listCompetitionRoutes(competitionId.value),
-                ])
-                return { categoryCount: categories.length, routes }
-            },
-        ),
-    { enabled: () => !!competitionId.value },
-)
-
-const refreshCompetitionSoon = coalesce(() => refresh(), 400)
-const refreshSetupSoon = coalesce(() => refreshSetup(), 400)
-useCompetitionLive(competitionId, ({ kind }) => {
-    if (kind === 'competition' || kind === 'resync') refreshCompetitionSoon()
+    competitionId,
+} = await useCompetitionRecord(({ kind }) => {
     if (kind === 'routes' || kind === 'categories' || kind === 'resync') {
         refreshSetupSoon()
     }
 })
+
+const { data: setup, refresh: refreshSetup } = useOfflineData(
+    () => `manage-competition-setup:${competitionId.value}`,
+    async () => {
+        const [categories, routes] = await Promise.all([
+            listCompetitionCategories(competitionId.value),
+            listCompetitionRoutes(competitionId.value),
+        ])
+        return { categoryCount: categories.length, routes }
+    },
+    { enabled: () => !!competitionId.value },
+)
 
 const checklist = computed(() =>
     competition.value
@@ -395,11 +353,11 @@ async function copy() {
                 t('competitions.copyName', { name: source.name }),
             ),
         )
-        const categories = await listCategories(source.id)
+        const categories = await listCompetitionCategories(source.id)
         await Promise.all(
             categories.map(
                 ({ name, gender, min_birth_year, max_birth_year, sort }) =>
-                    createCategory(copied.id, {
+                    createCompetitionCategory(copied.id, {
                         name,
                         gender,
                         min_birth_year,

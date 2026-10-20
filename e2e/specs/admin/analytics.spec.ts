@@ -142,7 +142,7 @@ test('grade charts switch discipline in place and follow the type filter', async
             ...(type === 'Boulder' ? gradeOf('font', '6A') : uiaa('6')),
             type,
             creator: [`${testPrefix}-setter`],
-            screw_date: new Date().toISOString(),
+            screw_date: new Date().toISOString().slice(0, 10),
         })
     }
     await gotoSettled(page, '/manage/analytics?range=all')
@@ -232,7 +232,7 @@ test('updates live when a route is created elsewhere', async ({
         ...uiaa('5'),
         type: 'Route',
         creator: [setter],
-        screw_date: new Date().toISOString(),
+        screw_date: new Date().toISOString().slice(0, 10),
     })
     await liveRefresh
 })
@@ -267,7 +267,7 @@ test('refreshes during a steady stream of route changes', async ({
                             ...uiaa('5'),
                             type: 'Route',
                             creator: [setter],
-                            screw_date: new Date().toISOString(),
+                            screw_date: new Date().toISOString().slice(0, 10),
                         },
                     )
                 }
@@ -349,7 +349,7 @@ test('reports routes whose grade votes are harder than the set grade', async ({
             ...uiaa('1'),
             type: 'Route',
             creator: ['Sandbagger'],
-            screw_date: new Date().toISOString(),
+            screw_date: new Date().toISOString().slice(0, 10),
         },
     )
     for (let vote = 0; vote < 3; vote++) {

@@ -4,7 +4,6 @@ import type {
     OpenRouteDefectRecord,
     RatingRecord,
     RouteRecord,
-    RouteScoreRecord,
     WallRecord,
 } from '~/types/models'
 
@@ -80,21 +79,6 @@ export function splitFollowRefresh(keys: string[]) {
     return [first, keys.filter((key) => !first.includes(key))] as const
 }
 
-export const liveTopics = {
-    openDefects: 'open_route_defects',
-    ownTicks: 'own_ticks',
-    ownNotifications: 'own_notifications',
-    followedTicks: 'followed_ticks',
-    followChanges: 'follow_changes',
-    climbers: 'climbers',
-    settings: 'settings',
-}
-
-export const gymChangesTopic = (gymId: string) => `gym_changes:${gymId}`
-
-export const gymDefectsTopic = (gymId: string) =>
-    `${liveTopics.openDefects}:${gymId}`
-
 export type GymChangeCollection =
     'routes' | 'walls' | 'locations' | 'ratings' | 'beta_videos' | 'seasons'
 
@@ -120,7 +104,12 @@ function inLocation<T extends { location?: string | null }>(
 }
 
 export type InScope<T> = (record: T) => boolean | null
-export type RowsData<T> = T[] | { items: T[]; totalItems: number }
+export interface ListPage<T> {
+    items: T[]
+    totalItems: number
+}
+
+export type RowsData<T> = T[] | ListPage<T>
 export type RatingLedger = Map<string, RatingRecord | null>
 export interface RatingChange {
     added: RatingRecord | null
@@ -309,7 +298,7 @@ function stars(rating: Pick<RatingRecord, 'rating'> | null) {
     return rating?.rating && rating.rating > 0 ? rating.rating : 0
 }
 
-type Score = Pick<RouteScoreRecord, 'average_rating' | 'ratings_count'>
+type Score = Pick<RouteRecord, 'average_rating' | 'ratings_count'>
 
 export function shiftScore(score: Score, added: number, removed = 0): Score {
     const count = Number(score.ratings_count ?? 0)
@@ -322,7 +311,7 @@ export function shiftScore(score: Score, added: number, removed = 0): Score {
     }
 }
 
-export function applyRatingChange<T extends RouteScoreRecord>(
+export function applyRatingChange<T extends RouteRecord>(
     rows: T[],
     change: RatingChange,
 ): T[] {

@@ -1,7 +1,9 @@
+import { displayName } from '~/utils/avatar'
+import type { PermissionCheck } from '#shared/utils/permissions'
 import { listGymRatings } from '~/api/ratings'
 import { listRoutes } from '~/api/routes'
 import { listMembers, listRoles } from '~/api/members'
-import { listCases } from '~/api/moderation'
+import { listModerationCases } from '~/api/moderation'
 import type { RouteRecord } from '~/types/models'
 import { normalizeCreators } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
@@ -101,11 +103,7 @@ export function useGlobalSearch() {
                 `/admin/users?search=${encodeURIComponent(user.email ?? user.username ?? '')}`,
             ),
             icon: 'i-lucide-user',
-            title:
-                [user.firstname, user.name].filter(Boolean).join(' ') ||
-                user.username ||
-                user.email ||
-                user.id,
+            title: displayName(user, user.id),
             subtitle: user.email ?? undefined,
         }))
     }
@@ -142,7 +140,7 @@ export function useGlobalSearch() {
     }
 
     const searchModeration = async (query: string): Promise<SearchResult[]> => {
-        const res = await listCases({
+        const res = await listModerationCases({
             gym: gymId.value,
             q: query,
             sort: 'newest',
@@ -209,7 +207,12 @@ export function useGlobalSearch() {
             permission: 'manage_settings',
             search: async (query: string) => searchSettings(query),
         },
-    ]
+    ] satisfies {
+        key: string
+        label: string
+        permission?: PermissionCheck
+        search: unknown
+    }[]
 
     async function search(query: string): Promise<SearchGroup[]> {
         const term = query.trim()

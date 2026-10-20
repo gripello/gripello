@@ -1,27 +1,28 @@
-import type { MembershipRecord, RoleRecord } from '../../types/models'
+import type { RoleRecord } from '../../types/models'
 
-export function membershipIn(
-    memberships: MembershipRecord[],
+export function membershipIn<T extends { gym: { id: string } }>(
+    memberships: readonly T[],
     gymId: string,
-): MembershipRecord | undefined {
+): T | undefined {
     return gymId
-        ? memberships.find((membership) => membership.gym === gymId)
+        ? memberships.find((membership) => membership.gym.id === gymId)
         : undefined
 }
 
 export function permissionsIn(
-    memberships: MembershipRecord[],
+    memberships: readonly {
+        gym: { id: string }
+        role: { permissions: string[] }
+    }[],
     gymId: string,
 ): string[] {
-    const permissions = membershipIn(memberships, gymId)?.expand?.role?.expand
-        ?.permissions
-    return (permissions ?? []).map((permission) => permission.name)
+    return membershipIn(memberships, gymId)?.role.permissions ?? []
 }
 
-export function activeMemberships<
-    T extends { expand?: { gym?: { active?: boolean } } },
->(memberships: readonly T[]): T[] {
-    return memberships.filter((membership) => membership.expand?.gym?.active)
+export function activeMemberships<T extends { gym: { active: boolean } }>(
+    memberships: readonly T[],
+): T[] {
+    return memberships.filter((membership) => membership.gym.active)
 }
 
 type GrantRole = Pick<RoleRecord, 'name' | 'permissions'>

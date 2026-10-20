@@ -101,7 +101,7 @@
                             class="text-xs text-muted tabular-nums"
                         >
                             {{
-                                formatDate(tickDate(lastEarned(item)!), {
+                                formatDate(lastEarned(item), {
                                     locale,
                                     dateStyle: 'medium',
                                 })
@@ -118,7 +118,6 @@
 import { listClimberAchievements } from '~/api/social'
 import { cacheKeys } from '~/utils/realtimeCache'
 import { formatDate } from '#shared/utils/formatting'
-import { tickDate } from '#shared/utils/ticks'
 import {
     groupAchievements,
     nextTier,

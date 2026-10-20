@@ -104,6 +104,7 @@
 </template>
 
 <script setup lang="ts">
+import { useEventListener } from '@vueuse/core'
 import { videoClock } from '#shared/utils/betaVideos'
 
 defineProps<{ src: string }>()
@@ -161,12 +162,8 @@ const onFullscreenChange = () =>
 onMounted(() => {
     if (video.value && video.value.readyState >= HTMLMediaElement.HAVE_METADATA)
         onMetadata()
-    document.addEventListener('fullscreenchange', onFullscreenChange)
+    useEventListener(document, 'fullscreenchange', onFullscreenChange)
 })
-
-onBeforeUnmount(() =>
-    document.removeEventListener('fullscreenchange', onFullscreenChange),
-)
 
 function onMetadata() {
     if (!video.value) return

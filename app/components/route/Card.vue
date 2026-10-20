@@ -169,7 +169,7 @@ const score = computed(() => formatScore(props.route, locale.value))
     font-size: 1.4rem;
     font-weight: 700;
     line-height: 1;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 55%, transparent);
+    color: var(--ui-text-muted);
     flex-shrink: 0;
 }
 
@@ -182,7 +182,7 @@ const score = computed(() => formatScore(props.route, locale.value))
 
 .route-card__comment {
     font-size: 0.8rem;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 70%, transparent);
+    color: var(--ui-text-muted);
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 2;

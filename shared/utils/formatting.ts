@@ -1,15 +1,9 @@
 import { formatNumber } from './number'
 
-export function formatDateToYYYYMMDD(date: string | null | undefined): string {
-    return parseDate(date)?.toISOString().slice(0, 10) ?? ''
-}
-
 export function localDateYYYYMMDD(date = new Date()): string {
     const pad = (value: number) => String(value).padStart(2, '0')
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
-
-const DAY_MS = 86_400_000
 
 export interface FormatDateOptions extends Intl.DateTimeFormatOptions {
     locale?: string | null
@@ -17,14 +11,22 @@ export interface FormatDateOptions extends Intl.DateTimeFormatOptions {
     withTime?: boolean
 }
 
+const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/
+// cached records from before the API switched to RFC 3339 still carry "YYYY-MM-DD HH:MM:SS.sssZ"
+const LEGACY_TIMESTAMP = /^(\d{4}-\d{2}-\d{2}) (?=\d)/
+
 export function parseDate(
     value: string | Date | null | undefined,
 ): Date | null {
     if (!value) return null
+    const text = String(value)
+    const day = value instanceof Date ? null : CALENDAR_DAY.exec(text)
     const parsed =
         value instanceof Date
             ? value
-            : new Date(String(value).replace(' ', 'T'))
+            : day
+              ? new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3]))
+              : new Date(text.replace(LEGACY_TIMESTAMP, '$1T'))
     return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
@@ -40,8 +42,6 @@ export function formatDate(
     const parsed = parseDate(value)
     if (!parsed) return fallback
     const resolvedLocale = locale || undefined
-    const isDateOnly = parsed.getTime() % DAY_MS === 0
-    if (!withTime && !intl.timeZone && isDateOnly) intl.timeZone = 'UTC'
     return withTime
         ? parsed.toLocaleString(resolvedLocale, intl)
         : parsed.toLocaleDateString(resolvedLocale, intl)

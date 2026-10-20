@@ -88,7 +88,7 @@ describe('tableFromXlsx', () => {
                 {
                     Color: '#2196F3',
                     Name: 'Crimp',
-                    'Set on': '2026-03-04T00:00:00.000Z',
+                    'Set on': '2026-03-04T00:00:00',
                 },
             ],
         })
@@ -236,19 +236,19 @@ describe('review import', () => {
             id: 'old',
             name: 'Crimp',
             location: 'Hall',
-            date: '2020-01-01 00:00:00.000Z',
+            date: '2020-01-01',
         },
         {
             id: 'new',
             name: 'Crimp',
             location: 'Hall',
-            date: '2022-01-01 00:00:00.000Z',
+            date: '2022-01-01',
         },
         {
             id: 'cave',
             name: 'Crimp',
             location: 'Cave',
-            date: '2019-01-01 00:00:00.000Z',
+            date: '2019-01-01',
         },
         { id: 'abc123', name: 'Sloper', location: 'Hall', date: '2021-01-01' },
     ]

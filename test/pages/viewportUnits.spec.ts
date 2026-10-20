@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 
 const FILES = [
-    'app/components/layout/CommandPalette.vue',
+    'app/components/layout/CommandPaletteDialog.vue',
     'app/pages/[gym]/manage/inventory.vue',
     'app/assets/css/main.css',
 ]

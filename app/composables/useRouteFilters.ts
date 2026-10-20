@@ -1,12 +1,12 @@
+import { ROUTE_TYPES } from '#shared/utils/routeTypes'
 import { listWalls } from '~/api/routes'
 import { cacheKeys } from '~/utils/realtimeCache'
-import { ROUTE_TYPES } from '~/utils/routes'
 import { routeFilterQuery } from '~/utils/routeSearch'
 import type { WallRecord } from '~/types/models'
 
 export function useRouteFilters(scope: string) {
     const { t } = useI18n()
-    const { data: locationRecords } = useLocations()
+    const { items: locations } = useLocations()
     const { gradeFilterItems } = useGradeSystems()
     const gymId = useCurrentGymId()
 
@@ -41,13 +41,6 @@ export function useRouteFilters(scope: string) {
         ROUTE_TYPES.map((value) => ({
             text: t(`routes.types.${value.toLowerCase()}`),
             value,
-        })),
-    )
-
-    const locations = computed(() =>
-        locationRecords.value.map((location) => ({
-            text: location.name,
-            value: location.id,
         })),
     )
 

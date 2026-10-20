@@ -36,7 +36,7 @@
                 class="platform-kpis grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6"
                 data-testid="platform-traffic-kpis"
             >
-                <AnalyticsStatsCard
+                <LayoutStatCard
                     v-for="kpi in kpis"
                     :key="kpi.key"
                     :title="kpi.label"
@@ -56,7 +56,6 @@
                     <AnalyticsSection
                         :title="t('platform.overview.traffic.title')"
                         icon="i-lucide-activity"
-                        :loading="trafficLoading"
                         :empty="!!trafficError"
                         :empty-text="t('errors.loadFailed')"
                         testid="platform-traffic"
@@ -74,9 +73,11 @@
                             :series="traffic.series"
                             :step-seconds="traffic.step_seconds"
                         />
+                        <USkeleton v-else class="h-[220px] w-full" />
                     </AnalyticsSection>
                     <PlatformEndpointTable
                         :endpoints="traffic?.endpoints ?? []"
+                        :loading="trafficLoading"
                     />
                     <AnalyticsSection
                         :title="t('platform.gyms.title')"
@@ -177,7 +178,6 @@
                     <AnalyticsSection
                         :title="t('platform.overview.needsYou')"
                         icon="i-lucide-bell-ring"
-                        color="error"
                         flush
                         testid="platform-needs-you"
                         class="max-xl:-order-1"
@@ -225,25 +225,18 @@
                     <AnalyticsSection
                         :title="t('platform.overview.people.title')"
                         icon="i-lucide-users-round"
-                        color="info"
+                        :loading="trafficLoading"
                         testid="platform-people"
                     >
-                        <dl v-if="traffic" class="grid grid-cols-2 gap-4">
-                            <div
+                        <div v-if="traffic" class="grid grid-cols-2 gap-4">
+                            <LayoutStatTile
                                 v-for="item in peopleItems"
                                 :key="item.key"
+                                :label="item.label"
+                                :value="item.value"
                                 :data-testid="`platform-people-${item.key}`"
-                            >
-                                <dd
-                                    class="text-2xl font-bold tabular-nums text-highlighted"
-                                >
-                                    {{ item.value }}
-                                </dd>
-                                <dt class="text-xs text-muted">
-                                    {{ item.label }}
-                                </dt>
-                            </div>
-                        </dl>
+                            />
+                        </div>
                         <div
                             v-if="signInShares.length"
                             class="mt-4 flex flex-col gap-2"
@@ -279,41 +272,35 @@
                         icon="i-lucide-building-2"
                         testid="platform-totals"
                     >
-                        <dl class="grid grid-cols-2 gap-4">
-                            <div
+                        <div class="grid grid-cols-2 gap-4">
+                            <LayoutStatTile
                                 v-for="tile in tiles"
                                 :key="tile.key"
+                                :label="tile.label"
+                                :value="tile.value"
+                                value-test-id="stats-card-value"
                                 :data-testid="`platform-stat-${tile.key}`"
-                            >
-                                <dd
-                                    class="text-2xl font-bold tabular-nums text-highlighted"
-                                    data-testid="stats-card-value"
-                                >
-                                    {{ tile.value }}
-                                </dd>
-                                <dt class="text-xs text-muted">
-                                    {{ tile.label }}
-                                </dt>
-                            </div>
-                        </dl>
+                            />
+                        </div>
                     </AnalyticsSection>
                     <AnalyticsSection
                         :title="t('platform.overview.servers.title')"
                         icon="i-lucide-server-cog"
-                        color="secondary"
                         flush
+                        :loading="trafficLoading"
                         testid="platform-servers"
                     >
                         <PlatformServerList
                             v-if="traffic"
                             :servers="traffic.system.replicas"
+                            flush
                         />
                     </AnalyticsSection>
                     <AnalyticsSection
                         :title="t('platform.overview.system.title')"
                         icon="i-lucide-server"
-                        color="secondary"
                         flush
+                        :loading="trafficLoading"
                         testid="platform-system"
                     >
                         <dl
@@ -345,7 +332,6 @@
                     <AnalyticsSection
                         :title="t('platform.overview.admins')"
                         icon="i-lucide-shield-user"
-                        color="secondary"
                         flush
                         testid="platform-admins"
                     >
@@ -359,13 +345,13 @@
                                 <ClimberAvatar
                                     :id="admin.id"
                                     :avatar="admin.avatar"
-                                    :name="userDisplayName(admin)"
+                                    :name="displayName(admin)"
                                 />
                                 <div class="min-w-0 flex-1">
                                     <p
                                         class="truncate text-sm font-semibold text-highlighted"
                                     >
-                                        {{ userDisplayName(admin) }}
+                                        {{ displayName(admin) }}
                                     </p>
                                     <p class="truncate text-xs text-muted">
                                         {{ admin.email }}
@@ -381,22 +367,18 @@
 </template>
 
 <script setup lang="ts">
+import { oauth2ProviderName } from '~/utils/oauth2'
+import { formatBytes, formatCompact, formatPercent } from '#shared/utils/number'
+import { displayName } from '~/utils/avatar'
+import { useIntervalFn } from '@vueuse/core'
 import {
     getPlatformTraffic,
     listPlatformUsers,
     type TrafficRange,
 } from '~/api/platform'
-import { formatBytes } from '~/utils/backups'
-import {
-    errorRate,
-    formatCompact,
-    formatMs,
-    formatPercent,
-    methodShares,
-} from '~/utils/platformTraffic'
+import { errorRate, formatMs, methodShares } from '~/utils/platformTraffic'
 import { formatDate } from '#shared/utils/formatting'
 import { platformTotals, type PlatformGym } from '~/utils/platformGyms'
-import { userDisplayName } from '~/utils/platformUsers'
 import { parseDate } from '#shared/utils/formatting'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
@@ -436,11 +418,12 @@ const {
     server: false,
 })
 const trafficLoading = computed(() => !traffic.value && !trafficError.value)
-let trafficTimer: ReturnType<typeof setInterval> | undefined
-onMounted(() => {
-    trafficTimer = setInterval(() => refreshTraffic(), 60_000)
-})
-onBeforeUnmount(() => clearInterval(trafficTimer))
+const { resume: startTrafficRefresh } = useIntervalFn(
+    () => refreshTraffic(),
+    60_000,
+    { immediate: false },
+)
+onMounted(startTrafficRefresh)
 
 const kpis = computed(() => {
     const data = traffic.value
@@ -546,16 +529,9 @@ const signInShares = computed(() =>
     methodShares(traffic.value?.people.sign_in_methods ?? {}),
 )
 
-const PROVIDER_NAMES: Record<string, string> = {
-    google: 'Google',
-    apple: 'Apple',
-    microsoft: 'Microsoft',
-    oidc: 'OpenID Connect',
-}
-
 function signInMethodLabel(method: string) {
     const [kind, provider] = method.split(':')
-    if (kind === 'oauth2') return PROVIDER_NAMES[provider ?? ''] ?? provider
+    if (kind === 'oauth2') return oauth2ProviderName({ name: provider ?? '' })
     const key = `platform.overview.people.methods.${kind}`
     return te(key) ? t(key) : method
 }

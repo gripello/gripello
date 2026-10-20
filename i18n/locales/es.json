@@ -77,7 +77,6 @@
         },
         "requirements": {
             "minLength": "Al menos 8 caracteres",
-            "maxLength": "Máximo 72 caracteres",
             "uppercase": "Letra mayúscula (A–Z)",
             "lowercase": "Letra minúscula (a–z)",
             "number": "Número (0–9)",
@@ -114,9 +113,9 @@
         "emailChangeSent": "Enlace de confirmación enviado a la nueva dirección. Tu dirección actual seguirá activa hasta que lo abras.",
         "emailChangeFailed": "No se pudo enviar el enlace de confirmación. Tu correo electrónico no ha cambiado.",
         "exportData": "Descargar tus datos",
-        "exportDataHint": "Un archivo ZIP con tu perfil, cuaderno, membresías, inscripciones a competiciones, notificaciones, defectos reportados y actividad de la cuenta.",
+        "exportDataHint": "Un archivo ZIP con tu perfil, registro, membresías, inscripciones a competiciones, notificaciones, defectos comunicados y actividad de la cuenta, que recibes como enlace de descarga por correo electrónico.",
         "exportDataDownload": "Descargar",
-        "exportDataRateLimited": "Puedes descargar tus datos 3 veces por hora. Inténtalo de nuevo más tarde.",
+        "exportDataRateLimited": "Puedes solicitar tus datos 3 veces por hora. Inténtalo de nuevo más tarde.",
         "deleteAccount": "Eliminar cuenta",
         "deleteAccountHint": "Elimina tu cuenta de forma permanente y cierra tu sesión. Las vías y valoraciones que hayas creado se conservan.",
         "deleteAccountConfirm": "Tu cuenta se eliminará de forma permanente y se cerrará tu sesión. Esta acción no se puede deshacer.",
@@ -198,7 +197,16 @@
             "linked": "Inicio de sesión vinculado",
             "linkConfirm": "Un inicio de sesión vinculado abre tu cuenta incluso tras cambiar la contraseña. Confirma con tu contraseña."
         },
-        "noAccount": "¿No tienes cuenta?"
+        "noAccount": "¿No tienes cuenta?",
+        "exportDataRequest": "Envíame un enlace",
+        "exportDataRequested": "Te enviaremos un enlace por correo",
+        "exportReady": "Tus datos están listos",
+        "exportReadyHint": "Este enlace de descarga funciona durante 7 días.",
+        "exportExpired": "Este enlace de descarga ha caducado o se ha sustituido por una exportación más reciente.",
+        "exportAgain": "Solicitar una nueva exportación",
+        "exportTooLarge": "Tu exportación de datos es demasiado grande",
+        "exportTooLargeHint": "Supera los 2 GB. Ponte en contacto con nosotros para recibir tus datos de otra forma.",
+        "exportNone": "No hay ninguna exportación de datos lista"
     },
     "routes": {
         "generate_name": "Generar nombre",
@@ -239,7 +247,9 @@
         "info": "Info",
         "outSoon": "Se retira el {date}",
         "mapWork": "Vías y reequipamiento",
-        "removed": "Esta vía se ha eliminado."
+        "removed": "Esta vía se ha eliminado.",
+        "sends": "Encadenes",
+        "screwedShort": "Montada"
     },
     "dashboard": {
         "online": "{0} en línea"
@@ -361,11 +371,13 @@
         "score": "Media estrellas",
         "comment": "Comentario",
         "climber_reviews": "Valoraciones",
-        "felt": "percibido",
         "perceived_difficulty": "Grado percibido",
         "loadError": "No se pudieron cargar las valoraciones.",
         "deleteOwn": "Eliminar mi reseña",
-        "deleteOwnConfirm": "Tu reseña se eliminará definitivamente."
+        "deleteOwnConfirm": "Tu reseña se eliminará definitivamente.",
+        "perceived": "Percibido",
+        "votes": "1 voto | {n} votos",
+        "ratingCount": "1 valoración | {n} valoraciones"
     },
     "table": {
         "actions": "Acciones",
@@ -547,7 +559,9 @@
                 "beta_approved": "Tu vídeo beta ha sido aprobado",
                 "beta_rejected": "Tu vídeo beta ha sido rechazado: {reason}",
                 "wall_reset_planned": "{wall}: {count} vías se retiran el {date}",
-                "platform_issue": "{level}: {summary} ({count}×)"
+                "platform_issue": "{level}: {summary} ({count}×)",
+                "account_export_ready": "Tu exportación de datos está lista para descargar",
+                "account_export_failed": "Tu exportación de datos es demasiado grande para descargarla"
             }
         }
     },
@@ -633,7 +647,7 @@
             },
             "reports": {
                 "title": "Denuncias de contenido",
-                "body": "Si denuncias un contenido, tratamos tu nombre, tu dirección de correo electrónico, el motivo de la denuncia y tu explicación para gestionar la denuncia e informarte de la decisión (art. 6, apartado 1, letra c), del RGPD, en relación con el art. 16 del Reglamento de Servicios Digitales). La moderación del rocódromo y su dirección de contacto reciben tu nombre y tu correo electrónico con la denuncia. La persona cuyo contenido denuncias no sabrá quién eres, salvo que la ley lo exija. Las denuncias se conservan durante el tiempo necesario para su documentación, también si eliminas tu cuenta."
+                "body": "Si denuncias un contenido, tratamos tu nombre, tu dirección de correo electrónico, el motivo de la denuncia y tu explicación para gestionar la denuncia e informarte de la decisión (art. 6, apartado 1, letra c), del RGPD, en relación con el art. 16 del Reglamento de Servicios Digitales). La moderación del rocódromo y su dirección de contacto reciben tu nombre y tu correo electrónico con la denuncia. La persona cuyo contenido denuncias no sabrá quién eres, salvo que la ley lo exija. Las denuncias se eliminan tres años después de la decisión; eliminar tu cuenta no las elimina antes."
             },
             "notifications": {
                 "title": "Notificaciones",
@@ -645,15 +659,15 @@
             },
             "dataExport": {
                 "title": "Descarga de tus datos",
-                "body": "En los ajustes de la cuenta, Descargar tus datos genera un archivo ZIP con todos los datos vinculados a tu cuenta: perfil, avatar, banner, diario, valoraciones, vídeos de beta, seguimientos, logros, notificaciones, pertenencias a rocódromos, tareas y participaciones en competiciones. Es la forma más rápida de ejercer tus derechos de acceso y portabilidad (arts. 15 y 20 del RGPD). La descarga tiene un límite de solicitudes por hora."
+                "body": "En los ajustes de la cuenta, Descargar tus datos genera un archivo ZIP con todos los datos vinculados a tu cuenta: perfil, avatar, banner, diario, valoraciones, vídeos de beta, seguimientos, logros, notificaciones, pertenencias a rocódromos, tareas y participaciones en competiciones. Es la forma más rápida de ejercer tus derechos de acceso y portabilidad (arts. 15 y 20 del RGPD). La descarga tiene un límite de solicitudes por hora. El archivo ZIP se prepara en segundo plano y se guarda 7 días en nuestro servidor; recibes el enlace de descarga por correo y como notificación, y una nueva exportación sustituye a la anterior."
             },
             "deletion": {
                 "title": "Eliminación de la cuenta",
-                "body": "Puedes eliminar tu cuenta en los ajustes. Se suprimen la cuenta, el diario, los seguimientos, los vídeos de beta, los logros, las suscripciones push, las notificaciones, las membresías y las inscripciones en competiciones. Se conservan sin vínculo con tu persona las valoraciones y los avisos de defectos o tareas. Las denuncias de contenido conservan el nombre y el correo de quien denuncia porque la normativa exige su tramitación. Cuando la supresión exija bloquear los datos, los mantenemos bloqueados durante los plazos legales de prescripción, a disposición exclusiva de jueces, tribunales y autoridades (art. 32 de la LOPDGDD). Las personas vinculadas al fallecido por razones familiares o de hecho, sus herederos y quienes él haya designado en su testamento digital pueden solicitar el acceso, la rectificación o la supresión de sus datos, salvo que el fallecido lo hubiera prohibido expresamente (art. 3 y art. 96 de la LOPDGDD). Escríbenos al correo del responsable."
+                "body": "Puedes eliminar tu cuenta en los ajustes. Se suprimen la cuenta, el diario, los seguimientos, los vídeos de beta, los logros, las suscripciones push, las notificaciones, las membresías y las inscripciones en competiciones. Se conservan sin vínculo con tu persona las valoraciones y los avisos de defectos o tareas. Las denuncias de contenido conservan el nombre y el correo de quien denuncia hasta que se eliminan, tres años después de la decisión. Cuando la supresión exija bloquear los datos, los mantenemos bloqueados durante los plazos legales de prescripción, a disposición exclusiva de jueces, tribunales y autoridades (art. 32 de la LOPDGDD). Las personas vinculadas al fallecido por razones familiares o de hecho, sus herederos y quienes él haya designado en su testamento digital pueden solicitar el acceso, la rectificación o la supresión de sus datos, salvo que el fallecido lo hubiera prohibido expresamente (art. 3 y art. 96 de la LOPDGDD). Escríbenos al correo del responsable."
             },
             "auditLog": {
                 "title": "Registro de auditoría",
-                "body": "Para garantizar la seguridad y la trazabilidad, registramos cada cambio que cualquier persona hace a través de la aplicación (p. ej., registros del diario, seguimientos, valoraciones, vídeos de beta, avisos de defectos y denuncias de contenido, inscripciones en competiciones y cambios del personal), así como los inicios de sesión, los intentos fallidos (la dirección introducida solo como un hash corto), los restablecimientos de contraseña y los cambios de correo electrónico, con el correo de la cuenta, la acción, el registro afectado y la dirección IP (art. 6, apartado 1, letra f), del RGPD). El personal de un rocódromo con acceso al registro de auditoría ve las entradas de su rocódromo, los administradores de la plataforma todas las entradas y tú las tuyas. Las entradas se eliminan automáticamente al cabo de {auditDays} días."
+                "body": "Para garantizar la seguridad y la trazabilidad, registramos cada cambio que cualquier persona hace a través de la aplicación (p. ej., registros del diario, seguimientos, valoraciones, vídeos de beta, avisos de defectos y denuncias de contenido, inscripciones en competiciones y cambios del personal), así como los inicios de sesión, los intentos fallidos (la dirección introducida solo como un hash corto), los restablecimientos de contraseña y los cambios de correo electrónico, con el correo de la cuenta, la acción, el registro afectado y la dirección IP (art. 6, apartado 1, letra f), del RGPD). El personal de un rocódromo con acceso al registro de auditoría ve las entradas de su rocódromo, los administradores de la plataforma todas las entradas y tú las tuyas. Las entradas conservan tu nombre de usuario o tu dirección de correo electrónico incluso después de eliminar tu cuenta, y se eliminan automáticamente al cabo de {auditDays} días."
             },
             "captcha": {
                 "title": "Protección contra spam",
@@ -710,9 +724,10 @@
             "kept": {
                 "reviews": "Las valoraciones y votos de grado se quedan en la vía sin tu nombre.",
                 "reports": "Los defectos que comunicaste se quedan en el rocódromo sin tu nombre para poder repararlos.",
-                "activity": "Las entradas del registro de actividad se conservan sin tu nombre hasta {days} días; las que se refieren a tu propia cuenta (como inicios de sesión) mantienen tu correo hasta entonces.",
+                "activity": "Las entradas del registro de actividad conservan tu nombre de usuario, o tu dirección de correo electrónico en las entradas sobre la propia cuenta, hasta que se eliminan al terminar el plazo de conservación de {days} días.",
                 "logs": "Los registros del servidor contienen el ID de tu cuenta hasta 7 días.",
-                "backups": "Las copias de seguridad diarias contienen tus datos hasta que se sustituyen, por defecto a los 7 días."
+                "backups": "Las copias de seguridad diarias contienen tus datos hasta que se sustituyen, por defecto a los 7 días.",
+                "exports": "Una exportación de datos solicitada se elimina en menos de una hora y su enlace de descarga de 7 días deja de funcionar de inmediato."
             },
             "noAccessTitle": "¿Ya no puedes iniciar sesión?",
             "noAccess": "Escríbenos desde el correo electrónico de tu cuenta y la eliminaremos en el plazo de un mes:"
@@ -797,7 +812,8 @@
             "climber": "{name} - Gripello",
             "feed": "Novedades",
             "info": "Info del rocódromo - Gripello",
-            "gymOnboarding": "Configurar rocódromo - Gripello"
+            "gymOnboarding": "Configurar rocódromo - Gripello",
+            "dataExport": "Tus datos - Gripello"
         },
         "content": {
             "settings": "Ajustes",
@@ -818,7 +834,8 @@
         "passwordMismatch": "Las contraseñas no coinciden.",
         "integerRange": "Introduce un número entero del {min} al {max}.",
         "passwordTooWeak": "La contraseña debe ser al menos «Buena».",
-        "email": "Introduce un correo electrónico válido."
+        "email": "Introduce un correo electrónico válido.",
+        "invalid": "Este valor no es válido."
     },
     "captcha": {
         "verifying": "Verificando… {progress} %"
@@ -925,7 +942,6 @@
         "roleName": "Nombre del rol",
         "roleDescription": "Descripción",
         "roleColor": "Color",
-        "customColor": "Personalizado",
         "preview": "Vista previa",
         "nameTaken": "Ya existe un rol con este nombre.",
         "noRoles": "Aún no hay roles",
@@ -1107,7 +1123,9 @@
         },
         "loadFailed": "No se pudo cargar este contenido.",
         "emailBlocked": "Esta dirección de correo no se puede usar.",
-        "nameProtected": "Este nombre está reservado. Elige otro."
+        "nameProtected": "Este nombre está reservado. Elige otro.",
+        "sessionEnded": "Tu sesión ha caducado. Inicia sesión de nuevo para guardar.",
+        "rateLimited": "Demasiadas solicitudes. Espera un momento y vuelve a intentarlo."
     },
     "export": {
         "title": "Exportar a Excel",
@@ -1474,6 +1492,7 @@
         "removedRoute": "Vía eliminada",
         "logAscent": "Registrar ascensión",
         "edit": "Editar ascensión",
+        "type": "Tipo de ascenso",
         "attempts": "Intentos",
         "attemptsInvalid": "Introduce un número entero del 1 al 999.",
         "date": "Fecha",
@@ -1774,7 +1793,8 @@
                 "platform_reports": "Denuncias de todos los rocódromos",
                 "content": "Moderación de mi contenido",
                 "moderation": "Contenido por revisar",
-                "platform_issues": "Errores y avisos del servidor"
+                "platform_issues": "Errores y avisos del servidor",
+                "account": "Mi cuenta"
             },
             "devices": "Dispositivos",
             "thisDevice": "Este dispositivo",
@@ -2035,7 +2055,8 @@
                 "allFlashes": "Todo al flash",
                 "uniqueTop": "Único top en una vía"
             },
-            "competition": "Competición"
+            "competition": "Competición",
+            "unsaved": "No guardado"
         },
         "export": {
             "menu": "Exportar",
@@ -2682,6 +2703,18 @@
             "subject": "Tu prueba de {app} ha terminado",
             "body": "La prueba de {gym} terminó el {date}. Los escaladores pueden seguir usando el rocódromo, pero tu equipo ya no puede hacer cambios.",
             "note": "Responde a este correo para continuar con {app}."
+        },
+        "accountExport": {
+            "subject": "Tus datos de {app} están listos",
+            "body": "La exportación de tu cuenta de {app} está lista para descargar. El enlace funciona durante 7 días y solo para esta exportación.",
+            "action": "Descargar tus datos",
+            "note": "Si no lo has solicitado, cambia tu contraseña."
+        },
+        "accountExportTooLarge": {
+            "subject": "No se ha podido crear la exportación de tus datos de {app}",
+            "body": "Tu cuenta de {app} contiene más datos de los que caben en una descarga (2 GB), por lo que no se ha creado ninguna exportación. Responde a este correo o ponte en contacto con el operador de {app} para recibir tus datos de otra forma.",
+            "action": "Abrir la exportación de datos",
+            "note": "Si no lo has solicitado, cambia tu contraseña."
         }
     },
     "leaderboard": {
@@ -2702,7 +2735,7 @@
             "end": "Fin",
             "add": "Añadir temporada",
             "deleteConfirm": "¿Eliminar esta temporada? Los ascensos se quedan en los cuadernos.",
-            "endBeforeStart": "El fin debe ser posterior al inicio"
+            "endBeforeStart": "El fin no puede ser anterior al inicio"
         },
         "points": "{n} pts",
         "stats": {
@@ -3174,5 +3207,15 @@
         "browser": "Gripello necesita un navegador más reciente para mostrarse correctamente.",
         "webview": "Android System WebView está desactualizado, por eso Gripello no se muestra correctamente.",
         "update": "Actualizar"
+    },
+    "seo": {
+        "default": "Gripello muestra los bloques y vías actuales de un rocódromo con grados, plano, diario de escalada y competiciones.",
+        "landing": "Encuentra tu rocódromo y consulta sus bloques y vías actuales, el plano y las competiciones.",
+        "routes": "Todos los bloques y vías actuales de {name} con grados, colores de presa y valoraciones.",
+        "info": "Horario, dirección y contacto de {name}.",
+        "competitions": "Competiciones de escalada en {name}: fechas, inscripción y resultados.",
+        "competition": "{name}: programa, categorías y resultados en directo.",
+        "leaderboard": "Clasificación de {name}: escaladores ordenados por sus mejores encadenes.",
+        "privacy": "Cómo {name} trata los datos personales."
     }
 }

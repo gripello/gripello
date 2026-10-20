@@ -37,7 +37,7 @@
             </div>
             <NuxtLink
                 v-else-if="context === 'staff'"
-                :to="`/${slug}/routes`"
+                :to="staffExit"
                 class="flex min-h-11 min-w-0 items-center gap-2 rounded-full bg-elevated py-1 ps-3 pe-4 lg:hidden"
                 :aria-label="`${$t('nav.backToClimbing')}: ${gymName}`"
                 data-testid="nav-back-to-climbing-mobile"
@@ -214,6 +214,8 @@ const paletteLinks = computed(() =>
             }[],
     ),
 )
+
+const staffExit = useStaffExit()
 </script>
 
 <style scoped>

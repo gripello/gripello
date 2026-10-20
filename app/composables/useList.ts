@@ -1,6 +1,5 @@
 import type { Ref } from 'vue'
-import { isAbortError } from '~/utils/errors'
-import { isOfflineError } from '~/utils/tickOutbox'
+import { isAbortError, isOfflineError } from '~/utils/errors'
 
 export type ListFetch<TRecord> = (
     page: number,

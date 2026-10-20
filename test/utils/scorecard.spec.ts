@@ -6,6 +6,7 @@ import {
     isFlash,
     replaceEntryScores,
     scoreFromRecord,
+    supersededUnsavedKeys,
     type ScoreAction,
 } from '~/utils/scorecard'
 
@@ -137,5 +138,37 @@ describe('replaceEntryScores', () => {
             { id: '2', entry: 'b' },
             { id: '3', entry: 'a' },
         ])
+    })
+})
+
+describe('supersededUnsavedKeys', () => {
+    const score = (entry: string, updated: string) => ({
+        entry,
+        comp_route: 'r1',
+        updated,
+    })
+
+    it('drops an unsaved score once the server has a newer one', () => {
+        const unsaved = new Map([
+            ['e1:r1', { base: '2026-01-01T10:00:00.000Z' }],
+            ['e2:r1', { base: undefined }],
+            ['e3:r1', { base: '2026-01-01T10:00:00.000Z' }],
+        ])
+        expect(
+            supersededUnsavedKeys(unsaved, [
+                score('e1', '2026-01-01T10:05:00.000Z'),
+                score('e2', '2026-01-01T10:05:00.000Z'),
+                score('e3', '2026-01-01T10:00:00.000Z'),
+            ]),
+        ).toEqual(['e1:r1', 'e2:r1'])
+    })
+
+    it('keeps an unsaved score while the server still has none', () => {
+        expect(
+            supersededUnsavedKeys(
+                new Map([['e1:r1', { base: undefined }]]),
+                [],
+            ),
+        ).toEqual([])
     })
 })

@@ -152,7 +152,7 @@ const validate = (state: typeof draft) => {
         starts_at: [required(t)],
         ends_at: [required(t)],
     })
-    if (state.starts_at && state.ends_at && state.ends_at <= state.starts_at)
+    if (state.starts_at && state.ends_at && state.ends_at < state.starts_at)
         errors.push({
             name: 'ends_at',
             message: t('leaderboard.seasons.endBeforeStart'),
@@ -168,8 +168,8 @@ function reset() {
 function edit(season: SeasonRecord) {
     Object.assign(draft, {
         name: season.name,
-        starts_at: season.starts_at.slice(0, 10),
-        ends_at: season.ends_at.slice(0, 10),
+        starts_at: season.starts_at,
+        ends_at: season.ends_at,
     })
     editingId.value = season.id
 }
@@ -177,8 +177,8 @@ function edit(season: SeasonRecord) {
 async function save() {
     const data = {
         name: draft.name.trim(),
-        starts_at: `${draft.starts_at} 00:00:00.000Z`,
-        ends_at: `${draft.ends_at} 00:00:00.000Z`,
+        starts_at: draft.starts_at,
+        ends_at: draft.ends_at,
     }
     const saved = await run(
         () =>

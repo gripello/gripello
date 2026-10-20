@@ -1,3 +1,4 @@
+import { useEventListener } from '@vueuse/core'
 import { COMPETITION_SCORES_KEY } from '~/utils/clientStorage'
 import {
     applyScoreAction,
@@ -7,7 +8,10 @@ import {
     type ScoreAction,
     type ScoreState,
 } from '~/utils/scorecard'
-import { listScores, putScores } from '~/api/competitions'
+import {
+    listCompetitionScores,
+    upsertCompetitionScores,
+} from '~/api/competitions'
 import { isNetworkError } from '~/utils/errors'
 import type { CompetitionRouteRecord } from '~/types/models'
 
@@ -49,7 +53,7 @@ export function useScorecard(competitionId: Ref<string>, entryId: Ref<string>) {
 
     async function fetchSaved() {
         const editsBefore = edits
-        const records = await listScores(competitionId.value, {
+        const records = await listCompetitionScores(competitionId.value, {
             entry: entryId.value,
         })
         // an edit during the request may already be saved and out of pending; its own live event reloads again
@@ -69,7 +73,7 @@ export function useScorecard(competitionId: Ref<string>, entryId: Ref<string>) {
     }
 
     async function save(compRoute: string, score: ScoreState) {
-        await putScores(competitionId.value, [
+        await upsertCompetitionScores(competitionId.value, [
             {
                 entry: entryId.value,
                 comp_route: compRoute,
@@ -126,12 +130,8 @@ export function useScorecard(competitionId: Ref<string>, entryId: Ref<string>) {
 
     const retry = () => void flush()
     onMounted(() => {
-        window.addEventListener('online', retry)
-        document.addEventListener('visibilitychange', retry)
-    })
-    onBeforeUnmount(() => {
-        window.removeEventListener('online', retry)
-        document.removeEventListener('visibilitychange', retry)
+        useEventListener('online', retry)
+        useEventListener(document, 'visibilitychange', retry)
     })
 
     return { scores, pendingCount, offline, load, act, flush }

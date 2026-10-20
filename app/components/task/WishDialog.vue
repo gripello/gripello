@@ -6,6 +6,13 @@
         sheet-on-mobile
         :title="$t('tasks.wish.dialogTitle')"
         data-testid="task-wish-dialog"
+        :submit-label="$t('tasks.wish.submit')"
+        :submit-loading="pending"
+        :submit-disabled="!location || !routeType"
+        captcha
+        submit-test-id="task-wish-submit"
+        cancel-test-id="task-wish-cancel"
+        @submit="submit"
     >
         <div class="flex flex-col gap-4">
             <UFormField :label="$t('climbing.location')" required>
@@ -21,20 +28,12 @@
                 <legend class="text-sm font-medium mb-2">
                     {{ $t('climbing.type') }}
                 </legend>
-                <div class="grid grid-cols-2 gap-2">
-                    <UButton
-                        v-for="type in ROUTE_TYPES"
-                        :key="type"
-                        :color="routeType === type ? 'primary' : 'neutral'"
-                        :variant="routeType === type ? 'solid' : 'soft'"
-                        :aria-pressed="routeType === type"
-                        class="min-h-12 justify-center"
-                        :data-testid="`task-wish-type-${type.toLowerCase()}`"
-                        @click="routeType = type"
-                    >
-                        {{ $t(`routes.types.${type.toLowerCase()}`) }}
-                    </UButton>
-                </div>
+                <OptionGrid
+                    v-model="routeType"
+                    :items="typeItems"
+                    :label="$t('climbing.type')"
+                    test-id-prefix="task-wish-type"
+                />
             </fieldset>
 
             <UFormField :label="$t('climbing.difficulty')">
@@ -62,31 +61,11 @@
                 />
             </UFormField>
         </div>
-
-        <template #actions>
-            <UButton
-                color="neutral"
-                variant="ghost"
-                data-testid="task-wish-cancel"
-                @click="open = false"
-                >{{ $t('actions.cancel') }}</UButton
-            >
-            <div class="flex-1" />
-            <UButton
-                :disabled="!location || !routeType || pending"
-                color="primary"
-                data-testid="task-wish-submit"
-                @click="submit"
-            >
-                <CaptchaLoader v-if="pending" />
-                <template v-else>{{ $t('tasks.wish.submit') }}</template>
-            </UButton>
-        </template>
     </LayoutDialogShell>
 </template>
 
 <script setup lang="ts">
-import { ROUTE_TYPES } from '~/utils/routes'
+import { ROUTE_TYPES } from '#shared/utils/routeTypes'
 import { createTask } from '~/api/tasks'
 import { gradeLabels } from '#shared/utils/grades'
 
@@ -101,9 +80,17 @@ const open = defineModel<boolean>({ default: false })
 
 const gymId = useCurrentGymId()
 const { t } = useI18n()
+
+const typeItems = computed(() =>
+    ROUTE_TYPES.map((type) => ({
+        value: type,
+        id: type.toLowerCase(),
+        label: t(`routes.types.${type.toLowerCase()}`),
+    })),
+)
 const { capHeaders } = useCapToken()
 const { pending, run } = useAsyncAction()
-const { data: locations } = useLocations()
+const { data: locations, items: locationItems } = useLocations()
 const { gradeSystemFor } = useGradeSystems()
 
 const location = ref('')
@@ -111,12 +98,6 @@ const routeType = ref<(typeof ROUTE_TYPES)[number] | null>(null)
 const grade = ref<string | undefined>(undefined)
 const description = ref('')
 
-const locationItems = computed(() =>
-    locations.value.map((record) => ({
-        label: record.name,
-        value: record.id,
-    })),
-)
 const gradeItems = computed(() =>
     routeType.value ? gradeLabels(gradeSystemFor(routeType.value)) : [],
 )

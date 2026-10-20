@@ -89,12 +89,13 @@
 </template>
 
 <script setup lang="ts">
+import { leaderboardTopic } from '#shared/utils/topics'
+import { useEventListener, useIntervalFn } from '@vueuse/core'
 import { listCompetitions } from '~/api/competitions'
 import { listRoutes, listWalls } from '~/api/routes'
 import { competitionShareUrl } from '~/utils/competitions'
-import { keepWhenOffline } from '~/utils/errors'
 import { qrDataUrl } from '~/utils/qrDataUrl'
-import { LEADERBOARD_REFRESH_MS, leaderboardTopic } from '~/utils/leaderboard'
+import { LEADERBOARD_REFRESH_MS } from '~/utils/leaderboard'
 import { cacheKeys } from '~/utils/realtimeCache'
 import {
     TV_BOARD_ROWS,
@@ -137,22 +138,14 @@ const [
     { data: competitions },
     { data: locations },
 ] = await Promise.all([
-    useAsyncData(
+    useOfflineData(
         cacheKeys.overviewRoutes,
-        (nuxtApp) =>
-            keepWhenOffline(nuxtApp, cacheKeys.overviewRoutes, () =>
-                listRoutes(gymId.value, {}).then((list) => list.items),
-            ),
+        () => listRoutes(gymId.value, {}).then((list) => list.items),
         { default: () => [] },
     ),
-    useAsyncData(
-        cacheKeys.overviewWalls,
-        (nuxtApp) =>
-            keepWhenOffline(nuxtApp, cacheKeys.overviewWalls, () =>
-                listWalls(gymId.value),
-            ),
-        { default: () => [] },
-    ),
+    useOfflineData(cacheKeys.overviewWalls, () => listWalls(gymId.value), {
+        default: () => [],
+    }),
     useAsyncData(
         'gym-tv-boards',
         () => loadTvBoards(gymId.value, TV_BOARD_ROWS),
@@ -294,11 +287,27 @@ function scheduleRotation() {
     )
 }
 
-const timers: ReturnType<typeof setInterval>[] = []
 let refreshing = false
-let portraitQuery: MediaQueryList | undefined
+const portraitQuery = shallowRef<MediaQueryList>()
 const updateOrientation = () =>
-    (orientation.value = portraitQuery?.matches ? 'portrait' : 'landscape')
+    (orientation.value = portraitQuery.value?.matches
+        ? 'portrait'
+        : 'landscape')
+useEventListener(portraitQuery, 'change', updateOrientation)
+const { resume: startClock } = useIntervalFn(
+    () => (now.value = new Date()),
+    CLOCK_MS,
+    { immediate: false },
+)
+const { resume: startRefresh } = useIntervalFn(
+    async () => {
+        if (refreshing) return
+        refreshing = true
+        await refreshScreen().finally(() => (refreshing = false))
+    },
+    REFRESH_MS,
+    { immediate: false },
+)
 
 watch(
     slideUrl,
@@ -311,17 +320,10 @@ watch(
 
 onMounted(() => {
     now.value = new Date()
-    portraitQuery = matchMedia('(orientation: portrait)')
+    portraitQuery.value = matchMedia('(orientation: portrait)')
     updateOrientation()
-    portraitQuery.addEventListener('change', updateOrientation)
-    timers.push(
-        setInterval(() => (now.value = new Date()), CLOCK_MS),
-        setInterval(async () => {
-            if (refreshing) return
-            refreshing = true
-            await refreshScreen().finally(() => (refreshing = false))
-        }, REFRESH_MS),
-    )
+    startClock()
+    startRefresh()
     watch(
         [
             () => playlist.value.length,
@@ -332,11 +334,7 @@ onMounted(() => {
         { immediate: true },
     )
 })
-onBeforeUnmount(() => {
-    timers.forEach(clearInterval)
-    clearTimeout(rotateTimer)
-    portraitQuery?.removeEventListener('change', updateOrientation)
-})
+onBeforeUnmount(() => clearTimeout(rotateTimer))
 </script>
 
 <style scoped>

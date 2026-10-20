@@ -30,6 +30,7 @@
 </template>
 
 <script setup lang="ts">
+import { useTimeoutFn } from '@vueuse/core'
 import {
     checkBlocklists,
     type Blocklists,
@@ -48,7 +49,6 @@ const { t } = useI18n()
 const value = ref('')
 const verdict = ref<BlocklistVerdict | null>(null)
 let request = 0
-let debounce: ReturnType<typeof setTimeout> | undefined
 
 async function check() {
     const current = ++request
@@ -70,12 +70,10 @@ async function check() {
     }
 }
 
+const { start: checkSoon } = useTimeoutFn(check, 300, { immediate: false })
 watch(
     () => [value.value, props.lists, props.sources],
-    () => {
-        clearTimeout(debounce)
-        debounce = setTimeout(check, 300)
-    },
+    () => checkSoon(),
     { deep: true },
 )
 </script>

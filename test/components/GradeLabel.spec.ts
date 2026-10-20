@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import GradeLabel from '~/components/GradeLabel.vue'
+import GradeLabel from '~/components/grade/Label.vue'
 import {
     DEFAULT_GYM_BANDS,
     gymBandsFrom,

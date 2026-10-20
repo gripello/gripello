@@ -19,7 +19,7 @@
             <span v-if="age">{{ t(`resets.${age.key}`, age.n) }}</span>
             <span>{{ t('resets.recentTicks', stat?.recent_ticks ?? 0) }}</span>
             <span v-if="stat?.average_rating"
-                >★ {{ stat.average_rating.toFixed(1) }}</span
+                >★ {{ formatNumber(stat.average_rating, locale) }}</span
             >
             <span
                 v-if="route.removal_planned_for"
@@ -41,6 +41,7 @@
 <script setup lang="ts">
 import type { ResetStat } from '~/api/routes'
 import { formatDate } from '#shared/utils/formatting'
+import { formatNumber } from '#shared/utils/number'
 import {
     RESET_FLAG_STYLE,
     ageUnit,

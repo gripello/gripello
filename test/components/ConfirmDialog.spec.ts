@@ -1,10 +1,10 @@
 import { mount } from '@vue/test-utils'
-import ConfirmDialog from '~/components/ConfirmDialog.vue'
+import ConfirmDialog from '~/components/confirm/Dialog.vue'
+import { dialogShellStub } from '../__stubs__/dialogShell'
 
 const dialogStub = {
-    props: ['modelValue', 'title'],
-    emits: ['update:modelValue'],
-    template: '<div>{{ title }}<slot /><slot name="actions" /></div>',
+    ...dialogShellStub,
+    template: `<div>{{ title }}${dialogShellStub.template}</div>`,
 }
 
 const buttonStub = {

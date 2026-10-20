@@ -13,8 +13,8 @@ describe('TvNewRoutesSlide', () => {
         const wrapper = mount(NewRoutesSlide, {
             props: {
                 routes: [
-                    route('today', '2026-10-14 00:00:00.000Z'),
-                    route('older', '2026-10-11 00:00:00.000Z'),
+                    route('today', '2026-10-14'),
+                    route('older', '2026-10-11'),
                 ],
                 wallNames: new Map([['w1', 'Cave']]),
                 now: new Date('2026-10-14T18:00:00'),

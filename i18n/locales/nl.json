@@ -77,7 +77,6 @@
         },
         "requirements": {
             "minLength": "Minstens 8 tekens",
-            "maxLength": "Maximaal 72 tekens",
             "uppercase": "Hoofdletter (A–Z)",
             "lowercase": "Kleine letter (a–z)",
             "number": "Cijfer (0–9)",
@@ -114,9 +113,9 @@
         "emailChangeSent": "Bevestigingslink naar het nieuwe adres gestuurd. Je huidige adres blijft actief totdat je die link opent.",
         "emailChangeFailed": "De bevestigingslink kon niet worden verstuurd. Je e-mailadres is niet gewijzigd.",
         "exportData": "Je gegevens downloaden",
-        "exportDataHint": "Een ZIP-bestand met je profiel, logboek, lidmaatschappen, wedstrijdinschrijvingen, meldingen, gemelde defecten en accountactiviteit.",
+        "exportDataHint": "Een ZIP-bestand met je profiel, logboek, lidmaatschappen, wedstrijdinschrijvingen, meldingen, gemelde gebreken en accountactiviteit, dat je als downloadlink per e-mail ontvangt.",
         "exportDataDownload": "Downloaden",
-        "exportDataRateLimited": "Je kunt je gegevens 3 keer per uur downloaden. Probeer het later opnieuw.",
+        "exportDataRateLimited": "Je kunt je gegevens 3 keer per uur aanvragen. Probeer het later opnieuw.",
         "deleteAccount": "Account verwijderen",
         "deleteAccountHint": "Verwijdert je account definitief en logt je uit. Routes en beoordelingen die je hebt gemaakt blijven bestaan.",
         "deleteAccountConfirm": "Hiermee wordt je account definitief verwijderd en word je uitgelogd. Dit kan niet ongedaan worden gemaakt.",
@@ -198,7 +197,16 @@
             "linked": "Aanmelding gekoppeld",
             "linkConfirm": "Een gekoppelde aanmelding opent je account ook na een wachtwoordwijziging. Bevestig met je wachtwoord."
         },
-        "noAccount": "Nog geen account?"
+        "noAccount": "Nog geen account?",
+        "exportDataRequest": "Stuur me een link",
+        "exportDataRequested": "We sturen je een link per e-mail",
+        "exportReady": "Je gegevens staan klaar",
+        "exportReadyHint": "Deze downloadlink werkt 7 dagen.",
+        "exportExpired": "Deze downloadlink is verlopen of vervangen door een nieuwere export.",
+        "exportAgain": "Nieuwe export aanvragen",
+        "exportTooLarge": "Je gegevensexport is te groot",
+        "exportTooLargeHint": "Hij is groter dan 2 GB. Neem contact met ons op om je gegevens op een andere manier te ontvangen.",
+        "exportNone": "Geen gegevensexport klaar"
     },
     "routes": {
         "generate_name": "Naam genereren",
@@ -239,7 +247,9 @@
         "info": "Info",
         "outSoon": "Eruit op {date}",
         "mapWork": "Routes & resets",
-        "removed": "Deze route is verwijderd."
+        "removed": "Deze route is verwijderd.",
+        "sends": "Beklimmingen",
+        "screwedShort": "Geschroefd"
     },
     "dashboard": {
         "online": "{0} online"
@@ -361,11 +371,13 @@
         "score": "Gem. sterren",
         "comment": "Opmerking",
         "climber_reviews": "Beoordelingen",
-        "felt": "voelt als",
         "perceived_difficulty": "Gevoelsgraad",
         "loadError": "Beoordelingen konden niet worden geladen.",
         "deleteOwn": "Mijn review verwijderen",
-        "deleteOwnConfirm": "Je review wordt definitief verwijderd."
+        "deleteOwnConfirm": "Je review wordt definitief verwijderd.",
+        "perceived": "Gevoeld",
+        "votes": "1 stem | {n} stemmen",
+        "ratingCount": "1 beoordeling | {n} beoordelingen"
     },
     "table": {
         "actions": "Acties",
@@ -547,7 +559,9 @@
                 "beta_approved": "Je beta-video is goedgekeurd",
                 "beta_rejected": "Je beta-video is afgewezen: {reason}",
                 "wall_reset_planned": "{wall}: {count} routes worden op {date} weggehaald",
-                "platform_issue": "{level}: {summary} ({count}×)"
+                "platform_issue": "{level}: {summary} ({count}×)",
+                "account_export_ready": "Je gegevensexport staat klaar om te downloaden",
+                "account_export_failed": "Je gegevensexport is te groot om te downloaden"
             }
         }
     },
@@ -633,7 +647,7 @@
             },
             "reports": {
                 "title": "Meldingen van inhoud",
-                "body": "Als je inhoud meldt, verwerken wij je naam, e-mailadres, de reden van de melding en je toelichting om de melding te behandelen en je over het besluit te informeren (art. 6, lid 1, onder c, AVG juncto art. 16 DSA). De moderatoren van de hal en het contactadres van de hal ontvangen je naam en e-mailadres bij de melding. Wie de gemelde inhoud heeft geplaatst, hoort niet wie hem heeft gemeld, tenzij de wet dat vereist. Deze gegevens blijven ook na het verwijderen van je account bewaard zolang dat voor de documentatie nodig is."
+                "body": "Als je inhoud meldt, verwerken wij je naam, e-mailadres, de reden van de melding en je toelichting om de melding te behandelen en je over het besluit te informeren (art. 6, lid 1, onder c, AVG juncto art. 16 DSA). De moderatoren van de hal en het contactadres van de hal ontvangen je naam en e-mailadres bij de melding. Wie de gemelde inhoud heeft geplaatst, hoort niet wie hem heeft gemeld, tenzij de wet dat vereist. Meldingen worden drie jaar na de beslissing verwijderd; tot dan blijven deze gegevens ook na het verwijderen van je account bewaard."
             },
             "notifications": {
                 "title": "Meldingen",
@@ -645,15 +659,15 @@
             },
             "dataExport": {
                 "title": "Je gegevens downloaden",
-                "body": "Met 'Je gegevens downloaden' in je accountinstellingen ontvang je een ZIP-bestand met alle gegevens die aan je account zijn gekoppeld (profiel, foto's, logboek, beoordelingen, bètavideo's, volgrelaties, achievements, meldingen, lidmaatschappen, taken, wedstrijdinschrijvingen). Dit kan een beperkt aantal keer per uur."
+                "body": "Met 'Je gegevens downloaden' in je accountinstellingen ontvang je een ZIP-bestand met alle gegevens die aan je account zijn gekoppeld (profiel, foto's, logboek, beoordelingen, bètavideo's, volgrelaties, achievements, meldingen, lidmaatschappen, taken, wedstrijdinschrijvingen). Dit kan een beperkt aantal keer per uur. Het ZIP-bestand wordt op de achtergrond gemaakt en 7 dagen op onze server bewaard; je krijgt de downloadlink per e-mail en als melding, en een nieuwe export vervangt de oude."
             },
             "deletion": {
                 "title": "Account verwijderen",
-                "body": "Je kunt je account op elk moment zelf verwijderen in je instellingen. Daarbij worden account, profielfoto en banner, logboek, volgrelaties, bètavideo's, achievements, pushabonnementen, meldingen, lidmaatschappen en wedstrijdinschrijvingen verwijderd. Beoordelingen en probleemmeldingen blijven anoniem bestaan; meldingen van inhoud (DSA) behouden naam en e-mailadres van de melder voor zover de wet dat vereist. Serverlogs en het auditlog worden volgens de hierboven genoemde termijnen verwijderd."
+                "body": "Je kunt je account op elk moment zelf verwijderen in je instellingen. Daarbij worden account, profielfoto en banner, logboek, volgrelaties, bètavideo's, achievements, pushabonnementen, meldingen, lidmaatschappen en wedstrijdinschrijvingen verwijderd. Beoordelingen en probleemmeldingen blijven anoniem bestaan; meldingen van inhoud (DSA) behouden naam en e-mailadres van de melder tot drie jaar na de beslissing. Serverlogs en het auditlog worden volgens de hierboven genoemde termijnen verwijderd."
             },
             "auditLog": {
                 "title": "Auditlog",
-                "body": "Om de beveiliging en traceerbaarheid te waarborgen, leggen wij elke wijziging vast die iemand via de app doet (bijv. logboekregels, volgrelaties, beoordelingen, betavideo's, probleem- en inhoudsmeldingen, wedstrijdinschrijvingen en wijzigingen door medewerkers), evenals inloggen, mislukte inlogpogingen (het ingevoerde adres alleen als korte hash), wachtwoordherstel en wijzigingen van het e-mailadres, telkens met het e-mailadres van het account, de handeling, het betreffende record en het IP-adres (art. 6, lid 1, onder f, AVG). Medewerkers van een hal met toegang tot het auditlog zien de vermeldingen van hun hal, de beheerders van het platform alle vermeldingen en jij je eigen vermeldingen. Vermeldingen worden na {auditDays} dagen automatisch verwijderd."
+                "body": "Om de beveiliging en traceerbaarheid te waarborgen, leggen wij elke wijziging vast die iemand via de app doet (bijv. logboekregels, volgrelaties, beoordelingen, betavideo's, probleem- en inhoudsmeldingen, wedstrijdinschrijvingen en wijzigingen door medewerkers), evenals inloggen, mislukte inlogpogingen (het ingevoerde adres alleen als korte hash), wachtwoordherstel en wijzigingen van het e-mailadres, telkens met het e-mailadres van het account, de handeling, het betreffende record en het IP-adres (art. 6, lid 1, onder f, AVG). Medewerkers van een hal met toegang tot het auditlog zien de vermeldingen van hun hal, de beheerders van het platform alle vermeldingen en jij je eigen vermeldingen. Vermeldingen behouden je gebruikersnaam of e-mailadres ook nadat je je account hebt verwijderd, en worden na {auditDays} dagen automatisch verwijderd."
             },
             "captcha": {
                 "title": "Spambescherming",
@@ -710,9 +724,10 @@
             "kept": {
                 "reviews": "Beoordelingen en graadstemmen blijven zonder je naam bij de route.",
                 "reports": "Gemelde gebreken blijven zonder je naam bij de hal, zodat ze verholpen kunnen worden.",
-                "activity": "Items in het activiteitenlogboek blijven tot {days} dagen bewaard zonder je naam; items over je account zelf (zoals aanmeldingen) houden tot dan je e-mailadres.",
+                "activity": "Items in het activiteitenlogboek behouden je gebruikersnaam, of je e-mailadres bij items over het account zelf, tot ze na de bewaartermijn van {days} dagen worden verwijderd.",
                 "logs": "Serverlogs bevatten je account-ID tot 7 dagen.",
-                "backups": "Dagelijkse back-ups bevatten je gegevens tot ze worden vervangen, standaard na 7 dagen."
+                "backups": "Dagelijkse back-ups bevatten je gegevens tot ze worden vervangen, standaard na 7 dagen.",
+                "exports": "Een aangevraagde gegevensexport wordt binnen een uur verwijderd en de downloadlink van 7 dagen werkt meteen niet meer."
             },
             "noAccessTitle": "Kun je niet meer inloggen?",
             "noAccess": "Schrijf ons vanaf het e-mailadres van je account, dan verwijderen we het binnen een maand:"
@@ -797,7 +812,8 @@
             "climber": "{name} - Gripello",
             "feed": "Feed",
             "info": "Halinfo - Gripello",
-            "gymOnboarding": "Hal inrichten - Gripello"
+            "gymOnboarding": "Hal inrichten - Gripello",
+            "dataExport": "Je gegevens - Gripello"
         },
         "content": {
             "settings": "Instellingen",
@@ -818,7 +834,8 @@
         "passwordMismatch": "Wachtwoorden komen niet overeen.",
         "integerRange": "Voer een geheel getal van {min} tot {max} in.",
         "passwordTooWeak": "Wachtwoord moet minstens “Goed” zijn.",
-        "email": "Voer een geldig e-mailadres in."
+        "email": "Voer een geldig e-mailadres in.",
+        "invalid": "Deze waarde is ongeldig."
     },
     "captcha": {
         "verifying": "Verifiëren… {progress}%"
@@ -925,7 +942,6 @@
         "roleName": "Naam van de rol",
         "roleDescription": "Beschrijving",
         "roleColor": "Kleur",
-        "customColor": "Eigen",
         "preview": "Voorbeeld",
         "nameTaken": "Er bestaat al een rol met deze naam.",
         "noRoles": "Nog geen rollen",
@@ -1107,7 +1123,9 @@
         },
         "loadFailed": "Deze inhoud kon niet worden geladen.",
         "emailBlocked": "Dit e-mailadres kan niet worden gebruikt.",
-        "nameProtected": "Deze naam is gereserveerd. Kies een andere."
+        "nameProtected": "Deze naam is gereserveerd. Kies een andere.",
+        "sessionEnded": "Je sessie is verlopen. Log opnieuw in om op te slaan.",
+        "rateLimited": "Te veel verzoeken. Wacht even en probeer het opnieuw."
     },
     "export": {
         "title": "Exporteren als Excel",
@@ -1474,6 +1492,7 @@
         "removedRoute": "Verwijderde route",
         "logAscent": "Beklimming loggen",
         "edit": "Beklimming bewerken",
+        "type": "Soort beklimming",
         "attempts": "Pogingen",
         "attemptsInvalid": "Voer een geheel getal van 1 tot 999 in.",
         "date": "Datum",
@@ -1774,7 +1793,8 @@
                 "platform_reports": "Inhoudsmeldingen uit alle hallen",
                 "content": "Moderatie van mijn inhoud",
                 "moderation": "Te beoordelen inhoud",
-                "platform_issues": "Serverfouten en waarschuwingen"
+                "platform_issues": "Serverfouten en waarschuwingen",
+                "account": "Mijn account"
             },
             "devices": "Apparaten",
             "thisDevice": "Dit apparaat",
@@ -2035,7 +2055,8 @@
                 "allFlashes": "Alles geflasht",
                 "uniqueTop": "Enige top op een route"
             },
-            "competition": "Wedstrijd"
+            "competition": "Wedstrijd",
+            "unsaved": "Niet opgeslagen"
         },
         "export": {
             "menu": "Exporteren",
@@ -2682,6 +2703,18 @@
             "subject": "Je proefperiode van {app} is afgelopen",
             "body": "De proefperiode van {gym} eindigde op {date}. Klimmers kunnen de hal blijven gebruiken, maar je team kan niets meer wijzigen.",
             "note": "Beantwoord deze e-mail om verder te gaan met {app}."
+        },
+        "accountExport": {
+            "subject": "Je {app}-gegevens staan klaar",
+            "body": "De export van je {app}-account staat klaar om te downloaden. De link werkt 7 dagen en alleen voor deze export.",
+            "action": "Gegevens downloaden",
+            "note": "Heb je dit niet aangevraagd? Wijzig dan je wachtwoord."
+        },
+        "accountExportTooLarge": {
+            "subject": "Je {app}-gegevensexport kon niet worden gemaakt",
+            "body": "Je {app}-account bevat meer gegevens dan in één download passen (2 GB), daarom is er geen export gemaakt. Beantwoord deze e-mail of neem contact op met de beheerder van {app} om je gegevens op een andere manier te ontvangen.",
+            "action": "Gegevensexport openen",
+            "note": "Heb je dit niet aangevraagd? Wijzig dan je wachtwoord."
         }
     },
     "leaderboard": {
@@ -2702,7 +2735,7 @@
             "end": "Einde",
             "add": "Seizoen toevoegen",
             "deleteConfirm": "Dit seizoen verwijderen? Beklimmingen blijven in de logboeken.",
-            "endBeforeStart": "Het einde moet na het begin liggen"
+            "endBeforeStart": "Het einde mag niet voor het begin liggen"
         },
         "points": "{n} ptn",
         "stats": {
@@ -3174,5 +3207,15 @@
         "browser": "Gripello heeft een nieuwere browser nodig om goed te worden weergegeven.",
         "webview": "Android System WebView is verouderd, daardoor wordt Gripello niet goed weergegeven.",
         "update": "Bijwerken"
+    },
+    "seo": {
+        "default": "Gripello toont de actuele boulders en routes van een klimhal met graden, plattegrond, logboek en wedstrijden.",
+        "landing": "Vind je klimhal en bekijk de actuele boulders en routes, de plattegrond en wedstrijden.",
+        "routes": "Alle actuele boulders en routes in {name} met graden, grepkleuren en beoordelingen.",
+        "info": "Openingstijden, adres en contactgegevens van {name}.",
+        "competitions": "Klimwedstrijden in {name}: data, inschrijving en uitslagen.",
+        "competition": "{name}: programma, categorieën en live-uitslagen.",
+        "leaderboard": "Ranglijst van {name}: klimmers gerangschikt op hun beste beklimmingen.",
+        "privacy": "Hoe {name} persoonsgegevens verwerkt."
     }
 }

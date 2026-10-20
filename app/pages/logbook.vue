@@ -12,40 +12,16 @@
                         :aria-label="t('ticks.gym')"
                         data-testid="logbook-gym"
                     />
-                    <SegmentedControl
-                        v-model="kind"
-                        :items="kindItems"
-                        size="sm"
-                        test-id="logbook-kind"
-                    />
-                    <SegmentedControl
-                        v-model="range"
-                        :items="rangeItems"
-                        size="sm"
-                        test-id="logbook-range"
+                    <LogbookKindRange
+                        v-model:kind="kind"
+                        v-model:range="range"
+                        test-id-prefix="logbook"
                     />
                 </div>
             </template>
         </LayoutPageHeader>
 
-        <LayoutEmptyState
-            v-if="ticksError"
-            variant="error"
-            :title="t('errors.loadFailed')"
-            data-testid="load-error"
-        >
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-refresh-cw"
-                    data-testid="load-error-retry"
-                    @click="retry()"
-                >
-                    {{ t('errors.retry') }}
-                </UButton>
-            </template>
-        </LayoutEmptyState>
+        <LayoutLoadError v-if="ticksError" @retry="retry()" />
 
         <template v-else-if="!allTicks.length">
             <LayoutEmptyState
@@ -72,7 +48,7 @@
                     class="col-span-6 md:col-span-3 flex"
                     :data-testid="`logbook-stat-${tile.key}`"
                 >
-                    <AnalyticsStatsCard
+                    <LayoutStatCard
                         class="w-full"
                         :title="tile.title"
                         :value="tile.value"
@@ -90,6 +66,7 @@
                 v-model="tab"
                 :items="tabItems"
                 :content="false"
+                stacked
                 class="mb-4"
                 data-testid="logbook-tabs"
             >
@@ -199,6 +176,7 @@
 </template>
 
 <script setup lang="ts">
+import { isOfflineError } from '~/utils/errors'
 import { listOwnTicks } from '~/api/ticks'
 import type { RouteRecord, TickRecord } from '~/types/models'
 import { groupTicksByDay } from '#shared/utils/ticks'
@@ -213,30 +191,22 @@ import {
     type LogbookRange,
     type LogbookTick,
 } from '#shared/utils/logbook'
-import { applyTickOutbox, isOfflineError } from '~/utils/tickOutbox'
+import { applyTickOutbox } from '~/utils/tickOutbox'
 import { cacheKeys } from '~/utils/realtimeCache'
 import { ALL_GYMS, gymsInTicks, ticksInGym } from '~/utils/logbookGyms'
 
 type LoggedTick = TickRecord & { expand?: { route?: RouteRecord } }
 
-const LOGBOOK_KINDS: LogbookKind[] = ['boulder', 'route']
-const LOGBOOK_RANGES: LogbookRange[] = ['30d', '12m', 'all']
-const kindItems = computed(() =>
-    LOGBOOK_KINDS.map((value) => ({ value, label: t(`ticks.kind.${value}`) })),
-)
-const rangeItems = computed(() =>
-    LOGBOOK_RANGES.map((value) => ({
-        value,
-        label: t(`ticks.range.${value}`),
-    })),
-)
-const LOGBOOK_TABS = [
-    'sessions',
-    'timeline',
-    'stats',
-    'projects',
-    'badges',
-] as const
+const LOGBOOK_TAB_ICONS = {
+    sessions: 'i-lucide-calendar-days',
+    timeline: 'i-lucide-history',
+    stats: 'i-lucide-chart-column',
+    projects: 'i-lucide-target',
+    badges: 'i-lucide-medal',
+} as const
+const LOGBOOK_TABS = Object.keys(LOGBOOK_TAB_ICONS) as Array<
+    keyof typeof LOGBOOK_TAB_ICONS
+>
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -299,6 +269,7 @@ const tabItems = computed(() =>
     LOGBOOK_TABS.map((value) => ({
         value,
         label: t(`ticks.tabs.${value}`),
+        icon: LOGBOOK_TAB_ICONS[value],
         badge:
             value === 'projects' && projects.value.length
                 ? {
@@ -331,7 +302,7 @@ const routesById = computed(
         new Map(
             logbookTicks.value
                 .map((tick) => tick.expand?.route)
-                .filter((route): route is RouteRecord => !!route)
+                .filter((route) => route !== undefined)
                 .map((route) => [route.id, route]),
         ),
 )

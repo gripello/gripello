@@ -85,7 +85,13 @@ export function routeMatchesQuery(route: RouteMatchFields, query: RouteQuery) {
         return false
     for (const key of ['type', 'color', 'grade_system'] as const)
         if (query[key] && route[key] !== query[key]) return false
-    if (query.grade?.length && !query.grade.includes(route.grade)) return false
+    if (
+        query.grade?.length &&
+        !query.grade.some(
+            (grade) => grade.toLowerCase() === route.grade?.toLowerCase(),
+        )
+    )
+        return false
     if (query.ids && !query.ids.includes(route.id)) return false
     const name = route.name.toLowerCase()
     const creators = normalizeCreators(route.creator).join(',').toLowerCase()

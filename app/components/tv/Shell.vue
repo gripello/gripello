@@ -41,7 +41,7 @@
 
         <footer
             v-if="$slots.footer"
-            class="relative flex items-center justify-between gap-4 text-sm text-dimmed"
+            class="relative flex items-center justify-between gap-4 text-sm text-muted"
         >
             <slot name="footer" />
         </footer>
@@ -66,10 +66,9 @@ const { cursorHidden } = useTvKiosk()
 // 16 px at 1080p in either orientation, scaling every rem size from 720p to 4K
 useHead({
     htmlAttrs: { style: 'font-size: max(10px, min(1.48vmin, 0.833vmax))' },
-    meta: [{ name: 'robots', content: 'noindex' }],
 })
 
-const now = ref<Date | null>(null)
+const now = useMountedNow(1000)
 const clock = computed(() =>
     now.value
         ? new Intl.DateTimeFormat(locale.value, { timeStyle: 'short' }).format(
@@ -77,12 +76,6 @@ const clock = computed(() =>
           )
         : '',
 )
-let clockTimer: ReturnType<typeof setInterval> | undefined
-onMounted(() => {
-    now.value = new Date()
-    clockTimer = setInterval(() => (now.value = new Date()), 1000)
-})
-onBeforeUnmount(() => clearInterval(clockTimer))
 </script>
 
 <style scoped>

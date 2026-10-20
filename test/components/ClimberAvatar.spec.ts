@@ -21,6 +21,21 @@ describe('ClimberAvatar', () => {
         )
     })
 
+    it('offers a sharper thumb for dense screens', () => {
+        const wrapper = mount(ClimberAvatar, {
+            props: {
+                name: 'Ada',
+                src: '/api/files/users/u1/a.png?thumb=100x100',
+                size: 'lg',
+            },
+        })
+
+        expect(wrapper.find('img').attributes('srcset')).toBe(
+            '/api/files/users/u1/a.png?thumb=100x100 100w, /api/files/users/u1/a.png?thumb=320x320 320w',
+        )
+        expect(wrapper.find('img').attributes('sizes')).toBe('80px')
+    })
+
     it('falls back to initials', () => {
         const wrapper = mount(ClimberAvatar, {
             props: { name: 'Ada Lovelace' },

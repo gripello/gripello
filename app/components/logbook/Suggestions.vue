@@ -47,21 +47,17 @@
 </template>
 
 <script setup lang="ts">
+import { gymChangesTopic } from '#shared/utils/topics'
 import { listRoutes } from '~/api/routes'
-import {
-    coalesce,
-    gymChangesTopic,
-    removeById,
-    type GymChange,
-} from '~/utils/realtimeCache'
+import { coalesce, removeById, type GymChange } from '~/utils/realtimeCache'
 import type { RouteRecord } from '~/types/models'
 import type { LogbookKind } from '#shared/utils/logbook'
 import { locationName } from '#shared/utils/formatting'
 import { gymTitle } from '~/utils/gymNames'
+import { isNewRoute } from '~/utils/overview'
 
 const SUGGESTION_COUNT = 6
 const CANDIDATE_COUNT = 40
-const NEW_ROUTE_DAYS = 30
 
 const props = defineProps<{
     kind: LogbookKind | null
@@ -102,10 +98,10 @@ useRealtime(
     { resync: refreshCandidatesSoon },
 )
 
-const newSince = Date.now() - NEW_ROUTE_DAYS * 86_400_000
+const now = new Date()
 
 function isNew(route: RouteRecord) {
-    return !!route.created && new Date(route.created).getTime() > newSince
+    return isNewRoute(route, now)
 }
 
 const suggestions = computed(() => {

@@ -96,6 +96,7 @@
 </template>
 
 <script setup lang="ts">
+import { useTimeoutFn } from '@vueuse/core'
 import { getRoute } from '~/api/routes'
 import { extractRouteId } from '~/utils/inventory'
 import { centeredCode, type ScannedCode, type Size } from '~/utils/qr'
@@ -137,12 +138,16 @@ const cameraConstraints = {
     height: { ideal: 720 },
 }
 
-const routes = reactive(new Map<string, RouteRecord | null>())
+const routes = reactive(new Map<string, RouteRecord | null | false>())
 const offCenter = ref(false)
 const opening = ref(false)
 const rejected = ref(false)
+const { start: hideRejectedSoon } = useTimeoutFn(
+    () => (rejected.value = false),
+    REJECT_MESSAGE_MS,
+    { immediate: false },
+)
 let lastRejectedAt = 0
-let rejectedTimer: ReturnType<typeof setTimeout> | undefined
 
 const hint = computed(() => {
     if (opening.value) return t('scan.opening')
@@ -161,8 +166,7 @@ function lookup(routeId: string) {
     getRoute(routeId)
         .then((route) => routes.set(routeId, route))
         .catch((error: { status?: number }) => {
-            if (error?.status === 404)
-                routes.set(routeId, { id: '', name: '', grade: '' })
+            if (error?.status === 404) routes.set(routeId, false)
             else {
                 failedLookupAt.set(routeId, Date.now())
                 routes.delete(routeId)
@@ -172,8 +176,7 @@ function lookup(routeId: string) {
 
 function knownRoute(routeId: string | null) {
     const route = routeId ? routes.get(routeId) : undefined
-    if (route === undefined || route === null) return undefined
-    return route.id ? route : false
+    return route ?? undefined
 }
 
 function tagFor(rawValue: string) {
@@ -204,10 +207,7 @@ function reject() {
     lastRejectedAt = now
     rejected.value = true
     signalRejected()
-    clearTimeout(rejectedTimer)
-    rejectedTimer = setTimeout(() => {
-        rejected.value = false
-    }, REJECT_MESSAGE_MS)
+    hideRejectedSoon()
 }
 
 function onFrame(codes: ScannedCode[], video: Size) {
@@ -228,7 +228,6 @@ function onFrame(codes: ScannedCode[], video: Size) {
 }
 
 onMounted(start)
-onBeforeUnmount(() => clearTimeout(rejectedTimer))
 </script>
 
 <style scoped>

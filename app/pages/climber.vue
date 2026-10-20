@@ -112,17 +112,10 @@
 
             <template v-else>
                 <div class="mb-4 flex flex-wrap items-center gap-2">
-                    <SegmentedControl
-                        v-model="kind"
-                        :items="kindItems"
-                        size="sm"
-                        test-id="climber-kind"
-                    />
-                    <SegmentedControl
-                        v-model="range"
-                        :items="rangeItems"
-                        size="sm"
-                        test-id="climber-range"
+                    <LogbookKindRange
+                        v-model:kind="kind"
+                        v-model:range="range"
+                        test-id-prefix="climber"
                     />
                 </div>
 
@@ -228,7 +221,6 @@
 
 <script setup lang="ts">
 import { getClimber } from '~/api/social'
-import { keepWhenOffline } from '~/utils/errors'
 import { listClimberTicks, listOwnTicks } from '~/api/ticks'
 import type { RouteRecord } from '~/types/models'
 import {
@@ -245,7 +237,6 @@ definePageMeta({
     key: (route) => String(route.query.id ?? ''),
 })
 
-const LOGBOOK_RANGES: LogbookRange[] = ['30d', '12m', 'all']
 const RECENT_LIMIT = 12
 
 const { t } = useI18n()
@@ -255,12 +246,9 @@ const climberId = String(route.query.id ?? '')
 const myId = useAuthRecord().value?.id ?? ''
 const isSelf = climberId === myId
 
-const { data: profile, error: profileError } = await useAsyncData(
+const { data: profile, error: profileError } = await useOfflineData(
     `climber:${climberId}`,
-    (nuxtApp) =>
-        keepWhenOffline(nuxtApp, `climber:${climberId}`, () =>
-            getClimber(climberId),
-        ),
+    () => getClimber(climberId),
 )
 if (!profile.value && !profileError.value)
     throw createError({ statusCode: 404, fatal: true })
@@ -292,14 +280,12 @@ const {
     data: theirTicks,
     error: theirTicksError,
     refresh: refreshTheirs,
-} = await useAsyncData(
+} = await useOfflineData(
     `climber-ticks:${climberId}`,
-    (nuxtApp) =>
-        keepWhenOffline(nuxtApp, `climber-ticks:${climberId}`, () =>
-            canSee.value
-                ? listClimberTicks<RoutedTick>(climberId)
-                : Promise.resolve([]),
-        ),
+    () =>
+        canSee.value
+            ? listClimberTicks<RoutedTick>(climberId)
+            : Promise.resolve([]),
     { default: () => [] },
 )
 const { data: myTicks, error: myTicksError } = await useAsyncData(
@@ -315,18 +301,6 @@ const ticksError = computed(() => theirTicksError.value ?? myTicksError.value)
 
 const kind = ref<LogbookKind>(preferredKind(theirTicks.value))
 const range = ref<LogbookRange>('12m')
-const kindItems = computed(() =>
-    (['boulder', 'route'] as const).map((value) => ({
-        value,
-        label: t(`ticks.kind.${value}`),
-    })),
-)
-const rangeItems = computed(() =>
-    LOGBOOK_RANGES.map((value) => ({
-        value,
-        label: t(`ticks.range.${value}`),
-    })),
-)
 
 const comparison = computed(() =>
     compareLogbooks(myTicks.value, theirTicks.value, kind.value, range.value),
@@ -383,14 +357,15 @@ const routesById = computed(
         new Map(
             theirTicks.value
                 .map((tick) => tick.expand?.route)
-                .filter((record): record is RouteRecord => !!record)
+                .filter((record) => record !== undefined)
                 .map((record) => [record.id, record]),
         ),
 )
 const suggestions = computed(() =>
     comparison.value.onlyTheirs
         .map((id) => routesById.value.get(id))
-        .filter((record): record is RouteRecord => !!record && !record.archived)
+        .filter((record) => record !== undefined)
+        .filter((record) => !record.archived)
         .slice(0, 10),
 )
 const recent = computed(() => theirTicks.value.slice(0, RECENT_LIMIT))

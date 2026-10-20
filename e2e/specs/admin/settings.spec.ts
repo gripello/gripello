@@ -162,3 +162,27 @@ test('removing a representative marks the form dirty and saves', async ({
         rows.getByTestId('settings-legal-representative-name'),
     ).toHaveValue('E2E Keep')
 })
+
+test('an unsaved edit survives a live change from another admin and saving keeps both', async ({
+    adminPage: page,
+    adminApi,
+}) => {
+    const description = `E2E description ${Date.now()}`
+    const otherName = `E2E Live ${Date.now()}`
+    await gotoSettled(page, '/admin/settings?section=info')
+    await page.getByTestId('settings-info-description').fill(description)
+
+    await updateGym(adminApi, E2E_GYM_SLUG, { name: otherName })
+    await page.getByTestId('settings-section-organization').click()
+    await expect(page.getByTestId('settings-org-name')).toHaveValue(otherName)
+    await page.getByTestId('settings-section-info').click()
+    await expect(page.getByTestId('settings-info-description')).toHaveValue(
+        description,
+    )
+
+    await page.getByTestId('settings-save').click()
+    await expect(page.getByTestId('settings-save')).toBeHidden()
+    const gym = await getGym(adminApi, E2E_GYM_SLUG)
+    expect(gym.name).toBe(otherName)
+    expect(gym.description).toBe(description)
+})

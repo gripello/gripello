@@ -40,6 +40,12 @@
             sheet-on-mobile
             :title="t('beta.add')"
             data-testid="beta-dialog"
+            :submit-label="t('beta.submit')"
+            submit-icon="i-lucide-send"
+            :submit-loading="saving"
+            :submit-disabled="!canSubmit"
+            submit-test-id="beta-submit"
+            @submit="submit"
         >
             <div class="flex flex-col gap-4">
                 <SegmentedControl
@@ -80,7 +86,7 @@
                             file.name
                         }}</span>
                         <span class="shrink-0 text-muted tabular-nums">{{
-                            megabytes(file.size)
+                            formatBytes(file.size, locale)
                         }}</span>
                         <UButton
                             color="neutral"
@@ -128,27 +134,6 @@
                     />
                 </label>
             </div>
-
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    @click="addOpen = false"
-                >
-                    {{ t('actions.cancel') }}
-                </UButton>
-                <div class="flex-1" />
-                <UButton
-                    color="primary"
-                    icon="i-lucide-send"
-                    :loading="saving"
-                    :disabled="!canSubmit"
-                    data-testid="beta-submit"
-                    @click="submit"
-                >
-                    {{ t('beta.submit') }}
-                </UButton>
-            </template>
         </LayoutDialogShell>
 
         <ReportsFormDialog
@@ -172,6 +157,8 @@
 </template>
 
 <script setup lang="ts">
+import { formatBytes } from '#shared/utils/number'
+import { useObjectUrl } from '@vueuse/core'
 import { createBeta, deleteBeta, listBetas } from '~/api/ratings'
 import type { BetaVideoRecord } from '~/types/models'
 import { cacheKeys } from '~/utils/realtimeCache'
@@ -234,19 +221,11 @@ const sourceItems = computed(() => [
 const link = ref('')
 const file = ref<File | null>(null)
 const dragging = ref(false)
-const fileUrl = ref('')
-watch(file, (picked) => {
-    if (fileUrl.value) URL.revokeObjectURL(fileUrl.value)
-    fileUrl.value = picked ? URL.createObjectURL(picked) : ''
-})
-onBeforeUnmount(() => {
-    if (fileUrl.value) URL.revokeObjectURL(fileUrl.value)
-})
+const fileObjectUrl = useObjectUrl(file)
+const fileUrl = computed(() => fileObjectUrl.value ?? '')
 const linkIcon = computed(() =>
     betaPlatformIcon(link.value.trim(), 'i-lucide-link'),
 )
-const megabytes = (bytes: number) =>
-    `${(bytes / 1024 / 1024).toLocaleString(locale.value, { maximumFractionDigits: 1 })} MB`
 
 function onPick(event: Event) {
     file.value = (event.target as HTMLInputElement).files?.[0] ?? null

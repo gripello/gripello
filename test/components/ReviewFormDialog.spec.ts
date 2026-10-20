@@ -1,6 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { computed, reactive, ref, watch } from 'vue'
-import ReviewFormDialog from '~/components/ReviewFormDialog.vue'
+import ReviewFormDialog from '~/components/review/FormDialog.vue'
+import { createRating, updateRating } from '~/api/ratings'
+import { dialogShellStub } from '../__stubs__/dialogShell'
 
 vi.mock('~/api/ratings', () => ({
     createRating: vi.fn(),
@@ -13,23 +15,48 @@ beforeEach(() => {
     vi.stubGlobal('watch', watch)
     vi.stubGlobal('computed', computed)
     vi.stubGlobal('useI18n', () => ({ t: (key: string) => key }))
-    vi.stubGlobal('useNotification', () => ({ error: vi.fn() }))
+    vi.stubGlobal('useNotification', () => ({ error: notifyError }))
     vi.stubGlobal('useCapToken', () => ({ capHeaders: vi.fn() }))
-    vi.stubGlobal('useNuxtApp', () => ({ $realtimeCache: {} }))
+    vi.stubGlobal('useNuxtApp', () => ({ $realtimeCache: realtimeCache }))
+    vi.stubGlobal('useCurrentGymId', () => computed(() => 'g1'))
 })
 
-async function openDialog(routeGrade: string | null) {
+const realtimeCache = { applyRating: vi.fn(), revertRating: vi.fn() }
+const notifyError = vi.fn()
+const setErrors = vi.fn()
+
+async function openDialog(
+    routeGrade: string | null,
+    review: Record<string, unknown> | null = null,
+) {
     const wrapper = mount(ReviewFormDialog, {
         props: {
             modelValue: false,
             routeId: 'r1',
             gradeSystem: 'uiaa',
             routeGrade,
+            review: review as never,
         },
         global: {
             mocks: { $t: (key: string) => key },
             stubs: {
-                LayoutDialogShell: { template: '<div><slot /></div>' },
+                LayoutDialogShell: dialogShellStub,
+                UForm: {
+                    setup(
+                        _: unknown,
+                        { expose }: { expose: (exposed: object) => void },
+                    ) {
+                        expose({ setErrors })
+                    },
+                    template: '<form><slot /></form>',
+                },
+                ClimberAvatar: true,
+                UButton: {
+                    props: ['disabled'],
+                    emits: ['click'],
+                    template:
+                        '<button @click="$emit(\'click\')"><slot /></button>',
+                },
                 SegmentedControl: {
                     name: 'SegmentedControl',
                     props: ['modelValue', 'items'],
@@ -39,6 +66,12 @@ async function openDialog(routeGrade: string | null) {
                     name: 'UInputRating',
                     props: ['modelValue'],
                     template: '<div />',
+                },
+                UTextarea: {
+                    props: ['modelValue'],
+                    emits: ['update:modelValue'],
+                    template:
+                        '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
                 },
                 USelectMenu: {
                     name: 'USelectMenu',
@@ -97,6 +130,38 @@ describe('ReviewFormDialog', () => {
         expect(stars.props('modelValue')).toBeUndefined()
     })
 
+    it('shows a complete optimistic review and posts only the review fields', async () => {
+        vi.mocked(createRating).mockResolvedValue({ id: 'saved' } as never)
+        const wrapper = await openDialog('5')
+        wrapper
+            .getComponent({ name: 'UInputRating' })
+            .vm.$emit('update:modelValue', 4)
+        await wrapper.get('textarea').setValue('Good')
+
+        await wrapper.get('[data-testid="review-form-submit"]').trigger('click')
+
+        const optimistic = realtimeCache.applyRating.mock.calls[0]![0]
+        expect(optimistic).toMatchObject({
+            gym: 'g1',
+            route_id: 'r1',
+            rating: 4,
+            grade: '5',
+            grade_system: 'uiaa',
+            comment: 'Good',
+        })
+        expect(optimistic.created).toBe(optimistic.updated)
+        await vi.waitFor(() => expect(createRating).toHaveBeenCalled())
+        const [routeId, input] = vi.mocked(createRating).mock.calls[0]!
+        expect(routeId).toBe('r1')
+        expect(Object.keys(input).sort()).toEqual([
+            'comment',
+            'grade',
+            'grade_index',
+            'grade_system',
+            'rating',
+        ])
+    })
+
     it('names the star picker', async () => {
         const wrapper = await openDialog('5')
 
@@ -105,5 +170,106 @@ describe('ReviewFormDialog', () => {
                 .getComponent({ name: 'UInputRating' })
                 .attributes('aria-label'),
         ).toBe('ratings.stars')
+    })
+
+    it('keeps the dialog and the typed review when saving fails, then saves once', async () => {
+        vi.mocked(createRating).mockReset()
+        let fail!: (error: unknown) => void
+        vi.mocked(createRating).mockImplementationOnce(
+            () => new Promise((_, reject) => (fail = reject)),
+        )
+        const wrapper = await openDialog('5')
+        wrapper
+            .getComponent({ name: 'UInputRating' })
+            .vm.$emit('update:modelValue', 4)
+        await wrapper.get('textarea').setValue('Great crimps')
+        const submit = wrapper.get('[data-testid="review-form-submit"]')
+
+        await submit.trigger('click')
+        await submit.trigger('click')
+        await vi.waitFor(() => expect(fail).toBeTypeOf('function'))
+        fail(Object.assign(new Error('boom'), { status: 500 }))
+        await vi.waitFor(() => expect(notifyError).toHaveBeenCalled())
+
+        expect(createRating).toHaveBeenCalledTimes(1)
+        expect(realtimeCache.revertRating).toHaveBeenCalled()
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+        expect(
+            (wrapper.get('textarea').element as HTMLTextAreaElement).value,
+        ).toBe('Great crimps')
+
+        vi.mocked(createRating).mockResolvedValueOnce({ id: 'saved' } as never)
+        await submit.trigger('click')
+        await vi.waitFor(() =>
+            expect(wrapper.emitted('update:modelValue')).toEqual([[false]]),
+        )
+        expect(createRating).toHaveBeenCalledTimes(2)
+    })
+
+    it('maps server field errors onto the form and emits saved only after success', async () => {
+        vi.mocked(createRating).mockReset()
+        setErrors.mockReset()
+        notifyError.mockReset()
+        vi.mocked(createRating).mockRejectedValueOnce(
+            Object.assign(new Error('invalid'), {
+                status: 400,
+                response: {
+                    data: { comment: { code: 'validation_required' } },
+                },
+            }),
+        )
+        const wrapper = await openDialog('5')
+        wrapper
+            .getComponent({ name: 'UInputRating' })
+            .vm.$emit('update:modelValue', 4)
+        await wrapper.get('textarea').setValue('Nice')
+        const submit = wrapper.get('[data-testid="review-form-submit"]')
+
+        await submit.trigger('click')
+        await vi.waitFor(() => expect(setErrors).toHaveBeenCalled())
+        expect(setErrors).toHaveBeenCalledWith([
+            { name: 'comment', message: 'validation.required' },
+        ])
+        expect(notifyError).not.toHaveBeenCalled()
+        expect(wrapper.emitted('saved')).toBeUndefined()
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+        vi.mocked(createRating).mockResolvedValueOnce({ id: 'saved' } as never)
+        await submit.trigger('click')
+        await vi.waitFor(() =>
+            expect(wrapper.emitted('saved')).toEqual([[{ id: 'saved' }]]),
+        )
+    })
+
+    it('asks for a captcha only for new reviews and saves edits once', async () => {
+        expect(
+            (await openDialog('5'))
+                .getComponent(dialogShellStub)
+                .props('captcha'),
+        ).toBe(true)
+
+        let finish!: (value: unknown) => void
+        vi.mocked(updateRating).mockImplementationOnce(
+            () => new Promise((resolve) => (finish = resolve)),
+        )
+        const wrapper = await openDialog('5', {
+            id: 'rev1',
+            rating: 3,
+            grade: '5',
+            comment: 'Old',
+            grade_system: 'uiaa',
+        })
+        expect(wrapper.getComponent(dialogShellStub).props('captcha')).toBe(
+            false,
+        )
+        const submit = wrapper.get('[data-testid="review-form-submit"]')
+        await submit.trigger('click')
+        await submit.trigger('click')
+        expect(updateRating).toHaveBeenCalledTimes(1)
+        expect(wrapper.emitted('saved')).toBeUndefined()
+        finish({ id: 'rev1' })
+        await vi.waitFor(() =>
+            expect(wrapper.emitted('saved')).toEqual([[{ id: 'rev1' }]]),
+        )
     })
 })

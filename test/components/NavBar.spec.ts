@@ -5,6 +5,7 @@ import NavBar from '~/components/layout/NavBar.vue'
 vi.stubGlobal('useTemplateRef', useTemplateRef)
 vi.stubGlobal('useThemeMode', () => ({ mode: ref('system'), setMode: vi.fn() }))
 vi.stubGlobal('usePermissions', () => ({ can: () => false }))
+vi.stubGlobal('useStaffExit', () => computed(() => '/e2e/routes'))
 vi.stubGlobal('useGym', () => ({
     slug: computed(() => 'e2e'),
     gym: computed(() => ({ name: 'E2E Gym' })),

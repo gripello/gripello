@@ -13,6 +13,9 @@ const NEEDS_OWN_PROCESS = [
     'test/server/tag-qr.spec.ts',
     'test/shared/formatting.spec.ts',
     'test/utils/qrTracking.spec.ts',
+    'test/utils/routeImportTimeZones.spec.ts',
+    'test/shared/openingHours.spec.ts',
+    'test/shared/logbookTimeZone.spec.ts',
 ]
 
 const importMetaPolyfill = (): PluginOption => ({

@@ -22,7 +22,7 @@ test('a user can mark a notification read but not hand it to someone else', asyn
         owner.id,
         'report_filed',
         { snippet: testPrefix },
-        '/manage/reports',
+        '/manage/moderation',
     )
     const ownerApi = await apiAs(owner)
 
@@ -41,7 +41,7 @@ test('a user can mark a notification read but not hand it to someone else', asyn
     const stored = await find(ownerApi, id)
     expect(stored?.read).toBe(true)
     expect(stored?.user).toBe(owner.id)
-    expect(stored?.url).toBe('/manage/reports')
+    expect(stored?.url).toBe('/manage/moderation')
     expect(stored?.type).toBe('report_filed')
     expect(await find(await apiAs(victim), id)).toBeUndefined()
 
@@ -59,7 +59,7 @@ test('only the recipient can see or touch a notification', async ({
         owner.id,
         'report_filed',
         { snippet: testPrefix },
-        '/manage/reports',
+        '/manage/moderation',
     )
 
     const anonymous = guestApi()

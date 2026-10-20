@@ -363,10 +363,14 @@ import {
     validateRules,
     validUsername,
 } from '~/utils/validation'
-import { safeRedirect, staffLandingPath } from '~/utils/nav'
+import { loginRedirect, staffLandingPath } from '~/utils/nav'
 import { isPasskeyCancel } from '~/utils/webauthn'
-import { isInvalidCredentials } from '~/utils/authErrors'
-import { blockedFieldError } from '~/utils/fieldErrors'
+import {
+    AUTH_ERROR_KEYS,
+    authErrorKind,
+    isCredentialError,
+} from '~/utils/authErrors'
+import { apiFieldErrors, blockedFieldError } from '~/utils/fieldErrors'
 import { authView, authViewQuery, type AuthView } from '~/utils/authView'
 import {
     oauth2ErrorKey,
@@ -376,7 +380,7 @@ import {
 import { openSignInPage } from '~/utils/native'
 import {
     finishOAuth2,
-    listOAuth2Providers,
+    listAuthMethods,
     login,
     mfaRequired,
     startOAuth2,
@@ -395,7 +399,7 @@ const auth = useAuthState()
 const { capHeaders } = useCapToken()
 const route = useRoute()
 const router = useRouter()
-const requestedRedirect = safeRedirect(route.query.redirect)
+const requestedRedirect = loginRedirect(route.query.redirect, route.hash)
 const { memberships, ensureLoaded } = usePermissions()
 
 async function afterLoginPath() {
@@ -602,47 +606,8 @@ const isEmailRequestView = computed(() =>
     ['requestReset', 'resendVerification'].includes(view.value),
 )
 
-function authErrorMessage(err: unknown) {
-    const { data, message } = (err ?? {}) as {
-        data?: { message?: string }
-        message?: string
-    }
-    return data?.message ?? message ?? ''
-}
-
-function isSuspendedError(err: unknown) {
-    return /suspended/i.test(authErrorMessage(err))
-}
-
-function isUnverifiedError(err: unknown) {
-    return (
-        !isSuspendedError(err) &&
-        ((err as { status?: number })?.status === 403 ||
-            /not verified/i.test(authErrorMessage(err)))
-    )
-}
-
-function isCredentialError(err: unknown) {
-    const msg = authErrorMessage(err)
-    return (
-        isSuspendedError(err) ||
-        isInvalidCredentials(msg) ||
-        /locked|too many/i.test(msg)
-    )
-}
-
 function resolveAuthError(err: unknown) {
-    const msg = authErrorMessage(err)
-    if (isSuspendedError(err)) return t('notifications.error.account_suspended')
-    if (isInvalidCredentials(msg))
-        return t('notifications.error.invalid_credentials')
-    if (isUnverifiedError(err))
-        return t('notifications.error.email_not_verified')
-    if (/locked/i.test(msg)) return t('notifications.error.account_locked')
-    if (/MFA session/i.test(msg)) return t('notifications.error.mfa_expired')
-    if (/too many/i.test(msg)) return t('notifications.error.too_many_attempts')
-    if (/captcha/i.test(msg)) return t('notifications.error.captcha')
-    return t('notifications.error.unknown')
+    return t(AUTH_ERROR_KEYS[authErrorKind(err)])
 }
 
 // ── Auth handlers ──────────────────────────────────────────────────
@@ -663,7 +628,7 @@ async function submitLogin() {
             twoFactorOpen.value = true
             return
         }
-        unverified.value = isUnverifiedError(err)
+        unverified.value = authErrorKind(err) === 'unverified'
         if (unverified.value) return
         if (!isCredentialError(err)) return notifyError(resolveAuthError(err))
         loginForm.value?.setErrors([
@@ -679,7 +644,7 @@ async function submitLogin() {
 
 const { data: oauth2Providers } = useAsyncData(
     'oauth2-providers',
-    listOAuth2Providers,
+    async () => (await listAuthMethods()).oauth2.providers,
     { server: false, default: () => [] },
 )
 
@@ -751,7 +716,7 @@ function abandonSecondFactor(err: unknown) {
 function notifyPasskeyError(err: unknown) {
     if (isPasskeyCancel(err)) return
     notifyError(
-        isSuspendedError(err)
+        authErrorKind(err) === 'suspended'
             ? resolveAuthError(err)
             : t('account.twoFactor.passkeyFailed'),
     )
@@ -830,15 +795,12 @@ async function submitReset() {
 }
 
 function registerFieldError(err: unknown) {
-    const fields = (
-        err as { data?: { data?: Record<string, { code?: string }> } }
-    )?.data?.data
-    if (fields?.username?.code === 'validation_not_unique')
+    const fields = apiFieldErrors(err)
+    if (fields.username?.code === 'validation_not_unique')
         return { name: 'username', message: t('users.usernameTaken') }
     const blocked = blockedFieldError(err, ['email', 'username', 'name'])
     if (blocked) return { name: blocked.name, message: t(blocked.key) }
-    if (fields?.email)
-        return { name: 'email', message: t('account.emailTaken') }
+    if (fields.email) return { name: 'email', message: t('account.emailTaken') }
     return null
 }
 

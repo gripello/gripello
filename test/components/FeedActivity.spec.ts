@@ -50,8 +50,8 @@ function mountActivity(props: Record<string, unknown>, hydrated = true) {
 
 describe('FeedActivity', () => {
     const ticks = [
-        tick('a', 'u1', '2026-09-01 10:00:00.000Z'),
-        tick('b', 'u2', '2026-09-02 10:00:00.000Z'),
+        tick('a', 'u1', '2026-09-01T10:00:00.000Z'),
+        tick('b', 'u2', '2026-09-02T10:00:00.000Z'),
     ]
 
     it('groups sends by day, newest first, with the climber linked', () => {
@@ -86,7 +86,7 @@ describe('FeedActivity', () => {
         'shows a removed route without a link (hideUser: %s)',
         (hideUser) => {
             const removed = {
-                ...tick('c', 'u1', '2026-09-03 10:00:00.000Z'),
+                ...tick('c', 'u1', '2026-09-03T10:00:00.000Z'),
                 route: '',
                 route_name: '',
                 expand: {},

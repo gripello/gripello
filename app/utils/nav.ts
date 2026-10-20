@@ -10,11 +10,14 @@ export function safeRedirect(target: unknown): string | null {
     return target
 }
 
+export function loginRedirect(redirect: unknown, hash: string) {
+    const target = safeRedirect(redirect)
+    return target && hash && !target.includes('#') ? target + hash : target
+}
+
 export function staffLandingPath(
-    memberships: readonly {
-        expand?: { gym?: { slug?: string; active?: boolean } }
-    }[],
+    memberships: readonly { gym: { slug: string; active: boolean } }[],
 ): string {
-    const slug = activeMemberships(memberships)[0]?.expand?.gym?.slug
+    const slug = activeMemberships(memberships)[0]?.gym.slug
     return slug ? `/${slug}/manage/routes` : '/'
 }

@@ -62,16 +62,3 @@ export function oauthProviderStatus(
     if (!checks.clientId || !checks.secret) return 'missing'
     return checks.live ? 'live' : 'configured'
 }
-
-// The form to show after the provider list reloads: unsaved edits survive, untouched forms take the new values.
-export function reloadedForm(
-    form: OAuthProviderForm | undefined,
-    before: OAuthProviderSettings | undefined,
-    item: OAuthProviderSettings,
-) {
-    const untouched =
-        !form ||
-        !before ||
-        JSON.stringify(form) === JSON.stringify(oauthProviderForm(before))
-    return untouched ? oauthProviderForm(item) : form
-}

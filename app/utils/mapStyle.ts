@@ -1,33 +1,33 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
 
-// Dark mode repaints the light "liberty" style (3D buildings, transit, street names) in Apple's dark palette:
-// teal land, slate towns, navy water, blue-grey roads. The first matching rule colours a layer.
+// Dark mode repaints the light "liberty" style in muted tones close to the app's dark surfaces, so the map doesn't glare.
+// The first matching rule colours a layer.
 export const DARK_MAP_RULES: [layer: RegExp, value: string | number][] = [
-    [/^background$/, '#124b4a'],
+    [/^background$/, '#1d2329'],
     [/^natural_earth$/, 0.15],
-    [/^park/, '#2a604a'],
-    [/^landcover_wood$/, '#1d5a4b'],
-    [/^landcover_(grass|wetland)$/, '#1a5a4f'],
-    [/^landuse_(pitch|track|cemetery)$/, '#24584a'],
-    [/^landuse_residential$/, '#353b4f'],
-    [/^landuse_hospital$/, '#463d57'],
-    [/^landuse_school$/, '#3a4054'],
-    [/^landcover_ice$/, '#3b4a5c'],
-    [/^landcover_sand$/, '#4a4838'],
-    [/^water$/, '#1e2a6a'],
-    [/^waterway/, '#2b3c8c'],
-    [/^aeroway_fill$/, '#2f3546'],
-    [/^aeroway/, '#4b5370'],
-    [/hatching$/, '#353b4f'],
-    [/rail/, '#4b5370'],
-    [/casing$/, '#2a2f3e'],
-    [/motorway|trunk_primary/, '#939cbe'],
-    [/secondary_tertiary|_link$/, '#7c84a6'],
-    [/path_pedestrian/, '#4c5470'],
-    [/minor|street|service_track/, '#5c6482'],
-    [/^building$/, '#3d4357'],
-    [/^building-3d$/, '#454b63'],
-    [/^boundary/, '#5a6080'],
+    [/^park/, '#1f2b27'],
+    [/^landcover_wood$/, '#1d2925'],
+    [/^landcover_(grass|wetland)$/, '#1e2a26'],
+    [/^landuse_(pitch|track|cemetery)$/, '#222e29'],
+    [/^landuse_residential$/, '#252a32'],
+    [/^landuse_hospital$/, '#2a2832'],
+    [/^landuse_school$/, '#262b33'],
+    [/^landcover_ice$/, '#2a313b'],
+    [/^landcover_sand$/, '#2d2c27'],
+    [/^water$/, '#18222f'],
+    [/^waterway/, '#1e2a38'],
+    [/^aeroway_fill$/, '#262b33'],
+    [/^aeroway/, '#363d48'],
+    [/hatching$/, '#252a32'],
+    [/rail/, '#363d48'],
+    [/casing$/, '#1a1f25'],
+    [/motorway|trunk_primary/, '#59616e'],
+    [/secondary_tertiary|_link$/, '#4b525e'],
+    [/path_pedestrian/, '#323944'],
+    [/minor|street|service_track/, '#3c434f'],
+    [/^building$/, '#2a3038'],
+    [/^building-3d$/, '#30363f'],
+    [/^boundary/, '#464d5a'],
 ]
 
 const COLOR_PROPERTY: Record<string, string> = {
@@ -55,12 +55,12 @@ export function darkPaint(layer: { id: string; type: string }) {
             [
                 'text-color',
                 /water/.test(layer.id)
-                    ? '#8fa4e0'
+                    ? '#7286a6'
                     : layer.id === 'poi_transit'
-                      ? '#8fb4ff'
-                      : '#c8cede',
+                      ? '#8199c2'
+                      : '#9aa2af',
             ],
-            ['text-halo-color', '#1a2030'],
+            ['text-halo-color', '#14181d'],
         ] as const
     const property = COLOR_PROPERTY[layer.type]
     const rule = DARK_MAP_RULES.find(([pattern]) => pattern.test(layer.id))

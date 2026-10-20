@@ -12,7 +12,7 @@
             >
                 <RouteSummary
                     :route="project.record"
-                    :meta="`${$t('ticks.attemptCount', { count: project.attempts })} · ${$t('ticks.projects.lastTried', { date: formatDate(tickDate(project.lastTried), { locale }) })}`"
+                    :meta="`${$t('ticks.attemptCount', { count: project.attempts })} · ${$t('ticks.projects.lastTried', { date: formatDate(project.lastTried, { locale }) })}`"
                 />
                 <div class="flex gap-2 justify-end mt-auto">
                     <UButton
@@ -42,7 +42,6 @@
 import type { RouteRecord } from '~/types/models'
 import type { OpenProject } from '#shared/utils/logbook'
 import { formatDate } from '#shared/utils/formatting'
-import { tickDate } from '#shared/utils/ticks'
 
 defineProps<{
     projects: (OpenProject & { record?: RouteRecord })[]

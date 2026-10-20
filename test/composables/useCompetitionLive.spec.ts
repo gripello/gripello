@@ -1,8 +1,5 @@
+import { competitionTopic, gymCompetitionsTopic } from '#shared/utils/topics'
 import { describe, expect, it } from 'vitest'
-import {
-    competitionTopic,
-    gymCompetitionsTopic,
-} from '~/composables/useCompetitionLive'
 
 describe('competitionTopic', () => {
     it('gives every competition its own topic', () => {

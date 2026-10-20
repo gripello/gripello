@@ -31,7 +31,6 @@
                         :label="t('climbing.location')"
                         v-model="selectedLocation"
                         :items="locations"
-                        label-key="text"
                         value-key="value"
                         :placeholder="t('filter.all')"
                         clear
@@ -79,6 +78,11 @@
         <LayoutLoadingState
             v-if="loading && !comments.length"
             variant="cards"
+        />
+
+        <LayoutLoadError
+            v-else-if="loadError && !comments.length"
+            @retry="fetchList"
         />
 
         <LayoutEmptyState
@@ -146,6 +150,8 @@
 </template>
 
 <script setup lang="ts">
+import { gymChangesTopic } from '#shared/utils/topics'
+import { useIntersectionObserver, useTimeoutFn } from '@vueuse/core'
 import {
     getRatingStats,
     listGymRatings,
@@ -153,13 +159,9 @@ import {
     type RatingSort,
 } from '~/api/ratings'
 import { isAbortError } from '~/utils/errors'
-import { openCase } from '~/api/moderation'
+import { openModerationCase } from '~/api/moderation'
 import { realtimeCommentPlacement } from '~/utils/comments'
-import {
-    coalesceIds,
-    gymChangesTopic,
-    type GymChange,
-} from '~/utils/realtimeCache'
+import { coalesceIds, type GymChange } from '~/utils/realtimeCache'
 import { formatNumber } from '#shared/utils/number'
 import { locationName } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
@@ -197,6 +199,7 @@ const {
     loading,
     loadingMore,
     hasMore,
+    error: loadError,
     refresh: fetchList,
     loadMore: loadNextPage,
     prefetch,
@@ -217,27 +220,27 @@ const statTiles = computed(() => [
         key: 'total',
         label: t('comments.totalReviews'),
         value: stats.value.totalReviews,
-        color: 'primary',
+        color: 'primary' as const,
     },
     {
         key: 'avg-rating',
         label: t('comments.avgRating'),
         value: stats.value.avgRating,
-        color: 'warning',
+        color: 'warning' as const,
         icon: 'i-lucide-star',
-        iconColor: 'amber-500',
+        iconColor: 'warning' as const,
     },
     {
         key: 'this-week',
         label: t('comments.thisWeek'),
         value: stats.value.thisWeek,
-        color: 'success',
+        color: 'success' as const,
     },
     {
         key: 'low-rated',
         label: t('comments.lowRated'),
         value: stats.value.lowRated,
-        color: 'error',
+        color: 'error' as const,
     },
 ])
 
@@ -280,14 +283,7 @@ const { gradeFilterItems } = useGradeSystems()
 
 const difficulties = gradeFilterItems
 
-const { data: locationRecords } = useLocations()
-
-const locations = computed(() =>
-    (locationRecords.value ?? []).map((location) => ({
-        text: location.name,
-        value: location.id,
-    })),
-)
+const { items: locations } = useLocations()
 
 const dateOptions = computed(() => [
     { label: t('filter.all'), value: 'all' },
@@ -374,48 +370,36 @@ const fetchStats = async () => {
     }
 }
 
-let statsDebounce: ReturnType<typeof setTimeout> | undefined
-function scheduleStatsRefresh() {
-    clearTimeout(statsDebounce)
-    statsDebounce = setTimeout(() => fetchStats(), 500)
-}
+const { start: scheduleStatsRefresh } = useTimeoutFn(() => fetchStats(), 500, {
+    immediate: false,
+})
 
 async function loadMore() {
     if (loading.value || loadingMore.value || !hasMore.value) return
     await loadNextPage()
     await nextTick()
-    if (sentinelRef.value && scrollObserver) {
-        scrollObserver.unobserve(sentinelRef.value)
-        scrollObserver.observe(sentinelRef.value)
-    }
+    pauseScrollObserver()
+    resumeScrollObserver()
 }
 
 // ── Infinite scroll ────────────────────────────────────────────────────────
 
 const sentinelRef = ref<HTMLElement | null>(null)
-let scrollObserver: IntersectionObserver | null = null
-
-watch(sentinelRef, (el) => {
-    scrollObserver?.disconnect()
-    if (!el || typeof IntersectionObserver === 'undefined') return
-    if (!scrollObserver) {
-        scrollObserver = new IntersectionObserver(
-            (entries) => {
-                if (entries[0]?.isIntersecting) loadMore()
-            },
-            { rootMargin: '400px 0px' },
-        )
-    }
-    scrollObserver.observe(el)
-})
+const { pause: pauseScrollObserver, resume: resumeScrollObserver } =
+    useIntersectionObserver(
+        sentinelRef,
+        ([entry]) => {
+            if (entry?.isIntersecting) loadMore()
+        },
+        { rootMargin: '400px 0px' },
+    )
 
 // ── Watchers ───────────────────────────────────────────────────────────────
 
-let searchDebounce: ReturnType<typeof setTimeout> | undefined
-watch(search, () => {
-    clearTimeout(searchDebounce)
-    searchDebounce = setTimeout(() => fetchList(), 300)
+const { start: fetchListSoon } = useTimeoutFn(() => fetchList(), 300, {
+    immediate: false,
 })
+watch(search, () => fetchListSoon())
 
 watch(
     [
@@ -456,7 +440,7 @@ const { run: runModerate } = useAsyncAction()
 
 async function moderate(comment: ManagedComment) {
     const opened = await runModerate(() =>
-        openCase({ content_type: 'rating', content_id: comment.id }),
+        openModerationCase({ content_type: 'rating', content_id: comment.id }),
     )
     if (opened)
         await navigateTo(gymPath(`/manage/moderation?case=${opened.id}`))
@@ -525,13 +509,6 @@ useRealtime(
     },
     { resync: () => refreshCommentsSoon() },
 )
-
-onBeforeUnmount(() => {
-    clearTimeout(searchDebounce)
-    clearTimeout(statsDebounce)
-    scrollObserver?.disconnect()
-    scrollObserver = null
-})
 </script>
 
 <style scoped>

@@ -1,13 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
 import { useAccountExport } from '~/composables/useAccountExport'
 import { useAsyncAction } from '~/composables/useAsyncAction'
 import { useAuthState } from '~/api/auth'
 import { mockApi } from '../api/apiMock'
-
-const saveBlob = vi.fn()
-vi.mock('~/utils/download', () => ({
-    saveBlob: (...args: unknown[]) => saveBlob(...args),
-}))
 
 const notifyError = vi.fn()
 vi.stubGlobal('useNotification', () => ({
@@ -16,12 +12,12 @@ vi.stubGlobal('useNotification', () => ({
 }))
 
 vi.stubGlobal('useAsyncAction', useAsyncAction)
+vi.stubGlobal('ref', ref)
 
 let fetchMock: ReturnType<typeof mockApi>['fetchMock']
 let api: ReturnType<typeof mockApi>
 
 beforeEach(() => {
-    saveBlob.mockReset()
     notifyError.mockReset()
     api = mockApi()
     fetchMock = api.fetchMock
@@ -30,23 +26,24 @@ beforeEach(() => {
 })
 
 describe('useAccountExport', () => {
-    it('downloads the zip with the auth token', async () => {
-        fetchMock.mockResolvedValue(new Response('zip'))
-        expect(await useAccountExport().download()).toBe(true)
+    it('asks the server to e-mail a link and remembers that it did', async () => {
+        fetchMock.mockResolvedValue(new Response(null, { status: 202 }))
+        const exporter = useAccountExport()
+        expect(exporter.requested.value).toBe(false)
+        expect(await exporter.request()).toBe(true)
         expect(api.request().url).toBe('/api/me/export')
+        expect(api.request().method).toBe('POST')
         expect(api.request().headers.get('Authorization')).toBe(
             'Bearer token-1',
         )
-        expect(saveBlob).toHaveBeenCalledWith(
-            expect.any(Blob),
-            expect.stringMatching(/^gripello-data-\d{4}-\d{2}-\d{2}\.zip$/),
-        )
+        expect(exporter.requested.value).toBe(true)
     })
 
     it('tells the user when the rate limit is hit', async () => {
         fetchMock.mockResolvedValue(new Response('{}', { status: 429 }))
-        expect(await useAccountExport().download()).toBeUndefined()
-        expect(saveBlob).not.toHaveBeenCalled()
+        const exporter = useAccountExport()
+        expect(await exporter.request()).toBeUndefined()
+        expect(exporter.requested.value).toBe(false)
         expect(notifyError).toHaveBeenCalledWith(
             'account.exportDataRateLimited',
         )
@@ -54,7 +51,7 @@ describe('useAccountExport', () => {
 
     it('shows the generic error otherwise', async () => {
         fetchMock.mockResolvedValue(new Response('{}', { status: 500 }))
-        await useAccountExport().download()
+        await useAccountExport().request()
         expect(notifyError).toHaveBeenCalledWith('notifications.error.generic')
     })
 })

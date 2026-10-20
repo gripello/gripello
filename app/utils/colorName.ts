@@ -1,4 +1,4 @@
-import { toHex6 } from '~/utils/color'
+import { parseHexColor, toHex6 } from '#shared/utils/color'
 
 const NAMED_COLORS = {
     red: ['#d32f2f', '#f44336', '#e53935', '#dc2626', '#ff0000'],
@@ -81,10 +81,9 @@ const NAMED_COLORS = {
 export type ColorName = keyof typeof NAMED_COLORS
 
 function oklab(hex: string): [number, number, number] {
-    const value = parseInt(hex.slice(1), 16)
-    const [red, green, blue] = [value >> 16, value >> 8, value].map(
+    const [red, green, blue] = (parseHexColor(hex) ?? [0, 0, 0]).map(
         (channel) => {
-            const c = (channel & 0xff) / 255
+            const c = channel / 255
             return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
         },
     ) as [number, number, number]
@@ -119,11 +118,11 @@ export function nearestColorName(
             oklab(toHex6(shade)),
         ]),
     )
-    const [l, a, b] = oklab(hex)
+    const origin = oklab(hex)
     let best: ColorName = 'grey'
     let bestDistance = Infinity
-    for (const [name, [refL, refA, refB]] of referenceColors) {
-        const distance = (l - refL) ** 2 + (a - refA) ** 2 + (b - refB) ** 2
+    for (const [name, reference] of referenceColors) {
+        const distance = oklabDistance(origin, reference)
         if (distance < bestDistance) {
             best = name
             bestDistance = distance
@@ -149,4 +148,30 @@ export function renamedForColor(
     const automatic =
         !name.trim() || name === translatedColorName(t, previousColor)
     return automatic ? translatedColorName(t, nextColor) : name
+}
+
+function oklabDistance(
+    a: [number, number, number],
+    b: [number, number, number],
+) {
+    return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2
+}
+
+export function nearestColors(
+    target: string,
+    pool: readonly string[],
+    limit: number,
+): string[] {
+    const hex = toHex6(target)
+    if (!hex) return []
+    const origin = oklab(hex)
+    return pool
+        .filter((color) => toHex6(color) !== hex)
+        .map((color) => ({
+            color,
+            distance: oklabDistance(origin, oklab(color)),
+        }))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, limit)
+        .map(({ color }) => color)
 }

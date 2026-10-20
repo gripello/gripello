@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { nextTick, reactive, ref } from 'vue'
 import UserDialog from '~/components/platform/UserDialog.vue'
+import { useReauth } from '~/composables/useReauth'
 
 const inputStub = {
     props: ['modelValue'],
@@ -23,6 +24,7 @@ const user = {
 describe('PlatformUserDialog', () => {
     beforeEach(() => {
         vi.stubGlobal('reactive', reactive)
+        vi.stubGlobal('useReauth', useReauth)
         vi.stubGlobal('useCapToken', () => ({
             capHeaders: async () => ({ 'X-Cap-Token': 'token' }),
         }))

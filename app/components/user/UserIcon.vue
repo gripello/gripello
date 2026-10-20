@@ -24,7 +24,7 @@
         >
             <ClimberAvatar
                 :id="user?.id"
-                :name="displayName"
+                :name="userName"
                 :avatar="user?.avatar"
                 :size="collapsed ? 'xs' : 'sm'"
             />
@@ -32,7 +32,7 @@
                 <span
                     class="block truncate text-sm font-medium text-highlighted"
                 >
-                    {{ displayName }}
+                    {{ userName }}
                 </span>
                 <span class="block truncate text-xs text-muted">
                     {{ user?.email }}
@@ -48,10 +48,14 @@
 </template>
 
 <script setup lang="ts">
-import { fileUrl } from '~/api/client'
 import { logout as signOut, useAuthState } from '~/api/auth'
 import type { DropdownMenuItem } from '@nuxt/ui'
-import { avatarColor, nameInitials } from '~/utils/avatar'
+import {
+    avatarColor,
+    avatarUrl,
+    displayName,
+    nameInitials,
+} from '~/utils/avatar'
 import { requiresSignIn } from '~/utils/authView'
 
 defineProps<{ collapsed?: boolean }>()
@@ -64,16 +68,10 @@ const { t } = useI18n()
 
 const user = computed(() => currentUser())
 
-const image = computed(() =>
-    fileUrl('users', user.value, user.value?.avatar, { thumb: '100x100' }),
-)
+const image = computed(() => avatarUrl(user.value))
 
-const displayName = computed(
-    () =>
-        [user.value?.firstname, user.value?.name].filter(Boolean).join(' ') ||
-        user.value?.username ||
-        user.value?.email ||
-        t('account.unknownUser'),
+const userName = computed(() =>
+    displayName(user.value, t('account.unknownUser')),
 )
 
 const isLoggingOut = ref(false)
@@ -82,12 +80,12 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
     [
         {
             type: 'label',
-            label: displayName.value,
+            label: userName.value,
             description: user.value?.email,
             avatar: {
                 src: image.value || undefined,
-                text: nameInitials(displayName.value),
-                alt: displayName.value,
+                text: nameInitials(userName.value),
+                alt: userName.value,
                 class: 'text-white',
                 style: { backgroundColor: avatarColor(user.value?.id) },
             },

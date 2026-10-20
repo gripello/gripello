@@ -3,11 +3,13 @@ import type { CompetitionRouteRecord } from '~/types/models'
 
 vi.stubGlobal('useNotification', () => ({ error: vi.fn() }))
 
-const listScores = vi.fn()
-const putScores = vi.fn()
+const listCompetitionScores = vi.fn()
+const upsertCompetitionScores = vi.fn()
 vi.mock('~/api/competitions', () => ({
-    listScores: (...args: unknown[]) => listScores(...args),
-    putScores: (...args: unknown[]) => putScores(...args),
+    listCompetitionScores: (...args: unknown[]) =>
+        listCompetitionScores(...args),
+    upsertCompetitionScores: (...args: unknown[]) =>
+        upsertCompetitionScores(...args),
 }))
 
 const boulder = { id: 'cr1', zone: true } as CompetitionRouteRecord
@@ -15,15 +17,15 @@ const boulder = { id: 'cr1', zone: true } as CompetitionRouteRecord
 describe('useScorecard', () => {
     beforeEach(() => {
         localStorage.clear()
-        listScores.mockReset()
-        putScores.mockReset().mockResolvedValue([])
+        listCompetitionScores.mockReset()
+        upsertCompetitionScores.mockReset().mockResolvedValue([])
     })
 
     it('keeps a saved click when an older reload answers after it', async () => {
         const { useScorecard } = await import('~/composables/useScorecard')
         const card = useScorecard(ref('c1'), ref('e1'))
         let answerReload!: (records: unknown[]) => void
-        listScores.mockReturnValueOnce(
+        listCompetitionScores.mockReturnValueOnce(
             new Promise((resolve) => (answerReload = resolve)),
         )
         const loading = card.load()

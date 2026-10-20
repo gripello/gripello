@@ -17,6 +17,21 @@ describe('routes page', () => {
     })
 })
 
+describe('routes page load error', () => {
+    it('keeps one failure flag that a later successful load clears', () => {
+        expect(source).not.toMatch(/routesError\.value \|\|/)
+        expect(source).toMatch(
+            /watch\(\s+routesError,\s+\(error\) => \{\s+loadFailed\.value = !!error/,
+        )
+        const loadRoutes = source.slice(
+            source.indexOf('async function loadRoutes'),
+        )
+        expect(loadRoutes).toMatch(
+            /totalItems: res\.totalItems,\s+\}\s+loadFailed\.value = false/,
+        )
+    })
+})
+
 describe('routes page table', () => {
     it('keeps the row actions icon-only so the table fits', () => {
         expect(source).toContain(
@@ -49,5 +64,22 @@ describe('manage routes page', () => {
         expect(manage).toMatch(
             /text-muted sm:hidden"\s+data-testid="routes-marker-legend"/,
         )
+    })
+
+    it('keeps loaded rows when a background reload fails', () => {
+        const manage = readFileSync(
+            path.resolve(
+                import.meta.dirname,
+                '../../app/pages/[gym]/manage/routes.vue',
+            ),
+            'utf8',
+        )
+        expect(manage).toContain(
+            'if (!background || routes.value.length === 0) listFailed.value = true',
+        )
+        expect(manage).toMatch(
+            /queueReload = coalesce\(\s+\(\) => reloadRoutes\(\{ background: true \}\)/,
+        )
+        expect(manage).toContain('{ resync: queueReload }')
     })
 })

@@ -6,6 +6,10 @@
         sheet-on-mobile
         :title="tick ? $t('ticks.edit') : $t('ticks.logAscent')"
         data-testid="tick-dialog"
+        :submit-label="$t('actions.save')"
+        :submit-loading="saving"
+        submit-test-id="tick-submit"
+        @submit="submit"
     >
         <UForm
             ref="formRef"
@@ -19,22 +23,14 @@
             "
             @submit="submit"
         >
-            <div class="flex gap-2 mb-5" role="radiogroup">
-                <UButton
-                    v-for="type in TICK_TYPES"
-                    :key="type"
-                    role="radio"
-                    :aria-checked="form.type === type"
-                    :color="form.type === type ? 'primary' : 'neutral'"
-                    :variant="form.type === type ? 'solid' : 'soft'"
-                    :icon="TICK_TYPE_ICONS[type]"
-                    class="tick-dialog__type h-12 justify-center"
-                    :data-testid="`tick-type-${type}`"
-                    @click="form.type = type"
-                >
-                    {{ $t(`ticks.types.${type}`) }}
-                </UButton>
-            </div>
+            <OptionGrid
+                v-model="form.type"
+                :items="typeItems"
+                cols="grid-cols-3"
+                :label="$t('ticks.type')"
+                test-id-prefix="tick-type"
+                class="mb-5"
+            />
 
             <div class="grid grid-cols-12 gap-3 mb-4">
                 <UFormField
@@ -82,21 +78,6 @@
                 />
             </UFormField>
         </UForm>
-
-        <template #actions>
-            <UButton color="neutral" variant="ghost" @click="open = false">
-                {{ $t('actions.cancel') }}
-            </UButton>
-            <div class="flex-1" />
-            <UButton
-                color="primary"
-                :loading="saving"
-                data-testid="tick-submit"
-                @click="submit"
-            >
-                {{ $t('actions.save') }}
-            </UButton>
-        </template>
     </LayoutDialogShell>
 </template>
 
@@ -104,14 +85,11 @@
 import type { Form } from '@nuxt/ui'
 import type { TickRecord } from '~/types/models'
 import { required, validateRules } from '~/utils/validation'
-import {
-    TICK_TYPES,
-    tickDate,
-    tickDay,
-    type TickType,
-} from '#shared/utils/ticks'
+import { TICK_TYPES, tickDay, type TickType } from '#shared/utils/ticks'
 import { localDay } from '#shared/utils/ticks'
 import { TICK_TYPE_ICONS } from '~/utils/ticks'
+import { formFieldErrors } from '~/utils/fieldErrors'
+import { useSessionEnded } from '~/composables/useSessionEnded'
 
 const open = defineModel<boolean>({ default: false })
 
@@ -127,8 +105,17 @@ const emit = defineEmits<{ saved: [tick: TickRecord] }>()
 
 const authStore = useAuthStore()
 const { t } = useI18n()
+
+const typeItems = computed(() =>
+    TICK_TYPES.map((type) => ({
+        value: type,
+        label: t(`ticks.types.${type}`),
+        icon: TICK_TYPE_ICONS[type],
+    })),
+)
 const { notify, error: notifyError } = useNotification()
 const { createTick, updateTick } = useTickOutbox()
+const noticeSessionEnded = useSessionEnded()
 
 const saving = ref(false)
 const today = ref(localToday())
@@ -169,15 +156,17 @@ watch(
 )
 
 async function submit() {
-    const valid =
-        !!formRef.value &&
-        (await formRef.value.validate({ silent: true })) !== false
-    if (!valid || saving.value) return
+    if (saving.value || !formRef.value) return
     saving.value = true
+    const valid = (await formRef.value.validate({ silent: true })) !== false
+    if (!valid) {
+        saving.value = false
+        return
+    }
     const fields = {
         type: form.type,
         attempts: form.attempts,
-        date: tickDate(form.day),
+        date: form.day,
         note: form.note.trim(),
     }
     try {
@@ -186,23 +175,22 @@ async function submit() {
             : await createTick({
                   ...fields,
                   user: authStore.record?.id ?? '',
-                  route: props.routeId,
+                  route: props.routeId ?? '',
               })
         notify(t(queued ? 'ticks.savedOffline' : 'ticks.saved'))
         emit('saved', saved)
         open.value = false
     } catch (err) {
-        console.error('Saving tick failed:', err)
-        notifyError(t('ticks.saveError'))
+        if (noticeSessionEnded(err)) return
+        const fieldErrors = formFieldErrors(
+            err,
+            ['type', 'attempts', 'note'],
+            t,
+        )
+        if (fieldErrors.length) formRef.value?.setErrors(fieldErrors)
+        else notifyError(t('ticks.saveError'))
     } finally {
         saving.value = false
     }
 }
 </script>
-
-<style scoped>
-.tick-dialog__type {
-    flex: 1 1 0;
-    min-width: 0;
-}
-</style>

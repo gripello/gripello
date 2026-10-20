@@ -1,17 +1,35 @@
 <script setup lang="ts">
-const props = defineProps<{
-    label: string
-    value: string | number
-    icon?: string
-    iconColor?: string
-    color?: string
-}>()
+export type StatTileColor = 'primary' | 'success' | 'info' | 'warning' | 'error'
 
-const iconClass = computed(() =>
-    props.iconColor === 'yellow-darken-2'
-        ? 'text-amber-500'
-        : props.iconColor && `text-${props.iconColor}`,
+const TEXT_COLORS: Record<StatTileColor, string> = {
+    primary: 'text-primary',
+    success: 'text-success',
+    info: 'text-info',
+    warning: 'text-warning',
+    error: 'text-error',
+}
+
+const props = withDefaults(
+    defineProps<{
+        label: string
+        value: string | number
+        icon?: string
+        iconColor?: StatTileColor
+        color?: StatTileColor
+        valueTestId?: string
+    }>(),
+    {
+        icon: undefined,
+        iconColor: undefined,
+        color: undefined,
+        valueTestId: 'stat-tile-value',
+    },
 )
+
+const iconClass = computed(
+    () => props.iconColor && TEXT_COLORS[props.iconColor],
+)
+const valueClass = computed(() => props.color && TEXT_COLORS[props.color])
 </script>
 
 <template>
@@ -24,9 +42,9 @@ const iconClass = computed(() =>
                 :class="iconClass"
             />
             <span
-                class="text-[1.375rem] leading-7 font-bold"
-                :class="color ? `text-${color}` : undefined"
-                data-testid="stat-tile-value"
+                class="text-[1.375rem] leading-7 font-bold tabular-nums"
+                :class="valueClass"
+                :data-testid="valueTestId"
                 >{{ value }}</span
             >
         </div>

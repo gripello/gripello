@@ -1,5 +1,5 @@
 // Mirrored in backend/internal/ratings/betas.go.
-const BETA_VIDEO_HOSTS = {
+export const BETA_VIDEO_HOSTS = {
     'youtube.com': 'YouTube',
     'instagram.com': 'Instagram',
     'tiktok.com': 'TikTok',

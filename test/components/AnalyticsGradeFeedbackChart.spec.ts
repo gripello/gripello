@@ -27,7 +27,7 @@ function axisLabel(routes: FeedbackRoute[]) {
         props: { routes },
         global: {
             stubs: {
-                AnalyticsBaseEchart: {
+                ChartEchart: {
                     props: ['option'],
                     setup(props: { option: typeof option }) {
                         option = props.option

@@ -174,6 +174,21 @@ describe('realtime cache plugin', () => {
         expect(refreshNuxtData).toHaveBeenCalledWith('achievements:me')
     })
 
+    it('refetches the open route after an own tick on it', async () => {
+        await startPlugin({ 'route:r1': { id: 'r1', gym: 'g1' } })
+        emit('own_ticks', {
+            action: 'create',
+            record: { user: 'me', route: 'r2' },
+        })
+        emit('own_ticks', {
+            action: 'create',
+            record: { user: 'me', route: 'r1' },
+        })
+        await vi.runAllTimersAsync()
+        expect(refreshNuxtData).toHaveBeenCalledWith('route:r1')
+        expect(refreshNuxtData).not.toHaveBeenCalledWith('route:r2')
+    })
+
     it('patches the season picker and reloads the shown board', async () => {
         const winter = { id: 's1', gym: 'g1', name: 'Winter' }
         const app = await startPlugin({

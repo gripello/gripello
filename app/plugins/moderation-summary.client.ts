@@ -1,3 +1,4 @@
+import { liveTopics, moderationTopic } from '#shared/utils/topics'
 import { coalesce } from '~/utils/realtimeCache'
 import { subscribeRealtime } from '~/composables/useRealtime'
 
@@ -16,13 +17,13 @@ export default defineNuxtPlugin(() => {
                 await refresh()
                 if (!next) return
                 const stops = [
-                    subscribeRealtime(`moderation:${next}`, refreshSoon),
+                    subscribeRealtime(moderationTopic(next), refreshSoon),
                 ]
                 // the platform badges also count suspended climbers
                 if (next === 'platform')
                     stops.push(
                         subscribeRealtime(
-                            'platform',
+                            liveTopics.platform,
                             (event: { kind?: string; changed?: string[] }) => {
                                 if (
                                     event.kind === 'platform_users.changed' &&

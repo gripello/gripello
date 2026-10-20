@@ -1,3 +1,4 @@
+import { toHex6 } from '#shared/utils/color'
 import { describe, it, expect } from 'vitest'
 import {
     FALLBACK_DOT_COLOR,
@@ -6,7 +7,6 @@ import {
     readableTextOn,
     routeDotColor,
     shadeColor,
-    toHex6,
 } from '~/utils/color'
 
 describe('toHex6', () => {

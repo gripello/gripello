@@ -1,19 +1,33 @@
 <script setup lang="ts">
 defineProps<{
-    title: string
+    title?: string
     subtitle?: string
+    icon?: string
 }>()
 </script>
 
 <template>
     <header
-        class="section-header flex flex-wrap items-center justify-between gap-3 mb-4"
+        class="section-header mb-4 flex flex-wrap items-center justify-between gap-3"
     >
-        <div class="min-w-0">
-            <h2 class="section-header__title">{{ title }}</h2>
-            <p v-if="subtitle" class="section-header__subtitle mb-0">
-                {{ subtitle }}
-            </p>
+        <div class="flex min-w-0 items-center gap-2.5">
+            <span
+                v-if="icon"
+                class="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"
+            >
+                <UIcon :name="icon" class="size-4" />
+            </span>
+            <div class="min-w-0">
+                <h2 class="section-header__title">
+                    <slot name="title">{{ title }}</slot>
+                </h2>
+                <div
+                    v-if="subtitle || $slots.subtitle"
+                    class="section-header__subtitle"
+                >
+                    <slot name="subtitle">{{ subtitle }}</slot>
+                </div>
+            </div>
         </div>
         <div v-if="$slots.actions" class="flex flex-wrap items-center gap-2">
             <slot name="actions" />
@@ -31,6 +45,6 @@ defineProps<{
 
 .section-header__subtitle {
     font-size: 0.85rem;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 50%, transparent);
+    color: var(--ui-text-muted);
 }
 </style>

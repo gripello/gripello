@@ -69,14 +69,16 @@ test('infinite scroll goes idle once every comment is loaded', async ({
                 (window as unknown as { observeCalls?: number }).observeCalls ??
                 0,
         )
+    let previous: number | null = null
     await expect
         .poll(
             async () => {
-                const before = await observeCalls()
-                await page.waitForTimeout(1_000)
-                return (await observeCalls()) - before
+                const now = await observeCalls()
+                const added = previous === null ? Infinity : now - previous
+                previous = now
+                return added
             },
-            { timeout: 15_000 },
+            { intervals: [1_000], timeout: 15_000 },
         )
         .toBeLessThan(3)
 })

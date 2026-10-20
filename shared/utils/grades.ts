@@ -275,7 +275,8 @@ export function nearestGrade(system: GradeSystem, index: number): string {
 }
 
 export function formatGrade(source: GradeSource | null | undefined): string {
-    return source?.grade?.trim() ?? ''
+    const grade = source?.grade?.trim() ?? ''
+    return findGrade(source?.grade_system, grade)?.[0] ?? grade
 }
 
 export interface ImportedGrading {

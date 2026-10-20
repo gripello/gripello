@@ -177,6 +177,11 @@
             sheet-on-mobile
             closable
             data-testid="platform-gym-dialog"
+            :submit-label="t('actions.save')"
+            :submit-loading="saving"
+            submit-test-id="platform-gym-submit"
+            cancel-test-id="platform-gym-cancel"
+            @submit="gymForm?.submit()"
         >
             <UForm
                 ref="gymForm"
@@ -222,25 +227,6 @@
                     />
                 </UFormField>
             </UForm>
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    data-testid="platform-gym-cancel"
-                    @click="dialogOpen = false"
-                >
-                    {{ t('actions.cancel') }}
-                </UButton>
-                <div class="flex-1" />
-                <UButton
-                    color="primary"
-                    :loading="saving"
-                    data-testid="platform-gym-submit"
-                    @click="gymForm?.submit()"
-                >
-                    {{ t('actions.save') }}
-                </UButton>
-            </template>
         </LayoutDialogShell>
     </div>
 </template>
