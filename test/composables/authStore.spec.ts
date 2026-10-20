@@ -85,25 +85,11 @@ describe('AuthStore', () => {
         expect(document.cookie).not.toContain('gripello_auth_session=1')
     })
 
-    it('moves a pre-rename login to the new cookie and expires the old one', () => {
+    it('ignores the pre-rename pb_auth cookie', () => {
         document.cookie = `${cookieOf(validToken, { id: 'u1' }, 'pb_auth')}; Path=/`
-        document.cookie = 'pb_auth_session=1; Path=/'
         const store = useAuthStore()
-        expect(store.record).toEqual({ id: 'u1' })
-        expect(store.persistent).toBe(false)
-        expect(
-            JSON.parse(readCookie(document.cookie, 'gripello_auth')).token,
-        ).toBe(validToken)
-        expect(document.cookie).toContain('gripello_auth_session=1')
-        expect(readCookie(document.cookie, 'pb_auth')).toBe('')
-        expect(readCookie(document.cookie, 'pb_auth_session')).toBe('')
-    })
-
-    it('prefers the new cookie when both are present', () => {
-        const store = new AuthStore(
-            `${cookieOf(expiredToken, { id: 'old' }, 'pb_auth')}; ${cookieOf(validToken, { id: 'u1' })}`,
-        )
-        expect(store.record).toEqual({ id: 'u1' })
+        expect(store.token).toBe('')
+        expect(store.record).toBeNull()
     })
 })
 

@@ -1,32 +1,8 @@
-import { createHmac } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
-import { fillLogin, signInAs } from '../../support/auth'
-
-const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
-
-function totp(secret: string, offset = 0) {
-    const bits = [...secret.replace(/\s/g, '')]
-        .map((char) => BASE32.indexOf(char).toString(2).padStart(5, '0'))
-        .join('')
-    const key = Buffer.from(
-        bits.match(/.{8}/g)!.map((byte) => parseInt(byte, 2)),
-    )
-    const counter = Buffer.alloc(8)
-    counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000) + offset))
-    const hash = createHmac('sha1', key).update(counter).digest()
-    const start = hash[hash.length - 1]! & 0x0f
-    return String((hash.readUInt32BE(start) & 0x7fffffff) % 1_000_000).padStart(
-        6,
-        '0',
-    )
-}
-
-async function typeCode(page: Page, testId: string, code: string) {
-    await page.getByTestId(testId).locator('input').first().click()
-    await page.keyboard.type(code)
-}
+import { fillLogin, signInAs, totp, typeCode } from '../../support/auth'
 
 async function confirmPassword(page: Page, password: string) {
     await page.getByTestId('two-factor-password').fill(password)
@@ -52,6 +28,12 @@ test.describe('account security', () => {
         await expect(
             page.getByTestId('two-factor-codes').locator('li'),
         ).toHaveCount(10)
+        const download = page.waitForEvent('download')
+        await page.getByTestId('two-factor-codes-download').click()
+        const file = await download
+        expect(file.suggestedFilename()).toBe('gripello-recovery-codes.txt')
+        const codes = (await readFile((await file.path())!, 'utf8')).trim()
+        expect(codes.split('\n')).toHaveLength(10)
         await page.getByTestId('two-factor-codes-done').click()
 
         await page.context().clearCookies()

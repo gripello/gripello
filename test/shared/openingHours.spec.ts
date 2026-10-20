@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import fixtures from '../../backend/testdata/openingHours.json'
 import {
     hasOpeningHours,
@@ -97,5 +97,49 @@ describe('openingHours', () => {
                 closes: '01:30',
             },
         ])
+    })
+})
+
+describe('openStatus around midnight and clock changes in Europe/Berlin', () => {
+    const originalTimeZone = process.env.TZ
+    beforeEach(() => {
+        process.env.TZ = 'Europe/Berlin'
+    })
+    afterEach(() => {
+        process.env.TZ = originalTimeZone
+    })
+    const lateSunday: GymOpeningHours = { sun: [['22:00', '02:00']] }
+    const lateSaturday: GymOpeningHours = { sat: [['22:00', '02:00']] }
+
+    it('keeps a Sunday night open into Monday', () => {
+        expect(openStatus(lateSunday, new Date('2026-10-19T01:00:00'))).toEqual(
+            { open: true, until: '02:00' },
+        )
+        expect(openStatus(lateSunday, new Date('2026-10-19T02:00:00'))).toEqual(
+            { open: false, opensAt: '22:00', opensOn: 'sun' },
+        )
+    })
+
+    it('closes on the wall clock when summer time starts', () => {
+        expect(
+            openStatus(lateSaturday, new Date('2026-03-29T01:30:00')),
+        ).toEqual({ open: true, until: '02:00' })
+        expect(
+            openStatus(lateSaturday, new Date('2026-03-29T03:00:00')),
+        ).toEqual({ open: false, opensAt: '22:00', opensOn: 'sat' })
+    })
+
+    it('closes on the wall clock when summer time ends', () => {
+        const firstOneThirty = new Date('2026-10-25T01:30:00+02:00')
+        const repeatedTwoThirty = new Date('2026-10-25T02:30:00+01:00')
+        expect(openStatus(lateSaturday, firstOneThirty)).toEqual({
+            open: true,
+            until: '02:00',
+        })
+        expect(openStatus(lateSaturday, repeatedTwoThirty)).toEqual({
+            open: false,
+            opensAt: '22:00',
+            opensOn: 'sat',
+        })
     })
 })

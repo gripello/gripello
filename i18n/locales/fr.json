@@ -77,7 +77,6 @@
         },
         "requirements": {
             "minLength": "Au moins 8 caractères",
-            "maxLength": "72 caractères maximum",
             "uppercase": "Lettre majuscule (A–Z)",
             "lowercase": "Lettre minuscule (a–z)",
             "number": "Chiffre (0–9)",
@@ -114,9 +113,9 @@
         "emailChangeSent": "Lien de confirmation envoyé à la nouvelle adresse. Votre adresse actuelle reste active jusqu'à ce que vous l'ouvriez.",
         "emailChangeFailed": "Le lien de confirmation n'a pas pu être envoyé. Votre adresse e-mail n'a pas changé.",
         "exportData": "Télécharger vos données",
-        "exportDataHint": "Un fichier ZIP contenant votre profil, votre carnet, vos adhésions, vos inscriptions aux compétitions, vos notifications, les défauts signalés et l'activité de votre compte.",
+        "exportDataHint": "Un fichier ZIP avec votre profil, carnet, adhésions, inscriptions aux compétitions, notifications, défauts signalés et activité du compte, envoyé sous forme de lien de téléchargement par e-mail.",
         "exportDataDownload": "Télécharger",
-        "exportDataRateLimited": "Vous pouvez télécharger vos données 3 fois par heure. Veuillez réessayer plus tard.",
+        "exportDataRateLimited": "Vous pouvez demander vos données 3 fois par heure. Veuillez réessayer plus tard.",
         "deleteAccount": "Supprimer le compte",
         "deleteAccountHint": "Supprime définitivement votre compte et vous déconnecte. Les voies et avis que vous avez créés sont conservés.",
         "deleteAccountConfirm": "Votre compte sera définitivement supprimé et vous serez déconnecté. Cette action est irréversible.",
@@ -198,7 +197,16 @@
             "linked": "Connexion associée",
             "linkConfirm": "Une connexion associée ouvre votre compte même après un changement de mot de passe. Confirmez avec votre mot de passe."
         },
-        "noAccount": "Pas encore de compte ?"
+        "noAccount": "Pas encore de compte ?",
+        "exportDataRequest": "M’envoyer un lien",
+        "exportDataRequested": "Nous vous envoyons un lien par e-mail",
+        "exportReady": "Vos données sont prêtes",
+        "exportReadyHint": "Ce lien de téléchargement fonctionne pendant 7 jours.",
+        "exportExpired": "Ce lien de téléchargement a expiré ou a été remplacé par un export plus récent.",
+        "exportAgain": "Demander un nouvel export",
+        "exportTooLarge": "Votre export de données est trop volumineux",
+        "exportTooLargeHint": "Il dépasse 2 Go. Contactez-nous pour recevoir vos données autrement.",
+        "exportNone": "Aucun export de données prêt"
     },
     "routes": {
         "generate_name": "Générer un nom",
@@ -239,7 +247,9 @@
         "info": "Infos",
         "outSoon": "Démontée le {date}",
         "mapWork": "Voies & réouvertures",
-        "removed": "Cette voie a été supprimée."
+        "removed": "Cette voie a été supprimée.",
+        "sends": "Réussites",
+        "screwedShort": "Ouverte"
     },
     "dashboard": {
         "online": "{0} en ligne"
@@ -361,11 +371,13 @@
         "score": "Moy. étoiles",
         "comment": "Commentaire",
         "climber_reviews": "Avis",
-        "felt": "ressenti",
         "perceived_difficulty": "Cotation ressentie",
         "loadError": "Impossible de charger les avis.",
         "deleteOwn": "Supprimer mon avis",
-        "deleteOwnConfirm": "Ton avis sera définitivement supprimé."
+        "deleteOwnConfirm": "Ton avis sera définitivement supprimé.",
+        "perceived": "Ressenti",
+        "votes": "1 vote | {n} votes",
+        "ratingCount": "1 avis | {n} avis"
     },
     "table": {
         "actions": "Actions",
@@ -547,7 +559,9 @@
                 "beta_approved": "Ta vidéo bêta a été approuvée",
                 "beta_rejected": "Ta vidéo bêta a été refusée : {reason}",
                 "wall_reset_planned": "{wall} : {count} voies démontées le {date}",
-                "platform_issue": "{level} : {summary} ({count}×)"
+                "platform_issue": "{level} : {summary} ({count}×)",
+                "account_export_ready": "Votre export de données est prêt à être téléchargé",
+                "account_export_failed": "Votre export de données est trop volumineux pour être téléchargé"
             }
         }
     },
@@ -633,7 +647,7 @@
             },
             "reports": {
                 "title": "Signalements de contenu",
-                "body": "Si vous signalez un contenu, nous traitons votre nom, votre adresse e-mail, le motif du signalement et vos explications afin de traiter le signalement et de vous informer de la décision (article 6, paragraphe 1, point c), du RGPD, en liaison avec l’article 16 du règlement sur les services numériques). Les modérateurs de la salle concernée et l’adresse de contact de la salle reçoivent votre nom et votre adresse e-mail avec le signalement. La personne dont vous signalez le contenu n’apprend pas qui vous êtes, sauf obligation légale. Les signalements sont conservés aussi longtemps que nécessaire à des fins de documentation, même après la suppression de votre compte."
+                "body": "Si vous signalez un contenu, nous traitons votre nom, votre adresse e-mail, le motif du signalement et vos explications afin de traiter le signalement et de vous informer de la décision (article 6, paragraphe 1, point c), du RGPD, en liaison avec l’article 16 du règlement sur les services numériques). Les modérateurs de la salle concernée et l’adresse de contact de la salle reçoivent votre nom et votre adresse e-mail avec le signalement. La personne dont vous signalez le contenu n’apprend pas qui vous êtes, sauf obligation légale. Les signalements sont supprimés trois ans après la décision ; la suppression de votre compte ne les supprime pas plus tôt."
             },
             "notifications": {
                 "title": "Notifications",
@@ -645,15 +659,15 @@
             },
             "dataExport": {
                 "title": "Télécharger mes données",
-                "body": "Dans les paramètres du compte, « Télécharger vos données » génère une archive ZIP contenant toutes les données liées à votre compte : profil, photo, bannière, carnet de croix, avis, vidéos de bêta, abonnements, succès, notifications, adhésions, tâches, participations aux compétitions, etc. Cela vous permet d’exercer vos droits d’accès et de portabilité vous-même. Le nombre de téléchargements par heure est limité."
+                "body": "Dans les paramètres du compte, « Télécharger vos données » génère une archive ZIP contenant toutes les données liées à votre compte : profil, photo, bannière, carnet de croix, avis, vidéos de bêta, abonnements, succès, notifications, adhésions, tâches, participations aux compétitions, etc. Cela vous permet d’exercer vos droits d’accès et de portabilité vous-même. Le nombre de téléchargements par heure est limité. Le fichier ZIP est préparé en arrière-plan et conservé 7 jours sur notre serveur ; vous recevez le lien de téléchargement par e-mail et en notification, et un nouvel export remplace l’ancien."
             },
             "deletion": {
                 "title": "Suppression du compte",
-                "body": "Vous pouvez supprimer votre compte dans les paramètres. Sont alors supprimés : le compte, le carnet de croix, les abonnements, les vidéos de bêta, les succès, les abonnements push, les notifications, les adhésions et les inscriptions aux compétitions. Sont conservés sans lien avec vous (anonymisés) : vos avis et les problèmes ou tâches que vous avez signalés. Les signalements de contenu conservent le nom et l’adresse e-mail du signalant tant que leur traitement l’exige. Les journaux techniques expirent selon les durées indiquées ci-dessus. En France, droit de définir des directives relatives à la conservation, à l’effacement et à la communication de vos données après votre décès (article 85 de la loi Informatique et Libertés)."
+                "body": "Vous pouvez supprimer votre compte dans les paramètres. Sont alors supprimés : le compte, le carnet de croix, les abonnements, les vidéos de bêta, les succès, les abonnements push, les notifications, les adhésions et les inscriptions aux compétitions. Sont conservés sans lien avec vous (anonymisés) : vos avis et les problèmes ou tâches que vous avez signalés. Les signalements de contenu conservent le nom et l’adresse e-mail du signalant jusqu’à leur suppression, trois ans après la décision. Les journaux techniques expirent selon les durées indiquées ci-dessus. En France, droit de définir des directives relatives à la conservation, à l’effacement et à la communication de vos données après votre décès (article 85 de la loi Informatique et Libertés)."
             },
             "auditLog": {
                 "title": "Journal d’audit",
-                "body": "Afin de garantir la sécurité et la traçabilité, nous journalisons chaque modification effectuée par quiconque via l’application (par ex. croix, abonnements, avis, vidéos de bêta, signalements de problèmes et de contenus, inscriptions aux compétitions et modifications du personnel) ainsi que les connexions, les tentatives de connexion échouées (l’adresse saisie uniquement sous forme de court hachage), les réinitialisations de mot de passe et les changements d’adresse e-mail, avec l’adresse e-mail du compte, l’action, l’enregistrement concerné et l’adresse IP (article 6, paragraphe 1, point f), du RGPD). Le personnel d’une salle ayant accès au journal d’audit voit les entrées de sa salle, les administrateurs de la plateforme toutes les entrées, et vous les vôtres. Les entrées sont supprimées automatiquement après {auditDays} jours."
+                "body": "Afin de garantir la sécurité et la traçabilité, nous journalisons chaque modification effectuée par quiconque via l’application (par ex. croix, abonnements, avis, vidéos de bêta, signalements de problèmes et de contenus, inscriptions aux compétitions et modifications du personnel) ainsi que les connexions, les tentatives de connexion échouées (l’adresse saisie uniquement sous forme de court hachage), les réinitialisations de mot de passe et les changements d’adresse e-mail, avec l’adresse e-mail du compte, l’action, l’enregistrement concerné et l’adresse IP (article 6, paragraphe 1, point f), du RGPD). Le personnel d’une salle ayant accès au journal d’audit voit les entrées de sa salle, les administrateurs de la plateforme toutes les entrées, et vous les vôtres. Les entrées conservent votre nom d’utilisateur ou votre adresse e-mail même après la suppression de votre compte, et sont supprimées automatiquement après {auditDays} jours."
             },
             "captcha": {
                 "title": "Protection contre le spam",
@@ -710,9 +724,10 @@
             "kept": {
                 "reviews": "Les avis et votes de cotation restent sur la voie sans votre nom.",
                 "reports": "Les défauts que vous avez signalés restent à la salle sans votre nom, pour pouvoir être réparés.",
-                "activity": "Les entrées du journal d’activité restent sans votre nom jusqu’à {days} jours ; celles qui concernent votre compte lui-même (comme les connexions) gardent votre adresse e-mail jusque-là.",
+                "activity": "Les entrées du journal d’activité conservent votre nom d’utilisateur, ou votre adresse e-mail pour les entrées concernant le compte lui-même, jusqu’à leur suppression après la durée de conservation de {days} jours.",
                 "logs": "Les journaux du serveur contiennent l’identifiant de votre compte jusqu’à 7 jours.",
-                "backups": "Les sauvegardes quotidiennes contiennent vos données jusqu’à leur remplacement, par défaut après 7 jours."
+                "backups": "Les sauvegardes quotidiennes contiennent vos données jusqu’à leur remplacement, par défaut après 7 jours.",
+                "exports": "Un export de données demandé est supprimé dans l’heure et son lien de téléchargement valable 7 jours cesse aussitôt de fonctionner."
             },
             "noAccessTitle": "Vous ne pouvez plus vous connecter ?",
             "noAccess": "Écrivez-nous depuis l’adresse e-mail de votre compte et nous le supprimerons dans un délai d’un mois :"
@@ -797,7 +812,8 @@
             "climber": "{name} - Gripello",
             "feed": "Fil d’actu",
             "info": "Infos de la salle - Gripello",
-            "gymOnboarding": "Configurer la salle - Gripello"
+            "gymOnboarding": "Configurer la salle - Gripello",
+            "dataExport": "Vos données - Gripello"
         },
         "content": {
             "settings": "Paramètres",
@@ -818,7 +834,8 @@
         "passwordMismatch": "Les mots de passe ne correspondent pas.",
         "integerRange": "Saisissez un nombre entier de {min} à {max}.",
         "passwordTooWeak": "Le mot de passe doit être au moins « Bon ».",
-        "email": "Veuillez saisir une adresse e-mail valide."
+        "email": "Veuillez saisir une adresse e-mail valide.",
+        "invalid": "Cette valeur n'est pas valide."
     },
     "captcha": {
         "verifying": "Vérification… {progress} %"
@@ -925,7 +942,6 @@
         "roleName": "Nom du rôle",
         "roleDescription": "Description",
         "roleColor": "Couleur",
-        "customColor": "Personnalisée",
         "preview": "Aperçu",
         "nameTaken": "Un rôle portant ce nom existe déjà.",
         "noRoles": "Aucun rôle pour l’instant",
@@ -1107,7 +1123,9 @@
         },
         "loadFailed": "Impossible de charger ce contenu.",
         "emailBlocked": "Cette adresse e-mail ne peut pas être utilisée.",
-        "nameProtected": "Ce nom est réservé. Choisis-en un autre."
+        "nameProtected": "Ce nom est réservé. Choisis-en un autre.",
+        "sessionEnded": "Votre session a expiré. Reconnectez-vous pour enregistrer.",
+        "rateLimited": "Trop de requêtes. Patientez un instant et réessayez."
     },
     "export": {
         "title": "Exporter en Excel",
@@ -1474,6 +1492,7 @@
         "removedRoute": "Voie supprimée",
         "logAscent": "Enregistrer une réussite",
         "edit": "Modifier la réussite",
+        "type": "Type d'ascension",
         "attempts": "Essais",
         "attemptsInvalid": "Saisissez un nombre entier de 1 à 999.",
         "date": "Date",
@@ -1774,7 +1793,8 @@
                 "platform_reports": "Signalements de toutes les salles",
                 "content": "Modération de mon contenu",
                 "moderation": "Contenu à examiner",
-                "platform_issues": "Erreurs et avertissements du serveur"
+                "platform_issues": "Erreurs et avertissements du serveur",
+                "account": "Mon compte"
             },
             "devices": "Appareils",
             "thisDevice": "Cet appareil",
@@ -2035,7 +2055,8 @@
                 "allFlashes": "Tout en flash",
                 "uniqueTop": "Seul top sur une voie"
             },
-            "competition": "Compétition"
+            "competition": "Compétition",
+            "unsaved": "Non enregistré"
         },
         "export": {
             "menu": "Exporter",
@@ -2682,6 +2703,18 @@
             "subject": "Votre essai de {app} est terminé",
             "body": "L'essai de {gym} s'est terminé le {date}. Les grimpeurs peuvent continuer à utiliser la salle, mais votre équipe ne peut plus rien modifier.",
             "note": "Répondez à cet e-mail pour continuer avec {app}."
+        },
+        "accountExport": {
+            "subject": "Vos données {app} sont prêtes",
+            "body": "L’export de votre compte {app} est prêt à être téléchargé. Le lien fonctionne pendant 7 jours et uniquement pour cet export.",
+            "action": "Télécharger vos données",
+            "note": "Si vous n’avez rien demandé, changez votre mot de passe."
+        },
+        "accountExportTooLarge": {
+            "subject": "L’export de vos données {app} n’a pas pu être créé",
+            "body": "Votre compte {app} contient plus de données qu’un seul téléchargement ne peut en contenir (2 Go), aucun export n’a donc été créé. Répondez à cet e-mail ou contactez l’exploitant de {app} pour recevoir vos données autrement.",
+            "action": "Ouvrir l’export de données",
+            "note": "Si vous n’avez rien demandé, changez votre mot de passe."
         }
     },
     "leaderboard": {
@@ -2702,7 +2735,7 @@
             "end": "Fin",
             "add": "Ajouter une saison",
             "deleteConfirm": "Supprimer cette saison ? Les ascensions restent dans les carnets.",
-            "endBeforeStart": "La fin doit être après le début"
+            "endBeforeStart": "La fin ne peut pas être avant le début"
         },
         "points": "{n} pts",
         "stats": {
@@ -3174,5 +3207,15 @@
         "browser": "Gripello a besoin d'un navigateur plus récent pour s'afficher correctement.",
         "webview": "Android System WebView est obsolète, Gripello ne peut donc pas s'afficher correctement.",
         "update": "Mettre à jour"
+    },
+    "seo": {
+        "default": "Gripello affiche les blocs et voies actuels d'une salle d'escalade avec cotations, plan, carnet de croix et compétitions.",
+        "landing": "Trouvez votre salle d'escalade et parcourez ses blocs et voies actuels, son plan et ses compétitions.",
+        "routes": "Tous les blocs et voies actuels de {name} avec cotations, couleurs de prises et avis.",
+        "info": "Horaires d'ouverture, adresse et coordonnées de {name}.",
+        "competitions": "Compétitions d'escalade à {name} : dates, inscriptions et résultats.",
+        "competition": "{name} : programme, catégories et résultats en direct.",
+        "leaderboard": "Classement de {name} : grimpeurs classés selon leurs meilleures croix.",
+        "privacy": "Comment {name} traite les données personnelles."
     }
 }

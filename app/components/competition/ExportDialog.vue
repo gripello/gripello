@@ -7,6 +7,11 @@
                 : ''
         "
         data-testid="competition-export-dialog"
+        :submit-label="$t('actions.export')"
+        submit-icon="i-lucide-download"
+        :submit-loading="loading"
+        submit-test-id="export-confirm"
+        @submit="confirm"
     >
         <UFormField :label="$t('export.language')">
             <USelect
@@ -16,21 +21,6 @@
                 data-testid="export-locale"
             />
         </UFormField>
-        <template #actions>
-            <UButton color="neutral" variant="ghost" @click="open = false">
-                {{ $t('actions.cancel') }}
-            </UButton>
-            <div class="flex-1" />
-            <UButton
-                color="primary"
-                icon="i-lucide-download"
-                :loading="loading"
-                data-testid="export-confirm"
-                @click="confirm"
-            >
-                {{ $t('actions.export') }}
-            </UButton>
-        </template>
     </LayoutDialogShell>
 </template>
 

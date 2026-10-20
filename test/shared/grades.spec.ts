@@ -111,6 +111,15 @@ describe('formatGrade', () => {
         expect(formatGrade({ grade: ' 6a+ ' })).toBe('6a+')
         expect(formatGrade(null)).toBe('')
     })
+
+    it('spells known grades the way their system writes them', () => {
+        expect(formatGrade({ grade: '6b', grade_system: 'font' })).toBe('6B')
+        expect(formatGrade({ grade: '6B+', grade_system: 'french' })).toBe(
+            '6b+',
+        )
+        expect(formatGrade({ grade: 'v5', grade_system: 'v' })).toBe('V5')
+        expect(formatGrade({ grade: 'odd', grade_system: 'font' })).toBe('odd')
+    })
 })
 
 describe('resolveImportedGrading', () => {

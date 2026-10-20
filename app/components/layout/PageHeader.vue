@@ -72,7 +72,7 @@ let pageBackOwners = 0
 
 .page-header__subtitle {
     font-size: 0.85rem;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 50%, transparent);
+    color: var(--ui-text-muted);
 }
 
 @variant max-sm {

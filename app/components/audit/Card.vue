@@ -156,7 +156,7 @@ const absoluteTime = computed(() =>
     align-items: center;
     gap: 2px 12px;
     flex-wrap: wrap;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 70%, transparent);
+    color: var(--ui-text-muted);
 }
 
 .audit-card__dot {
@@ -170,6 +170,6 @@ const absoluteTime = computed(() =>
 .audit-card__time {
     flex-shrink: 0;
     white-space: nowrap;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 60%, transparent);
+    color: var(--ui-text-muted);
 }
 </style>

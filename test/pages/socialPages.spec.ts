@@ -68,4 +68,19 @@ describe('social pages', () => {
         )
         expect(inbox).toMatch(/v-if="error"\s+variant="error"/)
     })
+
+    it('offers exactly the moderation actions the server lists for the case', () => {
+        const inbox = readFileSync(
+            path.resolve(
+                import.meta.dirname,
+                '../../app/components/moderation/Inbox.vue',
+            ),
+            'utf8',
+        )
+        const actionBindings = inbox.match(/:actions="[^"]+"/g) ?? []
+        expect(actionBindings.length).toBeGreaterThan(0)
+        for (const binding of actionBindings)
+            expect(binding).toBe(':actions="selected.actions ?? []"')
+        expect(inbox).not.toMatch(/moderationActions|can\('manage_comments'/)
+    })
 })

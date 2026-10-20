@@ -106,6 +106,7 @@ self.addEventListener('fetch', (event) => {
             ).then(
                 async (response) =>
                     response ||
+                    (await cachedGymRouteRedirect(url)) ||
                     (await caches.match(OFFLINE_URL)) ||
                     new Response('Offline', { status: 503 }),
             ),
@@ -134,6 +135,27 @@ self.addEventListener('fetch', (event) => {
     )
         event.respondWith(cacheFirst(request))
 })
+
+// QR tags link /route?id=, which the server redirects into the gym; offline that redirect points at the stored gym page.
+async function cachedGymRouteRedirect(url) {
+    const id = url.searchParams.get('id')
+    if (url.pathname !== '/route' || !id) return undefined
+    const previous = (await caches.keys()).filter(
+        (key) => key.endsWith('-pages') && key !== PAGES,
+    )
+    for (const name of [PAGES, ...previous]) {
+        const cache = await caches.open(name)
+        const stored = (await cache.keys()).find((request) => {
+            const storedUrl = new URL(request.url)
+            return (
+                /^\/[^/]+\/route$/.test(storedUrl.pathname) &&
+                storedUrl.searchParams.get('id') === id
+            )
+        })
+        if (stored) return Response.redirect(stored.url, 302)
+    }
+    return undefined
+}
 
 function isPublicPage(url) {
     return PUBLIC_PAGE.test(url.pathname)

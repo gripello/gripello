@@ -134,10 +134,7 @@
                     </section>
                 </template>
                 <template #features>
-                    <UPageCard
-                        :title="t('platform.features.title')"
-                        variant="outline"
-                    >
+                    <LayoutPanel :title="t('platform.features.title')">
                         <USwitch
                             v-for="flag in FEATURE_FLAGS"
                             :key="flag"
@@ -147,13 +144,12 @@
                             :data-testid="`platform-feature-${gym.slug}-${flag}`"
                             @update:model-value="setFeature(flag, $event)"
                         />
-                    </UPageCard>
+                    </LayoutPanel>
                 </template>
                 <template #danger>
-                    <UPageCard
+                    <LayoutPanel
                         :title="t('platform.gyms.delete')"
-                        variant="outline"
-                        class="ring-error/40"
+                        class="ring-error/40!"
                     >
                         <div>
                             <UButton
@@ -165,7 +161,7 @@
                                 {{ t('platform.gyms.delete') }}
                             </UButton>
                         </div>
-                    </UPageCard>
+                    </LayoutPanel>
                 </template>
             </AdminGymSettingsForm>
 
@@ -218,6 +214,7 @@
 </template>
 
 <script setup lang="ts">
+import { gymTopic } from '#shared/utils/topics'
 import { deleteGym as deleteGymRecord, getGymById, updateGym } from '~/api/gyms'
 import type { FeatureFlag } from '#shared/utils/featureFlags'
 import { FEATURE_FLAGS, hasFeature } from '#shared/utils/featureFlags'
@@ -240,7 +237,7 @@ const {
     error,
     refresh,
 } = await useAsyncData(`platform-gym-${gymId}`, () => getGymById(gymId))
-useLiveRefresh(`gym:${gymId}`, refresh, {
+useLiveRefresh(gymTopic(gymId), refresh, {
     when: (event: GymEvent) => event.kind === 'gym.updated',
 })
 
@@ -277,7 +274,7 @@ function requestHidden(hidden: boolean) {
     hiddenDialogOpen.value = true
 }
 
-async function setFlags(flags: Pick<GymRecord, 'active' | 'hidden'>) {
+async function setFlags(flags: Partial<Pick<GymRecord, 'active' | 'hidden'>>) {
     offlineDialogOpen.value = false
     hiddenDialogOpen.value = false
     await runToggle(async () => {

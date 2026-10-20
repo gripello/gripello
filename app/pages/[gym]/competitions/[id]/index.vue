@@ -4,24 +4,7 @@
             v-if="status === 'pending' && !competition"
             variant="page"
         />
-        <LayoutEmptyState
-            v-else-if="error || !competition"
-            variant="error"
-            :title="t('errors.loadFailed')"
-            data-testid="load-error"
-        >
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-refresh-cw"
-                    data-testid="load-error-retry"
-                    @click="refresh()"
-                >
-                    {{ t('errors.retry') }}
-                </UButton>
-            </template>
-        </LayoutEmptyState>
+        <LayoutLoadError v-else-if="error || !competition" @retry="refresh()" />
         <template v-else>
             <LayoutPageHeader
                 :title="competition.name"
@@ -148,6 +131,7 @@
 </template>
 
 <script setup lang="ts">
+import { useNow } from '@vueuse/core'
 import {
     COMPETITION_PHASE_COLORS,
     acceptsRegistrations,
@@ -155,60 +139,15 @@ import {
     formatCompetitionWindow,
 } from '~/utils/competitions'
 import { JUDGE_ONLY_FORMATS } from '#shared/utils/competitionScoring'
-import { getCompetition, listEntries } from '~/api/competitions'
-import { keepWhenOffline } from '~/utils/errors'
+import { listCompetitionEntries } from '~/api/competitions'
 
 const gymPath = useGymPath()
 
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
-const route = useRoute()
 const { can } = usePermissions()
-
-const competitionId = computed(() => String(route.params.id ?? ''))
-const competitionKey = () => `public-competition:${competitionId.value}`
-const myEntryKey = () => `competition-my-entry:${competitionId.value}`
-
-const {
-    data: competition,
-    status,
-    error,
-    refresh,
-} = await useAsyncData(
-    competitionKey,
-    (nuxtApp) =>
-        keepWhenOffline(nuxtApp, competitionKey(), () =>
-            getCompetition(competitionId.value),
-        ),
-    { enabled: () => !!competitionId.value },
-)
-
-if (competition.value && competition.value.gym !== useCurrentGymId().value)
-    throw createError({ status: 404, fatal: true })
-
-const now = useNow()
-const phase = computed(() =>
-    competition.value
-        ? competitionPhase(competition.value, now.value)
-        : 'draft',
-)
-
 const userId = authStore.record?.id ?? ''
 
-const { data: myEntry, refresh: refreshMyEntry } = await useAsyncData(
-    myEntryKey,
-    (nuxtApp) =>
-        keepWhenOffline(
-            nuxtApp,
-            myEntryKey(),
-            async () =>
-                (await listEntries(competitionId.value, { user: userId }))[0] ??
-                null,
-        ),
-    { default: () => null, enabled: () => !!userId && !!competitionId.value },
-)
-
-const refreshCompetitionSoon = coalesce(() => refresh(), 300)
 const refreshMyEntrySoon = coalesce(() => refreshMyEntry(), 300)
 const refreshCategoriesSoon = coalesce(
     () =>
@@ -219,14 +158,37 @@ const refreshScorecardRoutesSoon = coalesce(
     () => refreshNuxtData(`scorecard-routes:${competitionId.value}`),
     300,
 )
-useCompetitionLive(competitionId, ({ kind, user }) => {
-    if (kind === 'competition' || kind === 'resync') refreshCompetitionSoon()
+const {
+    data: competition,
+    status,
+    error,
+    refresh,
+    competitionId,
+} = await useCompetitionRecord(({ kind, user }) => {
     if ((kind === 'entries' && user === userId) || kind === 'resync') {
         refreshMyEntrySoon()
     }
     if (kind === 'categories' || kind === 'resync') refreshCategoriesSoon()
     if (kind === 'routes' || kind === 'resync') refreshScorecardRoutesSoon()
 })
+
+const now = useNow({ interval: 15_000 })
+const phase = computed(() =>
+    competition.value
+        ? competitionPhase(competition.value, now.value)
+        : 'draft',
+)
+
+const { data: myEntry, refresh: refreshMyEntry } = await useOfflineData(
+    () => `competition-my-entry:${competitionId.value}`,
+    async () =>
+        (
+            await listCompetitionEntries(competitionId.value, {
+                user: userId,
+            })
+        )[0] ?? null,
+    { default: () => null, enabled: () => !!userId && !!competitionId.value },
+)
 
 const hasRegistration = computed(
     () =>
@@ -267,5 +229,9 @@ useHead({
     title: computed(() =>
         t('page.title.competition', { name: competition.value?.name ?? '' }),
     ),
+})
+useSeoMeta({
+    description: () =>
+        t('seo.competition', { name: competition.value?.name ?? '' }),
 })
 </script>

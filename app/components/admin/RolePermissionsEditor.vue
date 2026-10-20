@@ -147,24 +147,15 @@
                 </div>
 
                 <div class="flex flex-col gap-4">
-                    <section
+                    <LayoutPanel
                         v-for="group in permissionGroups"
                         :key="group.key"
-                        class="overflow-hidden rounded-lg bg-default ring ring-default"
+                        :title="t(`permissions.groups.${group.key}`)"
+                        :icon="group.icon"
+                        flush
                         :data-testid="`role-group-${group.key}`"
                     >
-                        <div
-                            class="flex items-center gap-2 border-b border-default px-4 py-3"
-                        >
-                            <UIcon
-                                :name="group.icon"
-                                class="size-4 shrink-0 text-muted"
-                            />
-                            <h3
-                                class="min-w-0 flex-1 truncate font-semibold text-highlighted"
-                            >
-                                {{ t(`permissions.groups.${group.key}`) }}
-                            </h3>
+                        <template #actions>
                             <UCheckbox
                                 :model-value="
                                     groupState(selectedRole, group.permissions)
@@ -180,13 +171,13 @@
                                     toggleGroup(selectedRole, group.permissions)
                                 "
                             />
-                        </div>
+                        </template>
                         <div class="grid gap-x-6 px-4 py-1 lg:grid-cols-2">
                             <USwitch
                                 v-for="perm in group.permissions"
                                 :key="perm.id"
                                 :model-value="
-                                    hasPermission(selectedRole, perm.name)
+                                    roleHasPermission(selectedRole, perm.name)
                                 "
                                 :disabled="
                                     isProtectedRole(selectedRole) || saving
@@ -199,7 +190,7 @@
                                 "
                             />
                         </div>
-                    </section>
+                    </LayoutPanel>
                 </div>
             </div>
         </div>
@@ -223,6 +214,14 @@
             :title="t('permissions.deleteRole')"
             sheet-on-mobile
             data-testid="role-delete-dialog"
+            :submit-label="t('actions.delete')"
+            submit-color="error"
+            submit-icon="i-lucide-trash-2"
+            :submit-loading="deleting"
+            :submit-disabled="holderCount > 0 && !reassignTo"
+            submit-test-id="role-delete-confirm"
+            cancel-test-id="role-delete-cancel"
+            @submit="deleteRole"
         >
             <p class="text-sm mb-4">
                 {{
@@ -260,42 +259,25 @@
                     />
                 </UFormField>
             </template>
-
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    data-testid="role-delete-cancel"
-                    @click="deleteDialog = false"
-                >
-                    {{ t('actions.cancel') }}
-                </UButton>
-                <div class="flex-1" />
-                <UButton
-                    color="error"
-                    :loading="deleting"
-                    :disabled="holderCount > 0 && !reassignTo"
-                    icon="i-lucide-trash-2"
-                    data-testid="role-delete-confirm"
-                    @click="deleteRole"
-                >
-                    {{ t('actions.delete') }}
-                </UButton>
-            </template>
         </LayoutDialogShell>
     </section>
 </template>
 
 <script setup lang="ts">
+import { gymTopic } from '#shared/utils/topics'
 import type { GymEvent } from '~/composables/useRealtime'
 import { listPermissions } from '~/api/gyms'
 import { isAbortError } from '~/utils/errors'
 import {
     groupPermissions,
     isProtectedRole,
+    permissionGroupState,
     reassignTargets,
     defaultReassignTarget,
     revokesOwnAccess,
+    roleHasPermission,
+    toggleGroupPermissions,
+    togglePermissionName,
 } from '~/utils/roles'
 import { membershipIn } from '#shared/utils/memberships'
 import type { PermissionRecord, RoleRecord } from '~/types/models'
@@ -348,10 +330,6 @@ function memberCountLabel({ members: n }: ListedRole) {
     return t('permissions.memberCount', { n }, n)
 }
 
-function hasPermission(role: RoleRecord, permission: string) {
-    return (role.permissions ?? []).includes(permission)
-}
-
 const route = useRoute()
 const router = useRouter()
 const routeRoleId = computed(() =>
@@ -373,33 +351,24 @@ function selectRole(role: Pick<RoleRecord, 'id'> | null) {
 const permissionGroups = computed(() => groupPermissions(allPermissions.value))
 
 function groupState(role: RoleRecord, group: PermissionRecord[]) {
-    const granted = group.filter((perm) =>
-        hasPermission(role, perm.name),
-    ).length
-    if (granted === 0) return false
-    return granted === group.length ? true : 'indeterminate'
+    return permissionGroupState(
+        role,
+        group.map((perm) => perm.name),
+    )
 }
 
 function toggleGroup(role: RoleRecord, group: PermissionRecord[]) {
-    const ids = group.map((perm) => perm.name)
-    const current = role.permissions ?? []
-    const grantAll = groupState(role, group) !== true
     return savePermissions(
         role,
-        grantAll
-            ? [...new Set([...current, ...ids])]
-            : current.filter((id) => !ids.includes(id)),
+        toggleGroupPermissions(
+            role,
+            group.map((perm) => perm.name),
+        ),
     )
 }
 
 function togglePermission(role: RoleRecord, perm: PermissionRecord) {
-    const current = role.permissions ?? []
-    return savePermissions(
-        role,
-        current.includes(perm.name)
-            ? current.filter((name) => name !== perm.name)
-            : [...current, perm.name],
-    )
+    return savePermissions(role, togglePermissionName(role, perm.name))
 }
 
 const lockoutDialog = ref(false)
@@ -409,7 +378,7 @@ function savePermissions(role: RoleRecord, perms: string[]) {
     const risky = revokesOwnAccess({
         role,
         nextPermissions: perms,
-        ownRoleId: membershipIn(ownMemberships.value, gymId.value)?.role,
+        ownRoleId: membershipIn(ownMemberships.value, gymId.value)?.role.id,
         platformAdmin: isPlatformAdmin.value,
     })
     if (!risky) return persistPermissions(role, perms)
@@ -542,7 +511,7 @@ if (initial.value) {
 defineExpose({ startCreate })
 
 useLiveRefresh(
-    () => `gym:${gymId.value}`,
+    () => gymTopic(gymId.value),
     () => fetchData({ silent: true }),
     {
         when: (event: GymEvent) =>

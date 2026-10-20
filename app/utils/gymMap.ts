@@ -8,8 +8,7 @@ import {
 } from '#shared/utils/mapGeometry'
 import { formatGrade } from '#shared/utils/grades'
 import { readableTextOn, routeDotColor } from '~/utils/color'
-
-export const NEW_ROUTE_DAYS = 7
+import { isNewRoute } from '~/utils/overview'
 
 export interface MapWall extends WallGeometry {
     id: string
@@ -88,13 +87,6 @@ export function dotColors(color: string | null | undefined) {
     }
 }
 
-export function isNewRoute(screwDate: string | null | undefined, now: Date) {
-    if (!screwDate) return false
-    const set = new Date(screwDate.replace(' ', 'T')).getTime()
-    if (Number.isNaN(set)) return false
-    return now.getTime() - set <= NEW_ROUTE_DAYS * 86_400_000
-}
-
 export function placeRoutes(
     walls: MapWall[],
     routes: MapRoute[],
@@ -111,7 +103,7 @@ export function placeRoutes(
                 point: pointAt(wall.edge, route.wall_position ?? 0.5),
                 ...dotColors(route.color),
                 grade: formatGrade(route),
-                isNew: isNewRoute(route.screw_date, now),
+                isNew: isNewRoute(route, now),
             },
         ]
     })

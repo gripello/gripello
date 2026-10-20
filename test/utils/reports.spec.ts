@@ -1,5 +1,7 @@
+import { REPORT_REASONS } from '#shared/utils/reports'
+import { readFileSync } from 'node:fs'
 import { describe, it, expect } from 'vitest'
-import { reportContentUrl, REPORT_REASONS } from '~/utils/reports'
+import { reportContentUrl } from '~/utils/reports'
 
 describe('reportContentUrl', () => {
     it('addresses a comment as an anchor on its route page', () => {
@@ -33,17 +35,14 @@ describe('reportContentUrl', () => {
 })
 
 describe('REPORT_REASONS', () => {
-    it('matches the reason values the reports collection accepts', () => {
-        expect(REPORT_REASONS).toEqual([
-            'hate_speech',
-            'harassment',
-            'violence_threat',
-            'sexual_content',
-            'personal_data',
-            'ip_infringement',
-            'spam_fraud',
-            'other',
-        ])
+    it('matches the ReportReason enum of the API', () => {
+        const spec = readFileSync('api/moderation.yaml', 'utf8')
+        const enumLine =
+            /ReportReason:\s+type: string\s+enum: \[([^\]]+)\]/.exec(spec)
+        expect(enumLine).not.toBeNull()
+        expect(REPORT_REASONS).toEqual(
+            enumLine![1]!.split(',').map((value) => value.trim()),
+        )
     })
 
     it('has no duplicates', () => {

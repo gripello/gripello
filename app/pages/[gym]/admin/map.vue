@@ -284,6 +284,8 @@
 </template>
 
 <script setup lang="ts">
+import { isTypingTarget } from '~/utils/keyboard'
+import { useEventListener } from '@vueuse/core'
 import { fileUrl } from '~/api/client'
 import {
     deleteMapTrace,
@@ -603,19 +605,16 @@ const changeCount = computed(() => {
     )
 })
 
-const previewWalls = computed<WallRecord[]>(() =>
+const previewWalls = computed(() =>
     editor.state.value.walls
         .filter((wall) => !wallProblems(wall).length)
         .map((wall) => ({
             id: wall.id ?? wall.key,
-            location: locationId.value,
             name: wall.name,
             outline: wall.outline,
             edge: wall.edge,
             label: wall.label,
             sort: wall.sort,
-            anchor_from: wall.anchorFrom,
-            anchor_to: wall.anchorTo,
         })),
 )
 const previewRoutes = computed(() => locationRoutes.value)
@@ -735,8 +734,8 @@ function wallPayload(wall: EditorWall) {
         edge: wall.edge,
         label: wall.label,
         sort: wall.sort,
-        anchor_from: wall.anchorFrom,
-        anchor_to: wall.anchorTo,
+        anchor_from: wall.anchorFrom ?? 0,
+        anchor_to: wall.anchorTo ?? 0,
     }
 }
 
@@ -803,29 +802,19 @@ async function save() {
     )
 }
 
-const { discardDialogOpen, confirmDiscard, settleDiscard } = useDiscardConfirm(
-    () => editor.isDirty.value,
-)
+const { discardDialogOpen, confirmDiscard, settleDiscard, leaveGuard } =
+    useDiscardConfirm(() => editor.isDirty.value)
 
-onBeforeRouteLeave(() => confirmDiscard())
+onBeforeRouteLeave(leaveGuard)
 
 function onBeforeUnload(event: BeforeUnloadEvent) {
     if (!editor.isDirty.value) return
     event.preventDefault()
 }
 
-function isTyping(target: EventTarget | null) {
-    const element = target as HTMLElement | null
-    return (
-        !!element &&
-        (element.isContentEditable ||
-            ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName))
-    )
-}
-
 function onKeyDown(event: KeyboardEvent) {
     if (
-        isTyping(event.target) ||
+        isTypingTarget(event.target) ||
         preview.value ||
         !hasMap.value ||
         discardDialogOpen.value ||
@@ -850,15 +839,8 @@ function onKeyDown(event: KeyboardEvent) {
     event.preventDefault()
 }
 
-onMounted(() => {
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('beforeunload', onBeforeUnload)
-})
-
-onBeforeUnmount(() => {
-    window.removeEventListener('keydown', onKeyDown)
-    window.removeEventListener('beforeunload', onBeforeUnload)
-})
+useEventListener('keydown', onKeyDown)
+useEventListener('beforeunload', onBeforeUnload)
 </script>
 
 <style scoped>

@@ -77,7 +77,6 @@
         },
         "requirements": {
             "minLength": "At least 8 characters",
-            "maxLength": "Max 72 characters",
             "uppercase": "Uppercase letter (A–Z)",
             "lowercase": "Lowercase letter (a–z)",
             "number": "Number (0–9)",
@@ -114,9 +113,9 @@
         "emailChangeSent": "Confirmation link sent to the new address. Your current address stays active until you open it.",
         "emailChangeFailed": "The confirmation link could not be sent. Your email address is unchanged.",
         "exportData": "Download your data",
-        "exportDataHint": "A ZIP file with your profile, logbook, memberships, competition entries, notifications, reported defects and account activity.",
+        "exportDataHint": "A ZIP file with your profile, logbook, memberships, competition entries, notifications, reported defects and account activity, sent to you as a download link by e-mail.",
         "exportDataDownload": "Download",
-        "exportDataRateLimited": "You can download your data 3 times per hour. Please try again later.",
+        "exportDataRateLimited": "You can request your data 3 times per hour. Please try again later.",
         "deleteAccount": "Delete account",
         "deleteAccountHint": "Permanently removes your account and signs you out. Routes and reviews you created stay in place.",
         "deleteAccountConfirm": "This permanently deletes your account and signs you out. This cannot be undone.",
@@ -198,7 +197,16 @@
             "linked": "Sign-in linked",
             "linkConfirm": "A linked sign-in opens your account even after a password change. Confirm with your password."
         },
-        "noAccount": "No account?"
+        "noAccount": "No account?",
+        "exportDataRequest": "Email me a link",
+        "exportDataRequested": "We'll e-mail you a link",
+        "exportReady": "Your data is ready",
+        "exportReadyHint": "This download link works for 7 days.",
+        "exportExpired": "This download link has expired or was replaced by a newer export.",
+        "exportAgain": "Request a new export",
+        "exportTooLarge": "Your data export is too large",
+        "exportTooLargeHint": "It exceeds 2 GB. Contact us to receive your data another way.",
+        "exportNone": "No data export ready"
     },
     "routes": {
         "generate_name": "Generate name",
@@ -239,7 +247,9 @@
         "info": "Info",
         "outSoon": "Out {date}",
         "mapWork": "Routes & resets",
-        "removed": "This route has been removed."
+        "removed": "This route has been removed.",
+        "sends": "Sends",
+        "screwedShort": "Set"
     },
     "dashboard": {
         "online": "{0} online"
@@ -361,11 +371,13 @@
         "score": "Avg. stars",
         "comment": "Comment",
         "climber_reviews": "Reviews",
-        "felt": "felt",
         "perceived_difficulty": "Felt grade",
         "loadError": "Failed to load reviews.",
         "deleteOwn": "Delete my review",
-        "deleteOwnConfirm": "Your review will be removed for good."
+        "deleteOwnConfirm": "Your review will be removed for good.",
+        "perceived": "Felt",
+        "votes": "1 vote | {n} votes",
+        "ratingCount": "1 rating | {n} ratings"
     },
     "table": {
         "actions": "Actions",
@@ -547,7 +559,9 @@
                 "beta_approved": "Your beta video was approved",
                 "beta_rejected": "Your beta video was rejected: {reason}",
                 "wall_reset_planned": "{wall}: {count} routes come down on {date}",
-                "platform_issue": "{level}: {summary} ({count}×)"
+                "platform_issue": "{level}: {summary} ({count}×)",
+                "account_export_ready": "Your data export is ready to download",
+                "account_export_failed": "Your data export is too large to download"
             }
         }
     },
@@ -633,7 +647,7 @@
             },
             "reports": {
                 "title": "Content reports",
-                "body": "If you report illegal or inappropriate content, we process your name, e-mail address, the reason and your explanation to handle the report and inform you of the decision (Art. 6(1)(c) GDPR in conjunction with Art. 16 of the EU Digital Services Act). The gym's moderators and the gym's contact address receive your name and e-mail address with the report. The person whose content you report is not told who you are, unless the law requires it. Reports are kept as long as needed to document the decision and are not deleted when you delete your account."
+                "body": "If you report illegal or inappropriate content, we process your name, e-mail address, the reason and your explanation to handle the report and inform you of the decision (Art. 6(1)(c) GDPR in conjunction with Art. 16 of the EU Digital Services Act). The gym's moderators and the gym's contact address receive your name and e-mail address with the report. The person whose content you report is not told who you are, unless the law requires it. Reports are deleted three years after the decision; deleting your account does not delete them earlier."
             },
             "notifications": {
                 "title": "Notifications",
@@ -645,15 +659,15 @@
             },
             "dataExport": {
                 "title": "Download your data",
-                "body": "In your account settings, Download your data creates a ZIP file with all data linked to your account, including your profile, avatar, banner, logbook, reviews, beta videos, follows, achievements, notifications, memberships, tasks and competition entries. This lets you use your rights of access and data portability yourself. To protect the service, it can be used a few times per hour."
+                "body": "In your account settings, Download your data creates a ZIP file with all data linked to your account, including your profile, avatar, banner, logbook, reviews, beta videos, follows, achievements, notifications, memberships, tasks and competition entries. This lets you use your rights of access and data portability yourself. To protect the service, it can be used a few times per hour. The ZIP file is prepared in the background and kept on our server for 7 days; you get a download link by e-mail and as a notification, and requesting a new export replaces the old one."
             },
             "deletion": {
                 "title": "Deleting your account",
-                "body": "You can delete your account yourself in your account settings. This deletes your account, logbook, follows, beta videos, achievements, notifications, push subscriptions, memberships and competition entries. Your reviews and route problem reports remain without any link to you, so they cannot be traced back to you. Content reports you made keep your name and e-mail address as long as needed to document them. Server logs and audit log entries are deleted on their normal schedule."
+                "body": "You can delete your account yourself in your account settings. This deletes your account, logbook, follows, beta videos, achievements, notifications, push subscriptions, memberships and competition entries. Your reviews and route problem reports remain without any link to you, so they cannot be traced back to you. Content reports you made keep your name and e-mail address until they are deleted three years after the decision. Server logs and audit log entries are deleted on their normal schedule."
             },
             "auditLog": {
                 "title": "Audit log",
-                "body": "To keep the service secure and changes traceable, we log every change made through the app by anyone (for example logbook entries, follows, reviews, beta videos, route problem and content reports, competition entries and staff changes) as well as sign-ins, failed sign-in attempts (the entered address only as a short hash), password resets and e-mail address changes, each with the e-mail address of the account, the action, the affected record and the IP address (Art. 6(1)(f) GDPR). Gym staff with access to the audit log see the entries for their gym, the platform administrators see all entries, and you can see your own. Entries are deleted automatically after {auditDays} days."
+                "body": "To keep the service secure and changes traceable, we log every change made through the app by anyone (for example logbook entries, follows, reviews, beta videos, route problem and content reports, competition entries and staff changes) as well as sign-ins, failed sign-in attempts (the entered address only as a short hash), password resets and e-mail address changes, each with the e-mail address of the account, the action, the affected record and the IP address (Art. 6(1)(f) GDPR). Gym staff with access to the audit log see the entries for their gym, the platform administrators see all entries, and you can see your own. Entries keep your username or e-mail address even after you delete your account, and are deleted automatically after {auditDays} days."
             },
             "captcha": {
                 "title": "Spam protection",
@@ -710,9 +724,10 @@
             "kept": {
                 "reviews": "Reviews and grade votes stay on the route without your name.",
                 "reports": "Defects you reported stay with the gym without your name, so they can be fixed.",
-                "activity": "Activity log entries stay without your name for up to {days} days; entries about your account itself (such as sign-ins) keep your e-mail address until then.",
+                "activity": "Activity log entries keep your username, or your e-mail address for entries about the account itself, until they are deleted after the {days}-day retention period.",
                 "logs": "Server logs contain your account ID for up to 7 days.",
-                "backups": "Daily backups still contain your data until they are replaced, by default after 7 days."
+                "backups": "Daily backups still contain your data until they are replaced, by default after 7 days.",
+                "exports": "A data export you requested is deleted within an hour, and its 7-day download link stops working at once."
             },
             "noAccessTitle": "Cannot sign in any more?",
             "noAccess": "Write to us from the e-mail address of your account and we will delete it within one month:"
@@ -797,7 +812,8 @@
             "climber": "{name} - Gripello",
             "feed": "Feed",
             "info": "Gym info - Gripello",
-            "gymOnboarding": "Gym onboarding - Gripello"
+            "gymOnboarding": "Gym onboarding - Gripello",
+            "dataExport": "Your data - Gripello"
         },
         "content": {
             "settings": "Settings",
@@ -818,7 +834,8 @@
         "passwordMismatch": "Passwords do not match.",
         "integerRange": "Enter a whole number from {min} to {max}.",
         "passwordTooWeak": "Password must be at least “Good”.",
-        "email": "Please enter a valid email address."
+        "email": "Please enter a valid email address.",
+        "invalid": "This value is not valid."
     },
     "captcha": {
         "verifying": "Verifying… {progress}%"
@@ -925,7 +942,6 @@
         "roleName": "Role name",
         "roleDescription": "Description",
         "roleColor": "Color",
-        "customColor": "Custom",
         "preview": "Preview",
         "nameTaken": "A role with this name already exists.",
         "noRoles": "No roles yet",
@@ -1107,7 +1123,9 @@
         },
         "loadFailed": "Could not load this content.",
         "emailBlocked": "This e-mail address can't be used.",
-        "nameProtected": "This name is reserved. Please choose another one."
+        "nameProtected": "This name is reserved. Please choose another one.",
+        "sessionEnded": "Your session has ended. Sign in again to save.",
+        "rateLimited": "Too many requests. Wait a moment and try again."
     },
     "export": {
         "title": "Export as Excel",
@@ -1474,6 +1492,7 @@
         "removedRoute": "Removed route",
         "logAscent": "Log ascent",
         "edit": "Edit ascent",
+        "type": "Ascent type",
         "attempts": "Attempts",
         "attemptsInvalid": "Enter a whole number from 1 to 999.",
         "date": "Date",
@@ -1774,7 +1793,8 @@
                 "platform_reports": "Content reports from all gyms",
                 "content": "Moderation of my content",
                 "moderation": "Content to review",
-                "platform_issues": "Server errors and warnings"
+                "platform_issues": "Server errors and warnings",
+                "account": "My account"
             },
             "devices": "Devices",
             "thisDevice": "This device",
@@ -2035,7 +2055,8 @@
                 "allFlashes": "Flashed everything",
                 "uniqueTop": "Only top on a route"
             },
-            "competition": "Competition"
+            "competition": "Competition",
+            "unsaved": "Not saved"
         },
         "export": {
             "menu": "Export",
@@ -2682,6 +2703,18 @@
             "subject": "Your trial of {app} has ended",
             "body": "The trial of {gym} ended on {date}. Climbers can keep using the gym, but your team can no longer make changes.",
             "note": "Reply to this email to continue with {app}."
+        },
+        "accountExport": {
+            "subject": "Your {app} data is ready",
+            "body": "The export of your {app} account is ready to download. The link works for 7 days and only for this export.",
+            "action": "Download your data",
+            "note": "If you didn't request this, change your password."
+        },
+        "accountExportTooLarge": {
+            "subject": "Your {app} data export could not be created",
+            "body": "Your {app} account holds more data than fits into one download (2 GB), so no export was created. Reply to this e-mail or contact the operator of {app} to receive your data another way.",
+            "action": "Open your data export",
+            "note": "If you didn't request this, change your password."
         }
     },
     "leaderboard": {
@@ -2702,7 +2735,7 @@
             "end": "End",
             "add": "Add season",
             "deleteConfirm": "Delete this season? Ascents stay in the logbooks.",
-            "endBeforeStart": "The end has to be after the start"
+            "endBeforeStart": "The end can't be before the start"
         },
         "points": "{n} pts",
         "stats": {
@@ -3174,5 +3207,15 @@
         "browser": "Gripello needs a newer browser to display correctly.",
         "webview": "Android System WebView is out of date, so Gripello can't display correctly.",
         "update": "Update"
+    },
+    "seo": {
+        "default": "Gripello shows a climbing gym's current boulders and routes with grades, wall map, logbook and competitions.",
+        "landing": "Find your climbing gym and browse its current boulders and routes, wall map and competitions.",
+        "routes": "All current boulders and routes at {name} with grades, hold colours and reviews.",
+        "info": "Opening hours, address and contact details of {name}.",
+        "competitions": "Climbing competitions at {name}: dates, registration and results.",
+        "competition": "{name}: schedule, categories and live results.",
+        "leaderboard": "Leaderboard of {name}: climbers ranked by their best sends.",
+        "privacy": "How {name} processes personal data."
     }
 }

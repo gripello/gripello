@@ -2,6 +2,8 @@
     <img
         v-if="url"
         :src="url"
+        :srcset="thumbSrcset(url, THUMB_SETS.avatar)"
+        :sizes="`${PIXELS[size]}px`"
         :alt="name"
         class="shrink-0 rounded-full object-cover"
         :class="sizeClass"
@@ -18,8 +20,8 @@
 </template>
 
 <script setup lang="ts">
-import { fileUrl } from '~/api/client'
-import { avatarColor, nameInitials } from '~/utils/avatar'
+import { THUMBS, THUMB_SETS, thumbSrcset } from '#shared/utils/thumbs'
+import { avatarColor, avatarUrl, nameInitials } from '~/utils/avatar'
 
 const props = withDefaults(
     defineProps<{
@@ -40,13 +42,14 @@ const SIZES = {
     lg: 'size-20 text-2xl',
     xl: 'size-28 text-3xl',
 }
+const PIXELS = { xs: 24, sm: 32, md: 40, lg: 80, xl: 112 }
 const sizeClass = computed(() => SIZES[props.size])
 const url = computed(
     () =>
         props.src ||
-        (props.id &&
-            fileUrl('users', { id: props.id }, props.avatar, {
-                thumb: LARGE_SIZES.has(props.size) ? '320x320' : '100x100',
-            })),
+        avatarUrl(
+            { id: props.id, avatar: props.avatar },
+            LARGE_SIZES.has(props.size) ? THUMBS.avatarLarge : THUMBS.avatar,
+        ),
 )
 </script>

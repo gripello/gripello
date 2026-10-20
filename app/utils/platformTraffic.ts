@@ -32,20 +32,6 @@ export function errorRateColor(rate: number) {
     return rate >= 0.05 ? 'error' : rate >= 0.01 ? 'warning' : 'success'
 }
 
-export function formatPercent(rate: number, locale?: string) {
-    return new Intl.NumberFormat(locale, {
-        style: 'percent',
-        maximumFractionDigits: rate && rate < 0.01 ? 2 : 1,
-    }).format(rate)
-}
-
-export function formatCompact(value: number, locale?: string) {
-    return new Intl.NumberFormat(locale, {
-        notation: 'compact',
-        maximumFractionDigits: 1,
-    }).format(value)
-}
-
 export function formatMs(ms: number, locale?: string) {
     return ms >= 1000
         ? new Intl.NumberFormat(locale, {

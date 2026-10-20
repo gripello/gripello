@@ -33,10 +33,15 @@ export function appLinkPath(url: string, origin: string): string | null {
     }
 }
 
+// Same-origin links the WebView must not open: data export downloads need the system browser.
+const BROWSER_ONLY_PATHS = ['/api/account/export/']
+
 export function externalUrl(href: string, origin: string): string | null {
     try {
         const url = new URL(href, origin)
-        return /^https?:$/.test(url.protocol) && url.origin !== origin
+        if (!/^https?:$/.test(url.protocol)) return null
+        return url.origin !== origin ||
+            BROWSER_ONLY_PATHS.some((path) => url.pathname.startsWith(path))
             ? url.href
             : null
     } catch {

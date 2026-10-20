@@ -464,7 +464,7 @@ export const createTick = (
 ) =>
     api.post<TickRecord>('/me/ticks', {
         attempts: 1,
-        date: new Date().toISOString(),
+        date: new Date().toISOString().slice(0, 10),
         ...input,
     })
 export const updateTick = (api: Api, id: string, patch: Body) =>

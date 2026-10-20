@@ -188,7 +188,7 @@ const { isHealthy, onlineCount } = useAppStatus()
     margin: 16px 0 8px;
     text-align: center;
     font-size: 0.75rem;
-    color: var(--ui-text-dimmed);
+    color: var(--ui-text-muted);
     text-decoration: none;
 }
 </style>

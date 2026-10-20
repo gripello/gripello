@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import RouteDetails from '~/components/RouteDetails.vue'
+import RouteDetails from '~/components/route/Details.vue'
 
 function createWrapper(compact = false) {
     return mount(RouteDetails, {

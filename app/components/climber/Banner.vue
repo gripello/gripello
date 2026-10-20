@@ -3,6 +3,8 @@
         <img
             v-if="banner"
             :src="banner"
+            :srcset="thumbSrcset(banner, THUMB_SETS.banner)"
+            :sizes="sizes"
             alt=""
             class="size-full object-cover"
             data-testid="climber-banner-image"
@@ -21,15 +23,26 @@
 </template>
 
 <script setup lang="ts">
+import { THUMB_SETS, thumbSrcset } from '#shared/utils/thumbs'
 import { avatarColor } from '~/utils/avatar'
 import { paletteFromPixels, paletteGradient } from '~/utils/palette'
 
-const props = defineProps<{
-    banner?: string | null
-    avatar?: string | null
-    name?: string | null
-    id?: string | null
-}>()
+const props = withDefaults(
+    defineProps<{
+        banner?: string | null
+        avatar?: string | null
+        name?: string | null
+        id?: string | null
+        sizes?: string
+    }>(),
+    {
+        banner: null,
+        avatar: null,
+        name: null,
+        id: null,
+        sizes: '100vw',
+    },
+)
 
 const SAMPLE_SIZE = 32
 

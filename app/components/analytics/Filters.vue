@@ -105,12 +105,13 @@
 </template>
 
 <script setup lang="ts">
+import { translatedItems } from '~/utils/translatedItems'
+import { ROUTE_TYPES } from '#shared/utils/routeTypes'
 import {
     ANALYTICS_RANGES,
     type AnalyticsQuery,
     type AnalyticsRange,
 } from '#shared/utils/analytics'
-import { ROUTE_TYPES } from '~/utils/routes'
 
 const props = defineProps<{
     query: AnalyticsQuery
@@ -145,10 +146,7 @@ const activeFilterCount = computed(
 )
 
 const rangeOptions = computed(() =>
-    ANALYTICS_RANGES.map((value) => ({
-        value,
-        label: t(`analytics.filters.ranges.${value}`),
-    })),
+    translatedItems(ANALYTICS_RANGES, 'analytics.filters.ranges', t),
 )
 const rangeTab = computed({
     get: () => range.value,

@@ -1,6 +1,7 @@
 <template>
     <LayoutPanel
         :title="$t('competitions.scorecard.title')"
+        flush
         data-testid="competition-scorecard"
     >
         <template #actions>
@@ -50,7 +51,9 @@
             </UBadge>
         </template>
 
-        <SegmentedControl v-model="filter" :items="filterItems" />
+        <div class="px-4 pt-3 pb-1">
+            <SegmentedControl v-model="filter" :items="filterItems" />
+        </div>
 
         <LayoutEmptyState
             v-if="!visibleRoutes.length"
@@ -58,11 +61,11 @@
             :title="$t('competitions.scorecard.nothingHere')"
             :card="false"
         />
-        <ul v-else class="divide-y divide-default">
-            <li
+        <LayoutListGroup v-else flush>
+            <LayoutListRow
                 v-for="compRoute in visibleRoutes"
                 :key="compRoute.id"
-                class="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
+                wrap
                 :data-testid="`scorecard-route-${compRoute.number}`"
             >
                 <div
@@ -155,15 +158,14 @@
                         }}
                     </UButton>
                 </div>
-            </li>
-        </ul>
+            </LayoutListRow>
+        </LayoutListGroup>
     </LayoutPanel>
 </template>
 
 <script setup lang="ts">
 import { listCompetitionRoutes } from '~/api/competitions'
 import { EMPTY_SCORE, isFlash } from '~/utils/scorecard'
-import { keepWhenOffline } from '~/utils/errors'
 import type { ClimbStyle } from '#shared/utils/competitionScoring'
 import type {
     CompetitionEntryRecord,
@@ -190,13 +192,9 @@ const { scores, pendingCount, offline, load, act } = useScorecard(
 
 const isRope = computed(() => props.competition.discipline === 'rope')
 
-const compRoutesKey = () => `scorecard-routes:${props.competition.id}`
-const { data: compRoutes } = useAsyncData(
-    compRoutesKey,
-    (nuxtApp) =>
-        keepWhenOffline(nuxtApp, compRoutesKey(), () =>
-            listCompetitionRoutes(props.competition.id, { voided: false }),
-        ),
+const { data: compRoutes } = useOfflineData(
+    () => `scorecard-routes:${props.competition.id}`,
+    () => listCompetitionRoutes(props.competition.id, { voided: false }),
     { default: () => [] },
 )
 

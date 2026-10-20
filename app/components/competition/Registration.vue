@@ -15,18 +15,13 @@
                 class="flex items-center gap-4"
                 data-testid="competition-my-entry"
             >
-                <div
-                    class="flex size-14 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary"
-                >
-                    <span class="text-[10px] uppercase">{{
-                        $t('competitions.bib')
-                    }}</span>
-                    <span
-                        class="text-xl font-bold tabular-nums"
-                        data-testid="competition-my-bib"
-                        >{{ entry.bib }}</span
-                    >
-                </div>
+                <LayoutStatTile
+                    :label="$t('competitions.bib')"
+                    :value="entry.bib"
+                    color="primary"
+                    value-test-id="competition-my-bib"
+                    class="flex size-14 shrink-0 flex-col justify-center rounded-xl bg-primary/10"
+                />
                 <div class="min-w-0 flex-1">
                     <p class="font-medium text-highlighted">
                         {{
@@ -175,8 +170,12 @@
 </template>
 
 <script setup lang="ts">
-import { createEntry, listCategories, updateEntry } from '~/api/competitions'
-import { keepWhenOffline } from '~/utils/errors'
+import { useNow } from '@vueuse/core'
+import {
+    createCompetitionEntry,
+    listCompetitionCategories,
+    updateCompetitionEntry,
+} from '~/api/competitions'
 import { blockedFieldError } from '~/utils/fieldErrors'
 import {
     required,
@@ -211,7 +210,7 @@ const authStore = useAuthStore()
 const { t } = useI18n()
 const { pending, run } = useAsyncAction()
 
-const now = useNow()
+const now = useNow({ interval: 15_000 })
 const currentYear = now.value.getFullYear()
 const userId = authStore.record?.id ?? ''
 const withdrawOpen = ref(false)
@@ -242,14 +241,9 @@ const formRules = computed(() => ({
         : [],
 }))
 
-const categoriesKey = () =>
-    `competition-public-categories:${props.competition.id}`
-const { data: categories } = useAsyncData(
-    categoriesKey,
-    (nuxtApp) =>
-        keepWhenOffline(nuxtApp, categoriesKey(), () =>
-            listCategories(props.competition.id),
-        ),
+const { data: categories } = useOfflineData(
+    () => `competition-public-categories:${props.competition.id}`,
+    () => listCompetitionCategories(props.competition.id),
     { default: () => [] },
 )
 
@@ -279,7 +273,7 @@ watch(categoryItems, (items) => {
 async function register() {
     await run(
         async () => {
-            await createEntry(props.competition.id, {
+            await createCompetitionEntry(props.competition.id, {
                 user: userId,
                 category: form.category,
                 display_name: form.displayName.trim(),
@@ -304,7 +298,7 @@ async function setStatus(status: CompetitionEntryStatus) {
     const current = props.entry
     if (!current) return
     await run(async () => {
-        await updateEntry(current.id, { status })
+        await updateCompetitionEntry(current.id, { status })
         emit('changed')
     })
 }

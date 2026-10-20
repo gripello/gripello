@@ -1,3 +1,4 @@
+import { leaderboardTopic } from '#shared/utils/topics'
 import { describe, expect, it } from 'vitest'
 import type { SeasonRecord } from '~/types/models'
 import {
@@ -5,7 +6,6 @@ import {
     defaultSeason,
     gradePyramid,
     keepSelectableSeason,
-    leaderboardTopic,
     seasonState,
     selectableSeasons,
 } from '~/utils/leaderboard'
@@ -14,8 +14,8 @@ const season = (id: string, starts: string, ends: string): SeasonRecord => ({
     id,
     gym: 'g',
     name: id,
-    starts_at: `${starts} 00:00:00.000Z`,
-    ends_at: `${ends} 00:00:00.000Z`,
+    starts_at: starts,
+    ends_at: ends,
 })
 
 const spring = season('spring', '2026-03-01', '2026-05-31')

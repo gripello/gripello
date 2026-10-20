@@ -1,17 +1,15 @@
-import { saveBlob } from '~/utils/download'
-import { exportMyData } from '~/api/account'
+import { requestDataExport } from '~/api/account'
 
 export function useAccountExport() {
     const { t } = useI18n()
     const { pending, run } = useAsyncAction()
+    const requested = ref(false)
 
-    function download() {
+    function request() {
         return run(
             async () => {
-                await saveBlob(
-                    await exportMyData(),
-                    `gripello-data-${new Date().toISOString().slice(0, 10)}.zip`,
-                )
+                await requestDataExport()
+                requested.value = true
                 return true
             },
             {
@@ -23,5 +21,5 @@ export function useAccountExport() {
         )
     }
 
-    return { pending, download }
+    return { pending, requested, request }
 }

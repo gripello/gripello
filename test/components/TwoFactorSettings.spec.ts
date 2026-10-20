@@ -1,5 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import TwoFactorSettings from '~/components/account/TwoFactorSettings.vue'
+import AccountTotpSetup from '~/components/account/TotpSetup.vue'
+import AccountRecoveryCodes from '~/components/account/RecoveryCodes.vue'
+import LayoutListGroup from '~/components/layout/ListGroup.vue'
+import LayoutListRow from '~/components/layout/ListRow.vue'
 import { routeApi } from '../api/apiMock'
 
 const send = vi.fn()
@@ -7,15 +11,20 @@ const factor = (id: string, kind: 'totp' | 'passkey', name = '') => ({
     id,
     kind,
     name,
-    created: '2026-10-01 10:00:00Z',
+    created: '2026-10-01T10:00:00Z',
     last_used: '',
 })
 
 function mountSettings() {
     return mount(TwoFactorSettings, {
         global: {
+            components: {
+                AccountTotpSetup,
+                AccountRecoveryCodes,
+                LayoutListGroup,
+                LayoutListRow,
+            },
             stubs: {
-                UPageCard: { template: '<div><slot /></div>' },
                 UIcon: true,
                 UForm: {
                     emits: ['submit'],
@@ -205,5 +214,42 @@ describe('TwoFactorSettings', () => {
         )
         await flushPromises()
         expect(send).not.toHaveBeenCalledWith('/me/totp', expect.anything())
+    })
+
+    it('shows the new recovery codes after enabling the authenticator', async () => {
+        vi.doMock('qrcode', () => ({
+            default: { toDataURL: vi.fn().mockResolvedValue('data:') },
+        }))
+        send.mockResolvedValueOnce({ factors: [], recoveryCodesLeft: 0 })
+        const wrapper = mountSettings()
+        await flushPromises()
+        send.mockResolvedValueOnce({ secret: 'ABCD', uri: 'otpauth://x' })
+        await wrapper
+            .get('[data-testid="two-factor-totp-setup"]')
+            .trigger('click')
+        await wrapper
+            .get('[data-testid="two-factor-password"]')
+            .setValue('secret')
+        await wrapper.get('form').trigger('submit')
+        await flushPromises()
+        wrapper
+            .getComponent(AccountTotpSetup)
+            .vm.$emit('enabled', factor('t', 'totp'), [
+                'aaaa-bbbb',
+                'cccc-dddd',
+            ])
+        await flushPromises()
+        expect(
+            wrapper.get('[data-testid="two-factor-codes"]').text(),
+        ).toContain('cccc-dddd')
+        expect(
+            wrapper.find('[data-testid="two-factor-totp-remove"]').exists(),
+        ).toBe(true)
+        await wrapper
+            .get('[data-testid="two-factor-codes-done"]')
+            .trigger('click')
+        expect(wrapper.find('[data-testid="two-factor-codes"]').exists()).toBe(
+            false,
+        )
     })
 })

@@ -41,7 +41,7 @@ test('climbers follow each other and see sends in the feed', async ({
         route: route.id,
         type: 'top',
         attempts: 3,
-        date: `${day}T12:00:00Z`,
+        date: day,
         note: `${testPrefix} private note`,
     })
 

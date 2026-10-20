@@ -13,7 +13,7 @@ export interface GymMapMarker {
 type GymLocation = Pick<GymRecord, 'latitude' | 'longitude'>
 
 // The API stores an empty number field as 0.
-export const hasLocation = (gym: GymLocation | null | undefined) =>
+export const hasLocation = (gym: Partial<GymLocation> | null | undefined) =>
     !!(gym?.latitude || gym?.longitude)
 
 export function directionLinks(gym: GymLocation & Pick<GymRecord, 'address'>) {

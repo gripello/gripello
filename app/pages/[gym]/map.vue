@@ -5,24 +5,7 @@
         <div class="map-screen__body">
             <div class="map-screen__stage">
                 <div v-if="loadFailed" class="map-empty">
-                    <LayoutEmptyState
-                        variant="error"
-                        :card="false"
-                        :title="$t('errors.loadFailed')"
-                        data-testid="load-error"
-                    >
-                        <template #actions>
-                            <UButton
-                                color="neutral"
-                                variant="soft"
-                                icon="i-lucide-refresh-cw"
-                                data-testid="load-error-retry"
-                                @click="retryLoad"
-                            >
-                                {{ $t('errors.retry') }}
-                            </UButton>
-                        </template>
-                    </LayoutEmptyState>
+                    <LayoutLoadError :card="false" @retry="retryLoad" />
                 </div>
                 <MapView
                     v-else-if="map"
@@ -246,7 +229,7 @@
         </div>
 
         <TickDialog
-            v-if="isLoggedIn"
+            v-if="isLoggedIn || tickOpen"
             v-model="tickOpen"
             :route-id="tickRouteId"
             @saved="refreshTickedRoutes()"
@@ -263,13 +246,12 @@
 
 <script setup lang="ts">
 import { listRoutes } from '~/api/routes'
-import { keepWhenOffline } from '~/utils/errors'
 import type { RouteListItem } from '~/types/models'
 import type { SheetSnap } from '~/components/map/Sheet.vue'
 import type { RouteTypeFilter } from '~/components/map/FilterChips.vue'
 import { normalizeCreators } from '#shared/utils/formatting'
 import { routesOnWall } from '~/utils/gymMap'
-import { toHex6 } from '~/utils/color'
+import { toHex6 } from '#shared/utils/color'
 import { cacheKeys } from '~/utils/realtimeCache'
 
 const gymPath = useGymPath()
@@ -318,21 +300,19 @@ const {
     data: routeRecords,
     error: routesError,
     refresh: refreshRoutes,
-} = await useAsyncData(
+} = await useOfflineData(
     cacheKeys.mapRoutes,
-    (nuxtApp) =>
-        keepWhenOffline(
-            nuxtApp,
-            cacheKeys.mapRoutes,
-            () =>
-                locationId.value
-                    ? listRoutes(gymId.value, {
-                          location: locationId.value,
-                      }).then((list) => list.items)
-                    : Promise.resolve([]),
-            (rows) => rows.every((row) => row.location === locationId.value),
-        ),
-    { watch: [locationId], default: () => [] },
+    () =>
+        locationId.value
+            ? listRoutes(gymId.value, { location: locationId.value }).then(
+                  (list) => list.items,
+              )
+            : Promise.resolve([]),
+    {
+        watch: [locationId],
+        default: () => [],
+        fits: (rows) => rows.every((row) => row.location === locationId.value),
+    },
 )
 
 useLiveLocation([cacheKeys.mapRoutes], locationId)

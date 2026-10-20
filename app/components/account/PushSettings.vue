@@ -1,36 +1,20 @@
 <template>
-    <LayoutEmptyState
+    <LayoutLoadError
         v-if="push.loadError.value || prefsLoadFailed"
-        variant="error"
-        :title="t('errors.loadFailed')"
-        data-testid="load-error"
-    >
-        <template #actions>
-            <UButton
-                color="neutral"
-                variant="soft"
-                icon="i-lucide-refresh-cw"
-                data-testid="load-error-retry"
-                @click="retryLoad"
-            >
-                {{ t('errors.retry') }}
-            </UButton>
-        </template>
-    </LayoutEmptyState>
+        @retry="retryLoad"
+    />
     <div v-else class="flex flex-col gap-6">
         <section v-if="topics.length" class="flex flex-col">
             <LayoutEyebrow>
                 {{ t('accountSettings.push.topicsTitle') }}
             </LayoutEyebrow>
-            <UPageCard variant="outline" :ui="{ container: LIST }">
-                <label
+            <LayoutListGroup>
+                <LayoutListRow
                     v-for="topic in topics"
                     :key="topic.key"
-                    class="flex cursor-pointer items-center gap-3 px-4 py-3"
+                    as="label"
+                    :icon="topic.icon"
                 >
-                    <span class="push-icon bg-elevated text-muted">
-                        <UIcon :name="topic.icon" class="size-4" />
-                    </span>
                     <span class="flex-1 text-sm font-medium text-highlighted">
                         {{ t(`accountSettings.push.topics.${topic.key}`) }}
                     </span>
@@ -40,35 +24,27 @@
                         :disabled="!prefsLoaded"
                         @update:model-value="setTopic(topic.key, $event)"
                     />
-                </label>
-            </UPageCard>
+                </LayoutListRow>
+            </LayoutListGroup>
         </section>
 
         <section class="flex flex-col">
             <LayoutEyebrow>
                 {{ t('accountSettings.push.devices') }}
             </LayoutEyebrow>
-            <UPageCard
-                variant="outline"
-                :ui="{ container: LIST }"
-                data-testid="push-devices"
-            >
-                <div
+            <LayoutListGroup data-testid="push-devices">
+                <LayoutListRow
                     v-for="device in push.devices.value"
                     :key="device.id"
-                    class="flex items-center gap-3 py-1 ps-4 pe-1"
+                    dense
+                    :icon="
+                        isMobileDevice(device.device ?? '')
+                            ? 'i-lucide-smartphone'
+                            : 'i-lucide-monitor'
+                    "
+                    icon-active
                     data-testid="push-device"
                 >
-                    <span class="push-icon bg-primary/10 text-primary">
-                        <UIcon
-                            :name="
-                                isMobileDevice(device.device ?? '')
-                                    ? 'i-lucide-smartphone'
-                                    : 'i-lucide-monitor'
-                            "
-                            class="size-4"
-                        />
-                    </span>
                     <div class="min-w-0 flex-1">
                         <p
                             class="flex items-center gap-2 text-sm font-medium text-highlighted"
@@ -122,15 +98,12 @@
                         :disabled="push.busy.value"
                         @click="removeDevice(device)"
                     />
-                </div>
+                </LayoutListRow>
 
-                <div
+                <LayoutListRow
                     v-if="!push.thisDeviceAdded.value"
-                    class="flex items-center gap-3 px-4 py-3"
+                    icon="i-lucide-bell-plus"
                 >
-                    <span class="push-icon bg-elevated text-muted">
-                        <UIcon name="i-lucide-bell-plus" class="size-4" />
-                    </span>
                     <span
                         v-if="!push.available.value"
                         class="flex-1 text-sm text-muted"
@@ -158,27 +131,22 @@
                             {{ t('accountSettings.push.addDevice') }}
                         </UButton>
                     </template>
-                </div>
-            </UPageCard>
+                </LayoutListRow>
+            </LayoutListGroup>
         </section>
 
         <section v-if="followedWalls.length" class="flex flex-col">
             <LayoutEyebrow>
                 {{ t('accountSettings.push.followedWalls') }}
             </LayoutEyebrow>
-            <UPageCard
-                variant="outline"
-                :ui="{ container: LIST }"
-                data-testid="push-followed-walls"
-            >
-                <div
+            <LayoutListGroup data-testid="push-followed-walls">
+                <LayoutListRow
                     v-for="wall in followedWalls"
                     :key="wall.id"
-                    class="flex items-center gap-3 py-1 ps-4 pe-1"
+                    dense
+                    icon="i-lucide-mountain"
+                    icon-active
                 >
-                    <span class="push-icon bg-primary/10 text-primary">
-                        <UIcon name="i-lucide-mountain" class="size-4" />
-                    </span>
                     <div class="min-w-0 flex-1">
                         <p
                             class="truncate text-sm font-medium text-highlighted"
@@ -197,18 +165,15 @@
                         :aria-label="t('map.unfollowWall', { wall: wall.name })"
                         @click="unfollow(wall.id)"
                     />
-                </div>
-            </UPageCard>
+                </LayoutListRow>
+            </LayoutListGroup>
         </section>
     </div>
 </template>
 
 <script setup lang="ts">
-import {
-    getNotificationPrefs,
-    updateNotificationPrefs,
-} from '~/api/notifications'
-import { listWallsByIds } from '~/api/routes'
+import { getNotificationPrefs, putNotificationPrefs } from '~/api/notifications'
+import { listWallsById } from '~/api/routes'
 import { useAuthState } from '~/api/auth'
 import { formatDate } from '#shared/utils/formatting'
 import {
@@ -226,7 +191,6 @@ import type {
 
 type FollowedWall = WallRecord & { location_name: string }
 
-const LIST = 'p-0 sm:p-0 gap-y-0 divide-y divide-default'
 const TOPIC_ICONS: Record<string, string> = {
     new_routes: 'i-lucide-sparkles',
     defect_fixed: 'i-lucide-wrench',
@@ -240,6 +204,7 @@ const TOPIC_ICONS: Record<string, string> = {
     content: 'i-lucide-eye-off',
     social: 'i-lucide-users',
     achievements: 'i-lucide-medal',
+    account: 'i-lucide-user-round',
 }
 
 const { t, locale } = useI18n()
@@ -253,10 +218,7 @@ const grantedPermissions = computed(
     () =>
         new Set([
             ...memberships.value.flatMap(
-                (membership) =>
-                    membership.expand?.role?.expand?.permissions?.map(
-                        (permission) => permission.name,
-                    ) ?? [],
+                (membership) => membership.role.permissions,
             ),
             ...(isPlatformAdmin.value ? ['platform_admin'] : []),
         ]),
@@ -315,7 +277,7 @@ async function removeDevice(device: PushSubscriptionRecord) {
 async function setTopic(topic: string, on: boolean) {
     prefs.value = withTopic(prefs.value, 'push', topic, on)
     try {
-        await updateNotificationPrefs(prefs.value)
+        await putNotificationPrefs(prefs.value)
     } catch {
         prefs.value = withTopic(prefs.value, 'push', topic, !on)
         notifyError(t('notifications.error.edit'))
@@ -325,9 +287,7 @@ async function setTopic(topic: string, on: boolean) {
 const followedWalls = ref<FollowedWall[]>([])
 
 async function loadFollowedWalls(ids: string[]) {
-    followedWalls.value = await listWallsByIds<FollowedWall>(ids).catch(
-        () => [],
-    )
+    followedWalls.value = await listWallsById<FollowedWall>(ids).catch(() => [])
 }
 
 watch(followed, loadFollowedWalls)
@@ -339,11 +299,3 @@ async function unfollow(wallId: string) {
     )
 }
 </script>
-
-<style scoped>
-@reference "~/assets/css/main.css";
-
-.push-icon {
-    @apply inline-flex size-9 shrink-0 items-center justify-center rounded-lg;
-}
-</style>

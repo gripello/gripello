@@ -181,4 +181,84 @@ describe('DialogShell', () => {
         expect(history.length).toBe(before)
         wrapper.unmount()
     })
+
+    describe('footer', () => {
+        const buttonStub = {
+            props: ['disabled', 'loading'],
+            emits: ['click'],
+            template:
+                '<button :disabled="disabled" :data-loading="loading" @click="$emit(\'click\')"><slot /></button>',
+        }
+        const mountFooter = (
+            props: Record<string, unknown> = {},
+            slots: Record<string, string> = {},
+        ) =>
+            mount(DialogShell, {
+                props: {
+                    modelValue: true,
+                    submitLabel: 'Save',
+                    submitTestId: 'save',
+                    cancelTestId: 'cancel',
+                    ...props,
+                },
+                slots,
+                global: {
+                    mocks: { $t: (key: string) => key },
+                    components: {
+                        UModal: overlayStub('UModal'),
+                        UDrawer: overlayStub('UDrawer'),
+                    },
+                    stubs: {
+                        UButton: buttonStub,
+                        CaptchaLoader: { template: '<i data-testid="cap" />' },
+                    },
+                },
+            })
+
+        it('submits and closes on cancel', async () => {
+            const wrapper = mountFooter()
+            await wrapper.get('[data-testid="save"]').trigger('click')
+            expect(wrapper.emitted('submit')).toHaveLength(1)
+            await wrapper.get('[data-testid="cancel"]').trigger('click')
+            expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
+            wrapper.unmount()
+        })
+
+        it('leaves cancel to a listener when there is one', async () => {
+            const onCancel = vi.fn()
+            const wrapper = mountFooter({ onCancel })
+            await wrapper.get('[data-testid="cancel"]').trigger('click')
+            expect(onCancel).toHaveBeenCalled()
+            expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+            wrapper.unmount()
+        })
+
+        it('shows the captcha progress instead of the label while solving', () => {
+            const wrapper = mountFooter({ captcha: true, submitLoading: true })
+            const submit = wrapper.get('[data-testid="save"]')
+            expect(submit.find('[data-testid="cap"]').exists()).toBe(true)
+            expect(submit.attributes('disabled')).toBeDefined()
+            wrapper.unmount()
+        })
+
+        it('puts extra buttons after cancel and keeps the actions override', () => {
+            const extra = mountFooter(
+                {},
+                { 'footer-start': '<a data-testid="delete" />' },
+            )
+            const order = extra
+                .findAll('[data-testid]')
+                .map((el) => el.attributes('data-testid'))
+            expect(order.slice(-3)).toEqual(['cancel', 'delete', 'save'])
+            extra.unmount()
+
+            const custom = mountFooter(
+                {},
+                { actions: '<a data-testid="own" />' },
+            )
+            expect(custom.find('[data-testid="save"]').exists()).toBe(false)
+            expect(custom.find('[data-testid="own"]').exists()).toBe(true)
+            custom.unmount()
+        })
+    })
 })

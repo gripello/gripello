@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { nextTick } from 'vue'
-import VirtualWindow from '~/components/VirtualWindow.vue'
+import VirtualWindow from '~/components/virtual/Window.vue'
 
 type IOCallback = (entries: Array<{ isIntersecting: boolean }>) => void
 

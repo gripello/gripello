@@ -83,10 +83,10 @@
 
 <script setup lang="ts">
 import {
-    createCategory,
-    deleteCategory,
-    listCategories,
-    updateCategory,
+    createCompetitionCategory,
+    deleteCompetitionCategory,
+    listCompetitionCategories,
+    updateCompetitionCategory,
     type CategoryInput,
 } from '~/api/competitions'
 import { mergeCategoryRows, type CategoryRow } from '~/utils/competitions'
@@ -112,7 +112,7 @@ const genderItems = computed(() => [
 
 const { data: categories, refresh } = useAsyncData(
     () => `competition-categories:${props.competitionId}`,
-    () => listCategories(props.competitionId),
+    () => listCompetitionCategories(props.competitionId),
 )
 
 let savedRows: CategoryRow[] = []
@@ -154,8 +154,11 @@ async function save(index: number) {
     savingIndex.value = index
     await run(
         async () => {
-            if (row.id) await updateCategory(row.id, body)
-            else row.id = (await createCategory(props.competitionId, body)).id
+            if (row.id) await updateCompetitionCategory(row.id, body)
+            else
+                row.id = (
+                    await createCompetitionCategory(props.competitionId, body)
+                ).id
             await refresh()
             emit('changed')
         },
@@ -172,7 +175,7 @@ async function remove(index: number) {
     }
     await run(
         async () => {
-            await deleteCategory(row.id!)
+            await deleteCompetitionCategory(row.id!)
             await refresh()
             emit('changed')
         },

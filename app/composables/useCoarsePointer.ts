@@ -1,14 +1,15 @@
+import { useEventListener } from '@vueuse/core'
+
 export function useCoarsePointer() {
     const coarse = ref(false)
-    let query: MediaQueryList | undefined
+    const query = shallowRef<MediaQueryList>()
     const update = () => {
-        coarse.value = !!query?.matches
+        coarse.value = !!query.value?.matches
     }
+    useEventListener(query, 'change', update)
     onMounted(() => {
-        query = window.matchMedia?.('(pointer: coarse)')
+        query.value = window.matchMedia?.('(pointer: coarse)')
         update()
-        query?.addEventListener?.('change', update)
     })
-    onBeforeUnmount(() => query?.removeEventListener?.('change', update))
     return coarse
 }

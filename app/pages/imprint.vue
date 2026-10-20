@@ -42,5 +42,6 @@ const { data: settings } = useNuxtData<SettingsRecord>('settings')
 useSeoMeta({
     title: () => t('legal.imprint'),
     ogTitle: () => t('legal.imprint'),
+    description: () => t('legal.gymImprint', { name: 'Gripello' }),
 })
 </script>

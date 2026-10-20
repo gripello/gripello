@@ -32,9 +32,12 @@ test('settings image labels and the logo alt text come from i18n', async ({
         'Logo on route labels',
     )
 
-    const logo = page.getByTestId('nav-logo').locator('img').first()
-    await expect(logo).toHaveAttribute('alt', /\S/)
-    await expect(logo).not.toHaveAttribute('alt', 'Logo')
+    const switcher = page.locator('[data-testid="gym-switcher"]:visible')
+    await expect(switcher).toHaveAttribute('aria-label', /\S/)
+    await expect(switcher).not.toHaveAttribute('aria-label', /^Logo/)
+    await expect(
+        page.getByTestId('nav-logo').locator('img').first(),
+    ).toHaveAttribute('alt', '')
 })
 
 test('xlsx worksheet is named from the sent label without invalid characters', async ({

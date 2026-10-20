@@ -1,20 +1,10 @@
-export interface Semver {
-    major: number
-    minor: number
-    patch: number
-}
+import { parseSemver } from './version'
 
 export type ApiVersionStatus = 'ok' | 'outdated' | 'unsupported'
 
 export const API_VERSION_HEADER = 'X-Gripello-Api-Version'
 
-const NUXT_API_PREFIXES = ['/api/ui', '/api/version', '/api/cap']
-
-export function parseSemver(value: string | null | undefined): Semver | null {
-    const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(value ?? '')
-    if (!match) return null
-    return { major: +match[1]!, minor: +match[2]!, patch: +match[3]! }
-}
+export const NUXT_API_PREFIXES = ['/api/ui', '/api/version', '/api/cap']
 
 export function checkApiVersion(
     client: string | null | undefined,

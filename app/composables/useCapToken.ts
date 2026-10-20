@@ -1,8 +1,5 @@
 import type { CapScope } from '~~/server/utils/cap'
 
-import capWasmUrl from '@cap.js/wasm/browser/cap_wasm_bg.wasm?url'
-import pakoUrl from '../../node_modules/pako/dist/browser/pako_inflate.umd.min.js?url'
-
 interface CapStatus {
     enabled: boolean
 }
@@ -35,6 +32,11 @@ export function useCapToken() {
         solving.value = true
         progress.value = 0
         try {
+            const [{ default: capWasmUrl }, { default: pakoUrl }] =
+                await Promise.all([
+                    import('@cap.js/wasm/browser/cap_wasm_bg.wasm?url'),
+                    import('../../node_modules/pako/dist/browser/pako_inflate.umd.min.js?url'),
+                ])
             const w = globalThis as any
             w.CAP_CUSTOM_WASM_URL = capWasmUrl
             w.CAP_PAKO_URL = pakoUrl

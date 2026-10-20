@@ -203,7 +203,10 @@ import type { DefectSeverity } from '~/utils/tasks'
 const props = withDefaults(
     defineProps<{
         map: GymMap
-        walls: WallRecord[]
+        walls: Pick<
+            WallRecord,
+            'id' | 'name' | 'sort' | 'outline' | 'edge' | 'label'
+        >[]
         routes: MapRoute[]
         layoutRoutes?: MapRoute[] | null
         sentIds?: ReadonlySet<string> | null

@@ -40,6 +40,7 @@
 
 <script setup lang="ts">
 import { confirmPasswordReset } from '~/api/auth'
+import { fieldErrorCode } from '~/utils/fieldErrors'
 
 defineOptions({ name: 'ResetPasswordPage' })
 definePageMeta({ layout: 'blank', auth: false })
@@ -56,6 +57,5 @@ const resetPassword = (token: string) =>
     confirmPasswordReset(token, newPassword.value, confirmPassword.value)
 
 const isInvalidToken = (error: unknown) =>
-    (error as { data?: { data?: { token?: { code?: string } } } })?.data?.data
-        ?.token?.code === 'validation_invalid_token'
+    fieldErrorCode(error, 'token') === 'validation_invalid_token'
 </script>

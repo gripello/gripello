@@ -24,7 +24,7 @@ test('the feed shows new routes, betas and friends’ sends', async ({
         route: route.id,
         type: 'flash',
         attempts: 1,
-        date: `${new Date().toISOString().slice(0, 10)}T12:00:00Z`,
+        date: new Date().toISOString().slice(0, 10),
     })
 
     await gotoSettled(page, '/e2e/feed')

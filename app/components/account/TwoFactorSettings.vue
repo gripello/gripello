@@ -19,24 +19,26 @@
             </template>
         </LayoutEmptyState>
         <LayoutLoadingState v-else-if="!loaded" :count="2" />
-        <UPageCard
-            v-else
-            variant="outline"
-            :ui="{ container: LIST }"
-            data-testid="two-factor-settings"
-        >
-            <div v-if="totp" class="factor-row">
-                <span class="factor-icon bg-primary/10 text-primary">
-                    <UIcon name="i-lucide-smartphone" class="size-4" />
-                </span>
-                <UInput
-                    v-model="drafts[totp.id]"
-                    :placeholder="t('account.twoFactor.authenticatorApp')"
-                    :aria-label="t('account.twoFactor.name')"
-                    maxlength="60"
-                    size="sm"
-                    :data-testid="`two-factor-name-${totp.id}`"
-                />
+        <LayoutListGroup v-else data-testid="two-factor-settings">
+            <LayoutListRow
+                v-if="totp"
+                dense
+                icon="i-lucide-smartphone"
+                icon-active
+            >
+                <div class="flex min-w-0 flex-1 flex-col gap-1 py-1">
+                    <UInput
+                        v-model="drafts[totp.id]"
+                        :placeholder="t('account.twoFactor.authenticatorApp')"
+                        :aria-label="t('account.twoFactor.name')"
+                        maxlength="60"
+                        size="sm"
+                        :data-testid="`two-factor-name-${totp.id}`"
+                    />
+                    <p class="truncate text-xs text-muted">
+                        {{ usedLabel(totp) }}
+                    </p>
+                </div>
                 <UButton
                     color="neutral"
                     variant="ghost"
@@ -46,16 +48,10 @@
                     data-testid="two-factor-totp-remove"
                     @click="askPassword({ kind: 'remove', factor: totp })"
                 />
-                <p class="col-start-2 truncate text-xs text-muted">
-                    {{ usedLabel(totp) }}
-                </p>
-            </div>
-            <div v-else class="flex items-center gap-3 py-1 ps-4 pe-1">
-                <span class="factor-icon bg-elevated text-muted">
-                    <UIcon name="i-lucide-smartphone" class="size-4" />
-                </span>
+            </LayoutListRow>
+            <LayoutListRow v-else dense icon="i-lucide-smartphone">
                 <span
-                    class="flex-1 truncate py-2 text-sm font-medium text-highlighted"
+                    class="flex-1 truncate text-sm font-medium text-highlighted"
                 >
                     {{ t('account.twoFactor.authenticatorApp') }}
                 </span>
@@ -63,31 +59,35 @@
                     color="primary"
                     variant="soft"
                     class="me-3"
-                    :loading="setup.pending.value"
+                    :loading="withPassword.pending.value"
                     data-testid="two-factor-totp-setup"
                     @click="askPassword({ kind: 'totp' })"
                 >
                     {{ t('account.twoFactor.setUp') }}
                 </UButton>
-            </div>
+            </LayoutListRow>
 
-            <div
+            <LayoutListRow
                 v-for="passkey in passkeys"
                 :key="passkey.id"
-                class="factor-row"
+                dense
+                icon="i-lucide-key-round"
+                icon-active
                 data-testid="two-factor-passkey"
             >
-                <span class="factor-icon bg-primary/10 text-primary">
-                    <UIcon name="i-lucide-key-round" class="size-4" />
-                </span>
-                <UInput
-                    v-model="drafts[passkey.id]"
-                    :placeholder="t('account.twoFactor.passkey')"
-                    :aria-label="t('account.twoFactor.name')"
-                    maxlength="60"
-                    size="sm"
-                    :data-testid="`two-factor-name-${passkey.id}`"
-                />
+                <div class="flex min-w-0 flex-1 flex-col gap-1 py-1">
+                    <UInput
+                        v-model="drafts[passkey.id]"
+                        :placeholder="t('account.twoFactor.passkey')"
+                        :aria-label="t('account.twoFactor.name')"
+                        maxlength="60"
+                        size="sm"
+                        :data-testid="`two-factor-name-${passkey.id}`"
+                    />
+                    <p class="truncate text-xs text-muted">
+                        {{ usedLabel(passkey) }}
+                    </p>
+                </div>
                 <UButton
                     color="neutral"
                     variant="ghost"
@@ -101,19 +101,10 @@
                     data-testid="two-factor-passkey-remove"
                     @click="askPassword({ kind: 'remove', factor: passkey })"
                 />
-                <p class="col-start-2 truncate text-xs text-muted">
-                    {{ usedLabel(passkey) }}
-                </p>
-            </div>
+            </LayoutListRow>
 
-            <div
-                v-if="canAddPasskey"
-                class="flex items-center gap-3 py-1 ps-4 pe-1"
-            >
-                <span class="factor-icon bg-elevated text-muted">
-                    <UIcon name="i-lucide-key-round" class="size-4" />
-                </span>
-                <span class="flex-1 py-2 text-sm font-medium text-highlighted">
+            <LayoutListRow v-if="canAddPasskey" dense icon="i-lucide-key-round">
+                <span class="flex-1 text-sm font-medium text-highlighted">
                     {{ t('account.twoFactor.passkeys') }}
                 </span>
                 <UButton
@@ -126,16 +117,15 @@
                 >
                     {{ t('account.twoFactor.addPasskey') }}
                 </UButton>
-            </div>
+            </LayoutListRow>
 
-            <div
+            <LayoutListRow
                 v-if="factors.length"
-                class="flex items-center gap-3 py-1 ps-4 pe-1"
+                dense
+                icon="i-lucide-life-buoy"
+                :icon-active="codesLeft > 0"
             >
-                <span class="factor-icon" :class="iconTone(codesLeft > 0)">
-                    <UIcon name="i-lucide-life-buoy" class="size-4" />
-                </span>
-                <div class="min-w-0 flex-1 py-2">
+                <div class="min-w-0 flex-1">
                     <p class="text-sm font-medium text-highlighted">
                         {{ t('account.twoFactor.recoveryCodes') }}
                     </p>
@@ -162,72 +152,13 @@
                 >
                     {{ t('account.twoFactor.renewCodes') }}
                 </UButton>
-            </div>
-        </UPageCard>
+            </LayoutListRow>
+        </LayoutListGroup>
 
-        <LayoutDialogShell
-            v-model="setupOpen"
-            :title="t('account.twoFactor.authenticatorApp')"
-            :max-width="420"
-            data-testid="two-factor-setup-dialog"
-        >
-            <UForm
-                id="totp-setup-form"
-                :state="{ code: setupCode }"
-                class="flex flex-col items-center gap-4"
-                @submit="confirmTotp"
-            >
-                <img
-                    v-if="qrDataUrl"
-                    :src="qrDataUrl"
-                    :alt="t('account.twoFactor.qrAlt')"
-                    class="size-48 rounded-lg bg-white p-2"
-                />
-                <code
-                    class="w-full break-all rounded-md bg-elevated px-3 py-2 text-center font-mono text-sm select-all"
-                    data-testid="two-factor-secret"
-                >
-                    {{ formattedSecret }}
-                </code>
-                <UFormField
-                    :label="t('account.twoFactor.code')"
-                    name="code"
-                    class="w-full"
-                >
-                    <UPinInput
-                        :model-value="setupDigits"
-                        type="number"
-                        otp
-                        :length="OTP_LENGTH"
-                        size="lg"
-                        class="w-full justify-between"
-                        data-testid="two-factor-setup-code"
-                        @update:model-value="setupCode = otpCode($event)"
-                        @complete="confirmTotp"
-                    />
-                </UFormField>
-            </UForm>
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    @click="setupOpen = false"
-                >
-                    {{ t('actions.cancel') }}
-                </UButton>
-                <div class="flex-1" />
-                <UButton
-                    type="submit"
-                    form="totp-setup-form"
-                    color="primary"
-                    :disabled="setupCode.length !== OTP_LENGTH"
-                    :loading="confirmSetup.pending.value"
-                    data-testid="two-factor-setup-confirm"
-                >
-                    {{ t('account.twoFactor.verify') }}
-                </UButton>
-            </template>
-        </LayoutDialogShell>
+        <AccountTotpSetup
+            v-model:setup="totpSetupState"
+            @enabled="totpEnabled"
+        />
 
         <LayoutDialogShell
             :model-value="!!pending"
@@ -235,6 +166,13 @@
             :max-width="420"
             data-testid="two-factor-password-dialog"
             @update:model-value="!$event && (pending = undefined)"
+            :submit-label="passwordAction"
+            submit-form="two-factor-password-form"
+            :submit-color="pending?.kind === 'remove' ? 'error' : 'primary'"
+            :submit-loading="withPassword.pending.value"
+            :submit-disabled="!password"
+            submit-test-id="two-factor-password-confirm"
+            cancel-test-id="two-factor-password-cancel"
         >
             <form
                 id="two-factor-password-form"
@@ -258,83 +196,15 @@
                     data-testid="two-factor-password"
                 />
             </form>
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    data-testid="two-factor-password-cancel"
-                    @click="pending = undefined"
-                >
-                    {{ t('actions.cancel') }}
-                </UButton>
-                <div class="flex-1" />
-                <UButton
-                    type="submit"
-                    form="two-factor-password-form"
-                    :color="pending?.kind === 'remove' ? 'error' : 'primary'"
-                    :disabled="!password"
-                    :loading="withPassword.pending.value"
-                    data-testid="two-factor-password-confirm"
-                >
-                    {{ passwordAction }}
-                </UButton>
-            </template>
         </LayoutDialogShell>
 
-        <LayoutDialogShell
-            v-model="codesOpen"
-            persistent
-            :title="t('account.twoFactor.recoveryCodes')"
-            :max-width="420"
-            data-testid="two-factor-codes-dialog"
-        >
-            <ul
-                class="grid grid-cols-2 gap-2 font-mono text-sm"
-                data-testid="two-factor-codes"
-            >
-                <li
-                    v-for="code in recoveryCodes"
-                    :key="code"
-                    class="rounded-md bg-elevated px-2 py-1 text-center"
-                >
-                    {{ code }}
-                </li>
-            </ul>
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-copy"
-                    @click="copyCodes"
-                >
-                    {{ t('account.twoFactor.copy') }}
-                </UButton>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-download"
-                    @click="downloadCodes"
-                >
-                    {{ t('account.twoFactor.download') }}
-                </UButton>
-                <div class="flex-1" />
-                <UButton
-                    color="primary"
-                    data-testid="two-factor-codes-done"
-                    @click="codesOpen = false"
-                >
-                    {{ t('account.twoFactor.done') }}
-                </UButton>
-            </template>
-        </LayoutDialogShell>
+        <AccountRecoveryCodes v-model:codes="recoveryCodes" />
     </section>
 </template>
 
 <script setup lang="ts">
 import { formatDate } from '#shared/utils/formatting'
-import { OTP_LENGTH, otpCode, otpDigits } from '~/utils/otp'
 import { deviceLabel } from '~/utils/push'
-import { saveBlob } from '~/utils/download'
 import { needsPasswordFirst } from '~/utils/reauth'
 import {
     createPasskey,
@@ -348,11 +218,11 @@ import {
     passkeyRegistrationOptions,
     regenerateRecoveryCodes,
     renameMFAFactor,
-    totpEnable,
     totpSetup,
     type Factor,
 } from '~/api/account'
 import { useAuthState } from '~/api/auth'
+import type { TotpSetupState } from './TotpSetup.vue'
 
 type PendingAction =
     | { kind: 'remove'; factor: Factor }
@@ -360,13 +230,9 @@ type PendingAction =
     | { kind: 'totp' }
     | { kind: 'passkey' }
 
-const LIST = 'min-w-0 p-0 sm:p-0 gap-y-0 divide-y divide-default'
-
 const { t, locale } = useI18n()
 const { currentUser } = useAuthState()
 const { success, error: notifyError } = useNotification()
-const setup = useAsyncAction()
-const confirmSetup = useAsyncAction()
 const addPasskey = useAsyncAction()
 const withPassword = useAsyncAction()
 
@@ -399,10 +265,6 @@ onMounted(() => {
 })
 useAccountChanges('mfa', load)
 
-function iconTone(active: boolean) {
-    return active ? 'bg-primary/10 text-primary' : 'bg-elevated text-muted'
-}
-
 function usedLabel(factor: Factor) {
     const date = factor.last_used || factor.created
     const formatted = formatDate(date, {
@@ -415,65 +277,24 @@ function usedLabel(factor: Factor) {
 }
 
 const recoveryCodes = ref<string[]>([])
-const codesOpen = ref(false)
 
 function showRecoveryCodes(codes?: string[]) {
     if (!codes?.length) return
     recoveryCodes.value = codes
     codesLeft.value = codes.length
-    codesOpen.value = true
 }
 
-const setupOpen = ref(false)
-const secret = ref('')
-const setupCode = ref('')
-const qrDataUrl = ref('')
-const setupDigits = computed(() => otpDigits(setupCode.value))
-const formattedSecret = computed(() =>
-    secret.value.replace(/(.{4})/g, '$1 ').trim(),
-)
-
-const setupPassword = ref('')
-watch(setupOpen, (open) => {
-    if (!open) setupPassword.value = ''
-})
+const totpSetupState = ref<TotpSetupState | null>(null)
 
 async function startTotpSetup(confirmedPassword: string) {
-    const result = await totpSetup(confirmedPassword)
+    const { secret, uri } = await totpSetup(confirmedPassword)
     pending.value = undefined
-    setupPassword.value = confirmedPassword
-    await setup.run(async () => {
-        secret.value = result.secret
-        setupCode.value = ''
-        const { default: QRCode } = await import('qrcode')
-        qrDataUrl.value = await QRCode.toDataURL(result.uri, {
-            margin: 0,
-            width: 192,
-        })
-        setupOpen.value = true
-    })
+    totpSetupState.value = { secret, uri, password: confirmedPassword }
 }
 
-function confirmTotp() {
-    if (confirmSetup.pending.value || setupCode.value.length !== OTP_LENGTH)
-        return
-    return confirmSetup.run(
-        async () => {
-            const result = await totpEnable({
-                secret: secret.value,
-                code: setupCode.value.trim(),
-                password: setupPassword.value,
-            })
-            factors.value = [...factors.value, result.factor]
-            setupOpen.value = false
-            setupPassword.value = ''
-            showRecoveryCodes(result.recoveryCodes)
-        },
-        {
-            success: t('account.twoFactor.enabled'),
-            error: t('account.twoFactor.invalidCode'),
-        },
-    )
+function totpEnabled(factor: Factor, codes?: string[]) {
+    factors.value = [...factors.value, factor]
+    showRecoveryCodes(codes)
 }
 
 async function registerPasskey(confirmedPassword: string) {
@@ -599,32 +420,4 @@ function resetNames() {
 }
 
 defineExpose({ namesChanged, saveNames, resetNames })
-
-const codesText = computed(() => recoveryCodes.value.join('\n'))
-
-async function copyCodes() {
-    await navigator.clipboard
-        .writeText(codesText.value)
-        .then(() => success(t('account.twoFactor.copied')))
-        .catch(() => notifyError(t('notifications.error.generic')))
-}
-
-function downloadCodes() {
-    void saveBlob(
-        new Blob([codesText.value + '\n'], { type: 'text/plain' }),
-        'gripello-recovery-codes.txt',
-    ).catch(() => notifyError(t('notifications.error.generic')))
-}
 </script>
-
-<style scoped>
-@reference "~/assets/css/main.css";
-
-.factor-icon {
-    @apply inline-flex size-9 shrink-0 items-center justify-center rounded-lg;
-}
-
-.factor-row {
-    @apply grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-2 ps-4 pe-1;
-}
-</style>

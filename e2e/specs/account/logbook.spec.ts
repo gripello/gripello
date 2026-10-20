@@ -92,7 +92,7 @@ test('the dashboard sums up sends and turns a project into a send', async ({
     const easy = await routeOf('easy', '6+')
     const hard = await routeOf('hard', '7-')
     const project = await routeOf('project', '8')
-    const today = `${new Date().toISOString().slice(0, 10)}T12:00:00Z`
+    const today = new Date().toISOString().slice(0, 10)
     const climberApi = await apiAs(climber)
     for (const [route, type] of [
         [easy, 'flash'],
@@ -165,7 +165,7 @@ test('an ascent logged on another device appears in the open logbook', async ({
         route: route.id,
         type: 'flash',
         attempts: 1,
-        date: `${new Date().toISOString().slice(0, 10)}T12:00:00Z`,
+        date: new Date().toISOString().slice(0, 10),
     })
 
     await expect(

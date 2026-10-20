@@ -1,5 +1,5 @@
 <template>
-    <div class="surface-card legal-doc">
+    <LayoutPanel flush as="div" class="legal-doc">
         <nav
             v-if="toc.length > 1"
             class="privacy-toc"
@@ -132,7 +132,7 @@
                 </p>
             </section>
         </template>
-    </div>
+    </LayoutPanel>
 </template>
 
 <script setup lang="ts">

@@ -73,6 +73,15 @@
             :max-width="440"
             data-testid="platform-user-security-dialog"
             @update:model-value="(isOpen: boolean) => !isOpen && close()"
+            :submit-label="
+                action ? t(`platform.users.actions.${action}.confirm`) : ''
+            "
+            :submit-color="action === 'grantAdmin' ? 'primary' : 'error'"
+            :submit-loading="busy"
+            :submit-disabled="!canConfirm"
+            submit-test-id="platform-user-security-confirm"
+            cancel-test-id="platform-user-security-cancel"
+            @submit="confirmAction"
         >
             <div class="flex flex-col gap-4">
                 <p
@@ -81,7 +90,7 @@
                 >
                     {{
                         t(`platform.users.actions.${action}.message`, {
-                            name: userDisplayName(user),
+                            name: displayName(user),
                         })
                     }}
                 </p>
@@ -92,44 +101,18 @@
                     :require-old-password="false"
                     @validity="dialog.passwordValid = $event"
                 />
-                <UserPasswordField
+                <UserReauthField
                     v-if="needsPassword"
-                    v-model="dialog.adminPassword"
-                    :label="t('platform.users.adminPassword')"
-                    icon="i-lucide-shield-check"
+                    v-model="adminPassword"
                     data-testid="platform-user-admin-password"
                 />
             </div>
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    data-testid="platform-user-security-cancel"
-                    @click="close"
-                >
-                    {{ t('actions.cancel') }}
-                </UButton>
-                <div class="flex-1" />
-                <UButton
-                    :color="action === 'grantAdmin' ? 'primary' : 'error'"
-                    :loading="busy"
-                    :disabled="!canConfirm"
-                    data-testid="platform-user-security-confirm"
-                    @click="confirmAction"
-                >
-                    {{
-                        action
-                            ? t(`platform.users.actions.${action}.confirm`)
-                            : ''
-                    }}
-                </UButton>
-            </template>
         </LayoutDialogShell>
     </section>
 </template>
 
 <script setup lang="ts">
-import { reauthenticate } from '~/api/account'
+import { displayName } from '~/utils/avatar'
 import { useAuthState } from '~/api/auth'
 import {
     clearUserLockout,
@@ -139,12 +122,7 @@ import {
     revokeUserSessions,
     setUserPassword,
 } from '~/api/platform'
-import {
-    userDisplayName,
-    userSecurityState,
-    type PlatformUser,
-} from '~/utils/platformUsers'
-import { isWrongPassword } from '~/utils/reauth'
+import { userSecurityState, type PlatformUser } from '~/utils/platformUsers'
 
 type SecurityAction =
     | 'unlock'
@@ -164,8 +142,12 @@ const state = computed(() =>
 )
 
 const action = ref<SecurityAction | null>(null)
+const {
+    password: adminPassword,
+    confirm: reauthenticate,
+    errorText: reauthError,
+} = useReauth(action)
 const dialog = reactive({
-    adminPassword: '',
     password: '',
     passwordConfirm: '',
     passwordValid: false,
@@ -177,13 +159,12 @@ const needsPassword = computed(
 )
 const canConfirm = computed(
     () =>
-        (!needsPassword.value || !!dialog.adminPassword) &&
+        (!needsPassword.value || !!adminPassword.value) &&
         (action.value !== 'setPassword' || dialog.passwordValid),
 )
 
 function request(next: SecurityAction) {
     Object.assign(dialog, {
-        adminPassword: '',
         password: '',
         passwordConfirm: '',
         passwordValid: false,
@@ -211,16 +192,13 @@ async function perform(next: SecurityAction) {
     action.value = next
     const done = await run(
         async () => {
-            if (needsPassword.value) await reauthenticate(dialog.adminPassword)
+            if (needsPassword.value) await reauthenticate()
             await calls[next](props.user.id)
             return true
         },
         {
             success: t(`platform.users.actions.${next}.done`),
-            error: (error) =>
-                isWrongPassword(error)
-                    ? t('platform.users.adminPasswordWrong')
-                    : t('notifications.error.generic'),
+            error: reauthError(t('notifications.error.generic')),
         },
     )
     if (done) {

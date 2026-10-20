@@ -37,12 +37,10 @@ test('an edit landing after a new review does not duplicate the card', async ({
         const editedCard = page.getByTestId(`comment-card-${edited.id}`)
         await expect(editedCard).toBeVisible()
 
-        // The edit refetch is held until the new review is listed; the bound keeps a dropped or replaced refetch from hanging the test.
         let releaseEditFetch = () => {}
-        const editFetchReleased = new Promise<void>((resolve) => {
-            releaseEditFetch = resolve
-            setTimeout(resolve, 10_000)
-        })
+        const editFetchReleased = new Promise<void>(
+            (resolve) => (releaseEditFetch = resolve),
+        )
         await page.route(
             (url) =>
                 RATINGS_PATH.test(url.pathname) &&

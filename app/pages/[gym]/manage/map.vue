@@ -50,7 +50,15 @@
             </UButton>
         </div>
 
-        <div v-if="!map" class="placement-empty" data-testid="placement-empty">
+        <div v-if="loadFailed" class="placement-empty">
+            <LayoutLoadError :card="false" @retry="retryLoad" />
+        </div>
+
+        <div
+            v-else-if="!map"
+            class="placement-empty"
+            data-testid="placement-empty"
+        >
             <LayoutEmptyState
                 icon="i-lucide-map"
                 :card="false"
@@ -518,7 +526,7 @@
                         tabindex="0"
                         data-testid="placement-route"
                         :data-route-id="item.id"
-                        @pointerdown="onItemPointerDown(item, $event)"
+                        @pointerdown="drag.startPointer($event, item)"
                         @contextmenu.prevent
                         @click="onListClick(item.id)"
                         @keydown.enter.self="onListClick(item.id)"
@@ -566,16 +574,16 @@
 
         <Teleport to="body">
             <div
-                v-if="dragging"
+                v-if="drag.dragged.value && drag.position.value"
                 class="placement-drag-ghost"
                 :style="{
-                    left: `${dragging.x}px`,
-                    top: `${dragging.y}px`,
+                    left: `${drag.position.value.x}px`,
+                    top: `${drag.position.value.y}px`,
                 }"
                 data-testid="placement-drag-ghost"
             >
-                <RouteColorDot :color="dragging.color" :size="18" />
-                <span>{{ dragging.name }}</span>
+                <RouteColorDot :color="drag.dragged.value.color" :size="18" />
+                <span>{{ drag.dragged.value.name }}</span>
             </div>
         </Teleport>
 
@@ -605,7 +613,13 @@
 </template>
 
 <script setup lang="ts">
-import { haptic } from '~/utils/haptics'
+import { isTypingTarget } from '~/utils/keyboard'
+import {
+    gymChangesTopic,
+    gymDefectsTopic,
+    leaderboardTopic,
+} from '#shared/utils/topics'
+import { useEventListener } from '@vueuse/core'
 import {
     archiveRoutes,
     listResetStats,
@@ -624,13 +638,7 @@ import {
 } from '~/utils/wallResets'
 import type { SheetSnap } from '~/components/map/Sheet.vue'
 import { formatAnchorPoint, formatDate } from '#shared/utils/formatting'
-import {
-    cacheKeys,
-    gymChangesTopic,
-    gymDefectsTopic,
-    type GymChange,
-} from '~/utils/realtimeCache'
-import { leaderboardTopic } from '~/utils/leaderboard'
+import { cacheKeys, type GymChange } from '~/utils/realtimeCache'
 
 const gymPath = useGymPath()
 
@@ -651,20 +659,30 @@ const { success: notifySuccess } = useNotification()
 
 useSeoMeta({ title: () => t('routes.mapWork') })
 
-const { discardDialogOpen, confirmDiscard, settleDiscard } = useDiscardConfirm(
-    () => placement.changes.value.length > 0,
-)
+const { discardDialogOpen, confirmDiscard, settleDiscard, leaveGuard } =
+    useDiscardConfirm(() => placement.changes.value.length > 0)
 
-const { locationItems, locationId, map, walls, mapWalls } =
-    await useGymMapLocation('placement', {
-        confirmLeave: async () => {
-            const confirmed = await confirmDiscard()
-            if (confirmed) placement.reset()
-            return confirmed
-        },
-    })
+const {
+    locationItems,
+    locationId,
+    map,
+    walls,
+    mapWalls,
+    wallsError,
+    refreshWalls,
+} = await useGymMapLocation('placement', {
+    confirmLeave: async () => {
+        const confirmed = await confirmDiscard()
+        if (confirmed) placement.reset()
+        return confirmed
+    },
+})
 
-const { data: routes, refresh: refreshRoutes } = await useAsyncData(
+const {
+    data: routes,
+    error: routesError,
+    refresh: refreshRoutes,
+} = await useAsyncData(
     cacheKeys.placementRoutes,
     () =>
         locationId.value
@@ -676,6 +694,12 @@ const { data: routes, refresh: refreshRoutes } = await useAsyncData(
     { watch: [locationId], default: () => [] },
 )
 useLiveLocation([cacheKeys.placementRoutes], locationId)
+
+const loadFailed = computed(() => !!routesError.value || !!wallsError.value)
+
+function retryLoad() {
+    return Promise.all([refreshRoutes(), refreshWalls()])
+}
 
 const placement = useMapPlacement(routes, walls, mapWalls)
 
@@ -898,87 +922,19 @@ const canvasRef = useTemplateRef<{
     previewAt: (routeId: string, clientX: number, clientY: number) => void
     placeAt: (routeId: string, clientX: number, clientY: number) => boolean
 }>('canvasRef')
-const dragging = ref<{
-    id: string
-    name: string
-    color?: string | null
-    x: number
-    y: number
-} | null>(null)
 let suppressClick = false
-
-function onItemPointerDown(item: RouteRecord, event: PointerEvent) {
-    if (event.button !== 0) return
-    const isTouch = event.pointerType === 'touch'
-    const start = { x: event.clientX, y: event.clientY }
-    let longPressed = !isTouch
-    let pressTimer = 0
-
-    const startDrag = (x: number, y: number) => {
-        dragging.value = {
-            id: item.id,
-            name: item.name,
-            color: item.color,
-            x,
-            y,
-        }
-        canvasRef.value?.previewAt(item.id, x, y)
-    }
-    const preventScroll = (touchEvent: TouchEvent) => {
-        if (dragging.value) touchEvent.preventDefault()
-    }
-    const cleanup = () => {
-        clearTimeout(pressTimer)
-        window.removeEventListener('pointermove', move)
-        window.removeEventListener('pointerup', end)
-        window.removeEventListener('pointercancel', cancel)
-        window.removeEventListener('touchmove', preventScroll, {
-            capture: true,
-        })
-    }
-    const move = (moveEvent: PointerEvent) => {
-        const distance = Math.hypot(
-            moveEvent.clientX - start.x,
-            moveEvent.clientY - start.y,
-        )
-        if (!longPressed) {
-            if (distance >= DRAG_THRESHOLD_PX) cleanup()
-            return
-        }
-        if (!dragging.value && distance < DRAG_THRESHOLD_PX) return
-        moveEvent.preventDefault()
-        startDrag(moveEvent.clientX, moveEvent.clientY)
-    }
-    const end = (endEvent: PointerEvent) => {
-        cleanup()
-        if (!dragging.value) return
+const drag = useLongPressDrag<RouteRecord>({
+    delay: LONG_PRESS_MS,
+    tolerance: DRAG_THRESHOLD_PX,
+    onLift: revealMap,
+    onMove: (item, { x, y }) => canvasRef.value?.previewAt(item.id, x, y),
+    onDrop: (item, _target, { x, y }) => {
         suppressClick = true
         setTimeout(() => (suppressClick = false))
-        canvasRef.value?.placeAt(item.id, endEvent.clientX, endEvent.clientY)
-        dragging.value = null
-    }
-    const cancel = () => {
-        cleanup()
-        canvasRef.value?.previewAt(item.id, -1, -1)
-        dragging.value = null
-    }
-
-    if (isTouch) {
-        window.addEventListener('touchmove', preventScroll, {
-            passive: false,
-            capture: true,
-        })
-        pressTimer = window.setTimeout(() => {
-            longPressed = true
-            void haptic('press')
-            revealMap()
-            startDrag(start.x, start.y)
-        }, LONG_PRESS_MS)
-    }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', end)
-    window.addEventListener('pointercancel', cancel)
-}
+        canvasRef.value?.placeAt(item.id, x, y)
+    },
+    onCancel: (item) => canvasRef.value?.previewAt(item.id, -1, -1),
+})
 
 function onListClick(routeId: string) {
     if (suppressClick) return
@@ -1042,11 +998,10 @@ watch(
     { once: true, immediate: true },
 )
 
-onBeforeRouteLeave(() => confirmDiscard())
+onBeforeRouteLeave(leaveGuard)
 
 function onKeyDown(event: KeyboardEvent) {
-    const target = event.target as HTMLElement | null
-    if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return
+    if (isTypingTarget(event.target)) return
     const selected = placement.selectedPlaced.value
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
         placement.undo()
@@ -1072,15 +1027,8 @@ function onBeforeUnload(event: BeforeUnloadEvent) {
     if (placement.changes.value.length) event.preventDefault()
 }
 
-onMounted(() => {
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('beforeunload', onBeforeUnload)
-})
-
-onBeforeUnmount(() => {
-    window.removeEventListener('keydown', onKeyDown)
-    window.removeEventListener('beforeunload', onBeforeUnload)
-})
+useEventListener('keydown', onKeyDown)
+useEventListener('beforeunload', onBeforeUnload)
 </script>
 
 <style scoped>

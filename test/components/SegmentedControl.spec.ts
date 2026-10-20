@@ -1,6 +1,6 @@
 import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
-import SegmentedControl from '~/components/SegmentedControl.vue'
+import SegmentedControl from '~/components/segmented/Control.vue'
 
 const tabsStub = defineComponent({
     props: ['modelValue', 'items', 'content', 'variant', 'size', 'ui'],

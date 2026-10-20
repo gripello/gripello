@@ -1,3 +1,4 @@
+import { liveTopics } from '#shared/utils/topics'
 import type { PushSubscriptionRecord } from '~/types/models'
 import type { RecordChange } from '~/composables/useRealtime'
 import type { NotificationTopic } from '~/utils/notificationPrefs'
@@ -97,7 +98,7 @@ export function usePushSubscription() {
     }
 
     useRealtime(
-        'push_subscriptions',
+        liveTopics.pushSubscriptions,
         (event: RecordChange<PushSubscriptionRecord>) => {
             devices.value = applyDeviceEvent(devices.value, event)
         },

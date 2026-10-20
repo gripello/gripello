@@ -55,56 +55,18 @@
                         class="self-end"
                         @update:model-value="onMobileSortChange"
                     />
-                    <FilterSelect
-                        :label="gradeColumnTitle"
-                        v-model="selectedDifficulty"
-                        :placeholder="$t('filter.all')"
-                        clear
-                        @clear="selectedDifficulty = ''"
-                        :items="difficulties"
-                        label-key="text"
-                        value-key="value"
-                        data-testid="index-filter-difficulty"
-                    />
-                    <FilterSelect
-                        :label="$t('climbing.type')"
-                        v-model="selectedType"
-                        :placeholder="$t('filter.all')"
-                        clear
-                        @clear="selectedType = ''"
-                        :items="types"
-                        label-key="text"
-                        value-key="value"
-                        data-testid="index-filter-type"
-                    />
-                    <FilterSelect
-                        :label="$t('climbing.location')"
-                        v-model="selectedLocation"
-                        :placeholder="$t('filter.all')"
-                        clear
-                        @clear="selectedLocation = ''"
-                        :items="locations"
-                        label-key="text"
-                        value-key="value"
-                        data-testid="index-filter-location"
-                    />
-                    <FilterSelect
-                        v-if="walls.length"
-                        :label="$t('map.wall')"
-                        v-model="selectedWall"
-                        :placeholder="$t('filter.all')"
-                        clear
-                        @clear="selectedWall = ''"
-                        :items="walls"
-                        label-key="text"
-                        value-key="value"
-                        data-testid="index-filter-wall"
+                    <RouteFilterSelects
+                        :filters="filters"
+                        test-id-prefix="index"
+                        with-wall
                     />
                 </div>
             </template>
         </FilterBar>
 
-        <div v-if="isWideLayout" class="mt-4" data-testid="index-table">
+        <LayoutLoadError v-if="loadFailed" class="mt-4" @retry="retryLoad" />
+
+        <div v-else-if="isWideLayout" class="mt-4" data-testid="index-table">
             <UTable
                 :data="routes"
                 :get-row-id="(row: RouteListItem) => row.id"
@@ -226,7 +188,7 @@
             </div>
         </div>
 
-        <div v-if="!isWideLayout">
+        <div v-if="!isWideLayout && !loadFailed">
             <div class="mt-2 flex flex-col gap-4">
                 <RouteCard
                     v-for="route in routes"
@@ -254,13 +216,17 @@
         </div>
 
         <LayoutLoadingState
-            v-if="loading && routes.length === 0 && !isWideLayout"
+            v-if="
+                !loadFailed && loading && routes.length === 0 && !isWideLayout
+            "
             type="card"
             :count="1"
             class="mt-4"
         />
         <LayoutEmptyState
-            v-if="!loading && routes.length === 0 && !isWideLayout"
+            v-if="
+                !loadFailed && !loading && routes.length === 0 && !isWideLayout
+            "
             class="mt-4"
             :title="$t('table.no_data')"
         >
@@ -287,22 +253,27 @@
 </template>
 
 <script setup lang="ts">
+import { useIntersectionObserver } from '@vueuse/core'
 import { listRoutes } from '~/api/routes'
-import { isAbortError, keepWhenOffline } from '~/utils/errors'
+import { isAbortError } from '~/utils/errors'
 import type { TableColumn } from '@nuxt/ui'
-import type { RouteListItem, RouteScoreRecord } from '~/types/models'
+import type { RouteListItem, RouteRecord } from '~/types/models'
+import { toRouteRow, type RouteTableLoad } from '~/composables/useRouteTable'
 import {
     formatAnchorPoint,
     formatScore,
     hasAnchorPoint,
-    normalizeCreators,
     formatDate,
     wallName,
 } from '#shared/utils/formatting'
-import { toSortParam, type SortOption } from '~/utils/sorting'
-import { cacheKeys, unlessQueryChanged } from '~/utils/realtimeCache'
+import {
+    cacheKeys,
+    unlessQueryChanged,
+    type ListPage,
+} from '~/utils/realtimeCache'
 
 const { t, locale } = useI18n()
+const { gym } = useGym()
 const outSoonLabel = (route: { removal_planned_for?: string | null }) =>
     t('routes.outSoon', {
         date: formatDate(route.removal_planned_for, { locale: locale.value }),
@@ -315,39 +286,24 @@ const wishDialog = ref(false)
 const { error: notifyError } = useNotification()
 const { polite: announce } = useAnnouncer()
 
+const filters = useRouteFilters('routes')
 const {
     searchRouteName,
     selectedDifficulty,
     selectedType,
     selectedLocation,
     selectedWall,
-    difficulties,
-    types,
-    locations,
-    walls,
     activeFilterCount,
     routeQuery: baseQuery,
     clearFilters,
-} = useRouteFilters('routes')
+} = filters
 
 useSeoMeta({
     title: () => t('page.title.index'),
-    description: () => t('page.content.index'),
+    description: () => t('seo.routes', { name: gym.value?.name ?? '' }),
     ogTitle: () => t('page.title.index'),
-    ogDescription: () => t('page.content.index'),
+    ogDescription: () => t('seo.routes', { name: gym.value?.name ?? '' }),
     ogType: 'website',
-})
-
-interface TableOptions {
-    page: number
-    itemsPerPage: number
-    sortBy: SortOption[]
-}
-
-const tableOptions = reactive<TableOptions>({
-    page: 1,
-    itemsPerPage: 20,
-    sortBy: [{ key: 'screw_date', order: 'desc' }],
 })
 
 definePageMeta({ keepalive: true })
@@ -359,43 +315,24 @@ const sentinelRef = useTemplateRef<HTMLElement>('sentinelRef')
 
 const { gradeColumnTitle } = useGradeSystems()
 
-const UButton = resolveComponent('UButton')
-
-function sortableHeader(label: string, key: string) {
-    return () => {
-        const active = tableOptions.sortBy[0]
-        const order = active?.key === key ? active.order : undefined
-        return h(UButton, {
-            color: 'neutral',
-            variant: 'ghost',
-            label,
-            trailingIcon:
-                order === 'asc'
-                    ? 'i-lucide-arrow-up'
-                    : order === 'desc'
-                      ? 'i-lucide-arrow-down'
-                      : 'i-lucide-arrow-up-down',
-            class: '-mx-2.5 w-[calc(100%+1.25rem)] font-semibold',
-            onClick: () => toggleSort(key),
-        })
-    }
-}
-
-function toggleSort(key: string) {
-    const active = tableOptions.sortBy[0]
-    const sortBy: SortOption[] =
-        active?.key !== key
-            ? [{ key, order: 'asc' }]
-            : active.order === 'asc'
-              ? [{ key, order: 'desc' }]
-              : []
-    void loadRoutes({ page: 1, sortBy })
-}
-
-const tableUi = {
-    th: 'px-2 last:pe-4 2xl:px-4',
-    td: 'px-2 py-2 last:pe-4 2xl:px-4 whitespace-normal text-default',
-}
+const routeQueryKey = computed(() =>
+    JSON.stringify([gymId.value, baseQuery.value]),
+)
+const {
+    tableOptions,
+    tableUi,
+    sortableHeader,
+    pageInfo,
+    sortItemsMobile,
+    onMobileSortChange,
+    routeSort,
+} = useRouteTable({
+    itemsPerPage: 20,
+    totalItems: computed(() => routePage.value.totalItems),
+    queryKey: routeQueryKey,
+    defaultSort: '-screw_date',
+    load: (options) => loadRoutes(options),
+})
 
 const columnsDesktop = computed<TableColumn<RouteListItem>[]>(() => [
     { id: 'color', header: t('climbing.color') },
@@ -428,54 +365,13 @@ const columnsDesktop = computed<TableColumn<RouteListItem>[]>(() => [
     { id: 'actions', header: t('table.actions') },
 ])
 
-const pageInfo = computed(() => {
-    const { page, itemsPerPage } = tableOptions
-    const start = totalItems.value ? (page - 1) * itemsPerPage + 1 : 0
-    const end = Math.min(page * itemsPerPage, totalItems.value)
-    return `${start}-${end} / ${totalItems.value}`
-})
-
-const routeQueryKey = computed(() =>
-    JSON.stringify([gymId.value, baseQuery.value]),
-)
-
-const sortItemsMobile = computed(() => [
-    {
-        title: t('routes.screwed_at'),
-        key: 'screw_date',
-        defaultOrder: 'desc' as const,
-    },
-    {
-        title: t('ratings.score'),
-        key: 'score',
-        defaultOrder: 'desc' as const,
-    },
-    { title: t('climbing.routename'), key: 'name' },
-    { title: t('climbing.difficulty'), key: 'difficulty' },
-    { title: t('climbing.anchor_point'), key: 'anchor_point' },
-])
-
-function onMobileSortChange(sortBy: SortOption[]) {
-    tableOptions.sortBy = sortBy
-    tableOptions.page = 1
-    void loadRoutes({}, { append: false })
-}
-
-const toRouteSort = (sortByArr: SortOption[]) =>
-    toSortParam(sortByArr, '-screw_date', {
-        score: 'average_rating',
-        difficulty: 'type,grade_index',
-    })
-
-interface RoutePage {
-    items: RouteScoreRecord[]
-    totalItems: number
-}
-
-function fetchRoutes(page: number, perPage: number): Promise<RoutePage> {
+function fetchRoutes(
+    page: number,
+    perPage: number,
+): Promise<ListPage<RouteRecord>> {
     return listRoutes(gymId.value, {
         ...baseQuery.value,
-        sort: toRouteSort(tableOptions.sortBy),
+        sort: routeSort(),
         include: ['location', 'wall'],
         page,
         limit: perPage,
@@ -485,9 +381,10 @@ function fetchRoutes(page: number, perPage: number): Promise<RoutePage> {
 
 const nuxtApp = useNuxtApp()
 const loadedRoutePage = () =>
-    nuxtApp._asyncData[cacheKeys.routesList]?.data.value as RoutePage
+    nuxtApp._asyncData[cacheKeys.routesList]?.data
+        .value as ListPage<RouteRecord>
 
-function fetchLoadedRoutes(): Promise<RoutePage> {
+function fetchLoadedRoutes(): Promise<ListPage<RouteRecord>> {
     const { page, itemsPerPage } = tableOptions
     return unlessQueryChanged(
         () => JSON.stringify([routeQueryKey.value, tableOptions.sortBy]),
@@ -501,27 +398,33 @@ function fetchLoadedRoutes(): Promise<RoutePage> {
 
 useLiveQuery(cacheKeys.routesList, baseQuery)
 
-const { data: routePage } = await useAsyncData(
-    cacheKeys.routesList,
-    (nuxtApp) =>
-        keepWhenOffline(nuxtApp, cacheKeys.routesList, fetchLoadedRoutes),
-    { default: () => ({ items: [] as RouteScoreRecord[], totalItems: 0 }) },
-)
+const {
+    data: routePage,
+    error: routesError,
+    refresh: refreshRoutes,
+} = await useOfflineData(cacheKeys.routesList, fetchLoadedRoutes, {
+    default: () => ({ items: [] as RouteRecord[], totalItems: 0 }),
+})
 loading.value = false
+
+const loadFailed = ref(false)
+watch(
+    routesError,
+    (error) => {
+        loadFailed.value = !!error
+    },
+    { immediate: true },
+)
+
+async function retryLoad() {
+    loadFailed.value = false
+    tableOptions.page = 1
+    await refreshRoutes()
+}
 
 const totalItems = computed(() => routePage.value.totalItems)
 const routes = computed<RouteListItem[]>(() =>
-    routePage.value.items.map((route) => {
-        const hasRatings =
-            Number(route.ratings_count ?? 0) > 0 &&
-            typeof route.average_rating === 'number'
-        return {
-            ...route,
-            creator: normalizeCreators(route.creator),
-            has_ratings: hasRatings,
-            score: hasRatings ? route.average_rating : undefined,
-        }
-    }),
+    routePage.value.items.map(toRouteRow),
 )
 
 // Pages load one at a time, so the column stays once a page of this search showed a comment.
@@ -540,7 +443,7 @@ const showComments = computed(
 )
 
 async function loadRoutes(
-    options: Partial<TableOptions> = {},
+    options: RouteTableLoad = {},
     meta: { append?: boolean } = {},
 ): Promise<void> {
     loading.value = true
@@ -566,12 +469,13 @@ async function loadRoutes(
                 : res.items,
             totalItems: res.totalItems,
         }
+        loadFailed.value = false
         if (!meta.append)
             announce(t('climbing.routesFound', { n: res.totalItems }))
     } catch (error) {
         if (isAbortError(error)) return
-        console.error('Failed to load routes:', error)
-        notifyError(t('notifications.error.generic'))
+        if (meta.append) notifyError(t('notifications.error.generic'))
+        else loadFailed.value = true
     } finally {
         loading.value = false
     }
@@ -583,40 +487,13 @@ function loadMore() {
     void loadRoutes({}, { append: true })
 }
 
-let scrollObserver: IntersectionObserver | null = null
-
-watch(sentinelRef, (sentinel) => {
-    scrollObserver?.disconnect()
-    scrollObserver = null
-    if (!sentinel) return
-    scrollObserver = new IntersectionObserver(
-        (entries) => {
-            if (entries[0]?.isIntersecting) loadMore()
-        },
-        { rootMargin: '200px' },
-    )
-    scrollObserver.observe(sentinel)
-})
-
-let debounceT: ReturnType<typeof setTimeout> | null = null
-watch(routeQueryKey, () => {
-    if (debounceT) {
-        clearTimeout(debounceT)
-    }
-
-    debounceT = setTimeout(() => {
-        tableOptions.page = 1
-        void loadRoutes({}, { append: false })
-    }, 300)
-})
-
-onBeforeUnmount(() => {
-    if (debounceT) {
-        clearTimeout(debounceT)
-        debounceT = null
-    }
-    scrollObserver?.disconnect()
-})
+useIntersectionObserver(
+    sentinelRef,
+    ([entry]) => {
+        if (entry?.isIntersecting) loadMore()
+    },
+    { rootMargin: '200px' },
+)
 </script>
 
 <style scoped>

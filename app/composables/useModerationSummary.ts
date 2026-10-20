@@ -1,4 +1,4 @@
-import { getModerationSummary } from '~/api/moderation'
+import { moderationSummary } from '~/api/moderation'
 import { useAuthState } from '~/api/auth'
 import type { NavBadges } from '~/utils/navigation'
 import { navContext } from '~/utils/navigation'
@@ -37,7 +37,7 @@ export function useModerationSummary() {
             return
         }
         const request = ++latestRequest
-        const next = await getModerationSummary(
+        const next = await moderationSummary(
             scope.value === 'platform' ? undefined : scope.value,
         ).catch(() => null)
         if (request === latestRequest) summary.value = next

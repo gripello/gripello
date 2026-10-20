@@ -12,7 +12,7 @@
                     <LayoutListRow
                         v-for="section in group.sections"
                         :key="section.id"
-                        :to="{ query: { section: section.id } }"
+                        :to="{ query: { [queryKey]: section.id } }"
                         :data-testid="`${testIdPrefix}-drill-${section.id}`"
                     >
                         <UIcon
@@ -28,6 +28,13 @@
                         >
                             {{ section.label }}
                         </span>
+                        <UChip
+                            v-if="section.badge"
+                            color="warning"
+                            size="sm"
+                            standalone
+                            inset
+                        />
                         <UIcon
                             name="i-lucide-chevron-right"
                             class="size-5 text-dimmed"
@@ -37,12 +44,12 @@
             </template>
             <UButton
                 v-else
-                :to="{ query: {} }"
                 icon="i-lucide-arrow-left"
                 color="neutral"
                 variant="ghost"
                 class="mb-2 -ml-2 min-h-11 lg:hidden"
                 :data-testid="`${testIdPrefix}-drill-back`"
+                @click="backToList"
             >
                 {{ activeLabel }}
             </UButton>
@@ -56,14 +63,34 @@
             :aria-label="$t('settings.sections')"
         >
             <template #default="{ item }">
-                <span :data-testid="`${testIdPrefix}-section-${item.value}`">
-                    {{ item.label }}
-                </span>
+                <UChip :show="!!item.warning" color="warning" size="sm">
+                    <span
+                        :data-testid="`${testIdPrefix}-section-${item.value}`"
+                    >
+                        {{ item.label }}
+                    </span>
+                </UChip>
+            </template>
+        </LayoutTabs>
+        <LayoutTabs
+            v-if="desktopTabs"
+            v-model="selectedSection"
+            :items="sectionTabItems"
+            :content="false"
+            class="mb-4 max-lg:hidden"
+            :aria-label="$t('settings.sections')"
+        >
+            <template #default="{ item }">
+                <UChip :show="!!item.warning" color="warning" size="sm">
+                    <span :data-testid="`${testIdPrefix}-tab-${item.value}`">
+                        {{ item.label }}
+                    </span>
+                </UChip>
             </template>
         </LayoutTabs>
 
         <div class="flex gap-8">
-            <aside class="hidden w-52 shrink-0 lg:block">
+            <aside v-if="!desktopTabs" class="hidden w-52 shrink-0 lg:block">
                 <nav
                     class="settings-nav-desktop"
                     :aria-label="$t('settings.sections')"
@@ -81,6 +108,7 @@
                     class="lg:-mb-6"
                     :show="hasChanges"
                     :loading="saving"
+                    :disabled="saveDisabled"
                     :test-id-prefix="testIdPrefix"
                     cancelable
                     @save="emit('save')"
@@ -108,33 +136,47 @@
 <script setup lang="ts">
 import { requestedSection } from '~/utils/navigation'
 
-const props = defineProps<{
-    sections: { id: string; label: string; icon: string; danger?: boolean }[]
-    hasChanges: boolean
-    testIdPrefix: string
-    saving?: boolean
-    drillDown?: boolean
-}>()
+const props = withDefaults(
+    defineProps<{
+        sections: {
+            id: string
+            label: string
+            icon: string
+            danger?: boolean
+            badge?: boolean
+        }[]
+        hasChanges: boolean
+        testIdPrefix: string
+        saving?: boolean
+        saveDisabled?: boolean
+        unsavedChanges?: boolean
+        drillDown?: boolean
+        desktopTabs?: boolean
+        queryKey?: string
+    }>(),
+    { queryKey: 'section', unsavedChanges: undefined },
+)
 const emit = defineEmits<{ save: []; cancel: [] }>()
 
 const route = useRoute()
 const activeSection = computed(() =>
     requestedSection(
-        route.query.section,
+        route.query[props.queryKey],
         props.sections.map((section) => section.id),
     ),
 )
 
-const sectionChosen = computed(() => !!route.query.section)
+const sectionChosen = computed(() => !!route.query[props.queryKey])
 const activeLabel = computed(
     () =>
         props.sections.find((section) => section.id === activeSection.value)
             ?.label,
 )
 
+const { select, backToList } = useSectionQuery(props.queryKey)
 const selectedSection = computed({
     get: () => activeSection.value,
-    set: (section: string) => navigateTo({ query: { section } }),
+    set: select,
 })
 
 const sectionTabItems = computed(() =>
@@ -142,6 +184,7 @@ const sectionTabItems = computed(() =>
         label: section.label,
         icon: section.icon,
         value: section.id,
+        warning: section.badge,
     })),
 )
 
@@ -161,16 +204,17 @@ const sectionNavItems = computed(() =>
         label: section.label,
         icon: section.icon,
         class: section.danger ? 'mt-6 text-error' : undefined,
-        to: { query: { section: section.id } },
+        to: { query: { [props.queryKey]: section.id } },
+        replace: true,
         active: activeSection.value === section.id,
         'data-testid': `${props.testIdPrefix}-section-${section.id}`,
     })),
 )
 
-const { discardDialogOpen, confirmDiscard, settleDiscard } = useDiscardConfirm(
-    () => props.hasChanges,
+const { discardDialogOpen, settleDiscard, leaveGuard } = useDiscardConfirm(
+    () => props.unsavedChanges ?? props.hasChanges,
 )
-onBeforeRouteLeave(() => confirmDiscard())
+onBeforeRouteLeave(leaveGuard)
 </script>
 
 <style scoped>

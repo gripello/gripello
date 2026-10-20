@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { reactive } from 'vue'
 import UserSecurity from '~/components/platform/UserSecurity.vue'
 import en from '../../i18n/locales/en.json'
+import { useReauth } from '~/composables/useReauth'
 
 vi.mock('~/api/platform', async (importActual) => ({
     ...(await importActual<typeof import('~/api/platform')>()),
@@ -11,6 +12,7 @@ vi.mock('~/api/platform', async (importActual) => ({
 describe('PlatformUserSecurity', () => {
     it('renders no confirmation text while unlocking', async () => {
         vi.stubGlobal('reactive', reactive)
+        vi.stubGlobal('useReauth', useReauth)
         vi.stubGlobal('useAsyncAction', () => ({
             pending: ref(true),
             run: (action: () => Promise<unknown>) => action(),
@@ -19,7 +21,7 @@ describe('PlatformUserSecurity', () => {
             props: {
                 user: {
                     id: 'u1',
-                    locked_until: '2099-01-01 00:00:00.000Z',
+                    locked_until: '2099-01-01T00:00:00.000Z',
                 } as never,
             },
             global: {

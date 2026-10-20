@@ -1,6 +1,7 @@
 import { isNativeApp } from './native'
 
-export async function saveBlob(blob: Blob, filename: string) {
+export async function saveBlob(blob: Blob, name: string) {
+    const filename = safeFilename(name)
     if (isNativeApp()) return shareFile(blob, filename)
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -10,6 +11,31 @@ export async function saveBlob(blob: Blob, filename: string) {
     link.click()
     link.remove()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+export async function saveDownload(url: string, fallbackName: string) {
+    const response = await fetch(url)
+    if (!response.ok)
+        throw new Error(`Download failed with status ${response.status}`)
+    const filename =
+        attachmentName(response.headers.get('Content-Disposition')) ??
+        fallbackName
+    await saveBlob(await response.blob(), filename)
+}
+
+// A slash in a gym or competition name would make the app write into a missing directory.
+export function safeFilename(name: string) {
+    const cleaned = name
+        .replace(/[\\/:*?"<>|\u0000-\u001f\u007f]+/g, '-')
+        .replace(/\s+/g, ' ')
+        .replace(/^[\s.-]+|[\s-]+$/g, '')
+    return cleaned || 'download'
+}
+
+export function attachmentName(disposition: string | null) {
+    const encoded = disposition?.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+    if (encoded) return decodeURIComponent(encoded)
+    return disposition?.match(/filename="([^"]+)"/i)?.[1] ?? null
 }
 
 // The WebView can't save blob: URLs, so the app writes the file to its cache and offers the share sheet.
@@ -24,7 +50,9 @@ async function shareFile(blob: Blob, filename: string) {
         data: await blobToBase64(blob),
         directory: Directory.Cache,
     })
-    await Share.share({ title: filename, files: [uri] })
+    await Share.share({ title: filename, files: [uri] }).catch((error) => {
+        if (!isShareCancel(error)) throw error
+    })
 }
 
 export function blobToBase64(blob: Blob) {
@@ -35,3 +63,6 @@ export function blobToBase64(blob: Blob) {
         reader.readAsDataURL(blob)
     })
 }
+
+const isShareCancel = (error: unknown) =>
+    /cancel/i.test((error as { message?: string } | null)?.message ?? '')

@@ -61,8 +61,18 @@ test('the info page and the landing map show the gym location after consent', as
     )
     const map = page.getByTestId('gym-location-map')
     await expect(map.locator('.gym-map-pin')).toHaveCount(0)
+    const worker = page.waitForResponse((response) =>
+        response.url().includes('maplibre-gl-worker'),
+    )
+    const workerErrors: string[] = []
+    page.on('console', (message) => {
+        if (/worker failed to load|MIME type/i.test(message.text()))
+            workerErrors.push(message.text())
+    })
     await map.getByTestId('gym-map-consent').click()
     await expect(map.locator('.gym-map-pin')).toHaveCount(1)
+    expect((await worker).headers()['content-type']).toMatch(/javascript/)
+    expect(workerErrors).toEqual([])
 
     await gotoSettled(page, '/')
     const landingMap = page.getByTestId('gym-location-map')

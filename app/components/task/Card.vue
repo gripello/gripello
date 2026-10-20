@@ -1,11 +1,9 @@
 <template>
-    <UCard
-        variant="outline"
-        :class="[
-            'transition-shadow hover:shadow-md',
-            urgentActive ? 'ring-error/60' : 'hover:ring-accented',
-        ]"
-        :ui="{ body: 'p-3 sm:p-3 flex flex-col gap-2.5' }"
+    <div
+        class="flex flex-col gap-2.5 rounded-lg bg-default p-3 ring transition-shadow hover:shadow-md"
+        :class="
+            urgentActive ? 'ring-error/60' : 'ring-default hover:ring-accented'
+        "
         :data-testid="`task-card-${task.id}`"
         :data-urgent="urgentActive || undefined"
     >
@@ -105,7 +103,7 @@
         <div class="flex items-center gap-2 pt-2 border-t border-default">
             <UTooltip :text="createdAt">
                 <span
-                    class="text-xs text-dimmed tabular-nums"
+                    class="text-xs text-muted tabular-nums"
                     data-testid="task-card-created"
                     >{{ createdAgo }}</span
                 >
@@ -160,10 +158,12 @@
                 </UButton>
             </div>
         </div>
-    </UCard>
+    </div>
 </template>
 
 <script setup lang="ts">
+import { THUMBS } from '#shared/utils/thumbs'
+import { TASK_STATUSES } from '#shared/utils/tasks'
 import { fileUrl } from '~/api/client'
 import {
     DEFECT_CATEGORY_ICONS,
@@ -171,7 +171,6 @@ import {
     isTaskOverdue,
     NORMAL_TASK_PRIORITY,
     TASK_STATUS_ICONS,
-    TASK_STATUSES,
     taskAge,
     taskPriorityColor,
     taskPriorityName,
@@ -347,7 +346,7 @@ const thumbUrl = computed(() =>
     fileToken.value
         ? fileUrl('tasks', props.task, props.task.photo, {
               token: fileToken.value,
-              thumb: '400x0',
+              thumb: THUMBS.photo,
           })
         : '',
 )

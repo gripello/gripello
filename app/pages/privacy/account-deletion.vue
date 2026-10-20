@@ -9,7 +9,7 @@
             back-to="/privacy"
         />
 
-        <div class="surface-card legal-doc">
+        <LayoutPanel flush as="div" class="legal-doc">
             <section>
                 <h2>{{ $t('legal.accountDeletionPage.stepsTitle') }}</h2>
                 <ol>
@@ -60,7 +60,7 @@
                     >
                 </p>
             </section>
-        </div>
+        </LayoutPanel>
     </div>
 </template>
 
@@ -76,7 +76,14 @@ const DELETED = [
     'social',
     'memberships',
 ] as const
-const KEPT = ['reviews', 'reports', 'activity', 'logs', 'backups'] as const
+const KEPT = [
+    'reviews',
+    'reports',
+    'activity',
+    'exports',
+    'logs',
+    'backups',
+] as const
 
 const { t } = useI18n()
 const { data: settings } = useNuxtData<SettingsRecord>('settings')

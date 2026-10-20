@@ -2,24 +2,7 @@
     <div class="mx-auto w-full p-4">
         <LayoutPageHeader :title="t('friends.title')" />
 
-        <LayoutEmptyState
-            v-if="followsError || feedError"
-            variant="error"
-            :title="t('errors.loadFailed')"
-            data-testid="load-error"
-        >
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-refresh-cw"
-                    data-testid="load-error-retry"
-                    @click="reloadAll"
-                >
-                    {{ t('errors.retry') }}
-                </UButton>
-            </template>
-        </LayoutEmptyState>
+        <LayoutLoadError v-if="followsError || feedError" @retry="reloadAll" />
 
         <div
             v-else
@@ -67,15 +50,13 @@
             <aside
                 class="flex flex-col gap-4 lg:col-start-3 lg:row-span-2 lg:row-start-1"
             >
-                <section
-                    class="overflow-hidden rounded-lg bg-default ring ring-default"
-                    data-testid="friends-me"
-                >
+                <LayoutPanel flush data-testid="friends-me">
                     <ClimberBanner
                         :id="myId"
                         :banner="byId.get(myId)?.banner"
                         :avatar="byId.get(myId)?.avatar"
                         :name="nameOf(myId)"
+                        sizes="33vw"
                         class="h-20 max-lg:hidden"
                     />
                     <div
@@ -125,7 +106,7 @@
                             {{ t('friends.myProfile') }}
                         </UButton>
                     </div>
-                </section>
+                </LayoutPanel>
 
                 <section>
                     <UInput
@@ -139,7 +120,21 @@
                     />
                     <template v-if="searchTerm.length >= 3">
                         <LayoutEmptyState
-                            v-if="!searching && !results.length"
+                            v-if="!searching && searchError"
+                            variant="error"
+                            :card="false"
+                            :title="
+                                t(
+                                    requestErrorKey(
+                                        searchError,
+                                        'errors.loadFailed',
+                                    ),
+                                )
+                            "
+                            data-testid="friends-search-error"
+                        />
+                        <LayoutEmptyState
+                            v-else-if="!searching && !results.length"
                             icon="i-lucide-user-search"
                             :card="false"
                             :title="t('friends.noResults')"
@@ -265,7 +260,9 @@
 </template>
 
 <script setup lang="ts">
+import { useTimeoutFn } from '@vueuse/core'
 import { searchClimbers } from '~/api/social'
+import { requestErrorKey } from '~/utils/errors'
 import { listFeed } from '~/api/ticks'
 import type { FollowRecord } from '~/types/models'
 import type { FeedTick } from '~/utils/friends'
@@ -350,12 +347,17 @@ const counts = computed(() => ({
 
 const search = ref('')
 const searchTerm = ref('')
-let searchDebounce: ReturnType<typeof setTimeout> | undefined
-watch(search, (value) => {
-    clearTimeout(searchDebounce)
-    searchDebounce = setTimeout(() => (searchTerm.value = value.trim()), 300)
-})
-const { data: searchResults, status: searchStatus } = useAsyncData(
+const { start: setSearchTermSoon } = useTimeoutFn(
+    (value: string) => (searchTerm.value = value.trim()),
+    300,
+    { immediate: false },
+)
+watch(search, (value) => setSearchTermSoon(value))
+const {
+    data: searchResults,
+    status: searchStatus,
+    error: searchError,
+} = useAsyncData(
     'friends-search',
     () =>
         searchTerm.value.length >= 3
@@ -393,7 +395,7 @@ async function act(id: string, action: () => Promise<unknown>) {
         await action()
     } catch (error) {
         console.error(error)
-        notifyError(t('notifications.error.generic'))
+        notifyError(t(requestErrorKey(error, 'notifications.error.generic')))
     } finally {
         busy.value = ''
     }
@@ -415,6 +417,4 @@ function reloadAll() {
     void refreshFollows()
     void refreshFeed()
 }
-
-onBeforeUnmount(() => clearTimeout(searchDebounce))
 </script>

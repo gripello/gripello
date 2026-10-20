@@ -1,9 +1,16 @@
 import { mount } from '@vue/test-utils'
 import { ref } from 'vue'
-import GradeConversionDialog from '~/components/GradeConversionDialog.vue'
+import GradeConversionDialog from '~/components/grade/ConversionDialog.vue'
 import { DEFAULT_GYM_BANDS } from '#shared/utils/gradeReference'
 import { readableTextOn } from '~/utils/color'
 
+const saveDownload = vi.hoisted(() => vi.fn(async () => {}))
+vi.mock('~/utils/download', () => ({ saveDownload }))
+
+vi.stubGlobal('useAsyncAction', () => ({
+    pending: ref(false),
+    run: (action: () => unknown) => action(),
+}))
 vi.stubGlobal('useCurrentGymId', () => ref('gym1'))
 vi.stubGlobal('useGymBands', () => ({
     bands: ref(DEFAULT_GYM_BANDS),
@@ -11,7 +18,7 @@ vi.stubGlobal('useGymBands', () => ({
 }))
 
 describe('GradeConversionDialog', () => {
-    it('links the PDF download to the current gym', () => {
+    it("downloads the current gym's PDF through saveDownload", async () => {
         const wrapper = mount(GradeConversionDialog, {
             global: {
                 mocks: { $t: (key: string) => key, readableTextOn },
@@ -23,18 +30,20 @@ describe('GradeConversionDialog', () => {
                     LayoutSectionHeader: true,
                     UBadge: true,
                     UButton: {
-                        props: ['to'],
-                        template: '<a :href="to"><slot /></a>',
+                        template:
+                            '<button @click="$attrs.onClick?.()"><slot /></button>',
                     },
                 },
             },
         })
 
-        expect(
-            wrapper
-                .find('[data-testid="grade-conversion-pdf"]')
-                .attributes('href'),
-        ).toBe('/api/ui/grade-scale?gym=gym1')
+        await wrapper
+            .find('[data-testid="grade-conversion-pdf"]')
+            .trigger('click')
+        expect(saveDownload).toHaveBeenCalledWith(
+            '/api/ui/grade-scale?gym=gym1',
+            expect.stringMatching(/\.pdf$/),
+        )
     })
 })
 

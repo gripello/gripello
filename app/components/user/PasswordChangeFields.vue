@@ -19,12 +19,7 @@
             :placeholder="$t('account.placeholders.newPassword')"
             autocomplete="new-password"
             validate-on="blur"
-            :rules="[
-                rules.required,
-                rules.minLength,
-                rules.maxLength,
-                rules.strength,
-            ]"
+            :rules="[rules.required, rules.minLength, rules.strength]"
             icon="i-lucide-lock-keyhole-open"
             data-testid="password-new"
             @update:model-value="emit('update:password', $event)"
@@ -109,7 +104,6 @@ import type { InputProps } from '@nuxt/ui'
 import {
     required,
     minLength,
-    maxLength,
     passwordsMatch as makePasswordsMatchRule,
 } from '~/utils/validation'
 const props = withDefaults(
@@ -140,8 +134,7 @@ const { t } = useI18n()
 
 // ── Strength logic ────────────────────────────────────────────────────────
 const passwordRequirements = computed(() => [
-    { key: 'minLength', met: props.password.length >= 8 },
-    { key: 'maxLength', met: props.password.length <= 72 },
+    { key: 'minLength', met: [...props.password].length >= 8 },
     { key: 'uppercase', met: /[A-Z]/.test(props.password) },
     { key: 'lowercase', met: /[a-z]/.test(props.password) },
     { key: 'number', met: /\d/.test(props.password) },
@@ -154,9 +147,9 @@ const passwordRequirements = computed(() => [
 const strengthScore = computed(() => {
     if (!props.password) return 0
     const met = passwordRequirements.value.filter((r) => r.met).length
-    if (met <= 2) return 1
-    if (met <= 3) return 2
-    if (met <= 4) return 3
+    if (met <= 1) return 1
+    if (met <= 2) return 2
+    if (met <= 3) return 3
     return 4
 })
 
@@ -182,15 +175,13 @@ const passwordsMatch = computed(
 const rules = {
     required: required(t),
     minLength: minLength(t, 8),
-    maxLength: maxLength(t, 72),
     matchPassword: makePasswordsMatchRule(t, () => props.password),
     strength: () => strengthScore.value >= 3 || t('validation.passwordTooWeak'),
 }
 
 const isValid = computed(() => {
     const baseOk =
-        props.password.length >= 8 &&
-        props.password.length <= 72 &&
+        [...props.password].length >= 8 &&
         strengthScore.value >= 3 &&
         passwordsMatch.value
 
@@ -233,7 +224,7 @@ watch(isValid, (val) => emit('validity', val), { immediate: true })
     color: var(--ui-success);
 }
 .pcf-requirement-item.unmet {
-    color: color-mix(in oklab, var(--ui-text-highlighted) 45%, transparent);
+    color: var(--ui-text-muted);
 }
 
 .pcf-slide-down-enter-active,

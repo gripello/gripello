@@ -17,12 +17,14 @@
                 src="/gripello-light.svg"
                 :alt="logoAlt"
                 class="brand-logo__default brand-logo__default--light"
+                width="120"
                 height="36"
             />
             <img
                 src="/gripello-dark.svg"
                 :alt="logoAlt"
                 class="brand-logo__default brand-logo__default--dark"
+                width="120"
                 height="36"
             />
         </template>
@@ -30,6 +32,7 @@
 </template>
 
 <script setup lang="ts">
+import { THUMBS } from '#shared/utils/thumbs'
 import { fileUrl } from '~/api/client'
 import type { GymRecord } from '~/types/models'
 
@@ -38,7 +41,7 @@ const gymPath = useGymPath()
 
 const logoAlt = computed(() => props.gym?.name || 'Gripello')
 const logoUrl = computed(() =>
-    fileUrl('gyms', props.gym, props.gym?.page_logo, { thumb: '0x200' }),
+    fileUrl('gyms', props.gym, props.gym?.page_logo, { thumb: THUMBS.logo }),
 )
 </script>
 

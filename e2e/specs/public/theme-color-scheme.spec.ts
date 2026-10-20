@@ -181,8 +181,23 @@ test.describe('browser bars', () => {
             'light',
         )
         await page.emulateMedia({ colorScheme: 'dark' })
-        await page.waitForTimeout(300)
-        await expect(page.locator(appRoot)).toHaveClass(/(^|\s)light(\s|$)/)
+        await expect
+            .poll(() =>
+                page.evaluate(
+                    () => matchMedia('(prefers-color-scheme: dark)').matches,
+                ),
+            )
+            .toBe(true)
+        await expect
+            .poll(() =>
+                page
+                    .locator(appRoot)
+                    .evaluate((root) => [
+                        root.classList.contains('light'),
+                        root.classList.contains('dark'),
+                    ]),
+            )
+            .toEqual([true, false])
     })
 
     test('an open dialog dims the bars with its scrim', async ({ page }) => {

@@ -3,17 +3,19 @@ import { TICKS_DB } from './tickOutbox'
 import { RECENT_GYMS_KEY } from './recentGyms'
 import { PUSH_DECLINED_KEY } from './push'
 import { AUTH_COOKIE, SESSION_ONLY_AUTH_COOKIE } from '#shared/utils/authCookie'
+import {
+    GYM_COOKIE,
+    SIDEBAR_OPEN_COOKIE,
+    THEME_MODE_COOKIE,
+} from '#shared/utils/cookies'
 
+export { AUTH_COOKIE, SESSION_ONLY_AUTH_COOKIE } from '#shared/utils/authCookie'
 export {
-    AUTH_COOKIE,
-    LEGACY_AUTH_COOKIE,
-    LEGACY_SESSION_ONLY_AUTH_COOKIE,
-    SESSION_ONLY_AUTH_COOKIE,
-} from '#shared/utils/authCookie'
+    GYM_COOKIE,
+    SIDEBAR_OPEN_COOKIE,
+    THEME_MODE_COOKIE,
+} from '#shared/utils/cookies'
 
-export const THEME_MODE_COOKIE = 'theme-mode'
-export const SIDEBAR_OPEN_COOKIE = 'sidebar-open'
-export const GYM_COOKIE = 'gym'
 export const EXPORT_COLUMNS_KEY = 'gripello.export-columns'
 export const EXPORT_TAG_TEMPLATE_KEY = 'gripello.export-tag-template'
 export const COMPETITION_SCORES_KEY = 'gripello:competition-scores'

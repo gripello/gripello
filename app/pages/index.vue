@@ -81,9 +81,11 @@
                         <li
                             v-for="gym in section.gyms"
                             :key="gym.id"
-                            class="surface-card flex min-w-0 items-center"
+                            class="flex min-w-0 items-center rounded-lg bg-default"
                             :class="
-                                gym.id === selectedId && 'ring-2 ring-primary'
+                                gym.id === selectedId
+                                    ? 'ring-2 ring-primary'
+                                    : 'ring ring-default'
                             "
                         >
                             <NuxtLink
@@ -141,6 +143,7 @@
 </template>
 
 <script setup lang="ts">
+import { THUMBS } from '#shared/utils/thumbs'
 import { fileUrl } from '~/api/client'
 import { listGyms } from '~/api/gyms'
 import type { GymRecord } from '~/types/models'
@@ -178,7 +181,9 @@ const matching = computed(() => {
 })
 
 const logoUrl = (gym: GymRecord) =>
-    gym.page_logo ? fileUrl('gyms', gym, gym.page_logo, { thumb: '0x200' }) : ''
+    gym.page_logo
+        ? fileUrl('gyms', gym, gym.page_logo, { thumb: THUMBS.logo })
+        : ''
 const markers = computed(() => gymMarkers(matching.value, logoUrl))
 const hasMap = computed(() => markers.value.length > 0)
 
@@ -196,7 +201,7 @@ function selectGym(id: string) {
 const sections = computed(() =>
     landingSections(
         matching.value,
-        gymMemberships.value.map((membership) => membership.expand?.gym?.slug),
+        gymMemberships.value.map((membership) => membership.gym.slug),
         recentSlugs.value,
     ),
 )
@@ -204,6 +209,8 @@ const sections = computed(() =>
 useSeoMeta({
     title: () => t('landing.title'),
     ogTitle: () => t('landing.title'),
+    description: () => t('seo.landing'),
+    ogDescription: () => t('seo.landing'),
     ogType: 'website',
 })
 </script>

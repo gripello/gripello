@@ -1,3 +1,4 @@
+import { competitionTopic, gymCompetitionsTopic } from '#shared/utils/topics'
 export interface CompetitionChange {
     competition: string
     gym?: string
@@ -12,12 +13,6 @@ export interface CompetitionChange {
     entry?: string
     at: number
 }
-
-export const competitionTopic = (competitionId: string) =>
-    `competition_changes:${competitionId}`
-
-export const gymCompetitionsTopic = (gymId: string) =>
-    gymId ? `competitions:${gymId}` : null
 
 // Lists of a gym's competitions reload when one is created, changes status or is deleted.
 export function useGymCompetitionsLive(refresh: () => Promise<unknown>) {

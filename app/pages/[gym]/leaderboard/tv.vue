@@ -29,8 +29,10 @@
 </template>
 
 <script setup lang="ts">
+import { leaderboardTopic } from '#shared/utils/topics'
+import { useIntervalFn } from '@vueuse/core'
 import { qrDataUrl } from '~/utils/qrDataUrl'
-import { LEADERBOARD_REFRESH_MS, leaderboardTopic } from '~/utils/leaderboard'
+import { LEADERBOARD_REFRESH_MS } from '~/utils/leaderboard'
 import { TV_BOARD_ROWS } from '~/utils/tvScreen'
 
 definePageMeta({ layout: false })
@@ -75,12 +77,15 @@ const seasonLabel = computed(
 )
 
 const qrUrl = ref('')
-let refreshTimer: ReturnType<typeof setInterval> | undefined
+const { resume: startRefresh } = useIntervalFn(
+    () => void refreshBoards(),
+    REFRESH_MS,
+    { immediate: false },
+)
 onMounted(async () => {
-    refreshTimer = setInterval(() => void refreshBoards(), REFRESH_MS)
+    startRefresh()
     qrUrl.value = await qrDataUrl(
         `${requestUrl.origin}${gymPath('/leaderboard')}`,
     )
 })
-onBeforeUnmount(() => clearInterval(refreshTimer))
 </script>

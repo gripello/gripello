@@ -70,14 +70,16 @@
         <div class="mt-4">
             <LayoutLoadingState v-if="loading" />
 
+            <LayoutLoadError v-else-if="loadFailed" @retry="reload" />
+
             <LayoutEmptyState
-                v-if="!loading && !entries.length"
+                v-else-if="!entries.length"
                 icon="i-lucide-clipboard-clock"
                 :title="t('audit.empty')"
                 :hint="t('audit.emptyHint')"
             />
 
-            <LayoutListGroup v-if="!loading && entries.length">
+            <LayoutListGroup v-else>
                 <AuditCard
                     v-for="entry in entries"
                     :key="entry.id"
@@ -85,7 +87,7 @@
                 />
             </LayoutListGroup>
 
-            <div v-if="hasMore" class="text-center mt-4">
+            <div v-if="hasMore && !loadFailed" class="text-center mt-4">
                 <UButton
                     color="neutral"
                     variant="soft"
@@ -114,6 +116,9 @@
 </template>
 
 <script setup lang="ts">
+import { liveTopics } from '#shared/utils/topics'
+import { AUDIT_ACTIONS } from '#shared/utils/audit'
+import { useTimeoutFn } from '@vueuse/core'
 import type { RecordChange } from '~/composables/useRealtime'
 import { listGyms } from '~/api/gyms'
 import { listMembers } from '~/api/members'
@@ -124,7 +129,6 @@ import { gymTitle } from '~/utils/gymNames'
 import {
     AUDIT_ACTOR_GUESTS,
     AUDIT_ACTOR_PLATFORM,
-    AUDIT_ACTIONS,
     matchesAuditActor,
     AUDIT_PERIODS,
     AUDITED_COLLECTIONS,
@@ -157,12 +161,11 @@ const { data: auditGyms } = await useAsyncData(
     async () =>
         isPlatformAdmin.value
             ? listGyms()
-            : gymMemberships.value.flatMap((membership) =>
-                  membership.expand?.gym &&
-                  can('view_audit_log', membership.gym)
-                      ? [membership.expand.gym]
-                      : [],
-              ),
+            : gymMemberships.value
+                  .filter((membership) =>
+                      can('view_audit_log', membership.gym.id),
+                  )
+                  .map((membership) => membership.gym),
     { default: () => [] },
 )
 
@@ -257,10 +260,16 @@ async function fetchList(target = 1) {
     return result
 }
 
-const { data: initial } = await useAsyncData('activity-log', async () => {
-    await fetchList(1)
-    return { entries: entries.value, totalItems: totalItems.value }
-})
+const { data: initial, error: initialError } = await useAsyncData(
+    'activity-log',
+    async () => {
+        await fetchList(1)
+        return { entries: entries.value, totalItems: totalItems.value }
+    },
+)
+const listFailed = ref(false)
+const loadFailed = computed(() => listFailed.value || !!initialError.value)
+const { error: notifyError } = useNotification()
 if (initial.value) {
     entries.value = initial.value.entries
     totalItems.value = initial.value.totalItems
@@ -271,7 +280,7 @@ const { data: settings } = useNuxtData('settings')
 const retentionDays = computed(() => settings.value?.audit_retention_days ?? 90)
 
 useRealtime(
-    'audit_logs',
+    liveTopics.auditLogs,
     (e: RecordChange<AuditLogRecord>) => {
         if (e.action !== 'create' || !e.record) return
         if (page.value !== 1) return
@@ -310,26 +319,25 @@ definePageMeta({
     alias: ['/platform/audit'],
 })
 
-let searchDebounce: ReturnType<typeof setTimeout> | undefined
-
-watch(search, () => {
-    clearTimeout(searchDebounce)
-    searchDebounce = setTimeout(() => void reload(), 300)
+const { start: reloadSoon } = useTimeoutFn(() => void reload(), 300, {
+    immediate: false,
 })
+
+watch(search, () => reloadSoon())
 
 watch(
     [actionFilter, collectionFilter, periodFilter, actorFilter, gymFilter],
     () => void reload(),
 )
 
-onBeforeUnmount(() => clearTimeout(searchDebounce))
-
 async function reload() {
     loading.value = true
     try {
         await fetchList(1)
-    } catch (err) {
-        console.error('Failed to load audit log:', err)
+        listFailed.value = false
+        initialError.value = undefined
+    } catch {
+        listFailed.value = true
     } finally {
         loading.value = false
     }
@@ -339,8 +347,8 @@ async function loadMore() {
     loadingMore.value = true
     try {
         await fetchList(page.value + 1)
-    } catch (err) {
-        console.error('Failed to load more audit entries:', err)
+    } catch {
+        notifyError(t('notifications.error.generic'))
     } finally {
         loadingMore.value = false
     }

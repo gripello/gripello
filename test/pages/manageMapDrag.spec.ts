@@ -1,13 +1,12 @@
 import { readFileSync } from 'node:fs'
 
 describe('placement page route drag', () => {
-    it('claims touchmove in the capture phase so pull-to-refresh sees it prevented', () => {
-        const source = readFileSync('app/pages/[gym]/manage/map.vue', 'utf8')
-        expect(source).toMatch(
-            /addEventListener\('touchmove', preventScroll, \{\s*passive: false,\s*capture: true,/,
-        )
-        expect(source).toMatch(
-            /removeEventListener\('touchmove', preventScroll, \{\s*capture: true,?\s*\}\)/,
+    it('drags list rows through useLongPressDrag, which claims touchmove in the capture phase', () => {
+        const page = readFileSync('app/pages/[gym]/manage/map.vue', 'utf8')
+        const drag = readFileSync('app/composables/useLongPressDrag.ts', 'utf8')
+        expect(page).toContain('@pointerdown="drag.startPointer($event, item)"')
+        expect(drag).toMatch(
+            /addEventListener\('touchmove', onTouchMove, \{\s*passive: false,\s*capture: true,/,
         )
     })
 })

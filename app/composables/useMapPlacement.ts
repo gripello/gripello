@@ -1,3 +1,4 @@
+import { parseDate } from '#shared/utils/formatting'
 import type { Ref } from 'vue'
 import type { RouteRecord, WallRecord } from '~/types/models'
 import type { RouteTypeFilter } from '~/components/map/FilterChips.vue'
@@ -11,7 +12,7 @@ import {
     wallForAnchor,
 } from '#shared/utils/mapGeometry'
 import { formatGrade, gradeKey } from '#shared/utils/grades'
-import { toHex6 } from '~/utils/color'
+import { toHex6 } from '#shared/utils/color'
 import {
     applyPlacements,
     placementChanges,
@@ -182,14 +183,10 @@ export function useMapPlacement(
         const now = Date.now()
         const ages = wallRoutes.value
             .filter((item) => !item.permanent)
-            .map((item) =>
-                item.screw_date
-                    ? (now -
-                          new Date(
-                              item.screw_date.replace(' ', 'T'),
-                          ).getTime()) /
-                      DAY_MS
-                    : NaN,
+            .map(
+                (item) =>
+                    (now - (parseDate(item.screw_date)?.getTime() ?? NaN)) /
+                    DAY_MS,
             )
             .filter((age) => Number.isFinite(age) && age >= 0)
         if (!ages.length) return null

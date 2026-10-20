@@ -2,6 +2,7 @@
     <AnalyticsSection
         :title="t('platform.overview.traffic.endpoints')"
         icon="i-lucide-route"
+        :loading="loading"
         :empty="!endpoints.length"
         empty-icon="i-lucide-route"
         :empty-text="t('table.no_data')"
@@ -156,19 +157,21 @@
 </template>
 
 <script setup lang="ts">
+import { formatCompact, formatPercent } from '#shared/utils/number'
 import type { TrafficEndpoint } from '~/api/platform'
 import {
     clientErrorRate,
     errorRate,
     errorRateColor,
-    formatCompact,
     formatMs,
-    formatPercent,
     sortEndpoints,
     type EndpointSort,
 } from '~/utils/platformTraffic'
 
-const props = defineProps<{ endpoints: TrafficEndpoint[] }>()
+const props = defineProps<{
+    endpoints: TrafficEndpoint[]
+    loading?: boolean
+}>()
 
 const { t, locale } = useI18n()
 

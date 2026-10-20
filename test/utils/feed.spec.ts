@@ -7,16 +7,16 @@ const tick = (id: string, day: string, created: string): FeedTick => ({
     user: 'anna',
     type: 'top',
     attempts: 1,
-    date: `${day} 12:00:00.000Z`,
+    date: day,
     created,
 })
 
 describe('activityDays', () => {
     it('groups sends per day, newest day and newest send first', () => {
         const days = activityDays([
-            tick('a', '2026-10-01', '2026-10-01 09:00'),
-            tick('b', '2026-10-02', '2026-10-02 08:00'),
-            tick('c', '2026-10-01', '2026-10-01 18:00'),
+            tick('a', '2026-10-01', '2026-10-01T09:00'),
+            tick('b', '2026-10-02', '2026-10-02T08:00'),
+            tick('c', '2026-10-01', '2026-10-01T18:00'),
         ])
         expect(
             days.map(({ day, ticks }) => [day, ticks.map((t) => t.id)]),

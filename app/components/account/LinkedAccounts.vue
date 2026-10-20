@@ -5,18 +5,15 @@
         data-testid="linked-accounts"
     >
         <LayoutEyebrow>{{ t('account.linkedAccounts.title') }}</LayoutEyebrow>
-        <UPageCard variant="outline" :ui="{ container: LIST }">
-            <div
+        <LayoutListGroup>
+            <LayoutListRow
                 v-for="account in linked?.items ?? []"
                 :key="account.id"
-                class="flex items-center gap-3 py-1 ps-4 pe-1"
+                dense
+                :icon="oauth2ProviderIcon(account.provider)"
                 :data-testid="`linked-account-${account.provider}`"
             >
-                <UIcon
-                    :name="oauth2ProviderIcon(account.provider)"
-                    class="size-4 shrink-0 text-muted"
-                />
-                <div class="min-w-0 flex-1 py-2">
+                <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-medium text-highlighted">
                         {{ providerName(account.provider) }}
                     </p>
@@ -33,18 +30,15 @@
                     :data-testid="`linked-account-unlink-${account.provider}`"
                     @click="unlinking = account"
                 />
-            </div>
-            <div
+            </LayoutListRow>
+            <LayoutListRow
                 v-for="provider in linkable"
                 :key="provider.name"
-                class="flex items-center gap-3 py-1 ps-4 pe-1"
+                dense
+                :icon="oauth2ProviderIcon(provider.name)"
             >
-                <UIcon
-                    :name="oauth2ProviderIcon(provider.name)"
-                    class="size-4 shrink-0 text-muted"
-                />
                 <p
-                    class="min-w-0 flex-1 truncate py-2 text-sm font-medium text-highlighted"
+                    class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted"
                 >
                     {{ oauth2ProviderName(provider) }}
                 </p>
@@ -52,14 +46,15 @@
                     color="neutral"
                     variant="soft"
                     icon="i-lucide-link"
+                    class="me-3"
                     :loading="linking === provider.name"
                     :data-testid="`linked-account-link-${provider.name}`"
                     @click="link(provider.name)"
                 >
                     {{ t('account.linkedAccounts.link') }}
                 </UButton>
-            </div>
-        </UPageCard>
+            </LayoutListRow>
+        </LayoutListGroup>
 
         <ConfirmDialog
             :model-value="!!unlinking"
@@ -85,10 +80,8 @@
             @update:model-value="(open: boolean) => !open && (confirmLink = '')"
             @confirm="startLink(confirmLink)"
         >
-            <UserPasswordField
+            <UserReauthField
                 v-model="password"
-                :label="t('platform.users.adminPassword')"
-                icon="i-lucide-shield-check"
                 class="mt-3"
                 data-testid="linked-account-password"
             />
@@ -99,20 +92,16 @@
 <script setup lang="ts">
 import {
     listLinkedAccounts,
-    reauthenticate,
     unlinkAccount,
     type LinkedAccount,
 } from '~/api/account'
-import { finishOAuth2Link, listOAuth2Providers, startOAuth2 } from '~/api/auth'
-import { isWrongPassword } from '~/utils/reauth'
+import { finishOAuth2Link, listAuthMethods, startOAuth2 } from '~/api/auth'
 import {
     oauth2ErrorKey,
     oauth2ProviderIcon,
     oauth2ProviderName,
 } from '~/utils/oauth2'
 import { openSignInPage } from '~/utils/native'
-
-const LIST = 'min-w-0 p-0 sm:p-0 gap-y-0 divide-y divide-default'
 
 const { t } = useI18n()
 const { success: notifySuccess, error: notifyError } = useNotification()
@@ -148,7 +137,7 @@ const { data: linked, refresh } = useAsyncData(
 useAccountChanges('identities', refresh)
 const { data: providers } = useAsyncData(
     'oauth2-providers',
-    listOAuth2Providers,
+    async () => (await listAuthMethods()).oauth2.providers,
     { server: false, default: () => [] },
 )
 
@@ -169,29 +158,28 @@ function providerName(name: string) {
 
 const linking = ref('')
 const confirmLink = ref('')
-const password = ref('')
+const {
+    password,
+    confirm: reauthenticate,
+    errorText: reauthError,
+} = useReauth(confirmLink)
 
 // Accounts with a password confirm it first, so a stolen session can't add a lasting way in.
 function link(provider: string) {
     if (!linked.value?.hasPassword) return startLink(provider)
-    password.value = ''
     confirmLink.value = provider
 }
 
 async function startLink(provider: string) {
     linking.value = provider
     try {
-        if (confirmLink.value) await reauthenticate(password.value)
+        if (confirmLink.value) await reauthenticate()
         const { url } = await startOAuth2(provider, { link: true })
         await openSignInPage(url)
         linking.value = ''
     } catch (err) {
         linking.value = ''
-        notifyError(
-            isWrongPassword(err)
-                ? t('platform.users.adminPasswordWrong')
-                : t('auth.oauth2.errors.failed'),
-        )
+        notifyError(reauthError(t('auth.oauth2.errors.failed'))(err))
     }
 }
 

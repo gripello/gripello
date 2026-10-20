@@ -48,6 +48,30 @@ describe('PasswordChangeFields – validity emit', () => {
         expect(emits[emits.length - 1]).toEqual([true])
     })
 
+    it("accepts passwords far past bcrypt's 72 bytes", () => {
+        const long = STRONG_PASSWORD + 'ü'.repeat(200)
+        const wrapper = createWrapper({
+            requireOldPassword: false,
+            password: long,
+            passwordConfirm: long,
+        })
+
+        const emits = wrapper.emitted('validity')!
+        expect(emits[emits.length - 1]).toEqual([true])
+    })
+
+    it('counts the minimum in characters, not UTF-16 units', () => {
+        const emoji = 'Aa1!😀😀😀'
+        const wrapper = createWrapper({
+            requireOldPassword: false,
+            password: emoji,
+            passwordConfirm: emoji,
+        })
+
+        const emits = wrapper.emitted('validity')!
+        expect(emits[emits.length - 1]).toEqual([false])
+    })
+
     it('emits validity=false when passwords do not match', () => {
         const wrapper = createWrapper({
             requireOldPassword: false,

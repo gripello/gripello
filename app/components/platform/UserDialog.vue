@@ -6,6 +6,12 @@
         sheet-on-mobile
         closable
         data-testid="platform-user-dialog"
+        :submit-label="t('actions.save')"
+        :submit-loading="saving"
+        :submit-disabled="locked || (emailChanged && !adminPassword)"
+        submit-test-id="platform-user-save"
+        cancel-test-id="platform-user-cancel"
+        @submit="userForm?.submit()"
     >
         <template v-if="user">
             <UForm
@@ -61,11 +67,9 @@
                         />
                     </UFormField>
                 </div>
-                <UserPasswordField
+                <UserReauthField
                     v-if="emailChanged"
                     v-model="adminPassword"
-                    :label="t('platform.users.adminPassword')"
-                    icon="i-lucide-shield-check"
                     data-testid="platform-user-email-admin-password"
                 />
                 <div class="flex flex-wrap gap-x-6 gap-y-3">
@@ -185,48 +189,28 @@
                         :loading="membershipBusy"
                         :disabled="!newMembership.gym || !newMembership.role"
                         data-testid="platform-user-add-membership"
-                        @click="addMembership"
+                        @click="grantMembership"
                     >
                         {{ t('platform.users.addMembership') }}
                     </UButton>
                 </div>
             </section>
         </template>
-
-        <template #actions>
-            <UButton
-                color="neutral"
-                variant="ghost"
-                data-testid="platform-user-cancel"
-                @click="open = false"
-            >
-                {{ t('actions.cancel') }}
-            </UButton>
-            <div class="flex-1" />
-            <UButton
-                color="primary"
-                :loading="saving"
-                :disabled="locked || (emailChanged && !adminPassword)"
-                data-testid="platform-user-save"
-                @click="userForm?.submit()"
-            >
-                {{ t('actions.save') }}
-            </UButton>
-        </template>
     </LayoutDialogShell>
 </template>
 
 <script setup lang="ts">
+import { avatarUrl } from '~/utils/avatar'
+import { THUMBS } from '#shared/utils/thumbs'
+import { useObjectUrl } from '@vueuse/core'
 import type { Form } from '@nuxt/ui'
 import {
     changeMembershipRole,
-    createMembership,
+    addMembership,
     deleteMembership,
 } from '~/api/members'
 import type { GymRecord, RoleRecord, UserRecord } from '~/types/models'
 import { updatePlatformUser } from '~/api/platform'
-import { reauthenticate } from '~/api/account'
-import { fileUrl } from '~/api/client'
 import { requestPasswordReset, useAuthState } from '~/api/auth'
 import { gymTitle } from '~/utils/gymNames'
 import {
@@ -236,7 +220,6 @@ import {
     type MembershipChip,
     type PlatformUser,
 } from '~/utils/platformUsers'
-import { isWrongPassword } from '~/utils/reauth'
 import {
     required,
     validEmail,
@@ -275,7 +258,12 @@ function formFrom(user: UserRecord | null) {
 }
 
 const form = reactive(formFrom(props.user))
-const adminPassword = ref('')
+const {
+    password: adminPassword,
+    reset: resetPassword,
+    confirm: reauthenticate,
+    errorText: reauthError,
+} = useReauth()
 const emailChanged = computed(
     () => !!props.user && form.email.trim() !== (props.user.email ?? ''),
 )
@@ -287,15 +275,16 @@ watch([open, () => props.user?.id], () => {
     Object.assign(newMembership, { gym: '', role: '' })
     avatarFile.value = null
     avatarRemoved.value = false
-    adminPassword.value = ''
+    resetPassword()
 })
 
 const avatarFile = ref<File | null>(null)
 const avatarRemoved = ref(false)
+const avatarObjectUrl = useObjectUrl(avatarFile)
 const avatarPreview = computed(() => {
-    if (avatarFile.value) return URL.createObjectURL(avatarFile.value)
+    if (avatarFile.value) return avatarObjectUrl.value ?? null
     if (avatarRemoved.value || !props.user?.avatar) return null
-    return fileUrl('users', props.user, props.user.avatar, { thumb: '100x100' })
+    return avatarUrl(props.user, THUMBS.avatarLarge)
 })
 
 function selectAvatar(file: File) {
@@ -350,7 +339,7 @@ async function saveUser() {
     if (!user) return
     const saved = await runSave(
         async () => {
-            if (emailChanged.value) await reauthenticate(adminPassword.value)
+            if (emailChanged.value) await reauthenticate()
             await updatePlatformUser(
                 user.id,
                 {
@@ -371,10 +360,7 @@ async function saveUser() {
         },
         {
             success: t('notifications.success.edit'),
-            error: (error) =>
-                isWrongPassword(error)
-                    ? t('platform.users.adminPasswordWrong')
-                    : t('notifications.error.edit'),
+            error: reauthError(t('notifications.error.edit')),
         },
     )
     if (!saved) return
@@ -432,12 +418,12 @@ function removeMembership(chip: MembershipChip) {
     return updateMemberships(() => deleteMembership(chip.id))
 }
 
-async function addMembership() {
+async function grantMembership() {
     const user = props.user
     if (!user) return
     await updateMemberships(
         () =>
-            createMembership({
+            addMembership({
                 user: user.id,
                 gym: newMembership.gym,
                 role: newMembership.role,

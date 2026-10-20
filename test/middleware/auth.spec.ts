@@ -29,7 +29,7 @@ describe('auth middleware', () => {
         canMock.mockReset().mockReturnValue(true)
         ensureLoadedMock.mockReset().mockResolvedValue(undefined)
         memberships.value = [
-            { gym: 'gym1', expand: { gym: { slug: 'home', active: true } } },
+            { gym: { id: 'gym1', slug: 'home', active: true } },
         ]
         cachedGym.value = { id: 'gym1', slug: 'home' }
         loadGymMock.mockReset().mockResolvedValue({ id: 'gym2', slug: 'x' })

@@ -1,3 +1,4 @@
+import { userTopic } from '#shared/utils/topics'
 import {
     onActivated,
     onBeforeUnmount,
@@ -351,7 +352,7 @@ export function useAccountChanges(
 ) {
     const authRecord = useAuthRecord()
     return useLiveRefresh(
-        () => authRecord.value?.id && `user:${authRecord.value.id}`,
+        () => authRecord.value?.id && userTopic(authRecord.value.id),
         reload,
         {
             when: (event: UserEvent) =>

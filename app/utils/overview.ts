@@ -1,3 +1,4 @@
+import { parseDate } from '#shared/utils/formatting'
 export const NEW_ROUTE_WINDOW_DAYS = 14
 export const POPULAR_MIN_RATINGS = 2
 
@@ -32,22 +33,27 @@ export interface GradeRange {
 
 const DAY_MS = 86_400_000
 
-function setTime(route: OverviewRoute): number {
-    const time = new Date((route.screw_date ?? '').replace(' ', 'T')).getTime()
-    return Number.isNaN(time) ? 0 : time
+function setTime(route: Pick<OverviewRoute, 'screw_date'>): number {
+    return parseDate(route.screw_date)?.getTime() ?? 0
+}
+
+export function isNewRoute(
+    route: Pick<OverviewRoute, 'screw_date'>,
+    now: Date,
+) {
+    const time = setTime(route)
+    return (
+        time > now.getTime() - NEW_ROUTE_WINDOW_DAYS * DAY_MS &&
+        time <= now.getTime() + DAY_MS
+    )
 }
 
 export function newRoutes<Route extends OverviewRoute>(
     routes: Route[],
     now: Date,
-    days = NEW_ROUTE_WINDOW_DAYS,
 ): Route[] {
-    const since = now.getTime() - days * DAY_MS
     return routes
-        .filter((route) => {
-            const time = setTime(route)
-            return time > since && time <= now.getTime() + DAY_MS
-        })
+        .filter((route) => isNewRoute(route, now))
         .sort((a, b) => setTime(b) - setTime(a))
 }
 

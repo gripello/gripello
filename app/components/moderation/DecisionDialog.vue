@@ -12,22 +12,14 @@
                 <legend class="mb-2 text-sm font-semibold text-highlighted">
                     {{ t('moderation.decision.why') }}
                 </legend>
-                <div class="flex flex-wrap gap-2">
-                    <UButton
-                        v-for="reason in reasons"
-                        :key="reason.value"
-                        size="sm"
-                        :color="preset === reason.value ? 'primary' : 'neutral'"
-                        :variant="preset === reason.value ? 'soft' : 'outline'"
-                        :aria-pressed="preset === reason.value"
-                        :data-testid="`moderation-reason-${reason.value}`"
-                        @click="
-                            preset = preset === reason.value ? '' : reason.value
-                        "
-                    >
-                        {{ reason.label }}
-                    </UButton>
-                </div>
+                <OptionGrid
+                    v-model="preset"
+                    :items="reasons"
+                    cols="grid-cols-1 sm:grid-cols-2"
+                    deselectable
+                    :label="t('moderation.decision.why')"
+                    test-id-prefix="moderation-reason"
+                />
             </fieldset>
             <UFormField
                 :label="t('moderation.decision.explanation')"
@@ -75,7 +67,8 @@
 </template>
 
 <script setup lang="ts">
-import { REPORT_REASONS } from '~/utils/reports'
+import { translatedItems } from '~/utils/translatedItems'
+import { REPORT_REASONS } from '#shared/utils/reports'
 import { decisionReason } from '~/utils/moderation'
 
 const open = defineModel<boolean>({ default: false })
@@ -90,13 +83,14 @@ const emit = defineEmits<{ confirm: [reason: string] }>()
 
 const { t } = useI18n()
 
-const preset = ref('')
+const preset = ref<string | null>(null)
 const explanation = ref('')
 const reasons = computed(() =>
-    REPORT_REASONS.filter((value) => value !== 'other').map((value) => ({
-        value,
-        label: t(`reports.reasons.${value}`),
-    })),
+    translatedItems(
+        REPORT_REASONS.filter((value) => value !== 'other'),
+        'reports.reasons',
+        t,
+    ),
 )
 const reason = computed(() =>
     decisionReason(
@@ -107,7 +101,7 @@ const reason = computed(() =>
 
 watch(open, (isOpen) => {
     if (!isOpen) return
-    preset.value = ''
+    preset.value = null
     explanation.value = ''
 })
 </script>

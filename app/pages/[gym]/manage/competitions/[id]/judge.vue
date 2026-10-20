@@ -55,7 +55,7 @@
                         <span class="truncate">{{
                             routeOf(compRoute)?.name
                         }}</span>
-                        <span class="text-xs opacity-70"
+                        <span class="text-xs"
                             >{{ toppedByRoute.get(compRoute.id) ?? 0 }}/{{
                                 entries.length
                             }}</span
@@ -116,8 +116,13 @@
                 </div>
             </div>
 
+            <LayoutLoadError
+                v-if="loadFailed"
+                :card="false"
+                @retry="retryLoad"
+            />
             <LayoutEmptyState
-                v-if="!compRoutes.length"
+                v-else-if="!compRoutes.length"
                 icon="i-lucide-mountain"
                 :title="t(`competitions.items.${competition.discipline}.empty`)"
                 :card="false"
@@ -144,7 +149,12 @@
                 {{ t(`competitions.statuses.${competition.status}`) }}
             </UBadge>
             <fieldset
-                v-if="compRoutes.length && entries.length && currentRoute"
+                v-if="
+                    !loadFailed &&
+                    compRoutes.length &&
+                    entries.length &&
+                    currentRoute
+                "
                 :disabled="!scoringOpen"
                 class="contents"
             >
@@ -178,6 +188,33 @@
                                         class="size-4 shrink-0 animate-spin text-muted"
                                     />
                                 </p>
+                                <div
+                                    v-if="
+                                        !saving.has(entry.id) &&
+                                        unsavedScore(entry)
+                                    "
+                                    class="flex items-center gap-2"
+                                >
+                                    <UBadge
+                                        color="error"
+                                        variant="soft"
+                                        size="sm"
+                                        icon="i-lucide-cloud-off"
+                                        :data-testid="`judge-unsaved-${entry.bib}`"
+                                    >
+                                        {{ t('competitions.judge.unsaved') }}
+                                    </UBadge>
+                                    <UButton
+                                        color="error"
+                                        variant="link"
+                                        size="sm"
+                                        icon="i-lucide-refresh-cw"
+                                        :data-testid="`judge-retry-${entry.bib}`"
+                                        @click="retrySave(entry)"
+                                    >
+                                        {{ t('errors.retry') }}
+                                    </UButton>
+                                </div>
                                 <p class="truncate text-xs text-muted">
                                     {{ categoryNames.get(entry.category) }}
                                 </p>
@@ -322,15 +359,13 @@
 
 <script setup lang="ts">
 import {
-    getCompetition,
-    listCategories,
+    listCompetitionCategories,
     listCompetitionRoutes,
-    listEntries,
-    listScores,
-    putScores,
+    listCompetitionEntries,
+    listCompetitionScores,
+    upsertCompetitionScores,
     type ScoreInput,
 } from '~/api/competitions'
-import { keepWhenOffline } from '~/utils/errors'
 import { translatedColorName } from '~/utils/colorName'
 import {
     applyScoreAction,
@@ -340,6 +375,8 @@ import {
     replaceEntryScores,
     scoreBody,
     scoreFromRecord,
+    scoreKey,
+    supersededUnsavedKeys,
     type ScoreAction,
 } from '~/utils/scorecard'
 import {
@@ -347,6 +384,7 @@ import {
     competitionPhase,
     judgesMayScore,
 } from '~/utils/competitions'
+import { isRetryableSaveError } from '~/utils/errors'
 import type {
     CompetitionEntryRecord,
     CompetitionRouteRecord,
@@ -360,12 +398,18 @@ definePageMeta({
 })
 
 const { t } = useI18n()
-const route = useRoute()
 const { can } = usePermissions()
 const { run } = useAsyncAction()
 
-const competitionId = computed(() => String(route.params.id ?? ''))
 const gymPath = useGymPath()
+const competitionRecord = useCompetitionRecord(({ kind, entry }) => {
+    if (kind === 'categories' || kind === 'resync') refreshCategoriesSoon()
+    if (kind === 'routes' || kind === 'resync') refreshRoutesSoon()
+    if (kind === 'entries' || kind === 'resync') refreshEntriesSoon()
+    if (kind === 'scores') refreshScoresSoon(entry)
+    if (kind === 'resync') refreshScoresSoon()
+})
+const { competitionId } = competitionRecord
 
 const JUDGE_PICKER = gymPath('/manage/judge')
 const hydrated = useHydrated()
@@ -394,51 +438,52 @@ const search = ref('')
 const filter = ref<'all' | 'open' | 'topped'>('all')
 const saving = reactive(new Set<string>())
 
-const { data: competition, refresh: refreshCompetition } = await useAsyncData(
-    () => `judge-competition:${competitionId.value}`,
-    (nuxtApp) =>
-        keepWhenOffline(
-            nuxtApp,
-            `judge-competition:${competitionId.value}`,
-            () => getCompetition(competitionId.value),
-        ),
-    { enabled: () => !!competitionId.value },
-)
+const { data: competition } = await competitionRecord
 
-if (competition.value && competition.value.gym !== useCurrentGymId().value)
-    throw createError({ status: 404, fatal: true })
-
-const { data: compRoutes, refresh: refreshRoutes } = useAsyncData(
+const {
+    data: compRoutes,
+    error: routesError,
+    refresh: refreshRoutes,
+} = useOfflineData(
     () => `judge-routes:${competitionId.value}`,
-    (nuxtApp) =>
-        keepWhenOffline(nuxtApp, `judge-routes:${competitionId.value}`, () =>
-            listCompetitionRoutes(competitionId.value, { voided: false }),
-        ),
+    () => listCompetitionRoutes(competitionId.value, { voided: false }),
     { default: () => [], enabled: () => !!competitionId.value },
 )
 
-const { data: entries, refresh: refreshEntries } = useAsyncData(
+const {
+    data: entries,
+    error: entriesError,
+    refresh: refreshEntries,
+} = useOfflineData(
     () => `judge-entries:${competitionId.value}`,
-    (nuxtApp) =>
-        keepWhenOffline(nuxtApp, `judge-entries:${competitionId.value}`, () =>
-            listEntries(competitionId.value, {
-                status: ['registered', 'checked_in'],
-            }),
-        ),
+    () =>
+        listCompetitionEntries(competitionId.value, {
+            status: ['registered', 'checked_in'],
+        }),
     { default: () => [], enabled: () => !!competitionId.value },
 )
 
-const { data: scores, refresh: refreshScores } = useAsyncData(
+const {
+    data: scores,
+    error: scoresError,
+    refresh: refreshScores,
+} = useOfflineData(
     () => `judge-scores:${competitionId.value}`,
-    (nuxtApp) =>
-        keepWhenOffline(nuxtApp, `judge-scores:${competitionId.value}`, () =>
-            listScores(competitionId.value),
-        ),
+    () => listCompetitionScores(competitionId.value),
     { default: () => [], deep: true, enabled: () => !!competitionId.value },
 )
 
+const loadFailed = computed(
+    () => !!routesError.value || !!entriesError.value || !!scoresError.value,
+)
+
+function retryLoad() {
+    if (routesError.value) void refreshRoutes()
+    if (entriesError.value) void refreshEntries()
+    if (scoresError.value) void refreshScores()
+}
+
 const scoringOpen = computed(() => judgesMayScore(competition.value?.status))
-const refreshCompetitionSoon = coalesce(() => refreshCompetition(), 400)
 const refreshCategoriesSoon = coalesce(() => refreshCategories(), 400)
 const refreshRoutesSoon = coalesce(() => refreshRoutes(), 400)
 const refreshEntriesSoon = coalesce(() => refreshEntries(), 400)
@@ -448,23 +493,15 @@ const refreshScoresSoon = coalesceIds(async (entryIds) => {
     if (!entryIds || entryIds.size > MAX_ENTRY_REFRESH) return refreshScores()
     const fresh = await Promise.all(
         [...entryIds].map((entry) =>
-            listScores(competitionId.value, { entry }),
+            listCompetitionScores(competitionId.value, { entry }),
         ),
     )
     scores.value = replaceEntryScores(scores.value, entryIds, fresh.flat())
 }, 400)
-useCompetitionLive(competitionId, ({ kind, entry }) => {
-    if (kind === 'competition' || kind === 'resync') refreshCompetitionSoon()
-    if (kind === 'categories' || kind === 'resync') refreshCategoriesSoon()
-    if (kind === 'routes' || kind === 'resync') refreshRoutesSoon()
-    if (kind === 'entries' || kind === 'resync') refreshEntriesSoon()
-    if (kind === 'scores') refreshScoresSoon(entry)
-    if (kind === 'resync') refreshScoresSoon()
-})
 
 const { data: categories, refresh: refreshCategories } = useAsyncData(
     () => `judge-categories:${competitionId.value}`,
-    () => listCategories(competitionId.value),
+    () => listCompetitionCategories(competitionId.value),
     { default: () => [], enabled: () => !!competitionId.value },
 )
 const categoryNames = computed(
@@ -544,10 +581,28 @@ defineShortcuts({
 })
 const flags = computed(() => flagEntries(scores.value, entries.value.length))
 
-const scoreFor = (entry: CompetitionEntryRecord, compRouteId = routeId.value) =>
+type ScoreBody = Omit<ScoreInput, 'entry' | 'comp_route'>
+const unsaved = reactive(
+    new Map<string, { body: ScoreBody; base: string | undefined }>(),
+)
+const unsavedScore = (
+    entry: CompetitionEntryRecord,
+    compRouteId = routeId.value,
+) => unsaved.get(scoreKey(entry.id, compRouteId))?.body
+
+const serverScore = (entryId: string, compRouteId: string) =>
     scores.value.find(
-        (score) => score.entry === entry.id && score.comp_route === compRouteId,
+        (score) => score.entry === entryId && score.comp_route === compRouteId,
     )
+const scoreFor = (
+    entry: CompetitionEntryRecord,
+    compRouteId = routeId.value,
+): ScoreBody | undefined =>
+    unsavedScore(entry, compRouteId) ?? serverScore(entry.id, compRouteId)
+
+watch(scores, (list) => {
+    for (const key of supersededUnsavedKeys(unsaved, list)) unsaved.delete(key)
+})
 const stateOf = (
     entry: CompetitionEntryRecord,
     compRouteId = routeId.value,
@@ -581,21 +636,34 @@ function enqueue(
 async function upsert(
     entry: CompetitionEntryRecord,
     compRouteId: string,
-    body: Omit<ScoreInput, 'entry' | 'comp_route'>,
+    body: ScoreBody,
 ) {
+    const key = scoreKey(entry.id, compRouteId)
+    const base = serverScore(entry.id, compRouteId)?.updated
+    let failure: unknown
     saving.add(entry.id)
-    const saved = await run(async () => {
-        const [score] = await putScores(competitionId.value, [
-            {
-                ...body,
-                entry: entry.id,
-                comp_route: compRouteId,
+    const saved = await run(
+        async () => {
+            const [score] = await upsertCompetitionScores(competitionId.value, [
+                { ...body, entry: entry.id, comp_route: compRouteId },
+            ])
+            return score
+        },
+        {
+            handled: (error) => {
+                failure = error
+                return false
             },
-        ])
-        return score
-    })
+        },
+    )
     saving.delete(entry.id)
-    if (!saved) return
+    if (!saved) {
+        if (failure === undefined || isRetryableSaveError(failure))
+            unsaved.set(key, { body, base })
+        else unsaved.delete(key)
+        return
+    }
+    unsaved.delete(key)
     scores.value = [
         ...scores.value.filter((score) => score.id !== saved.id),
         saved,
@@ -632,6 +700,13 @@ function togglePlus(entry: CompetitionEntryRecord) {
             height_plus: !score?.height_plus,
             attempts: 1,
         })
+    })
+}
+
+function retrySave(entry: CompetitionEntryRecord) {
+    enqueue(entry, async (compRoute) => {
+        const body = unsavedScore(entry, compRoute.id)
+        if (body) await upsert(entry, compRoute.id, body)
     })
 }
 

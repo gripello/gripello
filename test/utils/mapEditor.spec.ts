@@ -229,7 +229,7 @@ describe('floor plan save errors', () => {
             removed: [wall('w9', 'Kids', 'w9')],
         }
         const error = {
-            data: {
+            response: {
                 data: {
                     'walls.1.name': {
                         code: 'validation_not_unique',

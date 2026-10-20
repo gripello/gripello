@@ -1,5 +1,6 @@
 <template>
     <LayoutLoadingState v-if="loading" variant="cards" :count="4" />
+    <LayoutLoadError v-else-if="loadFailed" @retry="retry" />
     <div
         v-else
         data-testid="task-board"
@@ -12,6 +13,7 @@
             :items="tabItems"
             :content="false"
             class="mb-3"
+            stacked
             data-testid="task-board-tabs"
         />
         <div class="task-board" :class="{ 'task-board--single': !mdAndUp }">
@@ -52,7 +54,7 @@
                     >
                     <span
                         v-if="column.status === 'done'"
-                        class="ml-auto text-xs text-dimmed"
+                        class="ml-auto text-xs text-muted"
                         >{{ t('tasks.board.recentlyDone') }}</span
                     >
                 </header>
@@ -197,12 +199,12 @@ const emit = defineEmits<{ edit: [task: TaskRecord] }>()
 const { t } = useI18n()
 const gymId = useCurrentGymId()
 const { run } = useAsyncAction()
-const { error: notifyError } = useNotification()
 
 const { mdAndUp } = useDisplay()
 const activeStatus = ref<TaskStatus>('open')
 const tasks = ref<TaskRecord[]>([])
 const loading = ref(true)
+const loadFailed = ref(false)
 const dropTarget = ref<TaskStatus | null>(null)
 
 const longPress = useLongPressDrag<TaskRecord>({
@@ -288,13 +290,18 @@ async function reload() {
             }),
         ])
         tasks.value = [...active.items, ...done.items]
+        loadFailed.value = false
     } catch (error) {
         if (isAbortError(error)) return
-        console.error(error)
-        notifyError(t('tasks.loadError'))
+        loadFailed.value = true
     } finally {
         loading.value = false
     }
+}
+
+function retry() {
+    loading.value = true
+    void reload()
 }
 
 async function changeStatus(task: TaskRecord, status: TaskStatus) {

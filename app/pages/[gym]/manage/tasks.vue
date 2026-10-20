@@ -87,8 +87,11 @@
 </template>
 
 <script setup lang="ts">
+import { translatedItems } from '~/utils/translatedItems'
+import { gymTopic, tasksTopic } from '#shared/utils/topics'
+import { TASK_KINDS } from '#shared/utils/tasks'
+import { useTimeoutFn } from '@vueuse/core'
 import type { GymEvent, RecordChange } from '~/composables/useRealtime'
-import { TASK_KINDS } from '~/utils/tasks'
 import { listTaskAssignees, type TaskQuery } from '~/api/tasks'
 import { useAuthState } from '~/api/auth'
 import type { TaskKind, TaskRecord } from '~/types/models'
@@ -102,7 +105,7 @@ const MINE = 'mine'
 
 const { t } = useI18n()
 const gymId = useCurrentGymId()
-const { data: locationRecords } = useLocations()
+const { items: locationItems } = useLocations()
 
 const boardRef = ref<{ reload: () => Promise<void> }>()
 const initialSearch = (useRoute().query.q as string | undefined) ?? ''
@@ -128,7 +131,7 @@ const { data: assignees, refresh: refreshAssignees } = await useAsyncData(
     () => listTaskAssignees(gymId.value),
 )
 // assignees are whoever holds manage_tasks, so member and role changes reshape the list
-useLiveRefresh(() => `gym:${gymId.value}`, refreshAssignees, {
+useLiveRefresh(() => gymTopic(gymId.value), refreshAssignees, {
     when: (event: GymEvent) =>
         event.kind === 'membership.changed' || event.kind === 'role.changed',
 })
@@ -143,19 +146,11 @@ const assigneeNames = computed(
         ),
 )
 
-const kindItems = computed(() =>
-    TASK_KINDS.map((value) => ({ value, label: t(`tasks.kinds.${value}`) })),
-)
+const kindItems = computed(() => translatedItems(TASK_KINDS, 'tasks.kinds', t))
 const assigneeFilterItems = computed(() =>
     (assignees.value ?? []).map((assignee) => ({
         value: assignee.user,
         label: assignee.name,
-    })),
-)
-const locationItems = computed(() =>
-    locationRecords.value.map((location) => ({
-        value: location.id,
-        label: location.name,
     })),
 )
 
@@ -200,18 +195,19 @@ async function reload() {
 
 useHead({ title: t('page.title.tasks') })
 
-let searchDebounce: ReturnType<typeof setTimeout> | undefined
-watch(search, (term) => {
-    clearTimeout(searchDebounce)
-    searchDebounce = setTimeout(() => (debouncedSearch.value = term), 300)
-})
+const { start: setSearchSoon } = useTimeoutFn(
+    (term: string) => (debouncedSearch.value = term),
+    300,
+    { immediate: false },
+)
+watch(search, (term) => setSearchSoon(term))
 
-useLiveRefresh(() => `tasks:${gymId.value}`, reload, { delayMs: 500 })
+useLiveRefresh(() => tasksTopic(gymId.value), reload, { delayMs: 500 })
 
 const { warning: notifyWarning } = useNotification()
 // the dialog can't delete, so a delete of the open task always came from someone else
 useRealtime(
-    () => `tasks:${gymId.value}`,
+    () => tasksTopic(gymId.value),
     ({ action, record }: RecordChange<TaskRecord>) => {
         if (action !== 'delete' || !formOpen.value) return
         if (record.id !== editedTask.value?.id) return
@@ -219,8 +215,6 @@ useRealtime(
         notifyWarning(t('tasks.deletedElsewhere'))
     },
 )
-
-onBeforeUnmount(() => clearTimeout(searchDebounce))
 
 function clearFilters() {
     kindFilter.value = null

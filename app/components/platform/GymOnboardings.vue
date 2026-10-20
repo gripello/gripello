@@ -76,6 +76,10 @@
             sheet-on-mobile
             closable
             data-testid="platform-gym-onboarding-dialog"
+            :submit-label="t('platform.onboardings.send')"
+            :submit-loading="sending"
+            submit-test-id="platform-gym-onboarding-submit"
+            @submit="emailForm?.submit()"
         >
             <UForm
                 ref="emailForm"
@@ -98,24 +102,6 @@
                     />
                 </UFormField>
             </UForm>
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    @click="dialogOpen = false"
-                >
-                    {{ t('actions.cancel') }}
-                </UButton>
-                <div class="flex-1" />
-                <UButton
-                    color="primary"
-                    :loading="sending"
-                    data-testid="platform-gym-onboarding-submit"
-                    @click="emailForm?.submit()"
-                >
-                    {{ t('platform.onboardings.send') }}
-                </UButton>
-            </template>
         </LayoutDialogShell>
     </LayoutPanel>
 </template>

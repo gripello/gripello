@@ -1,3 +1,4 @@
+import { liveTopics } from '#shared/utils/topics'
 export type PlatformEventKind =
     | 'platform_gyms.changed'
     | 'platform_users.changed'
@@ -19,7 +20,7 @@ export function usePlatformLive(
     kinds: PlatformEventKind[],
     refresh: () => Promise<unknown>,
 ) {
-    return useLiveRefresh('platform', refresh, {
+    return useLiveRefresh(liveTopics.platform, refresh, {
         when: (event: PlatformEvent) => kinds.includes(event.kind),
     })
 }

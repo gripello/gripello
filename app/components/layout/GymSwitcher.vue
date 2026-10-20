@@ -31,7 +31,7 @@
                 <img
                     v-if="logoUrl"
                     :src="logoUrl"
-                    :alt="title"
+                    alt=""
                     class="gym-switcher__custom logo-mono"
                     :class="collapsed ? 'max-w-8' : 'max-w-20'"
                     data-testid="nav-logo-custom"
@@ -39,20 +39,24 @@
                 <img
                     v-else-if="currentGym || collapsed"
                     src="/app-icon.svg"
-                    :alt="title"
+                    alt=""
                     class="size-8 rounded-md"
+                    width="32"
+                    height="32"
                 />
                 <template v-else>
                     <img
                         src="/gripello-light.svg"
-                        :alt="title"
+                        alt=""
                         class="gym-switcher__brand gym-switcher__brand--light"
+                        width="107"
                         height="32"
                     />
                     <img
                         src="/gripello-dark.svg"
-                        :alt="title"
+                        alt=""
                         class="gym-switcher__brand gym-switcher__brand--dark"
+                        width="107"
                         height="32"
                     />
                 </template>
@@ -94,6 +98,7 @@
 </template>
 
 <script setup lang="ts">
+import { THUMBS } from '#shared/utils/thumbs'
 import { fileUrl } from '~/api/client'
 import { listGyms } from '~/api/gyms'
 import type { DropdownMenuItem } from '@nuxt/ui'
@@ -122,7 +127,7 @@ const title = computed(() =>
 )
 const logoUrl = computed(() =>
     fileUrl('gyms', currentGym.value, currentGym.value?.page_logo, {
-        thumb: '0x200',
+        thumb: THUMBS.logo,
     }),
 )
 
@@ -151,7 +156,9 @@ function switchTo(slug: string) {
 }
 
 function gymItem(target: Partial<GymRecord>, role?: string): GymItem {
-    const logo = fileUrl('gyms', target, target.page_logo, { thumb: '0x200' })
+    const logo = fileUrl('gyms', target, target.page_logo, {
+        thumb: THUMBS.logo,
+    })
     return {
         label: gymTitle(target),
         ...(logo
@@ -175,13 +182,11 @@ function gymItem(target: Partial<GymRecord>, role?: string): GymItem {
 }
 
 const items = computed<DropdownMenuItem[][]>(() => {
-    const mine = gymMemberships.value.flatMap((membership) =>
-        membership.expand?.gym
-            ? [gymItem(membership.expand.gym, membership.expand.role?.name)]
-            : [],
+    const mine = gymMemberships.value.map((membership) =>
+        gymItem(membership.gym, membership.role.name),
     )
     const mineSlugs = new Set(
-        gymMemberships.value.map((membership) => membership.expand?.gym?.slug),
+        gymMemberships.value.map((membership) => membership.gym.slug),
     )
     const recent = recentSlugs.value
         .filter((slug) => !mineSlugs.has(slug))

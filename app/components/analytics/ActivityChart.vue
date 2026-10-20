@@ -1,5 +1,5 @@
 <template>
-    <AnalyticsBaseEchart
+    <ChartEchart
         :option="option"
         :height="320"
         testid="analytics-chart-activity"

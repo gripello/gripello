@@ -109,9 +109,7 @@ describe('ticks logged for today', () => {
     it('still leave out ascents dated tomorrow', () => {
         const now = new Date(2026, 8, 27, 20, 0)
         const tomorrow = new Date(2026, 8, 28, 12, 0)
-        const ticks = [
-            tick('top', '6A', { date: `${localDay(tomorrow)} 12:00:00.000Z` }),
-        ]
+        const ticks = [tick('top', '6A', { date: localDay(tomorrow) })]
         expect(logbookStats(ticks, 'boulder', '30d', now).current.sends).toBe(0)
     })
 })
@@ -166,10 +164,10 @@ describe('progression', () => {
     it('fills twelve months and tracks the hardest send per month', () => {
         const points = progression(
             [
-                tick('top', '6A', { date: '2026-09-02 12:00:00.000Z' }),
-                tick('flash', '6C', { date: '2026-09-20 12:00:00.000Z' }),
-                tick('attempt', '7C', { date: '2026-09-21 12:00:00.000Z' }),
-                tick('top', '6B', { date: '2026-01-10 12:00:00.000Z' }),
+                tick('top', '6A', { date: '2026-09-02' }),
+                tick('flash', '6C', { date: '2026-09-20' }),
+                tick('attempt', '7C', { date: '2026-09-21' }),
+                tick('top', '6B', { date: '2026-01-10' }),
             ],
             'boulder',
             NOW,

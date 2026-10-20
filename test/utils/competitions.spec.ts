@@ -24,6 +24,7 @@ import {
     formatCompetitionWindow,
     suggestedEnd,
     competitionShareUrl,
+    formatStandingPoints,
 } from '~/utils/competitions'
 import type { CompetitionRecord } from '~/types/models'
 
@@ -34,8 +35,8 @@ const competition: CompetitionRecord = {
     location: 'loc',
     status: 'published',
     discipline: 'boulder',
-    starts_at: '2026-10-10 10:00:00.000Z',
-    ends_at: '2026-10-10 14:00:00.000Z',
+    starts_at: '2026-10-10T10:00:00.000Z',
+    ends_at: '2026-10-10T14:00:00.000Z',
     scoring_format: 'dynamic',
     scoring: { bestOf: 10 },
     live_ranking: true,
@@ -69,7 +70,7 @@ describe('competitions', () => {
     it('round-trips datetime-local input values', () => {
         const input = toDateTimeInput(competition.starts_at)
         expect(input).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
-        expect(fromDateTimeInput(input)).toBe('2026-10-10 10:00:00.000Z')
+        expect(fromDateTimeInput(input)).toBe('2026-10-10T10:00:00.000Z')
         expect(toDateTimeInput('')).toBe('')
         expect(fromDateTimeInput('')).toBe('')
     })
@@ -211,8 +212,8 @@ describe('formatCompetitionWindow', () => {
     it('uses plain spaces so server and client render the same text', () => {
         const text = formatCompetitionWindow(
             {
-                starts_at: '2026-10-03 13:53:00.000Z',
-                ends_at: '2026-10-03 14:50:00.000Z',
+                starts_at: '2026-10-03T13:53:00.000Z',
+                ends_at: '2026-10-03T14:50:00.000Z',
             },
             'en',
         )
@@ -395,5 +396,19 @@ describe('mergeCategoryRows', () => {
         expect(
             currentCompetition([{ ...open, status: 'draft' as const }], at),
         ).toBeNull()
+    })
+})
+
+describe('formatStandingPoints', () => {
+    it('keeps two decimals of summed points like the server rounding', () => {
+        expect(formatStandingPoints({ points: 1033.33 }, 'en')).toBe('1,033.33')
+        expect(formatStandingPoints({ points: 333.5 }, 'de')).toBe('333,5')
+        expect(formatStandingPoints({ points: 1000 }, 'en')).toBe('1,000')
+    })
+
+    it('shows lead rank points with three decimals', () => {
+        expect(
+            formatStandingPoints({ points: 0, rankPoints: 1.4142 }, 'en'),
+        ).toBe('1.414')
     })
 })

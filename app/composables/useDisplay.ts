@@ -1,3 +1,4 @@
+import { useEventListener } from '@vueuse/core'
 import { BREAKPOINTS } from '#shared/utils/breakpoints'
 
 const VIEWPORT_HINT = 'sec-ch-viewport-width'
@@ -20,9 +21,7 @@ export function useDisplay() {
         if (nuxtApp.isHydrating)
             nuxtApp.hooks.hookOnce('app:suspense:resolve', update)
         else update()
-        window.addEventListener('resize', update, { passive: true })
-        if (getCurrentScope())
-            onScopeDispose(() => window.removeEventListener('resize', update))
+        useEventListener('resize', update, { passive: true })
     }
 
     return {

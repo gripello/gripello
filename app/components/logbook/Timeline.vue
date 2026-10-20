@@ -115,8 +115,10 @@
 </template>
 
 <script setup lang="ts">
+import { translatedItems } from '~/utils/translatedItems'
+import { gymChangesTopic } from '#shared/utils/topics'
 import { listContributions } from '~/api/ratings'
-import { gymChangesTopic, type GymChange } from '~/utils/realtimeCache'
+import { type GymChange } from '~/utils/realtimeCache'
 import { timeAgo } from '#shared/utils/formatting'
 import { activityDayLabel } from '~/utils/feed'
 import { TICK_TYPE_COLORS } from '~/utils/ticks'
@@ -144,10 +146,7 @@ const props = defineProps<{
 const { t, locale } = useI18n()
 const filter = ref<TimelineFilter>('all')
 const filterItems = computed(() =>
-    TIMELINE_KINDS.map((value) => ({
-        value,
-        label: t(`timeline.filters.${value}`),
-    })),
+    translatedItems(TIMELINE_KINDS, 'timeline.filters', t),
 )
 
 const {

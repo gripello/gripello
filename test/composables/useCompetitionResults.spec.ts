@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ref as vueRef } from 'vue'
+import { defineComponent, h, ref as vueRef } from 'vue'
+import { mount } from '@vue/test-utils'
 
 const getCompetitionStandings = vi.fn().mockResolvedValue({ categories: [] })
 vi.mock('~/api/competitions', () => ({ getCompetitionStandings }))
@@ -56,5 +57,27 @@ describe('useCompetitionResults', () => {
         onChange({ kind: 'categories' })
         vi.advanceTimersByTime(2_000)
         expect(getCompetitionStandings).not.toHaveBeenCalled()
+    })
+
+    it('polls while mounted and stops on unmount', async () => {
+        vi.useFakeTimers()
+        const { useCompetitionResults } =
+            await import('~/composables/useCompetitionResults')
+        const wrapper = mount(
+            defineComponent({
+                setup() {
+                    useCompetitionResults(vueRef('c1'), { pollMs: 1_000 })
+                    return () => h('div')
+                },
+            }),
+        )
+        getCompetitionStandings.mockClear()
+
+        vi.advanceTimersByTime(1_000)
+        expect(getCompetitionStandings).toHaveBeenCalledTimes(1)
+
+        wrapper.unmount()
+        vi.advanceTimersByTime(5_000)
+        expect(getCompetitionStandings).toHaveBeenCalledTimes(1)
     })
 })

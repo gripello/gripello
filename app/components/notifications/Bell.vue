@@ -116,11 +116,11 @@
 </template>
 
 <script setup lang="ts">
+import { liveTopics } from '#shared/utils/topics'
 import { achievementToast } from '~/utils/achievements'
 import { timeAgo } from '#shared/utils/formatting'
 import type { RecordChange } from '~/composables/useRealtime'
 import type { NotificationRecord } from '~/types/models'
-import { liveTopics } from '~/utils/realtimeCache'
 import { notificationLabelKey } from '~/utils/notificationLabel'
 
 const { t, locale } = useI18n()

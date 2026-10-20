@@ -3,28 +3,31 @@
         v-model="open"
         closable
         sheet-on-mobile
-        :title="t('platform.users.suspendName', { name: displayName })"
+        :title="t('platform.users.suspendName', { name: userName })"
         data-testid="platform-suspend-dialog"
+        :submit-label="
+            duration === 'permanent'
+                ? t('platform.users.suspendPermanently')
+                : t('platform.users.suspend')
+        "
+        submit-color="error"
+        :submit-loading="pending"
+        :submit-disabled="!ready"
+        submit-test-id="platform-suspend-confirm"
+        @submit="suspend"
     >
         <div class="flex flex-col gap-4">
             <fieldset>
                 <legend class="mb-2 text-sm font-semibold text-highlighted">
                     {{ t('platform.users.suspendHowLong') }}
                 </legend>
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <UButton
-                        v-for="option in DURATIONS"
-                        :key="option"
-                        block
-                        :color="duration === option ? 'primary' : 'neutral'"
-                        :variant="duration === option ? 'soft' : 'outline'"
-                        :aria-pressed="duration === option"
-                        :data-testid="`platform-suspend-${option}`"
-                        @click="duration = option"
-                    >
-                        {{ t(`platform.users.durations.${option}`) }}
-                    </UButton>
-                </div>
+                <OptionGrid
+                    v-model="duration"
+                    :items="durationItems"
+                    cols="grid-cols-2 sm:grid-cols-4"
+                    :label="t('platform.users.suspendHowLong')"
+                    test-id-prefix="platform-suspend"
+                />
             </fieldset>
             <UFormField
                 v-if="duration === 'until'"
@@ -88,10 +91,8 @@
                 "
                 data-testid="platform-suspend-block-domain"
             />
-            <UserPasswordField
+            <UserReauthField
                 v-model="adminPassword"
-                :label="t('platform.users.adminPassword')"
-                icon="i-lucide-shield-check"
                 data-testid="platform-suspend-admin-password"
             />
             <section class="rounded-xl bg-muted px-4 py-3">
@@ -106,10 +107,7 @@
                 </ul>
             </section>
         </div>
-        <template #actions>
-            <UButton color="neutral" variant="ghost" @click="open = false">
-                {{ t('actions.cancel') }}
-            </UButton>
+        <template #footer-start>
             <UButton
                 v-if="user && isSuspended(user)"
                 color="neutral"
@@ -120,27 +118,14 @@
             >
                 {{ t('platform.users.liftSuspension') }}
             </UButton>
-            <div class="flex-1" />
-            <UButton
-                color="error"
-                :disabled="!ready"
-                :loading="pending"
-                data-testid="platform-suspend-confirm"
-                @click="suspend"
-            >
-                {{
-                    duration === 'permanent'
-                        ? t('platform.users.suspendPermanently')
-                        : t('platform.users.suspend')
-                }}
-            </UButton>
         </template>
     </LayoutDialogShell>
 </template>
 
 <script setup lang="ts">
-import { reauthenticate } from '~/api/account'
-import { hideAuthor } from '~/api/moderation'
+import { translatedItems } from '~/utils/translatedItems'
+import { displayName } from '~/utils/avatar'
+import { hideAuthorContent } from '~/api/moderation'
 import {
     addBlockedEmails,
     getBlockSuggestions,
@@ -155,10 +140,8 @@ import {
     isPermanentlySuspended,
     isSuspended,
     suspensionEnd,
-    userDisplayName,
     type SuspensionDuration,
 } from '~/utils/platformUsers'
-import { isWrongPassword } from '~/utils/reauth'
 import { localDateYYYYMMDD, parseDate } from '#shared/utils/formatting'
 
 const DURATIONS: SuspensionDuration[] = ['week', 'month', 'until', 'permanent']
@@ -173,17 +156,22 @@ const { error: notifyError } = useNotification()
 
 const tomorrow = localDateYYYYMMDD(new Date(Date.now() + 86_400_000))
 const duration = ref<SuspensionDuration>('week')
+const durationItems = computed(() =>
+    translatedItems(DURATIONS, 'platform.users.durations', t),
+)
 const until = ref('')
 const reason = ref('')
 const hideContent = ref(false)
-const adminPassword = ref('')
+const {
+    password: adminPassword,
+    confirm: reauthenticate,
+    errorText: reauthError,
+} = useReauth(open)
 const suggestions = ref<BlockSuggestions | null>(null)
 const choices = computed(() => blockChoices(suggestions.value))
 const blockEmail = ref(false)
 const blockDomain = ref(false)
-const displayName = computed(() =>
-    props.user ? userDisplayName(props.user) || props.user.username : '',
-)
+const userName = computed(() => displayName(props.user))
 const ready = computed(
     () =>
         !!reason.value.trim() &&
@@ -204,7 +192,6 @@ watch(open, (isOpen) => {
             : ''
     reason.value = props.user?.suspension_reason ?? ''
     hideContent.value = false
-    adminPassword.value = ''
     blockEmail.value = blockDomain.value = false
     suggestions.value = null
     if (user)
@@ -230,11 +217,11 @@ async function send(suspension?: Suspension) {
         async () => {
             const id = props.user!.id
             if (suspension) {
-                await reauthenticate(adminPassword.value)
+                await reauthenticate()
                 await suspendUser(id, suspension)
             } else await liftSuspension(id)
             if (suspension && hideContent.value)
-                await hideAuthor(id, reason.value.trim())
+                await hideAuthorContent(id, reason.value.trim())
             const patterns = suspension ? blockedPatterns() : []
             if (patterns.length)
                 await addBlockedEmails(patterns).catch((error) => {
@@ -245,10 +232,7 @@ async function send(suspension?: Suspension) {
         },
         {
             success: t('moderation.saved'),
-            error: (error) =>
-                isWrongPassword(error)
-                    ? t('platform.users.adminPasswordWrong')
-                    : t('notifications.error.generic'),
+            error: reauthError(t('notifications.error.generic')),
         },
     )
     if (!done) return

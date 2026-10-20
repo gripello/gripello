@@ -9,7 +9,7 @@ test('server-renders the favicon, logo and logged-out navbar', async ({
 
     expect(html).toMatch(/<link[^>]+rel="icon"[^>]+href="[^"]+"/)
     expect(html).toMatch(
-        /data-testid="nav-logo"[^>]*>[\s\S]{0,120}?<img[^>]+alt="(?!Logo")[^"]+"/,
+        /data-testid="nav-logo"[^>]*>[\s\S]{0,120}?<img[^>]+ alt(="")?[\s>]/,
     )
     expect(html).toContain('data-testid="nav-login"')
     expect(html).not.toMatch(/verti-grade/i)

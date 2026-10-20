@@ -277,10 +277,8 @@
             @update:model-value="(open: boolean) => !open && (pending = null)"
             @confirm="confirm"
         >
-            <UserPasswordField
+            <UserReauthField
                 v-model="adminPassword"
-                :label="t('platform.users.adminPassword')"
-                icon="i-lucide-shield-check"
                 class="mt-3"
                 data-testid="platform-backups-admin-password"
             />
@@ -289,10 +287,11 @@
 </template>
 
 <script setup lang="ts">
+import { formatBytes } from '#shared/utils/number'
+import { useIntervalFn } from '@vueuse/core'
 import { CLIENT_ONLY } from '~/utils/platformMail'
 import { copyText } from '~/utils/clipboard'
 import { formatDate } from '#shared/utils/formatting'
-import { reauthenticate } from '~/api/account'
 import {
     backupDownloadUrl,
     deleteBackup,
@@ -303,12 +302,10 @@ import {
 } from '~/api/backups'
 import {
     backupHourOptions,
-    formatBytes,
     nextBackupRun,
     timeZoneName,
     syncCleanForm,
 } from '~/utils/backups'
-import { isWrongPassword } from '~/utils/reauth'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
@@ -439,17 +436,15 @@ async function copyRestore() {
     else notifyError(t('notifications.error.generic'))
 }
 
-let poll: ReturnType<typeof setInterval> | undefined
+const poll = useIntervalFn(() => refresh(), 5000, { immediate: false })
 watch(
     () => data.value?.running,
     (running) => {
-        clearInterval(poll)
-        if (running && import.meta.client)
-            poll = setInterval(() => refresh(), 5000)
+        if (running && import.meta.client) poll.resume()
+        else poll.pause()
     },
     { immediate: true },
 )
-onBeforeUnmount(() => clearInterval(poll))
 usePlatformLive(['backup.created', 'backup.deleted', 'backup.updated'], refresh)
 
 const { pending: starting, run: runStart } = useAsyncAction()
@@ -466,10 +461,13 @@ type PendingAction =
     | { kind: 'settings' }
 
 const pending = ref<PendingAction | null>(null)
-const adminPassword = ref('')
+const {
+    password: adminPassword,
+    confirm: reauthenticate,
+    errorText: reauthError,
+} = useReauth(pending)
 
 function request(action: PendingAction) {
-    adminPassword.value = ''
     pending.value = action
 }
 
@@ -484,7 +482,7 @@ async function confirm() {
     if (!action || !adminPassword.value) return
     await run(
         async () => {
-            await reauthenticate(adminPassword.value)
+            await reauthenticate()
             if (action.kind === 'download') {
                 window.location.assign(backupDownloadUrl(action.archive.name))
             } else if (action.kind === 'delete') {
@@ -497,10 +495,7 @@ async function confirm() {
             pending.value = null
         },
         {
-            error: (err) =>
-                isWrongPassword(err)
-                    ? t('platform.users.adminPasswordWrong')
-                    : t('notifications.error.generic'),
+            error: reauthError(t('notifications.error.generic')),
         },
     )
 }

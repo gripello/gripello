@@ -2,6 +2,7 @@ import { defineComponent, h, reactive } from 'vue'
 import { mount } from '@vue/test-utils'
 import SettingsLayout from '~/components/settings/Layout.vue'
 import { useDiscardConfirm } from '~/composables/useDiscardConfirm'
+import { useSectionQuery } from '~/composables/useSectionQuery'
 
 const route = reactive({ query: {} as Record<string, string> })
 const leaveGuards: (() => Promise<boolean>)[] = []
@@ -55,15 +56,25 @@ const sections = [
     { id: 'links', label: 'Links', icon: 'i-lucide-link' },
 ]
 
-function mountLayout(hasChanges = false) {
+function mountLayout(
+    hasChanges = false,
+    extraProps: Record<string, unknown> = {},
+) {
     vi.stubGlobal('useRoute', () => route)
     vi.stubGlobal('useDiscardConfirm', useDiscardConfirm)
     vi.stubGlobal('navigateTo', navigateTo)
+    vi.stubGlobal('useRouter', () => ({ back: vi.fn(), resolve: vi.fn() }))
+    vi.stubGlobal('useSectionQuery', useSectionQuery)
     vi.stubGlobal('onBeforeRouteLeave', (guard: () => Promise<boolean>) =>
         leaveGuards.push(guard),
     )
     return mount(SettingsLayout, {
-        props: { sections, hasChanges, testIdPrefix: 'platform-settings' },
+        props: {
+            sections,
+            hasChanges,
+            testIdPrefix: 'platform-settings',
+            ...extraProps,
+        },
         slots: {
             default: (scope: { activeSection: string }) =>
                 h('p', { 'data-testid': 'active' }, scope.activeSection),
@@ -74,6 +85,7 @@ function mountLayout(hasChanges = false) {
                 LayoutTabs: TabsStub,
                 LayoutSaveBar: true,
                 ConfirmDialog: true,
+                UChip: { template: '<i data-testid="badge" />' },
             },
             mocks: { $t: (key: string) => key },
         },
@@ -105,9 +117,10 @@ describe('SettingsLayout', () => {
         ).toBe('true')
 
         await wrapper.get('[data-tab="access"]').trigger('click')
-        expect(navigateTo).toHaveBeenCalledWith({
-            query: { section: 'access' },
-        })
+        expect(navigateTo).toHaveBeenCalledWith(
+            { query: { section: 'access' } },
+            { replace: true },
+        )
     })
 
     it('lets the route change only without unsaved changes', async () => {
@@ -150,5 +163,43 @@ describe('SettingsLayout', () => {
         expect(groups).toHaveLength(2)
         expect(groups[0]!.text()).not.toContain('Delete')
         expect(groups[1]!.text()).toContain('Delete')
+    })
+
+    it('reads and writes a custom query key', async () => {
+        route.query = { tab: 'links' }
+        const wrapper = mountLayout(false, { queryKey: 'tab' })
+        expect(wrapper.get('[data-testid="active"]').text()).toBe('links')
+
+        await wrapper.get('[data-tab="access"]').trigger('click')
+        expect(navigateTo).toHaveBeenCalledWith(
+            { query: { tab: 'access' } },
+            { replace: true },
+        )
+    })
+
+    it('guards leaving on unsaved changes outside the shown section', async () => {
+        mountLayout(false, { unsavedChanges: true })
+        const leaving = leaveGuards[0]!()
+        await expect(
+            Promise.race([leaving, Promise.resolve('pending')]),
+        ).resolves.toBe('pending')
+    })
+
+    it('shows desktop tabs instead of the side navigation', () => {
+        const wrapper = mountLayout(false, { desktopTabs: true })
+        expect(wrapper.find('aside').exists()).toBe(false)
+        expect(wrapper.findAll('[data-tab="access"]')).toHaveLength(2)
+    })
+
+    it('marks a section with a badge in the drill-down list', () => {
+        const wrapper = mountLayout(false, {
+            drillDown: true,
+            sections: [sections[0], { ...sections[1], badge: true }],
+        })
+        const rows = wrapper.findAll(
+            '[data-testid^="platform-settings-drill-"]',
+        )
+        expect(rows[0]!.find('[data-testid="badge"]').exists()).toBe(false)
+        expect(rows[1]!.find('[data-testid="badge"]').exists()).toBe(true)
     })
 })

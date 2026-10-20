@@ -1,3 +1,4 @@
+import { apiFieldErrors } from './fieldErrors'
 import {
     boundsOf,
     distance,
@@ -448,15 +449,7 @@ export function floorPlanErrors(
     error: unknown,
     sent: { walls: EditorWall[]; removed: EditorWall[] },
 ): FloorPlanError[] {
-    const fields =
-        (
-            error as {
-                data?: {
-                    data?: Record<string, { code?: string; message?: string }>
-                }
-            }
-        )?.data?.data ?? {}
-    return Object.entries(fields).flatMap(([field, detail]) => {
+    return Object.entries(apiFieldErrors(error)).flatMap(([field, detail]) => {
         const match = ERROR_KEY.exec(field)
         if (!match) return []
         const list = match[1] === 'walls' ? sent.walls : sent.removed

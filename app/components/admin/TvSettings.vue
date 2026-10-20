@@ -49,7 +49,7 @@
         <div class="flex flex-wrap items-center gap-4">
             <USelect
                 v-model="location"
-                :items="locationItems"
+                :items="locationSelectItems"
                 class="min-w-48"
                 data-testid="settings-tv-location"
             />
@@ -295,12 +295,9 @@ const location = computed({
     set: (value: string) =>
         (screen.value.location = value === ALL_LOCATIONS ? '' : value),
 })
-const locationItems = computed(() => [
+const locationSelectItems = computed(() => [
     { label: t('settings.tv.allLocations'), value: ALL_LOCATIONS },
-    ...locations.value.map((entry) => ({
-        label: entry.name,
-        value: entry.id,
-    })),
+    ...locationItems(locations.value),
 ])
 
 const screenUrl = computed(() =>

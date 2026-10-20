@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { ApiError } from '~/api/client'
 import {
+    apiFieldErrors,
     blockedFieldError,
+    formFieldErrors,
     linesToList,
     refusedEntries,
 } from '~/utils/fieldErrors'
@@ -60,5 +63,48 @@ describe('blocklist editing', () => {
                 ['ok.test', 'a b', 'fine.test'],
             ),
         ).toEqual(['a b'])
+    })
+})
+
+describe('formFieldErrors', () => {
+    const t = (key: string) => `t:${key}`
+    const error = {
+        response: {
+            data: {
+                name: { code: 'validation_required', message: 'Missing' },
+                grade: { code: 'validation_invalid_value', message: 'Bad' },
+                email: { code: 'validation_email_blocked', message: 'No' },
+                'walls.0.name': { code: 'validation_required', message: '' },
+            },
+        },
+    }
+
+    it('maps the server codes of the form fields to translated messages', () => {
+        expect(formFieldErrors(error, ['name', 'grade', 'email'], t)).toEqual([
+            { name: 'name', message: 't:validation.required' },
+            { name: 'grade', message: 't:validation.invalid' },
+            { name: 'email', message: 't:errors.emailBlocked' },
+        ])
+    })
+
+    it('ignores fields the form does not show and non-field errors', () => {
+        expect(formFieldErrors(error, ['comment'], t)).toEqual([])
+        expect(formFieldErrors(new Error('boom'), ['name'], t)).toEqual([])
+    })
+})
+
+describe('apiFieldErrors', () => {
+    it('reads field errors from the response body only', () => {
+        expect(
+            apiFieldErrors(
+                apiError({ token: { code: 'validation_invalid_token' } }),
+            ),
+        ).toEqual({ token: { code: 'validation_invalid_token' } })
+        expect(apiFieldErrors({ data: { data: { token: {} } } })).toEqual({})
+        expect(apiFieldErrors(new Error('offline'))).toEqual({})
+    })
+
+    it('has no data alias on ApiError', () => {
+        expect('data' in ApiError.prototype).toBe(false)
     })
 })

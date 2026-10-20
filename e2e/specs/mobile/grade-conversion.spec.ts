@@ -22,3 +22,14 @@ test('conversion ladders scroll inside the dialog on phones', async ({
         )
         .toBeLessThanOrEqual(0)
 })
+
+test('the grade scale PDF downloads as a named file, like the route export', async ({
+    page,
+}) => {
+    await gotoSettled(page, '/routes')
+    await page.getByTestId('index-grade-conversion-open').click()
+    const download = page.waitForEvent('download')
+    await page.getByTestId('grade-conversion-pdf').click()
+    expect((await download).suggestedFilename()).toMatch(/\.pdf$/)
+    await expect(page).toHaveURL(/\/routes$/)
+})

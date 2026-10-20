@@ -1,6 +1,7 @@
 <template>
     <!-- The header clears the status bar like the nav bar (iPad app, installed PWA), so both dividers stay level. -->
     <USidebar
+        v-if="!phone"
         :open="open"
         collapsible="icon"
         @update:open="keepOpenControlled"
@@ -17,7 +18,7 @@
             <LayoutGymSwitcher :collapsed="!open" />
             <UButton
                 v-if="staff"
-                :to="`/${slug}/routes`"
+                :to="staffExit"
                 color="neutral"
                 variant="soft"
                 icon="i-lucide-arrow-left"
@@ -123,6 +124,8 @@
 </template>
 
 <script setup lang="ts">
+import { useMediaQuery, useMounted } from '@vueuse/core'
+import { BREAKPOINTS } from '#shared/utils/breakpoints'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import {
     navContext,
@@ -144,6 +147,10 @@ const { t } = useI18n()
 const route = useRoute()
 
 const { open } = useSidebar()
+// Same query as USidebar's, so both agree on the breakpoint; below it its slide-over menu can get stuck open and phones use the bottom bar.
+const desktop = useMediaQuery(`(min-width: ${BREAKPOINTS.lg / 16}rem)`)
+const mounted = useMounted()
+const phone = computed(() => mounted.value && !desktop.value)
 // A listener makes USidebar's `open` model controlled; without it, crossing the mobile breakpoint leaves the rail collapsed while `open` is still true.
 const keepOpenControlled = () => {}
 const coarsePointer = useCoarsePointer()
@@ -187,4 +194,6 @@ const navLabel = computed(() =>
         ? gymTitle(gym.value)
         : t('nav.mainNavigation'),
 )
+
+const staffExit = useStaffExit()
 </script>

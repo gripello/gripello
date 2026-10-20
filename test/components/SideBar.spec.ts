@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { onTestFinished } from 'vitest'
 import { computed, defineComponent, h, ref } from 'vue'
 import SideBar from '~/components/layout/SideBar.vue'
 
@@ -11,8 +12,16 @@ vi.stubGlobal('useRoute', () => ({
 }))
 vi.stubGlobal('routeGymSlug', (params: { gym?: string }) => params.gym ?? '')
 vi.stubGlobal('useSidebar', () => ({ open: ref(true) }))
+const viewport = ref(1440)
+const mounted = ref(true)
+vi.mock('@vueuse/core', async (original) => ({
+    ...(await original<typeof import('@vueuse/core')>()),
+    useMediaQuery: () => computed(() => viewport.value >= 1024),
+    useMounted: () => mounted,
+}))
 vi.stubGlobal('useCoarsePointer', () => ref(false))
 vi.stubGlobal('useHydrated', () => ref(true))
+vi.stubGlobal('useStaffExit', () => computed(() => '/e2e/routes'))
 vi.stubGlobal('useGym', () => ({
     gym: computed(() => ({ name: 'E2E Gym' })),
     slug: computed(() => 'e2e'),
@@ -23,9 +32,14 @@ vi.stubGlobal('useScrollShadow', () => ({ style: ref({}) }))
 vi.stubGlobal('useModerationSummary', () => ({ badges: ref({}) }))
 
 const USidebar = defineComponent({
-    setup(_, { slots }) {
+    props: { open: { type: Boolean, default: false } },
+    setup(props, { slots }) {
         return () =>
-            h('aside', [slots.header?.(), slots.default?.(), slots.footer?.()])
+            h('aside', { 'data-open': String(props.open) }, [
+                slots.header?.(),
+                slots.default?.(),
+                slots.footer?.(),
+            ])
     },
 })
 
@@ -83,5 +97,33 @@ describe('SideBar', () => {
         expect(
             wrapper.find('[data-testid="user-menu-activator"]').exists(),
         ).toBe(true)
+    })
+})
+
+describe('SideBar at phone width', () => {
+    afterEach(() => {
+        viewport.value = 1440
+    })
+
+    it('drops the sidebar on phones, so its slide-over menu can never open, and restores the rail on desktop', async () => {
+        const wrapper = mountSideBar(true)
+        expect(wrapper.find('aside').attributes('data-open')).toBe('true')
+        viewport.value = 393
+        await wrapper.vm.$nextTick()
+        expect(wrapper.find('aside').exists()).toBe(false)
+        viewport.value = 1440
+        await wrapper.vm.$nextTick()
+        expect(wrapper.find('aside').attributes('data-open')).toBe('true')
+    })
+
+    it('keeps the server-rendered state until it is mounted', () => {
+        viewport.value = 393
+        mounted.value = false
+        onTestFinished(() => {
+            mounted.value = true
+        })
+        expect(mountSideBar(true).find('aside').attributes('data-open')).toBe(
+            'true',
+        )
     })
 })

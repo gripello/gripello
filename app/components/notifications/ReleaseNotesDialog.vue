@@ -305,13 +305,13 @@ const changelog = computed(() =>
 
 .release-date {
     font-size: 12px;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 55%, transparent);
+    color: var(--ui-text-muted);
 }
 
 .release-body {
     white-space: pre-wrap;
     font-size: 13px;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 75%, transparent);
+    color: var(--ui-text-toned);
     word-break: break-word;
 }
 
@@ -344,7 +344,7 @@ const changelog = computed(() =>
     text-align: center;
     text-transform: lowercase;
     background: color-mix(in oklab, var(--ui-text-highlighted) 7%, transparent);
-    color: color-mix(in oklab, var(--ui-text-highlighted) 70%, transparent);
+    color: var(--ui-text-muted);
 }
 
 .change-type--feat {
@@ -359,19 +359,19 @@ const changelog = computed(() =>
 
 .change-type--deps {
     background: color-mix(in oklab, var(--ui-text-highlighted) 5%, transparent);
-    color: color-mix(in oklab, var(--ui-text-highlighted) 50%, transparent);
+    color: var(--ui-text-muted);
 }
 
 .change-text {
     flex: 1;
     min-width: 0;
     word-break: break-word;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 87%, transparent);
+    color: var(--ui-text-toned);
 }
 
 .change-meta {
     font-size: 12px;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 55%, transparent);
+    color: var(--ui-text-muted);
 }
 
 .change-link {
@@ -389,7 +389,7 @@ const changelog = computed(() =>
     border-top: 1px solid
         color-mix(in oklab, var(--ui-text-highlighted) 6%, transparent);
     font-size: 12px;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 55%, transparent);
+    color: var(--ui-text-muted);
 }
 
 .mono {

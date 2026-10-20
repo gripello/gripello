@@ -1,14 +1,16 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, ref } from 'vue'
 import PushSettings from '~/components/account/PushSettings.vue'
+import LayoutListGroup from '~/components/layout/ListGroup.vue'
+import LayoutListRow from '~/components/layout/ListRow.vue'
 
 const getPrefs = vi.fn()
 const updatePrefs = vi.fn()
 vi.mock('~/api/notifications', () => ({
     getNotificationPrefs: () => getPrefs(),
-    updateNotificationPrefs: (...args: unknown[]) => updatePrefs(...args),
+    putNotificationPrefs: (...args: unknown[]) => updatePrefs(...args),
 }))
-vi.mock('~/api/routes', () => ({ listWallsByIds: async () => [] }))
+vi.mock('~/api/routes', () => ({ listWallsById: async () => [] }))
 
 const switchStub = {
     props: ['modelValue', 'disabled'],
@@ -24,8 +26,9 @@ function mountSettings(user: Record<string, unknown> = {}) {
     }
     return mount(PushSettings, {
         global: {
+            components: { LayoutListGroup, LayoutListRow },
+            mocks: { $t: (key: string) => key },
             stubs: {
-                UPageCard: { template: '<div><slot /></div>' },
                 LayoutEyebrow: { template: '<div><slot /></div>' },
                 UIcon: true,
                 UBadge: true,

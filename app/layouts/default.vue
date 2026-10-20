@@ -22,6 +22,7 @@
 </template>
 
 <script setup lang="ts">
+import { gymTopic, userTopic } from '#shared/utils/topics'
 import { fileUrl } from '~/api/client'
 import { refreshAuth } from '~/api/auth'
 import type { ApiError } from '~/api/client'
@@ -102,7 +103,7 @@ const realtimeGyms = computed(() =>
         ...new Set([
             gym.value?.id,
             ...(realtimeUserId.value
-                ? memberships.value.map((membership) => membership.gym)
+                ? memberships.value.map((membership) => membership.gym.id)
                 : []),
         ]),
     ]
@@ -117,7 +118,7 @@ function onGymEvent(event: GymEvent) {
     else if (event.kind === 'membership.changed') {
         if (event.users?.includes(realtimeUserId.value)) refreshPermissions()
     } else if (event.kind === 'role.changed') {
-        if (memberships.value.some((m) => m.role === event.id))
+        if (memberships.value.some((m) => m.role.id === event.id))
             refreshPermissions()
     }
 }
@@ -137,7 +138,7 @@ function subscribeRealtimeTopics() {
             const stops = gymIds
                 .split(',')
                 .filter(Boolean)
-                .map((gymId) => subscribeRealtime(`gym:${gymId}`, onGymEvent))
+                .map((gymId) => subscribeRealtime(gymTopic(gymId), onGymEvent))
             onCleanup(() => stops.forEach((stop) => stop()))
         },
         { immediate: true },
@@ -146,7 +147,7 @@ function subscribeRealtimeTopics() {
         realtimeUserId,
         (userId, _, onCleanup) => {
             if (userId)
-                onCleanup(subscribeRealtime(`user:${userId}`, onUserEvent))
+                onCleanup(subscribeRealtime(userTopic(userId), onUserEvent))
         },
         { immediate: true },
     )

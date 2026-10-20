@@ -52,5 +52,6 @@ const path = useGymPath()
 useSeoMeta({
     title: () => t('legal.imprint'),
     ogTitle: () => t('legal.imprint'),
+    description: () => t('legal.gymImprint', { name: gym.value?.name ?? '' }),
 })
 </script>

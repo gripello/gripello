@@ -12,7 +12,7 @@ const task = {
     priority: 2,
     status: 'open',
     photo: 'photo_abc.jpg',
-    created: '2026-10-01 10:00:00.000Z',
+    created: '2026-10-01T10:00:00.000Z',
 } as TaskRecord
 
 function mountCard() {
@@ -20,9 +20,6 @@ function mountCard() {
         props: { task },
         global: {
             stubs: {
-                UCard: {
-                    template: '<div><slot /><slot name="footer" /></div>',
-                },
                 LayoutImageViewer: {
                     props: ['src'],
                     template: '<div :data-src="src"><slot /></div>',
@@ -85,7 +82,6 @@ describe('TaskCard actions', () => {
             },
             global: {
                 stubs: {
-                    UCard: { template: '<div><slot /></div>' },
                     UDropdownMenu: {
                         props: ['items'],
                         template:

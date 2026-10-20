@@ -1,5 +1,5 @@
 <template>
-    <UCard data-testid="leaderboard-standing">
+    <LayoutPanel data-testid="leaderboard-standing">
         <div class="mb-4 grid grid-cols-3">
             <LayoutStatTile
                 :label="t('leaderboard.standing.rank')"
@@ -20,7 +20,7 @@
         </div>
         <LayoutSectionHeader :title="t('leaderboard.standing.bestSends')" />
         <LeaderboardRouteList :routes="sends" test-id="leaderboard-my-sends" />
-    </UCard>
+    </LayoutPanel>
 </template>
 
 <script setup lang="ts">

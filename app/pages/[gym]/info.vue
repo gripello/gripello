@@ -6,6 +6,8 @@
         >
             <img
                 :src="coverUrl"
+                :srcset="thumbSrcset(coverUrl, THUMB_SETS.cover)"
+                sizes="100vw"
                 :alt="title"
                 class="aspect-[16/5] w-full object-cover"
                 data-testid="gym-info-cover"
@@ -35,21 +37,19 @@
 
         <div v-else class="grid gap-4 lg:grid-cols-3">
             <div class="flex flex-col gap-4 lg:col-span-2">
-                <UCard v-if="gym?.description">
+                <LayoutPanel v-if="gym?.description">
                     <p
                         class="whitespace-pre-line"
                         data-testid="gym-info-description"
                     >
                         {{ gym.description }}
                     </p>
-                </UCard>
+                </LayoutPanel>
 
-                <UCard v-if="gym?.address || located">
-                    <template #header>
-                        <h2 class="font-semibold">
-                            {{ $t('gymInfo.location') }}
-                        </h2>
-                    </template>
+                <LayoutPanel
+                    v-if="gym?.address || located"
+                    :title="$t('gymInfo.location')"
+                >
                     <div class="flex flex-col gap-3">
                         <p
                             v-if="gym?.address"
@@ -69,14 +69,12 @@
                             class="self-start"
                         />
                     </div>
-                </UCard>
+                </LayoutPanel>
 
-                <UCard v-if="gym?.amenities?.length">
-                    <template #header>
-                        <h2 class="font-semibold">
-                            {{ $t('gymInfo.amenitiesTitle') }}
-                        </h2>
-                    </template>
+                <LayoutPanel
+                    v-if="gym?.amenities?.length"
+                    :title="$t('gymInfo.amenitiesTitle')"
+                >
                     <ul
                         class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
                         data-testid="gym-info-amenities"
@@ -94,32 +92,29 @@
                             {{ $t(`gymInfo.amenities.${amenity}`) }}
                         </li>
                     </ul>
-                </UCard>
+                </LayoutPanel>
             </div>
 
             <div class="order-first flex flex-col gap-4 lg:order-none">
-                <UCard v-if="hasHours" data-testid="gym-info-hours">
-                    <template #header>
-                        <h2 class="font-semibold">
-                            {{ $t('gymInfo.hoursTitle') }}
-                        </h2>
-                    </template>
+                <LayoutPanel
+                    v-if="hasHours"
+                    data-testid="gym-info-hours"
+                    :title="$t('gymInfo.hoursTitle')"
+                >
                     <GymHoursList :hours="gym?.opening_hours" :today="today" />
                     <p
                         v-if="gym?.hours_note"
-                        class="mt-3 text-sm whitespace-pre-line"
+                        class="text-sm whitespace-pre-line"
                         data-testid="gym-info-hours-note"
                     >
                         {{ gym.hours_note }}
                     </p>
-                </UCard>
+                </LayoutPanel>
 
-                <UCard v-if="contacts.length">
-                    <template #header>
-                        <h2 class="font-semibold">
-                            {{ $t('gymInfo.contact') }}
-                        </h2>
-                    </template>
+                <LayoutPanel
+                    v-if="contacts.length"
+                    :title="$t('gymInfo.contact')"
+                >
                     <ul class="flex flex-col gap-1">
                         <li v-for="contact in contacts" :key="contact.key">
                             <UButton
@@ -139,13 +134,14 @@
                             />
                         </li>
                     </ul>
-                </UCard>
+                </LayoutPanel>
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import { THUMBS, THUMB_SETS, thumbSrcset } from '#shared/utils/thumbs'
 import { fileUrl } from '~/api/client'
 import { GYM_AMENITIES } from '#shared/utils/gymAmenities'
 import { hasOpeningHours, toSchemaOrgHours } from '#shared/utils/openingHours'
@@ -166,7 +162,7 @@ const subtitle = computed(() => (gym.value ? gymSubtitle(gym.value) : ''))
 const coverUrl = computed(() =>
     gym.value?.cover_image
         ? fileUrl('gyms', gym.value, gym.value.cover_image, {
-              thumb: '1600x500',
+              thumb: THUMBS.cover,
           })
         : '',
 )
@@ -175,7 +171,7 @@ const markers = computed(() =>
     gym.value
         ? gymMarkers([gym.value], (g) =>
               g.page_logo
-                  ? fileUrl('gyms', g, g.page_logo, { thumb: '0x200' })
+                  ? fileUrl('gyms', g, g.page_logo, { thumb: THUMBS.logo })
                   : '',
           )
         : [],
@@ -190,11 +186,17 @@ const {
 
 const contacts = computed(() => (gym.value ? gymContacts(gym.value) : []))
 
+const infoDescription = computed(
+    () =>
+        gym.value?.description?.trim().slice(0, 160) ||
+        t('seo.info', { name: title.value }),
+)
+
 useSeoMeta({
     title: () => t('page.title.info'),
     ogTitle: () => t('gymInfo.title', { name: title.value }),
-    description: () => gym.value?.description?.slice(0, 160),
-    ogDescription: () => gym.value?.description?.slice(0, 160),
+    description: () => infoDescription.value,
+    ogDescription: () => infoDescription.value,
 })
 
 useHead({

@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-    checkApiVersion,
-    isGoApiPath,
-    parseSemver,
-} from '#shared/utils/apiVersion'
+import { checkApiVersion, isGoApiPath } from '#shared/utils/apiVersion'
+import { parseSemver } from '#shared/utils/version'
 
 describe('parseSemver', () => {
     it.each([
@@ -11,8 +8,18 @@ describe('parseSemver', () => {
         ['dev', null],
         ['v1.5.0', { major: 1, minor: 5, patch: 0 }],
         ['1.5.0-3-gabc', { major: 1, minor: 5, patch: 0 }],
+        [' 1.5.0 ', { major: 1, minor: 5, patch: 0 }],
     ])('%j', (input, expected) => {
         expect(parseSemver(input)).toEqual(expected)
+    })
+
+    it('exact rejects describe and pre-release suffixes', () => {
+        expect(parseSemver('1.5.0-3-gabc', { exact: true })).toBeNull()
+        expect(parseSemver('v1.5.0', { exact: true })).toEqual({
+            major: 1,
+            minor: 5,
+            patch: 0,
+        })
     })
 })
 

@@ -1,5 +1,5 @@
 import { listGyms } from '~/api/gyms'
-import { getPlatformStats } from '~/api/platform'
+import { platformStats } from '~/api/platform'
 import { withGymStats } from '~/utils/platformGyms'
 
 export function usePlatformGyms() {
@@ -8,7 +8,7 @@ export function usePlatformGyms() {
         async () => {
             const [gyms, stats] = await Promise.all([
                 listGyms({ all: true }),
-                getPlatformStats(),
+                platformStats(),
             ])
             return withGymStats(gyms, stats.gyms)
         },

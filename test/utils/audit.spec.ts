@@ -1,8 +1,8 @@
+import { AUDIT_ACTIONS } from '#shared/utils/audit'
 import { describe, it, expect } from 'vitest'
 import en from '../../i18n/locales/en.json'
 import {
     AUDITED_COLLECTIONS,
-    AUDIT_ACTIONS,
     actionColor,
     actionIcon,
     compressIp,

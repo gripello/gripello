@@ -1,3 +1,4 @@
+import { useEventListener, useIntervalFn, useTimeoutFn } from '@vueuse/core'
 import { tvReloadDue } from '~/utils/tvScreen'
 
 const CURSOR_IDLE_MS = 3_000
@@ -8,8 +9,6 @@ export function useTvKiosk() {
     useLiveGym()
     const cursorHidden = ref(false)
     let wakeLock: WakeLockSentinel | null = null
-    let cursorTimer: ReturnType<typeof setTimeout> | undefined
-    let reloadTimer: ReturnType<typeof setInterval> | undefined
     let updatePending = false
     let unmounted = false
 
@@ -37,14 +36,20 @@ export function useTvKiosk() {
         wakeLock = lock ?? null
     }
 
+    const { start: hideCursorSoon } = useTimeoutFn(
+        () => (cursorHidden.value = true),
+        CURSOR_IDLE_MS,
+        { immediate: false },
+    )
     function showCursor() {
         cursorHidden.value = false
-        clearTimeout(cursorTimer)
-        cursorTimer = setTimeout(
-            () => (cursorHidden.value = true),
-            CURSOR_IDLE_MS,
-        )
+        hideCursorSoon()
     }
+    const { resume: startReloadChecks } = useIntervalFn(
+        () => void checkReload(),
+        RELOAD_CHECK_MS,
+        { immediate: false },
+    )
 
     let removeUpdateHook = () => {}
 
@@ -55,17 +60,13 @@ export function useTvKiosk() {
         )
         void lockScreen()
         showCursor()
-        document.addEventListener('visibilitychange', lockScreen)
-        window.addEventListener('pointermove', showCursor)
-        reloadTimer = setInterval(() => void checkReload(), RELOAD_CHECK_MS)
+        useEventListener(document, 'visibilitychange', lockScreen)
+        useEventListener('pointermove', showCursor)
+        startReloadChecks()
     })
     onBeforeUnmount(() => {
         unmounted = true
         removeUpdateHook()
-        document.removeEventListener('visibilitychange', lockScreen)
-        window.removeEventListener('pointermove', showCursor)
-        clearTimeout(cursorTimer)
-        clearInterval(reloadTimer)
         void wakeLock?.release().catch(() => {})
     })
 

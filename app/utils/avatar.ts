@@ -1,14 +1,17 @@
-const AVATAR_COLORS = [
-    'var(--ui-primary)',
-    'var(--ui-secondary)',
-    'var(--ui-success)',
-    'var(--ui-info)',
+import { THUMBS, type ThumbSize } from '#shared/utils/thumbs'
+import { fileUrl } from '~/api/client'
+
+export const AVATAR_COLORS = [
+    '#38741c',
+    '#38656a',
+    '#236628',
+    '#0061a4',
     '#673ab7',
-    '#009688',
+    '#00796b',
     '#3f51b5',
-    '#e91e63',
-    '#00bcd4',
-    '#ff9800',
+    '#c2185b',
+    '#006d77',
+    '#b45309',
 ]
 
 export function avatarColor(name: string | null | undefined): string {
@@ -24,4 +27,31 @@ export function nameInitials(name: string | null | undefined): string {
         .slice(0, 2)
         .map((part) => part[0]?.toUpperCase() ?? '')
         .join('')
+}
+
+interface NamedUser {
+    id?: string
+    firstname?: string | null
+    name?: string | null
+    username?: string | null
+    email?: string | null
+}
+
+export function displayName(
+    user: NamedUser | null | undefined,
+    fallback = '',
+): string {
+    return (
+        [user?.firstname, user?.name].filter(Boolean).join(' ') ||
+        user?.username ||
+        user?.email ||
+        fallback
+    )
+}
+
+export function avatarUrl(
+    user: { id?: string; avatar?: string | null } | null | undefined,
+    thumb: ThumbSize = THUMBS.avatar,
+): string {
+    return fileUrl('users', user, user?.avatar, { thumb })
 }

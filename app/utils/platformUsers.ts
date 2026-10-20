@@ -1,16 +1,11 @@
-import type {
-    GymRecord,
-    MembershipRecord,
-    RoleRecord,
-    UserRecord,
-} from '~/types/models'
+import type { GymRecord, RoleRecord, UserRecord } from '~/types/models'
 import type { BlockSuggestions } from '~/api/platform'
 import { gymTitle } from '~/utils/gymNames'
 
 export type PlatformUserFilter = 'platform_admins' | 'unverified' | 'suspended'
 
 export type PlatformUser = UserRecord & {
-    expand?: { memberships_via_user?: MembershipRecord[] }
+    memberships?: { id: string; gym: string; role: string }[]
     mfa_enabled?: boolean
     session_count?: number
     locked_until?: string | null
@@ -47,15 +42,6 @@ export interface MembershipChip {
     roleColor: string | null
 }
 
-export function userDisplayName(user: UserRecord) {
-    return (
-        [user.firstname, user.name].filter(Boolean).join(' ') ||
-        user.username ||
-        user.email ||
-        ''
-    )
-}
-
 export function membershipChips(
     user: PlatformUser,
     gyms: GymRecord[],
@@ -63,7 +49,7 @@ export function membershipChips(
 ): MembershipChip[] {
     const gymById = new Map(gyms.map((gym) => [gym.id, gym]))
     const roleById = new Map(roles.map((role) => [role.id, role]))
-    return (user.expand?.memberships_via_user ?? [])
+    return (user.memberships ?? [])
         .map((membership) => {
             const gym = gymById.get(membership.gym)
             const role = roleById.get(membership.role)
@@ -124,11 +110,9 @@ export function suspensionEnd(
     if (duration === 'permanent') return null
     // The chosen day counts in full, in the admin's own time zone.
     if (duration === 'until')
-        return new Date(`${until}T23:59:59.999`).toISOString().replace('T', ' ')
+        return new Date(`${until}T23:59:59.999`).toISOString()
     const days = duration === 'week' ? 7 : 30
-    return new Date(now.getTime() + days * DAY_MS)
-        .toISOString()
-        .replace('T', ' ')
+    return new Date(now.getTime() + days * DAY_MS).toISOString()
 }
 
 // What the suspend dialog offers to block: the address unless already blocked, the domain only off public providers.

@@ -23,6 +23,20 @@ test('staff get their own bottom bar and a way back to climbing', async ({
     await expect(page.getByTestId('bottom-nav-feed')).toBeVisible()
 })
 
+test('back to climbing returns to the page staff tools were opened from', async ({
+    adminPage: page,
+}) => {
+    await gotoSettled(page, '/account')
+    await page.getByTestId('me-staff-tools').click()
+    await page.waitForURL(/\/manage$/)
+    await page.getByTestId('staff-hub-link-manage-comments').click()
+    await page.waitForURL('**/manage/comments')
+    await page.getByTestId('nav-back').click()
+    await page.waitForURL(/\/manage$/)
+    await page.getByTestId('nav-back-to-climbing-mobile').click()
+    await page.waitForURL(/\/account$/)
+})
+
 test('the mobile filter button is big enough to show its icon', async ({
     adminPage: page,
 }) => {

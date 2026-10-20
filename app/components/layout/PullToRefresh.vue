@@ -30,6 +30,7 @@
 </template>
 
 <script setup lang="ts">
+import { useEventListener } from '@vueuse/core'
 import { isNativeApp } from '~/utils/native'
 import {
     canPullFrom,
@@ -94,16 +95,8 @@ async function onEnd() {
 
 onMounted(() => {
     if (!isNativeApp()) return
-    window.addEventListener('touchstart', onStart, { passive: true })
-    window.addEventListener('touchmove', onMove, { passive: true })
-    window.addEventListener('touchend', onEnd)
-    window.addEventListener('touchcancel', onEnd)
-})
-
-onBeforeUnmount(() => {
-    window.removeEventListener('touchstart', onStart)
-    window.removeEventListener('touchmove', onMove)
-    window.removeEventListener('touchend', onEnd)
-    window.removeEventListener('touchcancel', onEnd)
+    useEventListener('touchstart', onStart, { passive: true })
+    useEventListener('touchmove', onMove, { passive: true })
+    useEventListener(['touchend', 'touchcancel'], onEnd)
 })
 </script>

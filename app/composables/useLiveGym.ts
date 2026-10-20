@@ -1,3 +1,4 @@
+import { gymTopic } from '#shared/utils/topics'
 import { getGym } from '~/api/gyms'
 import type { GymEvent } from '~/composables/useRealtime'
 import type { GymRecord } from '~/types/models'
@@ -22,7 +23,7 @@ export function updatedGym(
 export function useLiveGym() {
     const { gym, slug } = useGym()
     useRealtime(
-        () => gym.value?.id && `gym:${gym.value.id}`,
+        () => gym.value?.id && gymTopic(gym.value.id),
         (event: GymEvent) => {
             const next = updatedGym(gym.value, event)
             if (next) gym.value = next

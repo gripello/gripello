@@ -67,14 +67,12 @@
                 </button>
             </div>
 
-            <section
-                class="rounded-lg bg-default p-4 ring ring-default max-lg:hidden"
+            <LayoutPanel
+                :title="t('platform.logs.perMinute')"
+                class="max-lg:hidden"
                 data-testid="platform-logs-histogram"
             >
-                <div class="mb-4 flex flex-wrap items-center gap-3">
-                    <h2 class="flex-1 text-base font-semibold text-highlighted">
-                        {{ t('platform.logs.perMinute') }}
-                    </h2>
+                <template #actions>
                     <span
                         v-for="item in legend"
                         :key="item.label"
@@ -83,7 +81,7 @@
                         <span class="size-2.5 rounded-sm" :class="item.color" />
                         {{ item.label }}
                     </span>
-                </div>
+                </template>
                 <div class="flex h-24 items-end gap-1" aria-hidden="true">
                     <div
                         v-for="(bucket, index) in histogram"
@@ -120,15 +118,12 @@
                         tick
                     }}</span>
                 </div>
-            </section>
+            </LayoutPanel>
 
             <div
                 class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]"
             >
-                <section
-                    class="min-w-0 overflow-hidden rounded-lg bg-default ring ring-default"
-                    data-testid="platform-logs"
-                >
+                <LayoutPanel flush class="min-w-0" data-testid="platform-logs">
                     <div
                         class="flex flex-wrap items-center gap-3 border-b border-default p-3"
                     >
@@ -264,17 +259,10 @@
                             </div>
                         </li>
                     </ul>
-                </section>
+                </LayoutPanel>
 
                 <div class="flex flex-col gap-4">
-                    <section
-                        class="rounded-lg bg-default p-4 ring ring-default"
-                    >
-                        <h2
-                            class="mb-3 text-base font-semibold text-highlighted"
-                        >
-                            {{ t('platform.logs.runtimeLevel') }}
-                        </h2>
+                    <LayoutPanel :title="t('platform.logs.runtimeLevel')">
                         <URadioGroup
                             :model-value="runtimeLevel"
                             :items="runtimeItems"
@@ -286,17 +274,12 @@
                                 (level) => changeLevel(level as LogLevel)
                             "
                         />
-                    </section>
-                    <section
+                    </LayoutPanel>
+                    <LayoutPanel
                         v-if="replicaRows.length"
-                        class="rounded-lg bg-default p-4 ring ring-default"
+                        :title="t('platform.logs.replicas')"
                         data-testid="platform-logs-replicas"
                     >
-                        <h2
-                            class="mb-3 text-base font-semibold text-highlighted"
-                        >
-                            {{ t('platform.logs.replicas') }}
-                        </h2>
                         <ul class="flex flex-col gap-1">
                             <li
                                 v-for="replica in replicaRows"
@@ -347,7 +330,7 @@
                                 </button>
                             </li>
                         </ul>
-                    </section>
+                    </LayoutPanel>
                 </div>
             </div>
         </div>
@@ -355,6 +338,7 @@
 </template>
 
 <script setup lang="ts">
+import { useIntervalFn } from '@vueuse/core'
 import { copyText } from '~/utils/clipboard'
 import { listServerLogs, setLogLevel, type LogLevel } from '~/api/platform'
 import {
@@ -397,16 +381,15 @@ const {
     server: false,
 })
 
-let timer: ReturnType<typeof setInterval> | undefined
+const liveRefresh = useIntervalFn(() => refresh(), 5000, { immediate: false })
 watch(
     live,
     (on) => {
-        clearInterval(timer)
-        if (on && import.meta.client) timer = setInterval(() => refresh(), 5000)
+        if (on && import.meta.client) liveRefresh.resume()
+        else liveRefresh.pause()
     },
     { immediate: true },
 )
-onBeforeUnmount(() => clearInterval(timer))
 
 const lines = computed(() =>
     (logs.value?.items ?? []).map((entry) => ({

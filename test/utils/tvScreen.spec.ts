@@ -22,7 +22,7 @@ const now = new Date('2026-10-14T18:00:00')
 const route = (id: string, extra: Partial<TvRoute> = {}): TvRoute => ({
     id,
     name: id,
-    screw_date: '2026-10-12 00:00:00.000Z',
+    screw_date: '2026-10-12',
     wall: 'w1',
     ...extra,
 })
@@ -109,8 +109,8 @@ describe('buildPlaylist', () => {
         expect(
             kinds({
                 competitions: [
-                    competition('soon', '2026-10-20 10:00', '2026-10-20 18:00'),
-                    competition('now', '2026-10-14 10:00', '2026-10-14 22:00'),
+                    competition('soon', '2026-10-20T10:00', '2026-10-20T18:00'),
+                    competition('now', '2026-10-14T10:00', '2026-10-14T22:00'),
                 ],
             }),
         ).toEqual(['promo:soon', 'info'])
@@ -139,7 +139,7 @@ describe('plannedResets', () => {
         const resets = plannedResets(
             [
                 route('a', { removal_planned_for: '2026-10-20' }),
-                route('b', { removal_planned_for: '2026-10-20 00:00:00' }),
+                route('b', { removal_planned_for: '2026-10-20' }),
                 route('c', { wall: 'w2', removal_planned_for: '2026-10-16' }),
                 route('d', { removal_planned_for: '2026-10-01' }),
                 route('e', {
@@ -163,9 +163,9 @@ describe('plannedResets', () => {
 describe('takeoverCompetition', () => {
     it('picks the running competition that ends first', () => {
         const competitions = [
-            competition('late', '2026-10-14 10:00', '2026-10-15 22:00'),
-            competition('early', '2026-10-14 10:00', '2026-10-14 20:00'),
-            competition('soon', '2026-10-20 10:00', '2026-10-20 18:00'),
+            competition('late', '2026-10-14T10:00', '2026-10-15T22:00'),
+            competition('early', '2026-10-14T10:00', '2026-10-14T20:00'),
+            competition('soon', '2026-10-20T10:00', '2026-10-20T18:00'),
         ]
         expect(takeoverCompetition(competitions, now)?.id).toBe('early')
         expect(takeoverCompetition(competitions.slice(2), now)).toBeNull()

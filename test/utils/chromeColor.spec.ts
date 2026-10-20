@@ -22,6 +22,9 @@ describe('parseColor', () => {
 
     it('rejects anything else', () => {
         expect(parseColor('teal')).toBeNull()
+        expect(parseColor('face')).toBeNull()
+        expect(parseColor('bad')).toBeNull()
+        expect(parseColor(' #bad')).toEqual([187, 170, 221, 1])
     })
 })
 

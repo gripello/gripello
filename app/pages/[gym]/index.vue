@@ -46,24 +46,7 @@
             </div>
         </header>
 
-        <LayoutEmptyState
-            v-if="loadFailed"
-            variant="error"
-            :title="$t('errors.loadFailed')"
-            data-testid="load-error"
-        >
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-refresh-cw"
-                    data-testid="load-error-retry"
-                    @click="retryLoad"
-                >
-                    {{ $t('errors.retry') }}
-                </UButton>
-            </template>
-        </LayoutEmptyState>
+        <LayoutLoadError v-if="loadFailed" @retry="retryLoad" />
 
         <template v-else>
             <CompetitionCard
@@ -247,8 +230,8 @@
 </template>
 
 <script setup lang="ts">
+import { leaderboardTopic } from '#shared/utils/topics'
 import { listRoutes, listWalls } from '~/api/routes'
-import { keepWhenOffline } from '~/utils/errors'
 import type { RouteListItem } from '~/types/models'
 import { gradeLabels } from '#shared/utils/grades'
 import {
@@ -263,7 +246,7 @@ import { gymSubtitle, gymTitle } from '~/utils/gymNames'
 import { listCompetitions } from '~/api/competitions'
 import { currentCompetition } from '~/utils/competitions'
 import { plannedResets } from '~/utils/tvScreen'
-import { LEADERBOARD_REFRESH_MS, leaderboardTopic } from '~/utils/leaderboard'
+import { LEADERBOARD_REFRESH_MS } from '~/utils/leaderboard'
 import { formatDate } from '#shared/utils/formatting'
 
 const gymPath = useGymPath()
@@ -295,22 +278,14 @@ const [
     { data: routeRecords, error: routesError, refresh: refreshRoutes },
     { data: wallRecords, error: wallsError, refresh: refreshWalls },
 ] = await Promise.all([
-    useAsyncData(
+    useOfflineData(
         cacheKeys.overviewRoutes,
-        (nuxtApp) =>
-            keepWhenOffline(nuxtApp, cacheKeys.overviewRoutes, () =>
-                listRoutes(gymId.value, {}).then((list) => list.items),
-            ),
+        () => listRoutes(gymId.value, {}).then((list) => list.items),
         { default: () => [] },
     ),
-    useAsyncData(
-        cacheKeys.overviewWalls,
-        (nuxtApp) =>
-            keepWhenOffline(nuxtApp, cacheKeys.overviewWalls, () =>
-                listWalls(gymId.value),
-            ),
-        { default: () => [] },
-    ),
+    useOfflineData(cacheKeys.overviewWalls, () => listWalls(gymId.value), {
+        default: () => [],
+    }),
 ])
 
 const loadFailed = computed(() => !!routesError.value || !!wallsError.value)

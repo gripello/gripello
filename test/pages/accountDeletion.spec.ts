@@ -42,7 +42,8 @@ describe('account deletion page', () => {
         expect(listed('KEPT').map((key) => page.kept[key])).not.toContain(
             undefined,
         )
-        expect(listed('KEPT')).toHaveLength(5)
+        expect(listed('KEPT')).toHaveLength(6)
+        expect(listed('KEPT')).toContain('exports')
     })
 
     it('is linked from the privacy page', () => {

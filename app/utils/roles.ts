@@ -99,3 +99,39 @@ const BUILTIN_ROLES = new Set(['admin', 'routesetter', 'public'])
 export function roleLabel(name: string, t: (key: string) => string): string {
     return BUILTIN_ROLES.has(name) ? t(`members.builtinRoles.${name}`) : name
 }
+
+export function roleHasPermission(
+    role: Pick<RoleRecord, 'permissions'>,
+    permission: string,
+): boolean {
+    return (role.permissions ?? []).includes(permission)
+}
+
+export function permissionGroupState(
+    role: Pick<RoleRecord, 'permissions'>,
+    names: string[],
+): boolean | 'indeterminate' {
+    const granted = names.filter((name) => roleHasPermission(role, name)).length
+    if (granted === 0) return false
+    return granted === names.length ? true : 'indeterminate'
+}
+
+export function toggleGroupPermissions(
+    role: Pick<RoleRecord, 'permissions'>,
+    names: string[],
+): string[] {
+    const current = role.permissions ?? []
+    return permissionGroupState(role, names) === true
+        ? current.filter((name) => !names.includes(name))
+        : [...new Set([...current, ...names])]
+}
+
+export function togglePermissionName(
+    role: Pick<RoleRecord, 'permissions'>,
+    name: string,
+): string[] {
+    const current = role.permissions ?? []
+    return current.includes(name)
+        ? current.filter((granted) => granted !== name)
+        : [...current, name]
+}

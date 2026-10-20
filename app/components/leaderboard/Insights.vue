@@ -1,6 +1,6 @@
 <template>
     <div class="flex flex-col gap-4" data-testid="leaderboard-insights">
-        <UCard :ui="{ body: 'p-3 sm:p-3' }">
+        <LayoutPanel padding="sm">
             <div
                 class="grid grid-cols-2 gap-y-3 sm:grid-cols-4"
                 data-testid="leaderboard-stats"
@@ -20,7 +20,7 @@
                     :label="t('ticks.types.flash')"
                     :value="board.stats.flashes"
                     icon="i-lucide-zap"
-                    icon-color="yellow-darken-2"
+                    icon-color="warning"
                 />
                 <LayoutStatTile
                     :label="t('ticks.stats.hardest')"
@@ -29,13 +29,13 @@
                     icon-color="primary"
                 />
             </div>
-        </UCard>
+        </LayoutPanel>
 
         <section v-if="board.grades.length">
             <LayoutSectionHeader :title="t('leaderboard.stats.grades')" />
-            <UCard :ui="{ body: 'p-2 sm:p-3' }">
+            <LayoutPanel padding="sm">
                 <LogbookPyramidChart :rows="gradePyramid(board.grades)" />
-            </UCard>
+            </LayoutPanel>
         </section>
 
         <section v-if="board.topRoutes.length">

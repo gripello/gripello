@@ -78,6 +78,7 @@
                                     gridColumn: weekIndex + 2,
                                     gridRow: weekday + 2,
                                 }"
+                                :role="cell.inRange ? 'img' : undefined"
                                 :aria-label="
                                     cell.inRange ? cell.label : undefined
                                 "
@@ -118,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import { useEventListener } from '@vueuse/core'
 import type { TimelineDatum } from '#shared/utils/analytics'
 
 interface HeatmapCell {
@@ -273,11 +275,8 @@ function hideTooltip() {
     tooltip.visible = false
 }
 
-onMounted(() => {
-    scrollToToday()
-    window.addEventListener('scroll', hideTooltip, { passive: true })
-})
-onBeforeUnmount(() => window.removeEventListener('scroll', hideTooltip))
+onMounted(scrollToToday)
+useEventListener('scroll', hideTooltip, { passive: true })
 watch(selectedYear, () => nextTick(scrollToToday))
 
 function showCellTooltip(event: MouseEvent) {
@@ -332,7 +331,7 @@ function showCellTooltip(event: MouseEvent) {
 .heatmap-label {
     font-size: 11px;
     line-height: 1;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 60%, transparent);
+    color: var(--ui-text-muted);
     white-space: nowrap;
     align-self: center;
 }
@@ -381,7 +380,7 @@ function showCellTooltip(event: MouseEvent) {
     gap: 3px;
     margin-top: 8px;
     font-size: 11px;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 60%, transparent);
+    color: var(--ui-text-muted);
 }
 
 .heatmap-legend .heatmap-cell {
@@ -412,7 +411,7 @@ function showCellTooltip(event: MouseEvent) {
     font-size: 12px;
     white-space: nowrap;
     background: color-mix(in oklab, var(--ui-bg) 96%, transparent);
-    color: color-mix(in oklab, var(--ui-text-highlighted) 90%, transparent);
+    color: var(--ui-text-toned);
     border: 1px solid
         color-mix(in oklab, var(--ui-text-highlighted) 10%, transparent);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);

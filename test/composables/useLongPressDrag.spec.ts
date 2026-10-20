@@ -37,7 +37,10 @@ describe('useLongPressDrag', () => {
         expect(drag.target.value).toBe('done')
 
         drag.release()
-        expect(onDrop).toHaveBeenCalledWith('task-1', 'done')
+        expect(onDrop).toHaveBeenCalledWith('task-1', 'done', {
+            x: 120,
+            y: 600,
+        })
         expect(drag.dragged.value).toBeNull()
     })
 
@@ -93,5 +96,96 @@ describe('useLongPressDrag', () => {
         window.removeEventListener('touchmove', later)
 
         expect(preventedForLaterListeners).toBe(true)
+    })
+
+    it('lets a mouse drag at once past the threshold and drops without targets', () => {
+        const onDrop = vi.fn()
+        const onMove = vi.fn()
+        const onCancel = vi.fn()
+        const drag = useLongPressDrag<string>({
+            tolerance: 6,
+            onDrop,
+            onMove,
+            onCancel,
+        })
+        drag.startPointer(
+            new PointerEvent('pointerdown', {
+                button: 0,
+                pointerType: 'mouse',
+                clientX: 10,
+                clientY: 10,
+            }),
+            'route-1',
+        )
+        window.dispatchEvent(
+            new PointerEvent('pointermove', { clientX: 12, clientY: 10 }),
+        )
+        expect(drag.dragged.value).toBeNull()
+        window.dispatchEvent(
+            new PointerEvent('pointermove', { clientX: 40, clientY: 30 }),
+        )
+        expect(drag.dragged.value).toBe('route-1')
+        expect(onMove).toHaveBeenLastCalledWith('route-1', { x: 40, y: 30 })
+        window.dispatchEvent(new PointerEvent('pointerup'))
+        expect(onDrop).toHaveBeenCalledWith('route-1', '', { x: 40, y: 30 })
+
+        window.dispatchEvent(
+            new PointerEvent('pointermove', { clientX: 90, clientY: 90 }),
+        )
+        expect(drag.dragged.value).toBeNull()
+
+        drag.startPointer(
+            new PointerEvent('pointerdown', {
+                button: 0,
+                pointerType: 'touch',
+                clientX: 10,
+                clientY: 10,
+            }),
+            'route-2',
+        )
+        vi.advanceTimersByTime(350)
+        window.dispatchEvent(new PointerEvent('pointercancel'))
+        expect(onCancel).toHaveBeenCalledWith('route-2')
+        expect(onDrop).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps a mouse press from selecting text and swallows the click after a drag', () => {
+        const drag = useLongPressDrag<string>({ onDrop: vi.fn() })
+        const down = new PointerEvent('pointerdown', {
+            button: 0,
+            pointerType: 'mouse',
+            clientX: 10,
+            clientY: 10,
+            cancelable: true,
+        })
+        drag.startPointer(down, 'route-1')
+        expect(down.defaultPrevented).toBe(true)
+        window.dispatchEvent(
+            new PointerEvent('pointermove', { clientX: 60, clientY: 60 }),
+        )
+        window.dispatchEvent(new PointerEvent('pointerup'))
+        const onClick = vi.fn()
+        document.body.addEventListener('click', onClick)
+        const click = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+        })
+        document.body.dispatchEvent(click)
+        expect(click.defaultPrevented).toBe(true)
+        expect(onClick).not.toHaveBeenCalled()
+
+        drag.startPointer(
+            new PointerEvent('pointerdown', {
+                button: 0,
+                pointerType: 'mouse',
+                clientX: 10,
+                clientY: 10,
+            }),
+            'route-2',
+        )
+        window.dispatchEvent(new PointerEvent('pointerup'))
+        document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+        expect(onClick).toHaveBeenCalledOnce()
+        document.body.removeEventListener('click', onClick)
     })
 })

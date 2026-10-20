@@ -3,7 +3,7 @@ import { apiOf, gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { mailCount, mailbox, waitForMail } from '../../support/mail'
-import { decide, openCase } from '../../support/moderation'
+import { caseFor, decide, openCase } from '../../support/moderation'
 import {
     decideModerationCase,
     fileReport,
@@ -13,7 +13,6 @@ import {
     updateMe,
 } from '../../support/api'
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 2000))
 const toasts = (page: import('@playwright/test').Page) =>
     page.getByTestId('global-snackbar-message')
 
@@ -61,9 +60,8 @@ test('two moderators hiding the same case at once decide it only once', async ({
     expect((await findReport(api, reportId))?.status).toBe('actioned')
     await waitForMail(adminPage, notifier, { subject: /decision/i })
     await waitForMail(adminPage, author.email, { subject: /hidden/i })
-    await settle()
-    expect(await mailCount(adminPage, notifier)).toBe(2)
-    expect(await mailCount(adminPage, author.email)).toBe(1)
+    await expect.poll(() => mailCount(adminPage, notifier)).toBe(2)
+    await expect.poll(() => mailCount(adminPage, author.email)).toBe(1)
 })
 
 test('a double click on “Keep visible” decides once', async ({
@@ -90,8 +88,7 @@ test('a double click on “Keep visible” decides once', async ({
         .dblclick()
 
     await waitForMail(adminPage, notifier, { subject: /decision/i })
-    await settle()
-    expect(await mailCount(adminPage, notifier)).toBe(2)
+    await expect.poll(() => mailCount(adminPage, notifier)).toBe(2)
     await expect(
         toasts(adminPage).filter({ hasText: /went wrong|error/i }),
     ).toHaveCount(0)
@@ -179,6 +176,7 @@ test('a report on a profile that is already hidden is answered at once', async (
 
 test('a profile edited after being hidden comes back for review', async ({
     platformPage,
+    api,
     apiAs,
     createUser,
     testPrefix,
@@ -191,7 +189,13 @@ test('a profile edited after being hidden comes back for review', async ({
 
     await updateMe(personApi, { firstname: `${testPrefix}-Again` })
 
-    await openCase(platformPage, `${testPrefix}-Again`, '/platform/moderation')
+    const detail = await openCase(
+        platformPage,
+        `${testPrefix}-Again`,
+        '/platform/moderation',
+    )
+    await expect(detail).toContainText(`${testPrefix}-Again`)
+    expect((await caseFor(api, `${testPrefix}-Again`)).state).toBe('unreviewed')
 })
 
 test('undo after someone else restored the post explains instead of failing', async ({

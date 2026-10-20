@@ -25,6 +25,8 @@ const MOBILE_AUTH = [
     '**/auth/login-brand-contrast.spec.ts',
 ]
 
+const PHONE_FIT = '**/i18n/phone-fit.spec.ts'
+
 const workers = process.env.E2E_WORKERS
 const record = process.env.CI ? 'on-first-retry' : 'retain-on-failure'
 
@@ -90,24 +92,38 @@ export default defineConfig({
             use: { ...devices['Desktop Chrome'], locale: 'de-DE' },
             dependencies: ['setup'],
             testMatch: ['**/i18n/**'],
+            testIgnore: PHONE_FIT,
         },
         {
             name: 'i18n-nl',
             use: { ...devices['Desktop Chrome'], locale: 'nl-NL' },
             dependencies: ['setup'],
             testMatch: ['**/i18n/**'],
+            testIgnore: PHONE_FIT,
         },
         {
             name: 'i18n-fr',
             use: { ...devices['Desktop Chrome'], locale: 'fr-FR' },
             dependencies: ['setup'],
             testMatch: ['**/i18n/**'],
+            testIgnore: PHONE_FIT,
         },
         {
             name: 'i18n-es',
             use: { ...devices['Desktop Chrome'], locale: 'es-ES' },
             dependencies: ['setup'],
             testMatch: ['**/i18n/**'],
+            testIgnore: PHONE_FIT,
+        },
+        {
+            name: 'phone-de',
+            use: {
+                ...devices['Pixel 7'],
+                viewport: { width: 360, height: 740 },
+                locale: 'de-DE',
+            },
+            dependencies: ['setup'],
+            testMatch: PHONE_FIT,
         },
         {
             name: 'firefox-smoke',

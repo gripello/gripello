@@ -6,6 +6,13 @@
         sheet-on-mobile
         :title="$t('tasks.defect.dialogTitle')"
         data-testid="task-defect-dialog"
+        :submit-label="$t('tasks.defect.submit')"
+        :submit-loading="pending"
+        :submit-disabled="!selectedCategory"
+        captcha
+        submit-test-id="task-defect-submit"
+        cancel-test-id="task-defect-cancel"
+        @submit="submit"
     >
         <p class="text-sm text-muted mb-4">
             {{ $t('tasks.defect.dialogIntro') }}
@@ -26,23 +33,13 @@
             <legend class="text-sm font-medium mb-2">
                 {{ $t('tasks.defect.whatsWrong') }}
             </legend>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <UButton
-                    v-for="category in DEFECT_CATEGORIES"
-                    :key="category"
-                    :icon="DEFECT_CATEGORY_ICONS[category]"
-                    :color="
-                        selectedCategory === category ? 'primary' : 'neutral'
-                    "
-                    :variant="selectedCategory === category ? 'solid' : 'soft'"
-                    :aria-pressed="selectedCategory === category"
-                    class="min-h-12 justify-start text-left"
-                    :data-testid="`task-defect-category-${category}`"
-                    @click="selectedCategory = category"
-                >
-                    {{ $t(`tasks.categories.${category}`) }}
-                </UButton>
-            </div>
+            <OptionGrid
+                v-model="selectedCategory"
+                :items="categoryItems"
+                cols="grid-cols-2 sm:grid-cols-3"
+                :label="$t('tasks.defect.whatsWrong')"
+                test-id-prefix="task-defect-category"
+            />
         </fieldset>
 
         <UFormField
@@ -71,31 +68,12 @@
                 data-testid="task-defect-photo"
             />
         </UFormField>
-
-        <template #actions>
-            <UButton
-                color="neutral"
-                variant="ghost"
-                data-testid="task-defect-cancel"
-                @click="open = false"
-                >{{ $t('actions.cancel') }}</UButton
-            >
-            <div class="flex-1" />
-            <UButton
-                :disabled="!selectedCategory || pending"
-                color="primary"
-                data-testid="task-defect-submit"
-                @click="submit"
-            >
-                <CaptchaLoader v-if="pending" />
-                <template v-else>{{ $t('tasks.defect.submit') }}</template>
-            </UButton>
-        </template>
     </LayoutDialogShell>
 </template>
 
 <script setup lang="ts">
-import { DEFECT_CATEGORIES, DEFECT_CATEGORY_ICONS } from '~/utils/tasks'
+import { DEFECT_CATEGORIES } from '#shared/utils/tasks'
+import { DEFECT_CATEGORY_ICONS } from '~/utils/tasks'
 import { createTask } from '~/api/tasks'
 import type { DefectCategory, OpenRouteDefectRecord } from '~/types/models'
 
@@ -112,6 +90,14 @@ const open = defineModel<boolean>({ default: false })
 
 const gymId = useCurrentGymId()
 const { t } = useI18n()
+
+const categoryItems = computed(() =>
+    DEFECT_CATEGORIES.map((category) => ({
+        value: category,
+        label: t(`tasks.categories.${category}`),
+        icon: DEFECT_CATEGORY_ICONS[category],
+    })),
+)
 const { capHeaders } = useCapToken()
 const { warning } = useNotification()
 const { pending, run } = useAsyncAction()

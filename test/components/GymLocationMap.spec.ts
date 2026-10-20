@@ -5,9 +5,14 @@ const source = readFileSync('app/components/gym/LocationMap.vue', 'utf8')
 describe('GymLocationMap', () => {
     it('draws vector maps that follow the colour mode', () => {
         expect(source).toContain(
+            "import('maplibre-gl/dist/maplibre-gl-worker.mjs?url')",
+        )
+        expect(source).not.toContain(
             "from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'",
         )
-        expect(source).toContain('maplibre.setWorkerUrl(workerUrl)')
+        expect(source).toContain(
+            'maplibre.setWorkerUrl(`${workerUrl}?type=module`)',
+        )
         expect(source).toContain('map?.setStyle(mapStyle, { diff: false })')
         expect(source).toContain(
             "map.addControl(recenterControl(), 'top-left')",

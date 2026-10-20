@@ -1,11 +1,12 @@
-import type { MembershipRecord, UserRecord } from '~/types/models'
+import { isAbortOrNetworkError } from '~/utils/errors'
 import {
     activeMemberships,
     membershipIn,
     permissionsIn,
 } from '#shared/utils/memberships'
-import { PLATFORM_ADMIN, PLATFORM_ADMIN_GRANTS } from '~/utils/navigation'
-import { getMe, type Me } from '~/api/account'
+import { PLATFORM_ADMIN, type PermissionCheck } from '#shared/utils/permissions'
+import { PLATFORM_ADMIN_GRANTS } from '~/utils/navigation'
+import { getMe, type Me, type OwnMembership } from '~/api/account'
 import { useAuthState } from '~/api/auth'
 
 interface MembershipFetch {
@@ -17,10 +18,7 @@ const membershipFetches = new WeakMap<object, MembershipFetch>()
 
 export function usePermissions() {
     const auth = useAuthState()
-    const memberships = useState<MembershipRecord[]>(
-        'user-memberships',
-        () => [],
-    )
+    const memberships = useState<OwnMembership[]>('user-memberships', () => [])
     const loading = ref(false)
     const loaded = useState<boolean>('user-permissions-loaded', () => false)
     const loadedForUser = useState<string>('user-permissions-user', () => '')
@@ -33,10 +31,6 @@ export function usePermissions() {
     const { $i18n } = nuxtApp
     const { error: notifyError } = useNotification()
 
-    function isAutoCancelled(err: any) {
-        return !!err?.isAbort || err?.status === 0
-    }
-
     function currentUserId(): string {
         return (auth.isSignedIn() && auth.currentUserId()) || ''
     }
@@ -45,15 +39,17 @@ export function usePermissions() {
         try {
             const user = await getMe({ include: ['memberships'] })
             if (!isLatest() || currentUserId() !== userId) return
-            verifiedUser.value = { ...user, expand: undefined }
+            const { memberships: own = [], ...record } = user as Me & {
+                memberships?: OwnMembership[]
+            }
+            verifiedUser.value = record
             authRejected.value = false
             loadFailed.value = false
             platformAdmin.value = !!user.platform_admin
-            memberships.value =
-                (user.expand?.memberships_via_user as MembershipRecord[]) ?? []
+            memberships.value = own
         } catch (err) {
             if (
-                isAutoCancelled(err) ||
+                isAbortOrNetworkError(err) ||
                 !isLatest() ||
                 currentUserId() !== userId
             )
@@ -120,16 +116,22 @@ export function usePermissions() {
 
     const isPlatformAdmin = computed(() => loaded.value && platformAdmin.value)
 
-    function can(featureName: string, gymId = currentGymId.value): boolean {
+    function can(
+        featureName: PermissionCheck,
+        gymId = currentGymId.value,
+    ): boolean {
         if (!loaded.value) return false
         if (featureName === PLATFORM_ADMIN) return platformAdmin.value
-        if (platformAdmin.value && PLATFORM_ADMIN_GRANTS.includes(featureName))
+        if (
+            platformAdmin.value &&
+            PLATFORM_ADMIN_GRANTS.some((grant) => grant === featureName)
+        )
             return true
         return permissionsIn(memberships.value, gymId).includes(featureName)
     }
 
     function roleName(gymId = currentGymId.value): string {
-        return membershipIn(memberships.value, gymId)?.expand?.role?.name ?? ''
+        return membershipIn(memberships.value, gymId)?.role.name ?? ''
     }
 
     return {

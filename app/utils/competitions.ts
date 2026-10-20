@@ -14,6 +14,7 @@ import {
     JUDGE_ONLY_FORMATS,
     type ScoringSettings,
 } from '#shared/utils/competitionScoring'
+import type { StandingRow } from '#shared/utils/competitionResults'
 
 export type CategoryDraft = Pick<
     CompetitionCategoryRecord,
@@ -25,11 +26,15 @@ export function defaultCategories(t: (key: string) => string): CategoryDraft[] {
         {
             name: t('competitions.defaultCategories.female'),
             gender: 'female',
+            min_birth_year: 0,
+            max_birth_year: 0,
             sort: 1,
         },
         {
             name: t('competitions.defaultCategories.male'),
             gender: 'male',
+            min_birth_year: 0,
+            max_birth_year: 0,
             sort: 2,
         },
     ]
@@ -70,7 +75,7 @@ const pad = (value: number) => String(value).padStart(2, '0')
 
 export function toDateTimeInput(value: string | null | undefined): string {
     if (!value) return ''
-    const date = new Date(value.replace(' ', 'T'))
+    const date = new Date(value)
     if (Number.isNaN(date.getTime())) return ''
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
@@ -78,15 +83,16 @@ export function toDateTimeInput(value: string | null | undefined): string {
 export function fromDateTimeInput(value: string): string {
     if (!value) return ''
     const date = new Date(value)
-    return Number.isNaN(date.getTime())
-        ? ''
-        : date.toISOString().replace('T', ' ')
+    return Number.isNaN(date.getTime()) ? '' : date.toISOString()
 }
 
 export function copiedCompetition(
     competition: CompetitionRecord,
     copyName: string,
-): Omit<CompetitionRecord, 'id' | 'created' | 'updated' | 'expand'> {
+): Omit<
+    CompetitionRecord,
+    'id' | 'created' | 'updated' | 'expand' | 'gym' | 'freeze_at'
+> {
     return {
         name: copyName,
         description: competition.description,
@@ -131,10 +137,10 @@ export function competitionPhase(
     if (competition.status === 'draft') return 'draft'
     if (competition.status === 'published') return 'published'
     if (competition.status === 'closed') return 'ended'
-    if (now < new Date(competition.starts_at.replace(' ', 'T'))) {
+    if (now < new Date(competition.starts_at)) {
         return 'registration'
     }
-    if (now <= new Date(competition.ends_at.replace(' ', 'T'))) {
+    if (now <= new Date(competition.ends_at)) {
         return 'running'
     }
     return 'ended'
@@ -157,10 +163,7 @@ export function acceptsRegistrations(
     competition: Pick<CompetitionRecord, 'status' | 'ends_at'>,
     now: Date,
 ): boolean {
-    return (
-        competition.status === 'open' &&
-        now < new Date(competition.ends_at.replace(' ', 'T'))
-    )
+    return competition.status === 'open' && now < new Date(competition.ends_at)
 }
 
 export type SetupStep = 'details' | 'categories' | 'routes' | 'points' | 'holds'
@@ -270,8 +273,8 @@ export function formatCompetitionWindow(
         timeStyle: 'short',
     })
         .formatRange(
-            new Date(competition.starts_at.replace(' ', 'T')),
-            new Date(competition.ends_at.replace(' ', 'T')),
+            new Date(competition.starts_at),
+            new Date(competition.ends_at),
         )
         .replace(/\s/g, ' ')
 }
@@ -496,4 +499,14 @@ export function currentCompetition<
     const inPhase = (phase: CompetitionPhase) =>
         competitions.find((entry) => competitionPhase(entry, now) === phase)
     return inPhase('running') ?? inPhase('registration') ?? null
+}
+
+export function formatStandingPoints(
+    row: Pick<StandingRow, 'points' | 'rankPoints'>,
+    locale: string,
+): string {
+    const lead = row.rankPoints !== undefined
+    return new Intl.NumberFormat(locale, {
+        maximumFractionDigits: lead ? 3 : 2,
+    }).format(lead ? row.rankPoints! : row.points)
 }

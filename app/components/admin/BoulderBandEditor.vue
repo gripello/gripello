@@ -62,38 +62,12 @@
             data-testid="boulder-band-details"
         >
             <UFormField :label="$t('settings.bandColor')">
-                <UPopover :content="{ side: 'bottom', align: 'start' }">
-                    <button
-                        type="button"
-                        class="band-color"
-                        :style="{ background: current.color }"
-                        :aria-label="$t('settings.bandColor')"
-                        data-testid="boulder-band-color"
-                    />
-                    <template #content>
-                        <div class="flex w-60 flex-col gap-3 p-3">
-                            <UColorPicker
-                                :model-value="current.color"
-                                @update:model-value="setColor"
-                                class="mx-auto"
-                            />
-                            <UInput
-                                :model-value="current.color"
-                                @update:model-value="setColor"
-                                :aria-label="$t('settings.bandColor')"
-                                class="w-full font-mono"
-                                data-testid="boulder-band-color-hex"
-                            >
-                                <template #leading>
-                                    <span
-                                        class="size-4 rounded-full ring ring-default"
-                                        :style="{ background: current.color }"
-                                    />
-                                </template>
-                            </UInput>
-                        </div>
-                    </template>
-                </UPopover>
+                <ColorSwatchPicker
+                    :model-value="current.color"
+                    :label="$t('settings.bandColor')"
+                    test-id-prefix="boulder-band"
+                    @update:model-value="setColor"
+                />
             </UFormField>
             <UFormField
                 :label="$t('settings.bandName')"
@@ -297,22 +271,6 @@ function remove() {
     font-size: 0.65rem;
     text-align: center;
     font-variant-numeric: tabular-nums;
-}
-
-.band-color {
-    display: block;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow:
-        0 0 0 2px var(--ui-bg),
-        0 0 0 3px var(--ui-border-accented);
-    transition: transform 0.15s;
-}
-
-.band-color:hover {
-    transform: scale(1.08);
 }
 
 @variant max-sm {

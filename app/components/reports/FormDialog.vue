@@ -6,6 +6,13 @@
         sheet-on-mobile
         :title="$t('reports.dialogTitle')"
         data-testid="report-form-dialog"
+        :submit-label="$t('reports.submit')"
+        :submit-loading="saving"
+        :submit-disabled="!isFormValid"
+        captcha
+        submit-test-id="report-form-submit"
+        cancel-test-id="report-form-cancel"
+        @submit="submit"
     >
         <p class="text-sm text-muted mb-4">
             {{ $t('reports.dialogIntro') }}
@@ -89,30 +96,12 @@
                 />
             </UFormField>
         </UForm>
-
-        <template #actions>
-            <UButton
-                color="neutral"
-                variant="ghost"
-                data-testid="report-form-cancel"
-                @click="close"
-                >{{ $t('actions.cancel') }}</UButton
-            >
-            <div class="flex-1" />
-            <UButton
-                :disabled="!isFormValid || saving"
-                color="primary"
-                data-testid="report-form-submit"
-                @click="submit"
-            >
-                <CaptchaLoader v-if="saving" />
-                <template v-else>{{ $t('reports.submit') }}</template>
-            </UButton>
-        </template>
     </LayoutDialogShell>
 </template>
 
 <script setup lang="ts">
+import { translatedItems } from '~/utils/translatedItems'
+import { REPORT_REASONS } from '#shared/utils/reports'
 import { createReport } from '~/api/moderation'
 import {
     required,
@@ -121,7 +110,6 @@ import {
     validEmail,
     validateRules,
 } from '~/utils/validation'
-import { REPORT_REASONS } from '~/utils/reports'
 import { blockedFieldError } from '~/utils/fieldErrors'
 import { legalLinkProps } from '~/utils/legal'
 import type { ReportContentType, ReportReason } from '~/types/models'
@@ -168,10 +156,7 @@ const form = reactive({
 })
 
 const reasonItems = computed(() =>
-    REPORT_REASONS.map((value) => ({
-        value,
-        label: t(`reports.reasons.${value}`),
-    })),
+    translatedItems(REPORT_REASONS, 'reports.reasons', t),
 )
 
 const { gym } = useGym()

@@ -16,6 +16,7 @@ export function legacyGymRedirect(
     if (path === '/admin/activity') return '/account/activity'
     if (!isLegacyGymPath(path)) return null
     if (!isValidGymSlug(slug)) return '/'
-    const moved = MOVED_ADMIN_PAGE.exec(path)
-    return `/${slug}${moved ? `/manage/${moved[1]}` : path}${search}`
+    const moved = MOVED_ADMIN_PAGE.exec(path)?.[1]
+    const target = moved === 'reports' ? 'moderation' : moved
+    return `/${slug}${target ? `/manage/${target}` : path}${search}`
 }

@@ -1,3 +1,8 @@
+import {
+    PLATFORM_ADMIN,
+    type Permission,
+    type PermissionCheck,
+} from '#shared/utils/permissions'
 import { navTestId } from '~/utils/nav'
 
 export interface NavLink {
@@ -5,7 +10,7 @@ export interface NavLink {
     path?: string
     icon: string
     label: string
-    permission?: string
+    permission?: PermissionCheck
     signedIn?: boolean
     badge?: NavBadge
 }
@@ -24,10 +29,12 @@ export interface NavItem extends Partial<NavLink> {
     children?: NavLink[]
 }
 
-type Can = (permission: string) => boolean
+type Can = (permission: PermissionCheck) => boolean
 
-export const PLATFORM_ADMIN = 'platform_admin'
-export const PLATFORM_ADMIN_GRANTS = ['manage_settings', 'manage_users']
+export const PLATFORM_ADMIN_GRANTS: readonly Permission[] = [
+    'manage_settings',
+    'manage_users',
+]
 
 const YOU_TAB: NavLink = {
     to: '/account',
@@ -355,7 +362,7 @@ export function withGym<T extends { to?: string; children?: NavLink[] }>(
         }))
 }
 
-const allowed = (can: Can) => (link: { permission?: string }) =>
+const allowed = (can: Can) => (link: { permission?: PermissionCheck }) =>
     !link.permission || can(link.permission)
 
 const forViewer = (signedIn: boolean) => (link: { signedIn?: boolean }) =>
@@ -431,6 +438,14 @@ export function navContext(path: string, routeSlug: string): NavContext {
     if (isWithin(path, '/platform')) return 'platform'
     if (!routeSlug) return 'global'
     return /^\/[^/]+\/(manage|admin)(\/|$)/.test(path) ? 'staff' : 'gym'
+}
+
+export function staffExitPath(returnTo: string | null, slug: string) {
+    const path = returnTo?.split(/[?#]/)[0]
+    if (!path || navContext(path, slug) === 'staff') return `/${slug}/routes`
+    return gymLocalPath(path) === null || isWithin(path, `/${slug}`)
+        ? returnTo!
+        : `/${slug}/routes`
 }
 
 export function requestedSection(requested: unknown, ids: string[]) {

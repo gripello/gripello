@@ -57,10 +57,14 @@
 </template>
 
 <script setup lang="ts">
-import { fileUrl } from '~/api/client'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { bottomNavLinks, navContext } from '~/utils/navigation'
-import { avatarColor, nameInitials } from '~/utils/avatar'
+import {
+    avatarColor,
+    avatarUrl,
+    displayName,
+    nameInitials,
+} from '~/utils/avatar'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -74,17 +78,10 @@ const youTab = computed(() =>
         ? {
               label: t('nav.you'),
               avatar: {
-                  src:
-                      fileUrl('users', user.value, user.value.avatar, {
-                          thumb: '100x100',
-                      }) || undefined,
+                  src: avatarUrl(user.value) || undefined,
                   alt: '',
                   style: { backgroundColor: avatarColor(user.value.id) },
-                  text: nameInitials(
-                      [user.value.firstname, user.value.name]
-                          .filter(Boolean)
-                          .join(' ') || user.value.email,
-                  ),
+                  text: nameInitials(displayName(user.value)),
               },
           }
         : { label: t('routes.login'), icon: 'i-lucide-log-in' },

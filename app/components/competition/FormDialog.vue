@@ -11,6 +11,12 @@
         scrollable
         sheet-on-mobile
         data-testid="competition-form-dialog"
+        :submit-label="$t('actions.save')"
+        submit-icon="i-lucide-check"
+        :submit-loading="pending"
+        submit-test-id="competition-form-save"
+        cancel-test-id="competition-form-cancel"
+        @submit="save"
     >
         <UForm
             ref="formRef"
@@ -101,47 +107,24 @@
             <USeparator :label="$t('competitions.scoring')" />
 
             <UFormField :label="$t('competitions.discipline')">
-                <div class="grid grid-cols-2 gap-2">
-                    <UButton
-                        v-for="discipline in COMPETITION_DISCIPLINES"
-                        :key="discipline"
-                        :icon="DISCIPLINE_ICONS[discipline]"
-                        :color="
-                            form.discipline === discipline
-                                ? 'primary'
-                                : 'neutral'
-                        "
-                        :variant="
-                            form.discipline === discipline ? 'soft' : 'outline'
-                        "
-                        :aria-pressed="form.discipline === discipline"
-                        :disabled="!!competition"
-                        size="sm"
-                        class="justify-center"
-                        :data-testid="`competition-form-discipline-${discipline}`"
-                        @click="selectDiscipline(discipline)"
-                    >
-                        {{ $t(`competitions.disciplines.${discipline}`) }}
-                    </UButton>
-                </div>
+                <OptionGrid
+                    :model-value="form.discipline"
+                    :items="disciplineItems"
+                    :disabled="!!competition"
+                    :label="$t('competitions.discipline')"
+                    test-id-prefix="competition-form-discipline"
+                    @update:model-value="selectDiscipline"
+                />
             </UFormField>
 
             <UFormField :label="$t('competitions.format')">
-                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <UButton
-                        v-for="format in formats"
-                        :key="format"
-                        :color="form.format === format ? 'primary' : 'neutral'"
-                        :variant="form.format === format ? 'soft' : 'outline'"
-                        :aria-pressed="form.format === format"
-                        size="sm"
-                        class="justify-center"
-                        :data-testid="`competition-form-format-${format}`"
-                        @click="form.format = format"
-                    >
-                        {{ $t(`competitions.formats.${format}`) }}
-                    </UButton>
-                </div>
+                <OptionGrid
+                    v-model="form.format"
+                    :items="formatItems"
+                    cols="grid-cols-1 sm:grid-cols-2"
+                    :label="$t('competitions.format')"
+                    test-id-prefix="competition-form-format"
+                />
                 <p class="mt-2 text-xs text-muted">
                     {{ $t(formatHintKey) }}
                 </p>
@@ -244,35 +227,18 @@
                 />
             </UFormField>
         </UForm>
-
-        <template #actions>
-            <UButton
-                color="neutral"
-                variant="ghost"
-                data-testid="competition-form-cancel"
-                @click="open = false"
-                >{{ $t('actions.cancel') }}</UButton
-            >
-            <div class="flex-1" />
-            <UButton
-                color="primary"
-                icon="i-lucide-check"
-                :loading="pending"
-                data-testid="competition-form-save"
-                @click="save"
-                >{{ $t('actions.save') }}</UButton
-            >
-        </template>
     </LayoutDialogShell>
 </template>
 
 <script setup lang="ts">
+import { translatedItems } from '~/utils/translatedItems'
 import {
-    createCategory,
+    createCompetitionCategory,
     createCompetition,
     updateCompetition,
 } from '~/api/competitions'
 import { maxLength, nonBlank, validateRules } from '~/utils/validation'
+import { formFieldErrors } from '~/utils/fieldErrors'
 import {
     defaultCategories,
     fromDateTimeInput,
@@ -307,11 +273,13 @@ const open = defineModel<boolean>({ default: false })
 const gymId = useCurrentGymId()
 const { t } = useI18n()
 const { pending, run } = useAsyncAction()
-const { data: locationRecords } = useLocations()
+const { data: locationRecords, items: locationItems } = useLocations()
 
 const formRef = ref<{
     validate: (opts: { silent: boolean }) => Promise<unknown>
+    setErrors: (errors: { name: string; message: string }[]) => void
 }>()
+let draft: { competition: CompetitionRecord; categories: number } | null = null
 
 const form = reactive({
     name: '',
@@ -355,6 +323,18 @@ const formRules = computed(() => ({
 }))
 
 const formats = computed(() => FORMATS_BY_DISCIPLINE[form.discipline])
+
+const disciplineItems = computed(() =>
+    COMPETITION_DISCIPLINES.map((discipline) => ({
+        value: discipline,
+        label: t(`competitions.disciplines.${discipline}`),
+        icon: DISCIPLINE_ICONS[discipline],
+    })),
+)
+
+const formatItems = computed(() =>
+    translatedItems(formats.value, 'competitions.formats', t),
+)
 const itemKey = computed(() => `competitions.items.${form.discipline}`)
 const formatHintKey = computed(() =>
     form.format === 'dynamic'
@@ -385,16 +365,10 @@ function selectDiscipline(discipline: CompetitionDiscipline) {
     if (!formats.value.includes(form.format)) form.format = formats.value[0]!
 }
 
-const locationItems = computed(() =>
-    locationRecords.value.map((location) => ({
-        value: location.id,
-        label: location.name,
-    })),
-)
-
 watch(open, (isOpen) => {
     if (!isOpen) return
     const competition = props.competition
+    if (competition) draft = null
     Object.assign(form, {
         name: competition?.name ?? '',
         description: competition?.description ?? '',
@@ -446,30 +420,69 @@ function buildBody() {
     }
 }
 
+const API_FORM_FIELDS: Record<string, string> = {
+    name: 'name',
+    description: 'description',
+    location: 'location',
+    starts_at: 'startsAt',
+    ends_at: 'endsAt',
+    registration_url: 'registrationUrl',
+    freeze_minutes: 'freezeMinutes',
+}
+
+function showFieldErrors(error: unknown) {
+    const errors = formFieldErrors(error, Object.keys(API_FORM_FIELDS), t).map(
+        ({ name, message }) => ({ name: API_FORM_FIELDS[name]!, message }),
+    )
+    if (errors.length) formRef.value?.setErrors(errors)
+    return errors.length > 0
+}
+
+async function createDraft() {
+    draft = draft
+        ? {
+              ...draft,
+              competition: await updateCompetition(
+                  draft.competition.id,
+                  buildBody(),
+              ),
+          }
+        : {
+              competition: await createCompetition(gymId.value, {
+                  ...buildBody(),
+                  status: 'draft',
+              }),
+              categories: 0,
+          }
+    const categories = defaultCategories(t)
+    while (draft.categories < categories.length) {
+        await createCompetitionCategory(
+            draft.competition.id,
+            categories[draft.categories]!,
+        )
+        draft.categories += 1
+    }
+    return draft.competition
+}
+
 async function save() {
-    if ((await formRef.value?.validate({ silent: true })) === false) return
+    if (pending.value) return
+    pending.value = true
+    const valid = (await formRef.value?.validate({ silent: true })) !== false
+    pending.value = false
+    if (!valid) return
     await run(
         async () => {
-            if (props.competition) {
-                emit(
-                    'saved',
-                    await updateCompetition(props.competition.id, buildBody()),
-                )
-            } else {
-                const created = await createCompetition(gymId.value, {
-                    ...buildBody(),
-                    status: 'draft',
-                })
-                await Promise.all(
-                    defaultCategories(t).map((category) =>
-                        createCategory(created.id, category),
-                    ),
-                )
-                emit('saved', created)
-            }
+            emit(
+                'saved',
+                props.competition
+                    ? await updateCompetition(props.competition.id, buildBody())
+                    : await createDraft(),
+            )
+            draft = null
             open.value = false
         },
-        { success: t('competitions.saved') },
+        { success: t('competitions.saved'), handled: showFieldErrors },
     )
 }
 </script>

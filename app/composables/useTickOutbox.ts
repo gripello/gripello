@@ -1,3 +1,4 @@
+import { isOfflineError } from '~/utils/errors'
 import type { TickRecord } from '~/types/models'
 import {
     createTick as postTick,
@@ -6,9 +7,10 @@ import {
 } from '~/api/ticks'
 import { newRecordId } from '~/utils/realtimeCache'
 import {
+    currentTickOp,
+    currentTickRecord,
     enqueueTickOp,
     isAlreadyApplied,
-    isOfflineError,
     opsOfUser,
     replayFailure,
     settleReplayedOp,
@@ -110,7 +112,7 @@ export function useTickOutbox() {
             await pending
             rows = await readAll<TickOutboxOp>('outbox').catch(() => null)
         } while (pending !== outboxWrites)
-        if (rows) queue.value = rows
+        if (rows) queue.value = rows.map(currentTickOp)
         loaded.value = true
     }
 
@@ -128,6 +130,7 @@ export function useTickOutbox() {
             ).catch(() => null)
         } while (pending !== outboxWrites)
         if (stored === null) return queue.value
+        if (stored) stored = currentTickOp(stored)
         const current =
             stored && JSON.stringify(stored) === JSON.stringify(op)
                 ? op
@@ -159,7 +162,9 @@ export function useTickOutbox() {
         void navigator.storage?.persist?.().catch(() => {})
     }
 
-    async function createTick(fields: Omit<TickRecord, 'id'>) {
+    async function createTick(
+        fields: Omit<TickRecord, 'id' | 'created' | 'updated'>,
+    ) {
         const now = new Date().toISOString()
         const record: TickRecord = {
             ...fields,
@@ -304,7 +309,12 @@ export function useTickOutbox() {
     }
 
     function cachedTicks<T extends TickRecord>() {
-        return available ? readAll<T>('ticks').catch(() => []) : []
+        return available
+            ? readAll<T>('ticks').then(
+                  (ticks) => ticks.map(currentTickRecord),
+                  () => [],
+              )
+            : []
     }
 
     async function clearCachedTicks() {

@@ -1,5 +1,5 @@
 <template>
-    <AnalyticsBaseEchart
+    <ChartEchart
         :option="option"
         :height="rows.length * 28 + 70"
         testid="analytics-chart-setters"
@@ -67,7 +67,7 @@ const option = computed(() => {
             return `<strong>${escapeHtml(setter.setter)}</strong><br/>
                 ${t('analytics.labels.routeCount', { n: setter.routes }, setter.routes)} (${share(setter.routes)}%)<br/>
                 ${t('analytics.labels.setInPeriod')}: ${setter.routesInPeriod}<br/>
-                ${t('analytics.columns.averageRating')}: ${formatNumber(setter.averageRating, locale.value, 2) || '—'}<br/>
+                ${t('analytics.columns.averageRating')}: ${formatNumber(setter.averageRating, locale.value, 2)}<br/>
                 ${t('analytics.columns.averageDeviation')}: ${formatSigned(setter.averageDeviation)}`
         }),
         legend: {

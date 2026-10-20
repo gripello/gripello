@@ -2,8 +2,10 @@ import { BOULDER_GRADE_SYSTEMS, gradeKey, type GradeSystem } from './grades'
 import { compareGrades, gradeScore } from './analytics'
 import { localDay, tickDay, type TickType } from './ticks'
 
-export type LogbookKind = 'boulder' | 'route'
-export type LogbookRange = '30d' | '12m' | 'all'
+export const LOGBOOK_KINDS = ['boulder', 'route'] as const
+export const LOGBOOK_RANGES = ['30d', '12m', 'all'] as const
+export type LogbookKind = (typeof LOGBOOK_KINDS)[number]
+export type LogbookRange = (typeof LOGBOOK_RANGES)[number]
 
 export interface LogbookTick {
     route?: string | null
@@ -30,7 +32,6 @@ export interface LogbookStats {
     hardest: HardestSend | null
 }
 
-const DAY_MS = 86_400_000
 const RANGE_DAYS: Record<LogbookRange, number | null> = {
     '30d': 30,
     '12m': 365,
@@ -57,23 +58,21 @@ export function preferredKind(ticks: LogbookTick[]): LogbookKind {
     return routes > boulders ? 'route' : 'boulder'
 }
 
-function tickTime(tick: LogbookTick): number {
-    return new Date(`${tickDay(tick.date)}T12:00:00Z`).getTime()
+function inWindow(tick: LogbookTick, start: string | null, end: string) {
+    const day = tickDay(tick.date)
+    return (start === null || day > start) && day <= end
 }
 
-function inWindow(tick: LogbookTick, start: number | null, end: number) {
-    const time = tickTime(tick)
-    return (start === null || time > start) && time <= end
-}
-
-function windowEnd(now: Date): number {
-    return new Date(`${localDay(now)}T12:00:00Z`).getTime()
+function windowEnd(now: Date): string {
+    return localDay(now)
 }
 
 function windowStart(range: LogbookRange, now: Date, periodsBack = 0) {
     const days = RANGE_DAYS[range]
     if (days === null) return null
-    return now.getTime() - days * DAY_MS * (periodsBack + 1)
+    const start = new Date(now)
+    start.setDate(start.getDate() - days * (periodsBack + 1))
+    return localDay(start)
 }
 
 function hardestOf(ticks: LogbookTick[]): HardestSend | null {
@@ -169,11 +168,9 @@ export function progression(
 ): ProgressionPoint[] {
     const points = new Map<string, ProgressionPoint>()
     for (let back = months - 1; back >= 0; back--) {
-        const period = new Date(
-            Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1),
-        )
-            .toISOString()
-            .slice(0, 7)
+        const period = localDay(
+            new Date(now.getFullYear(), now.getMonth() - back, 1),
+        ).slice(0, 7)
         points.set(period, { period, sends: 0, maxIndex: null })
     }
     for (const tick of ticks) {

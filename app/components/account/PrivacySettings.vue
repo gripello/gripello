@@ -1,13 +1,6 @@
 <template>
-    <UPageCard
-        variant="outline"
-        :ui="{ container: 'p-0 sm:p-0 gap-y-0 divide-y divide-default' }"
-        data-testid="privacy-settings"
-    >
-        <div class="flex flex-wrap items-center gap-3 px-4 py-3">
-            <span class="privacy-icon bg-elevated text-muted">
-                <UIcon name="i-lucide-user-plus" class="size-4" />
-            </span>
+    <LayoutListGroup data-testid="privacy-settings">
+        <LayoutListRow icon="i-lucide-user-plus" wrap>
             <span class="flex-1 text-sm font-medium text-highlighted">
                 {{ t('accountSettings.privacy.followPolicy') }}
             </span>
@@ -18,15 +11,13 @@
                 data-testid="privacy-follow-policy"
                 @update:model-value="save({ follow_policy: $event })"
             />
-        </div>
-        <label
+        </LayoutListRow>
+        <LayoutListRow
             v-for="toggle in TOGGLES"
             :key="toggle.field"
-            class="flex cursor-pointer items-center gap-3 px-4 py-3"
+            as="label"
+            :icon="toggle.icon"
         >
-            <span class="privacy-icon bg-elevated text-muted">
-                <UIcon :name="toggle.icon" class="size-4" />
-            </span>
             <span class="flex-1 text-sm font-medium text-highlighted">
                 {{ t(`accountSettings.privacy.${toggle.label}`) }}
             </span>
@@ -35,16 +26,13 @@
                 :data-testid="`privacy-${toggle.label}`"
                 @update:model-value="save({ [toggle.field]: !$event })"
             />
-        </label>
-        <div
+        </LayoutListRow>
+        <LayoutListRow
             v-for="entry in blocks"
             :key="entry.id"
-            class="flex items-center gap-3 px-4 py-3"
+            icon="i-lucide-ban"
             data-testid="privacy-blocked"
         >
-            <span class="privacy-icon bg-elevated text-muted">
-                <UIcon name="i-lucide-ban" class="size-4" />
-            </span>
             <span class="flex-1 truncate text-sm font-medium text-highlighted">
                 {{ byId.get(entry.blocked)?.name || t('feed.someone') }}
             </span>
@@ -57,11 +45,12 @@
             >
                 {{ t('friends.unblock') }}
             </UButton>
-        </div>
-    </UPageCard>
+        </LayoutListRow>
+    </LayoutListGroup>
 </template>
 
 <script setup lang="ts">
+import { translatedItems } from '~/utils/translatedItems'
 import type { FollowPolicy, UserRecord } from '~/types/models'
 import { updateMe } from '~/api/account'
 import { useAuthState } from '~/api/auth'
@@ -103,10 +92,11 @@ const hidden = reactive(
     ) as Record<HiddenField, boolean>,
 )
 const policyItems = computed(() =>
-    (['approve', 'open', 'closed'] as const).map((value) => ({
-        value,
-        label: t(`accountSettings.privacy.policies.${value}`),
-    })),
+    translatedItems(
+        ['approve', 'open', 'closed'] as const,
+        'accountSettings.privacy.policies',
+        t,
+    ),
 )
 
 function current(): PrivacyChange {
@@ -143,11 +133,3 @@ async function save(change: PrivacyChange) {
     }
 }
 </script>
-
-<style scoped>
-@reference "~/assets/css/main.css";
-
-.privacy-icon {
-    @apply inline-flex size-9 shrink-0 items-center justify-center rounded-lg;
-}
-</style>

@@ -1,4 +1,4 @@
-import { fileToken } from '~/api/client'
+import { issueFileToken } from '~/api/client'
 
 const FILE_TOKEN_RENEWABLE_AFTER_MS = 60_000
 const FILE_TOKEN_RETRY_MS = 2_000
@@ -24,7 +24,7 @@ export function useFileToken(
         issuedAt = Date.now()
         let failed = false
         const next = record?.id
-            ? await fileToken(record.table, record.id).catch(() => {
+            ? await issueFileToken(record.table, record.id).catch(() => {
                   failed = true
                   return ''
               })

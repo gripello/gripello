@@ -1,5 +1,5 @@
 <template>
-    <AnalyticsBaseEchart
+    <ChartEchart
         :option="option"
         :height="rows.length * 28 + 40"
         testid="analytics-chart-age"

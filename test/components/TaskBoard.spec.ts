@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick, ref, shallowRef } from 'vue'
 import TaskBoard from '~/components/task/Board.vue'
 import { useLongPressDrag } from '~/composables/useLongPressDrag'
+import { listTasks } from '~/api/tasks'
 
 vi.mock('~/api/tasks', () => ({
     listTasks: vi.fn(async (_gym: string, query: { status: string[] }) => ({
@@ -53,5 +54,30 @@ describe('TaskBoard', () => {
                 ?.parentElement?.parentElement
         expect(zones?.style.bottom).toContain('var(--app-bottom-inset, 0px)')
         wrapper.unmount()
+    })
+
+    it('shows a retryable load error instead of an empty board', async () => {
+        vi.mocked(listTasks).mockRejectedValueOnce(new Error('boom'))
+        const wrapper = mount(TaskBoard, {
+            props: { query: {}, assigneeNames: new Map() },
+            global: {
+                stubs: {
+                    TaskCard: { template: '<div data-testid="card" />' },
+                    LayoutTabs: true,
+                    UIcon: true,
+                },
+                mocks: { $t: (key: string) => key },
+            },
+        })
+        await flushPromises()
+
+        expect(wrapper.find('[data-testid="load-error"]').exists()).toBe(true)
+        expect(wrapper.find('[data-testid="task-board"]').exists()).toBe(false)
+
+        await wrapper.get('[data-testid="load-error-retry"]').trigger('click')
+        await flushPromises()
+
+        expect(wrapper.find('[data-testid="load-error"]').exists()).toBe(false)
+        expect(wrapper.findAll('[data-testid="card"]')).toHaveLength(1)
     })
 })

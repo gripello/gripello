@@ -1,52 +1,56 @@
 <template>
-    <ul class="divide-y divide-default text-sm">
-        <li
+    <LayoutListGroup :flush="flush" class="text-sm">
+        <LayoutListRow
             v-for="server in servers"
             :key="server.name"
-            class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5"
             :data-testid="`platform-server-${server.name}`"
         >
-            <span
-                class="size-2 shrink-0 rounded-full"
-                :class="server.online ? 'bg-success' : 'bg-error'"
-                role="img"
-                :aria-label="
-                    server.online
-                        ? t('platform.overview.servers.online')
-                        : t('platform.overview.servers.offline')
-                "
-            />
-            <span class="min-w-0 flex-1 truncate font-mono text-highlighted">
-                {{ server.name }}
-            </span>
-            <UBadge color="neutral" variant="outline" size="sm">
-                {{ server.version }} · {{ server.role }}
-            </UBadge>
-            <span
-                class="w-full pl-5 text-xs text-muted"
-                :class="{ 'text-error': !server.online }"
+            <div
+                class="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1"
             >
-                {{ serverDetails(server) }}
-            </span>
-            <span
-                v-if="serverStrain(server)"
-                class="w-full pl-5 text-xs text-warning"
-                :data-testid="`platform-server-strain-${server.name}`"
-            >
-                {{ serverStrain(server) }}
-            </span>
-        </li>
-    </ul>
+                <span
+                    class="size-2 shrink-0 rounded-full"
+                    :class="server.online ? 'bg-success' : 'bg-error'"
+                    role="img"
+                    :aria-label="
+                        server.online
+                            ? t('platform.overview.servers.online')
+                            : t('platform.overview.servers.offline')
+                    "
+                />
+                <span
+                    class="min-w-0 flex-1 truncate font-mono text-highlighted"
+                >
+                    {{ server.name }}
+                </span>
+                <UBadge color="neutral" variant="outline" size="sm">
+                    {{ server.version }} · {{ server.role }}
+                </UBadge>
+                <span
+                    class="w-full pl-5 text-xs text-muted"
+                    :class="{ 'text-error': !server.online }"
+                >
+                    {{ serverDetails(server) }}
+                </span>
+                <span
+                    v-if="serverStrain(server)"
+                    class="w-full pl-5 text-xs text-warning"
+                    :data-testid="`platform-server-strain-${server.name}`"
+                >
+                    {{ serverStrain(server) }}
+                </span>
+            </div>
+        </LayoutListRow>
+    </LayoutListGroup>
 </template>
 
 <script setup lang="ts">
+import { formatBytes } from '#shared/utils/number'
 import type { ServerReplica } from '~/api/platform'
-import { formatBytes } from '~/utils/backups'
 import { formatUptime } from '~/utils/platformTraffic'
-import { replicaStrain } from '~/utils/serverHealth'
 import { formatDate } from '#shared/utils/formatting'
 
-defineProps<{ servers: ServerReplica[] }>()
+defineProps<{ servers: ServerReplica[]; flush?: boolean }>()
 
 const { t, locale } = useI18n()
 
@@ -76,7 +80,7 @@ function serverDetails(server: ServerReplica) {
 }
 
 function serverStrain(server: ServerReplica) {
-    return replicaStrain(server)
+    return server.strain
         .map((strain) =>
             t(`platform.overview.servers.strain.${strain}`, {
                 waits: server.db_waits,

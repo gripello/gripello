@@ -142,6 +142,45 @@ describe('useTickOutbox', () => {
         )
     })
 
+    it('sends ops queued by the old client in the current format', async () => {
+        const outbox = await seed(
+            {
+                ...created('a'),
+                record: {
+                    ...tick('a', 'old'),
+                    date: '2026-10-01 12:00:00.000Z',
+                    created: '2026-10-01 10:00:00.000Z',
+                },
+                queued: '2026-10-01 10:00:00.000Z',
+            },
+            {
+                op: 'update',
+                id: 'b',
+                user: 'u1',
+                record: { ...tick('b', 'iso'), date: '2026-10-02T12:00:00Z' },
+                queued: '2026-10-02T10:00:00Z',
+            },
+        )
+        api.fetchMock.mockImplementation(async () => jsonResponse(tick('a')))
+        await outbox.flush()
+        expect(api.request(0).body).toEqual({
+            id: 'a',
+            user: 'u1',
+            route: 'r1',
+            type: 'top',
+            attempts: 1,
+            date: '2026-10-01',
+            note: 'old',
+        })
+        expect(api.request(1).body).toEqual({
+            type: 'top',
+            attempts: 1,
+            date: '2026-10-02',
+            note: 'iso',
+        })
+        expect(outbox.queue.value).toEqual([])
+    })
+
     it('replays an edit made while the queued create was being sent', async () => {
         const outbox = await seed(created('a'))
         const answer = holdNextRequest()

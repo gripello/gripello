@@ -5,16 +5,8 @@
             variant="error"
             :title="t('errors.loadFailed')"
         />
-        <section
-            v-else
-            class="overflow-hidden rounded-lg bg-default ring ring-default"
-        >
-            <h2
-                class="border-b border-default px-4 py-3 text-base font-semibold text-highlighted sm:px-6"
-            >
-                {{ t('platform.settings.oauth2.title') }}
-            </h2>
-            <ul class="divide-y divide-default">
+        <LayoutPanel v-else :title="t('platform.settings.oauth2.title')" flush>
+            <LayoutListGroup flush>
                 <li
                     v-for="item in providers ?? []"
                     :key="item.provider"
@@ -248,8 +240,8 @@
                         </div>
                     </div>
                 </li>
-            </ul>
-        </section>
+            </LayoutListGroup>
+        </LayoutPanel>
 
         <ConfirmDialog
             :model-value="!!pending"
@@ -265,10 +257,8 @@
             @update:model-value="(open: boolean) => !open && (pending = null)"
             @confirm="save"
         >
-            <UserPasswordField
+            <UserReauthField
                 v-model="adminPassword"
-                :label="t('platform.users.adminPassword')"
-                icon="i-lucide-shield-check"
                 class="mt-3"
                 data-testid="platform-oauth-admin-password"
             />
@@ -279,7 +269,6 @@
 <script setup lang="ts">
 import { CLIENT_ONLY } from '~/utils/platformMail'
 import { copyText } from '~/utils/clipboard'
-import { reauthenticate } from '~/api/account'
 import {
     listOAuthProviderSettings,
     saveOAuthProviderSettings,
@@ -291,10 +280,8 @@ import {
     oauthProviderForm,
     oauthProviderPayload,
     oauthProviderStatus,
-    reloadedForm,
     type OAuthProviderForm,
 } from '~/utils/oauthSettings'
-import { isWrongPassword } from '~/utils/reauth'
 
 const { t } = useI18n()
 const { success: notifySuccess, error: notifyError } = useNotification()
@@ -319,19 +306,15 @@ function providerDetail(item: OAuthProviderSettings) {
         : item.client_id
 }
 
-const forms = reactive<Record<string, OAuthProviderForm>>({})
-// A reload only resets forms without unsaved edits, so saving one provider keeps edits in the others.
-watch(
+const { form: forms } = useDraft(
     providers,
-    (items, previous) => {
-        for (const item of items ?? [])
-            forms[item.provider] = reloadedForm(
-                forms[item.provider],
-                previous?.find((p) => p.provider === item.provider),
-                item,
-            )
-    },
-    { immediate: true },
+    (items): Record<string, OAuthProviderForm> =>
+        Object.fromEntries(
+            (items ?? []).map((item) => [
+                item.provider,
+                oauthProviderForm(item),
+            ]),
+        ),
 )
 
 function changed(item: OAuthProviderSettings) {
@@ -349,8 +332,11 @@ async function copy(text: string) {
 }
 
 const pending = ref<string | null>(null)
-const adminPassword = ref('')
-watch(pending, () => (adminPassword.value = ''))
+const {
+    password: adminPassword,
+    confirm: reauthenticate,
+    errorText: reauthError,
+} = useReauth(pending)
 
 const { pending: saving, run } = useAsyncAction()
 
@@ -360,7 +346,7 @@ async function save() {
     if (!provider || !form) return
     await run(
         async () => {
-            await reauthenticate(adminPassword.value)
+            await reauthenticate()
             providers.value = await saveOAuthProviderSettings(
                 provider,
                 oauthProviderPayload(form),
@@ -371,10 +357,7 @@ async function save() {
         },
         {
             success: t('settings.saveSuccess'),
-            error: (err) =>
-                isWrongPassword(err)
-                    ? t('platform.users.adminPasswordWrong')
-                    : t('settings.saveError'),
+            error: reauthError(t('settings.saveError')),
         },
     )
 }

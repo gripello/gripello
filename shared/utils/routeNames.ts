@@ -1,3 +1,5 @@
+import { parseHexColor, type Rgba } from './color'
+
 export const ROUTE_NAME_MAX_LENGTH = 30
 
 export const COLOR_FAMILIES = [
@@ -60,11 +62,9 @@ export function difficultyTier(
 export function colorFamily(
     color: string | null | undefined,
 ): ColorFamily | null {
-    const match = /^#?([0-9a-f]{6})/i.exec(color?.trim() ?? '')
-    if (!match) return null
-    const [r, g, b] = [0, 2, 4].map(
-        (i) => parseInt(match[1]!.slice(i, i + 2), 16) / 255,
-    ) as [number, number, number]
+    const rgba = parseHexColor(color)
+    if (!rgba) return null
+    const [r, g, b] = rgba.map((channel) => channel / 255) as Rgba
     const max = Math.max(r, g, b)
     const min = Math.min(r, g, b)
     const lightness = (max + min) / 2

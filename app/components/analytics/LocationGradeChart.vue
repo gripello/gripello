@@ -1,5 +1,5 @@
 <template>
-    <AnalyticsBaseEchart
+    <ChartEchart
         :option="option"
         :height="locations.length * 36 + 90"
         testid="analytics-chart-location-grades"

@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto'
 import { expect, test, type Page } from '@playwright/test'
 
 export const API_URL = process.env.E2E_API_URL || 'https://localhost'
@@ -109,4 +110,28 @@ export async function fillLogin(
         await expect(identityInput).toHaveValue(identity, { timeout: 500 })
         await expect(passwordInput).toHaveValue(password, { timeout: 500 })
     }).toPass()
+}
+
+const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+
+export function totp(secret: string, offset = 0) {
+    const bits = [...secret.replace(/[\s=]/g, '').toUpperCase()]
+        .map((char) => BASE32.indexOf(char).toString(2).padStart(5, '0'))
+        .join('')
+    const key = Buffer.from(
+        bits.match(/.{8}/g)!.map((byte) => parseInt(byte, 2)),
+    )
+    const counter = Buffer.alloc(8)
+    counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000) + offset))
+    const hash = createHmac('sha1', key).update(counter).digest()
+    const start = hash[hash.length - 1]! & 0x0f
+    return String((hash.readUInt32BE(start) & 0x7fffffff) % 1_000_000).padStart(
+        6,
+        '0',
+    )
+}
+
+export async function typeCode(page: Page, testId: string, code: string) {
+    await page.getByTestId(testId).locator('input').first().click()
+    await page.keyboard.type(code)
 }

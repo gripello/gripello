@@ -4,11 +4,11 @@
         :id="`comment-${comment.id}`"
         :data-testid="`comment-card-${comment.id}`"
     >
-        <div class="list-card__header">
+        <div class="comment-card__body">
             <UCheckbox
                 v-if="selectable"
                 :model-value="selected"
-                class="list-card__checkbox"
+                class="list-card__checkbox comment-card__lead"
                 :aria-label="
                     $t('common.selectItem', { name: comment.userName })
                 "
@@ -19,59 +19,77 @@
                 :src="comment.userAvatar"
                 :name="comment.userName"
                 size="sm"
+                class="comment-card__lead"
             />
 
-            <div class="list-card__title">
-                <NuxtLink
-                    v-if="comment.userId"
-                    :to="`/climber?id=${comment.userId}`"
-                    class="list-card__name hover:underline"
-                    data-testid="comment-card-author"
-                    >{{ comment.userName }}</NuxtLink
-                >
-                <span v-else class="list-card__name">{{
-                    comment.userName
-                }}</span>
-                <span class="comment-card__date">{{ formattedDate }}</span>
-            </div>
+            <div class="comment-card__main">
+                <div class="comment-card__head">
+                    <div class="list-card__title">
+                        <NuxtLink
+                            v-if="comment.userId"
+                            :to="`/climber?id=${comment.userId}`"
+                            class="list-card__name hover:underline"
+                            data-testid="comment-card-author"
+                            >{{ comment.userName }}</NuxtLink
+                        >
+                        <span
+                            v-else
+                            class="list-card__name"
+                            data-testid="comment-card-author"
+                            >{{ comment.userName }}</span
+                        >
+                        <span
+                            class="comment-card__date flex flex-wrap items-center gap-x-1.5 gap-y-1"
+                            data-testid="comment-card-meta"
+                        >
+                            {{ formattedDate }}
+                            <UTooltip
+                                v-if="comment.difficultyLabel"
+                                :text="t('ratings.perceived_difficulty')"
+                            >
+                                <span
+                                    class="list-card__pill"
+                                    data-testid="comment-card-perceived"
+                                >
+                                    <UIcon
+                                        :name="PERCEIVED_GRADE_ICON"
+                                        class="size-[13px]"
+                                    />
+                                    {{ t('ratings.perceived') }}
+                                    {{ comment.difficultyLabel }}
+                                </span>
+                            </UTooltip>
+                        </span>
+                    </div>
 
-            <div
-                v-if="comment.rating"
-                class="flex shrink-0 comment-card__rating"
-                role="img"
-                :aria-label="`${comment.rating}/5`"
-            >
-                <UIcon
-                    v-for="star in 5"
-                    :key="star"
-                    name="i-lucide-star"
-                    mode="svg"
-                    class="size-[18px]"
-                    :class="
-                        star <= comment.rating
-                            ? 'text-amber-500 **:fill-current'
-                            : 'text-dimmed'
-                    "
-                />
-            </div>
-            <div
-                v-if="actionsInHeader && $slots.actions"
-                class="-me-2 flex shrink-0 items-center"
-            >
-                <slot name="actions" />
-            </div>
-        </div>
+                    <div
+                        v-if="comment.rating"
+                        class="comment-card__aside flex shrink-0 comment-card__rating"
+                        role="img"
+                        :aria-label="`${comment.rating}/5`"
+                    >
+                        <UIcon
+                            v-for="star in 5"
+                            :key="star"
+                            name="i-lucide-star"
+                            mode="svg"
+                            class="size-[18px]"
+                            :class="
+                                star <= comment.rating
+                                    ? 'text-amber-500 **:fill-current'
+                                    : 'text-dimmed'
+                            "
+                        />
+                    </div>
+                    <div
+                        v-if="actionsInHeader && $slots.actions"
+                        class="comment-card__actions -me-2 flex shrink-0 items-center"
+                    >
+                        <slot name="actions" />
+                    </div>
+                </div>
 
-        <div class="list-card__meta">
-            <div
-                v-if="comment.comment"
-                class="list-card__meta-row list-card__meta-row--full"
-            >
-                <UIcon
-                    name="i-lucide-message-square-text"
-                    class="list-card__meta-icon size-[15px]"
-                />
-                <div class="comment-card__comment-wrap">
+                <div v-if="comment.comment" class="comment-card__text">
                     <span
                         ref="commentEl"
                         class="comment-card__comment"
@@ -99,43 +117,30 @@
                         </UButton>
                     </div>
                 </div>
-            </div>
 
-            <div
-                v-if="showRoute && comment.routeName"
-                class="list-card__meta-row list-card__meta-row--full"
-            >
-                <UIcon
-                    name="i-lucide-route"
-                    class="list-card__meta-icon size-[15px]"
-                />
-                <NuxtLink
-                    v-if="comment.routeId"
-                    :to="gymPath(`/route?id=${comment.routeId}`)"
-                    class="comment-card__route-link text-sm font-medium text-primary no-underline"
+                <div
+                    v-if="(showRoute && comment.routeName) || comment.location"
+                    class="list-card__pills"
                 >
-                    {{ comment.routeName }}
-                </NuxtLink>
-                <span v-else class="text-sm font-medium">{{
-                    comment.routeName
-                }}</span>
-            </div>
-
-            <div class="list-card__pills">
-                <span v-if="comment.location" class="list-card__pill">
-                    <UIcon name="i-lucide-map-pin" class="size-[13px]" />
-                    {{ comment.location }}
-                </span>
-                <UTooltip
-                    v-if="comment.difficultyLabel"
-                    :text="t('ratings.perceived_difficulty')"
-                >
-                    <span class="list-card__pill comment-card__pill--primary">
-                        <UIcon name="i-lucide-gauge" class="size-[13px]" />
-                        {{ t('ratings.felt') }}
-                        {{ comment.difficultyLabel }}
+                    <template v-if="showRoute && comment.routeName">
+                        <NuxtLink
+                            v-if="comment.routeId"
+                            :to="gymPath(`/route?id=${comment.routeId}`)"
+                            class="list-card__pill comment-card__route-link font-medium text-primary no-underline"
+                        >
+                            <UIcon name="i-lucide-route" class="size-[13px]" />
+                            {{ comment.routeName }}
+                        </NuxtLink>
+                        <span v-else class="list-card__pill font-medium">
+                            <UIcon name="i-lucide-route" class="size-[13px]" />
+                            {{ comment.routeName }}
+                        </span>
+                    </template>
+                    <span v-if="comment.location" class="list-card__pill">
+                        <UIcon name="i-lucide-map-pin" class="size-[13px]" />
+                        {{ comment.location }}
                     </span>
-                </UTooltip>
+                </div>
             </div>
         </div>
 
@@ -149,6 +154,7 @@
 </template>
 
 <script setup lang="ts">
+import { PERCEIVED_GRADE_ICON } from '~/utils/routeReviews'
 import { formatDate, timeAgo as sharedTimeAgo } from '#shared/utils/formatting'
 
 const gymPath = useGymPath()
@@ -235,20 +241,49 @@ function timeAgo(dateStr: string): string {
 </script>
 
 <style scoped>
+.comment-card__body {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+}
+
+.comment-card__lead {
+    flex-shrink: 0;
+}
+
+.comment-card__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.comment-card__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.comment-card__aside {
+    height: 1.3rem;
+    align-items: center;
+}
+
+.comment-card__actions {
+    margin-top: -11px;
+}
+
 .comment-card__date {
     font-size: 0.75rem;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 55%, transparent);
+    color: var(--ui-text-muted);
     line-height: 1.2;
 }
 
-.comment-card__comment-wrap {
-    flex: 1;
-    min-width: 0;
-}
-
 .comment-card__comment {
-    font-size: 0.8rem;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 70%, transparent);
+    font-size: 0.875rem;
+    color: var(--ui-text-toned);
     white-space: pre-wrap;
     word-break: break-word;
     line-height: 1.5;
@@ -263,18 +298,5 @@ function timeAgo(dateStr: string): string {
 
 .comment-card__route-link:hover {
     text-decoration: underline;
-}
-
-.comment-card__pill--primary {
-    color: var(--ui-primary);
-    background: color-mix(in oklab, var(--ui-primary) 8%, transparent);
-}
-
-.comment-card .list-card__meta-icon {
-    margin-top: 3px;
-}
-
-.comment-card .list-card__pills {
-    padding-left: 22px;
 }
 </style>

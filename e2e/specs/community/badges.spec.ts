@@ -19,7 +19,7 @@ test('the logbook shows achievements and the first one is announced', async ({
         route: route.id,
         type: 'flash',
         attempts: 1,
-        date: `${new Date().toISOString().slice(0, 10)}T12:00:00Z`,
+        date: new Date().toISOString().slice(0, 10),
     })
 
     await signInAs(page, climber.email, climber.password)

@@ -120,6 +120,7 @@
 </template>
 
 <script setup lang="ts">
+import { gymChangesTopic } from '#shared/utils/topics'
 import {
     createCompetitionRoute,
     deleteCompetitionRoute,
@@ -128,7 +129,7 @@ import {
 } from '~/api/competitions'
 import { listRoutes } from '~/api/routes'
 import { nextRouteNumber } from '~/utils/competitions'
-import { gymChangesTopic, type GymChange } from '~/utils/realtimeCache'
+import { type GymChange } from '~/utils/realtimeCache'
 import type {
     CompetitionRecord,
     CompetitionRouteRecord,

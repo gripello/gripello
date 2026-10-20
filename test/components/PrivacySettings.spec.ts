@@ -1,6 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, reactive, ref } from 'vue'
 import PrivacySettings from '~/components/account/PrivacySettings.vue'
+import LayoutListGroup from '~/components/layout/ListGroup.vue'
+import LayoutListRow from '~/components/layout/ListRow.vue'
 
 const update = vi.fn()
 vi.mock('~/api/account', () => ({
@@ -23,8 +25,8 @@ function mountSettings(user: Record<string, unknown>) {
     }
     return mount(PrivacySettings, {
         global: {
+            components: { LayoutListGroup, LayoutListRow },
             stubs: {
-                UPageCard: { template: '<div><slot /></div>' },
                 UIcon: true,
                 USelect: true,
                 USwitch: switchStub,

@@ -1,23 +1,16 @@
 <template>
-    <div class="surface-card w-full" :data-testid="testid">
-        <div class="section-header">
-            <div class="section-icon" :style="{ background: tint }">
-                <UIcon
-                    :name="icon"
-                    class="size-[16px]"
-                    :style="{ color: accent }"
-                />
-            </div>
-            <div class="section-heading">
-                <div class="section-title">{{ title }}</div>
-                <div v-if="subtitle" class="section-subtitle">
-                    {{ subtitle }}
-                </div>
-            </div>
-            <div class="flex-1" />
+    <LayoutPanel
+        :title="title"
+        :subtitle="subtitle"
+        :icon="icon"
+        flush
+        as="div"
+        class="w-full"
+        :data-testid="testid"
+    >
+        <template v-if="$slots.actions" #actions>
             <slot name="actions" />
-        </div>
-        <USeparator />
+        </template>
         <div :class="flush ? 'p-0' : 'p-4'">
             <div v-if="loading && flush" class="flex flex-col gap-4 px-4 py-2">
                 <div v-for="n in 3" :key="n" class="flex flex-col gap-2">
@@ -25,7 +18,7 @@
                     <USkeleton class="h-3 w-1/2" />
                 </div>
             </div>
-            <USkeleton v-else-if="loading" class="section-skeleton w-full" />
+            <USkeleton v-else-if="loading" class="h-[300px] w-full" />
             <LayoutEmptyState
                 v-else-if="empty"
                 :icon="emptyIcon"
@@ -34,16 +27,15 @@
             />
             <slot v-else />
         </div>
-    </div>
+    </LayoutPanel>
 </template>
 
 <script setup lang="ts">
-const props = withDefaults(
+withDefaults(
     defineProps<{
         title: string
         subtitle?: string
         icon: string
-        color?: string
         testid?: string
         loading?: boolean
         empty?: boolean
@@ -52,55 +44,10 @@ const props = withDefaults(
         flush?: boolean
     }>(),
     {
-        color: 'primary',
+        subtitle: undefined,
+        testid: undefined,
         emptyIcon: 'i-lucide-chart-column',
+        emptyText: undefined,
     },
 )
-
-const accent = computed(() => `var(--ui-${props.color})`)
-const tint = computed(
-    () => `color-mix(in oklab, ${accent.value} 12%, transparent)`,
-)
 </script>
-
-<style scoped>
-.section-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 16px;
-    min-height: unset;
-}
-
-.section-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.section-heading {
-    min-width: 0;
-}
-
-.section-subtitle {
-    font-size: 0.75rem;
-    font-weight: 400;
-    line-height: 1.3;
-    white-space: normal;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 55%, transparent);
-}
-
-.section-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    white-space: normal;
-}
-
-.section-skeleton {
-    height: 300px;
-}
-</style>

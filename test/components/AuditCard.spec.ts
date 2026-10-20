@@ -15,7 +15,7 @@ describe('AuditCard', () => {
                 entry: {
                     id: 'a1',
                     action: 'create',
-                    created: '2026-10-01 10:00:00.000Z',
+                    created: '2026-10-01T10:00:00.000Z',
                 } as AuditLogRecord,
             },
             global: { stubs: { UIcon: true, NuxtLink: true } },
@@ -49,7 +49,7 @@ describe('AuditCard', () => {
                     collection_name: 'unknown_things',
                     record_id: 'abc123',
                     changed_fields: ['latitude', 'longitude', 'wall_position'],
-                    created: '2026-10-01 10:00:00.000Z',
+                    created: '2026-10-01T10:00:00.000Z',
                 } as AuditLogRecord,
             },
             global: { stubs: { UIcon: true, NuxtLink: true } },

@@ -9,7 +9,7 @@ describe('useRouteFilters', () => {
         vi.stubGlobal('computed', computed)
         vi.stubGlobal('watch', watch)
         vi.stubGlobal('useI18n', () => ({ t: (key: string) => key }))
-        vi.stubGlobal('useLocations', () => ({ data: ref([]) }))
+        vi.stubGlobal('useLocations', () => ({ data: ref([]), items: ref([]) }))
         vi.stubGlobal('useGradeSystems', () => ({ gradeFilterItems: ref([]) }))
         vi.stubGlobal('useCurrentGymId', () => ref('gym1'))
         vi.stubGlobal('useAsyncData', (key: string) => {

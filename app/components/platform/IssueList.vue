@@ -1,6 +1,7 @@
 <template>
     <LayoutPanel
         :title="t('platform.issues.title')"
+        flush
         data-testid="platform-issues"
     >
         <template #actions>
@@ -11,23 +12,22 @@
                 test-id="platform-issues-range"
             />
         </template>
-        <LayoutEmptyState
-            v-if="error"
-            variant="error"
-            :title="t('errors.loadFailed')"
-        />
-        <LayoutLoadingState v-else-if="!data" :count="2" />
-        <UEmpty
-            v-else-if="!issues.length"
-            icon="i-lucide-circle-check"
-            :title="t('platform.issues.empty')"
-            variant="naked"
-            class="py-6"
-        />
-        <ul
-            v-else
-            class="-mx-4 -mb-4 divide-y divide-default border-t border-default"
-        >
+        <div v-if="error || !data || !issues.length" class="p-4">
+            <LayoutEmptyState
+                v-if="error"
+                variant="error"
+                :title="t('errors.loadFailed')"
+            />
+            <LayoutLoadingState v-else-if="!data" :count="2" />
+            <UEmpty
+                v-else
+                icon="i-lucide-circle-check"
+                :title="t('platform.issues.empty')"
+                variant="naked"
+                class="py-6"
+            />
+        </div>
+        <LayoutListGroup v-else flush>
             <li
                 v-for="issue in issues"
                 :key="issue.fingerprint"
@@ -104,11 +104,12 @@
                     </div>
                 </div>
             </li>
-        </ul>
+        </LayoutListGroup>
     </LayoutPanel>
 </template>
 
 <script setup lang="ts">
+import { translatedItems } from '~/utils/translatedItems'
 import {
     listIssueOccurrences,
     listIssues,
@@ -137,10 +138,7 @@ const { data, error } = useAsyncData(
 const issues = computed(() => data.value?.items ?? [])
 
 const rangeItems = computed(() =>
-    (['1h', '24h', '7d'] as const).map((value) => ({
-        value,
-        label: t(`platform.issues.ranges.${value}`),
-    })),
+    translatedItems(['1h', '24h', '7d'] as const, 'platform.issues.ranges', t),
 )
 
 watch(

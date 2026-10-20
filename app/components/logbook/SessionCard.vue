@@ -84,7 +84,6 @@ import type { RouteRecord, TickRecord } from '~/types/models'
 import { formatDate } from '#shared/utils/formatting'
 import { gradeKey } from '#shared/utils/grades'
 import { sessionSummary } from '#shared/utils/logbook'
-import { tickDate } from '#shared/utils/ticks'
 
 const props = defineProps<{
     day: string
@@ -104,7 +103,7 @@ const open = ref(props.initiallyOpen ?? false)
 
 const summary = computed(() => sessionSummary(props.ticks))
 const formattedDay = computed(() =>
-    formatDate(tickDate(props.day), {
+    formatDate(props.day, {
         locale: locale.value,
         weekday: 'long',
         day: 'numeric',

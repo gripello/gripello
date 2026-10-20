@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { nearestColorName, renamedForColor } from '~/utils/colorName'
+import {
+    nearestColorName,
+    nearestColors,
+    renamedForColor,
+} from '~/utils/colorName'
 
 describe('nearestColorName', () => {
     it.each([
@@ -77,5 +81,21 @@ describe('renamedForColor', () => {
         expect(renamedForColor(t, 'Beginner', '#facc15', '#2563eb')).toBe(
             'Beginner',
         )
+    })
+})
+
+describe('nearestColors', () => {
+    it('orders by perceptual distance and leaves the target out', () => {
+        expect(
+            nearestColors(
+                '#f44336',
+                ['#F44336', '#2196F3', '#E91E63', '#FF9800'],
+                2,
+            ),
+        ).toEqual(['#E91E63', '#FF9800'])
+    })
+
+    it('returns nothing for an unreadable target', () => {
+        expect(nearestColors('nope', ['#FFFFFF'], 3)).toEqual([])
     })
 })

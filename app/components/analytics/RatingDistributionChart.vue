@@ -1,5 +1,5 @@
 <template>
-    <AnalyticsBaseEchart
+    <ChartEchart
         :option="option"
         :height="220"
         testid="analytics-chart-rating-distribution"

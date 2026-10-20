@@ -134,6 +134,12 @@
             sheet-on-mobile
             closable
             data-testid="member-invite-dialog"
+            :submit-label="t('members.invite')"
+            submit-icon="i-lucide-user-plus"
+            :submit-loading="inviting"
+            submit-test-id="member-invite-submit"
+            cancel-test-id="member-invite-cancel"
+            @submit="inviteForm?.submit()"
         >
             <UForm
                 ref="inviteForm"
@@ -187,26 +193,6 @@
                     />
                 </UFormField>
             </UForm>
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    data-testid="member-invite-cancel"
-                    @click="inviteDialog = false"
-                >
-                    {{ t('actions.cancel') }}
-                </UButton>
-                <div class="flex-1" />
-                <UButton
-                    color="primary"
-                    icon="i-lucide-user-plus"
-                    :loading="inviting"
-                    data-testid="member-invite-submit"
-                    @click="inviteForm?.submit()"
-                >
-                    {{ t('members.invite') }}
-                </UButton>
-            </template>
         </LayoutDialogShell>
 
         <ConfirmDialog
@@ -220,6 +206,9 @@
 </template>
 
 <script setup lang="ts">
+import { gymTopic } from '#shared/utils/topics'
+import { displayName, avatarUrl } from '~/utils/avatar'
+import { useTimeoutFn } from '@vueuse/core'
 import type { GymEvent } from '~/composables/useRealtime'
 import type { Form, TableColumn } from '@nuxt/ui'
 import { required, validEmail, validateRules } from '~/utils/validation'
@@ -233,7 +222,6 @@ import {
     listMembers,
     type Member as ApiMember,
 } from '~/api/members'
-import { fileUrl } from '~/api/client'
 
 type Member = {
     id: string
@@ -283,8 +271,7 @@ const roleOptions = computed(() =>
     })),
 )
 const grantableRoleIds = computed(() => {
-    const ownRole = membershipIn(ownMemberships.value, gymId.value)?.expand
-        ?.role
+    const ownRole = membershipIn(ownMemberships.value, gymId.value)?.role
     return new Set(
         roles.value
             .filter((role) =>
@@ -320,20 +307,18 @@ function canManage(member: Member) {
 }
 
 function mapMember({ id, user, role }: ApiMember): Member {
-    const fullName = [user.firstname, user.name].filter(Boolean).join(' ')
     return {
         id,
         user: user.id,
         role: role.id,
-        displayName: fullName || user.username || user.email || '?',
+        displayName: displayName(user, '?'),
         email: user.email ?? '',
         username: user.username ?? '',
         initials:
             [user.firstname, user.name]
                 .map((part) => part?.[0]?.toUpperCase() ?? '')
                 .join('') || '?',
-        avatarUrl:
-            fileUrl('users', user, user.avatar, { thumb: '100x100' }) || null,
+        avatarUrl: avatarUrl(user) || null,
     }
 }
 
@@ -363,11 +348,10 @@ function clearFilters() {
     selectedRole.value = null
 }
 
-let searchDebounce: ReturnType<typeof setTimeout> | undefined
-watch(search, () => {
-    clearTimeout(searchDebounce)
-    searchDebounce = setTimeout(() => reloadMembers(), 300)
+const { start: reloadMembersSoon } = useTimeoutFn(() => reloadMembers(), 300, {
+    immediate: false,
 })
+watch(search, () => reloadMembersSoon())
 watch(selectedRole, () => reloadMembers())
 
 const { pending: changingRole, run: runRoleChange } = useAsyncAction()
@@ -473,7 +457,7 @@ defineExpose({ openInvite })
 void prefetch(`admin-members-${props.gymId}`)
 
 useLiveRefresh(
-    () => `gym:${gymId.value}`,
+    () => gymTopic(gymId.value),
     () => Promise.all([refreshRoles(), reloadLoaded()]),
     {
         when: (event: GymEvent) =>

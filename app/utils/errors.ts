@@ -1,11 +1,43 @@
-import { isOfflineError } from '~/utils/tickOutbox'
+import { ApiError } from '~/api/client'
 
 export function isAbortError(error: unknown): boolean {
     return !!(error as { isAbort?: boolean } | null)?.isAbort
 }
 
+export function endedSession(error: unknown) {
+    return error instanceof ApiError && error.sessionEnded
+}
+
+export function isRateLimited(error: unknown): boolean {
+    return (error as { status?: number } | null)?.status === 429
+}
+
+export function requestErrorKey(error: unknown, fallback: string) {
+    return isRateLimited(error) ? 'errors.rateLimited' : fallback
+}
+
 export function isNetworkError(error: unknown): boolean {
     return (error as { status?: number } | null)?.status === 0
+}
+
+export function isAbortOrNetworkError(error: unknown): boolean {
+    return isAbortError(error) || isNetworkError(error)
+}
+
+export function isRetryableSaveError(error: unknown): boolean {
+    const status = (error as { status?: number } | null)?.status ?? 0
+    return isAbortOrNetworkError(error) || status === 429 || status >= 500
+}
+
+export function isOfflineError(error: unknown) {
+    const { status, isAbort } =
+        (error as { status?: number; isAbort?: boolean } | null) ?? {}
+    if (isAbort) return false
+    return (
+        // Node has a navigator without onLine, which must not make every SSR error look offline
+        (typeof navigator !== 'undefined' && navigator.onLine === false) ||
+        status === 0
+    )
 }
 
 type AsyncDataStore = {

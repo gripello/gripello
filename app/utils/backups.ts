@@ -1,20 +1,3 @@
-const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte'] as const
-
-export function formatBytes(bytes: number, locale?: string) {
-    let value = bytes
-    let unit = 0
-    while (value >= 1024 && unit < units.length - 1) {
-        value /= 1024
-        unit++
-    }
-    return new Intl.NumberFormat(locale, {
-        style: 'unit',
-        unit: units[unit],
-        unitDisplay: 'short',
-        maximumFractionDigits: unit === 0 ? 0 : 1,
-    }).format(value)
-}
-
 // Backups run at hh:30 UTC; the label shows that moment in the viewer's time zone on the next run's day, so it matches across DST.
 export function backupHourOptions(
     locale?: string,

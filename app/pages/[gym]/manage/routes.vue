@@ -63,7 +63,7 @@
             @saved="onRouteSaved"
             @deleted="onRouteDeleted"
         />
-        <ImportRoute ref="importRouteRef" @closed="reloadRoutes" />
+        <ImportRoute ref="importRouteRef" @closed="reloadRoutes()" />
 
         <FilterBar
             v-model="searchRouteName"
@@ -80,38 +80,9 @@
                         :items="sortItemsMobile"
                         @update:model-value="onMobileSortChange"
                     />
-                    <FilterSelect
-                        :label="gradeColumnTitle"
-                        v-model="selectedDifficulty"
-                        :placeholder="$t('filter.all')"
-                        clear
-                        @clear="selectedDifficulty = ''"
-                        :items="difficulties"
-                        label-key="text"
-                        value-key="value"
-                        data-testid="routes-filter-difficulty"
-                    />
-                    <FilterSelect
-                        :label="$t('climbing.type')"
-                        v-model="selectedType"
-                        :placeholder="$t('filter.all')"
-                        clear
-                        @clear="selectedType = ''"
-                        :items="types"
-                        label-key="text"
-                        value-key="value"
-                        data-testid="routes-filter-type"
-                    />
-                    <FilterSelect
-                        :label="$t('climbing.location')"
-                        v-model="selectedLocation"
-                        :placeholder="$t('filter.all')"
-                        clear
-                        @clear="selectedLocation = ''"
-                        :items="locations"
-                        label-key="text"
-                        value-key="value"
-                        data-testid="routes-filter-location"
+                    <RouteFilterSelects
+                        :filters="filters"
+                        test-id-prefix="routes"
                     />
                     <div class="flex items-center">
                         <UButton
@@ -213,7 +184,9 @@
             </UButton>
         </div>
 
-        <div v-if="!isMobile" class="mt-4" data-testid="routes-table">
+        <LayoutLoadError v-if="loadFailed" class="mt-4" @retry="retryLoad" />
+
+        <div v-else-if="!isMobile" class="mt-4" data-testid="routes-table">
             <UTable
                 :data="routes"
                 :columns="tableColumns"
@@ -384,72 +357,69 @@
                 data-testid="routes-mobile-pagination"
             >
                 <div class="route-manager__pager-pill">
-                    <div class="route-manager__pager">
-                        <UButton
-                            class="icon-btn"
-                            icon="i-lucide-chevron-left"
-                            color="neutral"
-                            variant="ghost"
-                            size="sm"
-                            :disabled="tableOptions.page <= 1"
-                            :aria-label="$t('table.previous_page')"
-                            data-testid="routes-mobile-prev"
-                            @click="onMobilePageChange(tableOptions.page - 1)"
-                        />
-                        <template
-                            v-for="(page, index) in pageItems"
-                            :key="`${page}-${index}`"
-                        >
-                            <span
-                                v-if="page === ELLIPSIS"
-                                class="route-manager__page-gap"
-                                data-testid="routes-mobile-page-gap"
-                                aria-hidden="true"
-                                >{{ page }}</span
-                            >
+                    <UPagination
+                        :page="tableOptions.page"
+                        :total="totalItems"
+                        :items-per-page="tableOptions.itemsPerPage"
+                        :sibling-count="displayWidth < 480 ? 0 : 1"
+                        show-edges
+                        :show-controls="false"
+                        :ui="{ list: 'gap-0.5' }"
+                        @update:page="onMobilePageChange"
+                    >
+                        <template #prev>
                             <UButton
-                                v-else
+                                class="icon-btn"
+                                icon="i-lucide-chevron-left"
+                                color="neutral"
+                                variant="ghost"
+                                size="sm"
+                                :aria-label="$t('table.previous_page')"
+                                data-testid="routes-mobile-prev"
+                            />
+                        </template>
+                        <template #item="{ item, page, pageCount }">
+                            <UButton
+                                v-if="item.type === 'page'"
                                 :variant="
-                                    page === tableOptions.page
-                                        ? 'solid'
-                                        : 'ghost'
+                                    page === item.value ? 'solid' : 'ghost'
                                 "
                                 :color="
-                                    page === tableOptions.page
-                                        ? 'primary'
-                                        : 'neutral'
-                                "
-                                :aria-current="
-                                    page === tableOptions.page
-                                        ? 'page'
-                                        : undefined
+                                    page === item.value ? 'primary' : 'neutral'
                                 "
                                 :aria-label="
                                     $t('table.page_of', {
-                                        page,
-                                        total: pageLength,
+                                        page: item.value,
+                                        total: pageCount,
                                     })
                                 "
                                 size="sm"
                                 class="route-manager__page-btn justify-center"
-                                :data-testid="`routes-mobile-goto-${page}`"
-                                @click="onMobilePageChange(page)"
+                                :data-testid="`routes-mobile-goto-${item.value}`"
                             >
-                                {{ page }}
+                                {{ item.value }}
                             </UButton>
                         </template>
-                        <UButton
-                            class="icon-btn"
-                            icon="i-lucide-chevron-right"
-                            color="neutral"
-                            variant="ghost"
-                            size="sm"
-                            :disabled="tableOptions.page >= pageLength"
-                            :aria-label="$t('table.next_page')"
-                            data-testid="routes-mobile-next"
-                            @click="onMobilePageChange(tableOptions.page + 1)"
-                        />
-                    </div>
+                        <template #ellipsis>
+                            <span
+                                class="route-manager__page-gap"
+                                data-testid="routes-mobile-page-gap"
+                                aria-hidden="true"
+                                >...</span
+                            >
+                        </template>
+                        <template #next>
+                            <UButton
+                                class="icon-btn"
+                                icon="i-lucide-chevron-right"
+                                color="neutral"
+                                variant="ghost"
+                                size="sm"
+                                :aria-label="$t('table.next_page')"
+                                data-testid="routes-mobile-next"
+                            />
+                        </template>
+                    </UPagination>
                     <USelect
                         :model-value="tableOptions.itemsPerPage"
                         :items="pageSizeOptions"
@@ -481,33 +451,26 @@
 </template>
 
 <script setup lang="ts">
+import { gymChangesTopic } from '#shared/utils/topics'
 import { archiveRoutes, listRoutes, type RouteQuery } from '~/api/routes'
 import { isAbortError } from '~/utils/errors'
-import type { ExportOptions } from '~/components/ExportOptionsDialog.vue'
+import type { ExportOptions } from '~/components/export/OptionsDialog.vue'
 import {
     formatAnchorPoint,
     formatScore,
     locationName,
-    normalizeCreators,
 } from '#shared/utils/formatting'
-import { toSortParam, type SortOption } from '~/utils/sorting'
+import { toRouteRow, type RouteTableLoad } from '~/composables/useRouteTable'
 import {
     coalesce,
     coalesceIds,
-    gymChangesTopic,
     staffRouteChange,
     type GymChange,
 } from '~/utils/realtimeCache'
 import type { TableColumn } from '@nuxt/ui'
-import type { RouteListItem, RouteScoreRecord } from '~/types/models'
+import type { RouteListItem } from '~/types/models'
 
 const gymPath = useGymPath()
-
-interface LoadOptions {
-    page?: number
-    itemsPerPage?: number
-    sortBy?: SortOption[]
-}
 
 definePageMeta({
     middleware: ['auth'],
@@ -523,18 +486,13 @@ const { defectsByRoute } = useOpenDefects()
 
 const isMobile = computed(() => mdAndDown.value)
 
+const filters = useRouteFilters('manage-routes')
 const {
     searchRouteName,
-    selectedDifficulty,
-    selectedType,
-    selectedLocation,
-    difficulties,
-    types,
-    locations,
     activeFilterCount: routeFilterCount,
     routeQuery: baseQuery,
     clearFilters: clearRouteFilters,
-} = useRouteFilters('manage-routes')
+} = filters
 
 const displayArchived = ref(false)
 
@@ -552,16 +510,7 @@ const showArchiveConfirmation = ref(false)
 const routes = ref<RouteListItem[]>([])
 const totalItems = ref(0)
 const loading = ref(false)
-
-const tableOptions = reactive<{
-    page: number
-    itemsPerPage: number
-    sortBy: SortOption[]
-}>({
-    page: 1,
-    itemsPerPage: 25,
-    sortBy: [{ key: 'screw_date', order: 'desc' }],
-})
+const listFailed = ref(false)
 
 const pageSizeOptions = [10, 25, 50, 100]
 
@@ -584,43 +533,32 @@ const moreItems = computed(() => [
 
 const { gradeColumnTitle } = useGradeSystems()
 
-const UButton = resolveComponent('UButton')
+const routeQuery = computed<RouteQuery>(() => ({
+    ...baseQuery.value,
+    archived: displayArchived.value ? 'all' : false,
+}))
+const routeQueryKey = computed(() => JSON.stringify(routeQuery.value))
 
-function sortableHeader(label: string, key: string) {
-    return () => {
-        const active = tableOptions.sortBy[0]
-        const order = active?.key === key ? active.order : undefined
-        return h(UButton, {
-            color: 'neutral',
-            variant: 'ghost',
-            label,
-            trailingIcon:
-                order === 'asc'
-                    ? 'i-lucide-arrow-up'
-                    : order === 'desc'
-                      ? 'i-lucide-arrow-down'
-                      : 'i-lucide-arrow-up-down',
-            class: '-mx-2.5 w-[calc(100%+1.25rem)] font-semibold',
-            onClick: () => toggleSort(key),
-        })
-    }
-}
-
-function toggleSort(key: string) {
-    const active = tableOptions.sortBy[0]
-    const sortBy: SortOption[] =
-        active?.key !== key
-            ? [{ key, order: 'asc' }]
-            : active.order === 'asc'
-              ? [{ key, order: 'desc' }]
-              : []
-    void loadRoutes({ page: 1, sortBy })
-}
-
-const tableUi = {
-    th: 'px-2 last:pe-4 2xl:px-4',
-    td: 'px-2 py-2 last:pe-4 2xl:px-4 whitespace-normal text-default',
-}
+const {
+    tableOptions,
+    tableUi,
+    sortableHeader,
+    pageInfo,
+    sortItemsMobile: baseSortItems,
+    onMobileSortChange,
+    routeSort,
+} = useRouteTable({
+    itemsPerPage: 25,
+    totalItems,
+    queryKey: routeQueryKey,
+    defaultSort: '-created',
+    load: (options) => loadRoutes(options),
+})
+const sortItemsMobile = computed(() => [
+    ...baseSortItems.value,
+    { title: t('climbing.location'), key: 'location' },
+    { title: t('climbing.type'), key: 'type' },
+])
 
 const tableColumns = computed<TableColumn<RouteListItem>[]>(() => [
     { id: 'selected', meta: { class: { th: 'w-11', td: 'w-11' } } },
@@ -652,19 +590,6 @@ const tableColumns = computed<TableColumn<RouteListItem>[]>(() => [
 const rowSelection = computed(() =>
     Object.fromEntries(Array.from(selectedRouteIds.value, (id) => [id, true])),
 )
-
-const pageInfo = computed(() => {
-    const { page, itemsPerPage } = tableOptions
-    const start = totalItems.value ? (page - 1) * itemsPerPage + 1 : 0
-    const end = Math.min(page * itemsPerPage, totalItems.value)
-    return `${start}-${end} / ${totalItems.value}`
-})
-
-const routeQuery = computed<RouteQuery>(() => ({
-    ...baseQuery.value,
-    archived: displayArchived.value ? 'all' : false,
-}))
-const routeQueryKey = computed(() => JSON.stringify(routeQuery.value))
 
 const {
     selectedRouteIds,
@@ -700,42 +625,6 @@ const selectAllIcon = computed(() => {
 const { exportingFormat, exportPdf, exportXlsx, exportJson } = useRouteExport()
 const selectedIds = () => Array.from(selectedRouteIds.value)
 
-const pageLength = computed(() =>
-    Math.max(1, Math.ceil(totalItems.value / tableOptions.itemsPerPage)),
-)
-
-const PAGE_BUTTON = 36
-const pageWindowSize = computed(() => {
-    const spare = displayWidth.value - 32 - 96 - 16 - 2 * PAGE_BUTTON
-    return Math.max(1, Math.min(7, Math.floor(spare / PAGE_BUTTON)))
-})
-
-const ELLIPSIS = '...' as const
-
-const pageItems = computed(() => {
-    const total = pageLength.value
-    const current = tableOptions.page
-
-    if (total <= pageWindowSize.value) {
-        return Array.from({ length: total }, (_, index) => index + 1)
-    }
-
-    const budget = Math.max(3, pageWindowSize.value - 1)
-    const inner = Math.max(1, budget - 2)
-    const start = Math.max(
-        2,
-        Math.min(current - Math.floor((inner - 1) / 2), total - inner),
-    )
-    const end = Math.min(total - 1, start + inner - 1)
-
-    const items: (number | typeof ELLIPSIS)[] = [1]
-    if (start > 2) items.push(ELLIPSIS)
-    for (let page = start; page <= end; page++) items.push(page)
-    if (end < total - 1) items.push(ELLIPSIS)
-    items.push(total)
-    return items
-})
-
 const updateRouteSelection = (route: RouteListItem, isSelected: boolean) =>
     updateSelection(route.id, isSelected)
 
@@ -748,32 +637,10 @@ const selectAll = async () => {
     }
 }
 
-const toRouteSort = (sortByArr: SortOption[]) =>
-    toSortParam(sortByArr, '-created', {
-        score: 'average_rating',
-        location: 'location',
-        difficulty: 'type,grade_index',
-    })
-
-const sortItemsMobile = computed(() => [
-    {
-        title: t('routes.screwed_at'),
-        key: 'screw_date',
-        defaultOrder: 'desc' as const,
-    },
-    { title: t('ratings.score'), key: 'score', defaultOrder: 'desc' as const },
-    { title: t('climbing.routename'), key: 'name' },
-    { title: t('climbing.difficulty'), key: 'difficulty' },
-    { title: t('climbing.anchor_point'), key: 'anchor_point' },
-    { title: t('climbing.location'), key: 'location' },
-    { title: t('climbing.type'), key: 'type' },
-])
-
-const onMobileSortChange = (sortBy: SortOption[]) => {
-    void loadRoutes({ page: 1, sortBy })
-}
-
-const loadRoutes = async (options: LoadOptions = {}) => {
+const loadRoutes = async (
+    options: RouteTableLoad = {},
+    { background = false } = {},
+) => {
     const { page, itemsPerPage, sortBy } = options
 
     if (typeof page === 'number') {
@@ -793,19 +660,19 @@ const loadRoutes = async (options: LoadOptions = {}) => {
     try {
         const list = await listRoutes(gymId.value, {
             ...routeQuery.value,
-            sort: toRouteSort(tableOptions.sortBy),
+            sort: routeSort(),
             include: ['location'],
             page: tableOptions.page,
             limit: tableOptions.itemsPerPage,
             total: true,
         })
 
-        routes.value = list.items.map(normalizeRoute)
+        routes.value = list.items.map(toRouteRow)
         totalItems.value = list.total ?? 0
+        listFailed.value = false
     } catch (error) {
         if (isAbortError(error)) return
-        console.error('Failed to load routes:', error)
-        notifyError(t('notifications.error.generic'))
+        if (!background || routes.value.length === 0) listFailed.value = true
     } finally {
         loading.value = false
     }
@@ -828,13 +695,16 @@ const onRouteDeleted = async (id: string) => {
     await reloadRoutes()
 }
 
-const reloadRoutes = async () => {
+const reloadRoutes = async ({ background = false } = {}) => {
     invalidateAllRouteIdsCache()
-    await loadRoutes({
-        page: tableOptions.page,
-        itemsPerPage: tableOptions.itemsPerPage,
-        sortBy: tableOptions.sortBy,
-    })
+    await loadRoutes(
+        {
+            page: tableOptions.page,
+            itemsPerPage: tableOptions.itemsPerPage,
+            sortBy: tableOptions.sortBy,
+        },
+        { background },
+    )
 
     const maxPage = Math.max(
         1,
@@ -842,11 +712,14 @@ const reloadRoutes = async () => {
     )
     if (tableOptions.page > maxPage) {
         tableOptions.page = maxPage
-        await loadRoutes({
-            page: tableOptions.page,
-            itemsPerPage: tableOptions.itemsPerPage,
-            sortBy: tableOptions.sortBy,
-        })
+        await loadRoutes(
+            {
+                page: tableOptions.page,
+                itemsPerPage: tableOptions.itemsPerPage,
+                sortBy: tableOptions.sortBy,
+            },
+            { background },
+        )
     }
 }
 
@@ -916,37 +789,6 @@ const onItemsPerPageChange = (value: number | string) => {
     void loadRoutes({ page: 1, itemsPerPage: size })
 }
 
-let filterDebounceTimer: ReturnType<typeof setTimeout> | undefined
-
-watch(routeQueryKey, () => {
-    if (filterDebounceTimer) {
-        clearTimeout(filterDebounceTimer)
-    }
-
-    filterDebounceTimer = setTimeout(() => {
-        invalidateAllRouteIdsCache()
-        tableOptions.page = 1
-        void loadRoutes({
-            page: 1,
-            itemsPerPage: tableOptions.itemsPerPage,
-            sortBy: tableOptions.sortBy,
-        })
-    }, 300)
-})
-
-function normalizeRoute(route: RouteScoreRecord): RouteListItem {
-    const hasRatings =
-        Number(route.ratings_count ?? 0) > 0 &&
-        typeof route.average_rating === 'number'
-    return {
-        ...route,
-        comment: typeof route.comment === 'string' ? route.comment : '',
-        creator: normalizeCreators(route.creator),
-        score: hasRatings ? route.average_rating : null,
-        has_ratings: hasRatings,
-    }
-}
-
 const rescoreSoon = coalesceIds(async (ids) => {
     if (!ids) return queueReload()
     const { items } = await listRoutes(gymId.value, {
@@ -956,24 +798,31 @@ const rescoreSoon = coalesceIds(async (ids) => {
     for (const { id, average_rating, ratings_count } of items)
         routes.value = routes.value.map((route) =>
             route.id === id
-                ? normalizeRoute({ ...route, average_rating, ratings_count })
+                ? toRouteRow({ ...route, average_rating, ratings_count })
                 : route,
         )
 }, 500)
 
-const queueReload = coalesce(async () => {
-    invalidateAllRouteIdsCache()
-    await reloadRoutes()
-}, 500)
+const queueReload = coalesce(() => reloadRoutes({ background: true }), 500)
 
-const { data: initial } = await useAsyncData('admin-routes', async () => {
-    await loadRoutes({
-        page: tableOptions.page,
-        itemsPerPage: tableOptions.itemsPerPage,
-        sortBy: tableOptions.sortBy,
-    })
-    return { routes: routes.value, totalItems: totalItems.value }
-})
+const { data: initial, error: initialError } = await useAsyncData(
+    'admin-routes',
+    async () => {
+        await loadRoutes({
+            page: tableOptions.page,
+            itemsPerPage: tableOptions.itemsPerPage,
+            sortBy: tableOptions.sortBy,
+        })
+        if (listFailed.value) throw new Error('routes failed to load')
+        return { routes: routes.value, totalItems: totalItems.value }
+    },
+)
+const loadFailed = computed(() => listFailed.value || !!initialError.value)
+
+async function retryLoad() {
+    await loadRoutes()
+    if (!listFailed.value) initialError.value = undefined
+}
 
 if (initial.value) {
     routes.value = initial.value.routes
@@ -986,17 +835,12 @@ useRealtime(
         if (change.collection === 'routes' && change.action === 'delete')
             removeSelectedIds([change.record.id as string])
         const next = staffRouteChange(routes.value, change)
-        if (next.rows !== routes.value)
-            routes.value = next.rows.map(normalizeRoute)
+        if (next.rows !== routes.value) routes.value = next.rows.map(toRouteRow)
         if (next.reload) queueReload()
         if (next.rescore) rescoreSoon(next.rescore)
     },
     { resync: queueReload },
 )
-
-onBeforeUnmount(() => {
-    clearTimeout(filterDebounceTimer)
-})
 
 useHead(() => ({
     title: t('page.title.dashboard'),
@@ -1097,14 +941,6 @@ useHead(() => ({
     max-width: 96px;
 }
 
-.route-manager__pager {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    gap: 2px;
-}
-
 .route-manager__page-btn {
     min-width: 32px;
     padding-inline: 0;
@@ -1115,6 +951,6 @@ useHead(() => ({
     min-width: 16px;
     text-align: center;
     font-size: 0.75rem;
-    color: color-mix(in oklab, var(--ui-text-highlighted) 50%, transparent);
+    color: var(--ui-text-muted);
 }
 </style>

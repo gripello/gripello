@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, ref } from 'vue'
 import WishDialog from '~/components/task/WishDialog.vue'
+import { dialogShellStub } from '../__stubs__/dialogShell'
 
 const create = vi.fn()
 vi.mock('~/api/tasks', () => ({
@@ -19,7 +20,7 @@ function mountDialog(props: Record<string, unknown>) {
         global: {
             mocks: { $t: (key: string) => key },
             stubs: {
-                LayoutDialogShell: slotStub,
+                LayoutDialogShell: dialogShellStub,
                 UFormField: slotStub,
                 UButton: buttonStub,
                 USelect: true,
@@ -42,6 +43,7 @@ describe('TaskWishDialog', () => {
         }))
         vi.stubGlobal('useLocations', () => ({
             data: ref([{ id: 'hall', name: 'Hall' }]),
+            items: ref([{ value: 'hall', label: 'Hall' }]),
         }))
         vi.stubGlobal('useGradeSystems', () => ({
             gradeSystemFor: () => 'font',

@@ -109,6 +109,14 @@ describe('externalUrl', () => {
         expect(externalUrl('https://gripello.app/privacy', origin)).toBeNull()
     })
 
+    it('sends data export downloads to the browser instead of the WebView', () => {
+        expect(externalUrl('/api/account/export/abc', origin)).toBe(
+            'https://gripello.app/api/account/export/abc',
+        )
+        expect(externalUrl('/account/export/abc', origin)).toBeNull()
+        expect(externalUrl('/api/platform/backups/x.tar', origin)).toBeNull()
+    })
+
     it('leaves mail, phone and app links to the system', () => {
         expect(externalUrl('mailto:hi@gripello.app', origin)).toBeNull()
         expect(externalUrl('tel:+4912345', origin)).toBeNull()

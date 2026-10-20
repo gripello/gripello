@@ -28,6 +28,9 @@ describe('legacyGymRedirect', () => {
         expect(legacyGymRedirect('/admin/analytics', '', 'gym-a')).toBe(
             '/gym-a/manage/analytics',
         )
+        expect(legacyGymRedirect('/admin/reports', '', 'gym-a')).toBe(
+            '/gym-a/manage/moderation',
+        )
         expect(legacyGymRedirect('/admin/activity', '', 'gym-a')).toBe(
             '/account/activity',
         )

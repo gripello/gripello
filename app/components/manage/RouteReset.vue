@@ -70,6 +70,7 @@
 <script setup lang="ts">
 import { planRouteRemoval, type ResetStat } from '~/api/routes'
 import type { RouteRecord } from '~/types/models'
+import { formatNumber } from '#shared/utils/number'
 import {
     ageUnit,
     routeAgeDays,
@@ -85,7 +86,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ changed: [] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const gymPath = useGymPath()
 const gymId = useCurrentGymId()
 const { pending, run } = useAsyncAction()
@@ -132,7 +133,7 @@ const facts = computed(() => {
             key: 'stars',
             label: t('resets.facts.stars'),
             value: stat?.average_rating
-                ? `★ ${stat.average_rating.toFixed(1)} (${stat.ratings})`
+                ? `★ ${formatNumber(stat.average_rating, locale.value)} (${stat.ratings})`
                 : '—',
         },
         {

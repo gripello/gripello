@@ -4,24 +4,7 @@
             v-if="status === 'pending' && !competition"
             variant="page"
         />
-        <LayoutEmptyState
-            v-else-if="error || !competition"
-            variant="error"
-            :title="t('errors.loadFailed')"
-            data-testid="load-error"
-        >
-            <template #actions>
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    icon="i-lucide-refresh-cw"
-                    data-testid="load-error-retry"
-                    @click="refresh()"
-                >
-                    {{ t('errors.retry') }}
-                </UButton>
-            </template>
-        </LayoutEmptyState>
+        <LayoutLoadError v-else-if="error || !competition" @retry="refresh()" />
         <template v-else>
             <LayoutPageHeader
                 :title="t('competitions.rules.title')"
@@ -86,32 +69,18 @@
 
 <script setup lang="ts">
 import { competitionRules } from '~/utils/competitions'
-import { getCompetition } from '~/api/competitions'
 
 const gymPath = useGymPath()
 
 const { t, locale } = useI18n()
-const route = useRoute()
-
-const competitionId = computed(() => String(route.params.id ?? ''))
 
 const {
     data: competition,
     status,
     error,
     refresh,
-} = await useAsyncData(
-    () => `rules-competition:${competitionId.value}`,
-    () => getCompetition(competitionId.value),
-    { enabled: () => !!competitionId.value },
-)
-
-useCompetitionLive(competitionId, ({ kind }) => {
-    if (kind === 'competition' || kind === 'resync') void refresh()
-})
-
-if (competition.value && competition.value.gym !== useCurrentGymId().value)
-    throw createError({ status: 404, fatal: true })
+    competitionId,
+} = await useCompetitionRecord()
 
 const rules = computed(() =>
     competition.value ? competitionRules(competition.value) : [],
@@ -133,5 +102,9 @@ useHead({
             name: competition.value?.name ?? '',
         }),
     ),
+})
+useSeoMeta({
+    description: () =>
+        t('seo.competition', { name: competition.value?.name ?? '' }),
 })
 </script>
