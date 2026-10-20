@@ -98,4 +98,12 @@ describe('useAsyncAction', () => {
         await run(() => Promise.reject({ status: 500 }), { error: 'Custom' })
         expect(notifyError).toHaveBeenLastCalledWith('Custom')
     })
+
+    it('lets an error handler word a rate limit itself', async () => {
+        const { run } = useAsyncAction()
+        await run(() => Promise.reject({ status: 429 }), {
+            error: () => 'Try again in an hour',
+        })
+        expect(notifyError).toHaveBeenLastCalledWith('Try again in an hour')
+    })
 })

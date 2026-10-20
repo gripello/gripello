@@ -159,7 +159,7 @@ export const scoreKey = (entry: string, compRoute: string) =>
 
 export function supersededUnsavedKeys(
     unsaved: Map<string, { base: string | undefined }>,
-    scores: { entry: string; comp_route: string; updated: string }[],
+    scores: { entry: string; comp_route: string; updated?: string }[],
 ): string[] {
     const updatedByKey = new Map(
         scores.map((score) => [

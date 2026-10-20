@@ -7,9 +7,7 @@
             >
                 <USelect
                     v-model="form.route_grade_system"
-                    :items="
-                        translatedItems(ROUTE_GRADE_SYSTEMS, 'gradeSystems', t)
-                    "
+                    :items="routeSystems"
                     icon="i-lucide-trending-up"
                     class="w-full"
                     data-testid="settings-route-grade-system"
@@ -21,13 +19,7 @@
             >
                 <USelect
                     v-model="form.boulder_grade_system"
-                    :items="
-                        translatedItems(
-                            BOULDER_GRADE_SYSTEMS,
-                            'gradeSystems',
-                            t,
-                        )
-                    "
+                    :items="boulderSystems"
                     icon="i-lucide-box"
                     class="w-full"
                     data-testid="settings-boulder-grade-system"
@@ -73,4 +65,10 @@ defineProps<{ form: GymSettingsDraft }>()
 const emit = defineEmits<{ resetBands: [] }>()
 
 const { t } = useI18n()
+const routeSystems = computed(() =>
+    translatedItems<string>(ROUTE_GRADE_SYSTEMS, 'gradeSystems', t),
+)
+const boulderSystems = computed(() =>
+    translatedItems<string>(BOULDER_GRADE_SYSTEMS, 'gradeSystems', t),
+)
 </script>

@@ -27,14 +27,12 @@ export function useAsyncAction() {
             if (messages.handled?.(error) || noticeSessionEnded(error))
                 return undefined
             console.error(error)
-            const errorMessage =
+            notifyError(
                 typeof messages.error === 'function'
                     ? messages.error(error)
-                    : messages.error
-            notifyError(
-                isRateLimited(error)
-                    ? t('errors.rateLimited')
-                    : (errorMessage ?? t('notifications.error.generic')),
+                    : isRateLimited(error)
+                      ? t('errors.rateLimited')
+                      : (messages.error ?? t('notifications.error.generic')),
             )
             return undefined
         } finally {

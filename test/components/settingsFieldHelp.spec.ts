@@ -34,11 +34,11 @@ describe('settings fields', () => {
 
     it('labels grade systems through translatedItems', () => {
         const grading = source('admin/settings/GradingSection.vue')
-        expect(grading).toContain(
-            "translatedItems(ROUTE_GRADE_SYSTEMS, 'gradeSystems', t)",
+        expect(grading).toMatch(
+            /translatedItems(<string>)?\(\s*ROUTE_GRADE_SYSTEMS,\s*'gradeSystems',\s*t,?\s*\)/,
         )
-        expect(grading).toContain(
-            "translatedItems(BOULDER_GRADE_SYSTEMS, 'gradeSystems', t)",
+        expect(grading).toMatch(
+            /translatedItems(<string>)?\(\s*BOULDER_GRADE_SYSTEMS,\s*'gradeSystems',\s*t,?\s*\)/,
         )
     })
 

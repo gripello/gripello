@@ -587,7 +587,7 @@ const unsaved = reactive(
 )
 const unsavedScore = (
     entry: CompetitionEntryRecord,
-    compRouteId = routeId.value,
+    compRouteId = routeId.value ?? '',
 ) => unsaved.get(scoreKey(entry.id, compRouteId))?.body
 
 const serverScore = (entryId: string, compRouteId: string) =>
@@ -596,7 +596,7 @@ const serverScore = (entryId: string, compRouteId: string) =>
     )
 const scoreFor = (
     entry: CompetitionEntryRecord,
-    compRouteId = routeId.value,
+    compRouteId = routeId.value ?? '',
 ): ScoreBody | undefined =>
     unsavedScore(entry, compRouteId) ?? serverScore(entry.id, compRouteId)
 
