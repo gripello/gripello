@@ -113,6 +113,57 @@ func ShortName(username, firstname, name string) string {
 	return words[0] + " " + string([]rune(words[len(words)-1])[0]) + "."
 }
 
+// DistinctShortNames lengthens the surname initial of climbers whose short names collide ("Tilo A." → "Tilo Al.").
+func DistinctShortNames(people []Climber) []string {
+	names := make([]string, len(people))
+	letters := make([]int, len(people))
+	for i, person := range people {
+		names[i], letters[i] = person.Short, 1
+	}
+	for changed := true; changed; {
+		changed = false
+		seen := map[string][]int{}
+		for i, name := range names {
+			seen[name] = append(seen[name], i)
+		}
+		for _, group := range seen {
+			if len(group) < 2 {
+				continue
+			}
+			for _, i := range group {
+				if !differsInGroup(people, group, i) {
+					continue
+				}
+				words := strings.Fields(people[i].Name)
+				if len(words) < 2 {
+					continue
+				}
+				surname := []rune(words[len(words)-1])
+				if letters[i] >= len(surname) {
+					continue
+				}
+				letters[i]++
+				names[i] = words[0] + " " + string(surname[:letters[i]])
+				if letters[i] < len(surname) {
+					names[i] += "."
+				}
+				changed = true
+			}
+		}
+	}
+	return names
+}
+
+// Climbers with the same full name can never be told apart, so their surnames stay short.
+func differsInGroup(people []Climber, group []int, i int) bool {
+	for _, j := range group {
+		if people[j].Name != people[i].Name {
+			return true
+		}
+	}
+	return false
+}
+
 func AvatarURL(userID, file string) string {
 	if file == "" {
 		return ""

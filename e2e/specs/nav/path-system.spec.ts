@@ -31,8 +31,7 @@ test('staff tools open a separate workspace with a way back', async ({
 }) => {
     await gotoSettled(page, gymPath('/routes'))
     await page.getByTestId('nav-staff-tools').click()
-    await page.waitForURL(/\/manage$/)
-    await expect(page.getByTestId('staff-hub')).toBeVisible()
+    await page.waitForURL(/\/manage\/[a-z-]+$/)
     const sidebar = page.getByTestId('nav-desktop-links')
     await expect(sidebar.getByTestId('nav-link-manage-tasks')).toBeVisible()
     await expect(sidebar.getByTestId('nav-link-admin-settings')).toBeVisible()

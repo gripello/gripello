@@ -2,7 +2,7 @@
     <LayoutDialogShell
         v-model="open"
         :title="$t('gradeConversion.title')"
-        :max-width="1200"
+        :max-width="720"
         closable
         sheet-on-mobile
         data-testid="grade-conversion-dialog"
@@ -22,6 +22,21 @@
             </slot>
         </template>
 
+        <template #header-actions>
+            <UButton
+                :to="`/api/ui/grade-scale?gym=${gymId}`"
+                external
+                download
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-file-down"
+                class="icon-btn"
+                :aria-label="$t('gradeConversion.downloadPdf')"
+                :title="$t('gradeConversion.downloadPdf')"
+                data-testid="grade-conversion-pdf"
+            />
+        </template>
+
         <section
             v-for="ladder in ladders"
             :key="ladder.key"
@@ -29,158 +44,118 @@
             :data-testid="`grade-conversion-${ladder.key}`"
         >
             <LayoutSectionHeader :title="ladder.title" />
-            <div
-                class="ladder"
-                :style="{
-                    '--steps': ladder.steps,
-                    '--lanes': ladder.lanes,
-                    '--min': ladder.minWidth,
-                }"
-            >
+            <div class="ladder" :style="{ '--cols': ladder.columns.length }">
+                <span class="ladder__head ladder__head--axis">IRCRA</span>
                 <span
-                    v-for="cell in ladder.cells"
-                    :key="cell.key"
-                    class="ladder__cell"
-                    :class="[
-                        `ladder__cell--${cell.kind}`,
-                        {
-                            'grade-conversion__label--highlight':
-                                cell.highlighted,
-                        },
-                    ]"
-                    :style="{
-                        '--at': cell.at,
-                        '--span': cell.span,
-                        '--lane': cell.lane,
-                        background: cell.color,
-                        color: cell.color && readableTextOn(cell.color),
-                    }"
-                    :data-testid="cell.testId"
+                    v-for="column in ladder.columns"
+                    :key="column.key"
+                    class="ladder__head"
                 >
-                    <template v-if="cell.shortText">
-                        <span class="hidden sm:inline">{{ cell.text }}</span>
-                        <span class="sm:hidden">{{ cell.shortText }}</span>
-                    </template>
-                    <template v-else>{{ cell.text }}</template>
-                    <UBadge
-                        v-if="cell.badge"
-                        size="sm"
-                        color="neutral"
-                        variant="outline"
-                        :label="cell.badge"
-                    />
+                    <span class="hidden sm:inline">{{ column.title }}</span>
+                    <span class="sm:hidden">{{
+                        column.shortTitle ?? column.title
+                    }}</span>
                 </span>
+                <div
+                    class="ladder__axis"
+                    :style="{ height: rem(ladder.hi - ladder.lo) }"
+                >
+                    <span
+                        v-for="tick in ladder.ticks"
+                        :key="tick"
+                        class="ladder__tick"
+                        :style="{ top: rem(tick - ladder.lo) }"
+                        >{{ tick }}</span
+                    >
+                </div>
+                <div
+                    v-for="column in ladder.columns"
+                    :key="column.key"
+                    class="ladder__column"
+                    :class="{ 'ladder__column--primary': column.primary }"
+                    :style="{ height: rem(ladder.hi - ladder.lo) }"
+                >
+                    <span
+                        v-for="band in column.bands"
+                        :key="band.label"
+                        class="ladder__cell"
+                        :class="{
+                            'grade-conversion__label--highlight':
+                                band.highlighted,
+                        }"
+                        :style="{
+                            top: rem(band.lo - ladder.lo),
+                            height: rem(band.hi - band.lo),
+                            background: band.color,
+                            color: band.color && readableTextOn(band.color),
+                        }"
+                        :data-testid="band.testId"
+                        >{{ band.label }}</span
+                    >
+                </div>
             </div>
         </section>
-
-        <ul class="list-disc space-y-1 ps-5 text-sm text-muted">
-            <li v-for="note in NOTES" :key="note">
-                {{ $t(`gradeConversion.notes.${note}`) }}
-            </li>
-        </ul>
-        <p class="mt-3 text-xs text-dimmed">
-            {{ $t('gradeConversion.source') }}
-        </p>
-
-        <template #actions>
-            <UButton
-                :to="`/api/ui/grade-scale?gym=${gymId}`"
-                external
-                download
-                color="neutral"
-                variant="soft"
-                icon="i-lucide-file-down"
-                data-testid="grade-conversion-pdf"
-            >
-                {{ $t('gradeConversion.downloadPdf') }}
-            </UButton>
-        </template>
     </LayoutDialogShell>
 </template>
 
 <script setup lang="ts">
+import type { GradeSource, GradeSystem } from '#shared/utils/grades'
+import { bandRanges, type GymBand } from '#shared/utils/gradeReference'
 import {
-    gradeLabels,
-    type GradeSource,
-    type GradeSystem,
-} from '#shared/utils/grades'
-import {
-    bandRanges,
-    orientationUiaa,
-    vCells,
-    type GymBand,
-} from '#shared/utils/gradeReference'
+    clipBands,
+    groupBands,
+    scaleBands,
+    type LadderBand,
+} from '~/utils/gradeLadder'
 
 const props = defineProps<{
     source?: GradeSource | null
 }>()
 
-interface LadderCell {
-    key: string
-    text: string
-    shortText?: string
-    at: number
-    span: number
-    lane: number
-    kind: 'head' | 'band' | 'primary' | 'plain' | 'orientation' | 'ircra'
-    testId?: string
+interface Band extends LadderBand {
+    testId: string
     color?: string
-    badge?: string
     highlighted?: boolean
 }
 
-const IRCRA_STEPS = 32
-const NOTES = ['fontVsFrench', 'beginner', 'orientation', 'bands']
+interface Column {
+    key: string
+    title: string
+    shortTitle?: string
+    primary?: boolean
+    bands: Band[]
+}
+
+const REM_PER_IRCRA = 2.25
 
 const { t } = useI18n()
 const gymId = useCurrentGymId()
 const open = ref(false)
-
-function isSourceGrade(system: GradeSystem, label: string) {
-    return (
-        system === props.source?.grade_system && label === props.source?.grade
-    )
-}
-
-function laneOf(
-    lane: number,
-    kind: LadderCell['kind'],
-    head: string,
-    cells: { text: string; span?: number; system?: GradeSystem }[],
-    extra: Partial<LadderCell> = {},
-): LadderCell[] {
-    let at = 1
-    return [
-        {
-            key: `${lane}-head`,
-            text: head,
-            at: 0,
-            span: 1,
-            lane,
-            kind: 'head',
-            badge: extra.badge,
-            shortText: extra.shortText,
-        },
-        ...cells.map(({ text, span = 1, system }, i) => {
-            const cell: LadderCell = {
-                key: `${lane}-${i}`,
-                text,
-                at,
-                span,
-                lane,
-                kind,
-                testId: system
-                    ? `grade-conversion-${system}-${text}`
-                    : undefined,
-                highlighted: !!system && isSourceGrade(system, text),
-            }
-            at += span
-            return cell
-        }),
-    ]
-}
-
 const { bands: gymBands, bandName } = useGymBands()
+
+const rem = (ircra: number) => `${ircra * REM_PER_IRCRA}rem`
+
+function scaleColumn(
+    system: GradeSystem,
+    lo: number,
+    hi: number,
+    { primary = false, reference = false } = {},
+): Column {
+    return {
+        key: system,
+        title: t(`gradeSystems.${system}`),
+        shortTitle: t(`gradeSystemsShort.${system}`),
+        primary,
+        bands: clipBands(scaleBands(system), lo, hi).map((band) => ({
+            ...band,
+            testId: `grade-conversion-${reference ? 'reference-' : ''}${system}-${band.label}`,
+            highlighted:
+                !reference &&
+                system === props.source?.grade_system &&
+                band.label === props.source?.grade,
+        })),
+    }
+}
 
 function bandLabel(band: GymBand) {
     const range = bandRanges(gymBands.value).find((r) => r.key === band.key)
@@ -189,220 +164,138 @@ function bandLabel(band: GymBand) {
         : bandName(band)
 }
 
-const boulderCells = computed(() => {
-    const font = gradeLabels('font')
-    const bands = laneOf(
-        1,
-        'band',
-        t('gradeConversion.gymBand'),
-        gymBands.value.map((band) => ({
-            text: bandLabel(band),
-            span: band.span,
-        })),
-    ).map((cell, i) => {
-        const band = gymBands.value[i - 1]
-        return band
-            ? {
-                  ...cell,
-                  color: band.color,
-                  testId: `grade-conversion-band-${band.key}`,
-              }
-            : cell
-    })
-    const orientation = laneOf(
-        4,
-        'orientation',
-        '≈ UIAA',
-        font.map((_, i) => ({ text: orientationUiaa(i) })),
-        { badge: t('gradeConversion.orientation') },
-    ).map((cell) =>
-        cell.kind === 'head'
-            ? cell
-            : {
-                  ...cell,
-                  testId: `grade-conversion-orientation-${cell.at - 1}`,
-              },
+function ladder(key: string, title: string, columns: Column[]) {
+    const all = columns.flatMap((column) => column.bands)
+    const lo = Math.min(...all.map((band) => band.lo))
+    const hi = Math.max(...all.map((band) => band.hi))
+    const ticks = Array.from(
+        { length: Math.floor(hi) - Math.ceil(lo) + 1 },
+        (_, i) => Math.ceil(lo) + i,
     )
-    return [
-        ...bands,
-        ...laneOf(
-            2,
-            'primary',
-            t('gradeSystems.font'),
-            font.map((text) => ({ text, system: 'font' as const })),
-            { shortText: t('gradeSystemsShort.font') },
-        ),
-        ...laneOf(
-            3,
-            'plain',
-            t('gradeSystems.v'),
-            vCells().map(({ label, span }) => ({
-                text: label,
-                span,
-                system: 'v' as const,
+    return { key, title, columns, lo, hi, ticks }
+}
+
+const ladders = computed(() => {
+    const font = scaleBands('font')
+    const lo = font[0]!.lo
+    const hi = font.at(-1)!.hi
+    const gym: Column = {
+        key: 'gym',
+        title: t('gradeConversion.gymBand'),
+        bands: groupBands(
+            font,
+            gymBands.value.map((band) => ({
+                label: bandLabel(band),
+                span: band.span,
             })),
-            { shortText: t('gradeSystemsShort.v') },
-        ),
-        ...orientation,
-    ]
-})
-
-const routeCells = computed(() => {
-    const steps = Array.from({ length: IRCRA_STEPS }, (_, i) => i)
+        ).map((band, i) => ({
+            ...band,
+            color: gymBands.value[i]!.color,
+            testId: `grade-conversion-band-${gymBands.value[i]!.key}`,
+        })),
+    }
     return [
-        ...(['uiaa', 'french', 'yds'] as const).flatMap((system, i) => {
-            const labels = gradeLabels(system)
-            return laneOf(
-                i + 1,
-                system === 'uiaa' ? 'primary' : 'plain',
-                t(`gradeSystems.${system}`),
-                steps.map((step) =>
-                    labels[step]
-                        ? { text: labels[step], system }
-                        : { text: '—' },
-                ),
-                { shortText: t(`gradeSystemsShort.${system}`) },
-            )
-        }),
-        ...laneOf(
-            4,
-            'ircra',
-            'IRCRA',
-            steps.map((step) => ({ text: String(step + 1) })),
-        ),
+        ladder('boulders', t('gradeConversion.boulders'), [
+            gym,
+            scaleColumn('font', lo, hi, { primary: true }),
+            scaleColumn('v', lo, hi),
+            scaleColumn('uiaa', lo, hi, { reference: true }),
+        ]),
+        ladder('routes', t('gradeConversion.routes'), [
+            scaleColumn('uiaa', 0, 99, { primary: true }),
+            scaleColumn('french', 0, 99),
+            scaleColumn('yds', 0, 99),
+        ]),
     ]
 })
-
-const ladders = computed(() => [
-    {
-        key: 'boulders',
-        title: t('gradeConversion.boulders'),
-        steps: gradeLabels('font').length,
-        lanes: 4,
-        minWidth: '2.5rem',
-        cells: boulderCells.value,
-    },
-    {
-        key: 'routes',
-        title: t('gradeConversion.routes'),
-        steps: IRCRA_STEPS,
-        lanes: 4,
-        minWidth: '3rem',
-        cells: routeCells.value,
-    },
-])
 
 watch(open, async (isOpen) => {
     if (!isOpen) return
     await nextTick()
-    const cells = document.querySelectorAll<HTMLElement>(
-        '.grade-conversion__label--highlight',
-    )
-    for (const cell of cells) {
-        const ladder = cell.parentElement!
-        ladder.scrollLeft =
-            cell.offsetLeft - (ladder.clientWidth - cell.offsetWidth) / 2
-    }
-    cells[0]?.scrollIntoView({ block: 'center', inline: 'nearest' })
+    document
+        .querySelector<HTMLElement>('.grade-conversion__label--highlight')
+        ?.scrollIntoView({ block: 'center', inline: 'nearest' })
 })
 </script>
 
 <style scoped>
-@reference "~/assets/css/main.css";
-
 .ladder {
     display: grid;
-    grid-template-columns: repeat(var(--lanes), minmax(0, 1fr));
-    gap: 1px;
+    grid-template-columns: 3rem repeat(var(--cols), minmax(0, 1fr));
     overflow: clip;
     border: 1px solid var(--ui-border);
     border-radius: calc(var(--ui-radius) * 2);
-    background: var(--ui-border);
+    background: var(--ui-bg);
     color: var(--ui-text-muted);
     font-size: 0.875rem;
     font-variant-numeric: tabular-nums;
 }
 
-.ladder__cell {
-    grid-row: calc(var(--at) + 1) / span var(--span);
-    grid-column: var(--lane);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    min-height: 2.25rem;
-    padding: 6px 4px;
-    background: var(--ui-bg);
-    text-align: center;
-}
-
-.ladder__cell--head {
+.ladder__head {
     position: sticky;
     top: 0;
     z-index: 1;
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--ui-border);
     background: var(--ui-bg-elevated);
     color: var(--ui-text-highlighted);
     font-weight: 600;
+    text-align: center;
 }
 
-.ladder__cell--band {
-    align-items: flex-start;
-    padding-top: 10px;
-    font-weight: 600;
-}
-
-.ladder__cell--primary {
-    color: var(--ui-text-highlighted);
-    font-weight: 600;
-}
-
-.ladder__cell--orientation {
-    color: var(--ui-text-dimmed);
-    font-style: italic;
-    outline: 1px dashed var(--ui-border-accented);
-    outline-offset: -4px;
-}
-
-.ladder__cell--ircra {
+.ladder__head--axis {
     color: var(--ui-text-dimmed);
     font-size: 0.75rem;
 }
 
-.ladder__cell.grade-conversion__label--highlight {
-    background: color-mix(in oklab, var(--ui-primary) 12%, var(--ui-bg));
-    color: var(--ui-primary);
-    font-weight: 700;
+.ladder__axis,
+.ladder__column {
+    position: relative;
+    border-left: 1px solid var(--ui-border);
 }
 
-@variant sm {
-    .ladder {
-        grid-template-columns: 7rem repeat(
-                var(--steps),
-                minmax(var(--min), 1fr)
-            );
-        overflow-x: auto;
-    }
+.ladder__axis {
+    border-left: 0;
+    color: var(--ui-text-dimmed);
+    font-size: 0.75rem;
+}
 
-    .ladder__cell {
-        grid-row: var(--lane);
-        grid-column: calc(var(--at) + 1) / span var(--span);
-        flex-wrap: nowrap;
-        white-space: nowrap;
-    }
+.ladder__tick {
+    position: absolute;
+    right: 6px;
+    translate: 0 -50%;
+}
 
-    .ladder__cell--band {
-        align-items: center;
-        padding-top: 6px;
-    }
+.ladder__tick::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 2px);
+    width: 4px;
+    border-top: 1px solid var(--ui-border-accented);
+}
 
-    .ladder__cell--head {
-        position: sticky;
-        top: auto;
-        left: 0;
-        justify-content: flex-start;
-        padding-inline: 12px;
-        flex-wrap: wrap;
-    }
+.ladder__cell {
+    position: absolute;
+    inset-inline: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border-bottom: 1px solid var(--ui-border);
+    text-align: center;
+    line-height: 1.1;
+    overflow: hidden;
+}
+
+.ladder__column--primary .ladder__cell {
+    color: var(--ui-text-highlighted);
+    font-weight: 600;
+}
+
+.ladder__cell.grade-conversion__label--highlight {
+    background: color-mix(in oklab, var(--ui-primary) 14%, var(--ui-bg));
+    color: var(--ui-primary);
+    font-weight: 700;
 }
 </style>

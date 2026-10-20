@@ -1,15 +1,16 @@
 import { mount } from '@vue/test-utils'
 import RouteDetails from '~/components/RouteDetails.vue'
 
-function createWrapper() {
+function createWrapper(compact = false) {
     return mount(RouteDetails, {
-        props: { route_id: 'r1' },
+        props: { route_id: 'r1', compact },
         global: {
             mocks: { $t: (key: string) => key },
             stubs: {
                 UButton: {
+                    props: ['color', 'variant', 'icon'],
                     template:
-                        '<button v-bind="$attrs" @click="$emit(\'click\')"><slot /></button>',
+                        '<button v-bind="$attrs" :data-color="color" :data-icon="icon" @click="$emit(\'click\')"><slot /></button>',
                 },
                 RouteReviewsDialog: {
                     props: ['modelValue', 'routeId'],
@@ -32,4 +33,17 @@ describe('RouteDetails', () => {
         expect(dialog.attributes('data-open')).toBe('true')
         expect(dialog.attributes('data-route')).toBe('r1')
     })
+
+    it.each([false, true])(
+        'keeps the reviews action neutral (compact: %s)',
+        (compact) => {
+            const button = createWrapper(compact).get(
+                '[data-testid="route-details-open"]',
+            )
+            expect(button.attributes('data-color')).toBe('neutral')
+            expect(button.attributes('data-icon')).toBe(
+                'i-lucide-message-square-text',
+            )
+        },
+    )
 })

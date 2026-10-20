@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { mount } from '@vue/test-utils'
 import { computed, defineComponent, h, nextTick, ref } from 'vue'
 import BottomNav from '~/components/layout/BottomNav.vue'
@@ -61,5 +63,38 @@ describe('BottomNav', () => {
         authRecord.value = null
         await nextTick()
         expect(lastTab()).toBe('routes.login')
+    })
+})
+
+describe('BottomNav markers', () => {
+    const source = readFileSync(
+        path.resolve(
+            import.meta.dirname,
+            '../../app/components/layout/BottomNav.vue',
+        ),
+        'utf8',
+    )
+
+    it('gives the avatar no extra ring', () => {
+        expect(source).not.toContain('ring-2 ring-primary')
+    })
+
+    it('marks the active tab with a line on the top edge instead of a pill', () => {
+        expect(source).toMatch(
+            /v-if="active && !item\.scan"\s+class="bottom-nav__line"/,
+        )
+        expect(source).not.toMatch(/\.is-active \{[^}]*background/)
+    })
+})
+
+describe('BottomNav while typing', () => {
+    it('hides on touch screens while a text field has focus', () => {
+        const css = readFileSync(
+            path.resolve(import.meta.dirname, '../../app/assets/css/main.css'),
+            'utf8',
+        )
+        expect(css).toMatch(
+            /@media \(pointer: coarse\) \{\s+body:has\([\s\S]+?textarea[\s\S]+?\):focus\s+\)\s+\.bottom-nav \{\s+display: none;/,
+        )
     })
 })

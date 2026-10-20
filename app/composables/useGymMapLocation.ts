@@ -9,6 +9,18 @@ interface GymMapLocationOptions {
     confirmLeave?: () => Promise<boolean>
 }
 
+export function defaultMapLocation(
+    locations: { id: string; map?: unknown }[],
+): string {
+    return (
+        (
+            locations.find(
+                (record) => sanitizeGymMap(record.map)?.shapes.length,
+            ) ?? locations[0]
+        )?.id ?? ''
+    )
+}
+
 export function useGymMapLocation(
     key: string,
     { includeUnmapped = false, confirmLeave }: GymMapLocationOptions = {},
@@ -35,7 +47,7 @@ export function useGymMapLocation(
         get: () =>
             locations.value.some((record) => record.id === route.query.location)
                 ? (route.query.location as string)
-                : (selectableLocations.value[0]?.id ?? ''),
+                : defaultMapLocation(selectableLocations.value),
         set: async (id: string) => {
             if (id === locationId.value) return
             if (confirmLeave && !(await confirmLeave())) return

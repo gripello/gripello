@@ -114,7 +114,7 @@
         <template #bottom>
             <nav
                 v-if="tabs.length"
-                class="flex gap-1 overflow-x-auto border-t border-default px-4 py-2 lg:hidden"
+                class="flex gap-1 overflow-x-auto border-t border-default px-4 py-2 lg:hidden short-landscape:hidden"
                 :aria-label="$t('nav.sections')"
                 data-section-tabs
             >
@@ -124,23 +124,19 @@
                     :to="tab.to"
                     :color="tab.active ? 'primary' : 'neutral'"
                     :variant="tab.active ? 'solid' : 'soft'"
-                    :icon="tab.to === '/friends' ? tab.icon : undefined"
                     :aria-label="
                         tab.to === '/friends' && requests.length
                             ? `${$t(tab.label)}, ${$t('friends.tabs.requests')}: ${requests.length}`
-                            : $t(tab.label)
+                            : undefined
                     "
-                    size="sm"
+                    size="md"
                     class="shrink-0 rounded-full px-3"
-                    :class="{ 'icon-btn': tab.to === '/friends' }"
                     :aria-current="tab.active ? 'page' : undefined"
                     :data-testid="tab.testid"
                 >
-                    <template v-if="tab.to !== '/friends'">{{
-                        $t(tab.label)
-                    }}</template>
+                    {{ $t(tab.label) }}
                     <UBadge
-                        v-else-if="requests.length"
+                        v-if="tab.to === '/friends' && requests.length"
                         :label="requests.length"
                         color="error"
                         size="sm"

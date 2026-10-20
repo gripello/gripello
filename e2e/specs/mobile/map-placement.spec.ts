@@ -35,13 +35,14 @@ test('on a phone routes are placed one after another by tapping walls', async ({
 }) => {
     await gotoSettled(page, `/manage/map?location=${seeded.locationId}`)
     await expect(page.getByTestId('map-zoom-in')).toBeVisible()
+    await page.getByTestId('placement-open-list').tap()
 
     await page
         .locator(
             `[data-testid="placement-route"][data-route-id="${unplacedIds[0]}"]`,
         )
         .tap()
-    const north = page.getByRole('button', {
+    const north = page.getByTestId('placement-canvas').getByRole('button', {
         name: `${testPrefix} North`,
         exact: true,
     })
@@ -64,6 +65,7 @@ test('on a phone a long press on a route drags it onto a wall', async ({
     testPrefix,
 }) => {
     await gotoSettled(page, `/manage/map?location=${seeded.locationId}`)
+    await page.getByTestId('placement-open-list').tap()
     const from = centerOf(
         await settledBox(
             page.locator(

@@ -293,6 +293,24 @@ describe('sidebarSections', () => {
         expect(staffEntry).toBe('/gym-a/manage')
     })
 
+    it.each([
+        ['/climber?id=me', true],
+        ['/climber?id=someone-else', false],
+    ])('marks My profile current only for the own id (%s)', (path, own) => {
+        const profile = sidebarSections(
+            allowing(),
+            true,
+            'gym-a',
+            path,
+            t,
+            'gym',
+            'me',
+        )
+            .sections.flatMap((section) => section.items)
+            .find((item) => item.testid === 'nav-link-climber')
+        expect(profile).toMatchObject({ current: own, active: own })
+    })
+
     it('keeps the same zones on personal pages and hides staff for climbers', () => {
         const { sections, staffEntry } = sidebarSections(
             allowing(),
@@ -324,7 +342,7 @@ describe('sidebarSections', () => {
         )
     })
 
-    it('marks only the TV screen link on the TV section of the settings', () => {
+    it('keeps the settings link active on every settings section', () => {
         const current = (path: string) =>
             sidebarSections(
                 allowing('manage_settings'),
@@ -338,7 +356,7 @@ describe('sidebarSections', () => {
                 .filter((item) => item.active)
                 .map((item) => item.to)
         expect(current('/gym-a/admin/settings?section=tv')).toEqual([
-            '/gym-a/admin/settings?section=tv',
+            '/gym-a/admin/settings',
         ])
         expect(current('/gym-a/admin/settings?section=info')).toEqual([
             '/gym-a/admin/settings',

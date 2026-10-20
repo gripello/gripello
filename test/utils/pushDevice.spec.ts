@@ -35,7 +35,11 @@ vi.mock('~/api/notifications', () => ({
 }))
 vi.mock('@capacitor/push-notifications', () => ({ PushNotifications: plugin }))
 
-import { nativePermission, pushDevice } from '~/utils/pushDevice'
+import {
+    FCM_TOKEN_TIMEOUT_MS,
+    nativePermission,
+    pushDevice,
+} from '~/utils/pushDevice'
 
 describe('native push device', () => {
     afterEach(() => {
@@ -63,6 +67,24 @@ describe('native push device', () => {
         await expect(pushDevice().currentEndpoint()).rejects.toThrow(
             'no firebase',
         )
+    })
+
+    it('gives up when no token arrives instead of waiting forever', async () => {
+        vi.useFakeTimers()
+        plugin.register.mockImplementationOnce(async () => {})
+        const subscribed = pushDevice().subscribe('')
+        const outcome = expect(subscribed).rejects.toThrow('No FCM token')
+        await vi.advanceTimersByTimeAsync(FCM_TOKEN_TIMEOUT_MS)
+        await outcome
+        vi.useRealTimers()
+    })
+
+    it('stops the token timer when the plugin cannot listen', async () => {
+        vi.useFakeTimers()
+        plugin.addListener.mockRejectedValueOnce(new Error('no listener'))
+        await expect(pushDevice().subscribe('')).rejects.toThrow('no listener')
+        expect(vi.getTimerCount()).toBe(0)
+        vi.useRealTimers()
     })
 
     it('deletes the token on unsubscribe', async () => {

@@ -163,7 +163,7 @@ paths:
     get:
       operationId: getPlatformSystem
       tags: [platform]
-      description: Database, jobs, backup and mail state plus the replicas, without traffic. Platform admins only.
+      description: Database, jobs, backup and mail state plus the replicas, without traffic. `pg_dump_missing` is set while backups are on and pg_dump is not installed. Platform admins only.
       responses:
         '200':
           description: The same object as `system` in /platform/traffic

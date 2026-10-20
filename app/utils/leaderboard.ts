@@ -21,6 +21,7 @@ export interface LeaderboardRoute {
     color: string
     grade: string
     grade_system?: string
+    type?: string
     sends: number
     flashes: number
     points?: number

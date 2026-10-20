@@ -81,30 +81,43 @@ function createWrapper(props: Record<string, unknown> = {}) {
 }
 
 describe('PlacementCanvas', () => {
-    it('shows grades where routes have room and dots where they crowd', () => {
+    it('shows grades where routes have room and clusters where they crowd', () => {
         const wrapper = createWrapper()
-        expect(wrapper.findAll('[data-testid="placement-dot"]')).toHaveLength(3)
+        expect(wrapper.findAll('[data-testid="placement-dot"]')).toHaveLength(1)
         expect(
             wrapper
                 .findAll('[data-testid="map-dot-grade"]')
                 .map((grade) => grade.text()),
         ).toEqual(['6A'])
+        expect(
+            wrapper
+                .get('[data-testid="placement-cluster"]')
+                .attributes('data-count'),
+        ).toBe('2')
+    })
+
+    it('keeps the cluster of the selected route open', () => {
+        const wrapper = createWrapper({ selectedRouteId: 'r3' })
+        expect(wrapper.findAll('[data-testid="placement-dot"]')).toHaveLength(3)
+        expect(wrapper.find('[data-testid="placement-cluster"]').exists()).toBe(
+            false,
+        )
     })
 
     it('selects a route on Enter', async () => {
         const wrapper = createWrapper()
         await wrapper
-            .get('[data-testid="placement-dot"][data-route-id="r2"]')
+            .get('[data-testid="placement-dot"][data-route-id="r1"]')
             .trigger('keydown', { key: 'Enter' })
-        expect(wrapper.emitted('selectRoute')).toEqual([['r2']])
+        expect(wrapper.emitted('selectRoute')).toEqual([['r1']])
     })
 
     it('places the armed route next to the focused one', async () => {
-        const wrapper = createWrapper({ armedRouteId: 'r1' })
+        const wrapper = createWrapper({ armedRouteId: 'r2' })
         await wrapper
-            .get('[data-testid="placement-dot"][data-route-id="r2"]')
+            .get('[data-testid="placement-dot"][data-route-id="r1"]')
             .trigger('keydown', { key: 'Enter' })
-        expect(wrapper.emitted('place')).toEqual([['r1', 'north', 0.8]])
+        expect(wrapper.emitted('place')).toEqual([['r2', 'north', 0.2]])
     })
 
     it('previews the dragged route as its full grade marker', async () => {
@@ -118,5 +131,52 @@ describe('PlacementCanvas', () => {
         const ghost = wrapper.get('[data-testid="placement-ghost"]')
         expect(ghost.get('.map-dot-body').attributes('fill')).toBe('#43A047')
         expect(ghost.get('[data-testid="map-dot-grade"]').text()).toBe('7A')
+    })
+
+    it('hands a dot drag to the map when a second finger lands', async () => {
+        const proto = Element.prototype as unknown as Record<string, unknown>
+        proto.setPointerCapture ??= () => {}
+        proto.hasPointerCapture ??= () => false
+        const wrapper = createWrapper()
+        const dot = wrapper.get(
+            '[data-testid="placement-dot"][data-route-id="r1"]',
+        ).element
+        const pointer = (type: string, pointerId: number) =>
+            Object.assign(new Event(type, { bubbles: true }), {
+                pointerId,
+                button: 0,
+                clientX: 10,
+                clientY: 10,
+            })
+        dot.dispatchEvent(pointer('pointerdown', 1))
+        window.dispatchEvent(pointer('pointerdown', 2))
+        dot.dispatchEvent(pointer('pointerup', 1))
+        expect(wrapper.emitted('selectRoute')).toBeUndefined()
+        expect(wrapper.emitted('place')).toBeUndefined()
+    })
+
+    it('drops a running dot drag when the map unmounts', () => {
+        const proto = Element.prototype as unknown as Record<string, unknown>
+        proto.setPointerCapture ??= () => {}
+        const wrapper = createWrapper()
+        const dot = wrapper.get(
+            '[data-testid="placement-dot"][data-route-id="r1"]',
+        ).element
+        dot.dispatchEvent(
+            Object.assign(new Event('pointerdown', { bubbles: true }), {
+                pointerId: 1,
+                button: 0,
+                clientX: 10,
+                clientY: 10,
+            }),
+        )
+        const removed = vi.spyOn(window, 'removeEventListener')
+        wrapper.unmount()
+        expect(removed).toHaveBeenCalledWith(
+            'pointerdown',
+            expect.any(Function),
+            true,
+        )
+        removed.mockRestore()
     })
 })

@@ -66,13 +66,15 @@
                             v-for="row in category.rows"
                             :key="row.entry"
                             class="flex items-center gap-4 rounded-xl px-3 py-2.5 lg:py-3"
-                            :class="PODIUM_ROWS[row.rank] ?? 'bg-elevated/50'"
+                            :class="
+                                PODIUM_ROWS[podiumRank(row)] ?? 'bg-elevated/50'
+                            "
                             :data-testid="`standing-${row.bib}`"
                         >
                             <span
                                 class="flex size-11 shrink-0 items-center justify-center rounded-full text-xl font-black tabular-nums"
                                 :class="
-                                    MEDALS[row.rank] ??
+                                    MEDALS[podiumRank(row)] ??
                                     'text-muted ring ring-default'
                                 "
                                 >{{ row.rank }}</span
@@ -142,7 +144,7 @@ import type {
     CompetitionResults,
     StandingRow,
 } from '#shared/utils/competitionResults'
-import { MEDALS, PODIUM_ROWS } from '~/utils/themeColors'
+import { MEDALS, PODIUM_ROWS, podiumRank } from '~/utils/themeColors'
 
 const CATEGORIES_PER_PAGE = 3
 const ROTATE_MS = 20_000

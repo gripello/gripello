@@ -6,7 +6,9 @@
         />
 
         <LegalPrivacyDoc
-            :controller="settings"
+            :controller="
+                settings && { ...settings, name: settings.legal_name ?? '' }
+            "
             imprint-path="/imprint"
             :audit-retention-days="auditRetentionDays"
         />

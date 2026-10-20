@@ -122,30 +122,6 @@
             </span>
 
             <div class="ml-auto flex shrink-0 items-center gap-0.5">
-                <UTooltip v-if="route" :text="t('tasks.openRoute')">
-                    <UButton
-                        class="icon-btn"
-                        :to="gymPath(`/route?id=${route.id}`)"
-                        icon="i-lucide-external-link"
-                        color="neutral"
-                        variant="ghost"
-                        size="xs"
-                        :aria-label="t('tasks.openRoute')"
-                        data-testid="task-card-route"
-                    />
-                </UTooltip>
-                <UTooltip :text="t('actions.edit')">
-                    <UButton
-                        class="icon-btn"
-                        icon="i-lucide-pencil"
-                        color="neutral"
-                        variant="ghost"
-                        size="xs"
-                        :aria-label="t('actions.edit')"
-                        data-testid="task-card-edit"
-                        @click="emit('edit', task)"
-                    />
-                </UTooltip>
                 <UDropdownMenu :items="moveItems" :content="{ align: 'end' }">
                     <UButton
                         class="icon-btn"
@@ -341,8 +317,19 @@ const moveItems = computed(() => [
         {
             label: t('actions.edit'),
             icon: 'i-lucide-pencil',
+            'data-testid': 'task-card-edit',
             onSelect: () => emit('edit', props.task),
         },
+        ...(route.value
+            ? [
+                  {
+                      label: t('tasks.openRoute'),
+                      icon: 'i-lucide-external-link',
+                      to: gymPath(`/route?id=${route.value.id}`),
+                      'data-testid': 'task-card-route',
+                  },
+              ]
+            : []),
     ],
 ])
 

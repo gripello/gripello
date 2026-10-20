@@ -10,9 +10,7 @@ test('conversion ladders scroll inside the dialog on phones', async ({
     const dialog = page.getByTestId('grade-conversion-dialog')
     await expect(dialog.getByTestId('grade-conversion-boulders')).toBeVisible()
     await expect(dialog.getByTestId('grade-conversion-routes')).toBeVisible()
-    await expect(
-        dialog.getByTestId('grade-conversion-orientation-0'),
-    ).toHaveText('≤5+')
+    await expect(dialog.getByTestId('grade-conversion-font-6A')).toBeVisible()
 
     await expect
         .poll(() =>

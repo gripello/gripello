@@ -35,14 +35,15 @@
                     :class="
                         row.entry === highlightEntry
                             ? 'bg-primary/10'
-                            : (PODIUM_ROWS[row.rank] ?? 'bg-elevated/40')
+                            : (PODIUM_ROWS[podiumRank(row)] ?? 'bg-elevated/40')
                     "
                     :data-testid="`standing-${row.bib}`"
                 >
                     <span
                         class="flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-black tabular-nums"
                         :class="
-                            MEDALS[row.rank] ?? 'text-muted ring ring-default'
+                            MEDALS[podiumRank(row)] ??
+                            'text-muted ring ring-default'
                         "
                         :data-testid="`standing-rank-${row.bib}`"
                         >{{ row.rank }}</span
@@ -94,7 +95,7 @@ import type {
     CompetitionResults,
     StandingRow,
 } from '#shared/utils/competitionResults'
-import { MEDALS, PODIUM_ROWS } from '~/utils/themeColors'
+import { MEDALS, PODIUM_ROWS, podiumRank } from '~/utils/themeColors'
 
 const props = defineProps<{
     results: CompetitionResults | null | undefined

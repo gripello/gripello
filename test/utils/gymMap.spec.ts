@@ -182,4 +182,14 @@ describe('clearOfDots', () => {
         ]
         expect(clearOfDots(label, dots, 6, 8).y).toBe(44)
     })
+
+    it('tests the kept-on-screen position, not the raw one', () => {
+        const keepBelowTop = (box: typeof label) => ({
+            ...box,
+            y: Math.max(100, box.y),
+        })
+        expect(
+            clearOfDots(label, [{ x: 100, y: 105 }], 6, 8, -1, keepBelowTop).y,
+        ).toBe(156)
+    })
 })

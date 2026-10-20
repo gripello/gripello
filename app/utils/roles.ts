@@ -93,3 +93,9 @@ export function revokesOwnAccess(options: {
             !nextPermissions.includes(permission),
     )
 }
+
+const BUILTIN_ROLES = new Set(['admin', 'routesetter', 'public'])
+
+export function roleLabel(name: string, t: (key: string) => string): string {
+    return BUILTIN_ROLES.has(name) ? t(`members.builtinRoles.${name}`) : name
+}

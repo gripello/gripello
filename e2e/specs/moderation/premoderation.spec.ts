@@ -14,6 +14,7 @@ async function shareBeta(
     link: string,
 ) {
     await gotoSettled(page, `/route?id=${routeId}`)
+    await page.getByTestId('route-more-actions').click()
     await page.getByTestId('beta-add').click()
     await page.getByTestId('beta-link').fill(link)
     await page.getByTestId('beta-submit').click()

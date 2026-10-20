@@ -11,8 +11,11 @@
             >
                 {{ member.displayName }}
             </span>
-            <span class="block truncate text-xs text-muted">
-                {{ member.email }}
+            <span
+                v-if="member.email || member.username"
+                class="block truncate text-xs text-muted"
+            >
+                {{ member.email || `@${member.username}` }}
             </span>
         </span>
     </span>
@@ -24,6 +27,7 @@ defineProps<{
         user: string
         displayName: string
         email: string
+        username?: string
         initials: string
         avatarUrl: string | null
     }

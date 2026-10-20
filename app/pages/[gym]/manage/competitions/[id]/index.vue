@@ -122,6 +122,7 @@
                         class="mt-4"
                         :competition-id="competition.id"
                         :requires-payment="competition.requires_payment"
+                        :check-in="checkInOpen(competition, new Date())"
                     />
                 </template>
             </LayoutTabs>
@@ -167,6 +168,7 @@ import type {
     CompetitionExportKind,
 } from '~/composables/useCompetitionExport'
 import {
+    checkInOpen,
     copiedCompetition,
     formatCompetitionWindow,
     setupChecklist,

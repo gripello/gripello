@@ -58,6 +58,10 @@ const widthStyle = computed(() => ({
         : props.maxWidth,
 }))
 const activatorProps = { onClick: () => (open.value = true) }
+const shell = ref<HTMLElement>()
+const sheetListeners = {
+    'after:enter': () => shell.value?.focus({ preventScroll: true }),
+}
 </script>
 
 <template>
@@ -70,6 +74,7 @@ const activatorProps = { onClick: () => (open.value = true) }
         :description="subtitle"
         :dismissible="!persistent"
         v-bind="asSheet ? { noBodyStyles: true } : {}"
+        v-on="asSheet ? sheetListeners : {}"
         :content="
             asSheet
                 ? { disableOutsidePointerEvents: true }
@@ -84,7 +89,9 @@ const activatorProps = { onClick: () => (open.value = true) }
         <template #content>
             <div
                 v-bind="$attrs"
-                class="dialog-shell flex min-h-0 flex-1 flex-col"
+                ref="shell"
+                tabindex="-1"
+                class="dialog-shell flex min-h-0 flex-1 flex-col outline-none"
                 :class="asSheet && 'pb-[env(safe-area-inset-bottom)]'"
             >
                 <div
@@ -93,6 +100,7 @@ const activatorProps = { onClick: () => (open.value = true) }
                 >
                     <slot name="title">{{ title }}</slot>
                     <div class="flex-1" />
+                    <slot name="header-actions" />
                     <UButton
                         v-if="closable"
                         icon="i-lucide-x"

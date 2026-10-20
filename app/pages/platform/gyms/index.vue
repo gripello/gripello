@@ -1,11 +1,10 @@
 <template>
     <div class="w-full p-4">
-        <LayoutPageHeader :title="t('platform.gyms.title')">
+        <LayoutPageHeader :title="t('platform.gyms.title')" inline-actions>
             <template #actions>
                 <UButton
                     color="primary"
                     icon="i-lucide-plus"
-                    class="max-lg:fixed max-lg:right-4 max-lg:bottom-[calc(5rem+env(safe-area-inset-bottom))] max-lg:z-30 max-lg:h-12 max-lg:shadow-lg"
                     data-testid="platform-gym-create"
                     @click="openCreate"
                 >

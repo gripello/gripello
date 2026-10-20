@@ -53,10 +53,16 @@ const nativePushConfigured = () =>
             return false
         }))
 
+export const FCM_TOKEN_TIMEOUT_MS = 20_000
+
 // The plugin hands out the FCM token only through the registration event that register() fires.
 async function fcmToken() {
     const { PushNotifications: plugin } = await pluginModule()
     return new Promise<string>((resolve, reject) => {
+        const timer = setTimeout(() => {
+            done()
+            reject(new Error('No FCM token after register()'))
+        }, FCM_TOKEN_TIMEOUT_MS)
         const listeners = Promise.all([
             plugin.addListener('registration', ({ value }) => {
                 done()
@@ -67,11 +73,20 @@ async function fcmToken() {
                 reject(new Error(error))
             }),
         ])
-        const done = () =>
-            void listeners.then((handles) =>
-                handles.forEach((handle) => void handle.remove()),
-            )
-        void listeners.then(() => plugin.register()).catch(reject)
+        const done = () => {
+            clearTimeout(timer)
+            void listeners
+                .then((handles) =>
+                    handles.forEach((handle) => void handle.remove()),
+                )
+                .catch(() => null)
+        }
+        void listeners
+            .then(() => plugin.register())
+            .catch((error) => {
+                done()
+                reject(error)
+            })
     })
 }
 

@@ -425,6 +425,7 @@ components:
         privacy_url: { type: string, format: uri }
         contact_email: { type: string, format: email }
         audit_retention_days: { type: integer, description: '0 = unset, else 1–3650' }
+        legal_name: { type: string, maxLength: 300 }
         legal_address: { type: string, maxLength: 1000 }
         legal_phone: { type: string, maxLength: 100 }
         legal_register: { type: string, maxLength: 500 }

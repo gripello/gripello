@@ -56,10 +56,11 @@ type member struct {
 }
 
 type gymRef struct {
-	ID     string `json:"id"`
-	Slug   string `json:"slug"`
-	Name   string `json:"name"`
-	Active bool   `json:"active"`
+	ID       string `json:"id"`
+	Slug     string `json:"slug"`
+	Name     string `json:"name"`
+	UnitName string `json:"unit_name"`
+	Active   bool   `json:"active"`
 }
 
 type ownMembership struct {
@@ -202,7 +203,7 @@ func countMembers(ctx context.Context, q querier, gymID string, query memberQuer
 }
 
 func listOwnMemberships(ctx context.Context, q querier, userID string) ([]ownMembership, error) {
-	rows, err := q.Query(ctx, `SELECT m.id, m.created, g.id, g.slug, g.name, g.active, `+effectiveRoleColumns+`
+	rows, err := q.Query(ctx, `SELECT m.id, m.created, g.id, g.slug, g.name, g.unit_name, g.active, `+effectiveRoleColumns+`
 		FROM memberships m JOIN gyms g ON g.id = m.gym JOIN roles r ON r.id = m.role
 		WHERE m."user" = $1 ORDER BY g.name`, userID)
 	if err != nil {
@@ -210,7 +211,7 @@ func listOwnMemberships(ctx context.Context, q querier, userID string) ([]ownMem
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (ownMembership, error) {
 		var m ownMembership
-		fields := append([]any{&m.ID, &m.Created, &m.Gym.ID, &m.Gym.Slug, &m.Gym.Name, &m.Gym.Active}, roleFields(&m.Role)...)
+		fields := append([]any{&m.ID, &m.Created, &m.Gym.ID, &m.Gym.Slug, &m.Gym.Name, &m.Gym.UnitName, &m.Gym.Active}, roleFields(&m.Role)...)
 		return m, row.Scan(fields...)
 	})
 }

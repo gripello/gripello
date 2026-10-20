@@ -270,7 +270,8 @@
             "from": "Von",
             "to": "Bis",
             "locations": "Standorte",
-            "types": "Typen"
+            "types": "Typen",
+            "range": "Zeitraum"
         },
         "cards": {
             "activeRoutes": "Aktive Routen",
@@ -326,7 +327,9 @@
             "voteCount": "{n} Einschätzung | {n} Einschätzungen",
             "setInPeriod": "Im Zeitraum geschraubt",
             "setEarlier": "Früher geschraubt",
-            "otherSetters": "{n} weitere"
+            "otherSetters": "{n} weitere",
+            "months": "{n} Mon.",
+            "years": "{n} J."
         }
     },
     "climbing": {
@@ -428,7 +431,6 @@
         "reviewMissingTitle": "Nicht gescannt",
         "reviewMissingDescription": "Diese Routen wurden nicht gefunden. Nicht angehakte Routen bleiben aktiv.",
         "locationLabel": "Standort",
-        "locationHint": "Nur Routen an diesem Standort werden gezählt und archiviert.",
         "locationRequired": "Wähle einen Standort, um zu starten.",
         "locationRestoreHint": "Gespeicherter Fortschritt aus einer früheren Version – wähle den zugehörigen Standort.",
         "changeLocation": "Standort wechseln",
@@ -573,6 +575,7 @@
             "vatId": "USt-IdNr.",
             "subtitle": "Angaben gemäß § 5 DDG"
         },
+        "privacyContents": "Inhalt",
         "privacyPage": {
             "subtitle": "Wie wir personenbezogene Daten bei der Nutzung dieser Anwendung verarbeiten.",
             "controllerTitle": "Verantwortlicher",
@@ -658,7 +661,7 @@
             },
             "thirdParties": {
                 "title": "Kein Tracking, keine Drittanbieter",
-                "body": "Diese Anwendung verwendet keine Analyse-, Werbe- oder Social-Media-Dienste, keine Schriften oder Skripte von fremden Servern und keine eingebetteten Videos. Alle Daten werden auf unseren eigenen Servern in der Europäischen Union verarbeitet. Eine Übermittlung in Drittländer findet nur statt, wenn du Push-Benachrichtigungen aktivierst (Push-Dienst deines Browser-Herstellers) oder selbst einen Beta-Video-Link öffnest. Für Nutzende aus der Schweiz: Die Speicherung in der EU ist eine Bekanntgabe ins Ausland in einen Staat mit angemessenem Datenschutz nach Art. 16 Abs. 1 DSG. Karten werden erst von OpenStreetMap geladen, wenn du sie anzeigen lässt (siehe Karten)."
+                "body": "Diese Anwendung verwendet keine Analyse-, Werbe- oder Social-Media-Dienste, keine Schriften oder Skripte von fremden Servern und keine eingebetteten Videos. Alle Daten werden auf unseren eigenen Servern in der Europäischen Union verarbeitet. Eine Übermittlung in Drittländer findet nur statt, wenn du Push-Benachrichtigungen aktivierst (Push-Dienst deines Browser-Herstellers) oder selbst einen Beta-Video-Link öffnest. Für Nutzende aus der Schweiz: Die Speicherung in der EU ist eine Bekanntgabe ins Ausland in einen Staat mit angemessenem Datenschutz nach Art. 16 Abs. 1 DSG. Karten werden erst von OpenFreeMap geladen, wenn du sie anzeigen lässt (siehe Karten)."
             },
             "storage": {
                 "title": "Cookies und lokaler Speicher",
@@ -680,7 +683,7 @@
             },
             "map": {
                 "title": "Karten",
-                "body": "Karten auf Hallenseiten werden erst geladen, wenn du „Karte anzeigen“ wählst. Dein Browser lädt dann Kartenkacheln von der OpenStreetMap Foundation (Vereinigtes Königreich), die deine IP-Adresse und Browserangaben erhält (Art. 6 Abs. 1 lit. a DSGVO, deine Einwilligung). Die Auswahl wird auf deinem Gerät gespeichert; lösche die Websitedaten, um sie zu widerrufen. Wenn Mitarbeitende in den Einstellungen eine Hallenadresse suchen oder die Stecknadel verschieben, werden diese Adresse bzw. die Koordinaten an OpenStreetMap Nominatim gesendet."
+                "body": "Karten auf Hallenseiten werden erst geladen, wenn du „Karte anzeigen“ wählst. Dein Browser lädt dann Kartendaten, Schriften und Symbole von OpenFreeMap (openfreemap.org), das deine IP-Adresse und Browserangaben erhält (Art. 6 Abs. 1 lit. a DSGVO, deine Einwilligung). Die Auswahl wird auf deinem Gerät gespeichert; lösche die Websitedaten, um sie zu widerrufen. Wenn Mitarbeitende in den Einstellungen eine Hallenadresse suchen oder die Stecknadel verschieben, werden diese Adresse bzw. die Koordinaten an OpenStreetMap Nominatim gesendet."
             }
         },
         "accountDeletionPage": {
@@ -732,7 +735,6 @@
                 "exportColumns": "Merkt sich die gewählten Export-Spalten",
                 "exportTagTemplate": "Merkt sich das gewählte Schild-Layout",
                 "inventorySession": "Speichert den Fortschritt einer Inventur",
-                "inventoryInstructions": "Merkt sich, dass die Inventur-Anleitung angezeigt wurde",
                 "offlineLogbook": "Hält dein Logbuch und noch nicht gesendete Begehungen offline verfügbar",
                 "pushDeclined": "Merkt sich, dass du Push-Benachrichtigungen auf diesem Gerät entfernt hast",
                 "offlineScores": "Speichert Wettkampfergebnisse, die du ohne Netz eingetragen hast, bis sie gesendet sind",
@@ -878,8 +880,7 @@
         "staff": "Team",
         "more": "Mehr",
         "sections": "Bereiche",
-        "noStaffTools": "Du hast in dieser Halle keine Team-Werkzeuge",
-        "inbox": "Eingang"
+        "noStaffTools": "Du hast in dieser Halle keine Team-Werkzeuge"
     },
     "users": {
         "create": "Benutzer hinzufügen",
@@ -983,11 +984,11 @@
         "contactEmailHint": "Wird als Kontaktstelle veröffentlicht und über neue Inhaltsmeldungen benachrichtigt.",
         "mailNotConfigured": "E-Mail ist nicht konfiguriert, daher können Passwort-Zurücksetzungen und Meldungsbenachrichtigungen nicht zugestellt werden. Ein Plattform-Admin richtet sie unter Plattform-Einstellungen › E-Mail ein.",
         "legalTitle": "Impressum",
+        "legalName": "Name des Anbieters",
         "legalAddress": "Postanschrift",
         "legalPhone": "Telefon",
         "legalRegister": "Registereintrag",
         "legalUrlHint": "Leer lassen, um die integrierte Seite zu nutzen.",
-        "legalIntro": "Wird auf der integrierten Impressums- und Datenschutzseite angezeigt.",
         "legalAddressPlaceholder": "Straße 1\n12345 Stadt",
         "legalRegisterPlaceholder": "Amtsgericht Stadt, VR 12345",
         "legalVatId": "USt-IdNr.",
@@ -1016,19 +1017,8 @@
         "grading": "Bewertungsskalen",
         "routeGradeSystem": "Skala für Routen",
         "boulderGradeSystem": "Skala für Boulder",
-        "gradingHint": "Gilt für neu geschraubte Routen. Bestehende Routen behalten ihre Skala bis zur Bearbeitung.",
-        "description": "Verwalte Organisation, Branding, Bewertungsskalen und rechtliche Angaben.",
         "sections": "Einstellungsbereiche",
         "branding": "Branding",
-        "brandingHint": "Logos und Icons in der App, im Browser-Tab und auf gedruckten Routenschildern.",
-        "organizationHint": "Name, Kontakt und Kontooptionen deiner Organisation.",
-        "publicUrlsHint": "Adressen für Links, E-Mails und QR-Codes.",
-        "assetHints": {
-            "logo": "PNG, JPG, SVG oder WebP. Wird in der Navigationsleiste angezeigt.",
-            "icon": "ICO-Datei, die im Browser-Tab angezeigt wird.",
-            "sign": "PNG, JPG, SVG oder WebP. Wird auf Routenschilder gedruckt.",
-            "cover": "PNG, JPG oder WebP. Oben auf der Halleninfo-Seite."
-        },
         "boulderBands": "Boulderfarben",
         "boulderBandsHint": "Erscheint als Farbbalken neben Bouldergraden und auf gedruckten Schildern. Ziehe die Griffe, um festzulegen, wo eine Farbe endet; wähle eine Farbe, um sie umzubenennen, umzufärben, zu teilen oder zu entfernen.",
         "bandColor": "Farbe",
@@ -1294,7 +1284,8 @@
             "submit": "Meldung senden",
             "submitted": "Danke! Das Team wurde informiert.",
             "bannerTitle": "{n} bekanntes Problem | {n} bekannte Probleme",
-            "marker": "Bekanntes Problem"
+            "marker": "Bekanntes Problem",
+            "urgentMarker": "Dringendes Problem"
         },
         "wish": {
             "action": "Route wünschen",
@@ -1395,7 +1386,19 @@
             "platform_config": "Plattform-Einstellungen",
             "oauth2_providers": "Anmeldeanbieter",
             "retired_slugs": "Gesperrte Hallen-URL",
-            "backups": "Sicherung"
+            "backups": "Sicherung",
+            "gyms": "Halle",
+            "memberships": "Mitgliedschaft",
+            "invites": "Einladung",
+            "ticks": "Begehung",
+            "walls": "Wand",
+            "locations": "Bereich",
+            "beta_videos": "Beta-Video",
+            "seasons": "Saison",
+            "competitions": "Wettkampf",
+            "competition_routes": "Wettkampfroute",
+            "competition_entries": "Wettkampfanmeldung",
+            "moderation_items": "Moderationsfall"
         },
         "changedLabel": "Geändert",
         "filter": {
@@ -1405,6 +1408,28 @@
         "actor": {
             "guests": "Gäste",
             "me": "Ich"
+        },
+        "fields": {
+            "name": "Name",
+            "grade": "Grad",
+            "color": "Farbe",
+            "wall": "Wand",
+            "wall_position": "Position an der Wand",
+            "location": "Bereich",
+            "latitude": "Kartenposition",
+            "longitude": "Kartenposition",
+            "state": "Status",
+            "status": "Status",
+            "role": "Rolle",
+            "email": "E-Mail",
+            "firstname": "Vorname",
+            "avatar": "Profilbild",
+            "comment": "Kommentar",
+            "anchor_point": "Umlenker",
+            "screw_date": "Schraubdatum",
+            "archived": "archiviert",
+            "creators": "Schrauber",
+            "type": "Typ"
         }
     },
     "gradeSystems": {
@@ -1416,7 +1441,6 @@
     },
     "gradeConversion": {
         "title": "Grad-Umrechnung",
-        "source": "Die Routenskalen und die ≈-UIAA-Zeile folgen unverändert der IRCRA-Skala (Draper et al., 2015). Fb ↔ V nutzt die übliche Umrechnung. Die Hallenfarben sind das eigene Schema der Halle und stammen aus keiner der beiden Quellen.",
         "open": "Umrechnungstabelle",
         "downloadPdf": "PDF herunterladen",
         "easy": "Leicht",
@@ -1425,7 +1449,6 @@
         "boulders": "Boulder",
         "routes": "Routen",
         "gymBand": "Hallenfarbe",
-        "orientation": "Orientierung",
         "andUp": "ab {grade}",
         "bands": {
             "yellow": "Gelb",
@@ -1433,12 +1456,6 @@
             "blue": "Blau",
             "red": "Rot",
             "black": "Schwarz"
-        },
-        "notes": {
-            "fontVsFrench": "Fb 6A ist nicht französisch 6a. Französisch 6a ≈ UIAA 6, Fb 6A ≈ UIAA 7+.",
-            "beginner": "Die erste Farbe hat keine Untergrenze. IRCRA fasst alles leichter als Fb 3 unter „<2“ zusammen.",
-            "orientation": "≈ UIAA dient nur der Orientierung. Neue Boulder an Referenzbouldern bewerten, nicht an dieser Zeile.",
-            "bands": "Die Farben sind das eigene Schema der Halle (Einstellungen → Bewertungsskalen). Standard ist die Circuit-Reihenfolge aus Fontainebleau (Gelb, Orange, Blau, Rot, Schwarz); einen allgemeinen Standard gibt es nicht."
         }
     },
     "gradeSystemsShort": {
@@ -1520,8 +1537,6 @@
         },
         "suggestions": {
             "title": "Routen zum Ausprobieren",
-            "subtitle": "Noch nicht geschaffte Routen nahe deinem Niveau",
-            "subtitleNew": "Die neuesten Routen der Halle",
             "new": "Neu"
         },
         "pendingSync": "Noch nicht synchronisiert",
@@ -1671,14 +1686,13 @@
         "discard": "Verwerfen",
         "save": "Speichern ({n})",
         "saved": "Routenpositionen gespeichert.",
-        "wallRoutes": "{n} Routen an dieser Wand",
+        "wallRoutes": "{n} Route an dieser Wand | {n} Routen an dieser Wand",
         "distribute": "Routen gleichmäßig an der Wand verteilen",
         "unplaced": "Nicht platziert ({n})",
         "placed": "Auf dem Plan ({n})",
         "remove": "Vom Plan entfernen",
         "canvasLabel": "Plan zum Platzieren der Routen",
         "hints": {
-            "idle": "Tippe eine Route an und dann ihre Stelle an der Wand – die nächste Route folgt automatisch. Hake mehrere Routen an, um sie gemeinsam an eine Wand zu setzen. Punkte lassen sich verschieben.",
             "armed": "Klicke auf eine Wand, um „{name}“ zu platzieren. Esc bricht ab.",
             "checked": "Tippe auf eine Wand, um {n} Route dort nach Umlenker zu platzieren. | Tippe auf eine Wand, um {n} Routen dort nach Umlenker zu platzieren."
         },
@@ -1727,21 +1741,20 @@
     "overview": {
         "title": "Kletterhalle",
         "description": "Neue Routen, Wände und Grade auf einen Blick.",
-        "routesCount": "{n} Routen",
-        "newCount": "{n} neu diese Woche",
+        "routesCount": "{n} Route | {n} Routen",
+        "newCount": "{n} neu in zwei Wochen",
         "newRoutes": "Neu geschraubt",
-        "newRoutesEmpty": "In den letzten zwei Wochen wurde nichts Neues geschraubt.",
         "allRoutes": "Alle Routen",
         "walls": "Wände",
         "openMap": "Plan öffnen",
-        "wallRoutes": "{n} Routen",
+        "wallRoutes": "{n} Route | {n} Routen",
         "newestSet": "Neueste: {date}",
         "popular": "Beliebte Routen",
         "popularEmpty": "Noch nicht genug Bewertungen.",
         "progressTitle": "Dein Fortschritt",
         "progress": "Du hast {sent} von {total} aktuellen Routen geschafft.",
-        "openLogbook": "Logbuch öffnen",
-        "gradeSpread": "Grade an der Wand"
+        "gradeSpread": "Grade an der Wand",
+        "resets": "Bald abgeschraubt"
     },
     "accountSettings": {
         "title": "Einstellungen",
@@ -2010,7 +2023,8 @@
             "topsZones": "{tops} T · {zones} Z",
             "final": "Endergebnis",
             "updated": "Aktualisiert {time}",
-            "scanToJoin": "Scannen zum Mitmachen"
+            "scanToJoin": "Scannen zum Mitmachen",
+            "scanForResults": "Scannen für Ergebnisse"
         },
         "judge": {
             "title": "Schiedsrichter",
@@ -2091,7 +2105,8 @@
             "corrections": "Das Team prüft die Ergebnisse und kann sie korrigieren.",
             "entryFee": "Es gibt eine Startgebühr. Bezahle über den Link auf der Wettkampfseite; das Team markiert dich als bezahlt."
         },
-        "requiresPayment": "Startgebühr erforderlich"
+        "requiresPayment": "Startgebühr erforderlich",
+        "share": "Teilen"
     },
     "members": {
         "title": "Mitglieder",
@@ -2104,7 +2119,13 @@
         "removeConfirm": "Diese Person aus dem Team der Halle entfernen? Das Konto bleibt bestehen.",
         "removed": "Mitglied entfernt.",
         "alreadyMember": "Diese Person ist bereits Mitglied.",
-        "invited": "Einladung verschickt."
+        "invited": "Einladung verschickt.",
+        "builtinRoles": {
+            "admin": "Admin",
+            "routesetter": "Routenschrauber",
+            "public": "Öffentlich"
+        },
+        "rowActions": "Aktionen für Mitglied"
     },
     "invites": {
         "eyebrow": "EINLADUNG",
@@ -2226,7 +2247,6 @@
                 "registration": "Registrierung",
                 "open": "Offen",
                 "inviteOnly": "Nur mit Einladung",
-                "auditDays": "Audit-Log {n} Tag aufbewahrt | Audit-Log {n} Tage aufbewahrt",
                 "configured": "{n} eingerichtet",
                 "live": "{n} aktiv"
             },
@@ -2484,6 +2504,7 @@
             "settings": "Zeitplan speichern",
             "confirm": "Sicherungen enthalten alle Konten. Bestätige mit deinem Passwort.",
             "time": "Täglich um",
+            "pgDumpOff": "pg_dump fehlt",
             "pgDumpMissing": "pg_dump ist auf diesem Server nicht installiert",
             "lastFailed": "Letzte Sicherung fehlgeschlagen",
             "lastRun": "Letzte Sicherung {date}",
@@ -2857,7 +2878,6 @@
     },
     "moderation": {
         "title": "Moderation",
-        "reviewStats": "Bewertungsstatistik",
         "moderate": "Moderieren",
         "filterType": "Inhalt",
         "filterGym": "Halle",
@@ -2866,7 +2886,7 @@
             "approval": "Wartet auf Freigabe",
             "hidden": "Ausgeblendet",
             "history": "Geprüft",
-            "all": "Alle Hallen"
+            "all": "Alle offenen"
         },
         "types": {
             "rating": "Bewertung",
@@ -2974,7 +2994,8 @@
         },
         "map": {
             "show": "Karte anzeigen",
-            "consent": "Lädt Kartenkacheln von {provider}; dabei wird deine IP-Adresse übermittelt."
+            "consent": "Lädt Kartenkacheln von {provider}; dabei wird deine IP-Adresse übermittelt.",
+            "recenter": "Karte zentrieren"
         },
         "amenities": {
             "toilets": "WC",
@@ -3148,5 +3169,10 @@
         "extend": "Testphase verlängern",
         "convert": "Voll freischalten",
         "convertConfirm": "Testphase von {name} beenden? Das Team behält vollen Zugriff."
+    },
+    "outdatedBrowser": {
+        "browser": "Gripello braucht einen neueren Browser, um richtig angezeigt zu werden.",
+        "webview": "Android System WebView ist veraltet, deshalb wird Gripello nicht richtig angezeigt.",
+        "update": "Aktualisieren"
     }
 }

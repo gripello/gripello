@@ -126,6 +126,23 @@
                             {{ $t('filter.archived') }}
                         </UButton>
                     </div>
+                    <div
+                        class="flex w-full flex-wrap gap-x-4 gap-y-1 text-xs text-muted sm:hidden"
+                        data-testid="routes-marker-legend"
+                    >
+                        <span class="flex items-center gap-1.5">
+                            <RouteRatedMarker size="sm" />
+                            {{ $t('routes.rated') }}
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <TaskDefectMarker severity="minor" size="sm" />
+                            {{ $t('tasks.defect.marker') }}
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <TaskDefectMarker severity="urgent" size="sm" />
+                            {{ $t('tasks.defect.urgentMarker') }}
+                        </span>
+                    </div>
                 </div>
             </template>
         </FilterBar>

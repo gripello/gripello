@@ -33,7 +33,7 @@
 
         <div v-else class="flex flex-col gap-3">
             <div
-                class="grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6"
+                class="platform-kpis grid grid-cols-2 gap-3 md:grid-cols-3 2xl:grid-cols-6"
                 data-testid="platform-traffic-kpis"
             >
                 <AnalyticsStatsCard
@@ -46,7 +46,7 @@
                     :color="kpi.color"
                     :format="kpi.format"
                     :spark="kpi.spark"
-                    :loading="trafficPending && !traffic"
+                    :loading="trafficLoading"
                     :data-testid="`platform-kpi-${kpi.key}`"
                 />
             </div>
@@ -56,7 +56,7 @@
                     <AnalyticsSection
                         :title="t('platform.overview.traffic.title')"
                         icon="i-lucide-activity"
-                        :loading="trafficPending && !traffic"
+                        :loading="trafficLoading"
                         :empty="!!trafficError"
                         :empty-text="t('errors.loadFailed')"
                         testid="platform-traffic"
@@ -216,7 +216,7 @@
                                                 : 'text-dimmed'
                                         "
                                     >
-                                        {{ tile.value }}
+                                        {{ summary ? tile.value : '—' }}
                                     </span>
                                 </NuxtLink>
                             </li>
@@ -429,13 +429,13 @@ const rangeItems = (['1h', '24h', '7d', '30d'] as const).map((value) => ({
 }))
 const {
     data: traffic,
-    pending: trafficPending,
     error: trafficError,
     refresh: refreshTraffic,
 } = useAsyncData('platform-traffic', () => getPlatformTraffic(range.value), {
     watch: [range],
     server: false,
 })
+const trafficLoading = computed(() => !traffic.value && !trafficError.value)
 let trafficTimer: ReturnType<typeof setInterval> | undefined
 onMounted(() => {
     trafficTimer = setInterval(() => refreshTraffic(), 60_000)
@@ -606,15 +606,20 @@ const systemItems = computed(() => {
         {
             key: 'backup',
             label: t('platform.overview.system.lastBackup'),
-            value: system.backup_error
-                ? t('platform.backups.lastFailed')
-                : system.last_backup
-                  ? formatDate(system.last_backup, {
-                        locale: locale.value,
-                        withTime: true,
-                    })
-                  : '—',
-            tone: system.backup_error ? 'text-error' : undefined,
+            value: system.pg_dump_missing
+                ? t('platform.backups.pgDumpOff')
+                : system.backup_error
+                  ? t('platform.backups.lastFailed')
+                  : system.last_backup
+                    ? formatDate(system.last_backup, {
+                          locale: locale.value,
+                          withTime: true,
+                      })
+                    : '—',
+            tone:
+                system.backup_error || system.pg_dump_missing
+                    ? 'text-error'
+                    : undefined,
             to: '/platform/backups',
         },
         {
@@ -686,7 +691,20 @@ const attentionTiles = computed(() => {
         (entry) =>
             now - (parseDate(entry.oldest)?.getTime() ?? now) > STALE_CASE_MS,
     ).length
+    const backups = traffic.value?.system?.pg_dump_missing
+        ? [
+              {
+                  key: 'backups',
+                  label: t('platform.backups.pgDumpMissing'),
+                  value: '!',
+                  icon: 'i-lucide-database-backup',
+                  color: 'error',
+                  to: '/platform/backups',
+              },
+          ]
+        : []
     return [
+        ...backups,
         {
             key: 'legal',
             label: t('platform.overview.legalReports'),
@@ -743,3 +761,21 @@ function gymCounts(gym: PlatformGym) {
     ]
 }
 </script>
+
+<style scoped>
+@reference "~/assets/css/main.css";
+
+@variant max-md {
+    .platform-kpis :deep(.card-body) {
+        padding: 12px;
+    }
+
+    .platform-kpis :deep(.icon-badge) {
+        display: none;
+    }
+
+    .platform-kpis :deep(.card-value) {
+        font-size: 22px;
+    }
+}
+</style>

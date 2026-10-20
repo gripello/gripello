@@ -9,8 +9,6 @@ import {
     bandSettingsFrom,
     gymBandsFrom,
     gymBandFor,
-    orientationUiaa,
-    vCells,
 } from '#shared/utils/gradeReference'
 
 describe('grade reference ladders', () => {
@@ -20,16 +18,6 @@ describe('grade reference ladders', () => {
         const sum = (spans: number[]) => spans.reduce((a, b) => a + b, 0)
         expect(sum(V_FONT_SPANS)).toBe(fontCount)
         expect(sum(DEFAULT_GYM_BANDS.map((band) => band.span))).toBe(fontCount)
-        expect(vCells().map((cell) => cell.label)).toEqual(gradeLabels('v'))
-        expect(vCells()[6]).toEqual({ label: 'V3', span: 2 })
-    })
-
-    it('maps Fb columns to the IRCRA UIAA orientation', () => {
-        expect(orientationUiaa(0)).toBe('≤5+')
-        expect(orientationUiaa(6)).toBe('7+')
-        expect(orientationUiaa(20)).toBe('12')
-        expect(orientationUiaa(21)).toBe('—')
-        expect(orientationUiaa(23)).toBe('—')
     })
 
     it('derives the legend from the bands', () => {

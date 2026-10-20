@@ -140,6 +140,15 @@ export function competitionPhase(
     return 'ended'
 }
 
+export function checkInOpen(
+    competition: Pick<CompetitionRecord, 'status' | 'starts_at' | 'ends_at'>,
+    now: Date,
+) {
+    return ['registration', 'running'].includes(
+        competitionPhase(competition, now),
+    )
+}
+
 export function judgesMayScore(status: CompetitionStatus | undefined) {
     return status === 'open' || status === 'closed'
 }
@@ -479,4 +488,12 @@ export function mergeCategoryRows(
         ...next.map((row) => edited.get(row.id) ?? row),
         ...local.filter((row) => !row.id),
     ]
+}
+
+export function currentCompetition<
+    C extends Pick<CompetitionRecord, 'status' | 'starts_at' | 'ends_at'>,
+>(competitions: C[], now: Date): C | null {
+    const inPhase = (phase: CompetitionPhase) =>
+        competitions.find((entry) => competitionPhase(entry, now) === phase)
+    return inPhase('running') ?? inPhase('registration') ?? null
 }

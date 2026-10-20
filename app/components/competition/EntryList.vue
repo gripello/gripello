@@ -79,7 +79,7 @@
                     @update:model-value="(paid) => patch(entry, { paid })"
                 />
                 <UButton
-                    v-if="entry.status === 'registered'"
+                    v-if="checkIn && entry.status === 'registered'"
                     icon="i-lucide-check"
                     color="success"
                     variant="soft"
@@ -126,6 +126,7 @@ const STATUS_COLORS: Record<
 const props = defineProps<{
     competitionId: string
     requiresPayment?: boolean
+    checkIn?: boolean
 }>()
 
 const { t } = useI18n()

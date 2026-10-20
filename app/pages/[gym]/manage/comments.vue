@@ -97,28 +97,26 @@
                 <VirtualWindow :estimated-height="240">
                     <CommentsCard :comment="comment" show-route>
                         <template #actions>
-                            <UTooltip :text="t('actions.edit')">
-                                <UButton
-                                    class="icon-btn"
-                                    icon="i-lucide-pencil"
-                                    color="neutral"
-                                    variant="ghost"
-                                    :aria-label="t('actions.edit')"
-                                    data-testid="comment-card-edit"
-                                    @click="openEdit(comment)"
-                                />
-                            </UTooltip>
-                            <UTooltip :text="t('moderation.moderate')">
-                                <UButton
-                                    class="icon-btn"
-                                    icon="i-lucide-shield-check"
-                                    color="neutral"
-                                    variant="ghost"
-                                    :aria-label="t('moderation.moderate')"
-                                    data-testid="comment-card-moderate"
-                                    @click="moderate(comment)"
-                                />
-                            </UTooltip>
+                            <UButton
+                                icon="i-lucide-pencil"
+                                color="neutral"
+                                variant="ghost"
+                                size="sm"
+                                data-testid="comment-card-edit"
+                                @click="openEdit(comment)"
+                            >
+                                {{ t('actions.edit') }}
+                            </UButton>
+                            <UButton
+                                icon="i-lucide-shield-check"
+                                color="neutral"
+                                variant="ghost"
+                                size="sm"
+                                data-testid="comment-card-moderate"
+                                @click="moderate(comment)"
+                            >
+                                {{ t('moderation.moderate') }}
+                            </UButton>
                         </template>
                     </CommentsCard>
                 </VirtualWindow>

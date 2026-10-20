@@ -6,7 +6,44 @@
     >
         <div data-testid="profile-header">
             <LayoutPageHeader :title="t('accountSettings.title')" />
-            <div ref="tabNav" class="mb-4">
+            <LayoutListGroup
+                v-if="!tabChosen"
+                class="mb-4 lg:hidden"
+                :aria-label="t('settings.sections')"
+            >
+                <LayoutListRow
+                    v-for="tab in tabs"
+                    :key="tab.value"
+                    :to="{ query: { tab: tab.value } }"
+                    :data-testid="`profile-drill-${tab.value}`"
+                >
+                    <UIcon :name="tab.icon" class="size-5 text-muted" />
+                    <span class="flex-1 text-highlighted">{{ tab.label }}</span>
+                    <UChip
+                        v-if="tab.value === 'security' && showSecurityWarning"
+                        color="warning"
+                        size="sm"
+                        standalone
+                        inset
+                    />
+                    <UIcon
+                        name="i-lucide-chevron-right"
+                        class="size-5 text-dimmed"
+                    />
+                </LayoutListRow>
+            </LayoutListGroup>
+            <UButton
+                v-else
+                :to="{ query: {} }"
+                icon="i-lucide-arrow-left"
+                color="neutral"
+                variant="ghost"
+                class="mb-2 -ml-2 min-h-11 lg:hidden"
+                data-testid="profile-drill-back"
+            >
+                {{ t(`account.tabs.${activeTab}`) }}
+            </UButton>
+            <div ref="tabNav" class="mb-4 max-lg:hidden">
                 <LayoutTabs
                     v-model="selectedTab"
                     :items="tabs"
@@ -29,7 +66,10 @@
             </div>
         </div>
 
-        <div class="flex flex-col gap-4 sm:gap-6 pb-8">
+        <div
+            class="flex flex-col gap-4 sm:gap-6 pb-8"
+            :class="{ 'max-lg:hidden': !tabChosen }"
+        >
             <LayoutSaveBar
                 :show="sectionChanged[activeTab]"
                 :loading="saving"
@@ -299,6 +339,7 @@ const route = useRoute()
 const activeTab = computed<Section>(
     () => SECTIONS.find((section) => section === route.query.tab) ?? 'profile',
 )
+const tabChosen = computed(() => !!route.query.tab)
 
 const auth = useAuthState()
 const { pending: exportPending, download: downloadExport } = useAccountExport()

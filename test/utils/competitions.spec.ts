@@ -5,6 +5,8 @@ import {
     acceptsRegistrations,
     birthYearRange,
     categoriesFor,
+    checkInOpen,
+    currentCompetition,
     competitionPhase,
     lifecycleActions,
     needsGuardianConsent,
@@ -87,6 +89,20 @@ describe('competitions', () => {
             'female',
             'male',
         ])
+    })
+
+    it('allows check-in only before and during the competition', () => {
+        const at = (iso: string) => new Date(iso)
+        const open = { ...competition, status: 'open' as const }
+        expect(checkInOpen(open, at('2026-10-09T12:00:00Z'))).toBe(true)
+        expect(checkInOpen(open, at('2026-10-10T12:00:00Z'))).toBe(true)
+        expect(checkInOpen(open, at('2026-10-10T15:00:00Z'))).toBe(false)
+        expect(
+            checkInOpen(
+                { ...open, status: 'closed' },
+                at('2026-10-10T12:00:00Z'),
+            ),
+        ).toBe(false)
     })
 
     it('derives the phase from status and time window', () => {
@@ -363,5 +379,21 @@ describe('mergeCategoryRows', () => {
             row('b', 'U16'),
             { name: 'New', gender: 'any' },
         ])
+    })
+
+    it('picks a running competition before one taking registrations', () => {
+        const open = { ...competition, status: 'open' as const }
+        const later = {
+            ...open,
+            id: 'later',
+            starts_at: '2026-11-01T09:00:00Z',
+            ends_at: '2026-11-01T18:00:00Z',
+        }
+        const at = new Date('2026-10-10T12:00:00Z')
+        expect(currentCompetition([later, open], at)?.id).toBe('c1')
+        expect(currentCompetition([later], at)?.id).toBe('later')
+        expect(
+            currentCompetition([{ ...open, status: 'draft' as const }], at),
+        ).toBeNull()
     })
 })

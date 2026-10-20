@@ -176,6 +176,7 @@ test('the route page links an unplaced route straight to placement', async ({
     testPrefix,
 }) => {
     await gotoSettled(page, `/route?id=${unplacedIds[0]}`)
+    await page.getByTestId('route-more-actions').click()
     await page.getByTestId('route-place-on-map').click()
     await page.waitForURL(/\/manage\/map/)
     await expect(page.getByTestId('placement-hint')).toContainText(

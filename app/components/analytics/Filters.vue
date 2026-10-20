@@ -10,6 +10,15 @@
                         v-model="rangeTab"
                         :items="rangeOptions"
                         test-id="analytics-range"
+                        class="max-sm:hidden"
+                    />
+                    <USelect
+                        v-model="rangeTab"
+                        :items="rangeOptions"
+                        value-key="value"
+                        :aria-label="$t('analytics.filters.range')"
+                        class="w-full sm:hidden"
+                        data-testid="analytics-range-select"
                     />
                 </div>
             </template>

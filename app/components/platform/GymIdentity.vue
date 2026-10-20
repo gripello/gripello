@@ -73,7 +73,8 @@ import { gymTitle } from '~/utils/gymNames'
 import { gymTrial } from '~/utils/gymTrial'
 
 const props = defineProps<{ gym: GymRecord }>()
-const trial = computed(() => gymTrial(props.gym))
+const hydrated = useHydrated()
+const trial = computed(() => (hydrated.value ? gymTrial(props.gym) : null))
 
 const title = computed(() => gymTitle(props.gym))
 const logoUrl = computed(() =>

@@ -270,7 +270,8 @@
             "from": "From",
             "to": "To",
             "locations": "Locations",
-            "types": "Types"
+            "types": "Types",
+            "range": "Period"
         },
         "cards": {
             "activeRoutes": "Active routes",
@@ -326,7 +327,9 @@
             "voteCount": "{n} vote | {n} votes",
             "setInPeriod": "Set in period",
             "setEarlier": "Set earlier",
-            "otherSetters": "{n} other | {n} others"
+            "otherSetters": "{n} other | {n} others",
+            "months": "{n} mo",
+            "years": "{n} y"
         }
     },
     "climbing": {
@@ -428,7 +431,6 @@
         "reviewMissingTitle": "Routes not scanned",
         "reviewMissingDescription": "These routes were not found. Unchecked routes stay active.",
         "locationLabel": "Location",
-        "locationHint": "Only routes at this location are counted and archived.",
         "locationRequired": "Choose a location to start.",
         "locationRestoreHint": "Saved progress from an earlier version – choose the location it belongs to.",
         "changeLocation": "Change location",
@@ -573,6 +575,7 @@
             "vatId": "VAT ID",
             "subtitle": "Information according to § 5 DDG"
         },
+        "privacyContents": "Contents",
         "privacyPage": {
             "subtitle": "What personal data we process when you use Gripello, why, who can see it, how long we keep it and what you can control.",
             "controllerTitle": "Controller",
@@ -658,7 +661,7 @@
             },
             "thirdParties": {
                 "title": "No tracking, no third parties",
-                "body": "We do not use analytics, advertising, social media plugins or tracking, and the app loads no fonts, scripts or other resources from third-party servers. We do not sell your data or use it for profiling or automated decisions with legal or similarly significant effects. The only external services involved are the push service of your browser vendor, if you turn on push notifications, and video platforms you choose to open yourself from a beta video link (see the sections above). Maps are only loaded from OpenStreetMap after you choose to show them (see Maps)."
+                "body": "We do not use analytics, advertising, social media plugins or tracking, and the app loads no fonts, scripts or other resources from third-party servers. We do not sell your data or use it for profiling or automated decisions with legal or similarly significant effects. The only external services involved are the push service of your browser vendor, if you turn on push notifications, and video platforms you choose to open yourself from a beta video link (see the sections above). Maps are only loaded from OpenFreeMap after you choose to show them (see Maps)."
             },
             "storage": {
                 "title": "Cookies and local storage",
@@ -680,7 +683,7 @@
             },
             "map": {
                 "title": "Maps",
-                "body": "Maps on gym pages are only loaded after you select Show map. Your browser then requests map tiles from the OpenStreetMap Foundation (UK), which receives your IP address and browser details (Art. 6(1)(a) GDPR, your consent). We remember the choice on your device; clear the site data to withdraw it. Staff who look up a gym address or move the map pin in the settings send that address or the pin coordinates to OpenStreetMap Nominatim."
+                "body": "Maps on gym pages are only loaded after you select Show map. Your browser then requests map data, fonts and symbols from OpenFreeMap (openfreemap.org), which receives your IP address and browser details (Art. 6(1)(a) GDPR, your consent). We remember the choice on your device; clear the site data to withdraw it. Staff who look up a gym address or move the map pin in the settings send that address or the pin coordinates to OpenStreetMap Nominatim."
             }
         },
         "accountDeletionPage": {
@@ -732,7 +735,6 @@
                 "exportColumns": "Remembers selected export columns",
                 "exportTagTemplate": "Remembers the chosen tag layout",
                 "inventorySession": "Keeps the progress of an inventory scan",
-                "inventoryInstructions": "Remembers that inventory instructions were shown",
                 "offlineLogbook": "Keeps your logbook and unsent ascents available offline",
                 "pushDeclined": "Remembers that you removed push notifications on this device",
                 "offlineScores": "Keeps competition scores you entered without signal until they are sent",
@@ -878,8 +880,7 @@
         "staff": "Staff",
         "more": "More",
         "sections": "Sections",
-        "noStaffTools": "You have no staff tools in this gym",
-        "inbox": "Inbox"
+        "noStaffTools": "You have no staff tools in this gym"
     },
     "users": {
         "create": "Add user",
@@ -983,11 +984,11 @@
         "contactEmailHint": "Published as your point of contact and notified about new content reports.",
         "mailNotConfigured": "Email is not configured, so password resets and content report notices cannot be delivered. A platform admin sets it up under Platform settings › Mail.",
         "legalTitle": "Legal notice",
+        "legalName": "Provider name",
         "legalAddress": "Postal address",
         "legalPhone": "Phone",
         "legalRegister": "Register entry",
         "legalUrlHint": "Leave empty to use the built-in page.",
-        "legalIntro": "Shown on the built-in legal notice and privacy pages.",
         "legalAddressPlaceholder": "Street 1\n12345 City",
         "legalRegisterPlaceholder": "Register court City, VR 12345",
         "legalVatId": "VAT ID",
@@ -1016,19 +1017,8 @@
         "grading": "Grading scales",
         "routeGradeSystem": "Route scale",
         "boulderGradeSystem": "Boulder scale",
-        "gradingHint": "Applies to newly set routes. Existing routes keep their scale until edited.",
-        "description": "Manage your organization, branding, grading scales and legal information.",
         "sections": "Settings sections",
         "branding": "Branding",
-        "brandingHint": "Logos and icons shown in the app, the browser tab and on printed route labels.",
-        "organizationHint": "Name, contact and account options of your organization.",
-        "publicUrlsHint": "Addresses used for links, emails and QR codes.",
-        "assetHints": {
-            "logo": "PNG, JPG, SVG or WebP. Shown in the navigation bar.",
-            "icon": "ICO file shown in the browser tab.",
-            "sign": "PNG, JPG, SVG or WebP. Printed on route labels.",
-            "cover": "PNG, JPG or WebP. Shown at the top of the gym info page."
-        },
         "boulderBands": "Boulder colors",
         "boulderBandsHint": "Shown as a color bar next to boulder grades and on printed signs. Drag the handles to move where a color ends; select a color to rename, recolor, split or remove it.",
         "bandColor": "Color",
@@ -1294,7 +1284,8 @@
             "submit": "Send report",
             "submitted": "Thanks! The setters have been notified.",
             "bannerTitle": "{n} known problem | {n} known problems",
-            "marker": "Known problem"
+            "marker": "Known problem",
+            "urgentMarker": "Urgent problem"
         },
         "wish": {
             "action": "Wish for a route",
@@ -1395,7 +1386,19 @@
             "platform_config": "Platform settings",
             "oauth2_providers": "Sign-in provider",
             "retired_slugs": "Retired gym URL",
-            "backups": "Backup"
+            "backups": "Backup",
+            "gyms": "Gym",
+            "memberships": "Membership",
+            "invites": "Invite",
+            "ticks": "Ascent",
+            "walls": "Wall",
+            "locations": "Location",
+            "beta_videos": "Beta video",
+            "seasons": "Season",
+            "competitions": "Competition",
+            "competition_routes": "Competition route",
+            "competition_entries": "Competition entry",
+            "moderation_items": "Moderation case"
         },
         "changedLabel": "Changed",
         "filter": {
@@ -1405,6 +1408,28 @@
         "actor": {
             "guests": "Guests",
             "me": "Me"
+        },
+        "fields": {
+            "name": "name",
+            "grade": "grade",
+            "color": "colour",
+            "wall": "wall",
+            "wall_position": "position on the wall",
+            "location": "location",
+            "latitude": "map position",
+            "longitude": "map position",
+            "state": "state",
+            "status": "status",
+            "role": "role",
+            "email": "e-mail",
+            "firstname": "first name",
+            "avatar": "profile picture",
+            "comment": "comment",
+            "anchor_point": "anchor",
+            "screw_date": "set date",
+            "archived": "archived",
+            "creators": "setters",
+            "type": "type"
         }
     },
     "gradeSystems": {
@@ -1416,7 +1441,6 @@
     },
     "gradeConversion": {
         "title": "Grade conversion",
-        "source": "The route scales and the ≈ UIAA row follow the IRCRA reporting scale (Draper et al., 2015), unchanged. Fb ↔ V uses the common conversion. Gym colors are the gym's own scheme, not part of either source.",
         "open": "Conversion table",
         "downloadPdf": "Download PDF",
         "easy": "Easy",
@@ -1425,7 +1449,6 @@
         "boulders": "Boulders",
         "routes": "Routes",
         "gymBand": "Gym color",
-        "orientation": "Orientation",
         "andUp": "{grade} and up",
         "bands": {
             "yellow": "Yellow",
@@ -1433,12 +1456,6 @@
             "blue": "Blue",
             "red": "Red",
             "black": "Black"
-        },
-        "notes": {
-            "fontVsFrench": "Fb 6A is not French 6a. French 6a ≈ UIAA 6, Fb 6A ≈ UIAA 7+.",
-            "beginner": "The first color has no lower limit. IRCRA puts everything easier than Fb 3 into “<2”.",
-            "orientation": "≈ UIAA is orientation only. Grade new problems against benchmark problems, not this row.",
-            "bands": "Colors are the gym's own scheme (Settings → Grading scales). The default follows the Fontainebleau circuit order (yellow, orange, blue, red, black); there is no universal standard."
         }
     },
     "gradeSystemsShort": {
@@ -1520,8 +1537,6 @@
         },
         "suggestions": {
             "title": "Routes to try",
-            "subtitle": "Routes you haven't sent yet, close to your level",
-            "subtitleNew": "The newest routes in the gym",
             "new": "New"
         },
         "pendingSync": "Not synced yet",
@@ -1671,14 +1686,13 @@
         "discard": "Discard",
         "save": "Save ({n})",
         "saved": "Route positions saved.",
-        "wallRoutes": "{n} routes on this wall",
+        "wallRoutes": "{n} route on this wall | {n} routes on this wall",
         "distribute": "Space routes evenly along the wall",
         "unplaced": "Not placed ({n})",
         "placed": "On the map ({n})",
         "remove": "Remove from map",
         "canvasLabel": "Route placement map",
         "hints": {
-            "idle": "Tap a route, then its spot on the wall — the next route follows automatically. Tick several routes to put them on one wall at once. Drag dots to move them.",
             "armed": "Click on a wall to place \"{name}\". Esc cancels.",
             "checked": "Tap a wall to place {n} route there, ordered by anchor. | Tap a wall to place {n} routes there, ordered by anchor."
         },
@@ -1727,21 +1741,20 @@
     "overview": {
         "title": "Climbing gym",
         "description": "New routes, walls and grades at a glance.",
-        "routesCount": "{n} routes",
-        "newCount": "{n} new this week",
+        "routesCount": "{n} route | {n} routes",
+        "newCount": "{n} new in two weeks",
         "newRoutes": "Newly set",
-        "newRoutesEmpty": "No new routes in the last two weeks.",
         "allRoutes": "All routes",
         "walls": "Walls",
         "openMap": "Open map",
-        "wallRoutes": "{n} routes",
+        "wallRoutes": "{n} route | {n} routes",
         "newestSet": "Newest: {date}",
         "popular": "Popular routes",
         "popularEmpty": "Not enough reviews yet.",
         "progressTitle": "Your progress",
         "progress": "You have sent {sent} of {total} current routes.",
-        "openLogbook": "Open logbook",
-        "gradeSpread": "Grades on the wall"
+        "gradeSpread": "Grades on the wall",
+        "resets": "Leaving soon"
     },
     "accountSettings": {
         "title": "Settings",
@@ -2010,7 +2023,8 @@
             "topsZones": "{tops} T · {zones} Z",
             "final": "Final results",
             "updated": "Updated {time}",
-            "scanToJoin": "Scan to take part"
+            "scanToJoin": "Scan to take part",
+            "scanForResults": "Scan for results"
         },
         "judge": {
             "title": "Judging",
@@ -2091,7 +2105,8 @@
             "corrections": "Staff check the scores and can correct them.",
             "entryFee": "There is an entry fee. Pay via the link on the competition page; staff mark you as paid."
         },
-        "requiresPayment": "Entry fee required"
+        "requiresPayment": "Entry fee required",
+        "share": "Share"
     },
     "members": {
         "title": "Members",
@@ -2104,7 +2119,13 @@
         "removeConfirm": "Remove this person from the gym staff? Their account stays.",
         "removed": "Member removed.",
         "alreadyMember": "This person is already a member.",
-        "invited": "Invitation sent."
+        "invited": "Invitation sent.",
+        "builtinRoles": {
+            "admin": "Admin",
+            "routesetter": "Route setter",
+            "public": "Public"
+        },
+        "rowActions": "Member actions"
     },
     "invites": {
         "eyebrow": "INVITATION",
@@ -2226,7 +2247,6 @@
                 "registration": "Registration",
                 "open": "Open",
                 "inviteOnly": "Invite only",
-                "auditDays": "Audit log kept {n} day | Audit log kept {n} days",
                 "configured": "{n} configured",
                 "live": "{n} live"
             },
@@ -2484,6 +2504,7 @@
             "settings": "Save schedule",
             "confirm": "Backups contain every account. Confirm with your password.",
             "time": "Daily at",
+            "pgDumpOff": "pg_dump missing",
             "pgDumpMissing": "pg_dump is not installed on this server",
             "lastFailed": "Last backup failed",
             "lastRun": "Last backup {date}",
@@ -2857,7 +2878,6 @@
     },
     "moderation": {
         "title": "Moderation",
-        "reviewStats": "Review statistics",
         "moderate": "Moderate",
         "filterType": "Content",
         "filterGym": "Gym",
@@ -2866,7 +2886,7 @@
             "approval": "Waiting for approval",
             "hidden": "Hidden",
             "history": "Checked",
-            "all": "All gyms"
+            "all": "All open"
         },
         "types": {
             "rating": "Review",
@@ -2974,7 +2994,8 @@
         },
         "map": {
             "show": "Show map",
-            "consent": "Loads map tiles from {provider}, which receives your IP address."
+            "consent": "Loads map tiles from {provider}, which receives your IP address.",
+            "recenter": "Center map"
         },
         "amenities": {
             "toilets": "Toilets",
@@ -3148,5 +3169,10 @@
         "extend": "Extend trial",
         "convert": "Convert to full",
         "convertConfirm": "End the trial of {name}? Its team keeps full access."
+    },
+    "outdatedBrowser": {
+        "browser": "Gripello needs a newer browser to display correctly.",
+        "webview": "Android System WebView is out of date, so Gripello can't display correctly.",
+        "update": "Update"
     }
 }

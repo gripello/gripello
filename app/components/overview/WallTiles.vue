@@ -13,7 +13,7 @@
         >
             <span class="wall-tile__name">{{ wall.name }}</span>
             <span class="wall-tile__count">{{
-                $t('overview.wallRoutes', { n: wall.count })
+                $t('overview.wallRoutes', { n: wall.count }, wall.count)
             }}</span>
             <span
                 v-for="range in wall.ranges"

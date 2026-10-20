@@ -109,9 +109,11 @@ test('a setter adds boulders, opens the competition and copies it', async ({
     await expect(setterPage.getByTestId('competition-phase')).toHaveText(
         'Registration open',
     )
+    await setterPage.getByTestId('competition-share').click()
     await expect(setterPage.getByTestId('competition-share-url')).toHaveValue(
         new RegExp(`/competitions/${competition.id}$`),
     )
+    await setterPage.keyboard.press('Escape')
     await expect(row.getByTestId('competition-route-delete-1')).toHaveCount(0)
 
     await row.getByTestId('competition-route-voided-1').click()

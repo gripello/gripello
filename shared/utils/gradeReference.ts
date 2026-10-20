@@ -64,22 +64,6 @@ export function bandSettingsFrom(
     })
 }
 
-export interface SpanCell {
-    label: string
-    span: number
-}
-
-export function vCells(): SpanCell[] {
-    const labels = gradeLabels('v')
-    return V_FONT_SPANS.map((span, i) => ({ label: labels[i]!, span }))
-}
-
-export function orientationUiaa(fontIndex: number): string {
-    const uiaa = gradeLabels('uiaa')[FONT_FIRST_IRCRA + fontIndex - 1]
-    if (!uiaa) return '—'
-    return fontIndex === 0 ? `≤${uiaa}` : uiaa
-}
-
 export interface BandRange {
     key: string
     font: [from: string, to: string]

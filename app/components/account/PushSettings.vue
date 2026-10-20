@@ -296,6 +296,7 @@ async function addThisDevice() {
     } catch (err) {
         console.error('Push subscription failed:', err)
         notifyError(t('notifications.error.edit'))
+        globalThis.reportError?.(err)
     }
 }
 

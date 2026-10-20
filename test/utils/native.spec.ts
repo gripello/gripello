@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { Capacitor } from '@capacitor/core'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -17,7 +18,10 @@ import {
     appLinkPath,
     backAction,
     externalUrl,
+    followSystemTheme,
+    foregroundPush,
     openSignInPage,
+    rendersModernCss,
     systemAppUrl,
 } from '~/utils/native'
 
@@ -131,5 +135,52 @@ describe('systemAppUrl', () => {
         ).toBe(false)
         expect(systemAppUrl('https://www.google.com/search?q=maps')).toBe(false)
         expect(systemAppUrl('https://github.com/gripello')).toBe(false)
+    })
+})
+
+describe('rendersModernCss', () => {
+    it('needs color-mix support', () => {
+        expect(rendersModernCss({ supports: () => true })).toBe(true)
+        expect(rendersModernCss({ supports: () => false })).toBe(false)
+        expect(rendersModernCss(undefined)).toBe(false)
+    })
+})
+
+describe('foregroundPush', () => {
+    it('joins title and body and keeps a string url', () => {
+        expect(
+            foregroundPush({
+                title: 'Gripello',
+                body: 'Test',
+                data: { url: '/account/settings' },
+            }),
+        ).toEqual({ text: 'Gripello · Test', url: '/account/settings' })
+        expect(foregroundPush({ body: 'Only', data: { url: 5 } })).toEqual({
+            text: 'Only',
+            url: null,
+        })
+    })
+})
+
+describe('followSystemTheme', () => {
+    it('switches only while the theme follows the system', () => {
+        const system = { preference: 'system', value: 'light' }
+        followSystemTheme(system, 'dark')
+        expect(system.value).toBe('dark')
+        followSystemTheme(system, 'purple')
+        expect(system.value).toBe('dark')
+        const chosen = { preference: 'light', value: 'light' }
+        followSystemTheme(chosen, 'dark')
+        expect(chosen.value).toBe('light')
+        const forced = { preference: 'system', value: 'light', forced: true }
+        followSystemTheme(forced, 'dark')
+        expect(forced.value).toBe('light')
+    })
+
+    it('reapplies the reported theme after color-mode re-reads the stale media query', () => {
+        const plugin = readFileSync('app/plugins/native.client.ts', 'utf8')
+        expect(plugin).toMatch(
+            /watch\(\s+\(\) => \[colorMode\.value, colorMode\.preference\],\s+\(\) => followSystemTheme\(colorMode, systemTheme\),/,
+        )
     })
 })

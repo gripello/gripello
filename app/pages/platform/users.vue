@@ -53,7 +53,7 @@
             <li
                 v-for="user in rows"
                 :key="user.id"
-                class="relative flex items-center gap-x-3 gap-y-2 px-4 py-3 md:flex-wrap"
+                class="relative flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3"
                 :data-testid="`platform-user-${user.id}`"
             >
                 <button
@@ -65,25 +65,17 @@
                     <AdminMemberIdentity :member="user.identity" />
                 </button>
                 <div
-                    class="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-1.5 md:flex-1 md:justify-start"
+                    class="flex min-w-0 shrink-0 flex-wrap items-center gap-1.5 empty:hidden max-md:order-last max-md:basis-full md:flex-1"
                 >
                     <UBadge
+                        v-if="!user.verified"
                         size="sm"
-                        :class="{ 'max-md:hidden': user.verified }"
-                        :color="user.verified ? 'success' : 'warning'"
+                        color="warning"
                         variant="soft"
-                        :icon="
-                            user.verified
-                                ? 'i-lucide-badge-check'
-                                : 'i-lucide-mail-warning'
-                        "
+                        icon="i-lucide-mail-warning"
                         data-testid="platform-user-verified-badge"
                     >
-                        {{
-                            user.verified
-                                ? t('platform.users.verified')
-                                : t('platform.users.unverified')
-                        }}
+                        {{ t('platform.users.unverified') }}
                     </UBadge>
                     <UBadge
                         size="sm"
@@ -138,7 +130,9 @@
                     name="i-lucide-chevron-right"
                     class="size-5 shrink-0 text-dimmed md:hidden"
                 />
-                <div class="flex shrink-0 justify-end gap-1 max-md:hidden">
+                <div
+                    class="ml-auto flex shrink-0 justify-end gap-1 max-md:hidden"
+                >
                     <UButton
                         icon="i-lucide-pencil"
                         color="neutral"
@@ -148,26 +142,16 @@
                         data-testid="platform-user-edit"
                         @click="openEdit(user.id)"
                     />
-                    <UButton
-                        icon="i-lucide-ban"
-                        color="neutral"
-                        variant="ghost"
-                        class="icon-btn"
-                        :aria-label="t('platform.users.suspend')"
-                        :disabled="!!user.platform_admin"
-                        data-testid="platform-user-suspend"
-                        @click="openSuspend(user.id)"
-                    />
-                    <UButton
-                        icon="i-lucide-trash-2"
-                        color="error"
-                        variant="ghost"
-                        class="icon-btn"
-                        :aria-label="t('users.delete')"
-                        :disabled="!!user.platform_admin"
-                        data-testid="platform-user-delete"
-                        @click="openDelete(user.id)"
-                    />
+                    <UDropdownMenu :items="rowMenu(user)">
+                        <UButton
+                            icon="i-lucide-ellipsis-vertical"
+                            color="neutral"
+                            variant="ghost"
+                            class="icon-btn"
+                            :aria-label="t('actions.more')"
+                            data-testid="platform-user-menu"
+                        />
+                    </UDropdownMenu>
                 </div>
             </li>
         </LayoutListGroup>
@@ -348,6 +332,24 @@ const suspendingUser = computed(
     () => users.value.find((user) => user.id === suspendingId.value) ?? null,
 )
 const suspendOpen = ref(false)
+
+function rowMenu(user: { id: string; platform_admin?: boolean }) {
+    return [
+        {
+            label: t('platform.users.suspend'),
+            icon: 'i-lucide-ban',
+            disabled: !!user.platform_admin,
+            onSelect: () => openSuspend(user.id),
+        },
+        {
+            label: t('users.delete'),
+            icon: 'i-lucide-trash-2',
+            color: 'error' as const,
+            disabled: !!user.platform_admin,
+            onSelect: () => openDelete(user.id),
+        },
+    ]
+}
 
 function openSuspend(id: string) {
     suspendingId.value = id

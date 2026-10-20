@@ -6,6 +6,7 @@ test('defect report opens as a bottom sheet on mobile', async ({
     route,
 }) => {
     await gotoSettled(page, `/route?id=${route.id}`)
+    await page.getByTestId('route-more-actions').click()
     await page.getByTestId('task-defect-open').click()
 
     const dialog = page.getByTestId('task-defect-dialog')

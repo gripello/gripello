@@ -6,30 +6,23 @@
     >
         <figcaption class="grade-spread__title">{{ title }}</figcaption>
         <div class="grade-spread__bars" role="list">
-            <UTooltip
-                v-for="bar in bars"
+            <div
+                v-for="(bar, index) in bars"
                 :key="bar.grade"
-                :text="`${bar.grade}: ${$t('overview.routesCount', { n: bar.count })}`"
-                :content="{ side: 'top' }"
+                class="grade-spread__bar"
+                :class="{ 'grade-spread__bar--minor': index % 2 === 1 }"
+                role="listitem"
+                :aria-label="`${bar.grade}: ${bar.count}`"
+                data-testid="overview-grade-bar"
             >
-                <div
-                    class="grade-spread__bar"
-                    role="listitem"
-                    tabindex="0"
-                    :aria-label="`${bar.grade}: ${bar.count}`"
-                    data-testid="overview-grade-bar"
-                >
-                    <span class="grade-spread__count">{{
-                        bar.count || ''
-                    }}</span>
-                    <span
-                        class="grade-spread__fill"
-                        data-testid="overview-grade-fill"
-                        :style="{ height: `${(bar.count / max) * 100}%` }"
-                    />
-                    <span class="grade-spread__label">{{ bar.grade }}</span>
-                </div>
-            </UTooltip>
+                <span class="grade-spread__count">{{ bar.count }}</span>
+                <span
+                    class="grade-spread__fill"
+                    data-testid="overview-grade-fill"
+                    :style="{ height: `${(bar.count / max) * 100}%` }"
+                />
+                <span class="grade-spread__label">{{ bar.grade }}</span>
+            </div>
         </div>
     </figure>
 </template>
@@ -79,14 +72,8 @@ const max = computed(() => Math.max(1, ...props.bars.map((bar) => bar.count)))
     }
 }
 
-.grade-spread__bar:hover .grade-spread__label,
-.grade-spread__bar:focus-visible .grade-spread__label {
+.grade-spread__bar:hover .grade-spread__label {
     font-weight: 700;
-}
-
-.grade-spread__bar:focus-visible {
-    outline: 2px solid var(--ui-primary);
-    outline-offset: 2px;
 }
 
 .grade-spread__count {
@@ -113,8 +100,11 @@ const max = computed(() => Math.max(1, ...props.bars.map((bar) => bar.count)))
 @container (max-width: 22px) {
     .grade-spread__label {
         justify-self: center;
-        writing-mode: vertical-rl;
-        transform: rotate(180deg);
+        overflow: visible;
+    }
+
+    .grade-spread__bar--minor .grade-spread__label {
+        visibility: hidden;
     }
 }
 </style>

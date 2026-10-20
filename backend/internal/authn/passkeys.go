@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
@@ -106,7 +107,30 @@ func buildRelyingParty(appURL, appName string) (*webauthn.WebAuthn, error) {
 	if origin.Hostname() == "localhost" {
 		origins = append(origins, "http://localhost:3000")
 	}
-	return webauthn.New(&webauthn.Config{RPID: origin.Hostname(), RPDisplayName: appName, RPOrigins: origins})
+	return webauthn.New(&webauthn.Config{
+		RPID:            origin.Hostname(),
+		RPDisplayName:   appName,
+		RPOrigins:       origins,
+		RPOpaqueOrigins: androidAppOrigins(),
+	})
+}
+
+// AndroidPasskeyCerts are the signing certificates of the get_login_creds statement in public/.well-known/assetlinks.json.
+var AndroidPasskeyCerts = []string{
+	"92:5C:DD:9E:7C:A9:2A:AB:33:59:0E:2B:00:7D:E8:B8:84:22:5E:37:8C:36:B3:3C:2A:80:EA:00:F6:7E:BE:B1",
+}
+
+// The app's WebView signs passkey ceremonies with the origin of the app, not of the site it shows.
+func androidAppOrigins() []string {
+	origins := make([]string, 0, len(AndroidPasskeyCerts))
+	for _, cert := range AndroidPasskeyCerts {
+		digest, err := hex.DecodeString(strings.ReplaceAll(cert, ":", ""))
+		if err != nil {
+			panic(err)
+		}
+		origins = append(origins, protocol.OpaqueOriginPrefixAndroidAPKKeyHash+base64.RawURLEncoding.EncodeToString(digest))
+	}
+	return origins
 }
 
 // Ceremonies live in mfa_challenges, so the options and the answer may hit different replicas.

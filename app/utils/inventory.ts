@@ -12,7 +12,6 @@ export interface InventorySession {
 }
 
 export const INVENTORY_STORAGE_KEY = 'inventory-scanned-route-ids'
-export const INVENTORY_INSTRUCTIONS_KEY = 'inventory-instructions-seen'
 export const INVENTORY_SESSION_VERSION = 3
 
 function emptySession(): InventorySession {
@@ -79,20 +78,6 @@ export function persistSession(session: InventorySession): void {
 export function clearSession(): void {
     if (typeof localStorage === 'undefined') return
     localStorage.removeItem(INVENTORY_STORAGE_KEY)
-}
-
-export function hasSeenInstructions(): boolean {
-    try {
-        return localStorage?.getItem(INVENTORY_INSTRUCTIONS_KEY) === '1'
-    } catch {
-        return false
-    }
-}
-
-export function markInstructionsSeen(): void {
-    try {
-        localStorage?.setItem(INVENTORY_INSTRUCTIONS_KEY, '1')
-    } catch {}
 }
 
 export function scopedRoutes<T extends InventoryRoute>(

@@ -74,3 +74,38 @@ export function openSignInPage(url: string): Promise<void> {
     window.location.assign(url)
     return new Promise(() => {})
 }
+
+export const WEBVIEW_STORE_URL =
+    'https://play.google.com/store/apps/details?id=com.google.android.webview'
+
+// Tailwind 4 needs color-mix() (Chrome 111, Safari 16.4); without it soft colours fall back to solid fills.
+export function rendersModernCss(
+    css: Pick<typeof CSS, 'supports'> | undefined,
+) {
+    return !!css?.supports('color', 'color-mix(in lab, red, red)')
+}
+
+// Android shows no system notification while the app is open; the app turns it into a toast instead.
+export function foregroundPush(notification: {
+    title?: string
+    body?: string
+    data?: Record<string, unknown>
+}) {
+    const url = notification.data?.url
+    return {
+        text: [notification.title, notification.body]
+            .filter(Boolean)
+            .join(' · '),
+        url: typeof url === 'string' ? url : null,
+    }
+}
+
+export const SYSTEM_THEME_EVENT = 'gripello:system-theme'
+
+export function followSystemTheme(
+    colorMode: { preference: string; value: string; forced?: boolean },
+    theme: unknown,
+) {
+    if (colorMode.preference !== 'system' || colorMode.forced) return
+    if (theme === 'dark' || theme === 'light') colorMode.value = theme
+}

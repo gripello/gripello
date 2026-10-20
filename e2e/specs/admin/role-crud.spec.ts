@@ -102,7 +102,9 @@ test('moves the holders of a deleted role to the role picked in the dialog', asy
         .locator('tr, li')
         .filter({ has: page.getByTestId(`member-card-${holder.id}`) })
     await expect(card).toBeVisible()
-    await expect(card.getByTestId('member-card-role')).toHaveText('routesetter')
+    await expect(card.getByTestId('member-card-role')).toHaveText(
+        'Route setter',
+    )
 })
 
 test('the admin role cannot be deleted and its permissions are locked', async ({

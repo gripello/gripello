@@ -59,7 +59,7 @@
                     <span
                         class="text-2xl font-bold tabular-nums text-highlighted"
                     >
-                        {{ formatNumber(card.count) }}
+                        {{ logs ? formatNumber(card.count) : '—' }}
                     </span>
                     <span class="text-xs text-muted">
                         {{ t('platform.logs.inBuffer') }}
@@ -153,8 +153,9 @@
                         />
                     </div>
 
+                    <LayoutLoadingState v-if="!logs" />
                     <UEmpty
-                        v-if="!visible.length"
+                        v-else-if="!visible.length"
                         icon="i-lucide-scroll-text"
                         :title="t('platform.logs.empty')"
                         variant="naked"

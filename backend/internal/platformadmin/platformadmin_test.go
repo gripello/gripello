@@ -534,6 +534,15 @@ func TestTrafficSumsRequestsPerEndpoint(t *testing.T) {
 	if servers := f.call("GET", "/platform/system", "", f.operator, http.StatusOK)["replicas"].([]any); len(servers) != 3 {
 		t.Errorf("system replicas = %v", servers)
 	}
+	t.Setenv("PATH", t.TempDir())
+	f.app.Cfg.BackupDir = t.TempDir()
+	if missing := f.call("GET", "/platform/system", "", f.operator, http.StatusOK)["pg_dump_missing"]; missing != true {
+		t.Errorf("pg_dump_missing = %v without pg_dump on PATH", missing)
+	}
+	f.app.Cfg.BackupDir = ""
+	if missing, set := f.call("GET", "/platform/system", "", f.operator, http.StatusOK)["pg_dump_missing"]; set {
+		t.Errorf("pg_dump_missing = %v with backups off", missing)
+	}
 }
 
 func TestIssuesGroupLogsAndAlertPlatformAdminsOnce(t *testing.T) {

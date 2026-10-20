@@ -66,3 +66,48 @@ describe('TaskCard photo', () => {
         expect(renew).toHaveBeenCalled()
     })
 })
+
+describe('TaskCard actions', () => {
+    beforeEach(() => {
+        vi.stubGlobal('useGymPath', () => (path: string) => `/gym${path}`)
+        vi.stubGlobal('useFileToken', () => ({ token: ref(''), renew }))
+    })
+
+    it('keeps edit and open route in the menu, not as buttons', () => {
+        const wrapper = mount(TaskCard, {
+            props: {
+                task: {
+                    ...task,
+                    photo: '',
+                    route: 'r1',
+                    expand: { route: { id: 'r1', name: 'Arete' } },
+                } as unknown as TaskRecord,
+            },
+            global: {
+                stubs: {
+                    UCard: { template: '<div><slot /></div>' },
+                    UDropdownMenu: {
+                        props: ['items'],
+                        template:
+                            '<div data-testid="menu" :data-items="JSON.stringify(items.flat().map((i) => i[\'data-testid\'] ?? null))"><slot /></div>',
+                    },
+                    RouteSummary: true,
+                    ClimberAvatar: true,
+                    UBadge: true,
+                    UButton: true,
+                    UIcon: true,
+                    UTooltip: true,
+                    LayoutImageViewer: true,
+                },
+            },
+        })
+        const items = JSON.parse(
+            wrapper.get('[data-testid="menu"]').attributes('data-items')!,
+        )
+        expect(items).toContain('task-card-edit')
+        expect(items).toContain('task-card-route')
+        expect(wrapper.find('[data-testid="task-card-edit"]').exists()).toBe(
+            false,
+        )
+    })
+})

@@ -64,7 +64,7 @@ test('icon buttons have a 44px touch target', async ({ page, route }) => {
 test('settings asset actions are visible without hover', async ({
     adminPage: page,
 }) => {
-    await gotoSettled(page, '/admin/settings')
+    await gotoSettled(page, '/admin/settings?section=branding')
     await expect(page.getByTestId('settings-asset-actions-icon')).toHaveCount(0)
     const chooser = page.waitForEvent('filechooser')
     await page.getByTestId('settings-asset-logo').click()

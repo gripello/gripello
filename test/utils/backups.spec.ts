@@ -4,6 +4,7 @@ import {
     formatBytes,
     nextBackupRun,
     syncCleanForm,
+    timeZoneName,
 } from '~/utils/backups'
 
 describe('formatBytes', () => {
@@ -16,10 +17,31 @@ describe('formatBytes', () => {
 
 describe('backupHourOptions', () => {
     it('labels each UTC hour in the viewer time zone', () => {
-        const options = backupHourOptions('de', 'Europe/Berlin')
+        const winter = new Date('2026-01-15T12:00:00Z')
+        const options = backupHourOptions('de', 'Europe/Berlin', winter)
         expect(options).toHaveLength(24)
         expect(options[2]).toEqual({ value: 2, label: '03:30' })
-        expect(backupHourOptions('de', 'UTC')[23]?.label).toBe('23:30')
+        expect(backupHourOptions('de', 'UTC', winter)[23]?.label).toBe('23:30')
+    })
+
+    it('matches the next run during summer time', () => {
+        const summer = new Date('2026-10-19T12:00:00Z')
+        expect(backupHourOptions('de', 'Europe/Berlin', summer)[2]?.label).toBe(
+            '04:30',
+        )
+    })
+})
+
+describe('timeZoneName', () => {
+    it('names the zone the labels are in', () => {
+        expect(
+            timeZoneName(
+                'en',
+                'Europe/Berlin',
+                new Date('2026-01-15T12:00:00Z'),
+            ),
+        ).toBe('GMT+1')
+        expect(timeZoneName('en', 'UTC')).toBe('UTC')
     })
 })
 

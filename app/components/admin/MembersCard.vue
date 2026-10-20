@@ -59,18 +59,20 @@
             </template>
             <template #actions-cell="{ row }">
                 <div class="flex justify-end">
-                    <UTooltip :text="t('members.remove')">
+                    <UDropdownMenu
+                        :items="memberMenu(row.original)"
+                        :disabled="!canManage(row.original)"
+                    >
                         <UButton
-                            icon="i-lucide-user-minus"
-                            color="error"
+                            icon="i-lucide-ellipsis-vertical"
+                            color="neutral"
                             variant="ghost"
                             class="icon-btn"
                             :disabled="!canManage(row.original)"
-                            :aria-label="t('members.remove')"
-                            data-testid="member-card-remove"
-                            @click="confirmRemove(row.original)"
+                            :aria-label="t('members.rowActions')"
+                            data-testid="member-card-menu"
                         />
-                    </UTooltip>
+                    </UDropdownMenu>
                 </div>
             </template>
         </UTable>
@@ -95,18 +97,20 @@
                             (role) => changeRole(member, String(role))
                         "
                     />
-                    <UTooltip :text="t('members.remove')">
+                    <UDropdownMenu
+                        :items="memberMenu(member)"
+                        :disabled="!canManage(member)"
+                    >
                         <UButton
-                            icon="i-lucide-user-minus"
-                            color="error"
+                            icon="i-lucide-ellipsis-vertical"
+                            color="neutral"
                             variant="ghost"
                             class="icon-btn"
                             :disabled="!canManage(member)"
-                            :aria-label="t('members.remove')"
-                            data-testid="member-card-remove"
-                            @click="confirmRemove(member)"
+                            :aria-label="t('members.rowActions')"
+                            data-testid="member-card-menu"
                         />
-                    </UTooltip>
+                    </UDropdownMenu>
                 </div>
             </li>
         </LayoutListGroup>
@@ -221,6 +225,7 @@ import type { Form, TableColumn } from '@nuxt/ui'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import { blockedFieldError } from '~/utils/fieldErrors'
 import { canGrantRole, membershipIn } from '#shared/utils/memberships'
+import { roleLabel } from '~/utils/roles'
 import {
     changeMembershipRole,
     deleteMembership,
@@ -236,6 +241,7 @@ type Member = {
     role: string
     displayName: string
     email: string
+    username: string
     initials: string
     avatarUrl: string | null
 }
@@ -271,7 +277,10 @@ const currentUserId = computed(() => authStore.record?.id ?? null)
 const { data: roles, refresh: refreshRoles } = useRoles(gymId)
 const { memberships: ownMemberships, isPlatformAdmin } = usePermissions()
 const roleOptions = computed(() =>
-    roles.value.map((role) => ({ label: role.name, value: role.id })),
+    roles.value.map((role) => ({
+        label: roleLabel(role.name, t),
+        value: role.id,
+    })),
 )
 const grantableRoleIds = computed(() => {
     const ownRole = membershipIn(ownMemberships.value, gymId.value)?.expand
@@ -291,6 +300,18 @@ const assignableRoleOptions = computed(() =>
     })),
 )
 
+function memberMenu(member: Member) {
+    return [
+        {
+            label: t('members.remove'),
+            icon: 'i-lucide-user-minus',
+            color: 'error' as const,
+            'data-testid': 'member-card-remove',
+            onSelect: () => confirmRemove(member),
+        },
+    ]
+}
+
 function canManage(member: Member) {
     return (
         member.user !== currentUserId.value &&
@@ -306,6 +327,7 @@ function mapMember({ id, user, role }: ApiMember): Member {
         role: role.id,
         displayName: fullName || user.username || user.email || '?',
         email: user.email ?? '',
+        username: user.username ?? '',
         initials:
             [user.firstname, user.name]
                 .map((part) => part?.[0]?.toUpperCase() ?? '')

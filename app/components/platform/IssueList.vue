@@ -16,6 +16,7 @@
             variant="error"
             :title="t('errors.loadFailed')"
         />
+        <LayoutLoadingState v-else-if="!data" :count="2" />
         <UEmpty
             v-else-if="!issues.length"
             icon="i-lucide-circle-check"
@@ -55,7 +56,8 @@
                         {{ t('platform.issues.new') }}
                     </UBadge>
                     <span
-                        class="min-w-0 flex-1 truncate font-mono text-highlighted"
+                        class="min-w-0 flex-1 truncate font-mono text-highlighted max-md:order-last max-md:basis-full"
+                        data-testid="platform-issue-title"
                     >
                         {{ issueTitle(issue) }}
                     </span>

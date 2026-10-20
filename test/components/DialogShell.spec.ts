@@ -116,6 +116,53 @@ describe('DialogShell', () => {
         wrapper.unmount()
     })
 
+    it('puts header actions between the title and the close button', async () => {
+        const wrapper = mount(DialogShell, {
+            props: { modelValue: true, title: 'T', closable: true },
+            slots: { 'header-actions': '<a data-testid="extra">pdf</a>' },
+            global: {
+                mocks: { $t: (key: string) => key },
+                components: {
+                    UModal: overlayStub('UModal'),
+                    UDrawer: overlayStub('UDrawer'),
+                },
+                stubs: {
+                    UButton: {
+                        template: '<button data-testid="dialog-close" />',
+                    },
+                },
+            },
+        })
+        await nextTick()
+        const title = wrapper.find('.dialog-shell__title')
+        const order = title
+            .findAll('[data-testid]')
+            .map((el) => el.attributes('data-testid'))
+        expect(order).toEqual(['extra', 'dialog-close'])
+    })
+
+    it('moves focus into a sheet once it has opened', async () => {
+        width.value = 390
+        const wrapper = mount(DialogShell, {
+            props: { modelValue: false, sheetOnMobile: true },
+            attachTo: document.body,
+            global: {
+                mocks: { $t: (key: string) => key },
+                components: {
+                    UModal: overlayStub('UModal'),
+                    UDrawer: overlayStub('UDrawer'),
+                },
+                stubs: { UButton: true },
+            },
+        })
+        await wrapper.setProps({ modelValue: true })
+        wrapper.findComponent({ name: 'UDrawer' }).vm.$emit('after:enter')
+        expect(document.activeElement).toBe(
+            wrapper.find('.dialog-shell').element,
+        )
+        wrapper.unmount()
+    })
+
     it('closes on the back gesture instead of leaving the page', async () => {
         const wrapper = createWrapper()
         await wrapper.setProps({ modelValue: true })

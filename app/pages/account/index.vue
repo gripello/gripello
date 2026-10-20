@@ -146,29 +146,48 @@
                                 <UIcon name="i-lucide-building-2" />
                             </span>
                             <span class="native-row__text truncate">{{
-                                membership.expand?.gym?.name
+                                membership.expand?.gym
+                                    ? gymTitle(membership.expand.gym)
+                                    : ''
                             }}</span>
                             <UBadge
                                 color="neutral"
                                 variant="soft"
                                 data-testid="me-gym-role"
                             >
-                                {{ membership.expand?.role?.name }}
+                                {{
+                                    roleLabel(
+                                        membership.expand?.role?.name ?? '',
+                                        t,
+                                    )
+                                }}
                             </UBadge>
                         </NuxtLink>
-                        <UButton
-                            class="icon-btn"
-                            icon="i-lucide-log-out"
-                            color="error"
-                            variant="ghost"
-                            :aria-label="
-                                t('account.leaveGym', {
-                                    gym: membership.expand?.gym?.name,
-                                })
-                            "
-                            :data-testid="`me-gym-leave-${membership.expand?.gym?.slug}`"
-                            @click="leaving = membership"
-                        />
+                        <UDropdownMenu
+                            :items="[
+                                {
+                                    label: t('account.leave'),
+                                    icon: 'i-lucide-log-out',
+                                    color: 'error',
+                                    onSelect: () => (leaving = membership),
+                                },
+                            ]"
+                        >
+                            <UButton
+                                class="icon-btn"
+                                icon="i-lucide-ellipsis-vertical"
+                                color="neutral"
+                                variant="ghost"
+                                :aria-label="
+                                    t('account.leaveGym', {
+                                        gym: membership.expand?.gym
+                                            ? gymTitle(membership.expand.gym)
+                                            : '',
+                                    })
+                                "
+                                :data-testid="`me-gym-leave-${membership.expand?.gym?.slug}`"
+                            />
+                        </UDropdownMenu>
                     </div>
                 </div>
             </section>
@@ -176,7 +195,9 @@
                 v-model="leaveDialog"
                 :title="
                     t('account.leaveGym', {
-                        gym: leaving?.expand?.gym?.name,
+                        gym: leaving?.expand?.gym
+                            ? gymTitle(leaving.expand.gym)
+                            : '',
                     })
                 "
                 :message="t('account.leaveGymConfirm')"
@@ -207,6 +228,7 @@ import { logout as signOut } from '~/api/auth'
 import { deleteMembership } from '~/api/members'
 import type { MembershipRecord, SettingsRecord } from '~/types/models'
 import { gymTitle } from '~/utils/gymNames'
+import { roleLabel } from '~/utils/roles'
 import { staffSections } from '~/utils/navigation'
 
 const { t } = useI18n()

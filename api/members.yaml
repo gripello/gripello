@@ -434,11 +434,12 @@ components:
         id: { type: string }
         gym:
           type: object
-          required: [id, slug, name, active]
+          required: [id, slug, name, unit_name, active]
           properties:
             id: { type: string }
             slug: { type: string }
             name: { type: string }
+            unit_name: { type: string }
             active: { type: boolean }
         role: { $ref: '#/components/schemas/Role' }
         created: { type: string, format: date-time }

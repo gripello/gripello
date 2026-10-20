@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     FALLBACK_DOT_COLOR,
+    gradientEndColor,
     isLightColor,
     readableTextOn,
     routeDotColor,
@@ -122,5 +123,15 @@ describe('routeDotColor', () => {
         expect(routeDotColor('#e53935')).toBe('#E53935')
         expect(routeDotColor(null)).toBe(FALLBACK_DOT_COLOR)
         expect(routeDotColor('nope')).toBe(FALLBACK_DOT_COLOR)
+    })
+})
+
+describe('gradientEndColor', () => {
+    it('lightens near-black colours so the gradient stays visible', () => {
+        expect(gradientEndColor('#000000')).toBe('#3c3c3c')
+    })
+
+    it('darkens every other colour', () => {
+        expect(gradientEndColor('#ff8000')).toBe('#e16200')
     })
 })

@@ -31,18 +31,14 @@ test('the guest header keeps sign-in on screen at 360px', async ({ page }) => {
     expect(box.height).toBeLessThanOrEqual(44)
 })
 
-test('the active account settings tab is scrolled into view', async ({
+test('account settings open as a list of sections on phones', async ({
     adminPage: page,
 }) => {
-    await page.setViewportSize({ width: 360, height: 740 })
-    await gotoSettled(page, '/account/settings?tab=security')
-
-    await expect
-        .poll(async () => {
-            const box = (await page
-                .getByTestId('profile-tab-security')
-                .boundingBox())!
-            return box.x >= 0 && box.x + box.width <= 360
-        })
-        .toBe(true)
+    await gotoSettled(page, '/account/settings')
+    await expect(page.getByTestId('profile-firstname')).toBeHidden()
+    await page.getByTestId('profile-drill-security').click()
+    await page.waitForURL(/tab=security/)
+    await expect(page.getByTestId('profile-drill-back')).toBeVisible()
+    await page.getByTestId('profile-drill-back').click()
+    await expect(page.getByTestId('profile-drill-profile')).toBeVisible()
 })

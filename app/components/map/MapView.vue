@@ -252,8 +252,17 @@ const bounds = computed<MapBounds>(() => ({
     maxY: props.map.height,
 }))
 
+const mapWalls = computed(() => toMapWalls(props.walls, props.map))
+const contentBounds = computed(() =>
+    boundsOf([
+        ...mapWalls.value.flatMap((wall) => [...wall.outline, ...wall.edge]),
+        ...props.map.shapes.flatMap((shape) => shape.points),
+    ]),
+)
+
 const panZoom = useSvgPanZoom({
     bounds,
+    homeBounds: contentBounds,
     minWidth: 1,
     maxPixelsPerUnit: MAX_PIXELS_PER_METRE,
     doubleClickZoom: true,
@@ -266,7 +275,6 @@ const hitRadiusPx = computed(() =>
 )
 
 const shadowHref = shallowRef<string | null>(null)
-const mapWalls = computed(() => toMapWalls(props.walls, props.map))
 
 onMounted(() => {
     watch(
@@ -450,19 +458,26 @@ const labels = computed(() => {
             gradeHitPx.value,
             LABEL_EDGE_PX,
             position.y < mapCentreY ? 1 : -1,
+            keepOnScreen,
         )
-        const y = clampInside(box.y, LABEL_HEIGHT_PX, size.value.height)
-        const nearControls = y - LABEL_HEIGHT_PX / 2 < CONTROLS_HEIGHT_PX
-        const x = clampInside(
-            box.x,
-            width,
-            size.value.width - (nearControls ? CONTROLS_WIDTH_PX : 0),
-        )
-        return [{ ...box, name: wall.name, count, x, y }]
+        return [{ ...box, name: wall.name, count }]
     })
     const visible = visibleLabels(placed, props.selectedWallId)
     return placed.filter((label) => visible.has(label.id))
 })
+
+function keepOnScreen<Box extends { x: number; y: number; width: number }>(
+    box: Box,
+): Box {
+    const y = clampInside(box.y, LABEL_HEIGHT_PX, size.value.height)
+    const nearControls = y - LABEL_HEIGHT_PX / 2 < CONTROLS_HEIGHT_PX
+    const x = clampInside(
+        box.x,
+        box.width,
+        size.value.width - (nearControls ? CONTROLS_WIDTH_PX : 0),
+    )
+    return { ...box, x, y }
+}
 
 function clampInside(center: number, extent: number, limit: number) {
     const margin = extent / 2 + LABEL_EDGE_PX

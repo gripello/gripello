@@ -83,7 +83,87 @@
                     @select-route="selectFromMap"
                     @select-wall="selectWall"
                 />
+                <div
+                    v-if="!mdAndUp"
+                    class="map-screen__chips flex items-center gap-2 overflow-x-auto [scrollbar-width:none]"
+                    data-testid="placement-wall-chips"
+                >
+                    <UPopover :content="{ align: 'start', sideOffset: 6 }">
+                        <UChip
+                            :show="placement.activeFilterCount.value > 0"
+                            color="primary"
+                            size="lg"
+                            class="shrink-0"
+                        >
+                            <UButton
+                                icon="i-lucide-list-filter"
+                                color="neutral"
+                                variant="outline"
+                                class="icon-btn rounded-full bg-default"
+                                :aria-label="$t('filter.title')"
+                                data-testid="placement-filter-open"
+                            />
+                        </UChip>
+                        <template #content>
+                            <MapFilterChips
+                                v-model:grade="placement.gradeFilter.value"
+                                v-model:color="placement.colorFilter.value"
+                                v-model:type="placement.typeFilter.value"
+                                type-filter
+                                class="max-w-[85vw] p-2"
+                                :grades="placement.gradeOptions.value"
+                                :colors="placement.colorOptions.value"
+                                :grade-label="$t('climbing.difficulty')"
+                                :active-count="
+                                    placement.activeFilterCount.value
+                                "
+                                data-testid="placement-filters"
+                                @clear="placement.clearFilters()"
+                            />
+                        </template>
+                    </UPopover>
+                    <UButton
+                        :color="
+                            placement.selectedWallId.value
+                                ? 'neutral'
+                                : 'primary'
+                        "
+                        :variant="
+                            placement.selectedWallId.value ? 'outline' : 'solid'
+                        "
+                        class="shrink-0 rounded-full"
+                        :class="placement.selectedWallId.value && 'bg-default'"
+                        data-testid="placement-wall-chip-all"
+                        @click="showAllWalls"
+                    >
+                        {{ $t('filter.all') }}
+                    </UButton>
+                    <UButton
+                        v-for="wall in wallChips"
+                        :key="wall.id"
+                        :color="
+                            placement.selectedWallId.value === wall.id
+                                ? 'primary'
+                                : 'neutral'
+                        "
+                        :variant="
+                            placement.selectedWallId.value === wall.id
+                                ? 'solid'
+                                : 'outline'
+                        "
+                        class="shrink-0 rounded-full"
+                        :class="
+                            placement.selectedWallId.value !== wall.id &&
+                            'bg-default'
+                        "
+                        :data-testid="`placement-wall-chip-${wall.id}`"
+                        @click="selectWall(wall.id, false)"
+                    >
+                        {{ wall.name }}
+                    </UButton>
+                </div>
                 <MapFilterChips
+                    v-else
                     v-model:grade="placement.gradeFilter.value"
                     v-model:color="placement.colorFilter.value"
                     v-model:type="placement.typeFilter.value"
@@ -97,7 +177,7 @@
                     @clear="placement.clearFilters()"
                 />
                 <div
-                    v-if="wallTints.size"
+                    v-if="wallTints.size && mdAndUp"
                     class="placement-legend"
                     :style="{ bottom: `${sheetCover + 12}px` }"
                     data-testid="placement-legend"
@@ -123,13 +203,30 @@
                         data-testid="placement-selected"
                     />
                     <span
-                        v-else
+                        v-else-if="hint"
                         class="placement-hint text-xs"
                         aria-live="polite"
                         data-testid="placement-hint"
                     >
                         {{ hint }}
                     </span>
+                    <UButton
+                        v-if="
+                            !mdAndUp &&
+                            sheetSnap === 'peek' &&
+                            !placement.armedRouteId.value &&
+                            !placement.selectedPlaced.value
+                        "
+                        color="neutral"
+                        variant="soft"
+                        size="sm"
+                        trailing-icon="i-lucide-chevron-up"
+                        class="ms-auto shrink-0"
+                        data-testid="placement-open-list"
+                        @click="sheetSnap = 'half'"
+                    >
+                        {{ placementTabs[0]!.label }}
+                    </UButton>
                     <UButton
                         v-if="placement.armedRouteId.value"
                         color="neutral"
@@ -217,9 +314,14 @@
                             <span class="text-muted font-normal">
                                 ·
                                 {{
-                                    $t('mapPlacement.wallRoutes', {
-                                        n: placement.wallRoutes.value.length,
-                                    })
+                                    $t(
+                                        'mapPlacement.wallRoutes',
+                                        {
+                                            n: placement.wallRoutes.value
+                                                .length,
+                                        },
+                                        placement.wallRoutes.value.length,
+                                    )
                                 }}
                             </span>
                         </p>
@@ -326,6 +428,16 @@
                             })
                         }}
                     </UButton>
+                </div>
+
+                <div
+                    v-if="wallTints.size && !mdAndUp"
+                    class="placement-legend placement-legend--inline"
+                    data-testid="placement-legend"
+                >
+                    <span>{{ $t('resets.urgency.low') }}</span>
+                    <span class="placement-legend__bar" />
+                    <span>{{ $t('resets.urgency.high') }}</span>
                 </div>
 
                 <LayoutTabs
@@ -661,7 +773,7 @@ const moreItems = computed(() => [
         : []),
 ])
 
-const sheetSnap = ref<SheetSnap>('half')
+const sheetSnap = ref<SheetSnap>('peek')
 const sheetCover = ref(0)
 
 const { data: lastReset, refresh: refreshLastReset } = useAsyncData(
@@ -721,7 +833,7 @@ const hint = computed(() => {
             name: placement.armedRoute.value.name,
         })
     if (placement.selectedPlaced.value) return null
-    return t('mapPlacement.hints.idle')
+    return ''
 })
 
 function anchorLabel(item: RouteRecord) {
@@ -744,11 +856,23 @@ function selectFromMap(routeId: string | null) {
     )
 }
 
-function selectWall(wallId: string | null) {
+const wallChips = computed(() =>
+    [...mapWalls.value].sort(
+        (a, b) => a.sort - b.sort || a.name.localeCompare(b.name),
+    ),
+)
+
+function showAllWalls() {
+    placement.selectedWallId.value = null
+    canvasRef.value?.fitAll(true)
+}
+
+function selectWall(wallId: string | null, raiseSheet = true) {
     placement.selectedWallId.value = wallId
     if (!wallId) return
     canvasRef.value?.focusWall(wallId)
-    if (!mdAndUp.value && sheetSnap.value === 'peek') sheetSnap.value = 'half'
+    if (raiseSheet && !mdAndUp.value && sheetSnap.value === 'peek')
+        sheetSnap.value = 'half'
     nextTick(() =>
         document
             .querySelector('[data-testid="placement-wall-box"]')
@@ -769,6 +893,7 @@ async function discard() {
 }
 
 const canvasRef = useTemplateRef<{
+    fitAll: (animate?: boolean) => void
     focusWall: (wallId: string) => void
     previewAt: (routeId: string, clientX: number, clientY: number) => void
     placeAt: (routeId: string, clientX: number, clientY: number) => boolean
@@ -971,6 +1096,12 @@ onBeforeUnmount(() => {
     flex-direction: column;
     align-items: center;
     padding-top: 48px;
+}
+
+.placement-legend--inline {
+    position: static !important;
+    align-self: flex-start;
+    margin: 4px 0 8px;
 }
 
 .placement-legend {

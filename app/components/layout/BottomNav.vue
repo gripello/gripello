@@ -7,13 +7,18 @@
                 root: 'w-full [&>div]:w-full',
                 list: 'grid w-full auto-cols-fr grid-flow-col',
                 item: 'py-0',
-                link: 'h-16 flex-col justify-center gap-1 px-0 before:hidden',
+                link: 'relative h-16 short-landscape:h-11 flex-col justify-center gap-1 px-0 before:hidden',
                 linkLabel: 'w-full text-center text-[0.6875rem]',
             }"
             :aria-label="$t('nav.quickNavigation')"
             data-testid="bottom-nav"
         >
             <template #item-leading="{ item, active }">
+                <span
+                    v-if="active && !item.scan"
+                    class="bottom-nav__line"
+                    data-testid="bottom-nav-active-line"
+                />
                 <span v-if="item.scan" class="bottom-nav__scan">
                     <UIcon :name="item.icon" class="size-7" />
                 </span>
@@ -26,9 +31,8 @@
                         v-if="item.avatar"
                         v-bind="item.avatar"
                         size="xs"
-                        class="size-7"
+                        class="size-6 text-[0.625rem]"
                         :ui="{ fallback: 'font-bold text-white' }"
-                        :class="{ 'ring-2 ring-primary': active }"
                     />
                     <UIcon v-else :name="item.icon" class="size-6" />
                     <span
@@ -41,7 +45,7 @@
             </template>
             <template #item-label="{ item, active }">
                 <span
-                    class="bottom-nav__label"
+                    class="bottom-nav__label short-landscape:sr-only"
                     :class="{ 'is-active': active, 'sr-only': item.scan }"
                     :data-testid="item.testid"
                 >
@@ -139,8 +143,17 @@ const items = computed<NavigationMenuItem[]>(() =>
 }
 
 .bottom-nav__pill.is-active {
-    background: color-mix(in oklab, var(--ui-primary) 16%, transparent);
     color: var(--ui-primary);
+}
+
+.bottom-nav__line {
+    position: absolute;
+    top: 0;
+    left: 22%;
+    right: 22%;
+    height: 3px;
+    border-radius: 0 0 4px 4px;
+    background: var(--ui-primary);
 }
 
 .bottom-nav__scan {
@@ -153,6 +166,17 @@ const items = computed<NavigationMenuItem[]>(() =>
     border-radius: 9999px;
     background: var(--ui-primary);
     color: var(--ui-bg);
+    box-shadow:
+        0 0 0 4px var(--ui-bg),
+        0 4px 12px -4px rgb(0 0 0 / 0.35);
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+    .bottom-nav__scan {
+        width: 44px;
+        height: 44px;
+        margin-top: -8px;
+    }
 }
 
 .bottom-nav__label {
@@ -161,7 +185,7 @@ const items = computed<NavigationMenuItem[]>(() =>
 }
 
 .bottom-nav__label.is-active {
-    color: var(--ui-text-highlighted);
+    color: var(--ui-primary);
     font-weight: 700;
 }
 

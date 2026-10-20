@@ -339,3 +339,14 @@ func TestSenderAddressFollowsTheSettingsInUse(t *testing.T) {
 		t.Errorf("sender address = %q, want the settings applied last", got)
 	}
 }
+
+func TestMailButtonUsesTheBrandColor(t *testing.T) {
+	c := testClient(t)
+	rendered, err := c.Render(c.AppBrand(), "en", PasswordReset("Ana", "tok"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered.HTML, "background: #38741c") || strings.Contains(rendered.HTML, "#1f6feb") {
+		t.Error("the action button is not in the brand green")
+	}
+}

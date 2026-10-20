@@ -28,17 +28,15 @@
 
             <div class="audit-card__meta text-xs">
                 <span data-testid="audit-card-actor">{{ actorName }}</span>
-                <template v-if="entry.record_id">
+                <template v-if="entry.record_id && targetUrl">
                     <NuxtLink
-                        v-if="targetUrl"
                         :to="targetUrl"
                         class="audit-card__link"
                         data-testid="audit-card-record"
                         >{{ entry.record_id }}</NuxtLink
                     >
-                    <span v-else>{{ entry.record_id }}</span>
                 </template>
-                <span v-if="ip">{{ ip }}</span>
+                <span v-if="ip" class="max-md:hidden">{{ ip }}</span>
                 <span
                     class="pointer-fine:hidden"
                     data-testid="audit-card-absolute-time"
@@ -112,7 +110,15 @@ const actionTextClass = computed(
         })[actionColor(props.entry.action)] ?? 'text-muted',
 )
 
-const changedFields = computed(() => props.entry.changed_fields ?? [])
+const changedFields = computed(() => [
+    ...new Set(
+        (props.entry.changed_fields ?? []).map((field) =>
+            te(`audit.fields.${field}`)
+                ? t(`audit.fields.${field}`)
+                : field.replaceAll('_', ' '),
+        ),
+    ),
+])
 const ip = computed(() => compressIp(props.entry.ip))
 
 const relativeTime = computed(() =>

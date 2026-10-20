@@ -86,8 +86,12 @@ export function usePushOffer() {
     }
 
     async function turnOn() {
-        await subscribeThisDevice(authStore.record?.id, pushKey.value)
+        const added = await subscribeThisDevice(
+            authStore.record?.id,
+            pushKey.value,
+        )
         permission.value = await pushDevice().permission()
+        return !!added
     }
 
     onMounted(() => {

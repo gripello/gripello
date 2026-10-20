@@ -92,6 +92,15 @@ export function locationName(
     return location?.name ?? ''
 }
 
+export function hasAnchorPoint(value: unknown): boolean {
+    return (
+        value !== null &&
+        value !== undefined &&
+        value !== '' &&
+        Number(value) !== 0
+    )
+}
+
 export function formatAnchorPoint(value: unknown): unknown {
     if (value === null || value === undefined || value === '') {
         return '—'
@@ -110,7 +119,7 @@ export function formatScore(
         typeof route?.score === 'number' && Number.isFinite(route.score)
             ? route.score
             : null
-    return score !== null ? `${formatNumber(score, locale, 2)}/5` : '—'
+    return score !== null ? `${formatNumber(score, locale)}/5` : '—'
 }
 
 export function normalizeCreators(raw: unknown): string[] {

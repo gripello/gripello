@@ -105,7 +105,8 @@ test('platform admins appear read-only and cannot be deleted', async ({
     await expect(
         rows.first().getByTestId('platform-user-admin-badge'),
     ).toBeVisible()
+    await rows.first().getByTestId('platform-user-menu').click()
     await expect(
-        rows.first().getByTestId('platform-user-delete'),
+        page.getByRole('menuitem', { name: 'Delete user' }),
     ).toBeDisabled()
 })

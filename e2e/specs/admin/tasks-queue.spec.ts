@@ -159,6 +159,7 @@ test('a setter adds a task for a route from the route page', async ({
     testPrefix,
 }) => {
     await gotoSettled(setterPage, `/route?id=${route.id}`)
+    await setterPage.getByTestId('route-more-actions').click()
     await setterPage.getByTestId('route-add-task').click()
     await setterPage
         .getByTestId('task-form-title')

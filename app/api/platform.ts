@@ -240,6 +240,7 @@ export interface PlatformSystem {
     last_backup: string | null
     backup_error: string
     mail_configured?: boolean
+    pg_dump_missing?: boolean
 }
 
 export function getPlatformTraffic(range: TrafficRange) {

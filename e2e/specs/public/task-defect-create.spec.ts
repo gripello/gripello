@@ -13,6 +13,8 @@ test('a visitor reports a defect with a photo and sees the known-issue banner', 
     await gotoSettled(page, `/route?id=${route.id}`)
     await expect(page.getByTestId('task-defect-banner')).toBeHidden()
 
+    await page.getByTestId('route-more-actions').click()
+
     await page.getByTestId('task-defect-open').click()
     const dialog = page.getByTestId('task-defect-dialog')
     await expect(dialog).toBeVisible()

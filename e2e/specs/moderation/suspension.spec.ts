@@ -15,8 +15,13 @@ test('a platform admin suspends a person for good and lifts it again', async ({
 
     await gotoSettled(platformPage, '/platform/users')
     await platformPage.getByTestId('filter-search').fill(person.email)
+    // The search reloads the list after a debounce, which would close an open row menu.
+    await expect(
+        platformPage.getByTestId('platform-user-list').locator('li'),
+    ).toHaveCount(1)
     const row = platformPage.getByTestId(`platform-user-${person.id}`)
-    await row.getByTestId('platform-user-suspend').click()
+    await row.getByTestId('platform-user-menu').click()
+    await platformPage.getByRole('menuitem', { name: 'Suspend' }).click()
     await platformPage.getByTestId('platform-suspend-permanent').click()
     await platformPage
         .getByTestId('platform-suspend-reason')
@@ -35,7 +40,8 @@ test('a platform admin suspends a person for good and lifts it again', async ({
     await page.getByTestId('login-submit').click()
     await expect(page.getByTestId('login-form')).toContainText(/suspended/i)
 
-    await row.getByTestId('platform-user-suspend').click()
+    await row.getByTestId('platform-user-menu').click()
+    await platformPage.getByRole('menuitem', { name: 'Suspend' }).click()
     await platformPage.getByTestId('platform-suspend-lift').click()
     await expect(row.getByTestId('platform-user-suspended-badge')).toHaveCount(
         0,
@@ -76,8 +82,13 @@ test('the 7-day preset suspends for a week and needs a reason', async ({
     const person = await createUser('user', 'week')
     await gotoSettled(platformPage, '/platform/users')
     await platformPage.getByTestId('filter-search').fill(person.email)
+    // The search reloads the list after a debounce, which would close an open row menu.
+    await expect(
+        platformPage.getByTestId('platform-user-list').locator('li'),
+    ).toHaveCount(1)
     const row = platformPage.getByTestId(`platform-user-${person.id}`)
-    await row.getByTestId('platform-user-suspend').click()
+    await row.getByTestId('platform-user-menu').click()
+    await platformPage.getByRole('menuitem', { name: 'Suspend' }).click()
     await platformPage.getByTestId('platform-suspend-week').click()
     const confirm = platformPage.getByTestId('platform-suspend-confirm')
     await expect(confirm).toBeDisabled()

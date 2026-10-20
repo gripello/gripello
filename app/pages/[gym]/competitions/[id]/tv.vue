@@ -3,7 +3,7 @@
         :gym="gym"
         :qr="isPreStart ? '' : qrUrl"
         :qr-alt="t('competitions.qrCode')"
-        :qr-label="t('competitions.standings.scanToJoin')"
+        :qr-label="qrLabel"
         data-testid="competition-tv"
     >
         <template #eyebrow>
@@ -81,7 +81,11 @@
 </template>
 
 <script setup lang="ts">
-import { competitionPhase, competitionShareUrl } from '~/utils/competitions'
+import {
+    acceptsRegistrations,
+    competitionPhase,
+    competitionShareUrl,
+} from '~/utils/competitions'
 import { getCompetition } from '~/api/competitions'
 import { qrDataUrl } from '~/utils/qrDataUrl'
 import { coalesce } from '~/utils/realtimeCache'
@@ -122,6 +126,12 @@ const phase = computed(() =>
         : 'draft',
 )
 const isLive = computed(() => phase.value === 'running')
+const qrLabel = computed(() =>
+    competition.value &&
+    acceptsRegistrations(competition.value, now.value ?? new Date())
+        ? t('competitions.standings.scanToJoin')
+        : t('competitions.standings.scanForResults'),
+)
 const isPreStart = computed(
     () => phase.value === 'draft' || phase.value === 'registration',
 )
