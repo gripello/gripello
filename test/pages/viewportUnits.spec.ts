@@ -26,4 +26,14 @@ describe('viewport heights', () => {
             expect(maxHeights.filter((line) => /dvh\b/.test(line))).toEqual([])
         },
     )
+
+    it('lets map screens shrink on landscape phones after the base rule', () => {
+        const css = readFileSync('app/assets/css/main.css', 'utf8')
+        const base = css.indexOf('min-height: 420px;')
+        const override = css.search(
+            /@variant short-landscape \{\s+\.map-screen \{\s+min-height: 0;/,
+        )
+        expect(base).toBeGreaterThan(-1)
+        expect(override).toBeGreaterThan(base)
+    })
 })

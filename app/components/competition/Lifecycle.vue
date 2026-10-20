@@ -11,17 +11,6 @@
                 >{{ $t(`competitions.phases.${phase}.title`) }}</UBadge
             >
             <UButton
-                v-for="action in actions.secondary"
-                :key="action"
-                :icon="ACTION_ICONS[action]"
-                color="neutral"
-                variant="ghost"
-                :data-testid="`competition-action-${action}`"
-                @click="request(action)"
-            >
-                {{ $t(`competitions.actions.${action}`) }}
-            </UButton>
-            <UButton
                 v-if="actions.primary"
                 :icon="ACTION_ICONS[actions.primary]"
                 color="primary"
@@ -32,6 +21,16 @@
             >
                 {{ $t(`competitions.actions.${actions.primary}`) }}
             </UButton>
+            <UDropdownMenu v-if="secondaryItems.length" :items="secondaryItems">
+                <UButton
+                    icon="i-lucide-ellipsis-vertical"
+                    color="neutral"
+                    variant="ghost"
+                    class="icon-btn"
+                    :aria-label="$t('routes.moreActions')"
+                    data-testid="competition-lifecycle-more"
+                />
+            </UDropdownMenu>
         </div>
 
         <UStepper
@@ -39,8 +38,8 @@
             :items="phaseItems"
             size="sm"
             disabled
-            class="w-full"
-            :ui="{ title: 'hidden sm:block', description: 'hidden' }"
+            class="w-full max-sm:hidden"
+            :ui="{ description: 'hidden' }"
         />
 
         <ul
@@ -65,51 +64,49 @@
             </li>
         </ul>
 
-        <div
-            v-if="shareUrl"
-            class="flex flex-col gap-2 sm:flex-row sm:items-center"
-        >
-            <UInput
-                :model-value="shareUrl"
-                readonly
-                icon="i-lucide-link"
-                class="flex-1"
-                :ui="{ base: 'text-ellipsis' }"
-                :aria-label="$t('competitions.shareLink')"
-                data-testid="competition-share-url"
-            />
-            <div class="flex gap-2">
+        <div v-if="shareUrl">
+            <UPopover>
                 <UButton
-                    icon="i-lucide-copy"
+                    icon="i-lucide-share-2"
                     color="neutral"
                     variant="outline"
-                    data-testid="competition-share-copy"
-                    @click="copyLink"
+                    data-testid="competition-share"
+                    @click="renderQr"
                 >
-                    {{ $t('competitions.copyLink') }}
+                    {{ $t('competitions.share') }}
                 </UButton>
-                <UPopover>
-                    <UButton
-                        icon="i-lucide-qr-code"
-                        color="neutral"
-                        variant="outline"
-                        data-testid="competition-share-qr"
-                        @click="renderQr"
+                <template #content>
+                    <div
+                        class="flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-3 p-4"
                     >
-                        {{ $t('competitions.qrCode') }}
-                    </UButton>
-                    <template #content>
-                        <div class="p-4">
-                            <img
-                                v-if="qrDataUrl"
-                                :src="qrDataUrl"
-                                :alt="$t('competitions.qrCode')"
-                                class="size-56"
-                            />
-                        </div>
-                    </template>
-                </UPopover>
-            </div>
+                        <UInput
+                            :model-value="shareUrl"
+                            readonly
+                            icon="i-lucide-link"
+                            :ui="{ base: 'text-ellipsis' }"
+                            :aria-label="$t('competitions.shareLink')"
+                            data-testid="competition-share-url"
+                        />
+                        <UButton
+                            icon="i-lucide-copy"
+                            color="neutral"
+                            variant="outline"
+                            block
+                            data-testid="competition-share-copy"
+                            @click="copyLink"
+                        >
+                            {{ $t('competitions.copyLink') }}
+                        </UButton>
+                        <img
+                            v-if="qrDataUrl"
+                            :src="qrDataUrl"
+                            :alt="$t('competitions.qrCode')"
+                            class="mx-auto size-56"
+                            data-testid="competition-share-qr"
+                        />
+                    </div>
+                </template>
+            </UPopover>
         </div>
 
         <ConfirmDialog
@@ -192,6 +189,14 @@ const now = ref(new Date())
 const phase = computed(() => competitionPhase(props.competition, now.value))
 const actions = computed(() => lifecycleActions(props.competition.status))
 const ready = computed(() => props.checklist.every((item) => item.done))
+const secondaryItems = computed(() =>
+    actions.value.secondary.map((action) => ({
+        label: t(`competitions.actions.${action}`),
+        icon: ACTION_ICONS[action],
+        'data-testid': `competition-action-${action}`,
+        onSelect: () => request(action),
+    })),
+)
 
 const phaseItems = computed(() =>
     COMPETITION_PHASES.map((value) => ({

@@ -54,23 +54,30 @@
                         :key="`${endpoint.method} ${endpoint.pattern}`"
                         :data-testid="`platform-endpoint-${endpoint.method}-${endpoint.pattern}`"
                     >
-                        <td
-                            class="px-4 py-2 font-mono text-xs max-md:pr-2 max-md:whitespace-normal max-md:[overflow-wrap:anywhere]"
-                        >
-                            <UBadge
-                                v-if="endpoint.method"
-                                :color="
-                                    endpoint.method === 'GET'
-                                        ? 'info'
-                                        : 'secondary'
-                                "
-                                variant="subtle"
-                                size="sm"
-                                class="mr-1"
+                        <td class="px-4 py-2 font-mono text-xs max-md:pr-2">
+                            <span
+                                class="flex items-center gap-1 max-md:max-w-[50vw]"
                             >
-                                {{ endpoint.method }}
-                            </UBadge>
-                            {{ endpoint.pattern }}
+                                <UBadge
+                                    v-if="endpoint.method"
+                                    :color="
+                                        endpoint.method === 'GET'
+                                            ? 'info'
+                                            : 'secondary'
+                                    "
+                                    variant="subtle"
+                                    size="sm"
+                                    class="shrink-0"
+                                >
+                                    {{ endpoint.method }}
+                                </UBadge>
+                                <span
+                                    class="min-w-0 truncate"
+                                    :title="endpoint.pattern"
+                                >
+                                    {{ endpoint.pattern }}
+                                </span>
+                            </span>
                         </td>
                         <td class="px-2 py-2 text-right tabular-nums">
                             {{ formatCompact(endpoint.requests, locale) }}

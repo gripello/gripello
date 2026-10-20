@@ -1,27 +1,40 @@
 <template>
     <div :class="{ 'max-lg:pb-24': hasChanges }">
         <template v-if="drillDown">
-            <LayoutListGroup
-                v-if="!sectionChosen"
-                class="mb-4 lg:hidden"
-                :aria-label="$t('settings.sections')"
-            >
-                <LayoutListRow
-                    v-for="section in sections"
-                    :key="section.id"
-                    :to="{ query: { section: section.id } }"
-                    :data-testid="`${testIdPrefix}-drill-${section.id}`"
+            <template v-if="!sectionChosen">
+                <LayoutListGroup
+                    v-for="group in drillGroups"
+                    :key="group.danger ? 'danger' : 'sections'"
+                    class="mb-4 lg:hidden"
+                    :class="{ 'mt-8': group.danger }"
+                    :aria-label="$t('settings.sections')"
                 >
-                    <UIcon :name="section.icon" class="size-5 text-muted" />
-                    <span class="flex-1 text-highlighted">
-                        {{ section.label }}
-                    </span>
-                    <UIcon
-                        name="i-lucide-chevron-right"
-                        class="size-5 text-dimmed"
-                    />
-                </LayoutListRow>
-            </LayoutListGroup>
+                    <LayoutListRow
+                        v-for="section in group.sections"
+                        :key="section.id"
+                        :to="{ query: { section: section.id } }"
+                        :data-testid="`${testIdPrefix}-drill-${section.id}`"
+                    >
+                        <UIcon
+                            :name="section.icon"
+                            class="size-5"
+                            :class="group.danger ? 'text-error' : 'text-muted'"
+                        />
+                        <span
+                            class="flex-1"
+                            :class="
+                                group.danger ? 'text-error' : 'text-highlighted'
+                            "
+                        >
+                            {{ section.label }}
+                        </span>
+                        <UIcon
+                            name="i-lucide-chevron-right"
+                            class="size-5 text-dimmed"
+                        />
+                    </LayoutListRow>
+                </LayoutListGroup>
+            </template>
             <UButton
                 v-else
                 :to="{ query: {} }"
@@ -96,7 +109,7 @@
 import { requestedSection } from '~/utils/navigation'
 
 const props = defineProps<{
-    sections: { id: string; label: string; icon: string }[]
+    sections: { id: string; label: string; icon: string; danger?: boolean }[]
     hasChanges: boolean
     testIdPrefix: string
     saving?: boolean
@@ -132,10 +145,22 @@ const sectionTabItems = computed(() =>
     })),
 )
 
+const drillGroups = computed(() =>
+    [false, true]
+        .map((danger) => ({
+            danger,
+            sections: props.sections.filter(
+                (section) => !!section.danger === danger,
+            ),
+        }))
+        .filter((group) => group.sections.length),
+)
+
 const sectionNavItems = computed(() =>
     props.sections.map((section) => ({
         label: section.label,
         icon: section.icon,
+        class: section.danger ? 'mt-6 text-error' : undefined,
         to: { query: { section: section.id } },
         active: activeSection.value === section.id,
         'data-testid': `${props.testIdPrefix}-section-${section.id}`,

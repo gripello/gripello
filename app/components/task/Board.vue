@@ -86,12 +86,15 @@
                         v-if="!column.tasks.length"
                         variant="naked"
                         size="xs"
-                        :icon="TASK_STATUS_ICONS[column.status]"
+                        :icon="
+                            mdAndUp
+                                ? undefined
+                                : TASK_STATUS_ICONS[column.status]
+                        "
                         :description="t('tasks.board.emptyColumn')"
-                        class="flex-1"
                         :class="
                             !mdAndUp &&
-                            'rounded-lg border border-dashed border-default py-12'
+                            'flex-1 rounded-lg border border-dashed border-default py-12'
                         "
                     />
                 </div>

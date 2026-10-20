@@ -109,3 +109,11 @@ func TestPrivacyMigrationMovesTheExtraTextIntoTheDocument(t *testing.T) {
 		t.Errorf("gym without extra text got a document %s", *untouched)
 	}
 }
+
+func TestSettingsLegalNameIsSavedByOperators(t *testing.T) {
+	f := newFixture(t)
+	f.call(f.user("climber"), "PATCH", "/settings", `{"legal_name":"Gripello GmbH"}`, http.StatusForbidden)
+	f.call(f.operator, "PATCH", "/settings", `{"legal_name":"`+strings.Repeat("x", 301)+`"}`, http.StatusBadRequest, `"legal_name"`)
+	f.call(f.operator, "PATCH", "/settings", `{"legal_name":"Gripello GmbH"}`, http.StatusOK, `"legal_name":"Gripello GmbH"`)
+	f.call("", "GET", "/settings", "", http.StatusOK, `"legal_name":"Gripello GmbH"`)
+}

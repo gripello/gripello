@@ -25,3 +25,23 @@ func TestFullName(t *testing.T) {
 		t.Fatal("full name")
 	}
 }
+
+func TestDistinctShortNames(t *testing.T) {
+	people := []Climber{
+		{Name: "Tilo Alexander", Short: "Tilo A."},
+		{Name: "Tilo Albrecht", Short: "Tilo A."},
+		{Name: "Tilo Al", Short: "Tilo A."},
+		{Name: "Anna Müller", Short: "Anna M."},
+		{Name: "Bea Schulz", Short: "Bea S."},
+		{Name: "Bea Schulz", Short: "Bea S."},
+		{Name: "anna", Short: "anna"},
+		{Name: "anna", Short: "anna"},
+	}
+	got := DistinctShortNames(people)
+	want := []string{"Tilo Ale.", "Tilo Alb.", "Tilo Al", "Anna M.", "Bea S.", "Bea S.", "anna", "anna"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("%d: got %q want %q", i, got[i], want[i])
+		}
+	}
+}

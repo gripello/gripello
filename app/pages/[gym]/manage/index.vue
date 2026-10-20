@@ -42,6 +42,7 @@
 
 <script setup lang="ts">
 import { staffSections } from '~/utils/navigation'
+import { BREAKPOINTS } from '#shared/utils/breakpoints'
 
 definePageMeta({ middleware: ['auth'] })
 
@@ -52,6 +53,12 @@ const { slug } = useGym()
 useSeoMeta({ title: () => t('nav.staffTools') })
 
 const sections = computed(() => staffSections(can, slug.value))
+
+onMounted(() => {
+    const first = sections.value[0]?.links[0]?.to
+    if (first && window.innerWidth >= BREAKPOINTS.lg)
+        void navigateTo(first, { replace: true })
+})
 
 const SECTION_TINTS: Record<string, string> = {
     manage: 'var(--ui-info)',

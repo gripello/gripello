@@ -4,6 +4,7 @@ import {
     compareGrades,
     gradeScore,
     labelAnalytics,
+    routeAge,
     type AnalyticsPayload,
     type AnalyticsResponse,
 } from '#shared/utils/analytics'
@@ -139,5 +140,13 @@ describe('labelAnalytics', () => {
             },
         })
         expect(labelled.grades.Route.gradeFeedback[0]!.votedGradeLabel).toBe('')
+    })
+})
+
+describe('routeAge', () => {
+    it('picks a readable unit', () => {
+        expect(routeAge(12)).toEqual({ unit: 'days', n: 12 })
+        expect(routeAge(200)).toEqual({ unit: 'months', n: 7 })
+        expect(routeAge(7384)).toEqual({ unit: 'years', n: 20 })
     })
 })

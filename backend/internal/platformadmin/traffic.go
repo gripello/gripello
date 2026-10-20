@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"net/http"
+	"os/exec"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -267,6 +268,10 @@ func (m *module) systemState(ctx context.Context) (map[string]any, error) {
 	}
 	if c, ok := m.app.Mail.(interface{ Configured() bool }); ok {
 		state["mail_configured"] = c.Configured()
+	}
+	if m.app.Cfg.BackupDir != "" {
+		_, missing := exec.LookPath("pg_dump")
+		state["pg_dump_missing"] = missing != nil
 	}
 	return state, nil
 }

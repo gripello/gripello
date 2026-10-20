@@ -61,19 +61,23 @@
                                 {{ t('trial.convert') }}
                             </UButton>
                         </template>
-                        <USwitch
-                            :model-value="!!gym.active"
-                            :label="t('platform.gyms.active')"
-                            data-testid="platform-gym-active"
-                            @update:model-value="requestActive"
-                        />
-                        <USwitch
-                            :model-value="!!gym.hidden"
-                            :label="t('platform.gyms.invisible')"
-                            :disabled="!gym.active"
-                            data-testid="platform-gym-hidden"
-                            @update:model-value="requestHidden"
-                        />
+                        <div
+                            class="flex flex-wrap items-center gap-4 max-lg:order-last max-lg:w-full max-lg:rounded-lg max-lg:p-3 max-lg:ring max-lg:ring-default"
+                        >
+                            <USwitch
+                                :model-value="!!gym.active"
+                                :label="t('platform.gyms.active')"
+                                data-testid="platform-gym-active"
+                                @update:model-value="requestActive"
+                            />
+                            <USwitch
+                                :model-value="!!gym.hidden"
+                                :label="t('platform.gyms.invisible')"
+                                :disabled="!gym.active"
+                                data-testid="platform-gym-hidden"
+                                @update:model-value="requestHidden"
+                            />
+                        </div>
                         <UButton
                             :to="`/platform/moderation?gym=${gym.id}`"
                             color="neutral"
@@ -255,6 +259,7 @@ const extraSections = computed(() => [
         id: 'danger',
         label: t('platform.gyms.delete'),
         icon: 'i-lucide-trash-2',
+        danger: true,
     },
 ])
 
@@ -280,7 +285,8 @@ async function setFlags(flags: Pick<GymRecord, 'active' | 'hidden'>) {
     })
 }
 
-const trial = computed(() => gymTrial(gym.value))
+const hydrated = useHydrated()
+const trial = computed(() => (hydrated.value ? gymTrial(gym.value) : null))
 const convertDialogOpen = ref(false)
 
 async function setTrial(trialEndsAt: string | null) {

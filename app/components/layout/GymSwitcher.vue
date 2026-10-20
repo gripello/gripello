@@ -68,7 +68,7 @@
             </UBadge>
             <span
                 v-if="!collapsed && currentGym"
-                class="line-clamp-2 min-w-0 flex-1 text-start text-sm leading-4 font-semibold break-words text-highlighted"
+                class="line-clamp-2 min-w-0 flex-1 text-start text-sm leading-4 font-semibold break-normal hyphens-auto text-highlighted"
                 data-testid="gym-switcher-name"
             >
                 {{ title }}
@@ -151,11 +151,20 @@ function switchTo(slug: string) {
 }
 
 function gymItem(target: Partial<GymRecord>, role?: string): GymItem {
-    const logo = fileUrl('gyms', target, target.page_logo, { thumb: '100x100' })
+    const logo = fileUrl('gyms', target, target.page_logo, { thumb: '0x200' })
     return {
         label: gymTitle(target),
         ...(logo
-            ? { avatar: { src: logo, alt: '' } }
+            ? {
+                  avatar: {
+                      src: logo,
+                      alt: '',
+                      ui: {
+                          root: 'bg-transparent rounded-none',
+                          image: 'logo-mono object-contain',
+                      },
+                  },
+              }
             : { icon: 'i-lucide-building-2' }),
         role,
         slot: 'gym' as const,

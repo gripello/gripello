@@ -1,9 +1,6 @@
 <template>
     <div class="w-full p-4">
-        <LayoutPageHeader
-            :title="$t('page.content.settings')"
-            :subtitle="$t('settings.description')"
-        />
+        <LayoutPageHeader :title="$t('page.content.settings')" />
 
         <UAlert
             v-if="!mailConfigured"

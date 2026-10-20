@@ -106,44 +106,67 @@
                                     :source="metadata"
                                 >
                                     <template #activator="{ props: activator }">
-                                        <button
-                                            v-bind="activator"
-                                            type="button"
-                                            class="route-hero__difficulty-badge"
-                                            :style="difficultyBadgeStyle"
-                                            :aria-label="
-                                                t('gradeConversion.show')
-                                            "
-                                            :title="t('gradeConversion.show')"
-                                            data-testid="route-grade-badge"
+                                        <div
+                                            class="flex flex-col items-center gap-1"
                                         >
-                                            <span
-                                                class="route-hero__difficulty-text font-black"
-                                                >{{ difficulty }}</span
+                                            <button
+                                                v-bind="activator"
+                                                type="button"
+                                                class="route-hero__difficulty-badge"
+                                                :style="difficultyBadgeStyle"
+                                                :aria-label="
+                                                    t('gradeConversion.show')
+                                                "
+                                                :title="
+                                                    t('gradeConversion.show')
+                                                "
+                                                data-testid="route-grade-badge"
                                             >
-                                            <span
-                                                v-if="metadata?.grade_system"
-                                                class="route-hero__difficulty-system"
-                                                data-testid="route-grade-system"
-                                                >{{
-                                                    t(
-                                                        `gradeSystemsShort.${metadata.grade_system}`,
-                                                    )
-                                                }}</span
+                                                <span
+                                                    class="route-hero__difficulty-text font-black"
+                                                    >{{ difficulty }}</span
+                                                >
+                                                <span
+                                                    v-if="
+                                                        metadata?.grade_system
+                                                    "
+                                                    class="route-hero__difficulty-system"
+                                                    data-testid="route-grade-system"
+                                                    >{{
+                                                        t(
+                                                            `gradeSystemsShort.${metadata.grade_system}`,
+                                                        )
+                                                    }}</span
+                                                >
+                                                <span
+                                                    v-if="gymBand"
+                                                    class="route-hero__difficulty-band"
+                                                    :style="{
+                                                        background:
+                                                            gymBand.color,
+                                                    }"
+                                                    role="img"
+                                                    :title="bandName(gymBand)"
+                                                    :aria-label="
+                                                        bandName(gymBand)
+                                                    "
+                                                    :data-band="gymBand.key"
+                                                    data-testid="route-grade-band"
+                                                />
+                                            </button>
+                                            <button
+                                                v-bind="activator"
+                                                type="button"
+                                                class="route-hero__ink-muted flex min-h-11 items-center gap-1 text-xs font-medium underline-offset-2 hover:underline"
+                                                data-testid="route-grade-conversion"
                                             >
-                                            <span
-                                                v-if="gymBand"
-                                                class="route-hero__difficulty-band"
-                                                :style="{
-                                                    background: gymBand.color,
-                                                }"
-                                                role="img"
-                                                :title="bandName(gymBand)"
-                                                :aria-label="bandName(gymBand)"
-                                                :data-band="gymBand.key"
-                                                data-testid="route-grade-band"
-                                            />
-                                        </button>
+                                                <UIcon
+                                                    name="i-lucide-arrow-left-right"
+                                                    class="size-3.5"
+                                                />
+                                                {{ t('gradeConversion.open') }}
+                                            </button>
+                                        </div>
                                     </template>
                                 </GradeConversionDialog>
                             </div>
@@ -255,78 +278,21 @@
                             >
                                 {{ t('ratings.createReview') }}
                             </UButton>
-                            <UButton
-                                v-if="!metadata.archived && betasEnabled"
-                                color="neutral"
-                                variant="soft"
-                                size="lg"
-                                class="grow justify-center"
-                                icon="i-lucide-video"
-                                data-testid="beta-add"
-                                @click="betaVideos?.openAdd()"
+                            <UDropdownMenu
+                                v-if="moreActions.length"
+                                :items="moreActions"
+                                :content="{ align: 'end' }"
                             >
-                                {{ t('beta.add') }}
-                            </UButton>
-                            <UButton
-                                v-if="metadata?.wall && metadata.location"
-                                color="neutral"
-                                variant="soft"
-                                size="lg"
-                                class="grow justify-center"
-                                icon="i-lucide-map-pin"
-                                :to="{
-                                    path: gymPath('/map'),
-                                    query: {
-                                        location: metadata.location,
-                                        route: route_id,
-                                    },
-                                }"
-                                data-testid="route-show-on-map"
-                            >
-                                {{ t('map.showOnMap') }}
-                            </UButton>
-                            <UButton
-                                v-else-if="canPlaceOnMap"
-                                color="neutral"
-                                variant="soft"
-                                size="lg"
-                                class="grow justify-center"
-                                icon="i-lucide-map-pin-plus"
-                                :to="{
-                                    path: gymPath('/manage/map'),
-                                    query: {
-                                        location: metadata?.location,
-                                        route: route_id,
-                                    },
-                                }"
-                                data-testid="route-place-on-map"
-                            >
-                                {{ t('mapPlacement.placeThis') }}
-                            </UButton>
-                            <UButton
-                                v-if="!metadata.archived"
-                                color="neutral"
-                                variant="soft"
-                                size="lg"
-                                class="grow justify-center"
-                                icon="i-lucide-wrench"
-                                data-testid="task-defect-open"
-                                @click="defectDialog = true"
-                            >
-                                {{ t('tasks.defect.reportAction') }}
-                            </UButton>
-                            <UButton
-                                v-if="can('manage_tasks')"
-                                color="neutral"
-                                variant="soft"
-                                size="lg"
-                                class="grow justify-center"
-                                icon="i-lucide-list-plus"
-                                data-testid="route-add-task"
-                                @click="taskDialog = true"
-                            >
-                                {{ t('tasks.addForRoute') }}
-                            </UButton>
+                                <UButton
+                                    color="neutral"
+                                    variant="soft"
+                                    size="lg"
+                                    icon="i-lucide-ellipsis-vertical"
+                                    class="icon-btn"
+                                    :aria-label="t('table.actions')"
+                                    data-testid="route-more-actions"
+                                />
+                            </UDropdownMenu>
                             <TaskDefectDialog
                                 v-model="defectDialog"
                                 :route-id="route_id"
@@ -475,6 +441,7 @@ import { deleteRating, listRouteRatings } from '~/api/ratings'
 import { getRoute } from '~/api/routes'
 import { listRouteDefects } from '~/api/tasks'
 import { isAbortError, keepWhenOffline } from '~/utils/errors'
+import type { DropdownMenuItem } from '@nuxt/ui'
 import type { RatingRecord, RouteListItem } from '~/types/models'
 import {
     formatDate,
@@ -487,7 +454,7 @@ import { gymBandFor } from '#shared/utils/gradeReference'
 import { formatNumber } from '#shared/utils/number'
 import { sanitizeGymMap } from '#shared/utils/mapGeometry'
 import { reportContentUrl } from '~/utils/reports'
-import { isLightColor, shadeColor } from '~/utils/color'
+import { gradientEndColor, isLightColor } from '~/utils/color'
 import { cacheKeys } from '~/utils/realtimeCache'
 import { isOfflineError } from '~/utils/tickOutbox'
 import { hasFeature } from '#shared/utils/featureFlags'
@@ -645,6 +612,60 @@ const tickDialog = ref(false)
 const reviewDialog = ref(false)
 const defectDialog = ref(false)
 const taskDialog = ref(false)
+const moreActions = computed<DropdownMenuItem[][]>(() => {
+    const record = metadata.value
+    const id = route_id.value
+    if (!record || !id) return []
+    const climber: DropdownMenuItem[] = []
+    if (!record.archived && betasEnabled.value) {
+        climber.push({
+            label: t('beta.add'),
+            icon: 'i-lucide-video',
+            'data-testid': 'beta-add',
+            onSelect: () => betaVideos.value?.openAdd(),
+        })
+    }
+    if (record.wall && record.location) {
+        climber.push({
+            label: t('map.showOnMap'),
+            icon: 'i-lucide-map-pin',
+            to: {
+                path: gymPath('/map'),
+                query: { location: record.location, route: id },
+            },
+            'data-testid': 'route-show-on-map',
+        })
+    }
+    if (!record.archived) {
+        climber.push({
+            label: t('tasks.defect.reportAction'),
+            icon: 'i-lucide-wrench',
+            'data-testid': 'task-defect-open',
+            onSelect: () => (defectDialog.value = true),
+        })
+    }
+    const staff: DropdownMenuItem[] = []
+    if (!(record.wall && record.location) && canPlaceOnMap.value) {
+        staff.push({
+            label: t('mapPlacement.placeThis'),
+            icon: 'i-lucide-map-pin-plus',
+            to: {
+                path: gymPath('/manage/map'),
+                query: { location: record.location, route: id },
+            },
+            'data-testid': 'route-place-on-map',
+        })
+    }
+    if (can('manage_tasks')) {
+        staff.push({
+            label: t('tasks.addForRoute'),
+            icon: 'i-lucide-list-plus',
+            'data-testid': 'route-add-task',
+            onSelect: () => (taskDialog.value = true),
+        })
+    }
+    return [climber, staff].filter((group) => group.length)
+})
 const { tickedRouteIds, refreshTickedRoutes } = useTickedRoutes()
 
 // ── Page meta ──────────────────────────────────────────────────────────────
@@ -673,7 +694,7 @@ const { goBack } = useGoBack()
 const heroStyle = computed(() => {
     const color = heroColor.value
     return {
-        background: `linear-gradient(135deg, ${color} 0%, ${shadeColor(color, -30)} 100%)`,
+        background: `linear-gradient(135deg, ${color} 0%, ${gradientEndColor(color)} 100%)`,
         '--hero-ink': heroIsLight.value ? '#1a1a1a' : '#ffffff',
         '--hero-tint': heroIsLight.value
             ? 'rgba(0, 0, 0, 0.12)'
@@ -698,6 +719,7 @@ const difficultyBadgeStyle = computed(() => {
     return {
         background: color,
         color: isLightColor(color) ? '#1a1a1a' : '#ffffff',
+        boxShadow: '0 0 0 1px var(--hero-tint)',
     }
 })
 
@@ -971,9 +993,9 @@ onMounted(async () => {
 
     .route-hero {
         grid-area: hero;
-        min-height: 220px;
+        min-height: 168px;
         border-radius: 16px;
-        padding: 28px 32px;
+        padding: 20px 32px;
         justify-content: center;
     }
 

@@ -1,4 +1,4 @@
-import { INVENTORY_INSTRUCTIONS_KEY, INVENTORY_STORAGE_KEY } from './inventory'
+import { INVENTORY_STORAGE_KEY } from './inventory'
 import { TICKS_DB } from './tickOutbox'
 import { RECENT_GYMS_KEY } from './recentGyms'
 import { PUSH_DECLINED_KEY } from './push'
@@ -86,12 +86,6 @@ export const CLIENT_STORAGE: ClientStorageEntry[] = [
         name: INVENTORY_STORAGE_KEY,
         kind: 'localStorage',
         purpose: 'inventorySession',
-        duration: 'persistent',
-    },
-    {
-        name: INVENTORY_INSTRUCTIONS_KEY,
-        kind: 'localStorage',
-        purpose: 'inventoryInstructions',
         duration: 'persistent',
     },
     {

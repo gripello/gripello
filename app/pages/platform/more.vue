@@ -105,16 +105,18 @@ const links = computed(() => {
     const state = system.value
     const status: Record<string, { status: string; tone?: string }> = {}
     if (state) {
-        status['/platform/backups'] = state.backup_error
-            ? { status: t('platform.backups.failed'), tone: 'text-error' }
-            : {
-                  status: state.last_backup
-                      ? formatDate(state.last_backup, {
-                            locale: locale.value,
-                            withTime: true,
-                        })
-                      : '—',
-              }
+        status['/platform/backups'] = state.pg_dump_missing
+            ? { status: t('platform.backups.pgDumpOff'), tone: 'text-error' }
+            : state.backup_error
+              ? { status: t('platform.backups.failed'), tone: 'text-error' }
+              : {
+                    status: state.last_backup
+                        ? formatDate(state.last_backup, {
+                              locale: locale.value,
+                              withTime: true,
+                          })
+                        : '—',
+                }
         if (state.mail_configured === false)
             status['/platform/settings'] = {
                 status: t('platform.overview.system.mailOff'),

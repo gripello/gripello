@@ -80,19 +80,19 @@
                     <li
                         v-for="row in board.rows.slice(3, rows)"
                         :key="row.user"
-                        class="flex min-h-0 items-center gap-5 rounded-xl bg-elevated/50 px-5 text-[min(2.25rem,60cqh)] [container-type:size]"
+                        class="flex min-h-0 items-center gap-5 rounded-xl bg-elevated/50 px-5 [container-type:size]"
                     >
                         <span
-                            class="w-[1.8em] shrink-0 text-center font-bold text-muted tabular-nums"
+                            class="w-[1.8em] shrink-0 text-center text-[min(2.25rem,55cqh)] font-bold text-muted tabular-nums"
                             >{{ row.rank }}</span
                         >
                         <span
-                            class="min-w-0 flex-1 truncate font-semibold text-highlighted"
+                            class="min-w-0 flex-1 truncate text-[min(2.25rem,55cqh)] font-semibold text-highlighted"
                         >
                             {{ row.name || t('leaderboard.anonymous') }}
                         </span>
                         <span
-                            class="shrink-0 font-black text-highlighted tabular-nums"
+                            class="shrink-0 text-[min(2.25rem,55cqh)] font-black text-highlighted tabular-nums"
                         >
                             {{ formatNumber(row.score, locale, 0) }}
                         </span>

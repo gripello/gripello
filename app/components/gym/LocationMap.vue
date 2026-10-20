@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import 'leaflet/dist/leaflet.css'
-import type { LatLngTuple, Map as LeafletMap, LayerGroup } from 'leaflet'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
+import type { Map as MapLibreMap, Marker } from 'maplibre-gl'
 import { MAP_CONSENT_KEY } from '~/utils/clientStorage'
 import type { GymMapMarker } from '~/utils/gymInfo'
+import { tintDarkMap } from '~/utils/mapStyle'
 
 const props = withDefaults(
     defineProps<{
@@ -18,12 +20,14 @@ const emit = defineEmits<{
     select: [id: string | null]
 }>()
 
-const { mapTileUrl } = useRuntimeConfig().public
+const { mapStyle } = useRuntimeConfig().public
+const colorMode = useColorMode()
+const { t } = useI18n()
 const consented = ref(false)
 const container = ref<HTMLElement>()
-let map: LeafletMap | null = null
-let layer: LayerGroup | null = null
-let leaflet: typeof import('leaflet') | null = null
+let map: MapLibreMap | null = null
+let maplibre: typeof import('maplibre-gl') | null = null
+let pins: Marker[] = []
 let framed = false
 const overlay = ref<HTMLElement>()
 
@@ -49,36 +53,61 @@ function consent() {
 }
 
 async function showMap() {
-    leaflet = await import('leaflet')
+    maplibre = await import('maplibre-gl')
+    // Bundling moves maplibre away from the worker file it looks for next to itself.
+    maplibre.setWorkerUrl(workerUrl)
     await nextTick()
     if (!container.value || map) return
-    map = leaflet.map(container.value)
-    leaflet
-        .tileLayer(mapTileUrl, {
-            maxZoom: 19,
-            attribution:
-                '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
-        })
-        .addTo(map)
-    layer = leaflet.layerGroup().addTo(map)
-    resizeObserver = new ResizeObserver(() => map?.invalidateSize())
+    map = new maplibre.Map({
+        container: container.value,
+        style: mapStyle,
+        center: [10, 50],
+        zoom: 4,
+        attributionControl: { compact: true },
+    })
+    map.addControl(
+        new maplibre.NavigationControl({ showCompass: false }),
+        'top-left',
+    )
+    map.addControl(recenterControl(), 'top-left')
+    map.on('style.load', () => {
+        if (colorMode.value === 'dark') tintDarkMap(map!)
+    })
+    resizeObserver = new ResizeObserver(() => map?.resize())
     resizeObserver.observe(container.value)
     map.on('click', (e) =>
         props.draggable
-            ? emit('update:position', [e.latlng.lat, e.latlng.lng])
+            ? emit('update:position', [e.lngLat.lat, e.lngLat.lng])
             : emit('select', null),
     )
     drawMarkers()
 }
 
+watch(
+    () => colorMode.value,
+    () => map?.setStyle(mapStyle, { diff: false }),
+)
+
+const LOCATE_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" x2="5" y1="12" y2="12"/><line x1="19" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="5"/><line x1="12" x2="12" y1="19" y2="22"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/></svg>'
+
+function recenterControl() {
+    const group = document.createElement('div')
+    group.className = 'maplibregl-ctrl maplibregl-ctrl-group'
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'gym-map-recenter'
+    button.title = t('gymInfo.map.recenter')
+    button.setAttribute('aria-label', t('gymInfo.map.recenter'))
+    button.dataset.testid = 'gym-map-recenter'
+    button.innerHTML = LOCATE_ICON
+    button.addEventListener('click', () => frameMarkers(true))
+    group.append(button)
+    return { onAdd: () => group, onRemove: () => group.remove() }
+}
+
 const MOUNTAIN_ICON =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>'
-
-function label(text: string) {
-    const span = document.createElement('span')
-    span.textContent = text
-    return span
-}
 
 function pin(marker: GymMapMarker) {
     const outer = document.createElement('div')
@@ -95,55 +124,64 @@ function pin(marker: GymMapMarker) {
         inner.append(img)
     } else inner.innerHTML = MOUNTAIN_ICON
     outer.append(inner)
-    return outer
+    const element = document.createElement('div')
+    element.className = 'gym-map-marker'
+    element.style.zIndex = marker.id === props.selected ? '1' : ''
+    if (marker.label) {
+        element.title = marker.label
+        element.setAttribute('aria-label', marker.label)
+    }
+    element.append(outer)
+    return element
 }
 
 function drawMarkers(frame = true) {
-    if (!map || !layer || !leaflet) return
-    layer.clearLayers()
-    for (const m of props.markers) {
-        const marker = leaflet
-            .marker([m.lat, m.lng], {
-                icon: leaflet.divIcon({
-                    html: pin(m),
-                    className: 'gym-map-marker',
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 46],
-                    tooltipAnchor: [0, -46],
-                }),
-                zIndexOffset: m.id === props.selected ? 1000 : 0,
-                draggable: props.draggable,
-                title: m.label,
-            })
-            .addTo(layer)
-        if (m.label) marker.bindTooltip(label(m.label), { direction: 'top' })
-        if (!props.draggable) marker.on('click', () => emit('select', m.id))
+    if (!map || !maplibre) return
+    for (const marker of pins) marker.remove()
+    pins = props.markers.map((m) => {
+        const element = pin(m)
+        const marker = new maplibre!.Marker({
+            element,
+            anchor: 'bottom',
+            draggable: props.draggable,
+        })
+            .setLngLat([m.lng, m.lat])
+            .addTo(map!)
+        element.addEventListener('click', (event) => {
+            event.stopPropagation()
+            if (!props.draggable) emit('select', m.id)
+        })
         marker.on('dragend', () => {
-            const { lat, lng } = marker.getLatLng()
+            const { lat, lng } = marker.getLngLat()
             emit('update:position', [lat, lng])
         })
-    }
+        return marker
+    })
     if (frame) frameMarkers()
 }
 
-function frameMarkers() {
-    if (!map) return
-    const points = props.markers.map((m): LatLngTuple => [m.lat, m.lng])
-    if (!points.length) {
-        if (!framed) map.setView([50, 10], 4)
-        return
-    }
-    const bounds = leaflet!.latLngBounds(points)
-    if (!framed) {
+function frameMarkers(recenter = false) {
+    if (!map || !maplibre) return
+    const points = props.markers.map((m): [number, number] => [m.lng, m.lat])
+    if (!points.length) return
+    const bounds = points.reduce(
+        (box, point) => box.extend(point),
+        new maplibre.LngLatBounds(points[0], points[0]),
+    )
+    const fit = () =>
+        points.length > 1
+            ? map!.fitBounds(bounds, { padding: 32, maxZoom: props.zoom })
+            : map![recenter ? 'easeTo' : 'jumpTo']({
+                  center: points[0],
+                  zoom:
+                      framed && !recenter
+                          ? Math.max(map!.getZoom(), props.zoom)
+                          : props.zoom,
+              })
+    if (!framed || recenter) {
         framed = true
-        if (points.length > 1)
-            map.fitBounds(bounds, { padding: [32, 32], maxZoom: props.zoom })
-        else map.setView(points[0]!, props.zoom)
-    } else if (!map.getBounds().intersects(bounds)) {
-        if (points.length > 1)
-            map.fitBounds(bounds, { padding: [32, 32], maxZoom: props.zoom })
-        else map.setView(points[0]!, Math.max(map.getZoom(), props.zoom))
-    }
+        fit()
+    } else if (!points.some((point) => map!.getBounds().contains(point))) fit()
 }
 
 watch(
@@ -158,15 +196,13 @@ watch(
         const target = props.markers.find((m) => m.id === id)
         if (!map || !target) return
         await nextTick()
-        const zoom = Math.max(map.getZoom(), props.zoom)
         const coveredHeight = overlay.value?.offsetHeight ?? 0
-        const center = map.unproject(
-            map
-                .project([target.lat, target.lng], zoom)
-                .add([0, coveredHeight / 2]),
-            zoom,
-        )
-        map.flyTo(center, zoom, { duration: 0.5 })
+        map.flyTo({
+            center: [target.lng, target.lat],
+            zoom: Math.max(map.getZoom(), props.zoom),
+            offset: [0, -coveredHeight / 2],
+            duration: 500,
+        })
     },
 )
 </script>
@@ -174,6 +210,7 @@ watch(
 <template>
     <div
         class="gym-location-map relative isolate h-72 overflow-hidden rounded-lg border border-default bg-elevated md:h-96"
+        :class="{ 'h-auto!': !consented }"
         data-testid="gym-location-map"
     >
         <div v-if="consented" ref="container" class="size-full" />
@@ -181,7 +218,7 @@ watch(
             v-else
             icon="i-lucide-map"
             :title="$t('gymInfo.location')"
-            :hint="$t('gymInfo.map.consent', { provider: 'OpenStreetMap' })"
+            :hint="$t('gymInfo.map.consent', { provider: 'OpenFreeMap' })"
             :card="false"
             class="flex size-full flex-col items-center justify-center p-4"
         >
@@ -206,8 +243,7 @@ watch(
 
 <style>
 .gym-map-marker {
-    background: none;
-    border: 0;
+    cursor: pointer;
 }
 
 .gym-map-pin {
@@ -216,6 +252,7 @@ watch(
     justify-content: center;
     width: 40px;
     height: 40px;
+    margin-bottom: 6px;
     border-radius: 50% 50% 50% 0;
     transform: rotate(-45deg);
     background: var(--ui-primary);
@@ -252,38 +289,44 @@ watch(
     height: 18px;
 }
 
-.gym-location-map .leaflet-tile-container img {
-    width: 256.5px !important;
-    height: 256.5px !important;
-    mix-blend-mode: normal !important;
+.gym-location-map .maplibregl-canvas-container {
+    touch-action: none;
 }
 
-.dark .gym-location-map .leaflet-tile-pane {
-    filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
-}
-
-.dark .gym-location-map .leaflet-container {
-    background: var(--ui-bg-elevated) !important;
-}
-
-.dark .gym-location-map .leaflet-bar a,
-.dark .gym-location-map .leaflet-control-attribution {
+/* Component styles sit in a cascade layer, so beating maplibre's unlayered CSS needs !important. */
+.dark .gym-location-map .maplibregl-ctrl-group,
+.dark .gym-location-map .maplibregl-ctrl-attrib,
+.dark .gym-location-map .maplibregl-ctrl-attrib.maplibregl-compact {
     background: var(--ui-bg-elevated) !important;
     color: var(--ui-text) !important;
-    border-color: var(--ui-border) !important;
 }
 
-.dark .gym-location-map .leaflet-control-attribution a {
+.dark .gym-location-map .maplibregl-ctrl-group button + button {
+    border-top-color: var(--ui-border) !important;
+}
+
+.gym-map-recenter {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.gym-map-recenter svg {
+    width: 16px;
+    height: 16px;
+    color: #333;
+}
+
+.dark .gym-map-recenter svg {
+    color: var(--ui-text-highlighted);
+}
+
+.dark .gym-location-map .maplibregl-ctrl-icon,
+.dark .gym-location-map .maplibregl-ctrl-attrib-button {
+    filter: invert(1);
+}
+
+.dark .gym-location-map .maplibregl-ctrl-attrib a {
     color: var(--ui-text-highlighted) !important;
-}
-
-.dark .leaflet-tooltip {
-    background: var(--ui-bg-elevated) !important;
-    color: var(--ui-text) !important;
-    border-color: var(--ui-border) !important;
-}
-
-.dark .leaflet-tooltip-top::before {
-    border-top-color: var(--ui-bg-elevated) !important;
 }
 </style>

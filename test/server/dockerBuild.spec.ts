@@ -20,6 +20,40 @@ describe('docker ui build', () => {
         }
     })
 
+    it('copies every repo file the Go tests read into the Go test stage', () => {
+        const goTest = read('Dockerfile')
+            .split(/^FROM /m)
+            .find((stage) => stage.includes(' AS go-test'))!
+        const files = execFileSync(
+            'grep',
+            [
+                '-rhoE',
+                '"(\\.\\./){3,}[^"]+"',
+                'backend/internal',
+                '--include=*_test.go',
+            ],
+            { encoding: 'utf8' },
+        )
+            .split('\n')
+            .filter(Boolean)
+            .map((path) => path.slice(1, -1).replace(/^(\.\.\/)+/, ''))
+        expect(files).toContain('public/.well-known/assetlinks.json')
+        for (const file of new Set(files))
+            expect(
+                goTest
+                    .split('\n')
+                    .filter((line) => line.startsWith('COPY '))
+                    .some((line) => {
+                        const source = line.split(' ')[1]!.replace('*.json', '')
+                        return (
+                            file.startsWith(source) ||
+                            source.startsWith(`${file}/`)
+                        )
+                    }),
+                file,
+            ).toBe(true)
+    })
+
     it('type-checks the app in CI', () => {
         expect(read('Dockerfile')).toMatch(
             /^FROM ui-deps AS typecheck\nCOPY \. \.\n# .+\nRUN --mount=type=cache,target=\/root\/\.npm mkdir \/out && \{ yarn typecheck > \/out\/typecheck\.txt 2>&1; echo \$\? > \/out\/exit-code; \}; cat \/out\/typecheck\.txt$/m,

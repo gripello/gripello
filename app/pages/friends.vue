@@ -72,23 +72,24 @@
                     data-testid="friends-me"
                 >
                     <ClimberBanner
+                        :id="myId"
                         :banner="byId.get(myId)?.banner"
                         :avatar="byId.get(myId)?.avatar"
                         :name="nameOf(myId)"
-                        class="h-20"
+                        class="h-20 max-lg:hidden"
                     />
                     <div
-                        class="relative -mt-10 flex flex-col items-center gap-3 px-4 pb-4 text-center"
+                        class="relative flex flex-col items-center gap-3 p-2 text-center lg:-mt-10 lg:px-4 lg:pt-0 lg:pb-4"
                     >
                         <ClimberAvatar
+                            class="ring-4 ring-(--ui-bg) max-lg:hidden"
                             :id="myId"
                             :name="nameOf(myId)"
                             :src="byId.get(myId)?.avatar"
                             size="lg"
-                            class="ring-4 ring-(--ui-bg)"
                         />
                         <p
-                            class="text-lg font-bold break-words text-highlighted"
+                            class="text-lg font-bold break-words text-highlighted max-lg:hidden"
                         >
                             {{ nameOf(myId) }}
                         </p>
@@ -118,6 +119,7 @@
                             variant="soft"
                             icon="i-lucide-id-card"
                             block
+                            class="max-lg:hidden"
                             data-testid="friends-my-profile"
                         >
                             {{ t('friends.myProfile') }}

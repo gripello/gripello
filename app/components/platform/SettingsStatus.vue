@@ -21,10 +21,14 @@
                     {{ tile.badge }}
                 </UBadge>
             </span>
-            <span class="truncate text-lg font-bold text-highlighted">
+            <span
+                class="text-lg font-bold break-words text-highlighted [overflow-wrap:anywhere]"
+            >
                 {{ tile.value }}
             </span>
-            <span class="truncate text-xs text-muted">{{ tile.detail }}</span>
+            <span v-if="tile.detail" class="truncate text-xs text-muted">{{
+                tile.detail
+            }}</span>
         </NuxtLink>
     </div>
 </template>
@@ -36,7 +40,7 @@ import { getMailSettings, listOAuthProviderSettings } from '~/api/platform'
 import { formatDate } from '#shared/utils/formatting'
 import { oauthProviderStatus } from '~/utils/oauthSettings'
 
-const props = defineProps<{ allowRegistration: boolean; auditDays: number }>()
+const props = defineProps<{ allowRegistration: boolean }>()
 
 const { t, locale } = useI18n()
 
@@ -68,7 +72,6 @@ const tiles = computed(() => {
             value: props.allowRegistration
                 ? t('platform.settings.status.open')
                 : t('platform.settings.status.inviteOnly'),
-            detail: t('platform.settings.status.auditDays', props.auditDays),
             to: '/platform/settings?section=access',
         },
         {

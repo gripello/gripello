@@ -16,6 +16,7 @@ import {
     GRADE_DEVIATION_THRESHOLD,
     type FeedbackRoute,
 } from '#shared/utils/analytics'
+import { isGradeSystem, nearestGrade } from '#shared/utils/grades'
 import { escapeHtml, gridBase, itemTooltip, yAxisBase } from '~/utils/echarts'
 
 const gymPath = useGymPath()
@@ -50,8 +51,18 @@ const option = computed(() => {
     ])
     const min = Math.floor(Math.min(...grades)) - 1
     const max = Math.ceil(Math.max(...grades)) + 1
+    const systems = new Set(props.routes.map((route) => route.gradeSystem))
+    const system = systems.size === 1 ? [...systems][0] : undefined
+    const yBase = yAxisBase(colors.value)
     const axis = {
-        ...yAxisBase(colors.value),
+        ...yBase,
+        axisLabel: {
+            ...yBase.axisLabel,
+            formatter: (value: number) =>
+                system && isGradeSystem(system)
+                    ? nearestGrade(system, value)
+                    : String(value),
+        },
         min,
         max,
         interval: 1,

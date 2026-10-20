@@ -97,7 +97,9 @@
                 </div>
             </div>
 
-            <div class="grid gap-3 lg:grid-cols-[1fr_22rem]">
+            <div
+                class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_22rem]"
+            >
                 <LayoutPanel
                     :title="t('platform.backups.archives')"
                     class="flex flex-col"
@@ -177,7 +179,7 @@
                     </ul>
                 </LayoutPanel>
 
-                <div class="flex flex-col gap-3">
+                <div class="flex min-w-0 flex-col gap-3">
                     <LayoutPanel :title="t('platform.backups.schedule')">
                         <template #actions>
                             <USwitch
@@ -192,7 +194,9 @@
                                 "
                             />
                         </template>
-                        <UFormField :label="t('platform.backups.time')">
+                        <UFormField
+                            :label="`${t('platform.backups.time')} (${zoneLabel})`"
+                        >
                             <USelect
                                 v-model="form.hour"
                                 :items="hourOptions"
@@ -245,7 +249,7 @@
                             class="flex items-start gap-2 rounded-md bg-muted p-3 ring ring-default"
                         >
                             <code
-                                class="min-w-0 flex-1 font-mono text-xs leading-relaxed break-all text-highlighted"
+                                class="min-w-0 flex-1 overflow-x-auto font-mono text-xs leading-relaxed whitespace-pre text-highlighted"
                                 >{{ restoreCommand }}</code
                             >
                             <UButton
@@ -301,6 +305,7 @@ import {
     backupHourOptions,
     formatBytes,
     nextBackupRun,
+    timeZoneName,
     syncCleanForm,
 } from '~/utils/backups'
 import { isWrongPassword } from '~/utils/reauth'
@@ -319,7 +324,13 @@ const { data, error, refresh } = await useAsyncData(
 )
 
 const form = reactive({ keep: 7, include_storage: true, hour: 2 })
-const hourOptions = computed(() => backupHourOptions(locale.value))
+const hydrated = useHydrated()
+// The server renders in UTC; the viewer's zone only exists in the browser.
+const viewerZone = computed(() => (hydrated.value ? undefined : 'UTC'))
+const zoneLabel = computed(() => timeZoneName(locale.value, viewerZone.value))
+const hourOptions = computed(() =>
+    backupHourOptions(locale.value, viewerZone.value),
+)
 watch(
     () => data.value?.settings,
     (settings, previous) => syncCleanForm(form, settings, previous),

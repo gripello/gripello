@@ -170,9 +170,15 @@
                     <GradeLabel :source="row.original" />
                 </template>
                 <template #anchor_point-cell="{ row }">
-                    <span>{{
-                        formatAnchorPoint(row.original.anchor_point)
-                    }}</span>
+                    <span
+                        v-if="
+                            hasAnchorPoint(row.original.anchor_point) ||
+                            !wallName(row.original)
+                        "
+                        >{{
+                            formatAnchorPoint(row.original.anchor_point)
+                        }}</span
+                    >
                     <span
                         v-if="wallName(row.original)"
                         class="route-wall"
@@ -203,7 +209,7 @@
                 <template #actions-cell="{ row }">
                     <div class="flex items-center gap-2 justify-end">
                         <RouteViewButton :route-id="row.original.id" compact />
-                        <RouteDetails :route_id="row.original.id" />
+                        <RouteDetails :route_id="row.original.id" compact />
                     </div>
                 </template>
             </UTable>
@@ -288,6 +294,7 @@ import type { RouteListItem, RouteScoreRecord } from '~/types/models'
 import {
     formatAnchorPoint,
     formatScore,
+    hasAnchorPoint,
     normalizeCreators,
     formatDate,
     wallName,
@@ -401,7 +408,14 @@ const columnsDesktop = computed<TableColumn<RouteListItem>[]>(() => [
         id: 'anchor_point',
         header: sortableHeader(t('climbing.anchor_point'), 'anchor_point'),
     },
-    { id: 'comment', header: sortableHeader(t('climbing.comment'), 'comment') },
+    ...(showComments.value
+        ? [
+              {
+                  id: 'comment',
+                  header: sortableHeader(t('climbing.comment'), 'comment'),
+              },
+          ]
+        : []),
     {
         id: 'creator',
         header: sortableHeader(t('climbing.creators'), 'creator'),
@@ -508,6 +522,21 @@ const routes = computed<RouteListItem[]>(() =>
             score: hasRatings ? route.average_rating : undefined,
         }
     }),
+)
+
+// Pages load one at a time, so the column stays once a page of this search showed a comment.
+const commentsSeen = ref(false)
+watch(
+    routes,
+    (list) => {
+        const any = list.some((route) => route.comment)
+        commentsSeen.value =
+            tableOptions.page === 1 ? any : commentsSeen.value || any
+    },
+    { immediate: true },
+)
+const showComments = computed(
+    () => commentsSeen.value || tableOptions.sortBy[0]?.key === 'comment',
 )
 
 async function loadRoutes(

@@ -6,6 +6,7 @@ import {
     defaultReassignTarget,
     groupPermissions,
     revokesOwnAccess,
+    roleLabel,
 } from '~/utils/roles'
 import type { RoleRecord } from '~/types/models'
 
@@ -164,5 +165,20 @@ describe('revokesOwnAccess', () => {
                 nextPermissions: [],
             }),
         ).toBe(false)
+    })
+})
+
+describe('roleLabel', () => {
+    const t = (key: string) => `t:${key}`
+
+    it('translates built-in roles', () => {
+        expect(roleLabel('admin', t)).toBe('t:members.builtinRoles.admin')
+        expect(roleLabel('routesetter', t)).toBe(
+            't:members.builtinRoles.routesetter',
+        )
+    })
+
+    it('keeps custom role names', () => {
+        expect(roleLabel('Kids coach', t)).toBe('Kids coach')
     })
 })

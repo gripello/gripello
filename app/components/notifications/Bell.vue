@@ -154,10 +154,11 @@ async function openItem(item: NotificationRecord) {
 
 async function turnOnPush() {
     try {
-        await turnOn()
+        if (!(await turnOn())) notifyError(t('accountSettings.push.blocked'))
     } catch (err) {
         console.error('Push subscription failed:', err)
         notifyError(t('notifications.error.edit'))
+        globalThis.reportError?.(err)
     }
 }
 

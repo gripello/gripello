@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, it, expect } from 'vitest'
 import {
     formatAnchorPoint,
+    hasAnchorPoint,
     formatScore,
     normalizeCreators,
     formatDateToYYYYMMDD,
@@ -39,16 +40,16 @@ describe('formatAnchorPoint', () => {
 })
 
 describe('formatScore', () => {
-    it('formats a finite number to two decimal places', () => {
-        expect(formatScore({ score: 4.5 })).toBe('4.50/5')
+    it('formats a finite number to one decimal place', () => {
+        expect(formatScore({ score: 4.5 })).toBe('4.5/5')
     })
 
     it('uses the locale decimal separator', () => {
-        expect(formatScore({ score: 4.5 }, 'de')).toBe('4,50/5')
+        expect(formatScore({ score: 4.5 }, 'de')).toBe('4,5/5')
     })
 
     it('formats an integer score', () => {
-        expect(formatScore({ score: 3 })).toBe('3.00/5')
+        expect(formatScore({ score: 3 })).toBe('3.0/5')
     })
 
     it('returns "—" when score is null', () => {
@@ -236,5 +237,18 @@ describe('localDateYYYYMMDD', () => {
         expect(localDateYYYYMMDD(new Date(2026, 0, 2, 0, 15))).toBe(
             '2026-01-02',
         )
+    })
+})
+
+describe('hasAnchorPoint', () => {
+    it.each([
+        [null, false],
+        ['', false],
+        [0, false],
+        ['0', false],
+        [12, true],
+        ['A3', true],
+    ])('%s → %s', (value, expected) => {
+        expect(hasAnchorPoint(value)).toBe(expected)
     })
 })

@@ -25,7 +25,7 @@ export default defineNuxtConfig({
             branch: process.env.GITHUB_BRANCH || 'main',
         },
         public: {
-            mapTileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            mapStyle: 'https://tiles.openfreemap.org/styles/liberty',
             repoUrl: `https://github.com/${process.env.GITHUB_OWNER || 'gripello'}/${process.env.GITHUB_REPO || 'gripello'}`,
             appVersion:
                 process.env.APP_VERSION ||
@@ -125,7 +125,7 @@ export default defineNuxtConfig({
                 '@vue/devtools-core',
                 '@vue/devtools-kit',
                 'cap-widget',
-                'leaflet',
+                'maplibre-gl',
                 'qrcode',
                 'zxing-wasm/reader',
             ],

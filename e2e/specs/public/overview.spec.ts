@@ -62,15 +62,13 @@ test('guests are invited to sign in for the logbook', async ({ page }) => {
     await page.waitForURL(/\/auth\/login\?redirect=(%2F|\/)logbook/)
 })
 
-test('hovering a grade bar shows its route count', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 })
+test('grade bars name their grade and count without extra tab stops', async ({
+    page,
+}) => {
     await gotoSettled(page, gymPath('/'))
     const bar = page.getByTestId('overview-grade-bar').first()
-    await bar.hover()
-    await expect(
-        page.locator('[data-slot="content"]', { hasText: /routes/ }),
-    ).toBeVisible()
-    await expect(bar).toHaveAccessibleDescription(/routes/)
+    await expect(bar).toHaveAttribute('aria-label', /^.+: \d+$/)
+    await expect(bar).not.toHaveAttribute('tabindex')
 })
 
 test('grade bars share one baseline on a phone', async ({ page }) => {

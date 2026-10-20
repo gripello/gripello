@@ -3,7 +3,7 @@
         <UButton
             class="icon-btn"
             v-if="compact"
-            icon="i-lucide-star"
+            icon="i-lucide-message-square-text"
             color="neutral"
             variant="ghost"
             :aria-label="$t('ratings.ratings')"
@@ -13,7 +13,9 @@
         />
         <UButton
             v-else
-            color="primary"
+            icon="i-lucide-message-square-text"
+            color="neutral"
+            variant="soft"
             data-testid="route-details-open"
             @click="openSheet"
         >

@@ -270,7 +270,8 @@
             "from": "Van",
             "to": "Tot",
             "locations": "Locaties",
-            "types": "Typen"
+            "types": "Typen",
+            "range": "Periode"
         },
         "cards": {
             "activeRoutes": "Actieve routes",
@@ -326,7 +327,9 @@
             "voteCount": "{n} stem | {n} stemmen",
             "setInPeriod": "Gebouwd in periode",
             "setEarlier": "Eerder gebouwd",
-            "otherSetters": "{n} andere | {n} andere"
+            "otherSetters": "{n} andere | {n} andere",
+            "months": "{n} mnd",
+            "years": "{n} jr"
         }
     },
     "climbing": {
@@ -428,7 +431,6 @@
         "reviewMissingTitle": "Niet gescand",
         "reviewMissingDescription": "Deze routes zijn niet gevonden. Niet aangevinkte routes blijven actief.",
         "locationLabel": "Locatie",
-        "locationHint": "Alleen routes op deze locatie worden geteld en gearchiveerd.",
         "locationRequired": "Kies een locatie om te beginnen.",
         "locationRestoreHint": "Opgeslagen voortgang uit een eerdere versie – kies de bijbehorende locatie.",
         "changeLocation": "Locatie wijzigen",
@@ -573,6 +575,7 @@
             "vatId": "Btw-identificatienummer",
             "subtitle": "Informatie overeenkomstig § 5 DDG"
         },
+        "privacyContents": "Inhoud",
         "privacyPage": {
             "subtitle": "Hoe wij persoonsgegevens verwerken wanneer je deze applicatie gebruikt.",
             "controllerTitle": "Verwerkingsverantwoordelijke",
@@ -658,7 +661,7 @@
             },
             "thirdParties": {
                 "title": "Geen tracking, geen derden",
-                "body": "Deze applicatie gebruikt geen analyse-, advertentie- of socialemediaplug-ins en laadt geen bronnen van servers van derden. Alle gegevens worden op onze eigen servers in de EU verwerkt en we verkopen geen gegevens. Doorgifte naar derde landen kan alleen plaatsvinden als je pushmeldingen inschakelt (pushdienst van je browserleverancier) of zelf een link naar een bètavideo opent (zie de secties hierboven). Kaarten worden pas van OpenStreetMap geladen als je ervoor kiest ze te tonen (zie Kaarten)."
+                "body": "Deze applicatie gebruikt geen analyse-, advertentie- of socialemediaplug-ins en laadt geen bronnen van servers van derden. Alle gegevens worden op onze eigen servers in de EU verwerkt en we verkopen geen gegevens. Doorgifte naar derde landen kan alleen plaatsvinden als je pushmeldingen inschakelt (pushdienst van je browserleverancier) of zelf een link naar een bètavideo opent (zie de secties hierboven). Kaarten worden pas van OpenFreeMap geladen als je ervoor kiest ze te tonen (zie Kaarten)."
             },
             "storage": {
                 "title": "Cookies en lokale opslag",
@@ -680,7 +683,7 @@
             },
             "map": {
                 "title": "Kaarten",
-                "body": "Kaarten op halpagina’s worden pas geladen als je Kaart tonen kiest. Je browser vraagt dan kaarttegels op bij de OpenStreetMap Foundation (VK), die je IP-adres en browsergegevens ontvangt (art. 6 lid 1 sub a AVG, je toestemming). We onthouden de keuze op je apparaat; wis de sitegegevens om haar in te trekken. Medewerkers die in de instellingen een haladres opzoeken of de kaartspeld verplaatsen, sturen dat adres of de coördinaten naar OpenStreetMap Nominatim."
+                "body": "Kaarten op halpagina’s worden pas geladen als je Kaart tonen kiest. Je browser vraagt dan kaartgegevens, lettertypen en symbolen op bij OpenFreeMap (openfreemap.org), dat je IP-adres en browsergegevens ontvangt (art. 6 lid 1 sub a AVG, je toestemming). We onthouden de keuze op je apparaat; wis de sitegegevens om haar in te trekken. Medewerkers die in de instellingen een haladres opzoeken of de kaartspeld verplaatsen, sturen dat adres of de coördinaten naar OpenStreetMap Nominatim."
             }
         },
         "accountDeletionPage": {
@@ -732,7 +735,6 @@
                 "exportColumns": "Onthoudt de gekozen exportkolommen",
                 "exportTagTemplate": "Onthoudt de gekozen labelindeling",
                 "inventorySession": "Bewaart de voortgang van een inventarisatiescan",
-                "inventoryInstructions": "Onthoudt dat de inventarisatie-instructies zijn getoond",
                 "offlineLogbook": "Houdt je logboek en nog niet verzonden beklimmingen offline beschikbaar",
                 "pushDeclined": "Onthoudt dat je pushmeldingen op dit apparaat hebt verwijderd",
                 "offlineScores": "Bewaart wedstrijdscores die je zonder bereik hebt ingevoerd tot ze zijn verzonden",
@@ -878,8 +880,7 @@
         "staff": "Team",
         "more": "Meer",
         "sections": "Onderdelen",
-        "noStaffTools": "Je hebt geen teamtools in deze hal",
-        "inbox": "Inbox"
+        "noStaffTools": "Je hebt geen teamtools in deze hal"
     },
     "users": {
         "create": "Gebruiker toevoegen",
@@ -983,11 +984,11 @@
         "contactEmailHint": "Wordt gepubliceerd als aanspreekpunt en ontvangt meldingen over nieuwe inhoudsmeldingen.",
         "mailNotConfigured": "E-mail is niet geconfigureerd, dus wachtwoordherstel en meldingen over inhoud kunnen niet worden verzonden. Een platformbeheerder stelt dit in onder Platforminstellingen › E-mail.",
         "legalTitle": "Colofon",
+        "legalName": "Naam van de aanbieder",
         "legalAddress": "Postadres",
         "legalPhone": "Telefoon",
         "legalRegister": "Registratie",
         "legalUrlHint": "Laat leeg om de ingebouwde pagina te gebruiken.",
-        "legalIntro": "Wordt getoond op de ingebouwde colofon- en privacypagina.",
         "legalAddressPlaceholder": "Straat 1\n1234 AB Plaats",
         "legalRegisterPlaceholder": "KvK Plaats, 12345678",
         "legalVatId": "Btw-nummer",
@@ -1016,19 +1017,8 @@
         "grading": "Graadschalen",
         "routeGradeSystem": "Schaal voor routes",
         "boulderGradeSystem": "Schaal voor boulders",
-        "gradingHint": "Geldt voor nieuw gebouwde routes. Bestaande routes houden hun schaal tot ze worden bewerkt.",
-        "description": "Beheer je organisatie, huisstijl, graadschalen en juridische gegevens.",
         "sections": "Onderdelen van de instellingen",
         "branding": "Huisstijl",
-        "brandingHint": "Logo's en pictogrammen in de app, het browsertabblad en op geprinte routebordjes.",
-        "organizationHint": "Naam, contact en accountopties van je organisatie.",
-        "publicUrlsHint": "Adressen voor links, e-mails en QR-codes.",
-        "assetHints": {
-            "logo": "PNG, JPG, SVG of WebP. Wordt getoond in de navigatiebalk.",
-            "icon": "ICO-bestand dat in het browsertabblad wordt getoond.",
-            "sign": "PNG, JPG, SVG of WebP. Wordt op routebordjes geprint.",
-            "cover": "PNG, JPG of WebP. Bovenaan de halinfo-pagina."
-        },
         "boulderBands": "Boulderkleuren",
         "boulderBandsHint": "Verschijnt als kleurbalk naast bouldergraden en op geprinte bordjes. Sleep de grepen om te bepalen waar een kleur eindigt; kies een kleur om die te hernoemen, van kleur te veranderen, te splitsen of te verwijderen.",
         "bandColor": "Kleur",
@@ -1294,7 +1284,8 @@
             "submit": "Melding versturen",
             "submitted": "Bedankt! De routebouwers zijn op de hoogte gebracht.",
             "bannerTitle": "{n} bekend probleem | {n} bekende problemen",
-            "marker": "Bekend probleem"
+            "marker": "Bekend probleem",
+            "urgentMarker": "Dringend probleem"
         },
         "wish": {
             "action": "Route wensen",
@@ -1395,7 +1386,19 @@
             "platform_config": "Platforminstellingen",
             "oauth2_providers": "Aanmeldprovider",
             "retired_slugs": "Vrijgehouden hal-URL",
-            "backups": "Back-up"
+            "backups": "Back-up",
+            "gyms": "Hal",
+            "memberships": "Lidmaatschap",
+            "invites": "Uitnodiging",
+            "ticks": "Beklimming",
+            "walls": "Wand",
+            "locations": "Locatie",
+            "beta_videos": "Bètavideo",
+            "seasons": "Seizoen",
+            "competitions": "Wedstrijd",
+            "competition_routes": "Wedstrijdroute",
+            "competition_entries": "Wedstrijdinschrijving",
+            "moderation_items": "Moderatiezaak"
         },
         "changedLabel": "Gewijzigd",
         "filter": {
@@ -1405,6 +1408,28 @@
         "actor": {
             "guests": "Gasten",
             "me": "Ik"
+        },
+        "fields": {
+            "name": "naam",
+            "grade": "graad",
+            "color": "kleur",
+            "wall": "wand",
+            "wall_position": "positie op de wand",
+            "location": "locatie",
+            "latitude": "kaartpositie",
+            "longitude": "kaartpositie",
+            "state": "status",
+            "status": "status",
+            "role": "rol",
+            "email": "e-mailadres",
+            "firstname": "voornaam",
+            "avatar": "profielfoto",
+            "comment": "opmerking",
+            "anchor_point": "ankerpunt",
+            "screw_date": "bouwdatum",
+            "archived": "gearchiveerd",
+            "creators": "routebouwers",
+            "type": "type"
         }
     },
     "gradeSystems": {
@@ -1416,7 +1441,6 @@
     },
     "gradeConversion": {
         "title": "Graadconversie",
-        "source": "De routeschalen en de rij ≈ UIAA volgen ongewijzigd de IRCRA-rapportageschaal (Draper et al., 2015). Fb ↔ V gebruikt de gangbare omrekening. De halkleuren zijn het eigen schema van de hal en komen uit geen van beide bronnen.",
         "open": "Conversietabel",
         "downloadPdf": "Pdf downloaden",
         "easy": "Makkelijk",
@@ -1425,7 +1449,6 @@
         "boulders": "Boulders",
         "routes": "Routes",
         "gymBand": "Halkleur",
-        "orientation": "Indicatie",
         "andUp": "{grade} en hoger",
         "bands": {
             "yellow": "Geel",
@@ -1433,12 +1456,6 @@
             "blue": "Blauw",
             "red": "Rood",
             "black": "Zwart"
-        },
-        "notes": {
-            "fontVsFrench": "Fb 6A is niet Frans 6a. Frans 6a ≈ UIAA 6, Fb 6A ≈ UIAA 7+.",
-            "beginner": "De eerste kleur heeft geen ondergrens. IRCRA zet alles makkelijker dan Fb 3 onder “<2”.",
-            "orientation": "≈ UIAA is alleen een indicatie. Beoordeel nieuwe boulders aan de hand van referentieboulders, niet aan deze rij.",
-            "bands": "De kleuren zijn het eigen schema van de hal (Instellingen → Graadschalen). Standaard volgt de circuitvolgorde van Fontainebleau (geel, oranje, blauw, rood, zwart); een universele standaard bestaat niet."
         }
     },
     "gradeSystemsShort": {
@@ -1520,8 +1537,6 @@
         },
         "suggestions": {
             "title": "Routes om te proberen",
-            "subtitle": "Routes die je nog niet hebt geklommen, dicht bij je niveau",
-            "subtitleNew": "De nieuwste routes in de hal",
             "new": "Nieuw"
         },
         "pendingSync": "Nog niet gesynchroniseerd",
@@ -1671,14 +1686,13 @@
         "discard": "Verwerpen",
         "save": "Opslaan ({n})",
         "saved": "Routeposities opgeslagen.",
-        "wallRoutes": "{n} routes op deze wand",
+        "wallRoutes": "{n} route op deze wand | {n} routes op deze wand",
         "distribute": "Routes gelijkmatig over de wand verdelen",
         "unplaced": "Niet geplaatst ({n})",
         "placed": "Op de plattegrond ({n})",
         "remove": "Van plattegrond verwijderen",
         "canvasLabel": "Plattegrond voor het plaatsen van routes",
         "hints": {
-            "idle": "Tik op een route en dan op de plek op de wand — de volgende route volgt automatisch. Vink meerdere routes aan om ze in één keer op een wand te zetten. Sleep stippen om ze te verplaatsen.",
             "armed": "Klik op een wand om “{name}” te plaatsen. Esc annuleert.",
             "checked": "Tik op een wand om er {n} route te plaatsen, op volgorde van lijnnummer. | Tik op een wand om er {n} routes te plaatsen, op volgorde van lijnnummer."
         },
@@ -1727,21 +1741,20 @@
     "overview": {
         "title": "Klimhal",
         "description": "Nieuwe routes, wanden en graden in één oogopslag.",
-        "routesCount": "{n} routes",
-        "newCount": "{n} nieuw deze week",
+        "routesCount": "{n} route | {n} routes",
+        "newCount": "{n} nieuw in twee weken",
         "newRoutes": "Nieuw gebouwd",
-        "newRoutesEmpty": "De afgelopen twee weken is er niets nieuws gebouwd.",
         "allRoutes": "Alle routes",
         "walls": "Wanden",
         "openMap": "Plattegrond openen",
-        "wallRoutes": "{n} routes",
+        "wallRoutes": "{n} route | {n} routes",
         "newestSet": "Nieuwste: {date}",
         "popular": "Populaire routes",
         "popularEmpty": "Nog niet genoeg beoordelingen.",
         "progressTitle": "Je voortgang",
         "progress": "Je hebt {sent} van de {total} huidige routes geklommen.",
-        "openLogbook": "Logboek openen",
-        "gradeSpread": "Graden aan de wand"
+        "gradeSpread": "Graden aan de wand",
+        "resets": "Binnenkort weg"
     },
     "accountSettings": {
         "title": "Instellingen",
@@ -2010,7 +2023,8 @@
             "topsZones": "{tops} T · {zones} Z",
             "final": "Einduitslag",
             "updated": "Bijgewerkt {time}",
-            "scanToJoin": "Scan om mee te doen"
+            "scanToJoin": "Scan om mee te doen",
+            "scanForResults": "Scan voor de uitslag"
         },
         "judge": {
             "title": "Jurering",
@@ -2091,7 +2105,8 @@
             "corrections": "Het team controleert de scores en kan ze corrigeren.",
             "entryFee": "Er is inschrijfgeld. Betaal via de link op de wedstrijdpagina; het team markeert je als betaald."
         },
-        "requiresPayment": "Inschrijfgeld vereist"
+        "requiresPayment": "Inschrijfgeld vereist",
+        "share": "Delen"
     },
     "members": {
         "title": "Leden",
@@ -2104,7 +2119,13 @@
         "removeConfirm": "Deze persoon uit het team van de hal verwijderen? Het account blijft bestaan.",
         "removed": "Lid verwijderd.",
         "alreadyMember": "Deze persoon is al lid.",
-        "invited": "Uitnodiging verstuurd."
+        "invited": "Uitnodiging verstuurd.",
+        "builtinRoles": {
+            "admin": "Beheerder",
+            "routesetter": "Routebouwer",
+            "public": "Openbaar"
+        },
+        "rowActions": "Acties voor lid"
     },
     "invites": {
         "eyebrow": "UITNODIGING",
@@ -2226,7 +2247,6 @@
                 "registration": "Registratie",
                 "open": "Open",
                 "inviteOnly": "Alleen op uitnodiging",
-                "auditDays": "Auditlog {n} dag bewaard | Auditlog {n} dagen bewaard",
                 "configured": "{n} ingesteld",
                 "live": "{n} actief"
             },
@@ -2484,6 +2504,7 @@
             "settings": "Schema opslaan",
             "confirm": "Back-ups bevatten alle accounts. Bevestig met je wachtwoord.",
             "time": "Dagelijks om",
+            "pgDumpOff": "pg_dump ontbreekt",
             "pgDumpMissing": "pg_dump is niet geïnstalleerd op deze server",
             "lastFailed": "Laatste back-up mislukt",
             "lastRun": "Laatste back-up {date}",
@@ -2857,7 +2878,6 @@
     },
     "moderation": {
         "title": "Moderatie",
-        "reviewStats": "Beoordelingsstatistiek",
         "moderate": "Modereren",
         "filterType": "Inhoud",
         "filterGym": "Hal",
@@ -2866,7 +2886,7 @@
             "approval": "Wacht op goedkeuring",
             "hidden": "Verborgen",
             "history": "Gecontroleerd",
-            "all": "Alle hallen"
+            "all": "Alle open"
         },
         "types": {
             "rating": "Beoordeling",
@@ -2974,7 +2994,8 @@
         },
         "map": {
             "show": "Kaart tonen",
-            "consent": "Laadt kaarttegels van {provider}, dat je IP-adres ontvangt."
+            "consent": "Laadt kaarttegels van {provider}, dat je IP-adres ontvangt.",
+            "recenter": "Kaart centreren"
         },
         "amenities": {
             "toilets": "Toiletten",
@@ -3148,5 +3169,10 @@
         "extend": "Proef verlengen",
         "convert": "Volledig activeren",
         "convertConfirm": "Proefperiode van {name} beëindigen? Het team houdt volledige toegang."
+    },
+    "outdatedBrowser": {
+        "browser": "Gripello heeft een nieuwere browser nodig om goed te worden weergegeven.",
+        "webview": "Android System WebView is verouderd, daardoor wordt Gripello niet goed weergegeven.",
+        "update": "Bijwerken"
     }
 }

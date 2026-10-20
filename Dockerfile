@@ -22,6 +22,7 @@ RUN apt-get update \
 COPY backend/testdata ./testdata
 COPY i18n/locales/*.json /src/i18n/locales/
 COPY shared /src/shared
+COPY public/.well-known/assetlinks.json /src/public/.well-known/
 ENV GRIPELLO_TEST_DSN=postgres://postgres@127.0.0.1:5432/postgres?sslmode=disable
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

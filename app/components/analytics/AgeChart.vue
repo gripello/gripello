@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import type { AgedRoute } from '#shared/utils/analytics'
+import { routeAge, type AgedRoute } from '#shared/utils/analytics'
 import { escapeHtml, gridBase, itemTooltip, yAxisBase } from '~/utils/echarts'
 
 const gymPath = useGymPath()
@@ -20,6 +20,11 @@ const { colors, palette } = useChartTheme()
 
 const rows = computed(() => [...props.routes].reverse())
 
+function ageLabel(days: number) {
+    const { unit, n } = routeAge(days)
+    return t(`analytics.labels.${unit}`, { n })
+}
+
 const option = computed(() => ({
     backgroundColor: 'transparent',
     tooltip: itemTooltip(colors.value, ({ data }) => {
@@ -29,7 +34,7 @@ const option = computed(() => ({
             .map((part) => escapeHtml(String(part)))
             .join(' · ')
         return `<strong>${escapeHtml(route.name)}</strong><br/>${details}<br/>
-            ${t('analytics.labels.days', { n: route.ageDays })}`
+            ${ageLabel(route.ageDays)}`
     }),
     grid: { ...gridBase, left: 12, top: 8, right: 48 },
     xAxis: yAxisBase(colors.value),
@@ -59,8 +64,7 @@ const option = computed(() => ({
                 position: 'right',
                 color: colors.value.tooltipText,
                 fontSize: 11,
-                formatter: ({ value }: { value: number }) =>
-                    t('analytics.labels.days', { n: value }),
+                formatter: ({ value }: { value: number }) => ageLabel(value),
             },
             data: rows.value.map((route) => ({ value: route.ageDays, route })),
         },

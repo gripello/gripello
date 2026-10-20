@@ -13,6 +13,7 @@ test('a setter leaves the gym and loses the staff pages', async ({
     await expect(page.getByTestId('me-staff-tools')).toBeVisible()
 
     await page.getByTestId(`me-gym-leave-${E2E_GYM_SLUG}`).click()
+    await page.getByRole('menuitem', { name: 'Leave' }).click()
     await page.getByTestId('confirm-dialog-confirm').click()
 
     await expect(page.getByTestId(`me-gym-${E2E_GYM_SLUG}`)).toHaveCount(0)

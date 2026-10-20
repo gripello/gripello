@@ -210,6 +210,7 @@ export function clearOfDots(
     dotRadius: number,
     gap: number,
     direction: 1 | -1 = -1,
+    fit: (candidate: LabelBox) => LabelBox = (candidate) => candidate,
 ): LabelBox {
     const covers = (candidate: LabelBox) =>
         dots.some(
@@ -221,10 +222,10 @@ export function clearOfDots(
         )
     const step = (label.height / 2 + gap) * direction
     for (const offset of [0, step, step * 2, -step, -step * 2]) {
-        const candidate = { ...label, y: label.y + offset }
+        const candidate = fit({ ...label, y: label.y + offset })
         if (!covers(candidate)) return candidate
     }
-    return label
+    return fit(label)
 }
 
 export interface DotCluster<Dot extends { routeId: string; point: MapPoint }> {

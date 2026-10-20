@@ -21,6 +21,7 @@ import {
 
 interface PanZoomOptions {
     bounds: Ref<MapBounds>
+    homeBounds?: Ref<MapBounds | null>
     minWidth?: number
     maxPixelsPerUnit?: number
     canStartPan?: (event: PointerEvent) => boolean
@@ -45,10 +46,9 @@ const prefersReducedMotion = () =>
     !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 export function useSvgPanZoom(options: PanZoomOptions) {
+    const home = () => options.homeBounds?.value ?? options.bounds.value
     const svgRef = ref<SVGSVGElement | null>(null)
-    const viewBox = ref<ViewBox>(
-        fitViewBox(options.bounds.value, INITIAL_ASPECT_RATIO, 0.5),
-    )
+    const viewBox = ref<ViewBox>(fitViewBox(home(), INITIAL_ASPECT_RATIO, 0.5))
     const size = ref({ width: 0, height: 0 })
     const isPanning = ref(false)
     let view = viewBox.value
@@ -188,7 +188,7 @@ export function useSvgPanZoom(options: PanZoomOptions) {
     }
 
     function fitAll(animate = false) {
-        fitTo(options.bounds.value, { padding: 0.5, animate })
+        fitTo(home(), { padding: 0.5, animate })
     }
 
     function zoomBy(factor: number, focus?: MapPoint) {
@@ -395,7 +395,7 @@ export function useSvgPanZoom(options: PanZoomOptions) {
             return
         }
         const initial = pendingFit ?? {
-            bounds: options.bounds.value,
+            bounds: home(),
             padding: 0.5,
         }
         pendingFit = null

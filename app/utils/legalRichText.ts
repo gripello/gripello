@@ -137,3 +137,16 @@ export function privacySections(
     flush()
     return sections
 }
+
+export function inlineText(nodes: RichInline[]): string {
+    return nodes
+        .map((node) =>
+            node.type === 'text'
+                ? node.text
+                : node.type === 'br'
+                  ? ' '
+                  : inlineText(node.children),
+        )
+        .join('')
+        .trim()
+}

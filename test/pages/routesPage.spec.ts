@@ -16,3 +16,38 @@ describe('routes page', () => {
         )
     })
 })
+
+describe('routes page table', () => {
+    it('keeps the row actions icon-only so the table fits', () => {
+        expect(source).toContain(
+            '<RouteDetails :route_id="row.original.id" compact />',
+        )
+    })
+})
+
+describe('routes page comment column', () => {
+    it('stays while paging and while sorted by comment', () => {
+        expect(source).toMatch(
+            /tableOptions\.page === 1 \? any : commentsSeen\.value \|\| any/,
+        )
+        expect(source).toMatch(
+            /commentsSeen\.value \|\| tableOptions\.sortBy\[0\]\?\.key === 'comment'/,
+        )
+        expect(source).toContain('...(showComments.value')
+    })
+})
+
+describe('manage routes page', () => {
+    it('shows the marker legend only in the phone filter sheet', () => {
+        const manage = readFileSync(
+            path.resolve(
+                import.meta.dirname,
+                '../../app/pages/[gym]/manage/routes.vue',
+            ),
+            'utf8',
+        )
+        expect(manage).toMatch(
+            /text-muted sm:hidden"\s+data-testid="routes-marker-legend"/,
+        )
+    })
+})

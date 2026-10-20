@@ -83,6 +83,7 @@ test('operator legal fields feed the built-in imprint page', async ({
     await updateSettings(api, {
         imprint_url: '',
         privacy_url: '',
+        legal_name: 'E2E Operator GmbH',
         legal_address: address,
         legal_vat_id: 'DE987654321',
         legal_representatives: [{ name: 'E2E Operator', role: 'CEO' }],

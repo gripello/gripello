@@ -20,7 +20,7 @@
             <p class="truncate font-semibold text-highlighted">
                 {{ competition.name }}
             </p>
-            <p class="truncate text-sm text-muted">
+            <p class="text-sm text-muted">
                 {{ windowText }}
             </p>
         </div>
@@ -28,6 +28,7 @@
             :color="COMPETITION_PHASE_COLORS[phase]"
             variant="soft"
             size="sm"
+            class="shrink-0"
         >
             {{ $t(`competitions.phases.${phase}.title`) }}
         </UBadge>

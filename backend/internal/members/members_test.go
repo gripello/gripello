@@ -322,7 +322,7 @@ func TestListMembersAndOwnMemberships(t *testing.T) {
 	f.call(http.MethodGet, "/gyms/"+f.gymA+"/members", "", f.adminA, http.StatusOK, `"username":"setter-a_example_com"`, `"name":"routesetter"`)
 	f.call(http.MethodGet, "/gyms/"+f.gymA+"/members", "", f.operator, http.StatusOK, `"username":"admin-a_example_com"`)
 	f.call(http.MethodGet, "/gyms/"+f.gymA+"/members", "", f.setterA, http.StatusForbidden)
-	body := f.call(http.MethodGet, "/me/memberships", "", f.setterA, http.StatusOK, `"slug":"gym-a"`, `"manage_routes"`)
+	body := f.call(http.MethodGet, "/me/memberships", "", f.setterA, http.StatusOK, `"slug":"gym-a"`, `"unit_name":`, `"manage_routes"`)
 	if strings.Contains(body, "gym-b") {
 		t.Errorf("own memberships leak another gym: %s", body)
 	}

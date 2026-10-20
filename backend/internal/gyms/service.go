@@ -118,6 +118,7 @@ var settingsFields = map[string]field{
 	"privacy_url":           {kind: "url"},
 	"contact_email":         {kind: "email"},
 	"audit_retention_days":  {kind: "int", min: 1, max: 3650},
+	"legal_name":            {kind: "text", max: 300},
 	"legal_address":         {kind: "text", max: 1000},
 	"legal_phone":           {kind: "text", max: 100},
 	"legal_register":        {kind: "text", max: 500},

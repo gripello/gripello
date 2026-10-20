@@ -6,7 +6,6 @@
             v-if="!error"
             :class="{ 'max-lg:hidden': route.query.section }"
             :allow-registration="!!settings?.allow_registration"
-            :audit-days="settings?.audit_retention_days ?? 90"
         />
 
         <LayoutEmptyState
@@ -157,6 +156,18 @@
                     variant="outline"
                     :ui="formCardUi"
                 >
+                    <UFormField
+                        :label="t('settings.legalName')"
+                        name="legal_name"
+                        :ui="fieldUi"
+                    >
+                        <UInput
+                            v-model="form.legal_name"
+                            icon="i-lucide-building-2"
+                            class="w-full"
+                            data-testid="platform-settings-legal-name"
+                        />
+                    </UFormField>
                     <SettingsLegalFields
                         :legal="form"
                         test-id-prefix="platform-settings"
@@ -175,7 +186,7 @@
                     >
                         <SettingsPrivacyEditor
                             v-model:doc="form.privacy_doc"
-                            :controller="form"
+                            :controller="{ ...form, name: form.legal_name }"
                             imprint-path="/imprint"
                             test-id-prefix="platform-settings"
                         />
@@ -211,6 +222,7 @@ function formFrom(rec: SettingsRecord | null | undefined) {
         contact_email: rec?.contact_email ?? '',
         imprint_url: rec?.imprint_url ?? '',
         privacy_url: rec?.privacy_url ?? '',
+        legal_name: rec?.legal_name ?? '',
         ...legalFieldsFrom(rec ?? {}),
     }
 }
@@ -308,6 +320,7 @@ async function saveSettings() {
                 contact_email: form.contact_email.trim(),
                 imprint_url: form.imprint_url.trim(),
                 privacy_url: form.privacy_url.trim(),
+                legal_name: form.legal_name.trim(),
                 ...legalPayload(form),
             })
             resetForm()

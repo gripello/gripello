@@ -18,7 +18,9 @@ async function inviteByMail(page: Page, email: string) {
     await page.getByTestId('member-invite-lastname').fill('Invited')
     await page.getByTestId('member-invite-email').fill(email)
     await page.getByTestId('member-invite-role').click()
-    await page.getByRole('option', { name: 'routesetter', exact: true }).click()
+    await page
+        .getByRole('option', { name: 'Route setter', exact: true })
+        .click()
     await page.getByTestId('member-invite-submit').click()
     await expect(page.getByTestId('member-invite-dialog')).toBeHidden()
     await expect(page.getByTestId(`pending-invite-${email}`)).toBeVisible()

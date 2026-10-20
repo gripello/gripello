@@ -1,7 +1,12 @@
 <template>
     <div class="flex flex-col gap-4">
-        <LayoutPanel as="div">
-            <div class="flex flex-wrap items-center gap-2">
+        <FilterBar
+            v-model="search"
+            :search-label="t('actions.search')"
+            :active-filter-count="activeFilterCount"
+            @clear="clearFilters"
+        >
+            <template #search>
                 <SegmentedControl
                     v-model="view"
                     :items="viewItems"
@@ -16,6 +21,8 @@
                     class="min-w-48 flex-1"
                     data-testid="moderation-search"
                 />
+            </template>
+            <template #filters>
                 <FilterSelect
                     v-model="contentType"
                     :label="t('moderation.filterType')"
@@ -37,26 +44,29 @@
                     data-testid="moderation-filter-gym"
                     @clear="gymFilter = undefined"
                 />
-                <UBadge
-                    v-if="authorFilter"
-                    color="neutral"
-                    variant="outline"
-                    size="lg"
-                    class="gap-1"
-                >
-                    {{ authorFilter.name }}
-                    <UButton
-                        icon="i-lucide-x"
+            </template>
+            <template v-if="authorFilter" #below>
+                <div class="px-3 pb-3">
+                    <UBadge
                         color="neutral"
-                        variant="link"
-                        size="xs"
-                        :aria-label="t('filter.clear')"
-                        data-testid="moderation-author-clear"
-                        @click="authorFilter = null"
-                    />
-                </UBadge>
-            </div>
-        </LayoutPanel>
+                        variant="outline"
+                        size="lg"
+                        class="gap-1"
+                    >
+                        {{ authorFilter.name }}
+                        <UButton
+                            icon="i-lucide-x"
+                            color="neutral"
+                            variant="link"
+                            size="xs"
+                            :aria-label="t('filter.clear')"
+                            data-testid="moderation-author-clear"
+                            @click="authorFilter = null"
+                        />
+                    </UBadge>
+                </div>
+            </template>
+        </FilterBar>
 
         <p
             v-if="newCount"
@@ -250,6 +260,14 @@ const gymFilter = ref<string | undefined>(
     (route.query.gym as string | undefined) || undefined,
 )
 const authorFilter = ref<{ id: string; name: string } | null>(null)
+const activeFilterCount = computed(
+    () => Number(!!contentType.value) + Number(!!gymFilter.value),
+)
+
+function clearFilters() {
+    contentType.value = undefined
+    gymFilter.value = undefined
+}
 
 const viewItems = computed(() =>
     (props.platform ? PLATFORM_VIEWS : GYM_VIEWS).map((value) => {

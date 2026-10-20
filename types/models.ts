@@ -231,6 +231,7 @@ export interface LegalFields {
 }
 
 export interface SettingsRecord extends BaseRecord, LegalFields {
+    legal_name?: string | null
     audit_retention_days?: number | null
     allow_registration?: boolean
 }

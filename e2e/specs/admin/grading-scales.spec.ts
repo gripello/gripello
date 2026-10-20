@@ -143,7 +143,6 @@ test('route page links its grade to the IRCRA conversion table', async ({
         'grade-conversion-uiaa-8',
         'grade-conversion-font-6B',
         'grade-conversion-v-V3',
-        'grade-conversion-orientation-6',
         'grade-conversion-band-black',
     ]) {
         await expect(dialog.getByTestId(testId)).toBeAttached()

@@ -30,4 +30,34 @@ describe('AuditCard', () => {
         )
         expect(absolute.text()).toContain('2026')
     })
+
+    it('labels changed fields and hides unlinked record ids', () => {
+        const labels: Record<string, string> = {
+            'audit.fields.latitude': 'map position',
+            'audit.fields.longitude': 'map position',
+        }
+        vi.stubGlobal('useI18n', () => ({
+            t: (key: string) => labels[key] ?? key,
+            te: (key: string) => key in labels,
+            locale: ref('en'),
+        }))
+        const wrapper = mount(AuditCard, {
+            props: {
+                entry: {
+                    id: 'a2',
+                    action: 'update',
+                    collection_name: 'unknown_things',
+                    record_id: 'abc123',
+                    changed_fields: ['latitude', 'longitude', 'wall_position'],
+                    created: '2026-10-01 10:00:00.000Z',
+                } as AuditLogRecord,
+            },
+            global: { stubs: { UIcon: true, NuxtLink: true } },
+        })
+
+        expect(wrapper.find('[data-testid="audit-card-fields"]').text()).toBe(
+            'map position, wall position',
+        )
+        expect(wrapper.text()).not.toContain('abc123')
+    })
 })

@@ -232,6 +232,8 @@ onBeforeUnmount(() => clearTimeout(rejectedTimer))
 </script>
 
 <style scoped>
+@reference "~/assets/css/main.css";
+
 .scan-page {
     display: flex;
     flex-direction: column;
@@ -317,5 +319,36 @@ onBeforeUnmount(() => clearTimeout(rejectedTimer))
     display: flex;
     justify-content: center;
     padding: 4px 16px 12px;
+}
+
+@variant short-landscape {
+    .scan-viewport {
+        min-height: 0;
+    }
+
+    .scan-frame {
+        width: auto;
+        height: 70%;
+    }
+}
+
+@variant lg {
+    .scan-page {
+        width: 100%;
+        max-width: 28rem;
+        margin-inline: auto;
+        justify-content: center;
+        padding-block: 24px;
+    }
+
+    .scan-viewport {
+        flex: none;
+        aspect-ratio: 3 / 4;
+        border-radius: 16px;
+    }
+
+    .scan-idle {
+        flex: none;
+    }
 }
 </style>

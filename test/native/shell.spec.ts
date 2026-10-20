@@ -380,3 +380,24 @@ describe('home-screen widget', () => {
             )
     })
 })
+
+describe('android passkeys', () => {
+    it('ships Credential Manager, which the WebView uses for passkeys', () => {
+        const gradle = readFileSync('mobile/android/app/build.gradle', 'utf8')
+        expect(gradle).toContain('androidx.credentials:credentials:')
+        expect(gradle).toContain(
+            'androidx.credentials:credentials-play-services-auth:',
+        )
+    })
+})
+
+describe('android system theme', () => {
+    it('tells the page when the system switches between light and dark', () => {
+        const activity = readFileSync(
+            'mobile/android/app/src/main/java/app/gripello/MainActivity.java',
+            'utf8',
+        )
+        expect(activity).toContain('public void onConfigurationChanged(')
+        expect(activity).toContain("CustomEvent('gripello:system-theme'")
+    })
+})

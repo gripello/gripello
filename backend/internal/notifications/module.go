@@ -417,7 +417,7 @@ func (m *module) testPush(w http.ResponseWriter, r *http.Request) error {
 	payload, _ := json.Marshal(push.Payload{
 		Title: m.app.Cfg.AppName,
 		Body:  m.app.Locales.Translate(m.app.Locales.Language(language), "accountSettings.push.testMessage", nil),
-		URL:   "/account/settings",
+		URL:   "/account/settings?tab=notifications",
 		Tag:   "test",
 	})
 	m.sendAll(r.Context(), subscriptions, payload)

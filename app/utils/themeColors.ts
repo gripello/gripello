@@ -45,3 +45,12 @@ export const MEDALS: Record<number, string> = {
     2: 'bg-[#c9d1d9] text-[#1f2328]',
     3: 'bg-[#cd7f32] text-[#2b1600]',
 }
+
+export function podiumRank(row: {
+    rank: number
+    points: number
+    tops: number
+    zones: number
+}) {
+    return row.points > 0 || row.tops > 0 || row.zones > 0 ? row.rank : 0
+}

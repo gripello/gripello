@@ -51,6 +51,7 @@ test('the route page names the wall and links to it on the map', async ({
     await expect(page.getByTestId('route-wall')).toContainText(
         `${testPrefix} North`,
     )
+    await page.getByTestId('route-more-actions').click()
     await page.getByTestId('route-show-on-map').click()
     await page.waitForURL(/\/map\?/)
     await expect(page).toHaveURL(new RegExp(`route=${seeded.routeIds[0]}`))

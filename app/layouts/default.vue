@@ -11,6 +11,7 @@
         <div class="page-body">
             <LayoutNavBar :loggedIn="isLoggedIn" />
             <main ref="mainEl" id="main-content" class="app-main">
+                <LayoutOutdatedBrowser />
                 <slot />
             </main>
         </div>

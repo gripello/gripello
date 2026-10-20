@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
+@custom-variant short-landscape (@media (orientation: landscape) and (max-height: 500px));
+
 @theme {
     --font-sans: 'Roboto', sans-serif;
 }
@@ -113,7 +115,16 @@
             --app-bottom-inset: env(safe-area-inset-bottom, 0px);
         }
         :root:has([data-section-tabs]) {
-            --app-top: 109px;
+            --app-top: 113px;
+        }
+
+        @variant short-landscape {
+            :root {
+                --app-bottom: 44px;
+            }
+            :root:has([data-section-tabs]) {
+                --app-top: 64px;
+            }
         }
     }
 
@@ -481,6 +492,12 @@
         line-height: 1.6;
     }
 
+    @variant max-md {
+        .legal-doc {
+            padding: 4px 16px;
+        }
+    }
+
     .legal-doc section {
         padding: 18px 0;
     }
@@ -555,6 +572,12 @@
                 var(--app-bottom, 0px) - var(--app-bottom-inset, 0px)
         );
         min-height: 420px;
+    }
+
+    @variant short-landscape {
+        .map-screen {
+            min-height: 0;
+        }
     }
 
     .map-screen__bar {
@@ -672,6 +695,26 @@
 
     .dialog-fullscreen {
         padding-top: var(--app-top-inset);
+    }
+}
+
+/* Android resizes the page for the keyboard, which would lift the fixed bar above it. */
+@media (pointer: coarse) {
+    body:has(
+            :is(
+                input:not(
+                    [type='checkbox'],
+                    [type='radio'],
+                    [type='range'],
+                    [type='button'],
+                    [type='submit']
+                ),
+                textarea,
+                [contenteditable='true']
+            ):focus
+        )
+        .bottom-nav {
+        display: none;
     }
 }
 

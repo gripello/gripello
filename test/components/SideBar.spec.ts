@@ -12,6 +12,7 @@ vi.stubGlobal('useRoute', () => ({
 vi.stubGlobal('routeGymSlug', (params: { gym?: string }) => params.gym ?? '')
 vi.stubGlobal('useSidebar', () => ({ open: ref(true) }))
 vi.stubGlobal('useCoarsePointer', () => ref(false))
+vi.stubGlobal('useHydrated', () => ref(true))
 vi.stubGlobal('useGym', () => ({
     gym: computed(() => ({ name: 'E2E Gym' })),
     slug: computed(() => 'e2e'),

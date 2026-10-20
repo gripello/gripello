@@ -4,7 +4,10 @@ import {
     appLinkPath,
     backAction,
     externalUrl,
+    followSystemTheme,
+    foregroundPush,
     isNativeApp,
+    SYSTEM_THEME_EVENT,
     openInBrowser,
     systemAppUrl,
 } from '~/utils/native'
@@ -35,6 +38,17 @@ export default defineNuxtPlugin(async (nuxtApp) => {
                         : SystemBarsStyle.Light,
             }),
         { immediate: true },
+    )
+
+    // The WebView keeps reporting the launch theme to matchMedia, which color-mode re-reads on every navigation.
+    let systemTheme: unknown = null
+    window.addEventListener(SYSTEM_THEME_EVENT, (event) => {
+        systemTheme = (event as CustomEvent).detail
+        followSystemTheme(colorMode, systemTheme)
+    })
+    watch(
+        () => [colorMode.value, colorMode.preference],
+        () => followSystemTheme(colorMode, systemTheme),
     )
 
     void App.addListener('backButton', () => {
@@ -70,6 +84,23 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         ({ notification }) => {
             const url: unknown = notification.data?.url
             if (typeof url === 'string') openLink(url)
+        },
+    )
+
+    const { notify } = useNotification()
+    const { t } = nuxtApp.$i18n
+    void PushNotifications.addListener(
+        'pushNotificationReceived',
+        (notification) => {
+            const { text, url } = foregroundPush(notification)
+            if (!text) return
+            notify(
+                text,
+                'info',
+                url
+                    ? { label: t('routes.view'), onClick: () => openLink(url) }
+                    : undefined,
+            )
         },
     )
 

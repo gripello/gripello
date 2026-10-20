@@ -340,13 +340,14 @@ components:
         hardest: { type: string }
     LeaderboardRoute:
       type: object
-      required: [id, name, color, grade, grade_system, sends, flashes]
+      required: [id, name, color, grade, grade_system, type, sends, flashes]
       properties:
         id: { type: string }
         name: { type: string }
         color: { type: string }
         grade: { type: string }
         grade_system: { type: string }
+        type: { type: string, enum: ['', Route, Boulder] }
         sends: { type: integer }
         flashes: { type: integer }
         points: { type: integer }

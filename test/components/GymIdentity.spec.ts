@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { ref } from 'vue'
 import GymIdentity from '~/components/platform/GymIdentity.vue'
 import type { GymRecord } from '~/types/models'
 
@@ -10,6 +11,9 @@ const gym = (extra: Partial<GymRecord> = {}) =>
         active: true,
         ...extra,
     }) as GymRecord
+
+let hydrated = true
+vi.stubGlobal('useHydrated', () => ref(hydrated))
 
 function mountWith(record: GymRecord) {
     return mount(GymIdentity, {
@@ -55,5 +59,21 @@ describe('GymIdentity', () => {
 
         expect(wrapper.find('img').exists()).toBe(false)
         expect(wrapper.text()).toContain('/dav')
+    })
+
+    it('shows the trial only after hydration, so SSR markup does not depend on the clock', () => {
+        const trial = gym({ trial_ends_at: '2099-01-01T00:00:00Z' })
+        hydrated = false
+        expect(
+            mountWith(trial)
+                .find('[data-testid="platform-gym-trial-dav"]')
+                .exists(),
+        ).toBe(false)
+        hydrated = true
+        expect(
+            mountWith(trial)
+                .find('[data-testid="platform-gym-trial-dav"]')
+                .exists(),
+        ).toBe(true)
     })
 })

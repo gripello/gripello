@@ -7,7 +7,7 @@ test('dragging the banner crop moves the image, not the sheet', async ({
     pageAs,
 }) => {
     const page = await pageAs(await createUser())
-    await gotoSettled(page, '/account/settings')
+    await gotoSettled(page, '/account/settings?tab=profile')
 
     const png = await page.evaluate(() => {
         const canvas = document.createElement('canvas')

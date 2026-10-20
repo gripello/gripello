@@ -168,3 +168,12 @@ export function labelAnalytics(payload: AnalyticsPayload): AnalyticsResponse {
         },
     }
 }
+
+export function routeAge(days: number): {
+    unit: 'days' | 'months' | 'years'
+    n: number
+} {
+    if (days < 60) return { unit: 'days', n: days }
+    if (days < 730) return { unit: 'months', n: Math.round(days / 30.44) }
+    return { unit: 'years', n: Math.round(days / 365.25) }
+}

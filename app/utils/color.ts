@@ -52,6 +52,14 @@ export function shadeColor(hex: string, amount: number): string {
     return `#${((red << 16) | (green << 8) | blue).toString(16).padStart(6, '0')}`
 }
 
+export function gradientEndColor(hex: string): string {
+    const rgb = rgbChannels(hex)
+    if (!rgb) return hex
+    const [red, green, blue] = rgb
+    const nearlyBlack = red * 0.299 + green * 0.587 + blue * 0.114 < 48
+    return shadeColor(hex, nearlyBlack ? 60 : -30)
+}
+
 export function routeDotColor(color: string | null | undefined): string {
     return toHex6(color) || FALLBACK_DOT_COLOR
 }

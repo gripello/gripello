@@ -51,7 +51,9 @@
                     icon="i-lucide-refresh-cw"
                     class="icon-btn"
                     :aria-label="t('invites.resend')"
-                    :loading="sending"
+                    :loading="sending && busy === `send:${onboarding.email}`"
+                    :disabled="sending"
+                    :data-testid="`platform-gym-onboarding-resend-${onboarding.email}`"
                     @click="send(onboarding.email)"
                 />
                 <UButton
@@ -61,6 +63,8 @@
                     class="icon-btn"
                     :aria-label="t('platform.onboardings.revoke')"
                     :data-testid="`platform-gym-onboarding-revoke-${onboarding.email}`"
+                    :loading="sending && busy === `revoke:${onboarding.email}`"
+                    :disabled="sending"
                     @click="revoke(onboarding)"
                 />
             </LayoutListRow>
@@ -139,6 +143,7 @@ const dialogOpen = ref(false)
 const form = reactive({ email: '' })
 const emailForm = ref<Form<typeof form> | null>(null)
 const { pending: sending, run } = useAsyncAction()
+const busy = ref('')
 
 function openDialog() {
     form.email = ''
@@ -146,6 +151,7 @@ function openDialog() {
 }
 
 async function send(email: string) {
+    busy.value = `send:${email}`
     await run(
         async () => {
             await createGymOnboarding(email.trim())
@@ -157,6 +163,7 @@ async function send(email: string) {
 }
 
 async function revoke(onboarding: GymOnboarding) {
+    busy.value = `revoke:${onboarding.email}`
     await run(async () => {
         await deleteGymOnboarding(onboarding.id)
         await refresh()

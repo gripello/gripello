@@ -157,7 +157,8 @@ const context = computed(() =>
     navContext(route.path, routeGymSlug(route.params)),
 )
 const staff = computed(() => context.value === 'staff')
-const trial = computed(() => gymTrial(gym.value))
+const hydrated = useHydrated()
+const trial = computed(() => (hydrated.value ? gymTrial(gym.value) : null))
 const { badges } = useModerationSummary()
 const nav = computed(() =>
     sidebarSections(

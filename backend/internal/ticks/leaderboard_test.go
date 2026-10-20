@@ -103,7 +103,7 @@ func TestLeaderboardEndpoint(t *testing.T) {
 	url := "/gyms/" + f.gymA + "/leaderboard"
 	f.call("", "GET", url, "", http.StatusOK, `"total":1`, `"name":"Cleo C."`, `"score":3453`, `"sends":2`, `"me":null`)
 	f.call("climber", "GET", url, "", http.StatusOK, `"me":{"rank":1`, `"ahead":null`, `"mySends":[{"id":"`+hard+`","name":"7A"`,
-		`"stats":{"climbers":1,"sends":2,"flashes":1,"hardest":"7A"}`, `"topRoutes":[{"id":"`+hard+`","name":"7A"`, `"grade_system":"font"`)
+		`"stats":{"climbers":1,"sends":2,"flashes":1,"hardest":"7A"}`, `"topRoutes":[{"id":"`+hard+`","name":"7A"`, `"grade_system":"font","type":"Boulder"`)
 	f.call("", "GET", "/gyms/alpha/leaderboard?kind=route", "", http.StatusOK, `"score":1700`, `"hardest":"7a"`)
 
 	season := f.exec(`INSERT INTO seasons (id, gym, name, starts_at, ends_at) VALUES ($1, $2, 'Spring', $3, $4) RETURNING id`,

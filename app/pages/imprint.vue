@@ -6,7 +6,7 @@
         />
 
         <UAlert
-            v-if="!settings?.legal_address"
+            v-if="!settings?.legal_name || !settings?.legal_address"
             color="warning"
             variant="soft"
             icon="i-lucide-triangle-alert"
@@ -15,7 +15,10 @@
             data-testid="imprint-incomplete"
         />
 
-        <LegalImprintDoc :source="settings" />
+        <LegalImprintDoc
+            :source="settings"
+            :name="settings?.legal_name || undefined"
+        />
 
         <UButton
             to="/privacy"

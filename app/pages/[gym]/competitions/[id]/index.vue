@@ -43,7 +43,8 @@
             </LayoutPageHeader>
 
             <div
-                class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[2fr_1fr]"
+                class="grid grid-cols-1 items-start gap-4"
+                :class="{ 'lg:grid-cols-[2fr_1fr]': hasRegistration }"
             >
                 <div class="flex flex-col gap-4">
                     <LayoutPanel>
@@ -135,6 +136,7 @@
                     />
                 </div>
                 <CompetitionRegistration
+                    v-if="hasRegistration"
                     :entry="myEntry"
                     :competition="competition"
                     :class="{ 'order-first lg:order-none': !myEntry }"
@@ -148,6 +150,7 @@
 <script setup lang="ts">
 import {
     COMPETITION_PHASE_COLORS,
+    acceptsRegistrations,
     competitionPhase,
     formatCompetitionWindow,
 } from '~/utils/competitions'
@@ -224,6 +227,13 @@ useCompetitionLive(competitionId, ({ kind, user }) => {
     if (kind === 'categories' || kind === 'resync') refreshCategoriesSoon()
     if (kind === 'routes' || kind === 'resync') refreshScorecardRoutesSoon()
 })
+
+const hasRegistration = computed(
+    () =>
+        !!myEntry.value ||
+        (!!competition.value &&
+            acceptsRegistrations(competition.value, now.value)),
+)
 
 const showResults = computed(() =>
     ['running', 'ended', 'published'].includes(phase.value),

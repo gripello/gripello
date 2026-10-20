@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"golang.org/x/sync/singleflight"
+
+	"gripello/internal/platform/climbers"
 )
 
 const (
@@ -64,13 +66,14 @@ type leaderboardRoute struct {
 	Color       string `json:"color"`
 	Grade       string `json:"grade"`
 	GradeSystem string `json:"grade_system"`
+	Type        string `json:"type"`
 	Sends       int    `json:"sends"`
 	Flashes     int    `json:"flashes"`
 	Points      int    `json:"points,omitempty"`
 }
 
 type routeLabel struct {
-	Name, Color, GradeSystem string
+	Name, Color, GradeSystem, Type string
 }
 
 type leaderboardBoard struct {
@@ -179,7 +182,7 @@ func routeSummary(routes map[string]routeLabel, send leaderboardSend) leaderboar
 		summary.Flashes = 1
 	}
 	if route, ok := routes[send.Route]; ok {
-		summary.Name, summary.Color, summary.GradeSystem = route.Name, route.Color, route.GradeSystem
+		summary.Name, summary.Color, summary.GradeSystem, summary.Type = route.Name, route.Color, route.GradeSystem, route.Type
 	}
 	return summary
 }
@@ -458,10 +461,17 @@ func (m *module) boardFromSends(ctx context.Context, sends []leaderboardSend, kn
 	if err != nil {
 		return leaderboardBoard{}, err
 	}
+	found := []climbers.Climber{}
+	foundRows := []int{}
 	for i := range ranked {
 		if person, ok := people[ranked[i].User]; ok {
-			ranked[i].Name, ranked[i].Avatar = person.Short, person.Avatar
+			found = append(found, person)
+			foundRows = append(foundRows, i)
+			ranked[i].Avatar = person.Avatar
 		}
+	}
+	for j, name := range climbers.DistinctShortNames(found) {
+		ranked[foundRows[j]].Name = name
 	}
 	board := summarizeSends(sends)
 	board.rows = ranked
@@ -491,14 +501,14 @@ func (m *module) boardFromSends(ctx context.Context, sends []leaderboardSend, kn
 	}
 	for i, top := range board.topRoutes {
 		if route, ok := board.routes[top.ID]; ok {
-			board.topRoutes[i].Name, board.topRoutes[i].Color, board.topRoutes[i].GradeSystem = route.Name, route.Color, route.GradeSystem
+			board.topRoutes[i].Name, board.topRoutes[i].Color, board.topRoutes[i].GradeSystem, board.topRoutes[i].Type = route.Name, route.Color, route.GradeSystem, route.Type
 		}
 	}
 	return board, nil
 }
 
 func (m *module) routeLabels(ctx context.Context, routeIDs []string) (map[string]routeLabel, error) {
-	rows, err := m.app.DB.Query(ctx, `SELECT id, name, color, grade_system FROM routes WHERE id = ANY ($1)`, routeIDs)
+	rows, err := m.app.DB.Query(ctx, `SELECT id, name, color, grade_system, type FROM routes WHERE id = ANY ($1)`, routeIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -507,7 +517,7 @@ func (m *module) routeLabels(ctx context.Context, routeIDs []string) (map[string
 	for rows.Next() {
 		var id string
 		var label routeLabel
-		if err := rows.Scan(&id, &label.Name, &label.Color, &label.GradeSystem); err != nil {
+		if err := rows.Scan(&id, &label.Name, &label.Color, &label.GradeSystem, &label.Type); err != nil {
 			return nil, err
 		}
 		labels[id] = label

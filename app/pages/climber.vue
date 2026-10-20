@@ -66,25 +66,29 @@
                     >
                         {{ t('friends.editProfile') }}
                     </UButton>
-                    <ClimberFollowButton
-                        v-else-if="!profile.closed || state.kind !== 'none'"
-                        class="self-start sm:self-end"
-                        :user-id="profile.id"
-                        :state="state"
-                        :loading="busy"
-                        @follow="follow"
-                        @unfollow="unfollowTarget = $event"
-                    />
-                    <UDropdownMenu v-if="!isSelf" :items="menuItems">
-                        <UButton
-                            icon="i-lucide-ellipsis"
-                            color="neutral"
-                            variant="ghost"
-                            class="icon-btn self-start sm:self-end"
-                            :aria-label="t('actions.more')"
-                            data-testid="climber-menu"
+                    <div
+                        v-else
+                        class="flex items-center gap-2 self-start sm:self-end"
+                    >
+                        <ClimberFollowButton
+                            v-if="!profile.closed || state.kind !== 'none'"
+                            :user-id="profile.id"
+                            :state="state"
+                            :loading="busy"
+                            @follow="follow"
+                            @unfollow="unfollowTarget = $event"
                         />
-                    </UDropdownMenu>
+                        <UDropdownMenu :items="menuItems">
+                            <UButton
+                                icon="i-lucide-ellipsis"
+                                color="neutral"
+                                variant="ghost"
+                                class="icon-btn"
+                                :aria-label="t('actions.more')"
+                                data-testid="climber-menu"
+                            />
+                        </UDropdownMenu>
+                    </div>
                 </div>
             </header>
 

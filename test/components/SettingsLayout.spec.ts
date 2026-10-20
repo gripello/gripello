@@ -114,4 +114,41 @@ describe('SettingsLayout', () => {
         mountLayout(false)
         await expect(leaveGuards[0]!()).resolves.toBe(true)
     })
+
+    it('lists danger sections in their own group in the drill-down', () => {
+        vi.stubGlobal('useRoute', () => route)
+        vi.stubGlobal('useDiscardConfirm', useDiscardConfirm)
+        vi.stubGlobal('navigateTo', navigateTo)
+        vi.stubGlobal('onBeforeRouteLeave', () => {})
+        const wrapper = mount(SettingsLayout, {
+            props: {
+                sections: [
+                    ...sections,
+                    {
+                        id: 'danger',
+                        label: 'Delete',
+                        icon: 'i-lucide-trash-2',
+                        danger: true,
+                    },
+                ],
+                hasChanges: false,
+                testIdPrefix: 'gym',
+                drillDown: true,
+            },
+            global: {
+                stubs: {
+                    UNavigationMenu: NavStub,
+                    LayoutSaveBar: true,
+                    ConfirmDialog: true,
+                    LayoutListGroup: { template: '<ul><slot /></ul>' },
+                    LayoutListRow: { template: '<li><slot /></li>' },
+                },
+                mocks: { $t: (key: string) => key },
+            },
+        })
+        const groups = wrapper.findAll('ul.mb-4')
+        expect(groups).toHaveLength(2)
+        expect(groups[0]!.text()).not.toContain('Delete')
+        expect(groups[1]!.text()).toContain('Delete')
+    })
 })

@@ -73,4 +73,14 @@ describe('usePushOffer', () => {
         expect(await offerWith('granted')).toBe(false)
         expect(api).not.toHaveBeenCalled()
     })
+
+    it('tells the caller when the browser did not allow notifications', async () => {
+        vi.stubGlobal('Notification', {
+            permission: 'default',
+            requestPermission: async () => 'denied',
+        })
+        const { usePushOffer } = await import('~/composables/usePushOffer')
+        const { turnOn } = usePushOffer()
+        expect(await turnOn()).toBe(false)
+    })
 })

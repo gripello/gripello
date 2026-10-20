@@ -1,6 +1,7 @@
 <template>
     <SettingsLayout
         v-slot="{ activeSection }"
+        drill-down
         :sections="sections"
         :has-changes="hasChanges"
         :saving="saving"
@@ -19,7 +20,6 @@
                 v-if="activeSection === 'branding'"
                 id="settings-branding"
                 :title="$t('settings.branding')"
-                :description="$t('settings.brandingHint')"
                 variant="outline"
             >
                 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -78,9 +78,6 @@
                                     {{ $t('settings.changed') }}
                                 </UBadge>
                             </div>
-                            <p class="text-sm text-muted">
-                                {{ asset.hint }}
-                            </p>
 
                             <div
                                 class="mt-auto flex flex-wrap items-center gap-2 pt-3"
@@ -156,7 +153,6 @@
                 id="settings-organization"
                 :ui="formCardUi"
                 :title="$t('settings.organization')"
-                :description="$t('settings.organizationHint')"
                 variant="outline"
             >
                 <UFormField
@@ -429,7 +425,6 @@
                 v-if="activeSection === 'grading'"
                 id="settings-grading"
                 :title="$t('settings.grading')"
-                :description="$t('settings.gradingHint')"
                 variant="outline"
                 :ui="{ ...formCardUi, footer: 'pt-2 lg:col-span-2' }"
             >
@@ -492,7 +487,6 @@
                 id="settings-urls"
                 :ui="formCardUi"
                 :title="$t('settings.publicUrls')"
-                :description="$t('settings.publicUrlsHint')"
                 variant="outline"
             >
                 <UFormField
@@ -528,7 +522,6 @@
                 id="settings-legal"
                 :ui="formCardUi"
                 :title="$t('settings.legalTitle')"
-                :description="$t('settings.legalIntro')"
                 variant="outline"
             >
                 <SettingsLegalFields :legal="copySettings" />
@@ -898,7 +891,6 @@ const assetFields = computed(() =>
     assets.map((asset) => ({
         key: asset.key,
         label: t(`settings.assets.${asset.key}`),
-        hint: t(`settings.assetHints.${asset.key}`),
         accept: asset.accept,
         preview: asset.preview,
         inputRef: asset.inputRef,

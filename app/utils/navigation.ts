@@ -127,7 +127,7 @@ export const PLATFORM_MORE = '/platform/more'
 
 export const PLATFORM_BOTTOM_NAV: NavLink[] = [
     PLATFORM_LINKS[0]!,
-    { ...PLATFORM_LINKS[1]!, label: 'nav.inbox' },
+    PLATFORM_LINKS[1]!,
     ...PLATFORM_LINKS.slice(2, 4),
     { to: PLATFORM_MORE, icon: 'i-lucide-menu', label: 'nav.more' },
 ]
@@ -264,7 +264,7 @@ export const NAV_ITEMS: NavItem[] = [
             {
                 to: '/manage/comments',
                 icon: 'i-lucide-message-square',
-                label: 'moderation.reviewStats',
+                label: 'routes.comments',
                 permission: 'manage_comments',
             },
         ],
@@ -290,12 +290,6 @@ export const NAV_ITEMS: NavItem[] = [
                 to: '/admin/settings',
                 icon: 'i-lucide-settings',
                 label: 'routes.settings',
-                permission: 'manage_settings',
-            },
-            {
-                to: '/admin/settings?section=tv',
-                icon: 'i-lucide-tv',
-                label: 'settings.tv.title',
                 permission: 'manage_settings',
             },
         ],
@@ -572,6 +566,11 @@ function staffLinkCurrent(currentPath: string, to: string, links: NavLink[]) {
     )
 }
 
+function ownProfileState(currentPath: string, myId: string) {
+    const current = staffLinkCurrent(currentPath, `/climber?id=${myId}`, [])
+    return { current, active: current }
+}
+
 export function sidebarSections(
     can: Can,
     signedIn: boolean,
@@ -634,6 +633,7 @@ export function sidebarSections(
                       icon: 'i-lucide-id-card',
                       to: `/climber?id=${myId}`,
                       testid: 'nav-link-climber',
+                      ...ownProfileState(currentPath, myId),
                   },
               ]
             : []),

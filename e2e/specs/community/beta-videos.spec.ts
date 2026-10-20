@@ -13,6 +13,8 @@ test('a climber shares and removes a beta link', async ({
     await signInAs(page, climber.email, climber.password)
     await gotoSettled(page, `/route?id=${route.id}`)
 
+    await page.getByTestId('route-more-actions').click()
+
     await page.getByTestId('beta-add').click()
     await page.getByTestId('beta-link').fill('https://example.com/video')
     await expect(page.getByTestId('beta-submit')).toBeDisabled()
@@ -89,6 +91,8 @@ test('a picked video is previewed before sharing', async ({
     const climber = await createUser('user', 'preview')
     await signInAs(page, climber.email, climber.password)
     await gotoSettled(page, `/route?id=${route.id}`)
+
+    await page.getByTestId('route-more-actions').click()
 
     await page.getByTestId('beta-add').click()
     await page.getByTestId('beta-source').getByText('Video').click()

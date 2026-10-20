@@ -123,14 +123,10 @@
                     </div>
 
                     <p
-                        v-if="!sessionLocation"
+                        v-if="restoredUnscoped && !sessionLocation"
                         class="text-xs text-muted mt-2 mb-0"
                     >
-                        {{
-                            restoredUnscoped
-                                ? $t('inventory.locationRestoreHint')
-                                : $t('inventory.locationHint')
-                        }}
+                        {{ $t('inventory.locationRestoreHint') }}
                     </p>
                 </div>
 
@@ -495,9 +491,7 @@ import {
     clearSession,
     countUnlocated,
     extractRouteId,
-    hasSeenInstructions,
     loadSession,
-    markInstructionsSeen,
     missingRoutes,
     persistSession,
     scopedRoutes,
@@ -606,12 +600,6 @@ const sessionLocationName = computed(
 
 const locationLocked = computed(
     () => scannedRouteIds.value.length > 0 && !!sessionLocation.value,
-)
-
-const locationHint = computed(() =>
-    restoredUnscoped.value && !sessionLocation.value
-        ? t('inventory.locationRestoreHint')
-        : t('inventory.locationHint'),
 )
 
 const scoped = computed(() =>
@@ -1016,11 +1004,6 @@ useRealtime(
 onMounted(() => {
     restoreSession()
     reconcileScannedIds()
-    if (!hasSeenInstructions()) instructionsDialog.value = true
-})
-
-watch(instructionsDialog, (open) => {
-    if (!open) markInstructionsSeen()
 })
 </script>
 

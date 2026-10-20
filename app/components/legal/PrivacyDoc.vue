@@ -1,11 +1,24 @@
 <template>
     <div class="surface-card legal-doc">
+        <nav
+            v-if="toc.length > 1"
+            class="privacy-toc"
+            :aria-label="$t('legal.privacyContents')"
+            data-testid="privacy-toc"
+        >
+            <ol>
+                <li v-for="entry in toc" :key="entry.id">
+                    <a :href="`#${entry.id}`">{{ entry.title }}</a>
+                </li>
+            </ol>
+        </nav>
         <template
             v-for="(section, index) in sections"
             :key="section.type === 'block' ? section.key : `text-${index}`"
         >
             <section
                 v-if="section.type === 'text'"
+                :id="anchorOf(index)"
                 data-testid="privacy-custom"
             >
                 <h2 v-if="section.title.length">
@@ -14,7 +27,7 @@
                 <LegalRichText :blocks="section.blocks" />
             </section>
             <template v-else-if="section.key === 'controller'">
-                <section data-testid="privacy-controller">
+                <section :id="anchorOf(index)" data-testid="privacy-controller">
                     <h2>{{ $t('legal.privacyPage.controllerTitle') }}</h2>
                     <p v-if="controller?.name" class="font-medium">
                         {{ controller.name }}
@@ -41,6 +54,7 @@
             />
             <section
                 v-else-if="section.key === 'storage'"
+                :id="anchorOf(index)"
                 data-testid="privacy-storage"
             >
                 <h2>{{ $t('legal.privacyPage.storage.title') }}</h2>
@@ -91,6 +105,7 @@
 
             <section
                 v-else-if="section.key === 'rights'"
+                :id="anchorOf(index)"
                 data-testid="privacy-rights"
             >
                 <h2>{{ $t('legal.privacyPage.rights.title') }}</h2>
@@ -102,7 +117,11 @@
                 </ul>
                 <p>{{ $t('legal.privacyPage.rights.complaint') }}</p>
             </section>
-            <section v-else :data-testid="`privacy-${section.key}`">
+            <section
+                v-else
+                :id="anchorOf(index)"
+                :data-testid="`privacy-${section.key}`"
+            >
                 <h2>{{ $t(`legal.privacyPage.${section.key}.title`) }}</h2>
                 <p>
                     {{
@@ -123,7 +142,7 @@ import {
     isPrivacyBlockKey,
     privacyDocOrDefault,
 } from '#shared/utils/privacyDoc'
-import { privacySections } from '~/utils/legalRichText'
+import { inlineText, privacySections } from '~/utils/legalRichText'
 import { PRIVACY_RIGHTS, privacyBlockTitleKey } from '~/utils/privacyEditor'
 
 const props = defineProps<{
@@ -152,6 +171,24 @@ const sections = computed(() =>
         mentionLabel,
     ),
 )
+
+const anchorOf = (index: number) => `privacy-section-${index + 1}`
+
+const toc = computed(() =>
+    sections.value.flatMap((section, index) => {
+        if (section.type === 'text') {
+            const title = inlineText(section.title)
+            return title ? [{ id: anchorOf(index), title }] : []
+        }
+        if (section.key === 'contact') return []
+        return [
+            {
+                id: anchorOf(index),
+                title: t(privacyBlockTitleKey(section.key)),
+            },
+        ]
+    }),
+)
 </script>
 
 <style scoped>
@@ -169,6 +206,23 @@ const sections = computed(() =>
 .storage-table th {
     font-weight: 500;
     color: var(--ui-text-muted);
+}
+
+.privacy-toc {
+    padding: 18px 0;
+}
+
+.privacy-toc ol {
+    list-style: decimal;
+}
+
+.privacy-toc a {
+    color: var(--ui-primary);
+}
+
+.privacy-toc + section {
+    border-top: 1px solid
+        color-mix(in oklab, var(--ui-text-highlighted) 7%, transparent);
 }
 
 .rights-list {

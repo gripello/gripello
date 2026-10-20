@@ -2,11 +2,7 @@
     <section v-if="suggestions.length" data-testid="logbook-suggestions">
         <LayoutSectionHeader
             :title="$t('ticks.suggestions.title')"
-            :subtitle="
-                targetIndex === null
-                    ? $t('ticks.suggestions.subtitleNew')
-                    : $t('ticks.suggestions.subtitle')
-            "
+            :subtitle="gym ? gymTitle(gym) : undefined"
         />
         <div class="grid grid-cols-12 gap-3">
             <div
@@ -61,6 +57,7 @@ import {
 import type { RouteRecord } from '~/types/models'
 import type { LogbookKind } from '#shared/utils/logbook'
 import { locationName } from '#shared/utils/formatting'
+import { gymTitle } from '~/utils/gymNames'
 
 const SUGGESTION_COUNT = 6
 const CANDIDATE_COUNT = 40
@@ -74,6 +71,7 @@ const props = defineProps<{
 const { tickedRouteIds } = useTickedRoutes()
 
 const gymId = useCurrentGymId()
+const { gym } = useGym()
 
 const { data: candidates, refresh: refreshCandidates } = useAsyncData(
     () => `logbook-suggestions-${gymId.value}-${props.kind ?? 'any'}`,

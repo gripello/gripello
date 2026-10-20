@@ -38,7 +38,7 @@ export type ProfileInput = Record<string, unknown>
 export interface OwnMembership {
     id: string
     created: string
-    gym: Pick<GymRecord, 'id' | 'slug' | 'name' | 'active'>
+    gym: Pick<GymRecord, 'id' | 'slug' | 'name' | 'unit_name' | 'active'>
     role: RoleRecord & { permissions: string[] }
 }
 

@@ -2,6 +2,7 @@ package app.gripello;
 
 import android.app.DownloadManager;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.util.Base64;
 import android.net.Uri;
 import android.os.Build;
@@ -27,6 +28,17 @@ import java.nio.charset.StandardCharsets;
 public class MainActivity extends BridgeActivity {
 
     private static final String APP_SCHEME = "app.gripello";
+
+    // configChanges keeps the activity on a theme switch, so the WebView never re-reads it; the page follows this event.
+    @Override
+    public void onConfigurationChanged(Configuration config) {
+        super.onConfigurationChanged(config);
+        boolean dark = (config.uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        if (bridge != null) bridge.getWebView().evaluateJavascript(
+            "window.dispatchEvent(new CustomEvent('gripello:system-theme', { detail: '" + (dark ? "dark" : "light") + "' }))",
+            null
+        );
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

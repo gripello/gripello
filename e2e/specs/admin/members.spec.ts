@@ -27,13 +27,16 @@ test('changes a member role and removes them again', async ({
         .locator('tr, li')
         .filter({ has: page.getByTestId(`member-card-${climber.id}`) })
     await expect(card).toBeVisible()
-    await expect(card.getByTestId('member-card-role')).toHaveText('routesetter')
+    await expect(card.getByTestId('member-card-role')).toHaveText(
+        'Route setter',
+    )
 
     await card.getByTestId('member-card-role').click()
-    await page.getByRole('option', { name: 'admin', exact: true }).click()
+    await page.getByRole('option', { name: 'Admin', exact: true }).click()
     await expect.poll(() => roleOf(adminApi, climber.id)).toBe('admin')
 
-    await card.getByTestId('member-card-remove').click()
+    await card.getByTestId('member-card-menu').click()
+    await page.getByRole('menuitem', { name: 'Remove member' }).click()
     await page.getByTestId('confirm-dialog-confirm').click()
     await expect(card).toHaveCount(0)
     await expect.poll(() => roleOf(adminApi, climber.id)).toBeNull()
@@ -50,7 +53,9 @@ test('inviting an account only leaves a pending invite that can be revoked', asy
     await page.getByTestId('member-invite-open').click()
     await page.getByTestId('member-invite-email').fill(climber.email)
     await page.getByTestId('member-invite-role').click()
-    await page.getByRole('option', { name: 'routesetter', exact: true }).click()
+    await page
+        .getByRole('option', { name: 'Route setter', exact: true })
+        .click()
     await page.getByTestId('member-invite-submit').click()
     await expect(page.getByTestId('member-invite-dialog')).toBeHidden()
 

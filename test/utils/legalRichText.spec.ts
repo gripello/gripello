@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { privacySections, richTextBlocks } from '~/utils/legalRichText'
+import {
+    inlineText,
+    privacySections,
+    richTextBlocks,
+} from '~/utils/legalRichText'
 import { privacyBlockNode } from '#shared/utils/privacyDoc'
 
 const text = (value: string, marks?: object[]) => ({
@@ -235,5 +239,25 @@ describe('legal rich text', () => {
             },
             { type: 'block', key: 'rights' },
         ])
+    })
+})
+
+describe('inlineText', () => {
+    it('flattens marks and links into plain text', () => {
+        expect(
+            inlineText([
+                { type: 'text', text: 'Your ' },
+                {
+                    type: 'strong',
+                    children: [{ type: 'text', text: 'rights' }],
+                },
+                { type: 'br' },
+                {
+                    type: 'link',
+                    href: '/x',
+                    children: [{ type: 'text', text: 'here' }],
+                },
+            ]),
+        ).toBe('Your rights here')
     })
 })

@@ -60,4 +60,22 @@ describe('PlatformIssueList', () => {
         expect(shown).toContain('occurrence of b')
         expect(shown).not.toContain('occurrence of a')
     })
+
+    it('gives the issue title its own line on phones', async () => {
+        vi.stubGlobal('useRoute', () => ({ query: {} }))
+        const wrapper = mount(IssueList, {
+            global: {
+                stubs: {
+                    LayoutPanel: { template: '<div><slot /></div>' },
+                    SegmentedControl: true,
+                },
+            },
+        })
+        await flushPromises()
+        const title = wrapper.find(
+            '[data-testid="platform-issue-a"] [data-testid="platform-issue-title"]',
+        )
+        expect(title.text()).toBe('a')
+        expect(title.classes()).toContain('max-md:basis-full')
+    })
 })
