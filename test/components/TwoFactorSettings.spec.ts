@@ -6,6 +6,10 @@ import LayoutListGroup from '~/components/layout/ListGroup.vue'
 import LayoutListRow from '~/components/layout/ListRow.vue'
 import { routeApi } from '../api/apiMock'
 
+vi.mock('qrcode', () => ({
+    default: { toDataURL: vi.fn().mockResolvedValue('data:') },
+}))
+
 const send = vi.fn()
 const factor = (id: string, kind: 'totp' | 'passkey', name = '') => ({
     id,
@@ -186,9 +190,6 @@ describe('TwoFactorSettings', () => {
     })
 
     it('does not verify the setup before six digits are typed', async () => {
-        vi.doMock('qrcode', () => ({
-            default: { toDataURL: vi.fn().mockResolvedValue('data:') },
-        }))
         send.mockResolvedValueOnce({ factors: [], recoveryCodesLeft: 0 })
         const wrapper = mountSettings()
         await flushPromises()
@@ -207,19 +208,12 @@ describe('TwoFactorSettings', () => {
             method: 'POST',
             body: { password: 'secret' },
         })
-        await vi.waitFor(() =>
-            expect(
-                wrapper.find('[data-testid="two-factor-setup-code"]').exists(),
-            ).toBe(true),
-        )
+        await vi.waitFor(() => expect(wrapper.find('img').exists()).toBe(true))
         await flushPromises()
         expect(send).not.toHaveBeenCalledWith('/me/totp', expect.anything())
     })
 
     it('shows the new recovery codes after enabling the authenticator', async () => {
-        vi.doMock('qrcode', () => ({
-            default: { toDataURL: vi.fn().mockResolvedValue('data:') },
-        }))
         send.mockResolvedValueOnce({ factors: [], recoveryCodesLeft: 0 })
         const wrapper = mountSettings()
         await flushPromises()
@@ -231,7 +225,7 @@ describe('TwoFactorSettings', () => {
             .get('[data-testid="two-factor-password"]')
             .setValue('secret')
         await wrapper.get('form').trigger('submit')
-        await flushPromises()
+        await vi.waitFor(() => expect(wrapper.find('img').exists()).toBe(true))
         wrapper
             .getComponent(AccountTotpSetup)
             .vm.$emit('enabled', factor('t', 'totp'), [
