@@ -27,7 +27,7 @@ test('top-bar back leaves settings after browsing its sections', async ({
     for (const section of ['security', 'privacy']) {
         await page.getByTestId(`profile-drill-${section}`).click()
         await page.waitForURL(new RegExp(`tab=${section}`))
-        await page.getByTestId('profile-drill-back').click()
+        await page.getByTestId('nav-back').click()
         await page.waitForURL(/\/account\/settings$/)
     }
 
@@ -48,7 +48,7 @@ test('hardware back from a settings section goes to the list, then off the page'
     for (const section of ['preferences', 'notifications', 'privacy']) {
         await page.getByTestId(`profile-drill-${section}`).click()
         await page.waitForURL(new RegExp(`tab=${section}`))
-        await page.getByTestId('profile-drill-back').click()
+        await page.getByTestId('nav-back').click()
         await page.waitForURL(/\/account\/settings$/)
     }
 

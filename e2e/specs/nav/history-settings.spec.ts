@@ -40,7 +40,7 @@ test('browser back in platform settings returns to the list, then asks before dr
     for (const section of ['links', 'legal']) {
         await page.getByTestId(`platform-settings-drill-${section}`).click()
         await page.waitForURL(new RegExp(`section=${section}`))
-        await page.getByTestId('platform-settings-drill-back').click()
+        await page.getByTestId('nav-back').click()
         await page.waitForURL(/\/platform\/settings$/)
     }
 
@@ -70,7 +70,7 @@ test('browser back on a platform gym detail never replays sections and guards an
     for (const section of ['members', 'features']) {
         await page.getByTestId(`settings-drill-${section}`).click()
         await page.waitForURL(new RegExp(`section=${section}`))
-        await page.getByTestId('settings-drill-back').click()
+        await page.getByTestId('nav-back').click()
         await expect(page).toHaveURL(detail)
     }
 
