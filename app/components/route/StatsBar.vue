@@ -1,6 +1,6 @@
 <template>
     <div
-        class="flex items-center justify-around py-4 max-sm:[&_.iconify]:hidden lg:justify-start lg:gap-8"
+        class="flex items-center justify-around py-4 max-sm:[&_.stat-tile-icon]:hidden lg:justify-start lg:gap-8"
     >
         <LayoutStatTile
             :label="t('ratings.ratingCount', { n: ratedCount }, ratedCount)"

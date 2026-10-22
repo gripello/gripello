@@ -81,16 +81,18 @@ describe('RouteHero', () => {
         expect(wrapper.text()).not.toContain('Umrechnungstabelle')
     })
 
-    it('keeps white ink on colours where it stays legible', () => {
+    it('inks the hero with whichever of white and dark contrasts more', () => {
+        const ink = (color: string) =>
+            mountHero([], { color })
+                .get('[data-testid="route-hero"]')
+                .attributes('style')
+                ?.match(/--hero-ink: (#\w+)/)?.[1]
         expect(
-            ['#ec407a', '#ff8104', '#4caf50', '#03a9f4', '#9e9e9e'].map(
-                (color) =>
-                    mountHero([], { color })
-                        .get('[data-testid="route-hero"]')
-                        .attributes('style')
-                        ?.includes('--hero-ink: #ffffff'),
-            ),
-        ).toEqual([true, true, true, true, true])
+            ['#d32f2f', '#8e24aa', '#3949ab', '#00897b', '#212121'].map(ink),
+        ).toEqual(Array(5).fill('#ffffff'))
+        expect(
+            ['#ec407a', '#ff8104', '#4caf50', '#03a9f4', '#9e9e9e'].map(ink),
+        ).toEqual(Array(5).fill('#1a1a1a'))
     })
 
     it('inks title and grade alike on light tones', () => {
@@ -186,6 +188,16 @@ describe('RouteStatsBar', () => {
                 .find('[data-testid="route-out-soon"]')
                 .exists(),
         ).toBe(false)
+    })
+
+    it('hides the tile icons on phones so every tile fits', () => {
+        const wrapper = mountBar({
+            reviews: [],
+            removalPlannedFor: '2026-11-01',
+            anchorPoint: 5,
+        })
+        expect(wrapper.classes()).toContain('max-sm:[&_.stat-tile-icon]:hidden')
+        expect(wrapper.findAll('.stat-tile-icon')).toHaveLength(4)
     })
 
     it('shows the anchor only when the route has one', () => {

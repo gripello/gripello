@@ -188,16 +188,20 @@ const perceived = computed(() => {
 
 const themeColors = useThemeColors()
 const heroColor = computed(() => props.route.color || themeColors.value.primary)
-// White until it falls below 2.4:1, tuned by eye across real hold colours.
-const heroIsLight = computed(
-    () => contrastRatio('#ffffff', toHex6(heroColor.value)) < 2.4,
-)
+const HERO_DARK_INK = '#1a1a1a'
+const heroIsLight = computed(() => {
+    const background = toHex6(heroColor.value)
+    return (
+        contrastRatio(HERO_DARK_INK, background) >
+        contrastRatio('#ffffff', background)
+    )
+})
 
 const heroStyle = computed(() => {
     const color = heroColor.value
     return {
         background: `linear-gradient(135deg, ${color} 0%, ${gradientEndColor(color)} 100%)`,
-        '--hero-ink': heroIsLight.value ? '#1a1a1a' : '#ffffff',
+        '--hero-ink': heroIsLight.value ? HERO_DARK_INK : '#ffffff',
         '--hero-tint': heroIsLight.value
             ? 'rgba(0, 0, 0, 0.12)'
             : 'rgba(255, 255, 255, 0.2)',

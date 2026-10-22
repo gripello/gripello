@@ -38,7 +38,7 @@ const valueClass = computed(() => props.color && TEXT_COLORS[props.color])
             <UIcon
                 v-if="icon"
                 :name="icon"
-                class="size-[20px]"
+                class="stat-tile-icon size-[20px]"
                 :class="iconClass"
             />
             <span
