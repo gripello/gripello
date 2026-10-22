@@ -429,7 +429,7 @@ func TestWallDigestNotifiesFollowersOncePerWall(t *testing.T) {
 	var params map[string]any
 	var url, user string
 	f.app.DB.QueryRow(context.Background(), `SELECT params, url, "user" FROM notifications WHERE type = 'wall_new_routes'`).Scan(&params, &url, &user)
-	if params["wall"] != "North" || params["count"] != float64(3) || url != "/alpha/map?wall="+wall || user != f.users["climber"] {
+	if params["wall"] != "North" || params["count"] != float64(3) || url != "/alpha/map?location="+hall+"&wall="+wall || user != f.users["climber"] {
 		t.Errorf("digest = %v %s %s", params, url, user)
 	}
 

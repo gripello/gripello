@@ -490,6 +490,14 @@ function onListSelect(routeId: string) {
 const selectedWall = computed(() =>
     mapWalls.value.find((wall) => wall.id === selectedWallId.value),
 )
+// Also covers links into the kept-alive page and walls of a location that loads later.
+watch(
+    () => selectedWall.value?.id,
+    (wallId) => {
+        if (wallId && !selectedRouteId.value)
+            nextTick(() => mapViewRef.value?.focusWall(wallId))
+    },
+)
 const { isFollowing, setFollowing } = useFollowedWalls()
 const { error: notifyError } = useNotification()
 const followingWall = computed(

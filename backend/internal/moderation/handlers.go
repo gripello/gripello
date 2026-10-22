@@ -130,13 +130,17 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 			report.Explanation, report.NotifierName, report.NotifierEmail, report.Language); err != nil {
 			return err
 		}
+		caseID, err := m.countReport(ctx, w, report)
+		if err != nil {
+			return err
+		}
 		snippet := map[string]any{"snippet": httpx.Truncate(report.ContentSnapshot, 140)}
 		staff, err := usersWith(ctx, w.tx, report.Gym, tenancy.PermManageReports)
 		if err != nil {
 			return err
 		}
 		if err := events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
-			Type: "report_filed", Users: staff, Gym: report.Gym, Params: snippet, URL: tenancy.GymPath(ctx, w.tx, report.Gym, "/manage/moderation"),
+			Type: "report_filed", Users: staff, Gym: report.Gym, Params: snippet, URL: tenancy.GymPath(ctx, w.tx, report.Gym, "/manage/moderation?case="+caseID),
 		}); err != nil {
 			return err
 		}
@@ -146,13 +150,13 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 				return err
 			}
 			if err := events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
-				Type: "report_filed_platform", Users: admins, Gym: report.Gym, Params: snippet, URL: "/platform/moderation",
+				Type: "report_filed_platform", Users: admins, Gym: report.Gym, Params: snippet, URL: "/platform/moderation?case=" + caseID,
 			}); err != nil {
 				return err
 			}
 		}
 		w.after = append(w.after, func(ctx context.Context) { m.sendReceipt(ctx, report) })
-		return m.countReport(ctx, w, report)
+		return nil
 	})
 	if err != nil {
 		return err
@@ -161,16 +165,16 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 }
 
 // countReport raises the content's case; content that is already hidden gets that decision instead of a case nobody can act on.
-func (m *module) countReport(ctx context.Context, w *work, report Report) error {
+func (m *module) countReport(ctx context.Context, w *work, report Report) (caseID string, err error) {
 	if it, err := itemOf(ctx, w.tx, report.ContentType, report.ContentID); err == nil && it.State == "hidden" {
-		return m.closeReports(ctx, w, report.ContentType, report.ContentID, "content_removed", it.Reason, "")
+		return it.ID, m.closeReports(ctx, w, report.ContentType, report.ContentID, "content_removed", it.Reason, "")
 	}
 	it, err := m.queue(ctx, w, report.ContentType, report.ContentID, false)
 	if err != nil {
-		return err
+		return "", err
 	}
 	it.ReportsCount++
-	return m.save(ctx, w, &it)
+	return it.ID, m.save(ctx, w, &it)
 }
 
 func (m *module) listReports(w http.ResponseWriter, r *http.Request, gym string) error {

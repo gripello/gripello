@@ -162,6 +162,10 @@ func (f *fixture) notifications(kind, user string) int {
 	return f.count(`SELECT count(*) FROM events WHERE kind = 'notify' AND payload->>'type' = $1 AND payload->'users' ? $2`, kind, f.users[user])
 }
 
+func (f *fixture) notificationURL(kind string) string {
+	return f.exec(`SELECT payload->>'url' FROM events WHERE kind = 'notify' AND payload->>'type' = $1 ORDER BY id LIMIT 1`, kind)
+}
+
 func (f *fixture) report(contentType, contentID, reason string) string {
 	f.t.Helper()
 	body := `{"content_type":"` + contentType + `","content_id":"` + contentID + `","reason":"` + reason +
@@ -352,6 +356,9 @@ func TestReportsAreValidatedAndAcknowledged(t *testing.T) {
 	if f.notifications("report_filed", "adminA") != 1 || f.notifications("report_filed", "setterA") != 0 {
 		t.Error("report_filed went to the wrong people")
 	}
+	if got := f.notificationURL("report_filed"); got != "/alpha/manage/moderation?case="+f.item("rating", rating).ID {
+		t.Errorf("report_filed url = %s, want the case", got)
+	}
 	var snapshot, link string
 	f.app.DB.QueryRow(context.Background(), `SELECT content_snapshot, content_url FROM reports WHERE id = $1`, report).Scan(&snapshot, &link)
 	if snapshot != "rude" || link != "/route?id="+f.route+"#comment-"+rating {
@@ -369,6 +376,9 @@ func TestRemovingReportedContentHidesIt(t *testing.T) {
 	report := f.report("rating", rating, "hate_speech")
 	if f.notifications("report_filed_platform", "operator") != 1 {
 		t.Error("platform admin got no escalation")
+	}
+	if got := f.notificationURL("report_filed_platform"); got != "/platform/moderation?case="+f.item("rating", rating).ID {
+		t.Errorf("report_filed_platform url = %s, want the case", got)
 	}
 	url := "/moderation/" + f.item("rating", rating).ID
 	removal := `{"action":"hide","reason":"hate speech"}`
@@ -411,6 +421,9 @@ func TestPremoderatedUploadsWaitForTheGym(t *testing.T) {
 	}
 	if f.notifications("moderation_pending", "setterA") != 1 {
 		t.Error("gym staff got no pending notice")
+	}
+	if got := f.notificationURL("moderation_pending"); got != "/alpha/manage/moderation?case="+pending.ID {
+		t.Errorf("moderation_pending url = %s, want the case", got)
 	}
 	f.call("setterA", "POST", "/moderation/"+pending.ID, action("approve"), http.StatusOK)
 	if f.count(`SELECT count(*) FROM beta_videos WHERE id = $1 AND "user" = $2 AND gym = $3 AND file = 'beta.mp4'`, video, f.users["climber"], f.gymA) != 1 ||

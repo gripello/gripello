@@ -221,21 +221,21 @@ func (m *module) sendAll(ctx context.Context, subscriptions []subscription, body
 // ponytail: a restart between ticks drops that window's digest; persist the last run if it matters
 func (m *module) notifyWallNewRoutes(ctx context.Context, now time.Time) error {
 	end := now.UTC().Truncate(wallDigestEvery)
-	rows, err := m.app.DB.Query(ctx, `SELECT r.wall, r.gym, w.name, g.slug, COUNT(*),
+	rows, err := m.app.DB.Query(ctx, `SELECT r.wall, r.gym, w.name, w.location, g.slug, COUNT(*),
 			ARRAY(SELECT id FROM users WHERE followed_walls @> ARRAY[r.wall] AND gym_visible(r.gym, users.id))
 		FROM routes r JOIN walls w ON w.id = r.wall JOIN gyms g ON g.id = r.gym
 		WHERE NOT r.archived AND r.created >= $1 AND r.created < $2
-		GROUP BY r.wall, r.gym, w.name, g.slug`, end.Add(-wallDigestEvery), end)
+		GROUP BY r.wall, r.gym, w.name, w.location, g.slug`, end.Add(-wallDigestEvery), end)
 	if err != nil {
 		return err
 	}
 	digests, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (events.Notify, error) {
-		var wall, wallName, slug string
+		var wall, wallName, location, slug string
 		var count int
 		n := events.Notify{Type: "wall_new_routes"}
-		err := row.Scan(&wall, &n.Gym, &wallName, &slug, &count, &n.Users)
+		err := row.Scan(&wall, &n.Gym, &wallName, &location, &slug, &count, &n.Users)
 		n.Params = map[string]any{"wall": wallName, "count": count}
-		n.URL = "/" + slug + "/map?wall=" + wall
+		n.URL = "/" + slug + "/map?location=" + location + "&wall=" + wall
 		return n, err
 	})
 	if err != nil {
