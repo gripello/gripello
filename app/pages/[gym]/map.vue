@@ -469,8 +469,9 @@ function setQuery(patch: Record<string, string | null>) {
 }
 
 function selectWall(wallId: string | null) {
+    if (wallId && wallId === selectedWallId.value)
+        mapViewRef.value?.focusWall(wallId)
     setQuery({ wall: wallId, route: null })
-    if (wallId) mapViewRef.value?.focusWall(wallId)
 }
 
 function selectRoute(routeId: string | null) {
