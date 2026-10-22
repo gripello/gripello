@@ -1468,7 +1468,9 @@
         "boulders": "Bloques",
         "routes": "Vías",
         "gymBand": "Color del rocódromo",
+        "gymBandShort": "Color",
         "andUp": "{grade} o más",
+        "upTo": "hasta {grade}",
         "bands": {
             "yellow": "Amarillo",
             "orange": "Naranja",

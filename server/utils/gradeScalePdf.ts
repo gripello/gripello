@@ -1,6 +1,7 @@
-import { gradeLabels } from '#shared/utils/grades'
+import { gradeLabels, type GradeSystem } from '#shared/utils/grades'
 import type { GymBand } from '#shared/utils/gradeReference'
 import { readableTextOn } from '../../app/utils/color'
+import { scaleBands } from '../../app/utils/gradeLadder'
 
 export type Translate = (key: string, params?: Record<string, string>) => string
 
@@ -16,7 +17,10 @@ export interface WheelArc {
     ring: number
 }
 
+export type GradeScaleKind = 'boulders' | 'routes'
+
 export interface GradeScaleContent {
+    kind: GradeScaleKind
     title: string
     gymName: string
     unitName: string
@@ -32,6 +36,7 @@ const MARGIN = 48
 const INK = '#111827'
 const MUTED = '#6B7280'
 const SPOKE = '#D1D5DB'
+const ROUTE_SYSTEMS: GradeSystem[] = ['uiaa', 'french', 'yds']
 
 export function gradeWheel(bands: GymBand[]) {
     const font = gradeLabels('font')
@@ -189,6 +194,132 @@ function drawWheel(doc: PDFKit.PDFDocument, content: GradeScaleContent) {
     caption(content.t('gradeConversion.hard'), spokes.at(-1)!.angle)
 }
 
+export interface RouteSegment {
+    ring: number
+    label: string
+    from: number
+    to: number
+    shade: string
+}
+
+const EASY_SHADE = [243, 244, 246]
+const HARD_SHADE = [17, 24, 39]
+
+export function difficultyShade(share: number) {
+    return `#${EASY_SHADE.map((easy, i) =>
+        Math.round(easy + (HARD_SHADE[i]! - easy) * share)
+            .toString(16)
+            .padStart(2, '0'),
+    )
+        .join('')
+        .toUpperCase()}`
+}
+
+export function routeWheel() {
+    const rings = ROUTE_SYSTEMS.map((system) => scaleBands(system))
+    const all = rings.flat()
+    const lo = Math.min(...all.map((band) => band.lo))
+    const hi = Math.max(...all.map((band) => band.hi))
+    const angle = (ircra: number) => -90 + ((ircra - lo) / (hi - lo)) * SWEEP
+    return {
+        start: angle(lo),
+        end: angle(hi),
+        segments: rings.flatMap((bands, ring) =>
+            bands.map((band): RouteSegment => ({
+                ring,
+                label: band.label,
+                from: angle(band.lo),
+                to: angle(band.hi),
+                shade: difficultyShade(
+                    ((band.lo + band.hi) / 2 - lo) / (hi - lo),
+                ),
+            })),
+        ),
+    }
+}
+
+function radialText(
+    doc: PDFKit.PDFDocument,
+    text: string,
+    [x, y]: [number, number],
+    angle: number,
+    width: number,
+    size: number,
+) {
+    const upright = angle > 90 && angle < 270 ? angle - 180 : angle
+    doc.save()
+        .rotate(upright, { origin: [x, y] })
+        .text(text, x - width / 2, y - size * 0.6, {
+            width,
+            align: 'center',
+            lineBreak: false,
+        })
+        .restore()
+}
+
+function drawRouteWheel(doc: PDFKit.PDFDocument, content: GradeScaleContent) {
+    const cx = doc.page.width / 2
+    const cy = 480
+    const rings = [
+        { outer: 228, inner: 176, size: 12 },
+        { outer: 172, inner: 128, size: 9 },
+        { outer: 124, inner: 84, size: 8.5 },
+    ]
+    const { start, end, segments } = routeWheel()
+
+    for (const segment of segments) {
+        const { outer, inner, size } = rings[segment.ring]!
+        doc.path(ringPath(cx, cy, inner, outer, segment.from, segment.to))
+            .lineWidth(1.2)
+            .fillAndStroke(segment.shade, '#FFFFFF')
+        const mid = (segment.from + segment.to) / 2
+        doc.font('Sans-Bold')
+            .fontSize(size)
+            .fillColor(readableTextOn(segment.shade))
+        radialText(
+            doc,
+            segment.label,
+            polar(cx, cy, (inner + outer) / 2, mid),
+            mid,
+            outer - inner - 6,
+            size,
+        )
+    }
+
+    doc.font('Sans-Bold').fontSize(7).fillColor(MUTED)
+    ROUTE_SYSTEMS.forEach((system, ring) => {
+        const { outer, inner } = rings[ring]!
+        const [x, y] = polar(cx, cy, (inner + outer) / 2, start)
+        doc.text(
+            content.t(`gradeSystems.${system}`).toUpperCase(),
+            x - 108,
+            y - 4,
+            {
+                width: 100,
+                align: 'right',
+                characterSpacing: 1,
+                lineBreak: false,
+            },
+        )
+    })
+
+    doc.circle(cx, cy, 10).fill(INK)
+    doc.circle(cx, cy, 3.5).fill('#FFFFFF')
+
+    doc.font('Sans-Bold').fontSize(8).fillColor(MUTED)
+    const caption = (text: string, angle: number) => {
+        const [x, y] = polar(cx, cy, 246, angle)
+        doc.text(text.toUpperCase(), x - 40, y - 5, {
+            width: 80,
+            align: 'center',
+            characterSpacing: 1.5,
+            lineBreak: false,
+        })
+    }
+    caption(content.t('gradeConversion.easy'), start)
+    caption(content.t('gradeConversion.hard'), end)
+}
+
 function drawFooter(doc: PDFKit.PDFDocument, content: GradeScaleContent) {
     const y = doc.page.height - 44
     doc.moveTo(MARGIN, y)
@@ -212,7 +343,8 @@ export function drawGradeScalePdf(
     content: GradeScaleContent,
 ) {
     drawHeader(doc, content)
-    drawWheel(doc, content)
+    if (content.kind === 'routes') drawRouteWheel(doc, content)
+    else drawWheel(doc, content)
     drawFooter(doc, content)
 }
 

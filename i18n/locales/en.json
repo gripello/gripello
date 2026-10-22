@@ -1468,7 +1468,9 @@
         "boulders": "Boulders",
         "routes": "Routes",
         "gymBand": "Gym color",
+        "gymBandShort": "Color",
         "andUp": "{grade} and up",
+        "upTo": "up to {grade}",
         "bands": {
             "yellow": "Yellow",
             "orange": "Orange",

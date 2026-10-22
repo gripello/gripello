@@ -4,6 +4,13 @@ import GradeConversionDialog from '~/components/grade/ConversionDialog.vue'
 import { DEFAULT_GYM_BANDS } from '#shared/utils/gradeReference'
 import { readableTextOn } from '~/utils/color'
 
+const SegmentedControl = {
+    props: ['modelValue', 'items', 'testId'],
+    emits: ['update:modelValue'],
+    template:
+        '<div :data-testid="testId" :data-value="modelValue"><button v-for="item in items" :key="item.value" :data-testid="`${testId}-${item.value}`" @click="$emit(\'update:modelValue\', item.value)">{{ item.label }}</button></div>',
+}
+
 const saveDownload = vi.hoisted(() => vi.fn(async () => {}))
 vi.mock('~/utils/download', () => ({ saveDownload }))
 
@@ -27,7 +34,7 @@ describe('GradeConversionDialog', () => {
                         template:
                             '<div><slot name="header-actions" /><slot /></div>',
                     },
-                    LayoutSectionHeader: true,
+                    SegmentedControl,
                     UBadge: true,
                     UButton: {
                         template:
@@ -41,8 +48,8 @@ describe('GradeConversionDialog', () => {
             .find('[data-testid="grade-conversion-pdf"]')
             .trigger('click')
         expect(saveDownload).toHaveBeenCalledWith(
-            '/api/ui/grade-scale?gym=gym1',
-            expect.stringMatching(/\.pdf$/),
+            '/api/ui/grade-scale?gym=gym1&kind=boulders',
+            expect.stringMatching(/gradeConversion\.boulders\.pdf$/),
         )
     })
 })
@@ -57,13 +64,14 @@ describe('GradeConversionDialog ladders', () => {
                     template:
                         '<div><slot name="header-actions" /><slot /></div>',
                 },
-                LayoutSectionHeader: true,
+                SegmentedControl,
                 UButton: true,
             },
         },
     })
+    const remOf = (value: string) => Number(/([\d.]+)rem/.exec(value)?.[1])
     const top = (testId: string) =>
-        parseFloat(
+        remOf(
             (
                 wrapper
                     .find('[data-testid="grade-conversion-routes"]')
@@ -82,6 +90,91 @@ describe('GradeConversionDialog ladders', () => {
         expect(top('grade-conversion-uiaa-7')).not.toBe(
             top('grade-conversion-french-6b'),
         )
+    })
+
+    it("opens on the source grade's ladder", () => {
+        expect(
+            wrapper
+                .find('[data-testid="grade-conversion-tabs"]')
+                .attributes('data-value'),
+        ).toBe('routes')
+    })
+
+    it('marks only the tapped cell and lays the row band under it', async () => {
+        await wrapper
+            .find('[data-testid="grade-conversion-yds-5.11a"]')
+            .trigger('click')
+        const highlighted = wrapper.findAll(
+            '.grade-conversion__label--highlight',
+        )
+        expect(highlighted).toHaveLength(1)
+        expect(highlighted[0]!.attributes('data-testid')).toBe(
+            'grade-conversion-yds-5.11a',
+        )
+        expect(highlighted[0]!.attributes('aria-current')).toBe('true')
+        expect(
+            wrapper
+                .findAll('[aria-current]')
+                .map((cell) => cell.attributes('data-testid')),
+        ).toEqual(['grade-conversion-yds-5.11a'])
+        const routes = wrapper.find('[data-testid="grade-conversion-routes"]')
+        const row = routes.find('[data-testid="grade-conversion-row"]')
+            .element as HTMLElement
+        expect(remOf(row.style.top)).toBeCloseTo(
+            top('grade-conversion-yds-5.11a'),
+        )
+        await wrapper.setProps({
+            source: { grade_system: 'french', grade: '6b' },
+        })
+        await wrapper.setProps({
+            source: { grade_system: 'french', grade: '7a' },
+        })
+    })
+
+    it('selects a gym band as a single cell', async () => {
+        await wrapper
+            .find('[data-testid="grade-conversion-band-blue"]')
+            .trigger('click')
+        expect(
+            wrapper.findAll('.grade-conversion__label--highlight'),
+        ).toHaveLength(1)
+        await wrapper.setProps({
+            source: { grade_system: 'french', grade: '6b' },
+        })
+        await wrapper.setProps({
+            source: { grade_system: 'french', grade: '7a' },
+        })
+    })
+
+    it('gives the gym colour column a short phone title', () => {
+        expect(
+            wrapper.find('[data-testid="grade-conversion-boulders"]').text(),
+        ).toContain('gradeConversion.gymBandShort')
+    })
+
+    it('labels the gym bands with their font range', () => {
+        const band = (key: string) =>
+            wrapper.find(`[data-testid="grade-conversion-band-${key}"]`).text()
+        expect(band('yellow')).toContain('gradeConversion.upTo')
+        expect(band('blue')).toContain('6A – 6B')
+        expect(band('black')).toContain('gradeConversion.andUp')
+    })
+
+    it('switches to the boulder ladder for a boulder grade', async () => {
+        await wrapper.setProps({
+            source: { grade_system: 'font', grade: '6B' },
+        })
+        expect(
+            wrapper
+                .find('[data-testid="grade-conversion-tabs"]')
+                .attributes('data-value'),
+        ).toBe('boulders')
+        expect(
+            wrapper.find('[data-testid="grade-conversion-font-6B"]').classes(),
+        ).toContain('grade-conversion__label--highlight')
+        await wrapper.setProps({
+            source: { grade_system: 'french', grade: '7a' },
+        })
     })
 
     it('highlights the source grade and shows no notes', () => {
@@ -112,6 +205,17 @@ describe('GradeConversionDialog ladders', () => {
         await wrapper.setProps({
             source: { grade_system: 'french', grade: '7a' },
         })
+    })
+
+    it('downloads the PDF of the open ladder', async () => {
+        saveDownload.mockClear()
+        await wrapper
+            .find('[data-testid="grade-conversion-pdf"]')
+            .trigger('click')
+        expect(saveDownload).toHaveBeenCalledWith(
+            '/api/ui/grade-scale?gym=gym1&kind=routes',
+            expect.stringMatching(/gradeConversion\.routes\.pdf$/),
+        )
     })
 
     it('offers the PDF in the header, not in a footer', () => {
