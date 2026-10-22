@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { APP_SCHEME } from '~/utils/native'
 
@@ -609,6 +609,18 @@ describe('android release build', () => {
         ).split('release {')[2]
         expect(release).toContain('minifyEnabled true')
         expect(release).toContain('proguard-android-optimize.txt')
+    })
+
+    it('ships only the locales the app is translated into', () => {
+        const gradle = readFileSync('mobile/android/app/build.gradle', 'utf8')
+        const filters = gradle.match(/localeFilters \+= \[([^\]]*)\]/)?.[1]
+        const shipped = filters
+            ?.match(/'(\w+)'/g)
+            ?.map((code) => code.slice(1, -1))
+        const translated = readdirSync('i18n/locales')
+            .filter((file) => file.endsWith('.json'))
+            .map((file) => file.replace('.json', ''))
+        expect(shipped?.sort()).toEqual(translated.sort())
     })
 })
 

@@ -20,6 +20,9 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    androidResources {
+        localeFilters += ['en', 'de', 'nl', 'fr', 'es']
+    }
     signingConfigs {
         // CI passes the upload key through the environment; without it the release build stays unsigned.
         release {
