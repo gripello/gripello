@@ -199,6 +199,8 @@ func TestRouteListFilters(t *testing.T) {
 	annex := f.call("setter", "POST", "/gyms/"+f.gymA+"/routes", `{"name":"Annex","grade":"7a","type":"Route","location":"`+f.hallB+`"}`, http.StatusCreated)["id"].(string)
 	archived := f.route(`,"name":"Gone","archived":true`)
 	f.call("setterB", "POST", "/gyms/"+f.gymB+"/routes", `{"name":"Other gym","grade":"6a"}`, http.StatusCreated)
+	f.call("setter", "PUT", "/gyms/"+f.gymA+"/routes/removal", `{"ids":["`+placed+`"],"planned_for":"2030-05-02"}`, http.StatusOK)
+	f.call("setter", "PUT", "/gyms/"+f.gymA+"/routes/removal", `{"ids":["`+annex+`"],"planned_for":"2030-05-01"}`, http.StatusOK)
 
 	ids := func(query string) []string {
 		var out []string
@@ -223,6 +225,7 @@ func TestRouteListFilters(t *testing.T) {
 		"q=crimp+nobody":                           {},
 		"ids=" + placed + "," + annex + "&sort=name": {annex, placed},
 		"sort=name&limit=1&page=2":                   {loose},
+		"removal=planned&sort=removal_planned_for":   {annex, placed},
 	}
 	for query, want := range cases {
 		if got := ids(query); strings.Join(got, ",") != strings.Join(want, ",") {
@@ -238,6 +241,7 @@ func TestRouteListFilters(t *testing.T) {
 		t.Errorf("expand = %v", expand)
 	}
 	f.call("", "GET", "/gyms/"+f.gymA+"/routes?sort=password", "", http.StatusBadRequest)
+	f.call("", "GET", "/gyms/"+f.gymA+"/routes?removal=soon", "", http.StatusBadRequest)
 	f.call("", "GET", "/gyms/nope/routes", "", http.StatusNotFound)
 }
 

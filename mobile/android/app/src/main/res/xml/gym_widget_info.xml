@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2x2 shows open now and the week's new routes, wider adds the routes or the next reset; placing it asks for the gym. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="app.gripello.widget.WidgetConfigureActivity"
+    android:description="@string/widget_gym_description"
+    android:initialLayout="@layout/widget_gym_small"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:maxResizeHeight="150dp"
+    android:minResizeHeight="110dp"
+    android:previewLayout="@layout/widget_gym_medium"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable" />

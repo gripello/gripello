@@ -1,17 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home-screen widget (ClimbingWidget.java); wording follows i18n/locales. -->
+<!-- Home-screen widgets (ClimbingWidget.java, GymWidget.java); wording follows i18n/locales. -->
 <resources>
     <string name="widget_name">My climbing</string>
-    <string name="widget_description">Your sends this week, your streak and your latest climbs.</string>
+    <string name="widget_description">Your sends this week, your streak and your rank.</string>
     <string name="widget_this_week">This week</string>
+    <string name="widget_this_week_lower">this week</string>
     <string name="widget_sends">Sends</string>
-    <string name="widget_flashes">Flashes: %1$d</string>
-    <string name="widget_hardest">Hardest %1$s</string>
-    <string name="widget_latest">Latest sends</string>
     <string name="widget_empty">No sends this week yet</string>
     <string name="widget_sign_in">Sign in to Gripello to see your climbing.</string>
     <string name="widget_all_gyms">All gyms</string>
     <string name="widget_choose_gym">Gym</string>
+    <string name="widget_hardest_label">Hardest</string>
+    <string name="widget_rank_label">Rank</string>
+    <string name="widget_flashes_label">Flashes</string>
+    <string name="widget_last_climb">Last climb</string>
+    <string name="widget_streak_keep">Climb by Sunday to keep it going</string>
+    <string name="widget_streak_ends">Ends Sunday</string>
+    <string name="widget_gym_name">My gym</string>
+    <string name="widget_gym_description">Open now, this week’s new routes and the next reset.</string>
+    <string name="widget_new_routes">New routes</string>
+    <string name="widget_open_until">Open · until %1$s</string>
+    <string name="widget_closed_opens">Closed · opens %1$s</string>
+    <string name="widget_closed_opens_day">Closed · opens %1$s %2$s</string>
+    <string name="widget_closed">Closed</string>
+    <string name="widget_followed_walls">On walls you follow</string>
+    <string name="widget_newest">Newest</string>
+    <string name="widget_resets">%1$s resets %2$s</string>
+    <string name="widget_reset_on">Reset %1$s</string>
+    <string name="widget_next_reset">Next reset</string>
+    <string name="widget_last_new_route">Last new route</string>
+    <string name="widget_no_new_routes">No new routes this week</string>
+    <string name="widget_pick_gym">Pick a gym</string>
     <plurals name="widget_streak">
         <item quantity="one">%1$d week in a row</item>
         <item quantity="other">%1$d weeks in a row</item>

@@ -1,6 +1,7 @@
 package app.gripello.widget;
 
 import android.appwidget.AppWidgetManager;
+import android.appwidget.AppWidgetProviderInfo;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
@@ -14,7 +15,7 @@ import java.util.concurrent.Executors;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-// Picks the gym a widget counts (long-press → widget settings); the first entry keeps all gyms.
+// Picks the gym a widget shows (long-press → widget settings); "My climbing" also offers all gyms.
 public class WidgetConfigureActivity extends AppCompatActivity {
 
     private final ExecutorService loader = Executors.newSingleThreadExecutor();
@@ -34,12 +35,17 @@ public class WidgetConfigureActivity extends AppCompatActivity {
             return;
         }
         setTitle(R.string.widget_choose_gym);
-        ids.add(null);
-        names.add(getString(R.string.widget_all_gyms));
+        // "My gym" needs a gym; "My climbing" may count all of them.
+        AppWidgetProviderInfo info = AppWidgetManager.getInstance(this).getAppWidgetInfo(widgetId);
+        boolean needsGym = info != null && GymWidget.class.getName().equals(info.provider.getClassName());
+        if (!needsGym) {
+            ids.add(null);
+            names.add(getString(R.string.widget_all_gyms));
+        }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, names);
         ListView list = new ListView(this);
         list.setAdapter(adapter);
-        list.setOnItemClickListener((parent, view, position, row) -> choose(ids.get(position), position == 0 ? null : names.get(position)));
+        list.setOnItemClickListener((parent, view, position, row) -> choose(ids.get(position), ids.get(position) == null ? null : names.get(position)));
         setContentView(list);
         loader.execute(() -> {
             try {
@@ -54,7 +60,7 @@ public class WidgetConfigureActivity extends AppCompatActivity {
                     adapter.notifyDataSetChanged();
                 });
             } catch (Exception ignored) {
-                // Offline: "All gyms" still works.
+                // Offline: "All gyms" still works for "My climbing"; "My gym" can be picked once online.
             }
         });
     }

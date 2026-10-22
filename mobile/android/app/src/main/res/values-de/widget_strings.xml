@@ -1,17 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home-screen widget (ClimbingWidget.java); wording follows i18n/locales. -->
+<!-- Home-screen widgets (ClimbingWidget.java, GymWidget.java); wording follows i18n/locales. -->
 <resources>
     <string name="widget_name">Mein Klettern</string>
-    <string name="widget_description">Deine Durchstiege dieser Woche, deine Serie und deine letzten Routen.</string>
+    <string name="widget_description">Deine Durchstiege dieser Woche, deine Serie und dein Rang.</string>
     <string name="widget_this_week">Diese Woche</string>
+    <string name="widget_this_week_lower">diese Woche</string>
     <string name="widget_sends">Durchstiege</string>
-    <string name="widget_flashes">Flashes: %1$d</string>
-    <string name="widget_hardest">Schwerste %1$s</string>
-    <string name="widget_latest">Letzte Durchstiege</string>
     <string name="widget_empty">Diese Woche noch keine Durchstiege</string>
     <string name="widget_sign_in">Melde dich in Gripello an, um dein Klettern zu sehen.</string>
     <string name="widget_all_gyms">Alle Hallen</string>
     <string name="widget_choose_gym">Halle</string>
+    <string name="widget_hardest_label">Schwerste</string>
+    <string name="widget_rank_label">Rang</string>
+    <string name="widget_flashes_label">Flashes</string>
+    <string name="widget_last_climb">Zuletzt</string>
+    <string name="widget_streak_keep">Klettere bis Sonntag, um sie zu halten</string>
+    <string name="widget_streak_ends">Endet Sonntag</string>
+    <string name="widget_gym_name">Meine Halle</string>
+    <string name="widget_gym_description">Geöffnet, neue Routen dieser Woche und der nächste Umbau.</string>
+    <string name="widget_new_routes">Neue Routen</string>
+    <string name="widget_open_until">Geöffnet · bis %1$s</string>
+    <string name="widget_closed_opens">Geschlossen · öffnet %1$s</string>
+    <string name="widget_closed_opens_day">Geschlossen · öffnet %1$s %2$s</string>
+    <string name="widget_closed">Geschlossen</string>
+    <string name="widget_followed_walls">An deinen Wänden</string>
+    <string name="widget_newest">Neueste</string>
+    <string name="widget_resets">%1$s: Raus am %2$s</string>
+    <string name="widget_reset_on">Raus am %1$s</string>
+    <string name="widget_next_reset">Nächster Umbau</string>
+    <string name="widget_last_new_route">Letzte neue Route</string>
+    <string name="widget_no_new_routes">Diese Woche keine neuen Routen</string>
+    <string name="widget_pick_gym">Halle wählen</string>
     <plurals name="widget_streak">
         <item quantity="one">%1$d Woche in Folge</item>
         <item quantity="other">%1$d Wochen in Folge</item>

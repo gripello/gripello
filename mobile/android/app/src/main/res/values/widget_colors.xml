@@ -1,9 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Home-screen widget, matching the site's light theme (dark variant in values-night). -->
+    <!-- Home-screen widgets, matching the site's light theme (dark variant in values-night). -->
     <color name="widget_background">#FFFFFF</color>
     <color name="widget_text">#1A1C18</color>
-    <color name="widget_muted">#6B6F68</color>
+    <color name="widget_muted">#5F635C</color>
     <color name="widget_brand">#4A9B2F</color>
     <color name="widget_streak">#F57C00</color>
+    <color name="widget_card">#F2F4F0</color>
+    <color name="widget_track">#E6E8E3</color>
+    <color name="widget_bar">#A8D394</color>
+    <color name="widget_number">#1A1C18</color>
+    <color name="widget_streak_bg">#FFF1E0</color>
+    <color name="widget_streak_text">#8A4B00</color>
+    <color name="widget_open_bg">#E8F3E1</color>
+    <color name="widget_open_text">#2F6B1C</color>
+    <color name="widget_rank">#8A6A00</color>
+    <color name="widget_down">#B3261E</color>
 </resources>

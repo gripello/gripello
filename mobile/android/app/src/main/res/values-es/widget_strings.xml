@@ -1,17 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home-screen widget (ClimbingWidget.java); wording follows i18n/locales. -->
+<!-- Home-screen widgets (ClimbingWidget.java, GymWidget.java); wording follows i18n/locales. -->
 <resources>
     <string name="widget_name">Mi escalada</string>
-    <string name="widget_description">Tus encadenadas de la semana, tu racha y tus últimas vías.</string>
+    <string name="widget_description">Tus encadenadas de la semana, tu racha y tu puesto.</string>
     <string name="widget_this_week">Esta semana</string>
+    <string name="widget_this_week_lower">esta semana</string>
     <string name="widget_sends">Encadenadas</string>
-    <string name="widget_flashes">Flashes: %1$d</string>
-    <string name="widget_hardest">Máx. %1$s</string>
-    <string name="widget_latest">Últimas encadenadas</string>
     <string name="widget_empty">Aún no hay encadenadas esta semana</string>
     <string name="widget_sign_in">Inicia sesión en Gripello para ver tu escalada.</string>
     <string name="widget_all_gyms">Todos los rocódromos</string>
     <string name="widget_choose_gym">Rocódromo</string>
+    <string name="widget_hardest_label">La más dura</string>
+    <string name="widget_rank_label">Puesto</string>
+    <string name="widget_flashes_label">Flashes</string>
+    <string name="widget_last_climb">Última vez</string>
+    <string name="widget_streak_keep">Escala antes del domingo para mantenerla</string>
+    <string name="widget_streak_ends">Acaba el domingo</string>
+    <string name="widget_gym_name">Mi rocódromo</string>
+    <string name="widget_gym_description">Horario, vías nuevas de la semana y la próxima retirada.</string>
+    <string name="widget_new_routes">Vías nuevas</string>
+    <string name="widget_open_until">Abierto · hasta las %1$s</string>
+    <string name="widget_closed_opens">Cerrado · abre a las %1$s</string>
+    <string name="widget_closed_opens_day">Cerrado · abre el %2$s a las %1$s</string>
+    <string name="widget_closed">Cerrado</string>
+    <string name="widget_followed_walls">En muros que sigues</string>
+    <string name="widget_newest">Más recientes</string>
+    <string name="widget_resets">%1$s: se retira el %2$s</string>
+    <string name="widget_reset_on">Se retira el %1$s</string>
+    <string name="widget_next_reset">Próxima retirada</string>
+    <string name="widget_last_new_route">Última vía nueva</string>
+    <string name="widget_no_new_routes">Sin vías nuevas esta semana</string>
+    <string name="widget_pick_gym">Elige un rocódromo</string>
     <plurals name="widget_streak">
         <item quantity="many">%1$d semanas seguidas</item>
         <item quantity="one">%1$d semana seguida</item>

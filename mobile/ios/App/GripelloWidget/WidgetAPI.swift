@@ -11,20 +11,64 @@ struct ClimbingStats: Codable, Hashable {
     var sends: Int
     var flashes: Int
     var hardest: Send?
-    var latest: [Send]
+    // Monday first
+    var days: [Int]
     var streak: Int
-    var unread: Int
+    var rank: Int
+    var rankMove: Int
+    var rankWeek: String?
+    var rankBase: Int
+    var lastClimb: String?
     var origin: String
 
+    static func empty(origin: String) -> ClimbingStats {
+        ClimbingStats(sends: 0, flashes: 0, hardest: nil, days: Array(repeating: 0, count: 7), streak: 0,
+                      rank: 0, rankMove: 0, rankWeek: nil, rankBase: 0, lastClimb: nil, origin: origin)
+    }
+
     static let sample = ClimbingStats(
-        sends: 12, flashes: 4,
-        hardest: .init(name: "Crimp City", grade: "7A", color: "#E53935", flash: false),
-        latest: [
-            .init(name: "Crimp City", grade: "7A", color: "#E53935", flash: false),
-            .init(name: "Slab Happy", grade: "6B+", color: "#1E88E5", flash: true),
-            .init(name: "Pinch Me", grade: "6C", color: "#FDD835", flash: false),
+        sends: 8, flashes: 3,
+        hardest: .init(name: "Crimp City", grade: "6b+", color: "#E53935", flash: false),
+        days: [0, 3, 0, 5, 0, 0, 0],
+        streak: 4, rank: 14, rankMove: 3, rankWeek: nil, rankBase: 0, lastClimb: nil, origin: "https://gripello.app"
+    )
+}
+
+struct GymStats: Codable, Hashable {
+    struct NewRoute: Codable, Hashable {
+        var name: String
+        var grade: String
+        var color: String
+        var wall: String
+        var created: String
+    }
+
+    var hours: [String: [[String]]]?
+    var newCount: Int
+    var followed: Bool
+    var routes: [NewRoute]
+    var colors: [String]
+    var resetWall: String?
+    var resetMoreWalls: Int
+    var resetDate: String?
+    var lastNew: NewRoute?
+    var origin: String
+    var slug: String?
+
+    static func empty(origin: String) -> GymStats {
+        GymStats(hours: nil, newCount: 0, followed: false, routes: [], colors: [], resetWall: nil, resetMoreWalls: 0,
+                 resetDate: nil, lastNew: nil, origin: origin, slug: nil)
+    }
+
+    static let sample = GymStats(
+        hours: nil, newCount: 7, followed: true,
+        routes: [
+            .init(name: "Roter Riese", grade: "6c", color: "#E53935", wall: "The Cave", created: ""),
+            .init(name: "Lila Laune", grade: "6a+", color: "#8E24AA", wall: "Slab", created: ""),
+            .init(name: "Blaue Stunde", grade: "6a", color: "#1E88E5", wall: "Slab", created: ""),
         ],
-        streak: 5, unread: 2, origin: "https://gripello.app"
+        colors: ["#FDD835", "#1E88E5", "#E53935", "#212121", "#43A047", "#8E24AA", "#FB8C00"],
+        resetWall: "Overhang", resetMoreWalls: 0, resetDate: nil, lastNew: nil, origin: "https://gripello.app", slug: nil
     )
 }
 
@@ -33,7 +77,13 @@ enum WidgetState: Hashable {
     case signedOut
 }
 
-// The widget reads the climber's own logbook with the session the app handed over (WidgetStore).
+enum GymState: Hashable {
+    case stats(GymStats)
+    case signedOut
+    case noGym
+}
+
+// The widgets read the climber's own logbook and the gym's public routes with the session the app handed over (WidgetStore).
 enum WidgetAPI {
 
     private struct Unauthorized: Error {}
@@ -49,6 +99,7 @@ enum WidgetAPI {
             var grade_system: String
             var grade_index: Double
             var route_name: String
+            var date: String
             var expand: Expand?
         }
         var items: [Tick]
@@ -59,25 +110,68 @@ enum WidgetAPI {
         var current: Int
     }
 
-    private struct Total: Decodable { var total: Int? }
+    private struct Season: Decodable {
+        var id: String
+        var starts_at: String
+        var ends_at: String
+    }
+
+    private struct Board: Decodable {
+        struct Row: Decodable { var rank: Int }
+        var me: Row?
+    }
+
+    private struct Me: Decodable { var followed_walls: [String]? }
+
+    private struct GymInfo: Decodable {
+        var slug: String?
+        var opening_hours: [String: [[String]]?]?
+    }
+
+    private struct RoutePage: Decodable {
+        struct Route: Decodable {
+            struct Expand: Decodable {
+                struct Wall: Decodable { var name: String }
+                var wall: Wall?
+            }
+            var name: String
+            var grade: String
+            var color: String
+            var wall: String
+            var created: String
+            var removal_planned_for: String?
+            var expand: Expand?
+
+            var row: GymStats.NewRoute {
+                .init(name: name, grade: grade, color: color, wall: expand?.wall?.name ?? "", created: created)
+            }
+        }
+        var items: [Route]
+        var total: Int?
+    }
+
     private struct Gyms: Decodable { var items: [Gym] }
     struct Gym: Codable { var id: String; var name: String }
     private struct Refreshed: Decodable { var token: String }
 
     static let defaultOrigin = "https://gripello.app"
+    private static let gymRouteRows = 3
+    private static let gymHoldDots = 7
 
     static func load(gym: String?) async -> WidgetState {
         guard var session = WidgetStore.loadSession() else { return .signedOut }
         let cacheKey = WidgetStore.snapshotPrefix + (gym ?? "all")
+        let previous = WidgetStore.shared.data(forKey: cacheKey).flatMap { try? JSONDecoder().decode(ClimbingStats.self, from: $0) }
         do {
             session = try await refreshed(session)
             async let ticks: TickPage = get("/me/ticks", session, query: weekQuery(gym: gym))
             async let achievements: [Achievement]? = try? get("/climbers/\(session.userId)/achievements", session)
-            async let unread: Total? = try? get("/me/notifications", session, query: ["unread": "true", "limit": "1"])
-            let stats = summarize(try await ticks.items,
-                                  streak: await achievements?.first { $0.key == "active_weeks" }?.current ?? 0,
-                                  unread: await unread?.total ?? 0,
-                                  origin: session.origin)
+            async let rank = boardRank(gym: gym, session)
+            var stats = summarize(try await ticks.items, origin: session.origin)
+            stats.streak = await achievements?.first { $0.key == "active_weeks" }?.current ?? 0
+            stats.rank = try await rank
+            if stats.sends == 0 { stats.lastClimb = try await lastClimb(gym: gym, session) }
+            stats = withRankMove(stats, previous: previous)
             WidgetStore.saveSnapshot(try? JSONEncoder().encode(stats), forKey: cacheKey, ifToken: session.token)
             return .stats(stats)
         } catch is Unauthorized {
@@ -86,15 +180,53 @@ enum WidgetAPI {
             return .signedOut
         } catch {
             // Offline or a server hiccup: keep showing the last good numbers.
-            if let data = WidgetStore.shared.data(forKey: cacheKey),
-               let cached = try? JSONDecoder().decode(ClimbingStats.self, from: data) {
-                return .stats(cached)
-            }
-            return .stats(.init(sends: 0, flashes: 0, hardest: nil, latest: [], streak: 0, unread: 0, origin: session.origin))
+            return .stats(previous ?? .empty(origin: session.origin))
         }
     }
 
-    // Gyms for the widget's picker (the session adds its climber's hidden gyms); offline the last list keeps a picked gym.
+    static func loadGym(gym: String?) async -> GymState {
+        guard var session = WidgetStore.loadSession() else { return .signedOut }
+        guard let gym else { return .noGym }
+        let cacheKey = WidgetStore.snapshotPrefix + "gym." + gym
+        do {
+            session = try await refreshed(session)
+            let base = "/gyms/\(gym)"
+            async let info: GymInfo = get(base, session)
+            async let me: Me? = try? get("/me", session)
+            async let created: RoutePage = get(base + "/routes", session, query: [
+                "since": ISO8601DateFormatter().string(from: weekStart()), "include": "wall", "limit": "100", "total": "true",
+            ])
+            // The reset is extra; the new routes still show without it.
+            async let planned: RoutePage? = try? get(base + "/routes", session, query: [
+                "removal": "planned", "sort": "removal_planned_for", "include": "wall", "limit": "1000",
+            ])
+            let page = try await created
+            var stats = GymStats.empty(origin: session.origin)
+            let details = try await info
+            stats.slug = details.slug
+            stats.hours = details.opening_hours?.compactMapValues { $0 }
+            stats.newCount = page.total ?? page.items.count
+            summarizeNew(&stats, page.items, followed: Set(await me?.followed_walls ?? []))
+            if let planned = await planned { nextReset(&stats, planned.items) }
+            if stats.newCount == 0 {
+                let newest: RoutePage? = try? await get(base + "/routes", session, query: ["limit": "1", "include": "wall"])
+                stats.lastNew = newest?.items.first?.row
+            }
+            WidgetStore.saveSnapshot(try? JSONEncoder().encode(stats), forKey: cacheKey, ifToken: session.token)
+            return .stats(stats)
+        } catch is Unauthorized {
+            WidgetStore.clearSession(ifToken: session.token)
+            return .signedOut
+        } catch {
+            if let data = WidgetStore.shared.data(forKey: cacheKey),
+               let cached = try? JSONDecoder().decode(GymStats.self, from: data) {
+                return .stats(cached)
+            }
+            return .stats(.empty(origin: session.origin))
+        }
+    }
+
+    // Gyms for the widgets' picker (the session adds its climber's hidden gyms); offline the last list keeps a picked gym.
     static func gyms() async throws -> [Gym] {
         let session = WidgetStore.loadSession()
         do {
@@ -125,14 +257,38 @@ enum WidgetAPI {
         return calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
     }
 
+    static func day(_ date: Date) -> String {
+        let format = DateFormatter()
+        format.calendar = Calendar(identifier: .iso8601)
+        format.locale = Locale(identifier: "en_US_POSIX")
+        format.timeZone = .current
+        format.dateFormat = "yyyy-MM-dd"
+        return format.string(from: date)
+    }
+
+    // At noon: midnight doesn't exist on the day a time zone switches to daylight saving at 00:00.
+    static func parseDay(_ day: String) -> Date? {
+        let format = DateFormatter()
+        format.locale = Locale(identifier: "en_US_POSIX")
+        format.timeZone = .current
+        format.dateFormat = "yyyy-MM-dd HH"
+        return format.date(from: day + " 12")
+    }
+
+    // Ticks carry a plain day and the API reads a timestamp as its UTC day, so the week starts at the local Monday's date.
     private static func weekQuery(gym: String?) -> [String: String] {
-        var query = ["since": ISO8601DateFormatter().string(from: weekStart()), "limit": "1000"]
+        var query = ["since": day(weekStart()), "limit": "1000"]
         if let gym { query["gym"] = gym }
         return query
     }
 
+    // Monday = 0.
+    static func weekday(_ date: Date) -> Int {
+        (Calendar(identifier: .gregorian).component(.weekday, from: date) + 5) % 7
+    }
+
     // Boulder and route grades share no axis, so the hardest comes from the week's most climbed grade system.
-    private static func summarize(_ ticks: [TickPage.Tick], streak: Int, unread: Int, origin: String) -> ClimbingStats {
+    private static func summarize(_ ticks: [TickPage.Tick], origin: String) -> ClimbingStats {
         let sends = ticks.filter { $0.type != "attempt" }
         let counts = sends.reduce(into: [String: Int]()) { $0[$1.grade_system, default: 0] += 1 }
         // A tie goes to the system of the most recent send (the list is newest first), as on Android.
@@ -142,13 +298,81 @@ enum WidgetAPI {
             ClimbingStats.Send(name: tick.route_name, grade: tick.grade,
                                color: tick.expand?.route?.color ?? "#9E9E9E", flash: tick.type == "flash")
         }
-        return ClimbingStats(
-            sends: sends.count,
-            flashes: sends.filter { $0.type == "flash" }.count,
-            hardest: sends.filter { $0.grade_system == system }.max { $0.grade_index < $1.grade_index }.map(send),
-            latest: sends.prefix(3).map(send),
-            streak: streak, unread: unread, origin: origin
-        )
+        var stats = ClimbingStats.empty(origin: origin)
+        stats.sends = sends.count
+        stats.flashes = sends.filter { $0.type == "flash" }.count
+        stats.hardest = sends.filter { $0.grade_system == system }.max { $0.grade_index < $1.grade_index }.map(send)
+        for tick in sends {
+            if let date = parseDay(tick.date) { stats.days[weekday(date)] += 1 }
+        }
+        return stats
+    }
+
+    // The rank's movement since this widget first saw it this week (the API keeps no rank history).
+    static func withRankMove(_ fresh: ClimbingStats, previous: ClimbingStats?) -> ClimbingStats {
+        var stats = fresh
+        let week = day(weekStart())
+        let sameWeek = previous?.rankWeek == week && (previous?.rankBase ?? 0) > 0
+        stats.rankWeek = week
+        stats.rankBase = sameWeek ? previous!.rankBase : stats.rank
+        stats.rankMove = stats.rank > 0 && stats.rankBase > 0 ? stats.rankBase - stats.rank : 0
+        return stats
+    }
+
+    // The rank on the board the gym page opens first: the running season (else the last 60 days), boulders before routes.
+    private static func boardRank(gym: String?, _ session: WidgetStore.Session) async throws -> Int {
+        guard let gym else { return 0 }
+        let today = day(.now)
+        let seasons: [Season]? = try await optional { try await get("/gyms/\(gym)/seasons", session) }
+        let season = seasons?.first { $0.starts_at <= today && $0.ends_at >= today }?.id
+        for kind in ["boulder", "route"] {
+            var query = ["kind": kind]
+            if let season { query["season"] = season }
+            let board: Board? = try await optional { try await get("/gyms/\(gym)/leaderboard", session, query: query) }
+            if let me = board?.me { return me.rank }
+        }
+        return 0
+    }
+
+    // The day of the newest tick (attempts count as climbing), for the "last climb" card of an empty week.
+    private static func lastClimb(gym: String?, _ session: WidgetStore.Session) async throws -> String? {
+        var query = ["limit": "1"]
+        if let gym { query["gym"] = gym }
+        let page: TickPage? = try await optional { try await get("/me/ticks", session, query: query) }
+        return page?.items.first?.date
+    }
+
+    // Extra data: a failure leaves it out, an expired session still signs the widget out.
+    private static func optional<T>(_ fetch: () async throws -> T) async throws -> T? {
+        do {
+            return try await fetch()
+        } catch is Unauthorized {
+            throw Unauthorized()
+        } catch {
+            return nil
+        }
+    }
+
+    // Newest first; routes on followed walls lead, the rest of the gym fills up.
+    private static func summarizeNew(_ stats: inout GymStats, _ items: [RoutePage.Route], followed: Set<String>) {
+        stats.colors = items.prefix(gymHoldDots).map(\.color)
+        let onFollowed = items.filter { followed.contains($0.wall) }
+        stats.followed = !onFollowed.isEmpty
+        stats.routes = Array((onFollowed + items.filter { !followed.contains($0.wall) }).prefix(gymRouteRows).map(\.row))
+    }
+
+    // The earliest planned strip date from today on and the walls coming down that day.
+    private static func nextReset(_ stats: inout GymStats, _ items: [RoutePage.Route]) {
+        let today = day(.now)
+        guard let first = items.first(where: { ($0.removal_planned_for ?? "") >= today })?.removal_planned_for else { return }
+        var walls: [String] = []
+        for route in items where route.removal_planned_for == first {
+            let name = route.expand?.wall?.name ?? ""
+            if !walls.contains(name) { walls.append(name) }
+        }
+        stats.resetDate = first
+        stats.resetWall = walls.first ?? ""
+        stats.resetMoreWalls = max(0, walls.count - 1)
     }
 
     // Same rule as the web app (app/utils/session.ts): renew once less than 6 days are left.

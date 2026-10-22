@@ -47,7 +47,18 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/climbing_widget_info" />
         </receiver>
 
-        <!-- Loads the widget's numbers; only the system (BIND_JOB_SERVICE) can start it. -->
+        <!-- "My gym" home-screen widget: open now, new routes and the next reset of one gym. -->
+        <receiver
+            android:name=".widget.GymWidget"
+            android:exported="false"
+            android:label="@string/widget_gym_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/gym_widget_info" />
+        </receiver>
+
+        <!-- Loads the widgets' numbers; only the system (BIND_JOB_SERVICE) can start it. -->
         <service
             android:name=".widget.WidgetUpdateJob"
             android:exported="true"

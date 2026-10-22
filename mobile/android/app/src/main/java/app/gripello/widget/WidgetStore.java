@@ -1,7 +1,5 @@
 package app.gripello.widget;
 
-import android.appwidget.AppWidgetManager;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
 import java.util.Objects;
@@ -94,8 +92,7 @@ public final class WidgetStore {
         SharedPreferences prefs = prefs(context);
         if (!token.equals(prefs.getString("token", null))) return;
         if (!Objects.equals(gymId, gymId(context, widgetId))) return;
-        int[] placed = AppWidgetManager.getInstance(context).getAppWidgetIds(new ComponentName(context, ClimbingWidget.class));
-        for (int id : placed) {
+        for (int id : ClimbingWidget.placed(context)) {
             if (id == widgetId) {
                 prefs.edit().putString(SNAPSHOT + widgetId, json).apply();
                 return;

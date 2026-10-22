@@ -318,6 +318,166 @@ describe('home-screen widget', () => {
         expect(job).toContain('(current && again)')
     })
 
+    it('shows the next reset from today on, counting every wall of that day, on both platforms', () => {
+        const data = read(
+            'mobile/android/app/src/main/java/app/gripello/widget/WidgetData.java',
+        )
+        const api = read('mobile/ios/App/GripelloWidget/WidgetAPI.swift')
+        expect(data).toMatch(
+            /"removal_planned_for"\)\s*\.appendQueryParameter\("include", "wall"\)\s*\.appendQueryParameter\("limit", "1000"\)/,
+        )
+        expect(data).toContain('if (date.compareTo(today) < 0) continue;')
+        expect(api).toContain(
+            '"sort": "removal_planned_for", "include": "wall", "limit": "1000"',
+        )
+        expect(api).toContain('($0.removal_planned_for ?? "") >= today')
+    })
+
+    it('shows a gym with only holiday hours as closed, like the web', () => {
+        expect(
+            read(
+                'mobile/android/app/src/main/java/app/gripello/widget/OpeningHours.java',
+            ),
+        ).toContain(
+            'return intervals(hours, "holiday").isEmpty() ? null : new Status(false, "", -1);',
+        )
+        expect(
+            read(
+                'mobile/android/app/src/main/java/app/gripello/widget/GymWidget.java',
+            ),
+        ).toContain(
+            'if (status.time.isEmpty()) return context.getString(R.string.widget_closed);',
+        )
+        const gym = read('mobile/ios/App/GripelloWidget/GymWidget.swift')
+        expect(gym).toContain(
+            'return intervals(hours, "holiday").isEmpty ? nil : Status(open: false, time: "", day: nil)',
+        )
+        expect(gym).toContain(
+            'if time.isEmpty { return String(localized: "Closed") }',
+        )
+        const catalog = JSON.parse(
+            read('mobile/ios/App/GripelloWidget/Localizable.xcstrings'),
+        )
+        expect(
+            Object.keys(catalog.strings.Closed.localizations).sort(),
+        ).toEqual(['de', 'es', 'fr', 'nl'])
+    })
+
+    it('draws no empty chips before the first Android widget load', () => {
+        const res = 'mobile/android/app/src/main/res/layout'
+        const gone = (file: string, id: string) =>
+            expect(read(`${res}/${file}`)).toMatch(
+                new RegExp(
+                    `android:id="@\\+id/${id}"[^>]*android:visibility="gone"`,
+                ),
+            )
+        gone('widget_climb_summary.xml', 'widget_streak_chip')
+        for (const id of [
+            'widget_status_chip',
+            'widget_holds',
+            'widget_reset_banner',
+        ])
+            gone('widget_gym_summary.xml', id)
+        expect(read(`${res}/widget_gym_summary.xml`)).toContain(
+            'android:weightSum="7"',
+        )
+    })
+
+    it('parses iOS widget days at noon and signs out on a 401 from extra requests', () => {
+        const api = read('mobile/ios/App/GripelloWidget/WidgetAPI.swift')
+        expect(api).toContain('return format.date(from: day + " 12")')
+        expect(api).toContain('stats.rank = try await rank')
+        expect(api).toMatch(/catch is Unauthorized \{\s*throw Unauthorized\(\)/)
+        expect(api).not.toMatch(
+            /try\? await get\("\/gyms\/\\\(gym\)\/(seasons|leaderboard)"/,
+        )
+    })
+
+    it('keeps a rank base per Android widget when widgets share a gym', () => {
+        expect(
+            read(
+                'mobile/android/app/src/main/java/app/gripello/widget/WidgetData.java',
+            ),
+        ).toMatch(
+            /withRankMove\(Stats shared, Stats previous\) \{\s*\/\/[^\n]*\n\s*Stats fresh = Stats\.fromJson\(shared\.toJson\(\)\);/,
+        )
+    })
+
+    it('ships "My climbing" and "My gym" on Android and iOS', () => {
+        for (const receiver of ['.widget.ClimbingWidget', '.widget.GymWidget'])
+            expect(manifest).toContain(`android:name="${receiver}"`)
+        expect(
+            read('mobile/ios/App/GripelloWidget/ClimbingWidget.swift'),
+        ).toMatch(/ClimbingWidget\(\)\s*GymWidget\(\)/)
+        const project = read('mobile/ios/App/App.xcodeproj/project.pbxproj')
+        expect(project).toMatch(/GymWidget\.swift in Sources \*\/,/)
+        // "My gym" can't count all gyms, so its picker leaves that entry out.
+        expect(
+            read(
+                'mobile/android/app/src/main/java/app/gripello/widget/WidgetConfigureActivity.java',
+            ),
+        ).toContain(
+            'GymWidget.class.getName().equals(info.provider.getClassName())',
+        )
+    })
+
+    it("starts the week's ticks at the local Monday's date on both platforms", () => {
+        const data = read(
+            'mobile/android/app/src/main/java/app/gripello/widget/WidgetData.java',
+        )
+        expect(data).toContain('.appendQueryParameter("since", weekStartDay())')
+        expect(read('mobile/ios/App/GripelloWidget/WidgetAPI.swift')).toContain(
+            '["since": day(weekStart()), "limit": "1000"]',
+        )
+    })
+
+    it('asks for the next planned reset the same way on both platforms', () => {
+        const data = read(
+            'mobile/android/app/src/main/java/app/gripello/widget/WidgetData.java',
+        )
+        expect(data).toContain('.appendQueryParameter("removal", "planned")')
+        expect(data).toContain(
+            '.appendQueryParameter("sort", "removal_planned_for")',
+        )
+        expect(read('mobile/ios/App/GripelloWidget/WidgetAPI.swift')).toContain(
+            '"removal": "planned", "sort": "removal_planned_for"',
+        )
+        expect(read('api/routes.yaml')).toContain(
+            'schema: { type: string, enum: [planned] }',
+        )
+    })
+
+    it('translates every Android widget string', () => {
+        const names = (code: string) =>
+            [
+                ...read(
+                    `mobile/android/app/src/main/res/values${code ? `-${code}` : ''}/widget_strings.xml`,
+                ).matchAll(/<(?:string|plurals) name="(\w+)"/g),
+            ]
+                .map((m) => m[1])
+                .sort()
+        for (const code of ['de', 'nl', 'fr', 'es'])
+            expect(names(code)).toEqual(names(''))
+    })
+
+    it('translates every iOS widget string', () => {
+        const catalog = JSON.parse(
+            read('mobile/ios/App/GripelloWidget/Localizable.xcstrings'),
+        ) as {
+            strings: Record<string, { localizations?: Record<string, unknown> }>
+        }
+        const untranslated = Object.entries(catalog.strings)
+            .filter(([key]) => /[a-z]{2}/i.test(key.replace(/%(lld|@)/g, '')))
+            .filter(
+                ([, entry]) =>
+                    !['de', 'nl', 'fr', 'es'].every(
+                        (code) => entry.localizations?.[code],
+                    ),
+            )
+            .map(([key]) => key)
+        expect(untranslated).toEqual([])
+    })
+
     it('declares the App Group defaults in the app and the widget privacy manifests', () => {
         for (const file of [
             'mobile/ios/App/App/PrivacyInfo.xcprivacy',
@@ -369,6 +529,10 @@ describe('home-screen widget', () => {
         expect(read(`${res}/xml/climbing_widget_info.xml`)).toContain(
             'android:configure="app.gripello.widget.WidgetConfigureActivity"',
         )
+        for (const kind of ['climbing', 'gym'])
+            expect(read(`${res}/xml/${kind}_widget_info.xml`)).toContain(
+                'android:maxResizeHeight="150dp"',
+            )
         const names = (file: string) =>
             [...read(file).matchAll(/name="(widget_\w+)"/g)]
                 .map((m) => m[1])

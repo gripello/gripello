@@ -29,3 +29,12 @@ struct ClimbingWidgetIntent: WidgetConfigurationIntent {
     @Parameter(title: "Gym")
     var gym: GymEntity?
 }
+
+// "My gym" shows one gym; until one is picked it asks for it.
+struct GymWidgetIntent: WidgetConfigurationIntent {
+    static let title: LocalizedStringResource = "Gym"
+    static let description = IntentDescription("The gym this widget shows.")
+
+    @Parameter(title: "Gym")
+    var gym: GymEntity?
+}
