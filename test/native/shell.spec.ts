@@ -391,6 +391,17 @@ describe('android passkeys', () => {
     })
 })
 
+describe('android release build', () => {
+    it('shrinks and obfuscates with R8, which Play requires', () => {
+        const release = readFileSync(
+            'mobile/android/app/build.gradle',
+            'utf8',
+        ).split('release {')[2]
+        expect(release).toContain('minifyEnabled true')
+        expect(release).toContain('proguard-android-optimize.txt')
+    })
+})
+
 describe('android system theme', () => {
     it('tells the page when the system switches between light and dark', () => {
         const activity = readFileSync(
