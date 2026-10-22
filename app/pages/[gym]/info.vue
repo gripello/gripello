@@ -35,7 +35,7 @@
             data-testid="gym-info-empty"
         />
 
-        <div v-else class="grid gap-4 lg:grid-cols-3">
+        <div v-else class="grid items-start gap-4 lg:grid-cols-3">
             <div class="flex flex-col gap-4 lg:col-span-2">
                 <LayoutPanel v-if="gym?.description">
                     <p
@@ -47,61 +47,11 @@
                 </LayoutPanel>
 
                 <LayoutPanel
-                    v-if="gym?.address || located"
-                    :title="$t('gymInfo.location')"
-                >
-                    <div class="flex flex-col gap-3">
-                        <p
-                            v-if="gym?.address"
-                            class="flex gap-2 whitespace-pre-line"
-                            data-testid="gym-info-address"
-                        >
-                            <UIcon
-                                name="i-lucide-map-pin"
-                                class="mt-0.5 size-5 shrink-0 text-muted"
-                            />
-                            {{ gym.address }}
-                        </p>
-                        <GymLocationMap v-if="located" :markers="markers" />
-                        <GymDirectionsButton
-                            v-if="located && gym"
-                            :gym="gym"
-                            class="self-start"
-                        />
-                    </div>
-                </LayoutPanel>
-
-                <LayoutPanel
-                    v-if="gym?.amenities?.length"
-                    :title="$t('gymInfo.amenitiesTitle')"
-                >
-                    <ul
-                        class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
-                        data-testid="gym-info-amenities"
-                    >
-                        <li
-                            v-for="amenity in gym.amenities"
-                            :key="amenity"
-                            class="flex items-center gap-2"
-                            :data-testid="`gym-amenity-${amenity}`"
-                        >
-                            <UIcon
-                                :name="GYM_AMENITIES[amenity]"
-                                class="size-5 shrink-0 text-primary"
-                            />
-                            {{ $t(`gymInfo.amenities.${amenity}`) }}
-                        </li>
-                    </ul>
-                </LayoutPanel>
-            </div>
-
-            <div class="order-first flex flex-col gap-4 lg:order-none">
-                <LayoutPanel
                     v-if="hasHours"
                     data-testid="gym-info-hours"
                     :title="$t('gymInfo.hoursTitle')"
                 >
-                    <GymHoursList :hours="gym?.opening_hours" :today="today" />
+                    <GymWeekHours :hours="gym?.opening_hours" :today="today" />
                     <p
                         v-if="gym?.hours_note"
                         class="text-sm whitespace-pre-line"
@@ -112,12 +62,26 @@
                 </LayoutPanel>
 
                 <LayoutPanel
+                    v-if="gym?.address || located"
+                    :title="$t('gymInfo.location')"
+                >
+                    <GymAddressBlock v-if="gym" :gym="gym" />
+                    <GymLocationMap v-if="located" :markers="markers" />
+                </LayoutPanel>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <LayoutPanel
                     v-if="contacts.length"
                     :title="$t('gymInfo.contact')"
                 >
-                    <ul class="flex flex-col gap-1">
-                        <li v-for="contact in contacts" :key="contact.key">
-                            <UButton
+                    <ul class="flex flex-col gap-2 text-sm">
+                        <li
+                            v-for="contact in contacts"
+                            :key="contact.key"
+                            class="min-w-0"
+                        >
+                            <ULink
                                 :href="contact.href"
                                 :target="
                                     contact.key === 'website'
@@ -125,13 +89,40 @@
                                         : undefined
                                 "
                                 rel="noopener"
-                                color="neutral"
-                                variant="link"
-                                :icon="contact.icon"
-                                :label="contact.label"
-                                class="px-0 break-all"
+                                class="flex min-w-0 items-center gap-2 text-default hover:text-primary"
                                 :data-testid="`gym-info-${contact.key}`"
+                            >
+                                <UIcon
+                                    :name="contact.icon"
+                                    class="size-5 shrink-0 text-primary"
+                                />
+                                <span class="truncate">{{
+                                    contact.label
+                                }}</span>
+                            </ULink>
+                        </li>
+                    </ul>
+                </LayoutPanel>
+
+                <LayoutPanel
+                    v-if="gym?.amenities?.length"
+                    :title="$t('gymInfo.amenitiesTitle')"
+                >
+                    <ul
+                        class="grid grid-cols-2 gap-3 text-sm"
+                        data-testid="gym-info-amenities"
+                    >
+                        <li
+                            v-for="amenity in gym.amenities"
+                            :key="amenity"
+                            class="flex min-w-0 items-center gap-2"
+                            :data-testid="`gym-amenity-${amenity}`"
+                        >
+                            <UIcon
+                                :name="GYM_AMENITIES[amenity]"
+                                class="size-5 shrink-0 text-primary"
                             />
+                            {{ $t(`gymInfo.amenities.${amenity}`) }}
                         </li>
                     </ul>
                 </LayoutPanel>

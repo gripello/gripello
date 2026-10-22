@@ -1761,19 +1761,17 @@
         "title": "Kletterhalle",
         "description": "Neue Routen, Wände und Grade auf einen Blick.",
         "routesCount": "{n} Route | {n} Routen",
-        "newCount": "{n} neu in zwei Wochen",
-        "newRoutes": "Neu geschraubt",
         "allRoutes": "Alle Routen",
         "walls": "Wände",
         "openMap": "Plan öffnen",
         "wallRoutes": "{n} Route | {n} Routen",
-        "newestSet": "Neueste: {date}",
         "popular": "Beliebte Routen",
         "popularEmpty": "Noch nicht genug Bewertungen.",
         "progressTitle": "Dein Fortschritt",
         "progress": "Du hast {sent} von {total} aktuellen Routen geschafft.",
-        "gradeSpread": "Grade an der Wand",
-        "resets": "Bald abgeschraubt"
+        "wallNew": "{n} neu",
+        "todayHours": "Heute {hours}",
+        "gymInfo": "Hallen-Info"
     },
     "accountSettings": {
         "title": "Einstellungen",

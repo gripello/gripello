@@ -35,6 +35,13 @@ export function directionLinks(gym: GymLocation & Pick<GymRecord, 'address'>) {
     ]
 }
 
+export function addressParts(address: string): string[] {
+    const lines = address.includes('\n')
+        ? address.split('\n')
+        : address.split(',')
+    return lines.map((line) => line.trim()).filter(Boolean)
+}
+
 export function preferredDirections(
     gym: GymLocation & Pick<GymRecord, 'address'>,
     userAgent: string,
@@ -80,6 +87,14 @@ export function gymMarkers<T extends MarkedGym>(
     }))
 }
 
+function websiteLabel(url: string) {
+    try {
+        return new URL(url).hostname.replace(/^www\./, '')
+    } catch {
+        return url.replace(/^https?:\/\/(www\.)?/, '')
+    }
+}
+
 export function gymContacts(
     gym: Pick<GymRecord, 'legal_phone' | 'contact_email' | 'website_url'>,
 ) {
@@ -99,7 +114,7 @@ export function gymContacts(
         gym.website_url && {
             key: 'website',
             icon: 'i-lucide-globe',
-            label: gym.website_url.replace(/^https?:\/\/(www\.)?/, ''),
+            label: websiteLabel(gym.website_url),
             href: gym.website_url,
         },
     ].filter((contact) => !!contact)

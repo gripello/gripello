@@ -55,13 +55,3 @@ test('the map list shows the color dot and grade', async ({ page }) => {
     )
     await expectDotAndGrade(row)
 })
-
-test('the overview shows the color dot and grade for new routes', async ({
-    page,
-}) => {
-    await gotoSettled(page, gymPath('/'))
-    const tile = page.locator(
-        `[data-testid="overview-new-route"][data-route-id="${routeId}"]`,
-    )
-    await expectDotAndGrade(tile)
-})

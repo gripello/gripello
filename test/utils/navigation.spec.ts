@@ -415,10 +415,10 @@ describe('sectionTabs', () => {
                 tab.active,
             ]),
         ).toEqual([
+            ['/gym-a', false],
             ['/gym-a/routes', false],
             ['/gym-a/map', true],
             ['/gym-a/info', false],
-            ['/gym-a', false],
         ])
         expect(
             sectionTabs('/gym-a/info', 'gym-a').find((tab) => tab.active),

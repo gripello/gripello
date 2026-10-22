@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GymRecord } from '~/types/models'
-import { directionLinks, preferredDirections } from '~/utils/gymInfo'
+import { directionLinks } from '~/utils/gymInfo'
 
 const props = defineProps<{
     gym: Pick<GymRecord, 'latitude' | 'longitude' | 'address'>
@@ -8,9 +8,7 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const links = computed(() => directionLinks(props.gym))
-const userAgent = ref('')
-onMounted(() => (userAgent.value = navigator.userAgent))
-const href = computed(() => preferredDirections(props.gym, userAgent.value))
+const href = useDirectionsHref(() => props.gym)
 const items = computed(() =>
     links.value.map((link) => ({
         label: t(`gymInfo.directions.${link.key}`),

@@ -1761,19 +1761,17 @@
         "title": "Climbing gym",
         "description": "New routes, walls and grades at a glance.",
         "routesCount": "{n} route | {n} routes",
-        "newCount": "{n} new in two weeks",
-        "newRoutes": "Newly set",
         "allRoutes": "All routes",
         "walls": "Walls",
         "openMap": "Open map",
         "wallRoutes": "{n} route | {n} routes",
-        "newestSet": "Newest: {date}",
         "popular": "Popular routes",
         "popularEmpty": "Not enough reviews yet.",
         "progressTitle": "Your progress",
         "progress": "You have sent {sent} of {total} current routes.",
-        "gradeSpread": "Grades on the wall",
-        "resets": "Leaving soon"
+        "wallNew": "{n} new",
+        "todayHours": "Today {hours}",
+        "gymInfo": "Gym info"
     },
     "accountSettings": {
         "title": "Settings",

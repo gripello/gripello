@@ -55,14 +55,52 @@ export function hasOpeningHours(hours: GymOpeningHours | null | undefined) {
     return HOURS_DAYS.some((day) => hours?.[day]?.length)
 }
 
-export function weekdayOf(date: Date): Weekday {
-    return WEEKDAYS[(date.getDay() + 6) % 7]!
+export function formatIntervals(intervals: OpeningInterval[]): string {
+    return intervals.map(([opens, closes]) => `${opens}–${closes}`).join(', ')
 }
 
 const minutes = (time: string) =>
     Number(time.slice(0, 2)) * 60 + Number(time.slice(3))
 const crossesMidnight = ([opens, closes]: OpeningInterval) =>
     minutes(closes) < minutes(opens)
+
+const HOUR = 60
+const DAY_END = 24 * HOUR
+
+export interface TimelineDay {
+    day: Weekday
+    intervals: OpeningInterval[]
+    segments: { from: number; to: number }[]
+}
+
+export function weekTimeline(
+    hours: GymOpeningHours | null | undefined,
+): TimelineDay[] {
+    return WEEKDAYS.map((day, index) => {
+        const intervals = hours?.[day] ?? []
+        const previous = hours?.[WEEKDAYS[(index + 6) % 7]!] ?? []
+        return {
+            day,
+            intervals,
+            segments: [
+                ...previous.filter(crossesMidnight).map(([, closes]) => ({
+                    from: 0,
+                    to: minutes(closes) / DAY_END,
+                })),
+                ...intervals.map((interval) => ({
+                    from: minutes(interval[0]) / DAY_END,
+                    to: crossesMidnight(interval)
+                        ? 1
+                        : minutes(interval[1]) / DAY_END,
+                })),
+            ],
+        }
+    })
+}
+
+export function weekdayOf(date: Date): Weekday {
+    return WEEKDAYS[(date.getDay() + 6) % 7]!
+}
 
 // ponytail: uses the viewer's clock; add a gym timezone once gyms span time zones.
 export function openStatus(

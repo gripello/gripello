@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
     HOURS_DAYS,
+    formatIntervals,
     type GymOpeningHours,
     type HoursDay,
     type Weekday,
@@ -15,7 +16,7 @@ const { t, locale } = useI18n()
 function formatDay(day: HoursDay) {
     const intervals = props.hours?.[day]
     if (!intervals?.length) return t('gymInfo.closed')
-    return intervals.map(([opens, closes]) => `${opens}–${closes}`).join(', ')
+    return formatIntervals(intervals)
 }
 </script>
 

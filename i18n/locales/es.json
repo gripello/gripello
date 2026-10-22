@@ -1761,19 +1761,17 @@
         "title": "Rocódromo",
         "description": "Nuevas vías, paredes y grados de un vistazo.",
         "routesCount": "{n} vía | {n} vías",
-        "newCount": "{n} nuevas en dos semanas",
-        "newRoutes": "Recién equipadas",
         "allRoutes": "Todas las vías",
         "walls": "Paredes",
         "openMap": "Abrir mapa",
         "wallRoutes": "{n} vía | {n} vías",
-        "newestSet": "Más reciente: {date}",
         "popular": "Vías populares",
         "popularEmpty": "Aún no hay suficientes valoraciones.",
         "progressTitle": "Tu progreso",
         "progress": "Has encadenado {sent} de las {total} vías actuales.",
-        "gradeSpread": "Grados en la pared",
-        "resets": "Se desmontan pronto"
+        "wallNew": "{n} nueva | {n} nuevas",
+        "todayHours": "Hoy {hours}",
+        "gymInfo": "Info del rocódromo"
     },
     "accountSettings": {
         "title": "Ajustes",

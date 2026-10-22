@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import fixtures from '../../backend/testdata/openingHours.json'
 import {
+    formatIntervals,
     hasOpeningHours,
     isValidOpeningHours,
     openStatus,
+    weekTimeline,
     toSchemaOrgHours,
     type GymOpeningHours,
 } from '#shared/utils/openingHours'
@@ -141,5 +143,50 @@ describe('openStatus around midnight and clock changes in Europe/Berlin', () => 
             opensAt: '22:00',
             opensOn: 'sat',
         })
+    })
+})
+
+describe('formatIntervals', () => {
+    it('joins a midday break into one line', () => {
+        expect(
+            formatIntervals([
+                ['10:00', '13:00'],
+                ['15:00', '22:00'],
+            ]),
+        ).toBe('10:00–13:00, 15:00–22:00')
+    })
+})
+
+describe('weekTimeline', () => {
+    it('carries a late night into the next morning, Sunday into Monday', () => {
+        const days = weekTimeline({
+            fri: [['20:00', '02:00']],
+            sun: [['18:00', '03:00']],
+        })
+        expect(days.find((d) => d.day === 'fri')!.segments).toEqual([
+            { from: 20 / 24, to: 1 },
+        ])
+        expect(days.find((d) => d.day === 'sat')!.segments).toEqual([
+            { from: 0, to: 2 / 24 },
+        ])
+        expect(days.find((d) => d.day === 'sat')!.intervals).toEqual([])
+        expect(days.find((d) => d.day === 'mon')!.segments).toEqual([
+            { from: 0, to: 3 / 24 },
+        ])
+    })
+
+    it('places every weekday on a 0–24 axis with a gap for a midday break', () => {
+        const days = weekTimeline({
+            sat: [
+                ['06:00', '12:00'],
+                ['18:00', '01:00'],
+            ],
+        })
+        expect(days).toHaveLength(7)
+        expect(days.find((d) => d.day === 'mon')!.segments).toEqual([])
+        expect(days.find((d) => d.day === 'sat')!.segments).toEqual([
+            { from: 0.25, to: 0.5 },
+            { from: 0.75, to: 1 },
+        ])
     })
 })
