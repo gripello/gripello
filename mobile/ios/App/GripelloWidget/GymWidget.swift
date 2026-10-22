@@ -17,11 +17,17 @@ struct GymProvider: AppIntentTimelineProvider {
         return await entry(for: configuration)
     }
 
-    // Every 30 minutes (the open status follows within that), and when the new week starts.
+    // Every 30 minutes and when the new week starts; the open status flips on time in between.
     func timeline(for configuration: GymWidgetIntent, in context: Context) async -> Timeline<GymEntry> {
         let entry = await entry(for: configuration)
         let nextWeek = Calendar(identifier: .iso8601).date(byAdding: .weekOfYear, value: 1, to: WidgetAPI.weekStart()) ?? .now
-        return Timeline(entries: [entry], policy: .after(min(.now.addingTimeInterval(30 * 60), nextWeek)))
+        let reload = min(.now.addingTimeInterval(30 * 60), nextWeek)
+        var entries = [entry]
+        if case .stats(let stats) = entry.state {
+            entries += OpeningHours.changes(stats.hours, after: entry.date, until: reload)
+                .map { GymEntry(date: $0, state: entry.state, gymName: entry.gymName) }
+        }
+        return Timeline(entries: entries, policy: .after(reload))
     }
 
     // As for "My climbing", only the current gym list confirms a picked gym.
@@ -251,6 +257,20 @@ enum OpeningHours {
             }
         }
         return intervals(hours, "holiday").isEmpty ? nil : Status(open: false, time: "", day: nil)
+    }
+
+    // Opening and closing times in (start, end].
+    static func changes(_ hours: [String: [[String]]]?, after start: Date, until end: Date) -> [Date] {
+        guard let hours else { return [] }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: start)
+        let times = (0...1).flatMap { offset -> [Date] in
+            guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { return [] }
+            return intervals(hours, weekdays[WidgetAPI.weekday(day)]).joined().compactMap {
+                calendar.date(byAdding: .minute, value: minutes($0), to: day)
+            }
+        }
+        return Set(times.filter { $0 > start && $0 <= end }).sorted()
     }
 
     private static func intervals(_ hours: [String: [[String]]], _ day: String) -> [[String]] {

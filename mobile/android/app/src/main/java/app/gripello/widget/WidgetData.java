@@ -52,6 +52,7 @@ final class WidgetData {
         Send hardest;
         final int[] days = new int[7];
         int streak;
+        boolean streakRisk;
         int rank;
         int rankMove;
         String rankWeek;
@@ -62,7 +63,7 @@ final class WidgetData {
         String toJson() {
             try {
                 JSONObject json = new JSONObject().put("sends", sends).put("flashes", flashes).put("streak", streak)
-                    .put("rank", rank).put("rankMove", rankMove).put("rankBase", rankBase).put("origin", origin);
+                    .put("streakRisk", streakRisk).put("rank", rank).put("rankMove", rankMove).put("rankBase", rankBase).put("origin", origin);
                 if (rankWeek != null) json.put("rankWeek", rankWeek);
                 if (lastClimb != null) json.put("lastClimb", lastClimb);
                 if (hardest != null) json.put("hardest", send(hardest));
@@ -81,6 +82,7 @@ final class WidgetData {
                 stats.sends = json.optInt("sends");
                 stats.flashes = json.optInt("flashes");
                 stats.streak = json.optInt("streak");
+                stats.streakRisk = json.optBoolean("streakRisk");
                 stats.rank = json.optInt("rank");
                 stats.rankMove = json.optInt("rankMove");
                 stats.rankBase = json.optInt("rankBase");
@@ -208,14 +210,19 @@ final class WidgetData {
             session = refreshed(context, session);
             Map<String, Stats> weeks = new HashMap<>();
             int streak = -1;
+            boolean streakRisk = false;
             for (int id : widgetIds) {
                 String gym = WidgetStore.gymId(context, id);
                 String key = gym == null ? "" : gym;
                 if (!weeks.containsKey(key)) {
                     Stats week = week(session, gym);
                     if (week != null) {
-                        if (streak < 0) streak = streak(session);
+                        if (streak < 0) {
+                            streak = streak(session);
+                            streakRisk = streak > 0 && streakAtRisk(lastClimb(session, null));
+                        }
                         week.streak = streak;
+                        week.streakRisk = streakRisk;
                         if (week.sends == 0) week.lastClimb = lastClimb(session, gym);
                         if (gym != null) week.rank = rank(session, gym);
                     }
@@ -354,6 +361,10 @@ final class WidgetData {
     }
 
     private static String weekStart(SimpleDateFormat format) {
+        return format.format(monday().getTime());
+    }
+
+    private static Calendar monday() {
         Calendar week = Calendar.getInstance();
         week.setFirstDayOfWeek(Calendar.MONDAY);
         week.set(Calendar.HOUR_OF_DAY, 0);
@@ -362,12 +373,20 @@ final class WidgetData {
         week.set(Calendar.MILLISECOND, 0);
         week.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
         if (week.after(Calendar.getInstance())) week.add(Calendar.WEEK_OF_YEAR, -1);
-        return format.format(week.getTime());
+        return week;
     }
 
     // Ticks carry a plain day and the API reads a timestamp as its UTC day, so the week starts at the local Monday's date.
     static String weekStartDay() {
         return weekStart(new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT));
+    }
+
+    // active_weeks forgives one empty week (any tick at any gym counts), so the streak only ends this Sunday after an empty last week.
+    static boolean streakAtRisk(String newestTickDay) {
+        Calendar lastWeek = monday();
+        lastWeek.add(Calendar.WEEK_OF_YEAR, -1);
+        String lastMonday = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(lastWeek.getTime());
+        return newestTickDay == null || newestTickDay.compareTo(lastMonday) < 0;
     }
 
     // Monday = 0; a tick's date is a plain day on the climber's calendar.
@@ -384,7 +403,7 @@ final class WidgetData {
     }
 
     // Boulder and route grades share no axis, so the hardest comes from the week's most climbed grade system.
-    private static Stats summarize(JSONArray items) throws JSONException {
+    static Stats summarize(JSONArray items) throws JSONException {
         Stats stats = new Stats();
         List<JSONObject> ticks = new ArrayList<>();
         List<Send> sends = new ArrayList<>();
@@ -534,8 +553,14 @@ final class WidgetData {
             }
 
             if (stats.newCount == 0) {
-                JSONArray newest = new JSONObject(get(session, base + "/routes?limit=1&include=wall")).getJSONArray("items");
-                if (newest.length() > 0) stats.lastNew = newRoute(newest.getJSONObject(0));
+                try {
+                    JSONArray newest = new JSONObject(get(session, base + "/routes?limit=1&include=wall")).getJSONArray("items");
+                    if (newest.length() > 0) stats.lastNew = newRoute(newest.getJSONObject(0));
+                } catch (Unauthorized e) {
+                    throw e;
+                } catch (IOException | JSONException ignored) {
+                    // The last new route is extra; the rest of the card still shows.
+                }
             }
             return stats;
         } catch (Unauthorized e) {

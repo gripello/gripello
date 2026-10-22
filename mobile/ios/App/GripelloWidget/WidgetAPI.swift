@@ -14,6 +14,7 @@ struct ClimbingStats: Codable, Hashable {
     // Monday first
     var days: [Int]
     var streak: Int
+    var streakRisk: Bool
     var rank: Int
     var rankMove: Int
     var rankWeek: String?
@@ -23,14 +24,14 @@ struct ClimbingStats: Codable, Hashable {
 
     static func empty(origin: String) -> ClimbingStats {
         ClimbingStats(sends: 0, flashes: 0, hardest: nil, days: Array(repeating: 0, count: 7), streak: 0,
-                      rank: 0, rankMove: 0, rankWeek: nil, rankBase: 0, lastClimb: nil, origin: origin)
+                      streakRisk: false, rank: 0, rankMove: 0, rankWeek: nil, rankBase: 0, lastClimb: nil, origin: origin)
     }
 
     static let sample = ClimbingStats(
         sends: 8, flashes: 3,
         hardest: .init(name: "Crimp City", grade: "6b+", color: "#E53935", flash: false),
         days: [0, 3, 0, 5, 0, 0, 0],
-        streak: 4, rank: 14, rankMove: 3, rankWeek: nil, rankBase: 0, lastClimb: nil, origin: "https://gripello.app"
+        streak: 4, streakRisk: false, rank: 14, rankMove: 3, rankWeek: nil, rankBase: 0, lastClimb: nil, origin: "https://gripello.app"
     )
 }
 
@@ -167,10 +168,13 @@ enum WidgetAPI {
             async let ticks: TickPage = get("/me/ticks", session, query: weekQuery(gym: gym))
             async let achievements: [Achievement]? = try? get("/climbers/\(session.userId)/achievements", session)
             async let rank = boardRank(gym: gym, session)
+            async let newest = lastClimb(gym: nil, session)
             var stats = summarize(try await ticks.items, origin: session.origin)
             stats.streak = await achievements?.first { $0.key == "active_weeks" }?.current ?? 0
             stats.rank = try await rank
-            if stats.sends == 0 { stats.lastClimb = try await lastClimb(gym: gym, session) }
+            let newestDay = try await newest
+            stats.streakRisk = stats.streak > 0 && streakAtRisk(newestTickDay: newestDay)
+            if stats.sends == 0 { stats.lastClimb = gym == nil ? newestDay : try await lastClimb(gym: gym, session) }
             stats = withRankMove(stats, previous: previous)
             WidgetStore.saveSnapshot(try? JSONEncoder().encode(stats), forKey: cacheKey, ifToken: session.token)
             return .stats(stats)
@@ -280,6 +284,13 @@ enum WidgetAPI {
         var query = ["since": day(weekStart()), "limit": "1000"]
         if let gym { query["gym"] = gym }
         return query
+    }
+
+    // active_weeks forgives one empty week (any tick at any gym counts), so the streak only ends this Sunday after an empty last week.
+    static func streakAtRisk(newestTickDay: String?) -> Bool {
+        guard let newestTickDay else { return true }
+        let lastWeek = Calendar(identifier: .iso8601).date(byAdding: .weekOfYear, value: -1, to: weekStart()) ?? weekStart()
+        return newestTickDay < day(lastWeek)
     }
 
     // Monday = 0.

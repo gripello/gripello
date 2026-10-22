@@ -393,6 +393,52 @@ describe('home-screen widget', () => {
         )
     })
 
+    it('warns about the streak only after an empty last week at any gym, on both platforms', () => {
+        const data = read(
+            'mobile/android/app/src/main/java/app/gripello/widget/WidgetData.java',
+        )
+        expect(data).toContain(
+            'streakRisk = streak > 0 && streakAtRisk(lastClimb(session, null));',
+        )
+        expect(data).toContain(
+            'return newestTickDay == null || newestTickDay.compareTo(lastMonday) < 0;',
+        )
+        const climbing = read(
+            'mobile/android/app/src/main/java/app/gripello/widget/ClimbingWidget.java',
+        )
+        expect(climbing).toContain(
+            'boolean risk = !active && stats.streakRisk;',
+        )
+        expect(climbing).toContain(
+            'stats.streakRisk ? context.getString(R.string.widget_streak_ends)',
+        )
+        expect(climbing).not.toContain('stats.sends == 0 ?')
+        const api = read('mobile/ios/App/GripelloWidget/WidgetAPI.swift')
+        expect(api).toContain('async let newest = lastClimb(gym: nil, session)')
+        expect(api).toContain('return newestTickDay < day(lastWeek)')
+        const view = read('mobile/ios/App/GripelloWidget/ClimbingWidget.swift')
+        expect(view).toContain('Chip(text: stats.streakRisk ?')
+        expect(view).toContain('} else if !active, stats.streakRisk {')
+    })
+
+    it('keeps a fresh Android gym card when only the last new route fails', () => {
+        expect(
+            read(
+                'mobile/android/app/src/main/java/app/gripello/widget/WidgetData.java',
+            ),
+        ).toMatch(
+            /try \{\s*JSONArray newest = [^\n]*\n[^\n]*\n\s*\} catch \(Unauthorized e\) \{\s*throw e;\s*\} catch \(IOException \| JSONException ignored\)/,
+        )
+    })
+
+    it('flips the iOS open status at opening and closing times between reloads', () => {
+        const gym = read('mobile/ios/App/GripelloWidget/GymWidget.swift')
+        expect(gym).toContain(
+            'OpeningHours.changes(stats.hours, after: entry.date, until: reload)',
+        )
+        expect(gym).toContain('policy: .after(reload)')
+    })
+
     it('keeps a rank base per Android widget when widgets share a gym', () => {
         expect(
             read(

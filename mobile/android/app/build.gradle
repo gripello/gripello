@@ -56,6 +56,8 @@ dependencies {
     implementation "androidx.credentials:credentials-play-services-auth:$androidxCredentialsVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
+    // The SDK's org.json classes are stubs on the JVM.
+    testImplementation "org.json:json:$orgJsonVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')

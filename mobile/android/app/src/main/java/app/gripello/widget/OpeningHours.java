@@ -7,7 +7,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-// Port of openStatus in shared/utils/openingHours.ts (the iOS widget has the same in OpeningHours.swift).
+// Port of openStatus in shared/utils/openingHours.ts (the iOS widget has the same in GymWidget.swift).
 final class OpeningHours {
 
     static final String[] WEEKDAYS = { "mon", "tue", "wed", "thu", "fri", "sat", "sun" };

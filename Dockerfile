@@ -106,8 +106,9 @@ COPY mobile/www ./mobile/www
 COPY mobile/android ./mobile/android
 RUN --mount=type=cache,target=/root/.gradle \
     mkdir /out && npx cap sync android && cd mobile/android \
- && { ./gradlew --no-daemon -q assembleDebug; echo $? > /out/exit-code; } \
- && cp app/build/outputs/apk/debug/app-debug.apk /out/gripello-debug.apk 2>/dev/null; true
+ && { ./gradlew --no-daemon -q --continue assembleDebug testDebugUnitTest; echo $? > /out/exit-code; } \
+ && cp app/build/outputs/apk/debug/app-debug.apk /out/gripello-debug.apk 2>/dev/null; \
+    mkdir -p /out/junit && cp app/build/test-results/testDebugUnitTest/*.xml /out/junit/ 2>/dev/null; true
 
 FROM scratch AS android-results
 COPY --from=android /out /

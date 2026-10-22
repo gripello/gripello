@@ -167,8 +167,8 @@ private struct WeekSummary: View {
             BigNumber(value: stats.sends, label: "Sends")
             WeekChart(days: stats.days)
             if stats.streak > 0 {
-                // A week without sends turns the streak into a reminder that it runs out on Sunday.
-                Chip(text: stats.sends == 0 ? String(localized: "Ends Sunday") : String(localized: "\(stats.streak) weeks in a row"),
+                // A streak about to run out turns into a reminder that it ends on Sunday.
+                Chip(text: stats.streakRisk ? String(localized: "Ends Sunday") : String(localized: "\(stats.streak) weeks in a row"),
                      systemImage: "flame.fill", icon: Palette.streak, foreground: Palette.streakText, background: Palette.streakBackground)
             }
         }
@@ -249,7 +249,7 @@ private struct WeekDetails: View {
                     }
                     .frame(maxHeight: .infinity)
                 }
-            } else if !active, stats.streak > 0 {
+            } else if !active, stats.streakRisk {
                 VStack(alignment: .leading, spacing: 4) {
                     Label(String(localized: "\(stats.streak) weeks in a row"), systemImage: "flame.fill")
                         .font(.subheadline.weight(.black))

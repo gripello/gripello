@@ -141,7 +141,7 @@ public class ClimbingWidget extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_hardest_grade, stats.hardest.grade);
             views.setTextViewText(R.id.widget_hardest_name, stats.hardest.name);
         }
-        boolean risk = !active && stats.streak > 0;
+        boolean risk = !active && stats.streakRisk;
         if (risk) views.setTextViewText(R.id.widget_risk_title, streakText(context, stats.streak));
         views.setViewVisibility(R.id.widget_hardest_card, hardest ? View.VISIBLE : View.GONE);
         views.setViewVisibility(R.id.widget_risk_card, risk ? View.VISIBLE : View.GONE);
@@ -193,9 +193,9 @@ public class ClimbingWidget extends AppWidgetProvider {
                 views.setTextColor(DAYS[i], context.getColor(R.color.widget_muted));
             }
         }
-        // A week without sends turns the streak into a reminder that it runs out on Sunday.
+        // A streak about to run out turns into a reminder that it ends on Sunday.
         views.setViewVisibility(R.id.widget_streak_chip, stats.streak > 0 ? View.VISIBLE : View.GONE);
-        views.setTextViewText(R.id.widget_streak, stats.sends == 0 ? context.getString(R.string.widget_streak_ends) : streakText(context, stats.streak));
+        views.setTextViewText(R.id.widget_streak, stats.streakRisk ? context.getString(R.string.widget_streak_ends) : streakText(context, stats.streak));
     }
 
     private static String streakText(Context context, int streak) {
