@@ -19,6 +19,11 @@
                             :anchor-point="
                                 showAnchorPoint ? metadata.anchor_point : null
                             "
+                            :removal-planned-for="
+                                metadata.archived
+                                    ? null
+                                    : metadata.removal_planned_for
+                            "
                         />
                     </div>
 

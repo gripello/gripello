@@ -1,6 +1,6 @@
 <template>
     <div
-        class="flex items-center justify-around py-4 lg:justify-start lg:gap-8"
+        class="flex items-center justify-around py-4 max-sm:[&_.iconify]:hidden lg:justify-start lg:gap-8"
     >
         <LayoutStatTile
             :label="t('ratings.ratingCount', { n: ratedCount }, ratedCount)"
@@ -22,6 +22,17 @@
             icon="i-lucide-calendar"
             data-testid="route-screw-date"
         />
+        <template v-if="removalDate">
+            <USeparator orientation="vertical" class="my-1 h-10" />
+            <LayoutStatTile
+                :label="t('routes.outShort')"
+                :value="removalDate"
+                icon="i-lucide-calendar-clock"
+                color="warning"
+                icon-color="warning"
+                data-testid="route-out-soon"
+            />
+        </template>
         <template v-if="anchorPoint">
             <USeparator orientation="vertical" class="my-1 h-10" />
             <LayoutStatTile
@@ -44,6 +55,7 @@ const props = defineProps<{
     sendsCount?: number
     screwDate?: string | null
     anchorPoint?: number | null
+    removalPlannedFor?: string | null
 }>()
 
 const { t, locale } = useI18n()
@@ -51,11 +63,8 @@ const { t, locale } = useI18n()
 const ratedCount = computed(
     () => props.reviews.filter((review) => (review.rating ?? 0) > 0).length,
 )
-const screwDate = computed(() =>
-    formatDate(props.screwDate, {
-        locale: locale.value,
-        day: 'numeric',
-        month: 'numeric',
-    }),
-)
+const shortDate = (date: string | null | undefined) =>
+    formatDate(date, { locale: locale.value, day: 'numeric', month: 'numeric' })
+const screwDate = computed(() => shortDate(props.screwDate))
+const removalDate = computed(() => shortDate(props.removalPlannedFor))
 </script>

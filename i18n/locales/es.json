@@ -249,6 +249,7 @@
         "mapWork": "Vías y reequipamiento",
         "removed": "Esta vía se ha eliminado.",
         "sends": "Encadenes",
+        "outShort": "Se retira",
         "screwedShort": "Montada"
     },
     "dashboard": {

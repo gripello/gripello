@@ -175,6 +175,19 @@ describe('RouteStatsBar', () => {
         expect(values({ reviews: [review('', 3)] })[0]).toBe('3,01 Bewertung')
     })
 
+    it('shows the planned reset only when one is planned', () => {
+        expect(
+            mountBar({ reviews: [], removalPlannedFor: '2026-11-01' })
+                .get('[data-testid="route-out-soon"]')
+                .text(),
+        ).toBe('1.11.Raus')
+        expect(
+            mountBar({ reviews: [], removalPlannedFor: null })
+                .find('[data-testid="route-out-soon"]')
+                .exists(),
+        ).toBe(false)
+    })
+
     it('shows the anchor only when the route has one', () => {
         expect(
             mountBar({ reviews: [], anchorPoint: 5 })
