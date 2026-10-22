@@ -1468,7 +1468,9 @@
         "boulders": "Boulders",
         "routes": "Routes",
         "gymBand": "Halkleur",
+        "gymBandShort": "Kleur",
         "andUp": "{grade} en hoger",
+        "upTo": "t/m {grade}",
         "bands": {
             "yellow": "Geel",
             "orange": "Oranje",

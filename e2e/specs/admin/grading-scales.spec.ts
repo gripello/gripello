@@ -153,5 +153,6 @@ test('settings open the conversion table', async ({ adminPage: page }) => {
     await gotoSettled(page, '/admin/settings?section=grading')
     await page.getByTestId('grade-conversion-open').click()
     await expect(page.getByTestId('grade-conversion-dialog')).toBeVisible()
+    await page.getByTestId('grade-conversion-tabs-routes').click()
     await expect(page.getByTestId('grade-conversion-french-6a')).toBeVisible()
 })

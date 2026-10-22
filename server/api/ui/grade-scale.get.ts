@@ -5,7 +5,11 @@ import {
     pdfBuffer,
     resolveApplicationUrl,
 } from '../../utils/export'
-import { drawGradeScalePdf, translator } from '../../utils/gradeScalePdf'
+import {
+    drawGradeScalePdf,
+    translator,
+    type GradeScaleKind,
+} from '../../utils/gradeScalePdf'
 import { gymBandsFrom } from '#shared/utils/gradeReference'
 import { DEFAULT_LOCALE, isLocaleCode } from '../../../app/utils/locales'
 import type { GymRecord } from '../../../types/models'
@@ -13,6 +17,7 @@ import type { GymRecord } from '../../../types/models'
 export default eventHandler(async (event) => {
     const query = getQuery(event)
     const gymId = typeof query.gym === 'string' ? query.gym : ''
+    const kind: GradeScaleKind = query.kind === 'routes' ? 'routes' : 'boulders'
 
     const api = apiFetch()
     const gym = gymId
@@ -42,7 +47,7 @@ export default eventHandler(async (event) => {
         doc.registerFont('Sans', Buffer.from(regularFont))
         doc.registerFont('Sans-Bold', Buffer.from(boldFont))
 
-        const title = t('gradeConversion.boulders')
+        const title = t(`gradeConversion.${kind}`)
         const logoFile = gym.sign_image || gym.page_logo
         const logo = logoFile
             ? await fetchFile(api, 'gyms', gym, logoFile)
@@ -50,12 +55,13 @@ export default eventHandler(async (event) => {
         const footer = `${resolveApplicationUrl(event).replace(/^https?:\/\//, '')}/${gym.slug}`
         const pdf = await pdfBuffer(doc, () =>
             drawGradeScalePdf(doc, {
+                kind,
                 title,
                 gymName: gym.name,
                 unitName: gym.unit_name ?? '',
                 footer,
                 logo,
-                bands: gymBandsFrom(gym.boulder_bands),
+                bands: kind === 'routes' ? [] : gymBandsFrom(gym.boulder_bands),
                 t,
             }),
         )
