@@ -1762,19 +1762,17 @@
         "title": "Klimhal",
         "description": "Nieuwe routes, wanden en graden in één oogopslag.",
         "routesCount": "{n} route | {n} routes",
-        "newCount": "{n} nieuw in twee weken",
-        "newRoutes": "Nieuw gebouwd",
         "allRoutes": "Alle routes",
         "walls": "Wanden",
         "openMap": "Plattegrond openen",
         "wallRoutes": "{n} route | {n} routes",
-        "newestSet": "Nieuwste: {date}",
         "popular": "Populaire routes",
         "popularEmpty": "Nog niet genoeg beoordelingen.",
         "progressTitle": "Je voortgang",
         "progress": "Je hebt {sent} van de {total} huidige routes geklommen.",
-        "gradeSpread": "Graden aan de wand",
-        "resets": "Binnenkort weg"
+        "wallNew": "{n} nieuw",
+        "todayHours": "Vandaag {hours}",
+        "gymInfo": "Hal-info"
     },
     "accountSettings": {
         "title": "Instellingen",

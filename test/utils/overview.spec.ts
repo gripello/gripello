@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-    gradeSpread,
+    gradeAxis,
     isNewRoute,
     newRoutes,
     popularRoutes,
+    railDots,
     sentShare,
     wallSummaries,
 } from '~/utils/overview'
@@ -51,71 +52,71 @@ describe('popularRoutes', () => {
     })
 })
 
-describe('gradeSpread', () => {
-    it('counts per grade between the easiest and hardest used grade', () => {
-        const grades = ['4', '5', '6', '7', '8']
-        const routes = [
-            route('a', { grade: '5' }),
-            route('b', { grade: '7' }),
-            route('c', { grade: '7' }),
-            route('d', { grade: 'x' }),
-        ]
-        expect(gradeSpread(routes, grades)).toEqual([
-            { grade: '5', count: 1 },
-            { grade: '6', count: 0 },
-            { grade: '7', count: 2 },
-        ])
-        expect(gradeSpread([], grades)).toEqual([])
-    })
-})
-
 describe('wallSummaries', () => {
-    it('summarises count, grade range and newest set date per wall', () => {
+    it("keeps each wall's routes in wall order and counts the fresh ones", () => {
         const walls = [
             { id: 'w2', name: 'Island', location: 'l', sort: 2 },
             { id: 'w1', name: 'North', location: 'l', sort: 1 },
         ]
         const routes = [
-            route('a', {
-                wall: 'w1',
-                grade: '6',
-                grade_index: 10,
-                screw_date: '2026-09-01',
-            }),
-            route('b', {
-                wall: 'w1',
-                grade: '5',
-                grade_index: 7,
-                screw_date: '2026-09-20',
-            }),
-            route('c', {
-                wall: 'w1',
-                type: 'Boulder',
-                grade: '6A',
-                grade_index: 15.7,
-                screw_date: '2026-09-02',
-            }),
+            route('a', { wall: 'w1', screw_date: '2026-09-01' }),
+            route('b', { wall: 'w1', screw_date: '2026-09-20' }),
+            route('c', { wall: 'w3', screw_date: '2026-09-25' }),
         ]
-        expect(wallSummaries(walls, routes)).toEqual([
+        expect(wallSummaries(walls, routes, NOW)).toEqual([
             {
                 id: 'w1',
                 name: 'North',
                 location: 'l',
-                count: 3,
-                ranges: [
-                    { type: 'Boulder', easiest: '6A', hardest: '6A' },
-                    { type: 'Route', easiest: '5', hardest: '6' },
-                ],
-                newest: '2026-09-20',
+                routes: [routes[0], routes[1]],
+                fresh: 1,
             },
-            {
-                id: 'w2',
-                name: 'Island',
-                location: 'l',
-                count: 0,
-                ranges: [],
-                newest: null,
-            },
+            { id: 'w2', name: 'Island', location: 'l', routes: [], fresh: 0 },
+        ])
+    })
+})
+
+describe('gradeAxis', () => {
+    it("spans the used grades and labels whole grades of the viewer's system", () => {
+        const axis = gradeAxis([4.6, 7.4, 13.4], 'uiaa')!
+        expect(axis.min).toBeCloseTo(4)
+        expect(axis.max).toBeCloseTo(14)
+        expect(axis.ticks.map((tick) => tick.label)).toEqual([
+            '4',
+            '5',
+            '6',
+            '7',
+        ])
+        expect(axis.ticks[0]!.at).toBeCloseTo(0.06)
+    })
+
+    it('thins the labels to at most six', () => {
+        const axis = gradeAxis([1, 30], 'uiaa')!
+        expect(axis.ticks.length).toBeLessThanOrEqual(6)
+    })
+
+    it('has no axis without graded routes', () => {
+        expect(gradeAxis([], 'font')).toBeNull()
+    })
+})
+
+describe('railDots', () => {
+    it('places routes at their grade, stacks equal grades and flags new ones', () => {
+        const axis = { min: 0, max: 10, ticks: [] }
+        const dots = railDots(
+            [
+                route('hard', { grade_index: 8, screw_date: '2026-09-25' }),
+                route('easy', { grade_index: 2, screw_date: '2026-01-01' }),
+                route('easy2', { grade_index: 2 }),
+                route('ungraded'),
+            ],
+            axis,
+            NOW,
+        )
+        expect(dots).toEqual([
+            { id: 'easy', at: 0.2, level: 0, fresh: false },
+            { id: 'easy2', at: 0.2, level: 1, fresh: false },
+            { id: 'hard', at: 0.8, level: 0, fresh: true },
         ])
     })
 })

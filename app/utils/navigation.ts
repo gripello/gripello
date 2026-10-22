@@ -538,7 +538,7 @@ export function bottomNavLinks(
 }
 
 const SECTION_TABS: Record<Zone, string[]> = {
-    gym: ['/routes', '/map', '/info', '/'],
+    gym: ['/', '/routes', '/map', '/info'],
     community: ['/feed', '/leaderboard', '/competitions', '/friends'],
     you: [],
 }

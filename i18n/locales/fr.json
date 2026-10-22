@@ -1762,19 +1762,17 @@
         "title": "Salle d'escalade",
         "description": "Nouvelles voies, murs et cotations en un coup d'œil.",
         "routesCount": "{n} voie | {n} voies",
-        "newCount": "{n} nouvelles en deux semaines",
-        "newRoutes": "Nouvelles ouvertures",
         "allRoutes": "Toutes les voies",
         "walls": "Murs",
         "openMap": "Ouvrir le plan",
         "wallRoutes": "{n} voie | {n} voies",
-        "newestSet": "Plus récente : {date}",
         "popular": "Voies populaires",
         "popularEmpty": "Pas encore assez d'avis.",
         "progressTitle": "Votre progression",
         "progress": "Vous avez réussi {sent} des {total} voies actuelles.",
-        "gradeSpread": "Cotations sur le mur",
-        "resets": "Bientôt démontées"
+        "wallNew": "{n} nouvelle | {n} nouvelles",
+        "todayHours": "Aujourd’hui {hours}",
+        "gymInfo": "Infos salle"
     },
     "accountSettings": {
         "title": "Paramètres",

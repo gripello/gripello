@@ -1,50 +1,48 @@
 <template>
-    <div class="overview mx-auto w-full p-4" data-testid="overview">
-        <header class="overview-hero">
-            <div class="overview-hero__text">
-                <h1 class="overview-hero__title max-lg:sr-only">
+    <div
+        class="overview mx-auto flex w-full flex-col gap-6 p-4"
+        data-testid="overview"
+    >
+        <header
+            class="flex flex-wrap items-end justify-between gap-4 max-lg:-mb-6 lg:pt-2"
+        >
+            <div class="min-w-0">
+                <h1 class="text-2xl font-bold text-highlighted max-lg:sr-only">
                     {{ (gym && gymTitle(gym)) || $t('overview.title') }}
                 </h1>
                 <p
                     v-if="gym && gymSubtitle(gym)"
-                    class="text-muted"
+                    class="mt-1 text-muted max-lg:hidden"
                     data-testid="overview-org"
                 >
                     {{ gymSubtitle(gym) }}
                 </p>
-                <p class="overview-hero__stats" data-testid="overview-stats">
-                    {{
+            </div>
+            <div class="flex gap-2 max-lg:hidden">
+                <UButton
+                    :to="gymPath('/routes')"
+                    icon="i-lucide-list"
+                    :label="
                         $t(
                             'overview.routesCount',
                             { n: routes.length },
                             routes.length,
                         )
-                    }}
-                    ·
-                    {{ $t('overview.newCount', { n: freshRoutes.length }) }}
-                    <span class="max-lg:hidden">
-                        ·
-                        <NuxtLink
-                            :to="gymPath('/routes')"
-                            class="overview-hero__link"
-                            data-testid="overview-all-routes"
-                            >{{ $t('overview.allRoutes') }} ›</NuxtLink
-                        >
-                    </span>
-                </p>
+                    "
+                    data-testid="overview-all-routes"
+                />
                 <UButton
-                    v-if="openLabel"
-                    :to="gymPath('/info')"
-                    :color="openNow?.open ? 'success' : 'neutral'"
-                    variant="soft"
-                    size="sm"
-                    icon="i-lucide-clock"
-                    :label="openLabel"
-                    class="mt-2"
-                    data-testid="overview-open-status"
+                    :to="gymPath('/map')"
+                    color="neutral"
+                    variant="outline"
+                    icon="i-lucide-map"
+                    :label="$t('overview.openMap')"
+                    data-testid="overview-open-map"
                 />
             </div>
         </header>
+
+        <OverviewGymStatus v-if="gym" :gym="gym" />
 
         <LayoutLoadError v-if="loadFailed" @retry="retryLoad" />
 
@@ -53,89 +51,38 @@
                 v-if="liveCompetition"
                 :competition="liveCompetition"
                 :to="gymPath(`/competitions/${liveCompetition.id}`)"
-                class="overview-section"
                 data-testid="overview-competition"
             />
 
-            <section v-if="freshRoutes.length" class="overview-section">
-                <LayoutSectionHeader :title="$t('overview.newRoutes')" />
-                <OverviewNewRoutes
-                    :routes="freshRoutes"
-                    :wall-names="wallNames"
-                />
-            </section>
-
             <div class="overview-grid">
-                <div class="overview-main">
-                    <section v-if="walls.length" class="overview-section">
-                        <LayoutSectionHeader :title="$t('overview.walls')">
-                            <template #actions>
-                                <UButton
-                                    :to="gymPath('/map')"
-                                    color="neutral"
-                                    variant="ghost"
-                                    trailing-icon="i-lucide-map"
-                                    class="max-lg:hidden"
-                                    data-testid="overview-open-map"
-                                >
-                                    {{ $t('overview.openMap') }}
-                                </UButton>
-                            </template>
-                        </LayoutSectionHeader>
-                        <OverviewWallTiles :walls="walls" />
-                    </section>
-
-                    <section
-                        v-if="resets.length"
-                        class="overview-section"
-                        data-testid="overview-resets"
+                <div class="flex min-w-0 flex-col gap-6">
+                    <LayoutPanel
+                        v-if="walls.length"
+                        :title="$t('overview.walls')"
+                        data-testid="overview-walls"
                     >
-                        <LayoutSectionHeader :title="$t('overview.resets')" />
-                        <div class="flex flex-wrap gap-2">
-                            <NuxtLink
-                                v-for="reset in resets"
-                                :key="`${reset.wall.id}-${reset.date}`"
-                                :to="{
-                                    path: gymPath('/map'),
-                                    query: {
-                                        location: reset.wall.location,
-                                        wall: reset.wall.id,
-                                    },
-                                }"
-                                class="flex min-w-0 items-center gap-3 rounded-lg bg-default px-3 py-2 ring ring-default hover:bg-elevated/50"
-                                data-testid="overview-reset"
-                            >
-                                <UIcon
-                                    name="i-lucide-calendar-clock"
-                                    class="size-5 shrink-0 text-warning"
-                                />
-                                <span class="min-w-0">
-                                    <span
-                                        class="block truncate font-semibold text-highlighted"
-                                        >{{ reset.wall.name }}</span
-                                    >
-                                    <span class="block text-xs text-muted">
-                                        {{
-                                            $t(
-                                                'overview.wallRoutes',
-                                                { n: reset.count },
-                                                reset.count,
-                                            )
-                                        }}
-                                        ·
-                                        {{
-                                            formatDate(reset.date, {
-                                                locale,
-                                            })
-                                        }}
-                                    </span>
-                                </span>
-                            </NuxtLink>
-                        </div>
-                    </section>
+                        <template #actions>
+                            <UButton
+                                :to="gymPath('/map')"
+                                color="neutral"
+                                variant="ghost"
+                                trailing-icon="i-lucide-chevron-right"
+                                :label="$t('overview.openMap')"
+                            />
+                        </template>
+                        <OverviewWallRails :walls="walls" :now="now" />
+                    </LayoutPanel>
 
-                    <section class="overview-section">
-                        <LayoutSectionHeader :title="$t('overview.popular')" />
+                    <LayoutPanel :title="$t('overview.popular')">
+                        <template #actions>
+                            <UButton
+                                :to="gymPath('/routes')"
+                                color="neutral"
+                                variant="ghost"
+                                trailing-icon="i-lucide-chevron-right"
+                                :label="$t('overview.allRoutes')"
+                            />
+                        </template>
                         <MapRouteList
                             v-if="popular.length"
                             class="overview-popular"
@@ -153,10 +100,10 @@
                             icon="i-lucide-star"
                             :title="$t('overview.popularEmpty')"
                         />
-                    </section>
+                    </LayoutPanel>
                 </div>
 
-                <aside class="overview-side">
+                <aside class="flex flex-col gap-6 max-lg:order-first">
                     <LayoutPanel
                         v-if="isLoggedIn"
                         :title="$t('overview.progressTitle')"
@@ -183,19 +130,34 @@
                         test-id-prefix="overview"
                     />
 
-                    <section v-if="topBoard" data-testid="overview-leaderboard">
-                        <LayoutSectionHeader :title="$t('leaderboard.title')">
-                            <template #actions>
-                                <UButton
-                                    :to="gymPath('/leaderboard')"
-                                    color="neutral"
-                                    variant="ghost"
-                                    trailing-icon="i-lucide-chevron-right"
-                                >
-                                    {{ $t(`map.${topBoard.kind}s`) }}
-                                </UButton>
-                            </template>
-                        </LayoutSectionHeader>
+                    <LayoutPanel
+                        v-if="topBoard"
+                        :title="$t('leaderboard.title')"
+                        data-testid="overview-leaderboard"
+                    >
+                        <template #actions>
+                            <SegmentedControl
+                                v-if="boardItems.length > 1"
+                                v-model="boardKind"
+                                :items="boardItems"
+                                size="xs"
+                                test-id="overview-leaderboard-kind"
+                            />
+                            <span
+                                v-else
+                                class="text-sm text-muted"
+                                data-testid="overview-leaderboard-kind"
+                                >{{ $t(`ticks.kind.${topBoard.kind}`) }}</span
+                            >
+                            <UButton
+                                :to="gymPath('/leaderboard')"
+                                color="neutral"
+                                variant="ghost"
+                                icon="i-lucide-chevron-right"
+                                :aria-label="$t('leaderboard.title')"
+                                class="icon-btn"
+                            />
+                        </template>
                         <div class="flex flex-col gap-2">
                             <LeaderboardRow
                                 v-for="row in topBoard.rows"
@@ -204,25 +166,7 @@
                                 linked
                             />
                         </div>
-                    </section>
-
-                    <section v-if="routeBars.length || boulderBars.length">
-                        <LayoutSectionHeader
-                            :title="$t('overview.gradeSpread')"
-                        />
-                        <LayoutPanel>
-                            <div class="flex flex-col gap-5">
-                                <OverviewGradeSpread
-                                    :title="$t('map.routes')"
-                                    :bars="routeBars"
-                                />
-                                <OverviewGradeSpread
-                                    :title="$t('map.boulders')"
-                                    :bars="boulderBars"
-                                />
-                            </div>
-                        </LayoutPanel>
-                    </section>
+                    </LayoutPanel>
                 </aside>
             </div>
         </template>
@@ -233,21 +177,12 @@
 import { leaderboardTopic } from '#shared/utils/topics'
 import { listRoutes, listWalls } from '~/api/routes'
 import type { RouteListItem } from '~/types/models'
-import { gradeLabels } from '#shared/utils/grades'
-import {
-    gradeSpread,
-    newRoutes,
-    popularRoutes,
-    sentShare,
-    wallSummaries,
-} from '~/utils/overview'
+import { popularRoutes, sentShare, wallSummaries } from '~/utils/overview'
 import { cacheKeys } from '~/utils/realtimeCache'
 import { gymSubtitle, gymTitle } from '~/utils/gymNames'
 import { listCompetitions } from '~/api/competitions'
 import { currentCompetition } from '~/utils/competitions'
-import { plannedResets } from '~/utils/tvScreen'
 import { LEADERBOARD_REFRESH_MS } from '~/utils/leaderboard'
-import { formatDate } from '#shared/utils/formatting'
 
 const gymPath = useGymPath()
 
@@ -255,16 +190,12 @@ const POPULAR_LIMIT = 6
 
 definePageMeta({ keepalive: true })
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const authStore = useAuthStore()
 const gymId = useCurrentGymId()
 const { tickedRouteIds } = useTickedRoutes()
-const { routeGradeSystem, boulderGradeSystem } = useGradeSystems()
 const isLoggedIn = computed(() => authStore.isValid)
 const { gym } = useGym()
-const { status: openNow, label: openLabel } = useOpenStatus(
-    () => gym.value?.opening_hours,
-)
 
 useSeoMeta({
     title: () => t('page.title.overview'),
@@ -302,41 +233,12 @@ const routes = computed<RouteListItem[]>(() =>
     })),
 )
 
-const now = new Date()
-const freshRoutes = computed(() => newRoutes(routes.value, now))
+const setupNow = new Date()
+const mountedNow = useMountedNow(15 * 60_000)
+const now = computed(() => mountedNow.value ?? setupNow)
 const popular = computed(() => popularRoutes(routes.value, POPULAR_LIMIT))
-const walls = computed(() => wallSummaries(wallRecords.value, routes.value))
-const wallNames = computed(
-    () => new Map(wallRecords.value.map((wall) => [wall.id, wall.name])),
-)
-
-const routeBars = computed(() =>
-    gradeSpread(
-        routes.value.filter(
-            (route) =>
-                route.type === 'Route' &&
-                route.grade_system === routeGradeSystem.value,
-        ),
-        gradeLabels(routeGradeSystem.value),
-    ),
-)
-const boulderBars = computed(() =>
-    gradeSpread(
-        routes.value.filter(
-            (route) =>
-                route.type === 'Boulder' &&
-                route.grade_system === boulderGradeSystem.value,
-        ),
-        gradeLabels(boulderGradeSystem.value),
-    ),
-)
-
-const hydrated = useHydrated()
-// "Today" is the viewer's day, which the server can't know.
-const resets = computed(() =>
-    hydrated.value
-        ? plannedResets(routes.value, wallRecords.value, new Date())
-        : [],
+const walls = computed(() =>
+    wallSummaries(wallRecords.value, routes.value, now.value),
 )
 
 const { data: competitions, refresh: refreshCompetitions } = useLazyAsyncData(
@@ -356,9 +258,27 @@ const { data: boards, refresh: refreshBoards } = useLazyAsyncData(
 useLiveRefresh(() => leaderboardTopic(gymId.value), refreshBoards, {
     delayMs: LEADERBOARD_REFRESH_MS,
 })
-const topBoard = computed(
-    () => boards.value?.boards.find((board) => board.rows.length) ?? null,
+const filledBoards = computed(
+    () => boards.value?.boards.filter((board) => board.rows.length) ?? [],
 )
+const boardItems = computed(() =>
+    translatedItems(
+        filledBoards.value.map((board) => board.kind),
+        'ticks.kind',
+        t,
+    ),
+)
+const pickedKind = ref<string | null>(null)
+const topBoard = computed(
+    () =>
+        filledBoards.value.find((board) => board.kind === pickedKind.value) ??
+        filledBoards.value[0] ??
+        null,
+)
+const boardKind = computed({
+    get: () => topBoard.value?.kind ?? '',
+    set: (kind: string) => (pickedKind.value = kind),
+})
 
 const progress = computed(() => sentShare(routes.value, tickedRouteIds.value))
 const progressPercent = computed(() =>
@@ -371,77 +291,22 @@ const progressPercent = computed(() =>
 <style scoped>
 @reference "~/assets/css/main.css";
 
-.overview-hero {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 16px 32px;
-    padding: 8px 0 24px;
-}
-
-.overview-hero__title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    line-height: 1.15;
-}
-
-.overview-hero__stats {
-    margin: 6px 0 0;
-    color: var(--ui-text-muted);
-    font-size: 1rem;
-}
-
-.overview-hero__link {
-    color: var(--ui-primary);
-    font-weight: 600;
-    text-decoration: none;
-}
-
-.overview-hero__link:hover {
-    text-decoration: underline;
-}
-
-.overview-section {
-    margin-bottom: 24px;
-}
-
-.overview-main {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-.overview-main .overview-section {
-    margin-bottom: 0;
-}
-
 .overview-popular {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
     column-gap: 16px;
-    padding: 4px 8px;
-    border-radius: 12px;
-    border: 1px solid var(--ui-border);
-    background: var(--ui-bg);
 }
 
 .overview-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-columns: minmax(0, 1fr);
     gap: 24px;
     align-items: start;
 }
 
-.overview-side {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-@variant max-lg {
+@variant lg {
     .overview-grid {
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) 340px;
     }
 }
 </style>

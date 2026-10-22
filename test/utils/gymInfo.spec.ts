@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+    addressParts,
     directionLinks,
     formatNominatimAddress,
     geocodeAddress,
@@ -79,12 +80,12 @@ describe('gymInfo', () => {
             gymContacts({
                 legal_phone: '+49 (0) 69 123',
                 contact_email: 'info@gym.test',
-                website_url: 'https://www.gym.test',
+                website_url: 'https://www.gym.test/climbing/infos',
             }).map((c) => [c.key, c.label, c.href]),
         ).toEqual([
             ['phone', '+49 (0) 69 123', 'tel:+49069123'],
             ['email', 'info@gym.test', 'mailto:info@gym.test'],
-            ['website', 'gym.test', 'https://www.gym.test'],
+            ['website', 'gym.test', 'https://www.gym.test/climbing/infos'],
         ])
     })
 
@@ -143,5 +144,18 @@ describe('reverseGeocode', () => {
     it('falls back to the town and skips missing parts', () => {
         expect(formatNominatimAddress({ town: 'Bad Tölz' })).toBe('Bad Tölz')
         expect(formatNominatimAddress({})).toBe('')
+    })
+})
+
+describe('addressParts', () => {
+    it('splits a one-line address at its commas and keeps typed line breaks', () => {
+        expect(addressParts('Boulderweg 7, 12345 Musterstadt')).toEqual([
+            'Boulderweg 7',
+            '12345 Musterstadt',
+        ])
+        expect(addressParts('Hall 2, Gate B\n12345 Musterstadt')).toEqual([
+            'Hall 2, Gate B',
+            '12345 Musterstadt',
+        ])
     })
 })

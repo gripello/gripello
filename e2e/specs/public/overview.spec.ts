@@ -28,22 +28,16 @@ test.afterEach(async () => {
     await seeded.cleanup()
 })
 
-test('the overview shows new routes and walls that lead to the map', async ({
+test('walls flag new routes and lead to the map', async ({
     page,
     testPrefix,
 }) => {
     await gotoSettled(page, gymPath('/'))
-    await expect(page.getByTestId('overview-stats')).toBeVisible()
-
-    const fresh = page.locator(
-        `[data-testid="overview-new-route"][data-route-id="${freshRouteId}"]`,
-    )
-    await expect(fresh).toContainText(`${testPrefix}-fresh`)
 
     const wall = page.locator(
         `[data-testid="overview-wall"][data-name="${testPrefix} North"]`,
     )
-    await expect(wall).toContainText('2')
+    await expect(wall.getByTestId('overview-wall-new')).toBeVisible()
     await wall.click()
     await page.waitForURL(new RegExp(`/map\\?.*wall=${seeded.northWallId}`))
 })
@@ -60,32 +54,6 @@ test('guests are invited to sign in for the logbook', async ({ page }) => {
     await expect(page.getByTestId('overview-progress')).toHaveCount(0)
     await page.getByTestId('overview-login').click()
     await page.waitForURL(/\/auth\/login\?redirect=(%2F|\/)logbook/)
-})
-
-test('grade bars name their grade and count without extra tab stops', async ({
-    page,
-}) => {
-    await gotoSettled(page, gymPath('/'))
-    const bar = page.getByTestId('overview-grade-bar').first()
-    await expect(bar).toHaveAttribute('aria-label', /^.+: \d+$/)
-    await expect(bar).not.toHaveAttribute('tabindex')
-})
-
-test('grade bars share one baseline on a phone', async ({ page }) => {
-    await page.setViewportSize({ width: 360, height: 780 })
-    await gotoSettled(page, gymPath('/'))
-    const bottoms = await page
-        .getByTestId('overview-grades')
-        .first()
-        .getByTestId('overview-grade-fill')
-        .evaluateAll((fills) =>
-            fills.map((fill) => fill.getBoundingClientRect().bottom),
-        )
-    expect(bottoms.length).toBeGreaterThan(1)
-    expect(
-        Math.max(...bottoms) - Math.min(...bottoms),
-        bottoms.join(', '),
-    ).toBeLessThan(1)
 })
 
 test('guests get the public nav and an all-routes link', async ({ page }) => {
@@ -106,18 +74,25 @@ test('guests get the public nav and an all-routes link', async ({ page }) => {
     await page.waitForURL(/\/routes$/)
 })
 
-test('new routes appear on the overview without a reload', async ({
+test('new routes appear on their wall without a reload', async ({
     page,
     adminApi,
     testPrefix,
 }) => {
     await gotoSettled(page, gymPath('/'))
-    await expect(page.getByTestId('overview-stats')).toBeVisible()
+    const count = page
+        .locator(
+            `[data-testid="overview-wall"][data-name="${testPrefix} North"]`,
+        )
+        .getByTestId('overview-wall-count')
+    const before = await count.innerText()
 
     const live = await createRoute(adminApi, {
         name: `${testPrefix}-live`,
         ...uiaa('5'),
         location: seeded.locationId,
+        wall: seeded.northWallId,
+        wall_position: 0.5,
         type: 'Route',
         color: '#1E88E5',
         creator: ['E2E'],
@@ -125,11 +100,7 @@ test('new routes appear on the overview without a reload', async ({
     })
     seeded.routeIds.push(live.id)
 
-    await expect(
-        page.locator(
-            `[data-testid="overview-new-route"][data-route-id="${live.id}"]`,
-        ),
-    ).toBeVisible()
+    await expect(count).not.toHaveText(before)
 })
 
 test('the route page leads back to where it was opened', async ({

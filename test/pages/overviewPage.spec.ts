@@ -9,22 +9,38 @@ const source = readFileSync(
 
 describe('gym overview page', () => {
     it('leaves out on phones what the bars and tabs already show', () => {
-        expect(source).toMatch(/overview-hero__title max-lg:sr-only/)
+        expect(source).toMatch(/text-highlighted max-lg:sr-only/)
+        expect(source).toMatch(/class="mt-1 text-muted max-lg:hidden"/)
         expect(source).toMatch(
-            /<span class="max-lg:hidden">\s+·\s+<NuxtLink[\s\S]+?data-testid="overview-all-routes"/,
-        )
-        expect(source).toMatch(
-            /class="max-lg:hidden"\s+data-testid="overview-open-map"/,
+            /<div class="flex gap-2 max-lg:hidden">[\s\S]+?data-testid="overview-all-routes"[\s\S]+?data-testid="overview-open-map"/,
         )
         expect(source).toMatch(/<AuthGuestCta\s+v-else\s+class="max-lg:hidden"/)
-        expect(source).not.toContain('openLogbook')
     })
 
-    it('counts new routes over the same window the Newly set list uses', () => {
+    it('puts progress and leaderboard first on phones', () => {
         expect(source).toContain(
-            "$t('overview.newCount', { n: freshRoutes.length })",
+            '<aside class="flex flex-col gap-6 max-lg:order-first">',
         )
-        expect(source).toMatch(/<section v-if="freshRoutes\.length"/)
+    })
+
+    it('puts opening hours and address before the climbing content', () => {
+        expect(source.indexOf('<OverviewGymStatus')).toBeLessThan(
+            source.indexOf('<OverviewWallRails'),
+        )
+    })
+})
+
+describe('gym overview status strip', () => {
+    const strip = readFileSync(
+        path.resolve(
+            import.meta.dirname,
+            '../../app/components/overview/GymStatus.vue',
+        ),
+        'utf8',
+    )
+
+    it('renders on the server whenever the gym has hours, not only once the clock runs', () => {
+        expect(strip).toContain('v-if="hasHours || directionsHref"')
     })
 })
 
@@ -32,20 +48,24 @@ describe('gym overview live blocks', () => {
     it('shows each block only when it has something to show', () => {
         expect(source).toMatch(/<CompetitionCard\s+v-if="liveCompetition"/)
         expect(source).toMatch(
-            /v-if="resets\.length"[\s\S]+?data-testid="overview-resets"/,
+            /v-if="walls\.length"[\s\S]+?data-testid="overview-walls"/,
         )
         expect(source).toMatch(
-            /v-if="topBoard"\s+data-testid="overview-leaderboard"/,
+            /v-if="topBoard"[\s\S]+?data-testid="overview-leaderboard"/,
         )
+    })
+
+    it('lets climbers switch between the boulder and route boards', () => {
+        expect(source).toMatch(
+            /v-if="boardItems\.length > 1"\s+v-model="boardKind"/,
+        )
+        expect(source).toContain('board.rows.length')
     })
 
     it('keeps the blocks live', () => {
         expect(source).toContain('useGymCompetitionsLive(refreshCompetitions)')
         expect(source).toMatch(
             /useLiveRefresh\(\(\) => leaderboardTopic\(gymId\.value\), refreshBoards/,
-        )
-        expect(source).toMatch(
-            /hydrated\.value\s+\? plannedResets\(routes\.value, wallRecords\.value, new Date\(\)\)\s+: \[\]/,
         )
     })
 })

@@ -1,3 +1,4 @@
+import { GRADE_TABLES, type GradeSystem } from '#shared/utils/grades'
 import { parseDate } from '#shared/utils/formatting'
 export const NEW_ROUTE_WINDOW_DAYS = 14
 export const POPULAR_MIN_RATINGS = 2
@@ -16,19 +17,25 @@ export interface OverviewRoute {
     ratings_count?: number | null
 }
 
-export interface WallSummary {
+export interface WallSummary<Route extends OverviewRoute = OverviewRoute> {
     id: string
     name: string
     location: string
-    count: number
-    ranges: GradeRange[]
-    newest: string | null
+    routes: Route[]
+    fresh: number
 }
 
-export interface GradeRange {
-    type: 'Boulder' | 'Route'
-    easiest: string
-    hardest: string
+export interface GradeAxis {
+    min: number
+    max: number
+    ticks: { label: string; at: number }[]
+}
+
+export interface RailDot {
+    id: string
+    at: number
+    level: number
+    fresh: boolean
 }
 
 const DAY_MS = 86_400_000
@@ -75,66 +82,74 @@ export function popularRoutes<Route extends OverviewRoute>(
         .slice(0, limit)
 }
 
-export function gradeSpread(
-    routes: OverviewRoute[],
-    grades: string[],
-): { grade: string; count: number }[] {
-    const counts = new Map(grades.map((grade) => [grade, 0]))
-    for (const route of routes) {
-        if (route.grade && counts.has(route.grade))
-            counts.set(route.grade, counts.get(route.grade)! + 1)
-    }
-    const used = grades.filter((grade) => counts.get(grade)! > 0)
-    if (!used.length) return []
-    const first = grades.indexOf(used[0]!)
-    const last = grades.indexOf(used[used.length - 1]!)
-    return grades
-        .slice(first, last + 1)
-        .map((grade) => ({ grade, count: counts.get(grade)! }))
-}
-
-export function wallSummaries(
+export function wallSummaries<Route extends OverviewRoute>(
     walls: {
         id: string
         name: string
         location: string
         sort?: number | null
     }[],
-    routes: OverviewRoute[],
-): WallSummary[] {
+    routes: Route[],
+    now: Date,
+): WallSummary<Route>[] {
     return [...walls]
         .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
         .map((wall) => {
-            const onWall = routes
-                .filter((route) => route.wall === wall.id)
-                .sort((a, b) => (a.grade_index ?? 0) - (b.grade_index ?? 0))
-            const newest = onWall.reduce<OverviewRoute | null>(
-                (best, route) =>
-                    !best || setTime(route) > setTime(best) ? route : best,
-                null,
-            )
+            const onWall = routes.filter((route) => route.wall === wall.id)
             return {
                 id: wall.id,
                 name: wall.name,
                 location: wall.location,
-                count: onWall.length,
-                ranges: (['Boulder', 'Route'] as const).flatMap((type) => {
-                    const graded = onWall.filter(
-                        (route) =>
-                            (route.type === 'Boulder') ===
-                                (type === 'Boulder') && route.grade,
-                    )
-                    return graded.length
-                        ? [
-                              {
-                                  type,
-                                  easiest: graded[0]!.grade!,
-                                  hardest: graded.at(-1)!.grade!,
-                              },
-                          ]
-                        : []
-                }),
-                newest: newest?.screw_date ?? null,
+                routes: onWall,
+                fresh: onWall.filter((route) => isNewRoute(route, now)).length,
+            }
+        })
+}
+
+const AXIS_PADDING = 0.6
+const MAX_TICKS = 6
+
+export function gradeAxis(
+    indexes: number[],
+    system: GradeSystem,
+): GradeAxis | null {
+    if (!indexes.length) return null
+    const min = Math.min(...indexes) - AXIS_PADDING
+    const max = Math.max(...indexes) + AXIS_PADDING
+    const plain = GRADE_TABLES[system].filter(
+        ([label, index]) =>
+            index >= min && index <= max && !/[+-]$/.test(label),
+    )
+    const every = Math.ceil(plain.length / MAX_TICKS)
+    return {
+        min,
+        max,
+        ticks: plain
+            .filter((_, position) => position % every === 0)
+            .map(([label, index]) => ({
+                label,
+                at: (index - min) / (max - min),
+            })),
+    }
+}
+
+export function railDots(
+    routes: OverviewRoute[],
+    axis: GradeAxis,
+    now: Date,
+): RailDot[] {
+    const levels = new Map<number, number>()
+    return routes
+        .filter((route) => typeof route.grade_index === 'number')
+        .sort((a, b) => a.grade_index! - b.grade_index!)
+        .map((route) => {
+            const level = levels.get(route.grade_index!) ?? 0
+            levels.set(route.grade_index!, level + 1)
+            return {
+                id: route.id,
+                at: (route.grade_index! - axis.min) / (axis.max - axis.min),
+                level,
+                fresh: isNewRoute(route, now),
             }
         })
 }

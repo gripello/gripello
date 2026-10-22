@@ -121,10 +121,10 @@ describe('NavBar', () => {
                 .findAll('[data-testid^="section-tab-"]')
                 .map((tab) => tab.attributes('data-testid')),
         ).toEqual([
+            'section-tab-home',
             'section-tab-routes',
             'section-tab-map',
             'section-tab-info',
-            'section-tab-home',
         ])
     })
 
