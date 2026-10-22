@@ -31,7 +31,7 @@ test('settings drill into one section and keep unsaved changes', async ({
     const original = await retention.inputValue()
     await retention.fill(String(Number(original) + 1))
 
-    await page.getByTestId('platform-settings-drill-back').click()
+    await page.getByTestId('nav-back').click()
     await expect(
         page.getByTestId('platform-settings-drill-access'),
     ).toBeVisible()

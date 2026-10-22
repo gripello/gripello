@@ -42,17 +42,6 @@
                     </LayoutListRow>
                 </LayoutListGroup>
             </template>
-            <UButton
-                v-else
-                icon="i-lucide-arrow-left"
-                color="neutral"
-                variant="ghost"
-                class="mb-2 -ml-2 min-h-11 lg:hidden"
-                :data-testid="`${testIdPrefix}-drill-back`"
-                @click="backToList"
-            >
-                {{ activeLabel }}
-            </UButton>
         </template>
         <LayoutTabs
             v-else
@@ -167,13 +156,27 @@ const activeSection = computed(() =>
 )
 
 const sectionChosen = computed(() => !!route.query[props.queryKey])
-const activeLabel = computed(
-    () =>
-        props.sections.find((section) => section.id === activeSection.value)
-            ?.label,
-)
+const { select } = useSectionQuery(props.queryKey)
 
-const { select, backToList } = useSectionQuery(props.queryKey)
+const pageBackTo = usePageBackTo()
+const sectionBackOwner = -1
+let headerBackTo: typeof pageBackTo.value = null
+function releasePageBack() {
+    if (pageBackTo.value?.owner === sectionBackOwner)
+        pageBackTo.value = headerBackTo
+}
+watch(
+    () => props.drillDown && sectionChosen.value,
+    (inSection) => {
+        if (!inSection) return releasePageBack()
+        if (pageBackTo.value?.owner !== sectionBackOwner)
+            headerBackTo = pageBackTo.value
+        pageBackTo.value = { owner: sectionBackOwner, to: route.path }
+    },
+    { immediate: true },
+)
+onUnmounted(releasePageBack)
+
 const selectedSection = computed({
     get: () => activeSection.value,
     set: select,

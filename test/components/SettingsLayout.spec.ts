@@ -1,10 +1,14 @@
-import { defineComponent, h, reactive } from 'vue'
+import { defineComponent, h, onUnmounted, reactive, ref } from 'vue'
 import { mount } from '@vue/test-utils'
 import SettingsLayout from '~/components/settings/Layout.vue'
 import { useDiscardConfirm } from '~/composables/useDiscardConfirm'
 import { useSectionQuery } from '~/composables/useSectionQuery'
 
-const route = reactive({ query: {} as Record<string, string> })
+const route = reactive({
+    path: '/platform/settings',
+    query: {} as Record<string, string>,
+})
+const pageBackTo = ref<{ owner: number; to: string } | null>(null)
 const leaveGuards: (() => Promise<boolean>)[] = []
 
 const NavStub = defineComponent({
@@ -65,6 +69,8 @@ function mountLayout(
     vi.stubGlobal('navigateTo', navigateTo)
     vi.stubGlobal('useRouter', () => ({ back: vi.fn(), resolve: vi.fn() }))
     vi.stubGlobal('useSectionQuery', useSectionQuery)
+    vi.stubGlobal('usePageBackTo', () => pageBackTo)
+    vi.stubGlobal('onUnmounted', onUnmounted)
     vi.stubGlobal('onBeforeRouteLeave', (guard: () => Promise<boolean>) =>
         leaveGuards.push(guard),
     )
@@ -97,6 +103,32 @@ describe('SettingsLayout', () => {
         route.query = {}
         leaveGuards.length = 0
         navigateTo.mockClear()
+        pageBackTo.value = null
+    })
+
+    it('points the top-bar back at the section list while a section is open', async () => {
+        const header = { owner: 1, to: '/platform/gyms' }
+        pageBackTo.value = header
+        const wrapper = mountLayout(false, { drillDown: true })
+        expect(pageBackTo.value).toEqual(header)
+
+        route.query = { section: 'links' }
+        await wrapper.vm.$nextTick()
+        expect(pageBackTo.value?.to).toBe('/platform/settings')
+        expect(
+            wrapper
+                .find('[data-testid="platform-settings-drill-back"]')
+                .exists(),
+        ).toBe(false)
+
+        route.query = {}
+        await wrapper.vm.$nextTick()
+        expect(pageBackTo.value).toEqual(header)
+
+        route.query = { section: 'links' }
+        await wrapper.vm.$nextTick()
+        wrapper.unmount()
+        expect(pageBackTo.value).toEqual(header)
     })
 
     it('opens the requested section and falls back to the first', async () => {
@@ -133,6 +165,8 @@ describe('SettingsLayout', () => {
         vi.stubGlobal('useDiscardConfirm', useDiscardConfirm)
         vi.stubGlobal('navigateTo', navigateTo)
         vi.stubGlobal('onBeforeRouteLeave', () => {})
+        vi.stubGlobal('usePageBackTo', () => pageBackTo)
+        vi.stubGlobal('onUnmounted', onUnmounted)
         const wrapper = mount(SettingsLayout, {
             props: {
                 sections: [
