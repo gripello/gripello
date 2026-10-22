@@ -249,6 +249,7 @@
         "mapWork": "Routen & Resets",
         "removed": "Diese Route wurde entfernt.",
         "sends": "Begehungen",
+        "outShort": "Raus",
         "screwedShort": "Geschraubt"
     },
     "dashboard": {

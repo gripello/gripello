@@ -249,6 +249,7 @@
         "mapWork": "Routes & resets",
         "removed": "Deze route is verwijderd.",
         "sends": "Beklimmingen",
+        "outShort": "Eruit",
         "screwedShort": "Geschroefd"
     },
     "dashboard": {

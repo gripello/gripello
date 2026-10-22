@@ -249,6 +249,7 @@
         "mapWork": "Voies & réouvertures",
         "removed": "Cette voie a été supprimée.",
         "sends": "Réussites",
+        "outShort": "Démontée",
         "screwedShort": "Ouverte"
     },
     "dashboard": {

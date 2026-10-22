@@ -157,7 +157,8 @@
 import { locationName, wallName } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
 import { gymBandFor } from '#shared/utils/gradeReference'
-import { gradientEndColor, isLightColor, readableTextOn } from '~/utils/color'
+import { toHex6 } from '#shared/utils/color'
+import { contrastRatio, gradientEndColor } from '~/utils/color'
 import {
     commonDifficulty,
     PERCEIVED_GRADE_ICON,
@@ -187,13 +188,20 @@ const perceived = computed(() => {
 
 const themeColors = useThemeColors()
 const heroColor = computed(() => props.route.color || themeColors.value.primary)
-const heroIsLight = computed(() => isLightColor(heroColor.value))
+const HERO_DARK_INK = '#1a1a1a'
+const heroIsLight = computed(() => {
+    const background = toHex6(heroColor.value)
+    return (
+        contrastRatio(HERO_DARK_INK, background) >
+        contrastRatio('#ffffff', background)
+    )
+})
 
 const heroStyle = computed(() => {
     const color = heroColor.value
     return {
         background: `linear-gradient(135deg, ${color} 0%, ${gradientEndColor(color)} 100%)`,
-        '--hero-ink': heroIsLight.value ? '#1a1a1a' : '#ffffff',
+        '--hero-ink': heroIsLight.value ? HERO_DARK_INK : '#ffffff',
         '--hero-tint': heroIsLight.value
             ? 'rgba(0, 0, 0, 0.12)'
             : 'rgba(255, 255, 255, 0.2)',
@@ -216,8 +224,9 @@ const difficultyBadgeStyle = computed(() => {
     const color = heroColor.value
     return {
         background: color,
-        color: readableTextOn(color),
+        color: 'var(--hero-ink)',
         boxShadow: '0 0 0 1px var(--hero-tint)',
+        '--grade-fit': Math.min(1, 3.5 / (difficulty.value?.length || 1)),
     }
 })
 </script>
@@ -302,9 +311,9 @@ const difficultyBadgeStyle = computed(() => {
     cursor: pointer;
     flex-direction: column;
     flex-shrink: 0;
-    min-width: 64px;
+    width: 64px;
     height: 64px;
-    padding: 0 18px;
+    padding: 6px 4px 0;
     border-radius: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     display: flex;
@@ -314,8 +323,8 @@ const difficultyBadgeStyle = computed(() => {
 
 .route-hero__difficulty-convert {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 6px;
+    right: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -326,7 +335,7 @@ const difficultyBadgeStyle = computed(() => {
 }
 
 .route-hero__difficulty-text {
-    font-size: 1.25rem;
+    font-size: calc(1.25rem * var(--grade-fit, 1));
     line-height: 1;
     white-space: nowrap;
 }
@@ -347,7 +356,6 @@ const difficultyBadgeStyle = computed(() => {
 
 @variant lg {
     .route-hero {
-        grid-area: hero;
         border-radius: 16px;
         padding: 28px 40px 60px;
         justify-content: center;
@@ -364,13 +372,19 @@ const difficultyBadgeStyle = computed(() => {
     }
 
     .route-hero__difficulty-badge {
-        min-width: 80px;
+        width: 80px;
         height: 80px;
+        padding: 10px 4px 0;
         border-radius: 20px;
     }
 
+    .route-hero__difficulty-convert {
+        top: 9px;
+        right: 9px;
+    }
+
     .route-hero__difficulty-text {
-        font-size: 1.75rem;
+        font-size: calc(1.75rem * var(--grade-fit, 1));
     }
 }
 </style>
