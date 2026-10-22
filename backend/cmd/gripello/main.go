@@ -86,7 +86,7 @@ func connect(ctx context.Context) (config.Config, *platform.App, error) {
 		db.MaxConns = int32(cfg.DBMaxConns)
 	}
 	db.SlowQuery, httpx.SlowRequest = cfg.SlowQuery, cfg.SlowRequest
-	pool, err := db.Connect(ctx, cfg.DatabaseURL)
+	pool, err := db.ConnectWait(ctx, cfg.DatabaseURL, 2*time.Second)
 	if err != nil {
 		return cfg, nil, err
 	}

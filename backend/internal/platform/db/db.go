@@ -6,11 +6,14 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"math"
 	neturl "net/url"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -55,6 +58,10 @@ func Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 		return nil, err
 	}
 	cfg.MaxConns = MaxConns
+	if cfg.ConnConfig.ConnectTimeout == 0 {
+		// pgx waits for the OS connect timeout (minutes) on a host that drops packets
+		cfg.ConnConfig.ConnectTimeout = 10 * time.Second
+	}
 	cfg.ConnConfig.Tracer = tracer{}
 	// timestamptz values are rendered in the session zone; clients compare ISO strings, so keep it UTC everywhere.
 	cfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
@@ -63,6 +70,38 @@ func Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 		return nil, err
 	}
 	return pool, pool.Ping(ctx)
+}
+
+// ConnectWait keeps retrying an unreachable database (it may still be starting or not resolvable yet) until ctx ends.
+func ConnectWait(ctx context.Context, url string, retry time.Duration) (*pgxpool.Pool, error) {
+	for {
+		pool, err := Connect(ctx, url)
+		if err == nil || pool == nil {
+			return pool, err
+		}
+		pool.Close()
+		if !retryable(err) {
+			return nil, err
+		}
+		slog.Warn("database unreachable, retrying", "error", err)
+		select {
+		case <-ctx.Done():
+			return nil, err
+		case <-time.After(retry):
+		}
+	}
+}
+
+func retryable(err error) bool {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return true
+	}
+	switch pgErr.Code {
+	case "28000", "28P01", "3D000": // bad credentials or an unknown database won't heal by waiting
+		return false
+	}
+	return true
 }
 
 // Migrate applies pending migrations; the advisory lock lets every replica call it at startup.

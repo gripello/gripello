@@ -276,7 +276,7 @@ describe('docker ui build', () => {
         expect(waitLoop).toBeGreaterThan(entrypoint.indexOf('UI_PID=$!'))
         expect(waitLoop).toBeLessThan(entrypoint.indexOf('nginx -e stderr'))
         expect(entrypoint).toContain(
-            'kill -0 $API_PID $UI_PID 2>/dev/null || break 2',
+            'kill -0 $API_PID 2>/dev/null && kill -0 $UI_PID 2>/dev/null || break 2',
         )
     })
 
