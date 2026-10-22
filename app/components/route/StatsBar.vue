@@ -22,6 +22,15 @@
             icon="i-lucide-calendar"
             data-testid="route-screw-date"
         />
+        <template v-if="anchorPoint">
+            <USeparator orientation="vertical" class="my-1 h-10" />
+            <LayoutStatTile
+                :label="t('climbing.anchor_point')"
+                :value="anchorPoint"
+                icon="i-lucide-hash"
+                data-testid="route-anchor-point"
+            />
+        </template>
     </div>
 </template>
 
@@ -34,6 +43,7 @@ const props = defineProps<{
     reviews: ReviewDisplay[]
     sendsCount?: number
     screwDate?: string | null
+    anchorPoint?: number | null
 }>()
 
 const { t, locale } = useI18n()

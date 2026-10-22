@@ -43,9 +43,12 @@ const route = {
 
 const dialogOpened = vi.fn()
 
-function mountHero(reviews: ReviewDisplay[]) {
+function mountHero(
+    reviews: ReviewDisplay[],
+    overrides: Partial<RouteListItem> = {},
+) {
     return mount(RouteHero, {
-        props: { route, ticked: false, reviews },
+        props: { route: { ...route, ...overrides }, ticked: false, reviews },
         global: {
             stubs: {
                 UButton: true,
@@ -78,6 +81,39 @@ describe('RouteHero', () => {
         expect(wrapper.text()).not.toContain('Umrechnungstabelle')
     })
 
+    it('keeps white ink on colours where it stays legible', () => {
+        expect(
+            ['#ec407a', '#ff8104', '#4caf50', '#03a9f4', '#9e9e9e'].map(
+                (color) =>
+                    mountHero([], { color })
+                        .get('[data-testid="route-hero"]')
+                        .attributes('style')
+                        ?.includes('--hero-ink: #ffffff'),
+            ),
+        ).toEqual([true, true, true, true, true])
+    })
+
+    it('inks title and grade alike on light tones', () => {
+        const wrapper = mountHero([], { color: '#ffeb3b' })
+        expect(
+            wrapper.get('[data-testid="route-hero"]').attributes('style'),
+        ).toContain('--hero-ink: #1a1a1a')
+        expect(
+            wrapper
+                .get('[data-testid="route-grade-badge"]')
+                .attributes('style'),
+        ).toContain('color: var(--hero-ink)')
+    })
+
+    it('shrinks long grades to fit the fixed tile', () => {
+        const fit = (grade: string) =>
+            mountHero([], { grade })
+                .get('[data-testid="route-grade-badge"]')
+                .attributes('style')
+        expect(fit('4')).toContain('--grade-fit: 1')
+        expect(fit('7a+/7b')).toMatch(/--grade-fit: 0\.58/)
+    })
+
     it('hides the felt grade until someone voted', () => {
         expect(
             mountHero([review('', 4)])
@@ -100,14 +136,18 @@ describe('RouteHero', () => {
 })
 
 describe('RouteStatsBar', () => {
-    function values(props: InstanceType<typeof RouteStatsBar>['$props']) {
-        const wrapper = mount(RouteStatsBar, {
+    function mountBar(props: InstanceType<typeof RouteStatsBar>['$props']) {
+        return mount(RouteStatsBar, {
             props,
             global: {
                 components: { LayoutStatTile },
                 stubs: { UIcon: true, USeparator: true },
             },
         })
+    }
+
+    function values(props: InstanceType<typeof RouteStatsBar>['$props']) {
+        const wrapper = mountBar(props)
         return ['route-avg-rating', 'route-sends', 'route-screw-date'].map(
             (id) => wrapper.get(`[data-testid="${id}"]`).text(),
         )
@@ -133,5 +173,18 @@ describe('RouteStatsBar', () => {
 
     it('counts a single rating in the singular', () => {
         expect(values({ reviews: [review('', 3)] })[0]).toBe('3,01 Bewertung')
+    })
+
+    it('shows the anchor only when the route has one', () => {
+        expect(
+            mountBar({ reviews: [], anchorPoint: 5 })
+                .get('[data-testid="route-anchor-point"]')
+                .text(),
+        ).toBe('5Umlenker')
+        expect(
+            mountBar({ reviews: [], anchorPoint: null })
+                .find('[data-testid="route-anchor-point"]')
+                .exists(),
+        ).toBe(false)
     })
 })

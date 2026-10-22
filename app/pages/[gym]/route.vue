@@ -16,6 +16,9 @@
                             :reviews="reviews"
                             :sends-count="metadata.sends_count"
                             :screw-date="metadata.screw_date"
+                            :anchor-point="
+                                showAnchorPoint ? metadata.anchor_point : null
+                            "
                         />
                     </div>
 
@@ -90,26 +93,10 @@
 
                 <div class="route-details" data-testid="route-details">
                     <div
-                        v-if="showAnchorPoint || metadata.comment"
-                        class="route-details__info mb-4 flex flex-col gap-2"
+                        v-if="metadata.comment"
+                        class="route-details__info mb-4"
                     >
-                        <div
-                            v-if="showAnchorPoint"
-                            class="flex items-center gap-2"
-                        >
-                            <UIcon
-                                name="i-lucide-hash"
-                                class="size-[16px] text-muted"
-                            />
-                            <span class="text-sm text-muted"
-                                >{{ t('climbing.anchor_point') }}:
-                                {{ metadata.anchor_point }}</span
-                            >
-                        </div>
-                        <div
-                            v-if="metadata.comment"
-                            class="flex items-start gap-2"
-                        >
+                        <div class="flex items-start gap-2">
                             <UIcon
                                 name="i-lucide-info"
                                 class="mt-1 size-[16px] text-muted"
@@ -471,19 +458,7 @@ onMounted(async () => {
 }
 
 @variant lg {
-    .route-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
-        grid-template-areas:
-            'hero hero'
-            'bar bar'
-            'reviews details';
-        column-gap: 32px;
-        align-items: start;
-    }
-
     .route-bar {
-        grid-area: bar;
         margin-top: -28px;
         display: flex;
         align-items: center;
@@ -505,48 +480,7 @@ onMounted(async () => {
     }
 
     .route-details {
-        grid-area: details;
         padding-top: 24px;
-    }
-
-    .route-layout__reviews {
-        grid-area: reviews;
-        padding-top: 24px;
-    }
-}
-
-@variant xl {
-    .route-layout {
-        grid-template-columns: minmax(0, 1fr) minmax(20rem, 28rem);
-    }
-}
-</style>
-
-<style>
-@reference "~/assets/css/main.css";
-
-/* An empty details column hands its width to the reviews. */
-@variant lg {
-    .route-layout:not(
-            :has(
-                .route-details__info,
-                [data-testid='task-defect-banner'],
-                [data-testid='beta-list']
-            )
-        )
-        > .route-details {
-        display: none;
-    }
-
-    .route-layout:not(
-            :has(
-                .route-details__info,
-                [data-testid='task-defect-banner'],
-                [data-testid='beta-list']
-            )
-        )
-        > .route-layout__reviews {
-        grid-column: 1 / -1;
     }
 }
 </style>
