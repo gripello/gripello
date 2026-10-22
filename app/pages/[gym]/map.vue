@@ -469,8 +469,9 @@ function setQuery(patch: Record<string, string | null>) {
 }
 
 function selectWall(wallId: string | null) {
+    if (wallId && wallId === selectedWallId.value)
+        mapViewRef.value?.focusWall(wallId)
     setQuery({ wall: wallId, route: null })
-    if (wallId) mapViewRef.value?.focusWall(wallId)
 }
 
 function selectRoute(routeId: string | null) {
@@ -489,6 +490,14 @@ function onListSelect(routeId: string) {
 
 const selectedWall = computed(() =>
     mapWalls.value.find((wall) => wall.id === selectedWallId.value),
+)
+// Also covers links into the kept-alive page and walls of a location that loads later.
+watch(
+    () => selectedWall.value?.id,
+    (wallId) => {
+        if (wallId && !selectedRouteId.value)
+            nextTick(() => mapViewRef.value?.focusWall(wallId))
+    },
 )
 const { isFollowing, setFollowing } = useFollowedWalls()
 const { error: notifyError } = useNotification()

@@ -32,6 +32,9 @@ func TestPlanRouteRemoval(t *testing.T) {
 	if got := f.exec(`SELECT payload->'params'->>'count' FROM events WHERE topic = 'notify' AND payload->>'type' = 'wall_reset_planned'`); got != "2" {
 		t.Fatalf("notification count param = %s, want one notification for both routes", got)
 	}
+	if got := f.exec(`SELECT payload->>'url' FROM events WHERE topic = 'notify' AND payload->>'type' = 'wall_reset_planned'`); got != "/alpha/map?location="+f.hall+"&wall="+wall {
+		t.Fatalf("notification url = %s, want the wall's location on the map", got)
+	}
 	plan("setter", `{"ids":["`+crimp+`"],"planned_for":"2026-11-02"}`, http.StatusOK)
 	if got := notified(); got != "1" {
 		t.Fatalf("followers notified %s times, want once per date", got)

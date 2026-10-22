@@ -586,6 +586,11 @@ func TestIssuesGroupLogsAndAlertPlatformAdminsOnce(t *testing.T) {
 	if alerts != 1 {
 		t.Errorf("%d platform_issue alerts, want one per issue and cooldown", alerts)
 	}
+	var link string
+	f.app.DB.QueryRow(ctx, `SELECT payload->>'url' FROM events WHERE topic = 'notify' AND payload->>'type' = 'platform_issue'`).Scan(&link)
+	if link != "/platform/logs?issue="+issue["fingerprint"].(string) {
+		t.Errorf("platform_issue url = %s, want the issue", link)
+	}
 }
 
 func TestBrowserErrorsAreLoggedWithoutTheQuery(t *testing.T) {

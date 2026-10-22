@@ -140,3 +140,18 @@ test('the boulder chip hides routes of the other type', async ({ page }) => {
     await page.getByTestId('map-filter-clear').click()
     await expect(page.getByTestId('map-route-dot')).toHaveCount(3)
 })
+
+test('a link to a wall focuses it on the already open map', async ({
+    page,
+}) => {
+    await gotoSettled(page, `/map?location=${seeded.locationId}`)
+    const svg = page.getByTestId('map-svg')
+    const overview = await svg.getAttribute('viewBox')
+    const linked = `${new URL(page.url()).pathname}?location=${seeded.locationId}&wall=${seeded.northWallId}`
+    await page.evaluate((path) => {
+        const app = (document.querySelector('#__nuxt') as any).__vue_app__
+        return app.config.globalProperties.$router.push(path)
+    }, linked)
+    await expect(page).toHaveURL(new RegExp(`wall=${seeded.northWallId}`))
+    await expect(svg).not.toHaveAttribute('viewBox', overview!)
+})

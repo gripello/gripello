@@ -228,4 +228,6 @@ function openForm(task: TaskRecord | null) {
     editedTask.value = task
     formOpen.value = true
 }
+
+useLinkedTask(gymId, formOpen, openForm)
 </script>

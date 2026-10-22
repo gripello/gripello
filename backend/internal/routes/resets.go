@@ -80,14 +80,14 @@ func (m *module) planRemoval(ctx context.Context, gym string, body removalBody) 
 
 func notifyWallFollowers(ctx context.Context, tx pgx.Tx, gym, wall, date string, count int) error {
 	n := events.Notify{Type: "wall_reset_planned", Gym: gym}
-	var slug, wallName string
-	err := tx.QueryRow(ctx, `SELECT g.slug, w.name, ARRAY(SELECT id FROM users WHERE followed_walls @> ARRAY[w.id] AND gym_visible(w.gym, users.id))
-		FROM walls w JOIN gyms g ON g.id = w.gym WHERE w.id = $1`, wall).Scan(&slug, &wallName, &n.Users)
+	var slug, wallName, location string
+	err := tx.QueryRow(ctx, `SELECT g.slug, w.name, w.location, ARRAY(SELECT id FROM users WHERE followed_walls @> ARRAY[w.id] AND gym_visible(w.gym, users.id))
+		FROM walls w JOIN gyms g ON g.id = w.gym WHERE w.id = $1`, wall).Scan(&slug, &wallName, &location, &n.Users)
 	if err != nil || len(n.Users) == 0 {
 		return err
 	}
 	n.Params = map[string]any{"wall": wallName, "date": date, "count": count}
-	n.URL = "/" + slug + "/map?wall=" + wall
+	n.URL = "/" + slug + "/map?location=" + location + "&wall=" + wall
 	return events.PublishNotify(ctx, tx, auth.UserID(ctx), n)
 }
 

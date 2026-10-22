@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { apiOf, gotoSettled, gymPath } from '../../support/nav'
 import { createComment } from '../../support/comments'
@@ -18,6 +19,9 @@ const seededSetter = () =>
         email: 'e2e-routesetter@gripello.test',
         password: 'E2ePassw0rd!',
     })
+
+const openedCase = (page: Page) =>
+    page.locator('article[data-testid^="moderation-detail-"]:visible')
 
 const mentions = (text: string) => (item: { params?: unknown }) =>
     JSON.stringify(item.params ?? {}).includes(text)
@@ -50,7 +54,8 @@ test('a report alerts the gym’s report handlers and leads to the inbox', async
 
     await gotoSettled(adminPage, gymPath('/manage/routes'))
     await openFromBell(adminPage, notice.id)
-    await adminPage.waitForURL(/\/e2e\/manage\/moderation/)
+    await adminPage.waitForURL(/\/e2e\/manage\/moderation\?case=/)
+    await expect(openedCase(adminPage)).toContainText(text)
 })
 
 test('legal reports reach the platform, “something else” stays with the gym', async ({
@@ -94,7 +99,8 @@ test('legal reports reach the platform, “something else” stays with the gym'
 
     await gotoSettled(platformPage, '/platform')
     await openFromBell(platformPage, escalation.id)
-    await platformPage.waitForURL(/\/platform\/moderation/)
+    await platformPage.waitForURL(/\/platform\/moderation\?case=/)
+    await expect(openedCase(platformPage)).toContainText(`${testPrefix}-legal`)
 })
 
 test('waiting uploads alert their gym and the decision reaches the uploader', async ({
@@ -126,7 +132,9 @@ test('waiting uploads alert their gym and the decision reaches the uploader', as
             await apiAs(gym.staff),
             'moderation_pending',
         )
-        expect(staffNotice.url).toBe(`/${gym.slug}/manage/moderation`)
+        expect(staffNotice.url).toMatch(
+            new RegExp(`^/${gym.slug}/manage/moderation\\?case=\\w+$`),
+        )
         expect(
             (await notificationsOfType(setter, 'moderation_pending')).length,
         ).toBe(before)
@@ -142,18 +150,22 @@ test('waiting uploads alert their gym and the decision reaches the uploader', as
             uploaderApi,
             'beta_approved',
         )
-        expect(approved.url).toMatch(
-            new RegExp(`^/route\\?id=${gym.routeId}#beta-`),
-        )
+        const [, approvedBeta] = approved.url!.match(
+            new RegExp(`^/route\\?id=${gym.routeId}#beta-(\\w+)$`),
+        )!
         const rejected = await waitForNotificationOfType(
             uploaderApi,
             'beta_rejected',
         )
         expect(JSON.stringify(rejected.params)).toContain('Wrong route.')
+        expect(rejected.url).toBe(`/route?id=${gym.routeId}`)
 
         await gotoSettled(uploader, '/logbook')
         await openFromBell(uploader, approved.id)
         await uploader.waitForURL(new RegExp(`/route\\?id=${gym.routeId}`))
+        const tile = uploader.getByTestId(`beta-video-${approvedBeta}`)
+        await expect(tile).toHaveAttribute('data-highlighted', 'true')
+        await expect(tile).toBeInViewport()
     } finally {
         await deleteGym(api, gym.id)
     }
@@ -182,6 +194,7 @@ test('a hidden post notifies only its author', async ({
         'content_hidden',
     )
     expect(JSON.stringify(notice.params)).toContain(`${testPrefix}-because`)
+    expect(notice.url).toBe(`/route?id=${route.id}`)
     expect(
         await notificationsOfType(await apiAs(bystander), 'content_hidden'),
     ).toHaveLength(0)

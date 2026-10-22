@@ -136,7 +136,7 @@ func (m *module) onBetaPending(e events.Event) {
 			return err
 		}
 		return events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
-			Type: "moderation_pending", Users: staff, Gym: p.Gym, URL: tenancy.GymPath(ctx, w.tx, p.Gym, "/manage/moderation"),
+			Type: "moderation_pending", Users: staff, Gym: p.Gym, URL: tenancy.GymPath(ctx, w.tx, p.Gym, "/manage/moderation?case="+it.ID),
 		})
 	}))
 }

@@ -169,7 +169,7 @@ func (m *module) apply(ctx context.Context, w *work, it *Item, action, reason st
 		if err := m.save(ctx, w, it); err != nil {
 			return err
 		}
-		return m.closeReports(ctx, w, it.ContentType, it.ContentID, "content_kept", it.Reason, reviewer)
+		return m.closeReports(ctx, w, it.ID, it.ContentType, it.ContentID, "content_kept", it.Reason, reviewer)
 
 	case "reject":
 		if _, err := w.tx.Exec(ctx, `DELETE FROM moderation_items WHERE id = $1`, it.ID); err != nil {
@@ -194,7 +194,7 @@ func (m *module) apply(ctx context.Context, w *work, it *Item, action, reason st
 		if err := m.save(ctx, w, it); err != nil {
 			return err
 		}
-		if err := m.closeReports(ctx, w, it.ContentType, it.ContentID, "content_removed", it.Reason, reviewer); err != nil {
+		if err := m.closeReports(ctx, w, it.ID, it.ContentType, it.ContentID, "content_removed", it.Reason, reviewer); err != nil {
 			return err
 		}
 		return m.hideContent(ctx, w, it)
@@ -363,8 +363,15 @@ func (m *module) publishRestored(ctx context.Context, w *work, it *Item, k kind,
 	return publishOwnerChange(ctx, w.tx, *it, hidden)
 }
 
+func inboxPath(inbox, caseID string) string {
+	if caseID == "" {
+		return inbox
+	}
+	return inbox + "?case=" + caseID
+}
+
 // closeReports decides every open report on the content; the reporters get the DSA decision mail.
-func (m *module) closeReports(ctx context.Context, w *work, contentType, contentID, decision, reason, reviewer string) error {
+func (m *module) closeReports(ctx context.Context, w *work, caseID, contentType, contentID, decision, reason, reviewer string) error {
 	status := "rejected"
 	if decision == "content_removed" {
 		status = "actioned"
@@ -386,7 +393,7 @@ func (m *module) closeReports(ctx context.Context, w *work, contentType, content
 		}
 		staff = slices.DeleteFunc(staff, func(id string) bool { return id == reviewer })
 		if err := events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
-			Type: notification, Users: staff, Gym: report.Gym, URL: tenancy.GymPath(ctx, w.tx, report.Gym, "/manage/moderation"),
+			Type: notification, Users: staff, Gym: report.Gym, URL: tenancy.GymPath(ctx, w.tx, report.Gym, inboxPath("/manage/moderation", caseID)),
 		}); err != nil {
 			return err
 		}
@@ -399,15 +406,15 @@ func (m *module) notifyAuthor(ctx context.Context, w *work, it Item, action stri
 	if it.Author == "" {
 		return nil
 	}
-	n := events.Notify{Users: []string{it.Author}, Gym: it.Gym, URL: "/"}
+	n := events.Notify{Users: []string{it.Author}, Gym: it.Gym, URL: authorPath(ctx, w.tx, it)}
 	switch {
 	case action == "hide":
 		n.Type, n.Params = "content_hidden", map[string]any{"reason": httpx.Truncate(it.Reason, 140)}
 		w.after = append(w.after, func(ctx context.Context) { m.sendStatement(ctx, it.Author, []Item{it}) })
 	case action == "approve" && wasPending:
 		n.Type = "beta_approved"
-		if route, ok := it.Snapshot["route"].(string); ok {
-			n.URL = "/route?id=" + route + "#beta-" + it.ContentID
+		if n.URL != "/" {
+			n.URL += "#beta-" + it.ContentID
 		}
 	case action == "reject":
 		n.Type, n.Params = "beta_rejected", map[string]any{"reason": httpx.Truncate(it.Reason, 140)}
@@ -485,7 +492,7 @@ func notifier(report Report) []mail.Recipient {
 }
 
 // sendReceipt is the Art. 16(4) receipt to the notifier plus the alert to the gym's report handlers.
-func (m *module) sendReceipt(ctx context.Context, report Report) {
+func (m *module) sendReceipt(ctx context.Context, report Report, caseID string) {
 	receipt := mail.Content{Key: "reportReceipt", Details: []mail.Detail{reasonDetail(report), {Label: "reference", Value: report.ID}}}
 	if m.send(ctx, report.Gym, receipt, notifier(report)) {
 		m.app.DB.Exec(ctx, `UPDATE reports SET receipt_sent = true WHERE id = $1`, report.ID)
@@ -511,7 +518,7 @@ func (m *module) sendReceipt(ctx context.Context, report Report) {
 			{Label: "explanation", Value: report.Explanation},
 			{Label: "snapshot", Value: report.ContentSnapshot},
 		},
-		Action: tenancy.GymPath(ctx, m.app.DB, report.Gym, "/manage/moderation"),
+		Action: tenancy.GymPath(ctx, m.app.DB, report.Gym, inboxPath("/manage/moderation", caseID)),
 	}
 	// The contact address is whatever manage_settings typed in; the notifier's identity stays with the report handlers.
 	if contact := contactEmail(ctx, m.app.DB, report.Gym); contact != "" &&
@@ -555,7 +562,9 @@ func (m *module) dropContent(ctx context.Context, kindName, contentID string) er
 			return err
 		}
 		// Only whole rows live on in a quarantine; a hidden field-based case has nothing left to restore.
+		caseID := it.ID
 		if err == nil && (!it.quarantined() || kinds[kindName].fields != nil) {
+			caseID = ""
 			if _, err := w.tx.Exec(ctx, `DELETE FROM moderation_items WHERE id = $1`, it.ID); err != nil {
 				return err
 			}
@@ -566,7 +575,7 @@ func (m *module) dropContent(ctx context.Context, kindName, contentID string) er
 		} else if err != nil && !errors.Is(err, httpx.ErrNotFound) {
 			return err
 		}
-		return m.closeReports(ctx, w, kindName, contentID, "content_removed", "", "")
+		return m.closeReports(ctx, w, caseID, kindName, contentID, "content_removed", "", "")
 	})
 }
 

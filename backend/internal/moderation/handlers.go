@@ -130,13 +130,17 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 			report.Explanation, report.NotifierName, report.NotifierEmail, report.Language); err != nil {
 			return err
 		}
+		caseID, err := m.countReport(ctx, w, report)
+		if err != nil {
+			return err
+		}
 		snippet := map[string]any{"snippet": httpx.Truncate(report.ContentSnapshot, 140)}
 		staff, err := usersWith(ctx, w.tx, report.Gym, tenancy.PermManageReports)
 		if err != nil {
 			return err
 		}
 		if err := events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
-			Type: "report_filed", Users: staff, Gym: report.Gym, Params: snippet, URL: tenancy.GymPath(ctx, w.tx, report.Gym, "/manage/moderation"),
+			Type: "report_filed", Users: staff, Gym: report.Gym, Params: snippet, URL: tenancy.GymPath(ctx, w.tx, report.Gym, inboxPath("/manage/moderation", caseID)),
 		}); err != nil {
 			return err
 		}
@@ -146,13 +150,13 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 				return err
 			}
 			if err := events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
-				Type: "report_filed_platform", Users: admins, Gym: report.Gym, Params: snippet, URL: "/platform/moderation",
+				Type: "report_filed_platform", Users: admins, Gym: report.Gym, Params: snippet, URL: inboxPath("/platform/moderation", caseID),
 			}); err != nil {
 				return err
 			}
 		}
-		w.after = append(w.after, func(ctx context.Context) { m.sendReceipt(ctx, report) })
-		return m.countReport(ctx, w, report)
+		w.after = append(w.after, func(ctx context.Context) { m.sendReceipt(ctx, report, caseID) })
+		return nil
 	})
 	if err != nil {
 		return err
@@ -161,16 +165,16 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 }
 
 // countReport raises the content's case; content that is already hidden gets that decision instead of a case nobody can act on.
-func (m *module) countReport(ctx context.Context, w *work, report Report) error {
+func (m *module) countReport(ctx context.Context, w *work, report Report) (caseID string, err error) {
 	if it, err := itemOf(ctx, w.tx, report.ContentType, report.ContentID); err == nil && it.State == "hidden" {
-		return m.closeReports(ctx, w, report.ContentType, report.ContentID, "content_removed", it.Reason, "")
+		return it.ID, m.closeReports(ctx, w, it.ID, report.ContentType, report.ContentID, "content_removed", it.Reason, "")
 	}
 	it, err := m.queue(ctx, w, report.ContentType, report.ContentID, false)
 	if err != nil {
-		return err
+		return "", err
 	}
 	it.ReportsCount++
-	return m.save(ctx, w, &it)
+	return it.ID, m.save(ctx, w, &it)
 }
 
 func (m *module) listReports(w http.ResponseWriter, r *http.Request, gym string) error {
@@ -317,8 +321,12 @@ func (m *module) hideAuthor(w http.ResponseWriter, r *http.Request) error {
 			return nil
 		}
 		w.after = append(w.after, func(ctx context.Context) { m.sendStatement(ctx, authorID, hidden) })
+		link := "/"
+		if len(hidden) == 1 {
+			link = authorPath(ctx, w.tx, hidden[0])
+		}
 		return events.PublishNotify(ctx, w.tx, auth.UserID(ctx), events.Notify{
-			Type: "content_hidden", Users: []string{authorID}, Params: map[string]any{"reason": httpx.Truncate(hidden[0].Reason, 140)}, URL: "/",
+			Type: "content_hidden", Users: []string{authorID}, Params: map[string]any{"reason": httpx.Truncate(hidden[0].Reason, 140)}, URL: link,
 		})
 	})
 	if err != nil {
@@ -571,21 +579,11 @@ func (m *module) enrich(ctx context.Context, it *Item, viewer auth.Principal) {
 		it.Author = ""
 		delete(it.Snapshot, "user")
 	}
-	var routeID string
-	switch it.ContentType {
-	case "rating":
-		routeID, _ = it.Snapshot["route_id"].(string)
-	case "beta_video":
-		routeID, _ = it.Snapshot["route"].(string)
-	case "route":
-		routeID = it.ContentID
-	case "task":
-		db.QueryRow(ctx, `SELECT COALESCE(route, '') FROM tasks WHERE id = $1`, it.ContentID).Scan(&routeID)
-	case "competition_entry":
+	if it.ContentType == "competition_entry" {
 		db.QueryRow(ctx, `SELECT c.name FROM competition_entries e JOIN competitions c ON c.id = e.competition WHERE e.id = $1`, it.ContentID).
 			Scan(&c.Competition)
 	}
-	if routeID != "" {
+	if routeID := routeOf(ctx, db, *it); routeID != "" {
 		var route RouteSummary
 		if db.QueryRow(ctx, `SELECT id, name, grade, color FROM routes WHERE id = $1`, routeID).Scan(&route.ID, &route.Name, &route.Grade, &route.Color) == nil {
 			c.Route = &route
@@ -607,4 +605,36 @@ func (m *module) enrich(ctx context.Context, it *Item, viewer auth.Principal) {
 		c.Reports = append(c.Reports, reports...)
 	}
 	it.Context = c
+}
+
+func routeOf(ctx context.Context, q db.Querier, it Item) string {
+	var routeID string
+	switch it.ContentType {
+	case "rating":
+		routeID, _ = it.Snapshot["route_id"].(string)
+	case "beta_video":
+		routeID, _ = it.Snapshot["route"].(string)
+	case "route":
+		routeID = it.ContentID
+	case "task":
+		q.QueryRow(ctx, `SELECT COALESCE(route, '') FROM tasks WHERE id = $1`, it.ContentID).Scan(&routeID)
+	}
+	return routeID
+}
+
+// authorPath leads the author to where the decided content lived.
+func authorPath(ctx context.Context, q db.Querier, it Item) string {
+	switch it.ContentType {
+	case "profile":
+		return "/account/settings?tab=profile"
+	case "competition_entry":
+		var competition string
+		if q.QueryRow(ctx, `SELECT competition FROM competition_entries WHERE id = $1`, it.ContentID).Scan(&competition) == nil {
+			return tenancy.GymPath(ctx, q, it.Gym, "/competitions/"+competition)
+		}
+	}
+	if routeID := routeOf(ctx, q, it); routeID != "" {
+		return "/route?id=" + routeID
+	}
+	return "/"
 }
