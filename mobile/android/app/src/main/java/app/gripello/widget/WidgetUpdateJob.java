@@ -41,7 +41,9 @@ public class WidgetUpdateJob extends JobService {
     public boolean onStartJob(JobParameters params) {
         Context context = getApplicationContext();
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        int[] ids = manager.getAppWidgetIds(new ComponentName(context, ClimbingWidget.class));
+        int[] climbing = ClimbingWidget.ids(context, ClimbingWidget.class);
+        int[] gyms = ClimbingWidget.ids(context, GymWidget.class);
+        int[] ids = ClimbingWidget.placed(context);
         if (ids.length == 0) return false;
         running = params;
         loader.execute(() -> {
@@ -49,13 +51,15 @@ public class WidgetUpdateJob extends JobService {
             boolean current = false;
             again = false;
             try {
-                Map<Integer, WidgetData.Stats> stats = WidgetData.load(context, ids);
+                Map<Integer, WidgetData.Stats> stats = WidgetData.load(context, climbing);
+                Map<Integer, WidgetData.GymStats> gymStats = WidgetData.loadGyms(context, gyms);
                 // A stopped run was replaced; the newer one draws its own numbers.
                 if (running == params) {
                     current = true;
-                    for (int id : ids) ClimbingWidget.render(context, manager, id, stats.get(id));
+                    for (int id : climbing) ClimbingWidget.render(context, manager, id, stats.get(id));
+                    for (int id : gyms) GymWidget.render(context, manager, id, gymStats.get(id));
                     // A widget placed during the load had its onUpdate skipped as joining this run.
-                    int[] now = manager.getAppWidgetIds(new ComponentName(context, ClimbingWidget.class));
+                    int[] now = ClimbingWidget.placed(context);
                     Arrays.sort(ids);
                     Arrays.sort(now);
                     placedMeanwhile = !Arrays.equals(ids, now);

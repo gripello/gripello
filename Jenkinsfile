@@ -169,7 +169,11 @@ pipeline {
                     steps {
                         script {
                             reportCheck('Android') {
-                                runTestSuite('android-results', false)
+                                try {
+                                    runTestSuite('android-results', false)
+                                } finally {
+                                    junit testResults: 'test-results/android-results/junit/*.xml', allowEmptyResults: true
+                                }
                             }
                             archiveArtifacts artifacts: 'test-results/android-results/gripello*', allowEmptyArchive: true
                         }

@@ -664,9 +664,11 @@ export interface operations {
                 since?: string;
                 /** @description comma-separated route ids */
                 ids?: string;
+                /** @description `planned` = only routes with a planned strip date */
+                removal?: "planned";
                 /** @description comma-separated: location, wall, gym; filled into `expand` */
                 include?: components["parameters"]["Include"];
-                /** @description comma-separated keys, `-` prefix = descending; keys: name, created, updated, screw_date, average_rating, ratings_count, grade_index, type, anchor_point, comment, creator, color, archived_at, wall_position, location (by name). Default -created. */
+                /** @description comma-separated keys, `-` prefix = descending; keys: name, created, updated, screw_date, average_rating, ratings_count, grade_index, type, anchor_point, comment, creator, color, archived_at, wall_position, removal_planned_for, location (by name). Default -created. */
                 sort?: string;
                 page?: number;
                 limit?: number;

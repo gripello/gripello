@@ -1,17 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home-screen widget (ClimbingWidget.java); wording follows i18n/locales. -->
+<!-- Home-screen widgets (ClimbingWidget.java, GymWidget.java); wording follows i18n/locales. -->
 <resources>
     <string name="widget_name">Mijn klimmen</string>
-    <string name="widget_description">Je tops van deze week, je reeks en je laatste routes.</string>
+    <string name="widget_description">Je tops van deze week, je reeks en je rang.</string>
     <string name="widget_this_week">Deze week</string>
+    <string name="widget_this_week_lower">deze week</string>
     <string name="widget_sends">Tops</string>
-    <string name="widget_flashes">Flashes: %1$d</string>
-    <string name="widget_hardest">Zwaarste %1$s</string>
-    <string name="widget_latest">Laatste tops</string>
     <string name="widget_empty">Nog geen tops deze week</string>
     <string name="widget_sign_in">Log in bij Gripello om je klimmen te zien.</string>
     <string name="widget_all_gyms">Alle hallen</string>
     <string name="widget_choose_gym">Hal</string>
+    <string name="widget_hardest_label">Zwaarste</string>
+    <string name="widget_rank_label">Rang</string>
+    <string name="widget_flashes_label">Flashes</string>
+    <string name="widget_last_climb">Laatst</string>
+    <string name="widget_streak_keep">Klim voor zondag om hem te houden</string>
+    <string name="widget_streak_ends">Eindigt zondag</string>
+    <string name="widget_gym_name">Mijn hal</string>
+    <string name="widget_gym_description">Nu open, nieuwe routes van deze week en de volgende ombouw.</string>
+    <string name="widget_new_routes">Nieuwe routes</string>
+    <string name="widget_open_until">Open · tot %1$s</string>
+    <string name="widget_closed_opens">Gesloten · opent %1$s</string>
+    <string name="widget_closed_opens_day">Gesloten · opent %1$s %2$s</string>
+    <string name="widget_closed">Gesloten</string>
+    <string name="widget_followed_walls">Op muren die je volgt</string>
+    <string name="widget_newest">Nieuwste</string>
+    <string name="widget_resets">%1$s: eruit op %2$s</string>
+    <string name="widget_reset_on">Eruit op %1$s</string>
+    <string name="widget_next_reset">Volgende ombouw</string>
+    <string name="widget_last_new_route">Laatste nieuwe route</string>
+    <string name="widget_no_new_routes">Deze week geen nieuwe routes</string>
+    <string name="widget_pick_gym">Kies een hal</string>
     <plurals name="widget_streak">
         <item quantity="one">%1$d week op rij</item>
         <item quantity="other">%1$d weken op rij</item>

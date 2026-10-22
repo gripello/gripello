@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		B1D600000000000000000101 /* ClimbingWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1D600000000000000000001 /* ClimbingWidget.swift */; };
 		B1D600000000000000000102 /* GymIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1D600000000000000000002 /* GymIntent.swift */; };
+		B1D600000000000000000111 /* GymWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1D60000000000000000000B /* GymWidget.swift */; };
 		B1D600000000000000000103 /* WidgetAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1D600000000000000000003 /* WidgetAPI.swift */; };
 		B1D600000000000000000104 /* WidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1D600000000000000000004 /* WidgetStore.swift */; };
 		B1D600000000000000000105 /* WidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1D600000000000000000004 /* WidgetStore.swift */; };
@@ -57,6 +58,7 @@
 /* Begin PBXFileReference section */
 		B1D600000000000000000001 /* ClimbingWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClimbingWidget.swift; sourceTree = "<group>"; };
 		B1D600000000000000000002 /* GymIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymIntent.swift; sourceTree = "<group>"; };
+		B1D60000000000000000000B /* GymWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymWidget.swift; sourceTree = "<group>"; };
 		B1D600000000000000000003 /* WidgetAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAPI.swift; sourceTree = "<group>"; };
 		B1D600000000000000000004 /* WidgetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetStore.swift; sourceTree = "<group>"; };
 		B1D600000000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -106,6 +108,7 @@
 			children = (
 				B1D600000000000000000001 /* ClimbingWidget.swift */,
 				B1D600000000000000000002 /* GymIntent.swift */,
+				B1D60000000000000000000B /* GymWidget.swift */,
 				B1D600000000000000000003 /* WidgetAPI.swift */,
 				B1D600000000000000000004 /* WidgetStore.swift */,
 				B1D600000000000000000007 /* Localizable.xcstrings */,
@@ -345,6 +348,7 @@
 			files = (
 				B1D600000000000000000101 /* ClimbingWidget.swift in Sources */,
 				B1D600000000000000000102 /* GymIntent.swift in Sources */,
+				B1D600000000000000000111 /* GymWidget.swift in Sources */,
 				B1D600000000000000000103 /* WidgetAPI.swift in Sources */,
 				B1D600000000000000000104 /* WidgetStore.swift in Sources */,
 			);

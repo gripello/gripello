@@ -29,7 +29,7 @@ var routeSorts = map[string]string{
 	"name": "name", "created": "created", "updated": "updated", "screw_date": "screw_date",
 	"average_rating": "average_rating", "ratings_count": "ratings_count", "grade_index": "grade_index",
 	"type": "type", "anchor_point": "anchor_point", "comment": "comment", "creator": "creator::text",
-	"color": "color", "archived_at": "archived_at", "wall_position": "wall_position",
+	"color": "color", "archived_at": "archived_at", "wall_position": "wall_position", "removal_planned_for": "removal_planned_for",
 	"location": "(SELECT l.name FROM locations l WHERE l.id = average_rating.location)",
 }
 
@@ -103,6 +103,13 @@ func routeFilter(gym string, query map[string][]string) (*db.Where, error) {
 			return nil, httpx.Invalid("since", "Must be an RFC 3339 timestamp or a day as YYYY-MM-DD.")
 		}
 		where.Add("created >= ?", at)
+	}
+	switch get("removal") {
+	case "":
+	case "planned":
+		where.Clauses = append(where.Clauses, "removal_planned_for IS NOT NULL")
+	default:
+		return nil, httpx.Invalid("removal", "removal must be planned.")
 	}
 	if list := get("ids"); list != "" {
 		where.Add("id = ANY (?)", strings.Split(list, ","))
