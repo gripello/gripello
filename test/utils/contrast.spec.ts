@@ -124,7 +124,7 @@ describe('text colours', () => {
         const faded = files.flatMap((file) =>
             [
                 ...readFileSync(join('app', file), 'utf8').matchAll(
-                    /([^{}]+)\{[^{}]*?(?<![-\w])color:\s*color-mix\(\s*in oklab,\s*var\(--ui-text-highlighted\)/g,
+                    /(?<=^|[{}])([^{}]+)\{[^{}]*?(?<![-\w])color:\s*color-mix\(\s*in oklab,\s*var\(--ui-text-highlighted\)/g,
                 ),
             ]
                 .map((match) => match[1]!.trim())
