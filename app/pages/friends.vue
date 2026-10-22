@@ -56,21 +56,21 @@
                         :banner="byId.get(myId)?.banner"
                         :avatar="byId.get(myId)?.avatar"
                         :name="nameOf(myId)"
-                        sizes="33vw"
-                        class="h-20 max-lg:hidden"
+                        sizes="(min-width: 1024px) 33vw, 100vw"
+                        class="h-20"
                     />
                     <div
-                        class="relative flex flex-col items-center gap-3 p-2 text-center lg:-mt-10 lg:px-4 lg:pt-0 lg:pb-4"
+                        class="relative -mt-10 flex flex-col items-center gap-3 px-4 pb-4 text-center"
                     >
                         <ClimberAvatar
-                            class="ring-4 ring-(--ui-bg) max-lg:hidden"
+                            class="ring-4 ring-(--ui-bg)"
                             :id="myId"
                             :name="nameOf(myId)"
                             :src="byId.get(myId)?.avatar"
                             size="lg"
                         />
                         <p
-                            class="text-lg font-bold break-words text-highlighted max-lg:hidden"
+                            class="text-lg font-bold break-words text-highlighted"
                         >
                             {{ nameOf(myId) }}
                         </p>
@@ -100,7 +100,6 @@
                             variant="soft"
                             icon="i-lucide-id-card"
                             block
-                            class="max-lg:hidden"
                             data-testid="friends-my-profile"
                         >
                             {{ t('friends.myProfile') }}
