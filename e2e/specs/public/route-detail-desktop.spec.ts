@@ -3,37 +3,6 @@ import { createRating, updateRoute } from '../../support/api'
 import { gotoSettled } from '../../support/nav'
 import { uiaa } from '../../support/seed'
 
-test('puts the route details beside the reviews under the header', async ({
-    page,
-    createRoute,
-}) => {
-    const route = await createRoute({ comment: 'Start sitzend' })
-    await gotoSettled(page, `/route?id=${route.id}`)
-
-    const bar = (await page.getByTestId('route-bar').boundingBox())!
-    const details = (await page.getByTestId('route-details').boundingBox())!
-    const reviews = (await page.getByTestId('route-reviews').boundingBox())!
-
-    expect(bar.width).toBeGreaterThan(details.width * 2)
-    expect(reviews.y).toBeGreaterThanOrEqual(bar.y + bar.height - 1)
-    expect(details.x).toBeGreaterThanOrEqual(reviews.x + reviews.width)
-    expect(
-        Math.abs(details.x + details.width - (bar.x + bar.width)),
-    ).toBeLessThan(2)
-})
-
-test('reviews take the full width when there are no details', async ({
-    page,
-    createRoute,
-}) => {
-    const route = await createRoute({ anchor_point: 0 })
-    await gotoSettled(page, `/route?id=${route.id}`)
-
-    const bar = (await page.getByTestId('route-bar').boundingBox())!
-    const reviews = (await page.getByTestId('route-reviews').boundingBox())!
-    expect(Math.abs(reviews.width - bar.width)).toBeLessThan(2)
-})
-
 test('groups the grade card with the headline and keeps the name clear of the stats bar', async ({
     page,
     adminApi,

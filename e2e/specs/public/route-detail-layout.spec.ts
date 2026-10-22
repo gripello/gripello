@@ -38,12 +38,11 @@ for (const width of [360, 663, 768, 1024, 1440, 1920]) {
                 Math.abs(bar.x + bar.width - (hero.x + hero.width)),
             ).toBeLessThan(2)
         }
-        if (width < 1024) {
-            const details = await box('route-details')
-            expect(Math.abs(details.x - reviews.x)).toBeLessThan(2)
-            expect(Math.abs(details.width - reviews.width)).toBeLessThan(2)
-            await page.getByTestId('route-reviews').scrollIntoViewIfNeeded()
-            await expect(page.getByTestId('route-reviews')).toBeInViewport()
-        }
+        const details = await box('route-details')
+        expect(Math.abs(details.x - reviews.x)).toBeLessThan(2)
+        expect(Math.abs(details.width - reviews.width)).toBeLessThan(2)
+        expect(reviews.y).toBeGreaterThanOrEqual(details.y + details.height - 1)
+        await page.getByTestId('route-reviews').scrollIntoViewIfNeeded()
+        await expect(page.getByTestId('route-reviews')).toBeInViewport()
     })
 }
