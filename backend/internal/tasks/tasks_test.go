@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -370,18 +371,30 @@ func TestClimberWish(t *testing.T) {
 	}
 	testapp.WaitFor(t, func() bool { return len(f.notifications()) == 1 })
 	n := f.notifications()[0]
-	if n.Type != "task_wish_filed" || n.Params["location"] != "Hall" || n.URL != "/alpha/manage/tasks" || len(n.Users) != 2 {
+	if n.Type != "task_wish_filed" || n.Params["location"] != "Hall" || n.URL != "/alpha/manage/tasks?task="+id || len(n.Users) != 2 {
 		t.Errorf("wish notification = %+v", n)
+	}
+	f.call("setter", "POST", "/tasks/"+id+"/status", `{"status":"done"}`, http.StatusOK)
+	walled := f.call("climber", "POST", "/gyms/"+f.gymA+"/tasks", `{"kind":"wish","location":"`+f.hall+`","wall":"`+f.wallA+`","route_type":"Boulder","grade":"6a"}`, http.StatusCreated)["id"].(string)
+	f.call("setter", "POST", "/tasks/"+walled+"/status", `{"status":"done"}`, http.StatusOK)
+	var done []string
+	for _, n := range f.notifications() {
+		if n.Type == "task_wish_done" {
+			done = append(done, n.URL)
+		}
+	}
+	if want := []string{"/alpha/map?location=" + f.hall, "/alpha/map?location=" + f.hall + "&wall=" + f.wallA}; !slices.Equal(done, want) {
+		t.Errorf("wish done links = %v, want %v", done, want)
 	}
 }
 
 func TestUrgentDefectNotifiesAndMailsManagers(t *testing.T) {
 	f := newFixture(t)
-	f.defect("setter", "loose_bolt")
+	defect := f.defect("setter", "loose_bolt")
 	f.runUrgentAlerts()
 	notes := f.notifications()
 	if len(notes) != 1 || notes[0].Type != "task_defect_filed" || len(notes[0].Users) != 1 || notes[0].Users[0] != f.users["setter2"] ||
-		notes[0].Params["route"] != "Crimp" || notes[0].Params["gym"] != "Alpha" {
+		notes[0].Params["route"] != "Crimp" || notes[0].Params["gym"] != "Alpha" || notes[0].URL != "/alpha/manage/tasks?task="+defect {
 		t.Fatalf("defect notifications = %+v", notes)
 	}
 	mails := testapp.Mails(f.app)
@@ -423,7 +436,8 @@ func TestStaffTasksAndAssignees(t *testing.T) {
 		t.Errorf("task.created = %+v actor %q", change, actor)
 	}
 	notes := f.notifications()
-	if len(notes) != 1 || notes[0].Type != "task_assigned" || notes[0].Users[0] != f.users["setter2"] || notes[0].Params["title"] != "Clean" {
+	if len(notes) != 1 || notes[0].Type != "task_assigned" || notes[0].Users[0] != f.users["setter2"] || notes[0].Params["title"] != "Clean" ||
+		notes[0].URL != "/alpha/manage/tasks?task="+created["id"].(string) {
 		t.Errorf("assign notifications = %+v", notes)
 	}
 	list := items(f.call("setter", "GET", "/gyms/alpha/tasks/assignees", "", http.StatusOK))

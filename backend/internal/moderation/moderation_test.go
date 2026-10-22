@@ -166,6 +166,15 @@ func (f *fixture) notificationURL(kind string) string {
 	return f.exec(`SELECT payload->>'url' FROM events WHERE kind = 'notify' AND payload->>'type' = $1 ORDER BY id LIMIT 1`, kind)
 }
 
+func (f *fixture) notificationURLs(kind string) []string {
+	rows, _ := f.app.DB.Query(context.Background(), `SELECT payload->>'url' FROM events WHERE kind = 'notify' AND payload->>'type' = $1 ORDER BY id`, kind)
+	urls, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	return urls
+}
+
 func (f *fixture) report(contentType, contentID, reason string) string {
 	f.t.Helper()
 	body := `{"content_type":"` + contentType + `","content_id":"` + contentID + `","reason":"` + reason +
@@ -283,6 +292,9 @@ func TestModerationOfProfilesIsPlatformOnly(t *testing.T) {
 	if f.count(`SELECT count(*) FROM users WHERE id = $1 AND firstname = '' AND username = 'climber_' || id`, f.users["climber"]) != 1 {
 		t.Error("hidden profile kept its name")
 	}
+	if got := f.notificationURL("content_hidden"); got != "/account/settings?tab=profile" {
+		t.Errorf("content_hidden url = %s, want the profile settings", got)
+	}
 	f.call("operator", "POST", url, action("restore"), http.StatusOK)
 	if f.count(`SELECT count(*) FROM users WHERE id = $1 AND firstname = 'Rude' AND username = 'climber'`, f.users["climber"]) != 1 {
 		t.Error("restored profile lost its name")
@@ -397,6 +409,9 @@ func TestRemovingReportedContentHidesIt(t *testing.T) {
 	if f.notifications("content_hidden", "climber") != 1 {
 		t.Error("author not informed")
 	}
+	if got := f.notificationURL("content_hidden"); got != "/route?id="+f.route {
+		t.Errorf("content_hidden url = %s, want the review's route", got)
+	}
 	testapp.WaitFor(t, func() bool {
 		return f.count(`SELECT count(*) FROM reports WHERE id = $1 AND notified_at IS NOT NULL`, report) == 1
 	})
@@ -433,6 +448,9 @@ func TestPremoderatedUploadsWaitForTheGym(t *testing.T) {
 	if f.notifications("beta_approved", "climber") != 1 {
 		t.Error("author got no approval notice")
 	}
+	if got := f.notificationURL("beta_approved"); got != "/route?id="+f.route+"#beta-"+video {
+		t.Errorf("beta_approved url = %s, want the beta on its route", got)
+	}
 	if f.count(`SELECT count(*) FROM events WHERE topic = 'beta.created'`) != 1 || f.count(`SELECT count(*) FROM events WHERE kind = 'beta.created' AND topic LIKE 'gym_changes:%'`) != 2 {
 		t.Error("approval sent no beta.created events")
 	}
@@ -451,6 +469,9 @@ func TestRejectedUploadsAreDropped(t *testing.T) {
 	f.call("setterA", "POST", url, action("reject"), http.StatusOK)
 	if _, ok := f.find("beta_video", video); ok || f.notifications("beta_rejected", "climber") != 1 {
 		t.Error("rejected upload kept or author not told")
+	}
+	if got := f.notificationURL("beta_rejected"); got != "/route?id="+f.route {
+		t.Errorf("beta_rejected url = %s, want the route", got)
 	}
 }
 
@@ -498,11 +519,18 @@ func TestDecisionsCloseReports(t *testing.T) {
 	if f.notifications("report_decided_kept", "adminA") != 2 {
 		t.Error("report handlers not told about the decision")
 	}
+	caseURL := "/alpha/manage/moderation?case=" + f.item("rating", rating).ID
+	if got := f.notificationURLs("report_decided_kept"); !slices.Equal(got, []string{caseURL, caseURL}) {
+		t.Errorf("report_decided_kept urls = %v, want the case", got)
+	}
 
 	third := f.report("rating", rating, "harassment")
 	f.call("setterA", "POST", url, action("hide"), http.StatusOK)
 	if f.count(`SELECT count(*) FROM reports WHERE id = $1 AND status = 'actioned' AND decision_reason = 'spam'`, third) != 1 {
 		t.Error("hidden report not actioned")
+	}
+	if got := f.notificationURLs("report_decided_removed"); !slices.Equal(got, []string{caseURL}) {
+		t.Errorf("report_decided_removed urls = %v, want the case", got)
 	}
 	testapp.WaitFor(t, func() bool { return f.count(`SELECT count(*) FROM reports WHERE notified_at IS NOT NULL`) == 3 })
 }
@@ -563,6 +591,9 @@ func TestHidingAllContentOfAnAuthor(t *testing.T) {
 	}
 	if f.notifications("content_hidden", "climber") != 1 {
 		t.Error("author should get one hide notice for the whole batch")
+	}
+	if got := f.notificationURL("content_hidden"); got != "/" {
+		t.Errorf("batch content_hidden url = %s, want the start page", got)
 	}
 }
 
@@ -657,6 +688,9 @@ func TestReportsAlwaysGetADecision(t *testing.T) {
 	testapp.WaitFor(t, func() bool {
 		return f.count(`SELECT count(*) FROM reports WHERE content_id = $1 AND status = 'actioned'`, rating) == 1
 	})
+	if got := f.notificationURL("report_decided_removed"); got != "/alpha/manage/moderation" {
+		t.Errorf("deleted content's report_decided_removed url = %s, want the inbox (the case is gone)", got)
+	}
 
 	f.editProfile("climber", "Rude")
 	f.call("operator", "POST", "/moderation/"+f.item("profile", f.users["climber"]).ID, action("hide"), http.StatusOK)
@@ -791,7 +825,11 @@ func TestContactAddressGetsNoNotifierIdentity(t *testing.T) {
 		}
 		return desk && handler
 	})
+	caseURL := "/alpha/manage/moderation?case=" + f.item("rating", f.exec(`SELECT content_id FROM reports WHERE id = $1`, report)).ID
 	for _, m := range testapp.Mails(f.app) {
+		if (slices.Contains(m.To, "desk@example.com") || slices.Contains(m.To, "admina@example.com")) && !strings.Contains(m.Text, caseURL) {
+			t.Errorf("report alert to %v does not link the case %s", m.To, caseURL)
+		}
 		if slices.Contains(m.To, "desk@example.com") && strings.Contains(m.Text, "n@example.com") {
 			t.Error("contact address got the notifier's e-mail")
 		}
@@ -967,4 +1005,29 @@ func TestCasesListTheActionsDecideAccepts(t *testing.T) {
 
 	f.call("staffOperator", "POST", "/moderation/pendingitem0002", action("hide"), http.StatusOK, `"hidden_by":"platform"`)
 	f.call("reportsOnlyA", "POST", "/moderation/"+visible, action("hide"), http.StatusNotFound)
+}
+
+func TestReportsOnHiddenContentLinkTheHiddenCase(t *testing.T) {
+	f := newFixture(t)
+	it := f.call("operator", "POST", "/moderation/cases", `{"content_type":"route","content_id":"`+f.route+`"}`, http.StatusOK)
+	f.call("adminA", "POST", "/moderation/"+it["id"].(string), action("hide"), http.StatusOK)
+	f.report("route", f.route, "harassment")
+	caseURL := "/alpha/manage/moderation?case=" + it["id"].(string)
+	if got := f.notificationURL("report_filed"); got != caseURL {
+		t.Errorf("report_filed url = %s, want the hidden case", got)
+	}
+	if got := f.notificationURL("report_decided_removed"); got != caseURL {
+		t.Errorf("report_decided_removed url = %s, want the hidden case", got)
+	}
+}
+
+func TestHiddenEntriesLeadToTheirCompetition(t *testing.T) {
+	f := newFixture(t)
+	entry := f.entry()
+	competition := f.exec(`SELECT competition FROM competition_entries WHERE id = $1`, entry)
+	it := f.call("operator", "POST", "/moderation/cases", `{"content_type":"competition_entry","content_id":"`+entry+`"}`, http.StatusOK)
+	f.call("operator", "POST", "/moderation/"+it["id"].(string), action("hide"), http.StatusOK)
+	if got := f.notificationURL("content_hidden"); got != "/alpha/competitions/"+competition {
+		t.Errorf("content_hidden url = %s, want the competition", got)
+	}
 }

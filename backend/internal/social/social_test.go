@@ -108,6 +108,17 @@ func (f *fixture) outbox(topic string) []events.Event {
 	return out
 }
 
+func (f *fixture) notifiedURL(kind string) string {
+	for _, e := range f.outbox(events.TopicNotify) {
+		var n events.Notify
+		json.Unmarshal(e.Payload, &n)
+		if n.Type == kind {
+			return n.URL
+		}
+	}
+	return ""
+}
+
 func (f *fixture) notified(kind, user string) bool {
 	for _, e := range f.outbox(events.TopicNotify) {
 		var n events.Notify
@@ -135,6 +146,9 @@ func TestFollowPolicies(t *testing.T) {
 	if !f.notified("follow_requested", "admin") || !f.notified("new_follower", "setter") {
 		t.Error("followees were not notified")
 	}
+	if f.notifiedURL("follow_requested") != "/friends" || f.notifiedURL("new_follower") != "/climber?id="+f.users["climber"] {
+		t.Errorf("follow links = %s, %s", f.notifiedURL("follow_requested"), f.notifiedURL("new_follower"))
+	}
 
 	f.call("climber", "POST", "/follows/"+pending.ID+"/accept", "", http.StatusNotFound)
 	f.call("setter", "POST", "/follows/"+pending.ID+"/accept", "", http.StatusNotFound)
@@ -142,6 +156,9 @@ func TestFollowPolicies(t *testing.T) {
 	f.call("admin", "POST", "/follows/"+pending.ID+"/accept", "", http.StatusBadRequest)
 	if !f.notified("follow_accepted", "climber") {
 		t.Error("follower was not told about the accepted request")
+	}
+	if got := f.notifiedURL("follow_accepted"); got != "/climber?id="+f.users["admin"] {
+		t.Errorf("follow_accepted url = %s, want the followee", got)
 	}
 
 	f.call("hidden", "GET", "/me/follows", "", http.StatusOK, `[]`)

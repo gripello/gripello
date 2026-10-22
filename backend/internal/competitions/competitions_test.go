@@ -846,7 +846,8 @@ func TestManagerRegistrationNotifiesAndHidesUserIDs(t *testing.T) {
 		`{"category":"`+category+`","display_name":"O","birth_year":1990,"user":"`+f.users["other"]+`"}`, http.StatusCreated)["id"].(string)
 	var n events.Notify
 	notes := f.events(events.TopicNotify)
-	if len(notes) != 1 || json.Unmarshal(notes[0].Payload, &n) != nil || n.Type != "competition_entry_added" || n.Users[0] != f.users["other"] {
+	if len(notes) != 1 || json.Unmarshal(notes[0].Payload, &n) != nil || n.Type != "competition_entry_added" || n.Users[0] != f.users["other"] ||
+		n.URL != "/alpha/competitions/"+id {
 		t.Errorf("notify = %+v", notes)
 	}
 	f.call("other", "PATCH", "/competition-entries/"+entry, `{"status":"withdrawn"}`, http.StatusOK)

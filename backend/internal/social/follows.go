@@ -174,7 +174,7 @@ func (m *module) postFollow(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		n := events.Notify{Type: "follow_requested", Users: []string{follow.Followee}, Params: map[string]any{"name": follower.fullName()}, URL: "/friends?tab=requests"}
+		n := events.Notify{Type: "follow_requested", Users: []string{follow.Followee}, Params: map[string]any{"name": follower.fullName()}, URL: "/friends"}
 		if status == "accepted" {
 			n.Type, n.URL = "new_follower", "/climber?id="+principal.UserID
 		}

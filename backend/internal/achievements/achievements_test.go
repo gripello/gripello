@@ -196,6 +196,9 @@ func TestAchievementsAwardNotifyAndPrivacy(t *testing.T) {
 	if f.badges(climber) == 0 || f.notified(climber) != 1 {
 		t.Fatalf("a new climber's first send: badges %d, notifications %d", f.badges(climber), f.notified(climber))
 	}
+	if link := f.exec(`SELECT payload->>'url' FROM events WHERE topic = 'notify' AND payload->>'type' = 'achievement_earned'`); link != "/climber?id="+climber+"#achievements" {
+		t.Errorf("achievement_earned url = %s, want the climber's badges", link)
+	}
 
 	f.tick(setter, route, "top", time.Now().AddDate(0, 0, -40))
 	f.evaluate(setter)

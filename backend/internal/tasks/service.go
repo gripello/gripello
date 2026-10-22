@@ -297,15 +297,15 @@ func (m *module) notifyCreated(ctx context.Context, tx pgx.Tx, t Task, actor str
 	if err != nil {
 		return err
 	}
-	board := tenancy.GymPath(ctx, tx, t.Gym, "/manage/tasks")
+	link := taskPath(ctx, tx, t)
 	switch t.Kind {
 	case "defect":
 		g, _ := findGym(ctx, tx, t.Gym)
 		err = events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "task_defect_filed", Users: withoutUser(managers, actor), Gym: t.Gym,
-			Params: defectFiledParams(routeName(ctx, tx, t.Route), g.Name), URL: board})
+			Params: defectFiledParams(routeName(ctx, tx, t.Route), g.Name), URL: link})
 	case "wish":
 		err = events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "task_wish_filed", Users: withoutUser(managers, actor), Gym: t.Gym,
-			Params: wishParams(ctx, tx, t), URL: board})
+			Params: wishParams(ctx, tx, t), URL: link})
 	}
 	if err != nil {
 		return err
@@ -322,7 +322,19 @@ func (m *module) notifyAssignee(ctx context.Context, tx pgx.Tx, t Task, actor st
 		label = routeName(ctx, tx, t.Route)
 	}
 	return events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "task_assigned", Users: []string{t.Assignee}, Gym: t.Gym,
-		Params: map[string]any{"title": label}, URL: tenancy.GymPath(ctx, tx, t.Gym, "/manage/tasks")})
+		Params: map[string]any{"title": label}, URL: taskPath(ctx, tx, t)})
+}
+
+func taskPath(ctx context.Context, q db.Querier, t Task) string {
+	return tenancy.GymPath(ctx, q, t.Gym, "/manage/tasks?task="+t.ID)
+}
+
+func wishPlacePath(ctx context.Context, q db.Querier, t Task) string {
+	path := "/map?location=" + t.Location
+	if t.Wall != "" {
+		path += "&wall=" + t.Wall
+	}
+	return tenancy.GymPath(ctx, q, t.Gym, path)
 }
 
 func wishParams(ctx context.Context, q db.Querier, t Task) map[string]any {
@@ -415,7 +427,7 @@ func (m *module) notifyReporterOfDone(ctx context.Context, tx pgx.Tx, t Task) er
 			Params: map[string]any{"route": routeName(ctx, tx, t.Route)}, URL: "/route?id=" + t.Route})
 	case "wish":
 		return events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "task_wish_done", Users: []string{t.Reporter}, Gym: t.Gym,
-			Params: wishParams(ctx, tx, t), URL: tenancy.GymPath(ctx, tx, t.Gym, "/routes")})
+			Params: wishParams(ctx, tx, t), URL: wishPlacePath(ctx, tx, t)})
 	}
 	return nil
 }

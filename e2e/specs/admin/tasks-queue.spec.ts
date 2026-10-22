@@ -8,6 +8,8 @@ import {
     notificationsOfType,
 } from '../../support/api'
 import { reportDefect } from '../../support/tasks'
+import { openFromBell } from '../../support/notifications'
+import type { NotificationRecord } from '../../../types/models'
 
 test('a setter fixes a reported defect and the reporter is notified', async ({
     setterPage,
@@ -22,7 +24,28 @@ test('a setter fixes a reported defect and the reporter is notified', async ({
         description: `${testPrefix} loose bolt`,
     })
 
+    const setterApi = await apiOf(setterPage)
+    let filed: NotificationRecord | undefined
+    await expect
+        .poll(
+            async () =>
+                !!(filed = (
+                    await notificationsOfType(setterApi, 'task_defect_filed')
+                ).find((item) => item.url?.endsWith(`?task=${taskId}`))),
+        )
+        .toBe(true)
+
     await gotoSettled(setterPage, '/manage/tasks', /\/manage\/tasks/)
+    await openFromBell(setterPage, filed!.id)
+    const dialog = setterPage.getByTestId('task-form-dialog')
+    await expect(dialog).toBeVisible()
+    await expect(setterPage.getByTestId('task-form-description')).toHaveValue(
+        `${testPrefix} loose bolt`,
+    )
+    await setterPage.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await expect(setterPage).not.toHaveURL(/task=/)
+
     const card = setterPage.getByTestId(`task-card-${taskId}`)
     await expect(card).toBeVisible()
     await expect(card.getByTestId('task-card-priority')).toBeVisible()
