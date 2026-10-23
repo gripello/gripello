@@ -73,10 +73,13 @@ const now = useMountedNow(60_000)
 const days = computed(() =>
     weekTimeline(props.hours).map((row, index, week) => ({
         ...row,
+        segments: row.segments.filter((segment) => segment.to > segment.from),
         shown: row.intervals.length
             ? row.intervals
             : (props.hours?.[week[(index + 6) % 7]!.day] ?? [])
-                  .filter(([opens, closes]) => closes < opens)
+                  .filter(
+                      ([opens, closes]) => closes < opens && closes !== '00:00',
+                  )
                   .map(([, closes]): OpeningInterval => ['00:00', closes]),
     })),
 )

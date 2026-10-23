@@ -69,4 +69,16 @@ describe('GymWeekHours', () => {
         expect(saturday.text()).not.toContain('gymInfo.closed')
         expect(saturday.classes()).not.toContain('max-sm:hidden')
     })
+
+    it('keeps the day after a midnight closing closed', () => {
+        const wrapper = createWrapper({
+            hours: { sat: [['18:00', '00:00']] },
+            today: 'mon',
+        })
+
+        const sunday = wrapper.get('[data-testid="gym-hours-day-sun"]')
+        expect(sunday.text()).toContain('gymInfo.closed')
+        expect(sunday.findAll('.week-hours__segment')).toHaveLength(0)
+        expect(sunday.classes()).toContain('max-sm:hidden')
+    })
 })
