@@ -62,6 +62,7 @@
                             v-model="form.email"
                             type="email"
                             autocomplete="off"
+                            :disabled="ownAccount"
                             class="w-full"
                             data-testid="platform-user-email"
                         />
@@ -241,11 +242,11 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const locked = computed(
-    () =>
-        !!props.user?.platform_admin &&
-        props.user.id !== useAuthState().currentUserId(),
+const authState = useAuthState()
+const ownAccount = computed(
+    () => !!props.user && props.user.id === authState.currentUserId(),
 )
+const locked = computed(() => !!props.user?.platform_admin && !ownAccount.value)
 
 function formFrom(user: UserRecord | null) {
     return {

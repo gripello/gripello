@@ -1,6 +1,7 @@
 import type { WatchSource } from 'vue'
 import { reauthenticate } from '~/api/account'
 import { isWrongPassword, needsPasswordFirst } from '~/utils/reauth'
+import { throttledErrorKey } from '~/utils/authErrors'
 
 export function useReauth(open?: WatchSource<unknown>) {
     const { t } = useI18n()
@@ -15,6 +16,8 @@ export function useReauth(open?: WatchSource<unknown>) {
             if (isWrongPassword(error))
                 return t('platform.users.adminPasswordWrong')
             if (needsPasswordFirst(error)) return t('account.passwordRequired')
+            const throttled = throttledErrorKey(error)
+            if (throttled) return t(throttled)
             return typeof fallback === 'string' ? fallback : fallback(error)
         }
     }

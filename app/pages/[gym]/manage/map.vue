@@ -400,7 +400,7 @@
                                 color="error"
                                 icon="i-lucide-history"
                                 :disabled="
-                                    !placement.savedWallRouteIds.value.length ||
+                                    !resettableRouteIds.length ||
                                     placement.changes.value.length > 0
                                 "
                                 :title="
@@ -592,7 +592,7 @@
             :title="$t('mapPlacement.resetWall')"
             :message="
                 $t('mapPlacement.resetConfirm', {
-                    n: placement.savedWallRouteIds.value.length,
+                    n: resettableRouteIds.length,
                     wall: placement.selectedWall.value?.name ?? '',
                 })
             "
@@ -636,6 +636,7 @@ import {
     wallResetRows,
     type PlannableRoute,
 } from '~/utils/wallResets'
+import { removableRouteIds } from '~/utils/inventory'
 import type { SheetSnap } from '~/components/map/Sheet.vue'
 import { formatAnchorPoint, formatDate } from '#shared/utils/formatting'
 import { cacheKeys, type GymChange } from '~/utils/realtimeCache'
@@ -971,6 +972,10 @@ async function save() {
 }
 
 const resetDialogOpen = ref(false)
+const resettableRouteIds = computed(() => {
+    const onWall = new Set(placement.savedWallRouteIds.value)
+    return removableRouteIds(routes.value.filter((item) => onWall.has(item.id)))
+})
 const { pending: resetting, run: runReset } = useAsyncAction()
 
 async function resetWall() {
@@ -980,8 +985,8 @@ async function resetWall() {
         const { items } = await listRoutes<RouteRecord>(gymId.value, {
             wall: wallId,
         })
-        const ids = items.map((item) => item.id)
-        await archiveRoutes(gymId.value, ids)
+        const ids = removableRouteIds(items)
+        if (ids.length) await archiveRoutes(gymId.value, ids)
         await Promise.all([refreshRoutes(), refreshLastReset()])
         return ids.length
     })

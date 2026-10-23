@@ -388,7 +388,7 @@ func (m *module) deleteMe(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		if len(gyms) > 0 {
-			return httpx.BadRequest("A gym needs at least one admin.")
+			return httpx.BadRequest("A gym needs at least one admin.").Field("gym", "validation_last_admin", "A gym needs at least one admin.")
 		}
 		sessions, err := idsOf(ctx, tx, `SELECT id FROM sessions WHERE "user" = $1`, p.UserID)
 		if err != nil {

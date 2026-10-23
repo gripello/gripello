@@ -33,6 +33,7 @@ interface ExportRequest {
     kind?: (typeof KINDS)[number]
     format?: (typeof FORMATS)[number]
     locale?: string
+    timeZone?: string
     labels?: ExportLabels & CertificateLabels & { title: string }
 }
 
@@ -80,7 +81,10 @@ export default eventHandler(async (event) => {
         ),
     })
 
-    const subtitle = [dateRange(competition, locale), gym?.name]
+    const subtitle = [
+        dateRange(competition, locale, safeTimeZone(body.timeZone)),
+        gym?.name,
+    ]
         .filter(Boolean)
         .join(' · ')
 
@@ -390,13 +394,26 @@ function drawCertificate(
         })
 }
 
-function dateRange(competition: CompetitionRecord, locale: string) {
-    return new Intl.DateTimeFormat(locale, { dateStyle: 'long' })
+export function dateRange(
+    competition: Pick<CompetitionRecord, 'starts_at' | 'ends_at'>,
+    locale: string,
+    timeZone: string | undefined,
+) {
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone })
         .formatRange(
             new Date(competition.starts_at),
             new Date(competition.ends_at),
         )
         .replace(/\s/g, ' ')
+}
+
+export function safeTimeZone(timeZone: string | undefined) {
+    try {
+        return new Intl.DateTimeFormat('en', { timeZone }).resolvedOptions()
+            .timeZone
+    } catch {
+        return undefined
+    }
 }
 
 function safeLocale(locale: string | undefined) {

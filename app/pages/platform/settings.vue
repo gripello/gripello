@@ -35,6 +35,7 @@
                     ? !!sectionEditor(activeSection)?.hasChanges
                     : activeSection !== 'signIn' && hasChanges
             "
+            :unsaved-changes="unsavedChanges"
             :saving="
                 EDITOR_SECTIONS.includes(activeSection)
                     ? !!sectionEditor(activeSection)?.saving
@@ -53,22 +54,25 @@
             "
         >
             <PlatformMailSettings
-                v-if="activeSection === 'mail'"
+                v-if="visitedSections.has('mail')"
+                v-show="activeSection === 'mail'"
                 ref="mailSettings"
             />
             <PlatformBlocklistSettings
-                v-else-if="activeSection === 'blocklists'"
+                v-if="visitedSections.has('blocklists')"
+                v-show="activeSection === 'blocklists'"
                 ref="blocklistSettings"
             />
-            <PlatformOAuthSettings v-else-if="activeSection === 'signIn'" />
+            <PlatformOAuthSettings v-if="activeSection === 'signIn'" />
             <UForm
-                v-else
+                v-else-if="!EDITOR_SECTIONS.includes(activeSection)"
                 ref="settingsForm"
                 :state="form"
                 :validate="validateSettings"
                 class="flex flex-col gap-6"
                 data-testid="platform-settings-form"
                 @submit="saveSettings"
+                @error="showSectionOf($event.errors)"
             >
                 <LayoutPanel
                     v-if="activeSection === 'access'"
@@ -199,11 +203,12 @@
 
 <script setup lang="ts">
 import { updateSettings } from '~/api/gyms'
-import type { Form } from '@nuxt/ui'
+import type { Form, FormError } from '@nuxt/ui'
 import type { SettingsRecord } from '~/types/models'
 import { privacyDocProblem } from '~/utils/privacyEditor'
 import { type RichTextDoc } from '#shared/utils/privacyDoc'
 import { requestedSection } from '~/utils/navigation'
+import { changedFields } from '~/utils/routes'
 import { SETTINGS_FIELD_UI, SETTINGS_FIELDS_GRID } from '~/utils/settingsUi'
 import { integerBetween, validEmail, validateRules } from '~/utils/validation'
 
@@ -231,6 +236,7 @@ type SettingsForm = ReturnType<typeof formFrom>
 
 const {
     form,
+    pristine,
     hasChanges,
     reset: resetForm,
     commit,
@@ -290,6 +296,31 @@ function sectionEditor(section: string) {
     return null
 }
 
+const visitedSections = reactive(new Set<string>())
+watch(activeSection, (section) => visitedSections.add(section), {
+    immediate: true,
+})
+const unsavedChanges = computed(
+    () =>
+        hasChanges.value ||
+        EDITOR_SECTIONS.some((section) => sectionEditor(section)?.hasChanges),
+)
+
+const FIELD_SECTIONS: Record<string, string> = {
+    audit_retention_days: 'access',
+    contact_email: 'links',
+    privacy_doc: 'privacy',
+}
+const { select: selectSection } = useSectionQuery('section')
+
+function showSectionOf(errors: Pick<FormError, 'name'>[]) {
+    const failing = errors
+        .map((error) => FIELD_SECTIONS[error.name ?? ''])
+        .filter((section): section is string => !!section)
+    if (failing[0] && !failing.includes(String(route.query.section)))
+        selectSection(failing[0])
+}
+
 const fieldUi = SETTINGS_FIELD_UI
 function validateSettings(state: SettingsForm) {
     return validateRules(state, {
@@ -303,17 +334,27 @@ function validateSettings(state: SettingsForm) {
 
 const { pending: saving, run: runSave } = useAsyncAction()
 
+function settingsPayload(values: SettingsForm) {
+    return {
+        ...values,
+        contact_email: values.contact_email.trim(),
+        imprint_url: values.imprint_url.trim(),
+        privacy_url: values.privacy_url.trim(),
+        legal_name: values.legal_name.trim(),
+        ...legalPayload(values),
+    }
+}
+
 async function saveSettings() {
+    if (saving.value) return
+    const changed = changedFields(
+        settingsPayload(form),
+        settingsPayload(pristine.value),
+    )
+    if (!Object.keys(changed).length) return commit()
     await runSave(
         async () => {
-            const saved = await updateSettings({
-                ...form,
-                contact_email: form.contact_email.trim(),
-                imprint_url: form.imprint_url.trim(),
-                privacy_url: form.privacy_url.trim(),
-                legal_name: form.legal_name.trim(),
-                ...legalPayload(form),
-            })
+            const saved = await updateSettings(changed)
             commit(saved)
         },
         {

@@ -1,7 +1,7 @@
 import { INVENTORY_STORAGE_KEY } from './inventory'
 import { TICKS_DB } from './tickOutbox'
 import { RECENT_GYMS_KEY } from './recentGyms'
-import { PUSH_DECLINED_KEY } from './push'
+import { PUSH_DECLINED_KEY, PUSH_DEVICE_USER_KEY } from './push'
 import { AUTH_COOKIE, SESSION_ONLY_AUTH_COOKIE } from '#shared/utils/authCookie'
 import {
     GYM_COOKIE,
@@ -100,6 +100,12 @@ export const CLIENT_STORAGE: ClientStorageEntry[] = [
         name: PUSH_DECLINED_KEY,
         kind: 'localStorage',
         purpose: 'pushDeclined',
+        duration: 'persistent',
+    },
+    {
+        name: PUSH_DEVICE_USER_KEY,
+        kind: 'localStorage',
+        purpose: 'pushDeviceUser',
         duration: 'persistent',
     },
     {

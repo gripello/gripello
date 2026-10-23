@@ -81,9 +81,44 @@ export function useMapEditor() {
         tool.value = 'select'
     }
 
-    function markSaved(next: EditorState) {
+    function markSaved(
+        next: EditorState,
+        createdIdByKey: ReadonlyMap<string, string> = new Map(),
+    ) {
+        const withCreatedIds = (snapshot: EditorState): EditorState => {
+            if (!snapshot.walls.some((wall) => createdIdByKey.has(wall.key)))
+                return snapshot
+            return {
+                ...snapshot,
+                walls: snapshot.walls.map((wall) => {
+                    const id = createdIdByKey.get(wall.key)
+                    return id ? { ...wall, id, key: id } : wall
+                }),
+            }
+        }
         state.value = next
         saved.value = next
+        past.value = past.value.map(withCreatedIds)
+        future.value = future.value.map(withCreatedIds)
+        const selected = selection.value
+        if (selected?.kind === 'wall' && createdIdByKey.has(selected.key))
+            selection.value = {
+                kind: 'wall',
+                key: createdIdByKey.get(selected.key)!,
+            }
+        const vertex = selectedVertex.value
+        if (
+            vertex &&
+            vertex.path.type !== 'shape' &&
+            createdIdByKey.has(vertex.path.key)
+        )
+            selectedVertex.value = {
+                ...vertex,
+                path: {
+                    ...vertex.path,
+                    key: createdIdByKey.get(vertex.path.key)!,
+                },
+            }
     }
 
     function commit(next: EditorState) {

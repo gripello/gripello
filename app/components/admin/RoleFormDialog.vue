@@ -84,6 +84,7 @@
 
 <script setup lang="ts">
 import type { ApiError } from '~/api/client'
+import { fieldErrorCode, formFieldErrors } from '~/utils/fieldErrors'
 import { createRole, updateRole } from '~/api/members'
 import type { Form } from '@nuxt/ui'
 import { required, maxLength, validateRules } from '~/utils/validation'
@@ -180,16 +181,17 @@ function close() {
 }
 
 async function save() {
-    if ((await form.value?.validate({ silent: true })) === false) return
-
-    const payload = {
-        name: nameLocked.value ? (props.role?.name ?? '') : draft.name.trim(),
-        description: draft.description.trim(),
-        color: toHex6(draft.color),
-    }
-
+    if (saving.value) return
     saving.value = true
     try {
+        if ((await form.value?.validate({ silent: true })) === false) return
+        const payload = {
+            name: nameLocked.value
+                ? (props.role?.name ?? '')
+                : draft.name.trim(),
+            description: draft.description.trim(),
+            color: toHex6(draft.color),
+        }
         const saved = isEdit.value
             ? await updateRole(props.role!.id!, payload)
             : await createRole(gymId.value, {
@@ -199,8 +201,12 @@ async function save() {
         emit('saved', isEdit.value ? 'updated' : 'created', saved.id)
         close()
     } catch (err) {
-        if ((err as ApiError)?.response?.data?.name) {
-            nameError.value = t('permissions.nameTaken')
+        const nameCode = fieldErrorCode(err, 'name')
+        if (nameCode) {
+            nameError.value =
+                nameCode === 'validation_not_unique'
+                    ? t('permissions.nameTaken')
+                    : formFieldErrors(err, ['name'], t)[0]!.message
             return
         }
         if ((err as ApiError)?.status === 403) {

@@ -132,10 +132,13 @@ func (m *module) upsertScores(ctx context.Context, competitionID string, inputs 
 			if err != nil {
 				return httpx.Invalid("comp_route", "Route is not part of this competition.")
 			}
-			if err := guardScore(&s, e, r, c, v, now); err != nil {
+			scorer := v
+			// staff who compete score their own entry as climbers
+			scorer.staff = v.staff && e.User != v.user
+			if err := guardScore(&s, e, r, c, scorer, now); err != nil {
 				return err
 			}
-			s.ID, s.ScoredBy, s.ByJudge = ids.New(), &v.user, v.staff
+			s.ID, s.ScoredBy, s.ByJudge = ids.New(), &v.user, scorer.staff
 			stored, err := upsertScore(ctx, tx, s)
 			if errors.Is(err, httpx.ErrNotFound) {
 				return httpx.NewError(http.StatusForbidden, "A judge already scored this route.")

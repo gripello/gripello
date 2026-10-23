@@ -1,4 +1,4 @@
-import { isOfflineError } from '~/utils/errors'
+import { isOfflineError, isRetryableSaveError } from '~/utils/errors'
 import type { TickRecord } from '~/types/models'
 import {
     createTick as postTick,
@@ -10,9 +10,12 @@ import {
     currentTickOp,
     currentTickRecord,
     enqueueTickOp,
+    countServerError,
     isAlreadyApplied,
+    isServerError,
     opsOfUser,
     replayFailure,
+    serverGaveUp,
     settleReplayedOp,
     updatableFields,
     TICKS_DB,
@@ -162,6 +165,11 @@ export function useTickOutbox() {
         void navigator.storage?.persist?.().catch(() => {})
     }
 
+    function dropOps(id: string) {
+        if (queue.value.some((op) => op.id === id))
+            setQueue(queue.value.filter((op) => op.id !== id))
+    }
+
     async function createTick(
         fields: Omit<TickRecord, 'id' | 'created' | 'updated'>,
     ) {
@@ -209,13 +217,16 @@ export function useTickOutbox() {
             })
             return { tick: record, queued: true }
         }
-        if (queue.value.some((op) => op.op === 'create' && op.id === tick.id))
-            return queued()
+        const queuedOp = queue.value.find((op) => op.id === tick.id)
+        if (queuedOp?.op === 'create') return queued()
         try {
-            return {
-                tick: await patchTick(tick.id, fields),
-                queued: false,
-            }
+            // the tick shown carries the queued edit's values, so send them along
+            const saved = await patchTick(
+                tick.id,
+                queuedOp ? updatableFields(record) : fields,
+            )
+            dropOps(tick.id)
+            return { tick: saved, queued: false }
         } catch (error) {
             if (!available || !isOfflineError(error)) throw error
             return queued()
@@ -230,6 +241,7 @@ export function useTickOutbox() {
         }
         try {
             await removeTick(id)
+            dropOps(id)
             return { queued: false }
         } catch (error) {
             if (!available || !isOfflineError(error)) throw error
@@ -266,14 +278,31 @@ export function useTickOutbox() {
             (op) => !op.failed,
         )
         if (!replayable.length) return
-        for (const op of replayable) {
+        for (const queued of replayable) {
+            let op = queued
             try {
                 if (op.op === 'create') await postTick(op.record!)
                 else if (op.op === 'update')
                     await patchTick(op.id, updatableFields(op.record))
                 else await removeTick(op.id)
             } catch (error) {
-                if (isOfflineError(error)) break
+                if (isServerError(error)) {
+                    const counted = countServerError(op)
+                    setQueue(
+                        queue.value.map((entry) =>
+                            entry === op ? counted : entry,
+                        ),
+                    )
+                    op =
+                        queue.value.find((entry) => entry.id === op.id) ??
+                        counted
+                    if (!serverGaveUp(op)) break
+                } else if (
+                    isOfflineError(error) ||
+                    isRetryableSaveError(error) ||
+                    (error as { status?: number } | null)?.status === 401
+                )
+                    break
                 if (op.op !== 'delete' && !isAlreadyApplied(op, error)) {
                     console.error('Replaying tick failed:', error)
                     setQueue(

@@ -238,7 +238,8 @@ const {
     refresh,
 } = await useAsyncData(`platform-gym-${gymId}`, () => getGymById(gymId))
 useLiveRefresh(gymTopic(gymId), refresh, {
-    when: (event: GymEvent) => event.kind === 'gym.updated',
+    when: (event: GymEvent) =>
+        event.kind === 'gym.updated' || event.kind === 'gym.trial_changed',
 })
 
 useHead({

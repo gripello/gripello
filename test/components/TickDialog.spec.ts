@@ -54,6 +54,8 @@ describe('TickDialog', () => {
             return target
         })
         vi.stubGlobal('useAuthStore', () => ({ record: { id: 'u1' } }))
+        vi.stubGlobal('useGym', () => ({ gym: ref(gym) }))
+        vi.stubGlobal('useNuxtApp', () => ({ _asyncData: asyncData }))
         vi.stubGlobal('useTickOutbox', () => ({
             createTick,
             updateTick: vi.fn(),
@@ -65,6 +67,11 @@ describe('TickDialog', () => {
     })
 
     const templateRefs = new Map<string, { value: unknown }>()
+    const gym = { id: 'g1', slug: 'hall', name: 'Hall' }
+    let asyncData: Record<string, { data: { value: unknown } }> = {}
+    afterEach(() => {
+        asyncData = {}
+    })
 
     it('keeps the note after a failed save and saves exactly once per click', async () => {
         let fail!: (error: unknown) => void
@@ -135,5 +142,70 @@ describe('TickDialog', () => {
         expect(
             (wrapper.get('textarea').element as HTMLTextAreaElement).value,
         ).toBe('Kept')
+    })
+
+    it('maps a refused date onto the day field and shows the rate limit', async () => {
+        createTick.mockRejectedValueOnce({
+            status: 400,
+            response: { data: { date: { code: 'validation_invalid_value' } } },
+        })
+        const wrapper = mountDialog()
+        await wrapper.setProps({ modelValue: true })
+        const submit = wrapper.get('[data-testid="tick-submit"]')
+        await submit.trigger('click')
+        await flushPromises()
+        expect(setErrors).toHaveBeenCalledWith([
+            { name: 'day', message: expect.any(String) },
+        ])
+
+        createTick.mockRejectedValueOnce({ status: 429 })
+        await submit.trigger('click')
+        await flushPromises()
+        expect(notifyError).toHaveBeenCalledWith('errors.rateLimited')
+    })
+
+    it('gives a new tick the route snapshot so a queued tick shows its route', async () => {
+        asyncData = {
+            'route:r1': {
+                data: {
+                    value: {
+                        id: 'r1',
+                        gym: 'g1',
+                        name: 'Crimpy',
+                        type: 'Boulder',
+                        color: '#ff0000',
+                        grade: '6A',
+                        grade_system: 'font',
+                        grade_index: 12,
+                        archived: false,
+                        permanent: false,
+                        location: 'l1',
+                        wall: 'w1',
+                    },
+                },
+            },
+        }
+        createTick.mockResolvedValueOnce({ tick: { id: 't1' }, queued: true })
+        const wrapper = mountDialog()
+        await wrapper.setProps({ modelValue: true })
+        await wrapper.get('[data-testid="tick-submit"]').trigger('click')
+        await flushPromises()
+
+        expect(createTick).toHaveBeenCalledWith(
+            expect.objectContaining({
+                route: 'r1',
+                route_name: 'Crimpy',
+                grade: '6A',
+                grade_system: 'font',
+                grade_index: 12,
+                expand: {
+                    route: expect.objectContaining({
+                        id: 'r1',
+                        type: 'Boulder',
+                        expand: { gym },
+                    }),
+                },
+            }),
+        )
     })
 })

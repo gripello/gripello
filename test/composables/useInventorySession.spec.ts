@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import type { RouteRecord } from '~/types/models'
+import { loadSession, persistSession } from '~/utils/inventory'
 
 const archiveRoute = vi.fn()
 const listRoutes = vi.fn()
@@ -15,7 +16,8 @@ vi.stubGlobal('useNotification', () => ({
     warning: vi.fn(),
 }))
 vi.stubGlobal('useRealtime', vi.fn())
-vi.stubGlobal('onMounted', vi.fn())
+const onMounted = vi.fn()
+vi.stubGlobal('onMounted', onMounted)
 
 const { useInventorySession } =
     await import('~/composables/useInventorySession')
@@ -96,5 +98,20 @@ describe('useInventorySession', () => {
         listRoutes.mockRejectedValueOnce(new Error('boom'))
         await inventory.loadRoutes()
         expect(onLoadError).toHaveBeenCalledOnce()
+    })
+
+    it("ignores another gym's session and leaves it stored", async () => {
+        persistSession('g2', { location: 'l9', ids: ['x1'] })
+        onMounted.mockClear()
+        const inventory = useInventorySession({
+            gymId: ref('g1'),
+            onLoadError: vi.fn(),
+        })
+        onMounted.mock.calls[0]![0]()
+        expect(inventory.sessionLocation.value).toBeNull()
+        expect(inventory.scannedRouteIds.value).toEqual([])
+
+        inventory.reset()
+        expect(loadSession('g2')).toEqual({ location: 'l9', ids: ['x1'] })
     })
 })

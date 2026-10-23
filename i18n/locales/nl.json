@@ -753,6 +753,7 @@
                 "inventorySession": "Bewaart de voortgang van een inventarisatiescan",
                 "offlineLogbook": "Houdt je logboek en nog niet verzonden beklimmingen offline beschikbaar",
                 "pushDeclined": "Onthoudt dat je pushmeldingen op dit apparaat hebt verwijderd",
+                "pushDeviceUser": "Onthoudt wie op dit apparaat pushmeldingen ontvangt, zodat een andere aanmelding ze stopt",
                 "offlineScores": "Bewaart wedstrijdscores die je zonder bereik hebt ingevoerd tot ze zijn verzonden",
                 "gym": "Onthoudt de hal die je het laatst hebt geopend",
                 "recentGyms": "Toont de hallen die je onlangs hebt bezocht op de startpagina",
@@ -2461,7 +2462,8 @@
             "blockEmail": "{email} blokkeren",
             "blockDomain": "Alle adressen bij {domain} blokkeren",
             "blockDomainShared": "{accounts} ander account, {suspended} geschorst | {accounts} andere accounts, {suspended} geschorst",
-            "blockFailed": "Geschorst, maar de e-mailblokkade kon niet worden opgeslagen. Voeg die toe onder Instellingen › Blokkeerlijsten."
+            "blockFailed": "Geschorst, maar de e-mailblokkade kon niet worden opgeslagen. Voeg die toe onder Instellingen › Blokkeerlijsten.",
+            "hideContentFailed": "Geschorst, maar de inhoud kon niet worden verborgen. Probeer het opnieuw."
         },
         "features": {
             "title": "Feature flags",

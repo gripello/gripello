@@ -3,12 +3,18 @@
         :loading="status !== 'success' && status !== 'error'"
         :eyebrow="$t('gymOnboarding.eyebrow')"
         :title="
-            onboarding ? $t('gymOnboarding.title') : $t('account.linkInvalid')
+            onboarding
+                ? $t('gymOnboarding.title')
+                : status === 'error'
+                  ? ''
+                  : $t('account.linkInvalid')
         "
         :subtitle="
             onboarding
                 ? $t('gymOnboarding.subtitle', { email: onboarding.email })
-                : $t('gymOnboarding.invalid')
+                : status === 'error'
+                  ? ''
+                  : $t('gymOnboarding.invalid')
         "
         :heading-key="onboarding ? 'form' : 'invalid'"
         back-to="/"
@@ -21,8 +27,9 @@
             }}</span>
         </template>
 
+        <LayoutLoadError v-if="status === 'error'" @retry="refresh()" />
         <UButton
-            v-if="status === 'success' && !onboarding"
+            v-else-if="status === 'success' && !onboarding"
             color="neutral"
             variant="soft"
             block
@@ -81,6 +88,7 @@ import type { Form } from '@nuxt/ui'
 import { redeemGymOnboarding, showGymOnboarding } from '~/api/gyms'
 import { isValidGymSlug, slugifyGymName } from '#shared/utils/gymSlug'
 import { fieldErrorCode } from '~/utils/fieldErrors'
+import { nullIfNotFound } from '~/utils/errors'
 import { maxLength, required, validateRules } from '~/utils/validation'
 
 definePageMeta({ layout: 'blank' })
@@ -91,9 +99,13 @@ const token = String(route.params.token ?? '')
 
 useHead({ title: t('page.title.gymOnboarding') })
 
-const { data: onboarding, status } = await useAsyncData(
+const {
+    data: onboarding,
+    status,
+    refresh,
+} = await useAsyncData(
     `gym-onboarding-${token}`,
-    () => showGymOnboarding(token).catch(() => null),
+    () => nullIfNotFound(showGymOnboarding(token)),
     { server: false },
 )
 

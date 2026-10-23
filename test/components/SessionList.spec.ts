@@ -2,8 +2,11 @@ import { flushPromises, mount } from '@vue/test-utils'
 import SessionList from '~/components/account/SessionList.vue'
 import LayoutListGroup from '~/components/layout/ListGroup.vue'
 import LayoutListRow from '~/components/layout/ListRow.vue'
+import { AuthStore } from '~/composables/authStore'
 
-const token = `x.${btoa(JSON.stringify({ sid: 'here' }))}.y`
+const tokenFor = (sid: string) => `x.${btoa(JSON.stringify({ sid }))}.y`
+const token = tokenFor('here')
+let store: AuthStore
 const getFullList = vi.fn()
 const remove = vi.fn()
 const send = vi.fn()
@@ -65,7 +68,9 @@ describe('SessionList', () => {
             ])
         remove.mockReset().mockResolvedValue(true)
         send.mockReset().mockResolvedValue(null)
-        globalThis.__AUTH_STORE__ = { token }
+        store = new AuthStore('')
+        store.save(token, { id: 'me' })
+        globalThis.__AUTH_STORE__ = store
         vi.stubGlobal('useAccountChanges', vi.fn())
         vi.stubGlobal('useNotification', () => ({ error: vi.fn() }))
         vi.stubGlobal('useAsyncAction', () => ({
@@ -102,5 +107,15 @@ describe('SessionList', () => {
         await flushPromises()
         expect(send).toHaveBeenCalled()
         expect(wrapper.findAll('[data-testid="session-row"]')).toHaveLength(1)
+    })
+
+    it('follows a new session after the token changes', async () => {
+        const wrapper = mountList()
+        await flushPromises()
+        store.save(tokenFor('other'), { id: 'me' })
+        await flushPromises()
+        const rows = wrapper.findAll('[data-testid="session-row"]')
+        expect(rows[1]!.text()).toContain('account.sessions.thisDevice')
+        expect(rows[0]!.text()).not.toContain('account.sessions.thisDevice')
     })
 })

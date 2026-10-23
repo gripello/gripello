@@ -96,19 +96,21 @@ func publishChange(ctx context.Context, tx pgx.Tx, c Competition, kind, user, en
 	return publish(ctx, tx, topic, KindChanged, stripped, events.Audience{SignedIn: true, NotUsers: []string{user}, Gym: c.Gym})
 }
 
-func publishTick(ctx context.Context, tx pgx.Tx, tick Tick, gym string, private bool) error {
-	change := TickChange{Action: "create", Record: tick}
-	if err := publish(ctx, tx, TopicOwnTicks, "tick.created", change, events.Audience{Users: []string{tick.User}}); err != nil {
+// publishTick takes the action "create" or "delete", like the ticks module's events.
+func publishTick(ctx context.Context, tx pgx.Tx, action string, tick Tick, gym string, private bool) error {
+	kind := "tick." + action + "d"
+	change := TickChange{Action: action, Record: tick}
+	if err := publish(ctx, tx, TopicOwnTicks, kind, change, events.Audience{Users: []string{tick.User}}); err != nil {
 		return err
 	}
 	if !private {
 		shared := change
 		shared.Record.Note = ""
-		if err := publish(ctx, tx, TopicFollowedTicks, "tick.created", shared, events.Audience{FollowersOf: tick.User, Gym: gym}); err != nil {
+		if err := publish(ctx, tx, TopicFollowedTicks, kind, shared, events.Audience{FollowersOf: tick.User, Gym: gym}); err != nil {
 			return err
 		}
 	}
-	return publish(ctx, tx, TopicTickChanged, "tick.created",
+	return publish(ctx, tx, TopicTickChanged, kind,
 		TickChanged{User: tick.User, Route: tick.Route, Gym: gym, Date: tick.Date}, events.Audience{})
 }
 

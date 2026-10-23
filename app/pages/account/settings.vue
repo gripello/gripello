@@ -241,7 +241,8 @@
 import { THUMBS } from '#shared/utils/thumbs'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import { needsPasswordFirst } from '~/utils/reauth'
-import { blockedFieldError } from '~/utils/fieldErrors'
+import { blockedFieldError, fieldErrorCode } from '~/utils/fieldErrors'
+import { throttledErrorKey } from '~/utils/authErrors'
 import { fileUrl, type ApiError } from '~/api/client'
 import type { Form } from '@nuxt/ui'
 import { SUPPORTED_LOCALES, isLocaleCode } from '~/utils/locales'
@@ -587,6 +588,8 @@ async function saveUser(section: Section) {
             notifyError(t('account.wrongOldPassword'))
         } else if (needsPasswordFirst(err)) {
             notifyError(t('account.passwordRequired'))
+        } else if (throttledErrorKey(err)) {
+            notifyError(t(throttledErrorKey(err)!))
         } else if (blockedFieldError(err, ['username', 'name'])) {
             notifyError(t('errors.nameProtected'))
         } else {
@@ -619,6 +622,10 @@ async function deleteAccount() {
             notifyError(t('account.wrongOldPassword'))
         } else if (needsPasswordFirst(err)) {
             notifyError(t('account.passwordRequired'))
+        } else if (throttledErrorKey(err)) {
+            notifyError(t(throttledErrorKey(err)!))
+        } else if (fieldErrorCode(err, 'gym') === 'validation_last_admin') {
+            notifyError(t('account.lastAdmin'))
         } else {
             console.error('Error deleting account:', err)
             notifyError(t('notifications.error.delete'))

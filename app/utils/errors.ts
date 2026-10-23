@@ -16,6 +16,19 @@ export function requestErrorKey(error: unknown, fallback: string) {
     return isRateLimited(error) ? 'errors.rateLimited' : fallback
 }
 
+export function isNotFound(error: unknown): boolean {
+    return (error as { status?: number } | null)?.status === 404
+}
+
+export async function nullIfNotFound<T>(request: Promise<T>) {
+    try {
+        return await request
+    } catch (error) {
+        if (isNotFound(error)) return null
+        throw error
+    }
+}
+
 export function isNetworkError(error: unknown): boolean {
     return (error as { status?: number } | null)?.status === 0
 }
@@ -48,11 +61,12 @@ type AsyncDataStore = {
     payload: { data: Record<string, unknown> }
 }
 
-export async function keepWhenOffline<T>(
+// useAsyncData resets data to its default when a refresh fails; this keeps what was loaded when `keep` allows it.
+async function keepLoadedOnError<T>(
     nuxtApp: AsyncDataStore,
     key: string,
     fetch: () => Promise<T>,
-    fits: (loaded: T) => boolean = () => true,
+    keep: (error: unknown, loaded: T) => boolean,
 ): Promise<T> {
     try {
         return await fetch()
@@ -65,8 +79,28 @@ export async function keepWhenOffline<T>(
             nuxtApp.payload.data[key] !== undefined
                 ? (entry.data.value as T)
                 : null
-        if (loaded == null || !isOfflineError(error) || !fits(loaded))
-            throw error
+        if (loaded == null || !keep(error, loaded)) throw error
         return loaded
     }
+}
+
+export function keepWhenOffline<T>(
+    nuxtApp: AsyncDataStore,
+    key: string,
+    fetch: () => Promise<T>,
+    fits: (loaded: T) => boolean = () => true,
+): Promise<T> {
+    return keepLoadedOnError(
+        nuxtApp,
+        key,
+        fetch,
+        (error, loaded) => isOfflineError(error) && fits(loaded),
+    )
+}
+
+export function keepShownOnError<T>(
+    key: string,
+    fetch: () => Promise<T>,
+): (nuxtApp: AsyncDataStore) => Promise<T> {
+    return (nuxtApp) => keepLoadedOnError(nuxtApp, key, fetch, () => true)
 }

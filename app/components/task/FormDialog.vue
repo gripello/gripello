@@ -286,6 +286,7 @@ import {
 } from '~/api/tasks'
 import { fileUrl } from '~/api/client'
 import { formFieldErrors } from '~/utils/fieldErrors'
+import { changedFields } from '~/utils/routes'
 import { maxLength, nonBlank, validateRules } from '~/utils/validation'
 import {
     DEFECT_CATEGORY_ICONS,
@@ -376,6 +377,7 @@ const formRef = ref<{
 const walls = ref<WallRecord[]>([])
 const assignees = ref<TaskAssigneeRecord[]>([])
 const photo = ref<File | null>(null)
+let openedInput: TaskInput = {}
 
 const form = reactive({
     title: '',
@@ -480,7 +482,10 @@ const existingThumbUrl = computed(() =>
 watch(
     () => form.location,
     () => {
-        if (!wallItems.value.some((item) => item.value === form.wall))
+        if (
+            walls.value.length &&
+            !wallItems.value.some((item) => item.value === form.wall)
+        )
             form.wall = undefined
     },
 )
@@ -501,6 +506,7 @@ watch(open, async (isOpen) => {
         description: task?.description ?? '',
         resolutionNote: task?.resolution_note ?? '',
     })
+    openedInput = buildInput()
     photo.value = null
     const [loadedAssignees, loadedWalls] = await Promise.all([
         listTaskAssignees(gymId.value).catch(() => []),
@@ -565,7 +571,11 @@ async function save() {
     await run(
         async () => {
             const saved = props.task
-                ? await updateTask(props.task.id, buildInput(), photo.value)
+                ? await updateTask(
+                      props.task.id,
+                      changedFields(buildInput(), openedInput),
+                      photo.value,
+                  )
                 : await createTask(
                       gymId.value,
                       { kind: form.kind, ...buildInput() },

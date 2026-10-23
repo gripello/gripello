@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
     HOURS_DAYS,
+    nextOpeningInterval,
     WEEKDAYS,
     type GymOpeningHours,
     type HoursDay,
@@ -14,10 +15,9 @@ const dayLabel = (day: HoursDay) =>
 
 function addInterval(day: HoursDay) {
     const intervals = hours.value[day] ?? []
-    const last = intervals.at(-1)
     hours.value = {
         ...hours.value,
-        [day]: [...intervals, last ? [last[1], '22:00'] : ['09:00', '22:00']],
+        [day]: [...intervals, nextOpeningInterval(intervals)],
     }
 }
 

@@ -112,6 +112,18 @@ describe('TwoFactorStep', () => {
         expect(wrapper.emitted('failed')).toHaveLength(1)
     })
 
+    it('ends the step when the account is suspended', async () => {
+        send.mockRejectedValue({
+            status: 403,
+            response: { message: 'This account is suspended.' },
+        })
+        const wrapper = mountStep(['totp'])
+        await wrapper.get('[data-testid="two-factor-code"]').setValue('000000')
+        await flushPromises()
+        expect(wrapper.emitted('failed')).toHaveLength(1)
+        expect(wrapper.find('[data-testid="field-error"]').exists()).toBe(false)
+    })
+
     it('formats and sends a recovery code', async () => {
         send.mockResolvedValue(result)
         const wrapper = mountStep(['totp', 'recovery'], 'recovery')

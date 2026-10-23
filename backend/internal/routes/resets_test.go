@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"gripello/internal/platform/ids"
 )
@@ -21,12 +22,16 @@ func TestPlanRouteRemoval(t *testing.T) {
 		return f.exec(`SELECT COUNT(*)::text FROM events WHERE topic = 'notify' AND payload->>'type' = 'wall_reset_planned'`)
 	}
 
-	plan("climber", `{"ids":["`+crimp+`"],"planned_for":"2026-11-02"}`, http.StatusForbidden)
-	plan("setterB", `{"ids":["`+crimp+`"],"planned_for":"2026-11-02"}`, http.StatusForbidden)
+	plan("climber", `{"ids":["`+crimp+`"],"planned_for":"2030-11-02"}`, http.StatusForbidden)
+	plan("setterB", `{"ids":["`+crimp+`"],"planned_for":"2030-11-02"}`, http.StatusForbidden)
 	plan("setter", `{"ids":["`+crimp+`"],"planned_for":"soon"}`, http.StatusBadRequest)
+	lastWeek := time.Now().AddDate(0, 0, -7).Format(time.DateOnly)
+	plan("setter", `{"ids":["`+crimp+`"],"planned_for":"`+lastWeek+`"}`, http.StatusBadRequest)
+	today := time.Now().Format(time.DateOnly)
+	plan("setter", `{"ids":["`+f.route("")+`"],"planned_for":"`+today+`"}`, http.StatusOK)
 
-	planned := items(plan("setter", `{"ids":["`+crimp+`","`+sloper+`"],"planned_for":"2026-11-02"}`, http.StatusOK))
-	if len(planned) != 2 || planned[0].(map[string]any)["removal_planned_for"] != "2026-11-02" {
+	planned := items(plan("setter", `{"ids":["`+crimp+`","`+sloper+`"],"planned_for":"2030-11-02"}`, http.StatusOK))
+	if len(planned) != 2 || planned[0].(map[string]any)["removal_planned_for"] != "2030-11-02" {
 		t.Fatalf("planned = %v", planned)
 	}
 	if got := f.exec(`SELECT payload->'params'->>'count' FROM events WHERE topic = 'notify' AND payload->>'type' = 'wall_reset_planned'`); got != "2" {
@@ -35,7 +40,7 @@ func TestPlanRouteRemoval(t *testing.T) {
 	if got := f.exec(`SELECT payload->>'url' FROM events WHERE topic = 'notify' AND payload->>'type' = 'wall_reset_planned'`); got != "/alpha/map?location="+f.hall+"&wall="+wall {
 		t.Fatalf("notification url = %s, want the wall's location on the map", got)
 	}
-	plan("setter", `{"ids":["`+crimp+`"],"planned_for":"2026-11-02"}`, http.StatusOK)
+	plan("setter", `{"ids":["`+crimp+`"],"planned_for":"2030-11-02"}`, http.StatusOK)
 	if got := notified(); got != "1" {
 		t.Fatalf("followers notified %s times, want once per date", got)
 	}
@@ -49,7 +54,7 @@ func TestPlanRouteRemoval(t *testing.T) {
 	if f.exec(`SELECT COALESCE(removal_planned_for::text, 'none') FROM routes WHERE id = $1`, crimp) != "none" {
 		t.Fatal("archiving should clear the planned removal")
 	}
-	plan("setter", `{"ids":["`+crimp+`"],"planned_for":"2026-11-02"}`, http.StatusNotFound)
+	plan("setter", `{"ids":["`+crimp+`"],"planned_for":"2030-11-02"}`, http.StatusNotFound)
 }
 
 func TestResetStats(t *testing.T) {

@@ -4,6 +4,7 @@ export interface InventoryRoute {
     location?: string | null
     anchor_point?: number | null
     archived?: boolean
+    permanent?: boolean
 }
 
 export interface InventorySession {
@@ -26,7 +27,7 @@ function validIds(value: unknown): string[] {
     )
 }
 
-export function loadSession(): InventorySession {
+export function loadSession(gymId: string): InventorySession {
     if (typeof localStorage === 'undefined') return emptySession()
 
     const raw = localStorage.getItem(INVENTORY_STORAGE_KEY)
@@ -46,6 +47,9 @@ export function loadSession(): InventorySession {
     if (!parsed || typeof parsed !== 'object') return emptySession()
 
     const record = parsed as Record<string, unknown>
+    // Another gym's session stays stored untouched until this gym saves its own.
+    if (typeof record.gym === 'string' && record.gym && record.gym !== gymId)
+        return emptySession()
     return {
         location:
             record.v === INVENTORY_SESSION_VERSION &&
@@ -57,11 +61,11 @@ export function loadSession(): InventorySession {
     }
 }
 
-export function persistSession(session: InventorySession): void {
+export function persistSession(gymId: string, session: InventorySession): void {
     if (typeof localStorage === 'undefined') return
 
     if (session.ids.length === 0 && !session.location) {
-        localStorage.removeItem(INVENTORY_STORAGE_KEY)
+        clearSession(gymId)
         return
     }
 
@@ -69,15 +73,29 @@ export function persistSession(session: InventorySession): void {
         INVENTORY_STORAGE_KEY,
         JSON.stringify({
             v: INVENTORY_SESSION_VERSION,
+            gym: gymId || undefined,
             location: session.location,
             ids: session.ids,
         }),
     )
 }
 
-export function clearSession(): void {
+export function clearSession(gymId: string): void {
     if (typeof localStorage === 'undefined') return
+    const storedGym = loadSessionGym()
+    if (storedGym && storedGym !== gymId) return
     localStorage.removeItem(INVENTORY_STORAGE_KEY)
+}
+
+function loadSessionGym(): string | null {
+    try {
+        const record = JSON.parse(
+            localStorage.getItem(INVENTORY_STORAGE_KEY) ?? 'null',
+        ) as Record<string, unknown> | null
+        return typeof record?.gym === 'string' && record.gym ? record.gym : null
+    } catch {
+        return null
+    }
 }
 
 export function scopedRoutes<T extends InventoryRoute>(
@@ -144,3 +162,7 @@ export function extractRouteId(value: unknown): string | null {
 
     return null
 }
+
+export const removableRouteIds = (
+    routes: { id: string; permanent?: boolean | null }[],
+) => routes.filter((route) => !route.permanent).map((route) => route.id)

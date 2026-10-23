@@ -57,6 +57,25 @@ describe('usePushSubscription', () => {
         expect(push.loadError.value).toBe(false)
     })
 
+    it('still lists the devices when this device has no push token', async () => {
+        vi.doMock('~/utils/pushDevice', () => ({
+            pushDevice: () => ({
+                currentEndpoint: () =>
+                    Promise.reject(new Error('registrationError')),
+            }),
+        }))
+        Object.assign(window, { PushManager: class {}, Notification: class {} })
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        const push = await load()
+        await push.refresh()
+        vi.doUnmock('~/utils/pushDevice')
+        Reflect.deleteProperty(window, 'PushManager')
+
+        expect(push.loadError.value).toBe(false)
+        expect(push.devices.value).toHaveLength(1)
+        expect(push.currentEndpoint.value).toBe('')
+    })
+
     it('sends the test push to this device only', async () => {
         const push = await load()
         push.currentEndpoint.value = 'https://fcm.googleapis.com/fcm/send/abc'

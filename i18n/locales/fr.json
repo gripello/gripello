@@ -753,6 +753,7 @@
                 "inventorySession": "Conserve la progression d’un inventaire",
                 "offlineLogbook": "Garde votre carnet et les réussites non envoyées disponibles hors ligne",
                 "pushDeclined": "Mémorise que vous avez supprimé les notifications push sur cet appareil",
+                "pushDeviceUser": "Mémorise qui reçoit les notifications push sur cet appareil, afin qu’une autre connexion les arrête",
                 "offlineScores": "Conserve les scores de compétition saisis sans réseau jusqu’à leur envoi",
                 "gym": "Mémorise la dernière salle ouverte",
                 "recentGyms": "Affiche les salles récemment visitées sur la page d’accueil",
@@ -2461,7 +2462,8 @@
             "blockEmail": "Bloquer {email}",
             "blockDomain": "Bloquer toutes les adresses de {domain}",
             "blockDomainShared": "{accounts} autre compte, {suspended} suspendu(s) | {accounts} autres comptes, {suspended} suspendu(s)",
-            "blockFailed": "Suspendu, mais le blocage de l'e-mail n'a pas pu être enregistré. Ajoute-le dans Paramètres › Listes de blocage."
+            "blockFailed": "Suspendu, mais le blocage de l'e-mail n'a pas pu être enregistré. Ajoute-le dans Paramètres › Listes de blocage.",
+            "hideContentFailed": "Suspendu, mais le contenu n'a pas pu être masqué. Réessaie."
         },
         "features": {
             "title": "Fonctionnalités",

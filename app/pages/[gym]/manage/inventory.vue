@@ -473,7 +473,7 @@
 <script setup lang="ts">
 import { archiveRoutes } from '~/api/routes'
 import { locationName } from '#shared/utils/formatting'
-import { extractRouteId } from '~/utils/inventory'
+import { extractRouteId, removableRouteIds } from '~/utils/inventory'
 import type { RouteRecord } from '~/types/models'
 
 definePageMeta({
@@ -716,7 +716,7 @@ const openManualDialog = () => {
 }
 
 const openFinishDialog = () => {
-    archiveSelection.value = new Set(missing.value.map((route) => route.id))
+    archiveSelection.value = new Set(removableRouteIds(missing.value))
     finishDialog.value = true
 }
 

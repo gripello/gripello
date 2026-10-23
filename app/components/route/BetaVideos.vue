@@ -293,9 +293,14 @@ const deleteTarget = ref<BetaVideoRecord | null>(null)
 async function confirmDelete() {
     const video = deleteTarget.value
     if (!video) return
-    await runDelete(() => deleteBeta(video.id), {
-        success: t('beta.deleted'),
-    })
+    const deleted = await runDelete(
+        async () => {
+            await deleteBeta(video.id)
+            return true
+        },
+        { success: t('beta.deleted') },
+    )
+    if (!deleted) return
     deleteTarget.value = null
     await refresh()
 }

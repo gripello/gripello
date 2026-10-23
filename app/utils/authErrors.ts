@@ -54,3 +54,15 @@ export function authErrorKind(err: unknown): AuthErrorKind {
 export function isCredentialError(err: unknown) {
     return CREDENTIAL_KINDS.has(authErrorKind(err))
 }
+
+export function sessionRejected(err: unknown) {
+    const status = (err as { status?: number } | null)?.status
+    return status === 401 || status === 403
+}
+
+export function throttledErrorKey(err: unknown) {
+    const kind = authErrorKind(err)
+    if (kind === 'locked') return AUTH_ERROR_KEYS.locked
+    if (kind === 'rateLimited') return 'errors.rateLimited'
+    return null
+}

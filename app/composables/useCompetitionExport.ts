@@ -71,6 +71,7 @@ export function useCompetitionExport() {
                     format,
                     locale: exportLocale,
                     labels: exportLabels,
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 }),
             })
             if (!response.ok)

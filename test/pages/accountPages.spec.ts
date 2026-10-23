@@ -88,5 +88,6 @@ describe('account pages', () => {
             /<LayoutLoadError v-if="error"[^>]*@retry="refresh\(\)"/,
         )
         expect(source).toContain(':loading="!error && available === null"')
+        expect(source).toContain('to="/account/settings?tab=security"')
     })
 })

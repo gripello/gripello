@@ -75,7 +75,7 @@ export function useInventorySession(options: {
 
     const restoreSession = () => {
         try {
-            const session = loadSession()
+            const session = loadSession(options.gymId.value)
             scannedRouteIds.value = session.ids
             sessionLocation.value = session.location
             restoredUnscoped.value = session.ids.length > 0 && !session.location
@@ -90,7 +90,7 @@ export function useInventorySession(options: {
         () => {
             if (!import.meta.client) return
             try {
-                persistSession({
+                persistSession(options.gymId.value, {
                     location: sessionLocation.value,
                     ids: scannedRouteIds.value,
                 })
@@ -210,7 +210,7 @@ export function useInventorySession(options: {
         scannedRouteIds.value = []
         restoredUnscoped.value = false
         try {
-            clearSession()
+            clearSession(options.gymId.value)
         } catch (error) {
             console.warn('Failed to clear inventory session:', error)
         }

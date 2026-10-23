@@ -141,20 +141,21 @@ func TestCategoryFits(t *testing.T) {
 func TestOwnerEntryStatus(t *testing.T) {
 	cases := []struct {
 		current, requested string
-		open               bool
+		open, withdrawable bool
 		want               string
 	}{
-		{"registered", "withdrawn", true, "withdrawn"},
-		{"checked_in", "withdrawn", false, "withdrawn"},
-		{"withdrawn", "registered", true, "registered"},
-		{"withdrawn", "registered", false, "withdrawn"},
-		{"registered", "checked_in", true, "registered"},
-		{"disqualified", "withdrawn", true, "disqualified"},
-		{"disqualified", "registered", true, "disqualified"},
+		{"registered", "withdrawn", true, true, "withdrawn"},
+		{"checked_in", "withdrawn", false, true, "withdrawn"},
+		{"checked_in", "withdrawn", false, false, "checked_in"},
+		{"withdrawn", "registered", true, true, "registered"},
+		{"withdrawn", "registered", false, true, "withdrawn"},
+		{"registered", "checked_in", true, true, "registered"},
+		{"disqualified", "withdrawn", true, true, "disqualified"},
+		{"disqualified", "registered", true, true, "disqualified"},
 	}
 	for _, c := range cases {
-		if got := ownerEntryStatus(c.current, c.requested, c.open); got != c.want {
-			t.Errorf("%s -> %s (open %v) = %s, want %s", c.current, c.requested, c.open, got, c.want)
+		if got := ownerEntryStatus(c.current, c.requested, c.open, c.withdrawable); got != c.want {
+			t.Errorf("%s -> %s (open %v, withdrawable %v) = %s, want %s", c.current, c.requested, c.open, c.withdrawable, got, c.want)
 		}
 	}
 }
@@ -887,6 +888,70 @@ func TestRepublishDoesNotDuplicateTicksOnAnotherDay(t *testing.T) {
 	}
 }
 
+func TestOwnerCannotWithdrawOncePublished(t *testing.T) {
+	f := newFixture(t)
+	id, category, route1, _ := f.competition("")
+	entry := f.register("climber", id, category, "")
+	f.call("judge", "PUT", "/competitions/"+id+"/scores", `{"scores":[{"entry":"`+entry+`","comp_route":"`+route1+`","top_attempt":1}]}`, http.StatusOK)
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
+	if got := f.call("climber", "PATCH", "/competition-entries/"+entry, `{"status":"withdrawn"}`, http.StatusOK); got["status"] != "registered" {
+		t.Errorf("withdrawn after closing: %v", got)
+	}
+	f.call("manager", "POST", "/competitions/"+id+"/publish", "", http.StatusOK)
+	f.call("climber", "PATCH", "/competition-entries/"+entry, `{"status":"withdrawn"}`, http.StatusOK)
+	if rows := standingRows(f.call("", "GET", "/competitions/"+id+"/standings", "", http.StatusOK)); len(rows) != 1 || rows[0]["entry"] != entry {
+		t.Errorf("published standings changed: %v", rows)
+	}
+}
+
+func TestPublishSkipsInactiveEntries(t *testing.T) {
+	f := newFixture(t)
+	id, category, route1, _ := f.competition("")
+	disqualified := f.register("climber", id, category, "")
+	withdrawn := f.register("other", id, category, "")
+	f.call("judge", "PUT", "/competitions/"+id+"/scores", `{"scores":[
+		{"entry":"`+disqualified+`","comp_route":"`+route1+`","top_attempt":1},
+		{"entry":"`+withdrawn+`","comp_route":"`+route1+`","top_attempt":2}]}`, http.StatusOK)
+	f.call("manager", "PATCH", "/competition-entries/"+disqualified, `{"status":"disqualified"}`, http.StatusOK)
+	f.call("other", "PATCH", "/competition-entries/"+withdrawn, `{"status":"withdrawn"}`, http.StatusOK)
+	f.call("manager", "POST", "/competitions/"+id+"/publish", "", http.StatusOK)
+	var count int
+	f.app.DB.QueryRow(context.Background(), `SELECT COUNT(*) FROM ticks`).Scan(&count)
+	if count != 0 {
+		t.Errorf("ticks of inactive entries = %d", count)
+	}
+}
+
+func TestRepublishReplacesTheCompetitionTicks(t *testing.T) {
+	f := newFixture(t)
+	id, category, route1, route2 := f.competition("")
+	entry := f.register("climber", id, category, "")
+	f.call("judge", "PUT", "/competitions/"+id+"/scores", `{"scores":[
+		{"entry":"`+entry+`","comp_route":"`+route1+`","top_attempt":1},
+		{"entry":"`+entry+`","comp_route":"`+route2+`","top_attempt":2}]}`, http.StatusOK)
+	f.call("manager", "POST", "/competitions/"+id+"/publish", "", http.StatusOK)
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
+	f.call("judge", "PUT", "/competitions/"+id+"/scores", `{"scores":[
+		{"entry":"`+entry+`","comp_route":"`+route1+`","top_attempt":3},
+		{"entry":"`+entry+`","comp_route":"`+route2+`","attempts":4,"top_attempt":0}]}`, http.StatusOK)
+	f.call("manager", "POST", "/competitions/"+id+"/publish", "", http.StatusOK)
+
+	var count, attempts int
+	var route, kind string
+	f.app.DB.QueryRow(context.Background(), `SELECT COUNT(*), MIN(route), MIN(type), MIN(attempts) FROM ticks WHERE competition = $1`, id).
+		Scan(&count, &route, &kind, &attempts)
+	if count != 1 || route != f.boulder || kind != "top" || attempts != 3 {
+		t.Errorf("ticks after republish = %d %s %s %d", count, route, kind, attempts)
+	}
+	kinds := map[string]int{}
+	for _, e := range f.events(TopicTickChanged) {
+		kinds[e.Kind]++
+	}
+	if kinds["tick.created"] != 3 || kinds["tick.deleted"] != 2 {
+		t.Errorf("tick.changed kinds = %v", kinds)
+	}
+}
+
 func TestJudgesDoNotWorkOnDrafts(t *testing.T) {
 	f := newFixture(t)
 	id, category, route1, _ := f.competition("")
@@ -974,4 +1039,32 @@ func TestStaffScoringStopsOncePublished(t *testing.T) {
 	f.call("manager", "POST", "/competitions/"+id+"/publish", "", http.StatusOK)
 	f.call("judge", "PUT", "/competitions/"+id+"/scores", score, http.StatusBadRequest)
 	f.call("manager", "DELETE", "/competition-scores/"+saved[0].(map[string]any)["id"].(string), "", http.StatusBadRequest)
+}
+
+func TestJudgeScoresTheirOwnEntryAsAClimber(t *testing.T) {
+	f := newFixture(t)
+	id, category, route1, _ := f.competition("")
+	own := f.register("judge", id, category, "")
+	score := `{"scores":[{"entry":"` + own + `","comp_route":"` + route1 + `","top_attempt":1}]}`
+	f.call("judge", "PUT", "/competitions/"+id+"/scores", score, http.StatusOK)
+	var byJudge bool
+	f.app.DB.QueryRow(context.Background(), `SELECT by_judge FROM competition_scores WHERE entry = $1`, own).Scan(&byJudge)
+	if byJudge {
+		t.Error("own score stored as a judge's")
+	}
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
+	f.call("judge", "PUT", "/competitions/"+id+"/scores", score, http.StatusBadRequest)
+	f.call("manager", "PUT", "/competitions/"+id+"/scores", score, http.StatusOK)
+}
+
+func TestCompetitionRoutesStayWhilePublished(t *testing.T) {
+	f := newFixture(t)
+	id, _, route1, _ := f.competition("")
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
+	f.call("manager", "POST", "/competitions/"+id+"/publish", "", http.StatusOK)
+	f.call("manager", "PATCH", "/competition-routes/"+route1, `{"voided":true}`, http.StatusBadRequest)
+	f.call("manager", "DELETE", "/competition-routes/"+route1, "", http.StatusBadRequest)
+	f.call("manager", "POST", "/competitions/"+id+"/routes", `{"route":"`+f.route(f.gymA, f.hall, "Boulder")+`","number":3}`, http.StatusBadRequest)
+	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
+	f.call("manager", "DELETE", "/competition-routes/"+route1, "", http.StatusNoContent)
 }

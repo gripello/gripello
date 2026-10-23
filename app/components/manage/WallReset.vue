@@ -55,6 +55,7 @@
                     type="date"
                     size="sm"
                     class="w-40"
+                    :min="today"
                     :aria-label="t('resets.date')"
                     data-testid="reset-date"
                 />
@@ -165,7 +166,7 @@
             <UButton
                 color="primary"
                 icon="i-lucide-calendar-check"
-                :disabled="!selected.size || !plannedFor"
+                :disabled="!selected.size || !plannedFor || plannedFor < today"
                 :loading="pending"
                 data-testid="reset-save"
                 @click="savePlan"
@@ -214,6 +215,7 @@ const { pending, run } = useAsyncAction()
 const selected = ref(new Set<string>())
 const plannedFor = ref('')
 const doneOpen = ref(false)
+const today = computed(() => inWeeks(0, props.now))
 
 watch(
     () => props.row.wall.id,
@@ -262,19 +264,20 @@ async function savePlan() {
     const dropped = props.row.planned
         .filter((route) => !selected.value.has(route.id))
         .map((route) => route.id)
-    const saved = await run(
+    await run(
         async () => {
             await planRouteRemoval(
                 gymId.value,
                 [...selected.value],
                 plannedFor.value,
             )
-            await planRouteRemoval(gymId.value, dropped, null)
-            return true
+            if (dropped.length)
+                await planRouteRemoval(gymId.value, dropped, null)
         },
         { success: t('notifications.success.edit') },
     )
-    if (saved) emit('changed')
+    // The plan and the unplan are separate requests, so a failure can leave either applied.
+    emit('changed')
 }
 
 async function clearPlan() {
@@ -303,7 +306,8 @@ async function finish() {
         },
         { success: t('resets.doneSuccess', { wall: props.row.wall.name }) },
     )
+    if (!done) return
     doneOpen.value = false
-    if (done) emit('changed')
+    emit('changed')
 }
 </script>

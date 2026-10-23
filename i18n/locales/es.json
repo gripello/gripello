@@ -753,6 +753,7 @@
                 "inventorySession": "Guarda el progreso de un inventario",
                 "offlineLogbook": "Mantiene tu libreta y las ascensiones no enviadas disponibles sin conexión",
                 "pushDeclined": "Recuerda que eliminaste las notificaciones push en este dispositivo",
+                "pushDeviceUser": "Recuerda quién recibe notificaciones push en este dispositivo para que otro inicio de sesión las detenga",
                 "offlineScores": "Guarda las puntuaciones de competición introducidas sin cobertura hasta que se envían",
                 "gym": "Recuerda el último rocódromo que abriste",
                 "recentGyms": "Muestra en la página de inicio los rocódromos visitados recientemente",
@@ -2461,7 +2462,8 @@
             "blockEmail": "Bloquear {email}",
             "blockDomain": "Bloquear todas las direcciones de {domain}",
             "blockDomainShared": "{accounts} cuenta más, {suspended} suspendida(s) | {accounts} cuentas más, {suspended} suspendida(s)",
-            "blockFailed": "Suspendida, pero no se pudo guardar el bloqueo del correo. Añádelo en Ajustes › Listas de bloqueo."
+            "blockFailed": "Suspendida, pero no se pudo guardar el bloqueo del correo. Añádelo en Ajustes › Listas de bloqueo.",
+            "hideContentFailed": "Suspendida, pero no se pudo ocultar el contenido. Inténtalo de nuevo."
         },
         "features": {
             "title": "Funciones",

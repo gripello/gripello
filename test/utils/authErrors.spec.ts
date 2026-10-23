@@ -4,6 +4,8 @@ import {
     authErrorKind,
     isCredentialError,
     isInvalidCredentials,
+    sessionRejected,
+    throttledErrorKey,
 } from '~/utils/authErrors'
 
 describe('isInvalidCredentials', () => {
@@ -64,5 +66,34 @@ describe('authErrorKind', () => {
         ).toBe(true)
         expect(isCredentialError(apiError(403, 'not verified'))).toBe(false)
         expect(isCredentialError(apiError(500))).toBe(false)
+    })
+})
+
+const failure = (status: number, message = '') => ({
+    status,
+    data: { message },
+})
+
+describe('sessionRejected', () => {
+    it('only treats 401 and 403 as a dead session', () => {
+        expect(sessionRejected(failure(401))).toBe(true)
+        expect(sessionRejected(failure(403))).toBe(true)
+        expect(sessionRejected(failure(429))).toBe(false)
+        expect(sessionRejected(failure(503))).toBe(false)
+        expect(sessionRejected(new TypeError('Failed to fetch'))).toBe(false)
+    })
+})
+
+describe('throttledErrorKey', () => {
+    it('names a lockout or a rate limit and nothing else', () => {
+        expect(
+            throttledErrorKey(
+                failure(429, 'Account temporarily locked. Try again later.'),
+            ),
+        ).toBe('notifications.error.account_locked')
+        expect(throttledErrorKey(failure(429, 'Too many requests.'))).toBe(
+            'errors.rateLimited',
+        )
+        expect(throttledErrorKey(failure(400))).toBeNull()
     })
 })

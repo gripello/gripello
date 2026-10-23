@@ -15,6 +15,7 @@
             :validate="validateSettings"
             class="flex flex-col gap-6 empty:hidden"
             @submit="saveSettings"
+            @error="showSectionOf($event.errors)"
         >
             <AdminSettingsBrandingSection
                 v-if="activeSection === 'branding'"
@@ -153,12 +154,13 @@ import {
 } from '#shared/utils/tvSettings'
 import { tvSettingsPayload } from '~/utils/tvScreen'
 import { isValidOpeningHours } from '#shared/utils/openingHours'
-import type { Form } from '@nuxt/ui'
+import type { Form, FormError } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { isValidGymSlug } from '#shared/utils/gymSlug'
 import { type RichTextDoc } from '#shared/utils/privacyDoc'
 import { gymLink } from '~/utils/navigation'
 import { privacyDocProblem } from '~/utils/privacyEditor'
+import { fieldErrorCode } from '~/utils/fieldErrors'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import { SETTINGS_FIELD_UI, SETTINGS_FIELDS_GRID } from '~/utils/settingsUi'
 import { changedGymSettings, gymSettingsDraft } from '~/utils/gymSettingsDraft'
@@ -228,6 +230,45 @@ function validateSettings(state: typeof copySettings) {
             ],
         }),
     })
+}
+
+const FIELD_SECTIONS: Record<string, string> = {
+    slug: 'organization',
+    previous_slugs: 'organization',
+    contact_email: 'organization',
+    opening_hours: 'info',
+    tv_settings: 'tv',
+    privacy_doc: 'privacy',
+}
+const route = useRoute()
+const { select: selectSection } = useSectionQuery('section')
+
+function showSectionOf(errors: Pick<FormError, 'name'>[]) {
+    const failing = errors
+        .map((error) => FIELD_SECTIONS[error.name ?? ''])
+        .filter((section): section is string => !!section)
+    if (failing[0] && !failing.includes(String(route.query.section)))
+        selectSection(failing[0])
+}
+
+function slugFieldErrors(error: unknown): FormError[] {
+    return (['slug', 'previous_slugs'] as const).flatMap((name) => {
+        const code = fieldErrorCode(error, name)
+        if (!code) return []
+        const key =
+            code === 'validation_slug_used'
+                ? 'gymOnboarding.slugTaken'
+                : 'platform.gyms.invalidSlug'
+        return [{ name, message: t(key) }]
+    })
+}
+
+function showSlugErrors(error: unknown) {
+    const errors = slugFieldErrors(error)
+    if (!errors.length) return false
+    settingsForm.value?.setErrors(errors)
+    showSectionOf(errors)
+    return true
 }
 
 function changedFieldsPayload() {
@@ -387,8 +428,10 @@ function resetForm() {
 watch(
     settings,
     (rec) => {
-        if (rec)
-            for (const asset of assets) asset.preview.value = asset.stored(rec)
+        if (!rec) return
+        for (const asset of assets)
+            if (!asset.file.value && !asset.clear.value)
+                asset.preview.value = asset.stored(rec)
     },
     { immediate: true },
 )
@@ -417,6 +460,7 @@ async function saveSettings() {
         {
             success: t('settings.saveSuccess'),
             error: t('settings.saveError'),
+            handled: showSlugErrors,
         },
     )
 }

@@ -39,6 +39,7 @@
                                 icon="i-lucide-x"
                                 class="icon-btn"
                                 :aria-label="t('friends.decline')"
+                                :loading="busy === request.id"
                                 data-testid="friends-decline"
                                 @click="removeFollow(request.id)"
                             />
@@ -389,6 +390,7 @@ const unfollowTarget = ref<string | null>(null)
 const removeTarget = ref<string | null>(null)
 
 async function act(id: string, action: () => Promise<unknown>) {
+    if (busy.value) return
     busy.value = id
     try {
         await action()

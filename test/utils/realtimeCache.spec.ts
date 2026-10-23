@@ -581,4 +581,26 @@ describe('staffRouteChange', () => {
                 staffRouteChange(rows, change('routes', action, record)).reload,
             ).toBe(true)
     })
+
+    it('relinks the wall and location of a route another staffer moved', () => {
+        const hallA = { id: 'l1', name: 'Hall A' }
+        const hallB = { id: 'l2', name: 'Hall B' }
+        const placed = [
+            { id: 'r1', location: 'l1', expand: { location: hallA } },
+            { id: 'r2', location: 'l2', expand: { location: hallB } },
+        ]
+        const moved = staffRouteChange(
+            placed,
+            change('routes', 'update', { id: 'r1', location: 'l2' }),
+        )
+        expect(moved.rows[0]!.expand).toEqual({ location: hallB })
+        expect(moved.reload).toBe(false)
+
+        const unknown = staffRouteChange(
+            placed,
+            change('routes', 'update', { id: 'r1', location: 'l3' }),
+        )
+        expect(unknown.rows[0]!.expand).toEqual({})
+        expect(unknown.reload).toBe(true)
+    })
 })

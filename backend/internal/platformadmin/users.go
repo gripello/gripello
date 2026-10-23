@@ -179,6 +179,10 @@ func (m *module) updateUser(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if email, ok := changes["email"]; ok && email != t.Email {
+		if p, _ := auth.From(r.Context()); t.ID == p.UserID {
+			return httpx.NewError(http.StatusForbidden, "Change your own e-mail on the account page.").
+				Field("email", "validation_own_email", "Change your own e-mail on the account page.")
+		}
 		if err := auth.RequireCallerReauth(r.Context(), m.app.DB); err != nil {
 			return err
 		}

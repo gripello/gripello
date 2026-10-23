@@ -90,6 +90,11 @@ async function fcmToken() {
     })
 }
 
+export async function onFcmTokenChange(handler: (token: string) => void) {
+    const { PushNotifications: plugin } = await pluginModule()
+    return plugin.addListener('registration', ({ value }) => handler(value))
+}
+
 export const nativePermission = (
     state: string,
 ): NotificationPermission | undefined =>

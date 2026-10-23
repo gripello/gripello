@@ -45,12 +45,20 @@ describe('nginx caching', () => {
         expect(standings).toContain('proxy_no_cache $standings_personal')
         expect(standings).toContain('limit_req zone=api')
         expect(nginx).toMatch(
-            /map \$arg_view \$standings_public_view \{\s+default 0;\s+public 1;/,
+            /map "\$http_authorization\$cookie_gripello_auth" \$standings_personal \{\s+default 1;\s+"" 0;\s+\}/,
         )
-        expect(nginx).toContain(
-            'map "$standings_public_view|$http_authorization$cookie_gripello_auth" $standings_personal {',
+    })
+
+    it('never shares standings fetched with credentials, not even ?view=public', () => {
+        expect(nginx).not.toContain('$arg_view')
+        const personal = nginx.match(
+            /map "([^"]+)" \$standings_personal \{([^}]+)\}/,
+        )!
+        expect(personal[1]).toBe('$http_authorization$cookie_gripello_auth')
+        const cacheable = [...personal[2]!.matchAll(/"([^"]*)" 0;/g)].map(
+            (match) => match[1],
         )
-        expect(nginx).toMatch(/default 1;\s+"~\^1\\\|" 0;\s+"0\|" 0;/)
+        expect(cacheable).toEqual([''])
     })
 
     it('serves robots.txt from disk and lets crawlers keep it for an hour', () => {

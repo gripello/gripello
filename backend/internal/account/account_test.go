@@ -218,7 +218,7 @@ func TestDeleteAccount(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("right-password"), bcrypt.MinCost)
 	f.exec(`UPDATE users SET password_hash = $1`, string(hash))
 	const confirmed = `{"password":"right-password"}`
-	f.call(f.admin, http.MethodDelete, "/me", confirmed, http.StatusBadRequest, "at least one admin")
+	f.call(f.admin, http.MethodDelete, "/me", confirmed, http.StatusBadRequest, "validation_last_admin")
 
 	f.exec(`INSERT INTO sessions (id, "user") VALUES ('sess1', $1)`, f.climber)
 	f.exec(`INSERT INTO audit_logs (id, actor, actor_label, action) VALUES ('audit1', $1, 'climber@example.com', 'login')`, f.climber)

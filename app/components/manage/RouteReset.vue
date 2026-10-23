@@ -35,6 +35,7 @@
                 type="date"
                 size="sm"
                 class="w-40"
+                :min="today"
                 :aria-label="t('resets.date')"
                 data-testid="route-reset-date"
             />
@@ -44,7 +45,9 @@
                 variant="soft"
                 icon="i-lucide-calendar-check"
                 :disabled="
-                    !plannedFor || plannedFor === route.removal_planned_for
+                    !plannedFor ||
+                    plannedFor < today ||
+                    plannedFor === route.removal_planned_for
                 "
                 :loading="pending"
                 data-testid="route-reset-plan"
@@ -92,6 +95,7 @@ const gymId = useCurrentGymId()
 const { pending, run } = useAsyncAction()
 
 const plannedFor = ref('')
+const today = computed(() => weeksFromToday(0, props.now))
 watch(
     () => [props.route.id, props.route.removal_planned_for],
     () => {
