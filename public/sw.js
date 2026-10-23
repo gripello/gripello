@@ -3,11 +3,13 @@ const CACHE = `gripello-${BUILD}`
 const PAGES = `${CACHE}-pages`
 const OFFLINE_URL = '/offline.html'
 const PUBLIC_DATA = /^\/(_i18n\/|api\/gyms\/[^/]+\/(walls|locations)$)/
+// Members see hidden gyms and their trial, so these live in PAGES, which sign-out clears.
+const ROUTE_DATA = /^\/api\/(gyms\/[^/]+(\/routes)?|routes(\/[^/]+)?)$/
 const FILES = /^\/api\/files\//
 const PUBLIC_PAGE =
     /^\/(?:(?:privacy|imprint|logbook|offline\.html)|(?!(?:account|admin|auth|logbook|manage|platform|scan|competitions)(?:\/|$))[a-z0-9-]{3,40}(?:\/(?:routes|map|route|imprint|privacy))?)?\/?$/
 const FILE_CACHE_LIMIT = 50
-const NETWORK_TIMEOUT_MS = 4000
+const NETWORK_TIMEOUT_MS = 2500
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -114,12 +116,18 @@ self.addEventListener('fetch', (event) => {
         return
     }
 
-    if (PUBLIC_DATA.test(url.pathname)) {
+    const isRouteData = ROUTE_DATA.test(url.pathname)
+    if (isRouteData || PUBLIC_DATA.test(url.pathname)) {
+        // A late answer would only reach the cache, and live updates never correct a stale route list.
+        const timeoutMs = isRouteData ? 0 : NETWORK_TIMEOUT_MS
         event.respondWith(
-            networkFirst(request, CACHE).then(
-                (response) =>
-                    response || new Response('Offline', { status: 503 }),
-            ),
+            networkFirst(
+                request,
+                isRouteData ? PAGES : CACHE,
+                // Every search would add an entry; offline needs only the browsed lists.
+                (response) => storable(response) && !url.searchParams.has('q'),
+                timeoutMs,
+            ).then((response) => response || Response.error()),
         )
         return
     }
@@ -205,7 +213,12 @@ async function trimFiles() {
         await cache.delete(key)
 }
 
-function networkFirst(request, cacheName, canStore = storable) {
+function networkFirst(
+    request,
+    cacheName,
+    canStore = storable,
+    timeoutMs = NETWORK_TIMEOUT_MS,
+) {
     return new Promise((resolve) => {
         let settled = false
         const settle = (response) => {
@@ -218,10 +231,12 @@ function networkFirst(request, cacheName, canStore = storable) {
                 .open(cacheName)
                 .then((cache) => cache.match(request))
                 .then((response) => response || caches.match(request))
-        const timer = setTimeout(async () => {
-            const response = await cached()
-            if (response) settle(response)
-        }, NETWORK_TIMEOUT_MS)
+        const timer =
+            timeoutMs &&
+            setTimeout(async () => {
+                const response = await cached()
+                if (response) settle(response)
+            }, timeoutMs)
 
         fetch(request)
             .then(async (response) => {

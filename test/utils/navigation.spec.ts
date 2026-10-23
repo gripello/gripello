@@ -12,6 +12,7 @@ import {
     withGymSlug,
     gymSwitchPath,
     bottomNavLinks,
+    offlineTabPaths,
     navContext,
     requestedSection,
     parentPath,
@@ -621,5 +622,30 @@ describe('staffExitPath', () => {
         expect(staffExitPath(null, 'kz')).toBe('/kz/routes')
         expect(staffExitPath('/kz/manage/tasks', 'kz')).toBe('/kz/routes')
         expect(staffExitPath('/other-gym/map', 'kz')).toBe('/kz/routes')
+    })
+})
+
+describe('offlineTabPaths', () => {
+    it('covers the phone tabs and the gym pages a climber opens at the wall', () => {
+        expect(offlineTabPaths('gym-a')).toEqual([
+            '/gym-a/routes',
+            '/gym-a/feed',
+            '/scan',
+            '/logbook',
+            '/account',
+            '/gym-a',
+            '/gym-a/map',
+            '/gym-a/info',
+            '/gym-a/route',
+        ])
+    })
+
+    it('skips gym pages without a gym', () => {
+        expect(offlineTabPaths('')).toEqual([
+            '/',
+            '/scan',
+            '/logbook',
+            '/account',
+        ])
     })
 })

@@ -293,6 +293,8 @@ const {
     walls,
     wallsError,
     refreshWalls,
+    locationsError,
+    refreshLocations,
     mapWalls,
 } = await useGymMapLocation('map')
 
@@ -328,9 +330,12 @@ const locationMenuItems = computed(() =>
     })),
 )
 
-const loadFailed = computed(() => !!routesError.value || !!wallsError.value)
+const loadFailed = computed(
+    () => !!routesError.value || !!wallsError.value || !!locationsError.value,
+)
 
-function retryLoad() {
+async function retryLoad() {
+    await refreshLocations()
     return Promise.all([refreshRoutes(), refreshWalls()])
 }
 

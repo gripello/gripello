@@ -1,6 +1,7 @@
 import { listLocations } from '~/api/routes'
 import type { LocationRecord } from '~/types/models'
 import { sharedAsyncData } from '~/utils/asyncData'
+import { useOfflineData } from '~/composables/useOfflineData'
 
 export function locationItems(locations: LocationRecord[] | null | undefined) {
     return (locations ?? []).map(({ id, name }) => ({ value: id, label: name }))
@@ -8,7 +9,7 @@ export function locationItems(locations: LocationRecord[] | null | undefined) {
 
 export function useLocations() {
     const gymId = useCurrentGymId()
-    const request = useAsyncData<LocationRecord[]>(
+    const request = useOfflineData<LocationRecord[], LocationRecord[]>(
         'locations',
         () => listLocations(gymId.value),
         { ...sharedAsyncData, default: () => [] },
