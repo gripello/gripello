@@ -11,6 +11,22 @@ export interface TickOutboxOp {
     record?: TickRecord
     queued: string
     failed?: string
+    serverErrors?: number
+}
+
+export const MAX_SERVER_ERRORS = 5
+
+export function isServerError(error: unknown) {
+    return ((error as { status?: number } | null)?.status ?? 0) >= 500
+}
+
+// A row the server keeps failing on must not hold back the ticks queued after it.
+export function countServerError(op: TickOutboxOp): TickOutboxOp {
+    return { ...op, serverErrors: (op.serverErrors ?? 0) + 1 }
+}
+
+export function serverGaveUp(op: TickOutboxOp) {
+    return (op.serverErrors ?? 0) >= MAX_SERVER_ERRORS
 }
 
 export type PendingTick<T extends TickRecord = TickRecord> = T & {
@@ -37,6 +53,7 @@ export function enqueueTickOp(
                           ...updatableFields(op.record),
                       },
                       failed: undefined,
+                      serverErrors: undefined,
                   }
                 : entry,
         )

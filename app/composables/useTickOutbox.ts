@@ -10,9 +10,12 @@ import {
     currentTickOp,
     currentTickRecord,
     enqueueTickOp,
+    countServerError,
     isAlreadyApplied,
+    isServerError,
     opsOfUser,
     replayFailure,
+    serverGaveUp,
     settleReplayedOp,
     updatableFields,
     TICKS_DB,
@@ -275,14 +278,26 @@ export function useTickOutbox() {
             (op) => !op.failed,
         )
         if (!replayable.length) return
-        for (const op of replayable) {
+        for (const queued of replayable) {
+            let op = queued
             try {
                 if (op.op === 'create') await postTick(op.record!)
                 else if (op.op === 'update')
                     await patchTick(op.id, updatableFields(op.record))
                 else await removeTick(op.id)
             } catch (error) {
-                if (
+                if (isServerError(error)) {
+                    const counted = countServerError(op)
+                    setQueue(
+                        queue.value.map((entry) =>
+                            entry === op ? counted : entry,
+                        ),
+                    )
+                    op =
+                        queue.value.find((entry) => entry.id === op.id) ??
+                        counted
+                    if (!serverGaveUp(op)) break
+                } else if (
                     isOfflineError(error) ||
                     isRetryableSaveError(error) ||
                     (error as { status?: number } | null)?.status === 401

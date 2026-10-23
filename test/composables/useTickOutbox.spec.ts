@@ -1,6 +1,6 @@
 import { useTickOutbox } from '~/composables/useTickOutbox'
 import type { TickRecord } from '~/types/models'
-import type { TickOutboxOp } from '~/utils/tickOutbox'
+import { MAX_SERVER_ERRORS, type TickOutboxOp } from '~/utils/tickOutbox'
 import { jsonResponse, mockApi } from '../api/apiMock'
 
 type Row = { id: string }
@@ -297,6 +297,28 @@ describe('useTickOutbox', () => {
             ])
         },
     )
+
+    it('gives up on an op the server keeps failing so later ticks still sync', async () => {
+        const outbox = await seed(edited('b', 'x'), deleted('c'))
+        api.fetchMock.mockImplementation(async (url: string) =>
+            String(url).endsWith('/api/ticks/b')
+                ? jsonResponse({ message: 'boom' }, 500)
+                : new Response(null, { status: 204 }),
+        )
+
+        for (let attempt = 1; attempt < MAX_SERVER_ERRORS; attempt++)
+            await outbox.flush()
+        expect(sent()).not.toContain('DELETE /api/ticks/c')
+        expect(outbox.queue.value[0]).toMatchObject({
+            id: 'b',
+            serverErrors: MAX_SERVER_ERRORS - 1,
+        })
+        expect(outbox.queue.value[0]!.failed).toBeUndefined()
+
+        await outbox.flush()
+        expect(sent()).toContain('DELETE /api/ticks/c')
+        expect(outbox.queue.value).toMatchObject([{ id: 'b', failed: 'boom' }])
+    })
 
     it('marks an op the server rejects and replays the rest', async () => {
         const outbox = await seed(edited('b', 'x'), deleted('c'))
