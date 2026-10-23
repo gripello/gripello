@@ -88,6 +88,10 @@ describe('PlatformSuspendDialog', () => {
             'platform.users.hideContentFailed',
         )
         expect(wrapper.emitted('changed')).toBeUndefined()
+        expect(wrapper.get('fieldset').attributes()).toHaveProperty('disabled')
+        expect(
+            wrapper.get('[data-testid="platform-suspend-reason"]').attributes(),
+        ).toHaveProperty('disabled')
 
         await confirm.trigger('click')
         await flushPromises()

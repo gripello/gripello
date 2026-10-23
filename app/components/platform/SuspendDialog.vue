@@ -17,7 +17,7 @@
         @submit="suspend"
     >
         <div class="flex flex-col gap-4">
-            <fieldset>
+            <fieldset :disabled="!!suspendedUser">
                 <legend class="mb-2 text-sm font-semibold text-highlighted">
                     {{ t('platform.users.suspendHowLong') }}
                 </legend>
@@ -37,6 +37,7 @@
                     v-model="until"
                     type="date"
                     :min="tomorrow"
+                    :disabled="!!suspendedUser"
                     class="w-full"
                     data-testid="platform-suspend-until"
                 />
@@ -49,6 +50,7 @@
                     v-model="reason"
                     :rows="3"
                     :maxlength="2000"
+                    :disabled="!!suspendedUser"
                     autoresize
                     class="w-full"
                     data-testid="platform-suspend-reason"
