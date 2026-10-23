@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { useNow } from '@vueuse/core'
+import { useIntervalFn, useNow } from '@vueuse/core'
 import {
     COMPETITION_PHASES,
     COMPETITION_PHASE_COLORS,
@@ -185,7 +185,7 @@ const requestUrl = useRequestURL({
 const confirmOpen = ref(false)
 const pendingAction = ref<LifecycleAction | null>(null)
 const qrDataUrl = ref('')
-const now = useNow({ interval: 60_000 })
+const now = useNow({ scheduler: (update) => useIntervalFn(update, 60_000) })
 
 const phase = computed(() => competitionPhase(props.competition, now.value))
 const actions = computed(() => lifecycleActions(props.competition.status))

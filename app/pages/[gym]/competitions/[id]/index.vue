@@ -131,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { useNow } from '@vueuse/core'
+import { useIntervalFn, useNow } from '@vueuse/core'
 import {
     COMPETITION_PHASE_COLORS,
     acceptsRegistrations,
@@ -172,7 +172,7 @@ const {
     if (kind === 'routes' || kind === 'resync') refreshScorecardRoutesSoon()
 })
 
-const now = useNow({ interval: 15_000 })
+const now = useNow({ scheduler: (update) => useIntervalFn(update, 15_000) })
 const phase = computed(() =>
     competition.value
         ? competitionPhase(competition.value, now.value)
