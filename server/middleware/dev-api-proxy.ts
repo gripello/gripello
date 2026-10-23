@@ -8,5 +8,6 @@ export default defineEventHandler((event) => {
     return proxyRequest(
         event,
         `${useRuntimeConfig().apiBase}${pathname}${search}`,
+        { fetchOptions: { redirect: 'manual' } },
     )
 })
