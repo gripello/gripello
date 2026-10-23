@@ -29,6 +29,14 @@ export function toRouteRow(route: RouteRecord): RouteListItem {
     }
 }
 
+export function latestRequestTracker() {
+    let latest = 0
+    return function start() {
+        const request = ++latest
+        return () => request === latest
+    }
+}
+
 export function useRouteTable({
     itemsPerPage,
     totalItems,

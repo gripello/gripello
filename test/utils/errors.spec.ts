@@ -4,6 +4,7 @@ import {
     isOfflineError,
     isRetryableSaveError,
     keepWhenOffline,
+    nullIfNotFound,
     requestErrorKey,
 } from '~/utils/errors'
 
@@ -130,5 +131,16 @@ describe('isRetryableSaveError', () => {
         expect(isRetryableSaveError({ status: 503 })).toBe(true)
         expect(isRetryableSaveError({ status: 400 })).toBe(false)
         expect(isRetryableSaveError({ status: 403 })).toBe(false)
+    })
+})
+
+describe('nullIfNotFound', () => {
+    it('turns only a 404 into null and rethrows everything else', async () => {
+        expect(await nullIfNotFound(Promise.resolve('found'))).toBe('found')
+        expect(await nullIfNotFound(Promise.reject({ status: 404 }))).toBeNull()
+        for (const status of [0, 429, 503])
+            await expect(
+                nullIfNotFound(Promise.reject({ status })),
+            ).rejects.toEqual({ status })
     })
 })

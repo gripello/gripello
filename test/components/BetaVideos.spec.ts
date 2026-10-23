@@ -1,6 +1,7 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick, ref } from 'vue'
 import BetaVideos from '~/components/route/BetaVideos.vue'
+import { deleteBeta, listBetas } from '~/api/ratings'
 
 vi.mock('~/api/ratings', () => ({
     listBetas: vi.fn(async () => []),
@@ -69,5 +70,51 @@ describe('RouteBetaVideos', () => {
         const wrapper = await openDialog(true, true)
         expect(wrapper.find('[data-testid="beta-source"]').exists()).toBe(true)
         expect(wrapper.find('[data-testid="beta-link"]').exists()).toBe(true)
+    })
+
+    it('keeps the delete confirmation open when deleting fails', async () => {
+        vi.mocked(listBetas).mockResolvedValue([
+            { id: 'b1', user: 'u1', route: 'r1' },
+        ] as never)
+        vi.mocked(deleteBeta).mockRejectedValueOnce(new Error('down'))
+        vi.stubGlobal('useAsyncAction', () => ({
+            pending: ref(false),
+            run: async (action: () => Promise<unknown>) =>
+                action().catch(() => undefined),
+        }))
+        const wrapper = mount(BetaVideos, {
+            props: { routeId: 'r1', links: true, uploads: false },
+            global: {
+                stubs: {
+                    LayoutScrollStrip: { template: '<div><slot /></div>' },
+                    RouteBetaTile: {
+                        emits: ['delete'],
+                        template:
+                            '<button data-testid="tile-delete" @click="$emit(\'delete\')" />',
+                    },
+                    ConfirmDialog: {
+                        props: ['modelValue'],
+                        emits: ['confirm'],
+                        template:
+                            '<button v-if="modelValue" data-testid="delete-confirm" @click="$emit(\'confirm\')" />',
+                    },
+                    LayoutDialogShell: true,
+                    RouteBetaPlayer: true,
+                    ReportsFormDialog: true,
+                    UButton: true,
+                    UBadge: true,
+                    UIcon: true,
+                },
+            },
+        })
+        await flushPromises()
+        await wrapper.get('[data-testid="tile-delete"]').trigger('click')
+        await wrapper.get('[data-testid="delete-confirm"]').trigger('click')
+        await flushPromises()
+
+        expect(deleteBeta).toHaveBeenCalledWith('b1')
+        expect(wrapper.find('[data-testid="delete-confirm"]').exists()).toBe(
+            true,
+        )
     })
 })

@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref as vueRef } from 'vue'
 import { mount } from '@vue/test-utils'
-import { toRouteRow, useRouteTable } from '~/composables/useRouteTable'
+import {
+    latestRequestTracker,
+    toRouteRow,
+    useRouteTable,
+} from '~/composables/useRouteTable'
 import type { RouteRecord } from '~/types/models'
 
 vi.mock('@nuxt/ui/components/Button.vue', () => ({
@@ -100,5 +104,22 @@ describe('toRouteRow', () => {
         expect(
             toRouteRow({ ...base, ratings_count: 2, average_rating: 4.5 }),
         ).toMatchObject({ score: 4.5, has_ratings: true })
+    })
+})
+
+describe('latestRequestTracker', () => {
+    it('reports only the most recently started request as latest', () => {
+        const start = latestRequestTracker()
+        const append = start()
+        expect(append()).toBe(true)
+        const reload = start()
+        expect(append()).toBe(false)
+        expect(reload()).toBe(true)
+    })
+
+    it('keeps separate trackers independent', () => {
+        const first = latestRequestTracker()()
+        latestRequestTracker()()
+        expect(first()).toBe(true)
     })
 })

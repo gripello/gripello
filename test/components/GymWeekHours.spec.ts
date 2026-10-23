@@ -56,4 +56,17 @@ describe('GymWeekHours', () => {
                 .text(),
         ).toContain('10:00–18:00')
     })
+
+    it('shows a day open only after midnight with its spill-over hours', () => {
+        const wrapper = createWrapper({
+            hours: { fri: [['18:00', '02:00']] },
+            today: 'mon',
+        })
+
+        const saturday = wrapper.get('[data-testid="gym-hours-day-sat"]')
+        expect(saturday.findAll('.week-hours__segment')).toHaveLength(1)
+        expect(saturday.text()).toContain('00:00–02:00')
+        expect(saturday.text()).not.toContain('gymInfo.closed')
+        expect(saturday.classes()).not.toContain('max-sm:hidden')
+    })
 })

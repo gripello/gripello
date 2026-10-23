@@ -8,6 +8,10 @@
         data-testid="route-details-sheet"
     >
         <LayoutLoadingState v-if="isLoading" :count="2" />
+        <LayoutLoadError
+            v-else-if="status === 'error'"
+            @retry="loadRatings()"
+        />
 
         <div v-if="!isLoading && reviews.length">
             <CommentsCard
@@ -34,7 +38,7 @@
         </div>
 
         <LayoutEmptyState
-            v-if="!isLoading && !reviews.length"
+            v-if="status === 'success' && !reviews.length"
             icon="i-lucide-sparkles"
             :card="false"
             :title="$t('ratings.no_reviews_yet')"
@@ -64,7 +68,7 @@ const { t } = useI18n()
 const props = defineProps<{ routeId: string }>()
 const open = defineModel<boolean>({ default: false })
 
-const { error: notifyError } = useNotification()
+const { isBlocked } = useBlocks()
 
 const {
     data: ratings,
@@ -72,19 +76,15 @@ const {
     execute: loadRatings,
 } = useAsyncData(
     cacheKeys.ratingsSheet(props.routeId),
-    async () => {
-        try {
-            return (await listRouteRatings(props.routeId)).items
-        } catch (error) {
-            console.error('Error fetching ratings:', error)
-            notifyError(t('ratings.loadError'))
-            return []
-        }
-    },
+    async () => (await listRouteRatings(props.routeId)).items,
     { server: false, immediate: false, default: () => [] },
 )
 const isLoading = computed(() => status.value === 'pending')
-const reviews = computed(() => ratings.value.map(mapReview))
+const reviews = computed(() =>
+    ratings.value
+        .filter((rating) => !isBlocked(rating.author?.id))
+        .map(mapReview),
+)
 
 const reportDialog = ref(false)
 const reportTarget = ref<string | null>(null)

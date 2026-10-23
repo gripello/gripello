@@ -112,7 +112,17 @@
                         </div>
                     </div>
 
-                    <TaskDefectBanner :defects="openDefects" class="mb-4" />
+                    <LayoutLoadError
+                        v-if="defectsError"
+                        class="mb-4"
+                        data-testid="route-defects-error"
+                        @retry="getOpenDefects()"
+                    />
+                    <TaskDefectBanner
+                        v-else
+                        :defects="openDefects"
+                        class="mb-4"
+                    />
 
                     <RouteBetaVideos
                         v-if="route_id"
@@ -124,8 +134,12 @@
                 </div>
 
                 <div class="route-layout__reviews" data-testid="route-reviews">
+                    <LayoutLoadError
+                        v-if="ratingsError"
+                        @retry="routeRatings.refresh()"
+                    />
                     <RouteReviewsSection
-                        v-if="route_id"
+                        v-else-if="route_id"
                         :reviews="reviews"
                         :route-id="route_id"
                         :target-comment-id="targetCommentId"
@@ -159,7 +173,8 @@
 import { listRouteRatings } from '~/api/ratings'
 import { getRoute } from '~/api/routes'
 import { listRouteDefects } from '~/api/tasks'
-import { isAbortError, isOfflineError } from '~/utils/errors'
+import { isOfflineError, nullIfNotFound } from '~/utils/errors'
+import { keepShownOnError } from '~/utils/keepShown'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { RouteListItem } from '~/types/models'
 import {
@@ -203,55 +218,50 @@ const route_id = ref<string | null>((nuxtRoute.query.id as string) || null)
 
 const targetCommentId = ref('')
 const loading = ref(true)
-const { error: notifyError } = useNotification()
 
+const routeKey = cacheKeys.route(route_id.value ?? '')
 const routeDetail = useOfflineData(
-    cacheKeys.route(route_id.value ?? ''),
-    async (): Promise<RouteListItem | null> => {
+    routeKey,
+    keepShownOnError(routeKey, async (): Promise<RouteListItem | null> => {
         if (!route_id.value) return null
         try {
-            const record = await getRoute(route_id.value, ['location', 'wall'])
-            return { ...record, creator: normalizeCreators(record.creator) }
+            const record = await nullIfNotFound(
+                getRoute(route_id.value, ['location', 'wall']),
+            )
+            return (
+                record && {
+                    ...record,
+                    creator: normalizeCreators(record.creator),
+                }
+            )
         } catch (err: unknown) {
-            const status = (err as { status?: number }).status ?? 0
             if (isOfflineError(err)) throw err
-            if (status !== 404) throw createError({ status: status || 503 })
-            return null
+            throw createError({
+                status: (err as { status?: number }).status || 503,
+            })
         }
-    },
+    }),
 )
 
+const ratingsKey = cacheKeys.ratings(route_id.value ?? '')
 const routeRatings = useOfflineData(
-    cacheKeys.ratings(route_id.value ?? ''),
-    loadRatings,
+    ratingsKey,
+    keepShownOnError(ratingsKey, async () =>
+        route_id.value ? (await listRouteRatings(route_id.value)).items : [],
+    ),
     { default: () => [] },
 )
+const ratingsError = routeRatings.error
 
-async function loadRatings() {
-    if (!route_id.value) return []
-    try {
-        return (await listRouteRatings(route_id.value)).items
-    } catch (err: unknown) {
-        if (isOfflineError(err)) throw err
-        if (!isAbortError(err)) {
-            console.error('Error fetching ratings:', err)
-            notifyError(t('ratings.loadError'))
-        }
-        return []
-    }
-}
-
+const defectsKey = cacheKeys.routeDefects(route_id.value ?? '')
 const routeDefects = useOfflineData(
-    cacheKeys.routeDefects(route_id.value ?? ''),
-    () =>
-        route_id.value
-            ? listRouteDefects(route_id.value).catch((err) => {
-                  if (isOfflineError(err)) throw err
-                  return []
-              })
-            : Promise.resolve([]),
+    defectsKey,
+    keepShownOnError(defectsKey, async () =>
+        route_id.value ? listRouteDefects(route_id.value) : [],
+    ),
     { default: () => [] },
 )
+const defectsError = routeDefects.error
 
 const metadata = computed(() => routeDetail.data.value ?? null)
 const openDefects = routeDefects.data

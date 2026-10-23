@@ -331,12 +331,16 @@ const locationMenuItems = computed(() =>
 )
 
 const loadFailed = computed(
-    () => !!routesError.value || !!wallsError.value || !!locationsError.value,
+    () =>
+        !!routesError.value ||
+        !!wallsError.value ||
+        !!locationsError.value ||
+        !!matchesError.value,
 )
 
 async function retryLoad() {
     await refreshLocations()
-    return Promise.all([refreshRoutes(), refreshWalls()])
+    return Promise.all([refreshRoutes(), refreshWalls(), refreshMatches()])
 }
 
 const allRoutes = computed<RouteListItem[]>(() =>
@@ -380,7 +384,11 @@ const matchQuery = computed(() =>
         : null,
 )
 useLiveQuery(cacheKeys.mapMatching, matchQuery)
-const { data: serverMatches } = useAsyncData(
+const {
+    data: serverMatches,
+    error: matchesError,
+    refresh: refreshMatches,
+} = useAsyncData(
     cacheKeys.mapMatching,
     () =>
         matchQuery.value
@@ -397,11 +405,11 @@ const { data: serverMatches } = useAsyncData(
 
 const matchingIds = computed<Set<string> | null>(() => {
     const hasSentFilter = isLoggedIn.value && sentFilter.value !== 'all'
-    if (!hasServerFilter.value && !hasSentFilter && !colorFilter.value)
-        return null
-    const serverIds = hasServerFilter.value
-        ? new Set((serverMatches.value ?? []).map((match) => match.id))
-        : null
+    const serverIds =
+        hasServerFilter.value && serverMatches.value
+            ? new Set(serverMatches.value.map((match) => match.id))
+            : null
+    if (!serverIds && !hasSentFilter && !colorFilter.value) return null
     return new Set(
         routes.value
             .filter((item) => !serverIds || serverIds.has(item.id))

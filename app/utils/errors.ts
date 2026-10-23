@@ -16,6 +16,19 @@ export function requestErrorKey(error: unknown, fallback: string) {
     return isRateLimited(error) ? 'errors.rateLimited' : fallback
 }
 
+export function isNotFound(error: unknown): boolean {
+    return (error as { status?: number } | null)?.status === 404
+}
+
+export async function nullIfNotFound<T>(request: Promise<T>) {
+    try {
+        return await request
+    } catch (error) {
+        if (isNotFound(error)) return null
+        throw error
+    }
+}
+
 export function isNetworkError(error: unknown): boolean {
     return (error as { status?: number } | null)?.status === 0
 }

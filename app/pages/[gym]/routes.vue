@@ -258,7 +258,11 @@ import { listRoutes } from '~/api/routes'
 import { isAbortError } from '~/utils/errors'
 import type { TableColumn } from '@nuxt/ui'
 import type { RouteListItem, RouteRecord } from '~/types/models'
-import { toRouteRow, type RouteTableLoad } from '~/composables/useRouteTable'
+import {
+    latestRequestTracker,
+    toRouteRow,
+    type RouteTableLoad,
+} from '~/composables/useRouteTable'
 import {
     formatAnchorPoint,
     formatScore,
@@ -442,11 +446,15 @@ const showComments = computed(
     () => commentsSeen.value || tableOptions.sortBy[0]?.key === 'comment',
 )
 
+const startRouteLoad = latestRequestTracker()
+
 async function loadRoutes(
     options: RouteTableLoad = {},
     meta: { append?: boolean } = {},
 ): Promise<void> {
+    const isLatest = startRouteLoad()
     loading.value = true
+    const previousPage = tableOptions.page
 
     if (typeof options.page === 'number') tableOptions.page = options.page
     if (typeof options.itemsPerPage === 'number')
@@ -462,7 +470,7 @@ async function loadRoutes(
             () => fetchRoutes(tableOptions.page, tableOptions.itemsPerPage),
             () => routePage.value,
         )
-        if (loadedQuery() !== before) return
+        if (!isLatest() || loadedQuery() !== before) return
         routePage.value = {
             items: meta.append
                 ? routePage.value.items.concat(res.items)
@@ -473,19 +481,25 @@ async function loadRoutes(
         if (!meta.append)
             announce(t('climbing.routesFound', { n: res.totalItems }))
     } catch (error) {
+        if (!isLatest()) return
+        if (meta.append) tableOptions.page = previousPage
         if (isAbortError(error)) return
         if (meta.append) notifyError(t('notifications.error.generic'))
         else loadFailed.value = true
     } finally {
-        loading.value = false
+        if (isLatest()) loading.value = false
     }
 }
 
 function loadMore() {
     if (loading.value || routes.value.length >= totalItems.value) return
-    tableOptions.page += 1
-    void loadRoutes({}, { append: true })
+    void loadRoutes({ page: tableOptions.page + 1 }, { append: true })
 }
+
+// Page 1 holds the same rows in both layouts, so only deeper paging needs a reload.
+watch(isWideLayout, () => {
+    if (tableOptions.page > 1) void loadRoutes({ page: 1 })
+})
 
 useIntersectionObserver(
     sentinelRef,

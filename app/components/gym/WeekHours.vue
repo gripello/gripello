@@ -6,7 +6,7 @@
             class="week-hours__day"
             :class="{
                 'week-hours__day--today': row.day === today,
-                'max-sm:hidden': !row.intervals.length && row.day !== today,
+                'max-sm:hidden': !row.segments.length && row.day !== today,
             }"
             :data-testid="`gym-hours-day-${row.day}`"
         >
@@ -34,8 +34,8 @@
                 />
             </span>
             <span class="text-right tabular-nums">{{
-                row.intervals.length
-                    ? formatIntervals(row.intervals)
+                row.shown.length
+                    ? formatIntervals(row.shown)
                     : $t('gymInfo.closed')
             }}</span>
         </li>
@@ -58,6 +58,7 @@ import {
     formatIntervals,
     weekTimeline,
     type GymOpeningHours,
+    type OpeningInterval,
     type Weekday,
 } from '#shared/utils/openingHours'
 
@@ -69,7 +70,16 @@ const props = defineProps<{
 const { locale } = useI18n()
 const now = useMountedNow(60_000)
 
-const days = computed(() => weekTimeline(props.hours))
+const days = computed(() =>
+    weekTimeline(props.hours).map((row, index, week) => ({
+        ...row,
+        shown: row.intervals.length
+            ? row.intervals
+            : (props.hours?.[week[(index + 6) % 7]!.day] ?? [])
+                  .filter(([opens, closes]) => closes < opens)
+                  .map(([, closes]): OpeningInterval => ['00:00', closes]),
+    })),
+)
 const nowAt = computed(() =>
     now.value
         ? (now.value.getHours() * 60 + now.value.getMinutes()) / (24 * 60)

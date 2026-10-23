@@ -12,7 +12,7 @@ describe('routes page', () => {
             source.indexOf('async function loadRoutes'),
         )
         expect(loadRoutes).toMatch(
-            /await unlessQueryChanged\(\s+loadedQuery,[\s\S]+?\(\) => routePage\.value,\s+\)\s+if \(loadedQuery\(\) !== before\) return/,
+            /await unlessQueryChanged\(\s+loadedQuery,[\s\S]+?\(\) => routePage\.value,\s+\)\s+if \(!isLatest\(\) \|\| loadedQuery\(\) !== before\) return/,
         )
     })
 })
@@ -81,5 +81,41 @@ describe('manage routes page', () => {
             /queueReload = coalesce\(\s*\(\) => reloadRoutes\(\{ background: true \}\)/,
         )
         expect(manage).toContain('{ resync: queueReload }')
+    })
+})
+
+describe('routes page infinite scroll', () => {
+    const loadRoutes = source.slice(
+        source.indexOf('async function loadRoutes'),
+        source.indexOf('useIntersectionObserver(\n'),
+    )
+
+    it('raises the page only through loadRoutes and restores it when the append fails', () => {
+        expect(source).not.toContain('tableOptions.page += 1')
+        expect(loadRoutes).toContain(
+            'void loadRoutes({ page: tableOptions.page + 1 }, { append: true })',
+        )
+        expect(loadRoutes).toMatch(
+            /const previousPage = tableOptions\.page\s+if \(typeof options\.page/,
+        )
+        expect(loadRoutes).toMatch(
+            /catch \(error\) \{\s+if \(!isLatest\(\)\) return\s+if \(meta\.append\) tableOptions\.page = previousPage/,
+        )
+    })
+
+    it('drops responses and loading resets of superseded loads', () => {
+        expect(loadRoutes).toMatch(/const isLatest = startRouteLoad\(\)/)
+        expect(loadRoutes).toContain(
+            'if (!isLatest() || loadedQuery() !== before) return',
+        )
+        expect(loadRoutes).toMatch(
+            /finally \{\s+if \(isLatest\(\)\) loading\.value = false/,
+        )
+    })
+
+    it('reloads page 1 when the layout switches while paged deeper', () => {
+        expect(source).toMatch(
+            /watch\(isWideLayout, \(\) => \{\s+if \(tableOptions\.page > 1\) void loadRoutes\(\{ page: 1 \}\)/,
+        )
     })
 })
