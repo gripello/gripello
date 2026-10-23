@@ -56,6 +56,19 @@ describe('android app links', () => {
     })
 })
 
+describe('android release build', () => {
+    it('keeps the Capacitor annotations that carry plugin permissions through R8', () => {
+        const rules = readFileSync(
+            'mobile/android/app/proguard-rules.pro',
+            'utf8',
+        )
+        expect(rules).toMatch(/^-keepattributes .*RuntimeVisibleAnnotations/m)
+        expect(rules).toContain(
+            '-keep @interface com.getcapacitor.annotation.** { *; }',
+        )
+    })
+})
+
 describe('native layout', () => {
     it('keeps every page below the status bar without a marker or script', () => {
         const css = readFileSync('app/assets/css/main.css', 'utf8')
