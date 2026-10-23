@@ -65,7 +65,7 @@
         "h3": "1.15.11",
         "happy-dom": "21.0.3",
         "maplibre-gl": "^6.15.0",
-        "nuxt": "^4.6.1",
+        "nuxt": "^4.6.2",
         "pako": "^3.0.2",
         "pdfkit": "0.20.2",
         "prettier": "3.9.10",
@@ -80,7 +80,7 @@
     "browserslist": [
         "defaults and fully supports es6-module"
     ],
-    "packageManager": "yarn@4.18.0",
+    "packageManager": "yarn@4.18.1",
     "release-it": {
         "$schema": "https://unpkg.com/release-it/schema/release-it.json",
         "git": {
