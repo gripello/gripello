@@ -47,8 +47,14 @@ export function usePushSubscription() {
             publicKey.value = settings.publicKey
             ready.value = pushReady(settings)
             devices.value = list.items
+            // A device that can't hand out its token (FCM registration error) still lists the account's devices.
             currentEndpoint.value = available.value
-                ? await pushDevice().currentEndpoint()
+                ? await pushDevice()
+                      .currentEndpoint()
+                      .catch((err) => {
+                          console.error('Push endpoint lookup failed:', err)
+                          return ''
+                      })
                 : ''
         } catch (err) {
             console.error('Failed to load notification settings:', err)
@@ -62,6 +68,7 @@ export function usePushSubscription() {
             const added = await subscribeThisDevice(
                 authStore.record?.id,
                 publicKey.value,
+                (endpoint) => (currentEndpoint.value = endpoint),
             )
             if (!added) return false
             const { device, endpoint } = added

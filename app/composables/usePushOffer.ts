@@ -1,5 +1,8 @@
+import type { PluginListenerHandle } from '@capacitor/core'
+import type { PushSubscriptionRecord } from '~/types/models'
 import {
     createPushSubscription,
+    deletePushSubscription,
     getNotificationSettings,
     listPushSubscriptions,
 } from '~/api/notifications'
@@ -13,13 +16,36 @@ import {
     type PushSupport,
 } from '~/utils/push'
 import { isNativeApp } from '~/utils/native'
-import { pushDevice } from '~/utils/pushDevice'
+import { onFcmTokenChange, pushDevice } from '~/utils/pushDevice'
 
 const subscribedHere = ref(false)
+let fcmTokenFollower: Promise<PluginListenerHandle> | undefined
+
+// Right after an account switch FCM may still be deleting the token register() just handed out; its replacement arrives as a later registration.
+function followFcmToken(
+    device: PushSubscriptionRecord,
+    onEndpoint?: (endpoint: string) => void,
+) {
+    void fcmTokenFollower?.then((handle) => handle.remove())
+    let current = device
+    fcmTokenFollower = onFcmTokenChange(async (token) => {
+        if (token === current.endpoint) return
+        const replaced = current
+        current = { ...replaced, endpoint: token }
+        current = await createPushSubscription({
+            kind: 'fcm',
+            endpoint: token,
+            device: replaced.device,
+        })
+        onEndpoint?.(token)
+        await deletePushSubscription(replaced.id).catch(() => null)
+    })
+}
 
 export async function subscribeThisDevice(
     userId: string | undefined,
     publicKey: string,
+    onEndpoint?: (endpoint: string) => void,
 ) {
     const subscription = await pushDevice().subscribe(publicKey)
     if (!subscription) return null
@@ -27,6 +53,7 @@ export async function subscribeThisDevice(
         device: deviceLabel(navigator.userAgent),
         ...subscription,
     })
+    if (subscription.kind === 'fcm') followFcmToken(device, onEndpoint)
     setPushDeclined(userId, false)
     subscribedHere.value = true
     return { device, endpoint: subscription.endpoint }

@@ -83,4 +83,46 @@ describe('usePushOffer', () => {
         const { turnOn } = usePushOffer()
         expect(await turnOn()).toBe(false)
     })
+
+    it('replaces the stored FCM token when FCM hands out a new one', async () => {
+        let tokenChanged!: (token: string) => Promise<void>
+        vi.doMock('~/utils/pushDevice', () => ({
+            pushDevice: () => ({
+                subscribe: async () => ({ kind: 'fcm', endpoint: 'dying' }),
+            }),
+            onFcmTokenChange: async (handler: typeof tokenChanged) => {
+                tokenChanged = handler
+                return { remove: async () => {} }
+            },
+        }))
+        api.mockImplementation(
+            async (path: string, options?: { body?: any }) =>
+                options?.body
+                    ? { id: options.body.endpoint, ...options.body }
+                    : null,
+        )
+        const { subscribeThisDevice } =
+            await import('~/composables/usePushOffer')
+        const onEndpoint = vi.fn()
+        await subscribeThisDevice('u1', '', onEndpoint)
+        await new Promise((resolve) => setTimeout(resolve))
+        vi.doUnmock('~/utils/pushDevice')
+
+        await tokenChanged('dying')
+        await Promise.all([tokenChanged('fresh'), tokenChanged('fresh')])
+
+        const writes = api.mock.calls.filter(([, options]) => options)
+        expect(writes.map(([path, options]) => [path, options.method])).toEqual(
+            [
+                ['/me/push-subscriptions', 'POST'],
+                ['/me/push-subscriptions', 'POST'],
+                ['/me/push-subscriptions/dying', 'DELETE'],
+            ],
+        )
+        expect(writes[1][1].body).toMatchObject({
+            kind: 'fcm',
+            endpoint: 'fresh',
+        })
+        expect(onEndpoint).toHaveBeenCalledExactlyOnceWith('fresh')
+    })
 })
