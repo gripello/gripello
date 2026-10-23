@@ -634,3 +634,23 @@ describe('android system theme', () => {
         expect(activity).toContain("CustomEvent('gripello:system-theme'")
     })
 })
+
+describe('android system bars', () => {
+    it('mirrors the legacy light flags into the window appearance below Android 15', () => {
+        const activity = readFileSync(
+            'mobile/android/app/src/main/java/app/gripello/MainActivity.java',
+            'utf8',
+        )
+        expect(activity).toContain(
+            'Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM',
+        )
+        expect(activity).toContain('WindowCompat.enableEdgeToEdge(getWindow())')
+        expect(activity).toContain('addOnPreDrawListener(')
+        expect(activity).toContain(
+            'syncBarAppearance(decor.getSystemUiVisibility())',
+        )
+        expect(activity).toContain(
+            'controller.setSystemBarsAppearance(appearance, mask)',
+        )
+    })
+})

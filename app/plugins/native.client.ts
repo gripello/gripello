@@ -15,16 +15,18 @@ import { parentPath } from '~/utils/navigation'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
     if (!isNativeApp()) return
+    // Composables need the app context, which is gone after the first await.
+    const router = useRouter()
+    const colorMode = useColorMode()
+    const pageBackTo = usePageBackTo()
+    const forcedPop = useForcedPop()
+    const { notify } = useNotification()
     const [{ App }, { SplashScreen }, { PushNotifications }] =
         await Promise.all([
             import('@capacitor/app'),
             import('@capacitor/splash-screen'),
             import('@capacitor/push-notifications'),
         ])
-    const router = useRouter()
-    const colorMode = useColorMode()
-    const pageBackTo = usePageBackTo()
-    const forcedPop = useForcedPop()
 
     nuxtApp.hook('app:suspense:resolve', () => void SplashScreen.hide())
 
@@ -87,7 +89,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         },
     )
 
-    const { notify } = useNotification()
     const { t } = nuxtApp.$i18n
     void PushNotifications.addListener(
         'pushNotificationReceived',

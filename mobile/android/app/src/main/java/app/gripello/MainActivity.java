@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
+import android.view.WindowInsetsController;
 import android.webkit.CookieManager;
 import android.webkit.URLUtil;
 import android.webkit.WebResourceError;
@@ -16,6 +17,7 @@ import android.webkit.WebViewClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.widget.Toast;
+import androidx.core.view.WindowCompat;
 import androidx.webkit.WebSettingsCompat;
 import androidx.webkit.WebViewFeature;
 import com.getcapacitor.BridgeActivity;
@@ -47,6 +49,16 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         WebView webView = bridge.getWebView();
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        // Android 15 draws every app edge to edge; older ones get it too, so the page's own bars show behind the system bars.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) WindowCompat.enableEdgeToEdge(getWindow());
+        // Android 11–14: SystemBars only sets the legacy light flags, which the window ignores once the splash screen has set its appearance.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            View decor = getWindow().getDecorView();
+            decor.getViewTreeObserver().addOnPreDrawListener(() -> {
+                syncBarAppearance(decor.getSystemUiVisibility());
+                return true;
+            });
+        }
         // Passkeys: the WebView only offers WebAuthn when the app opts in; assetlinks.json vouches for the origin.
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION)) {
             WebSettingsCompat.setWebAuthenticationSupport(
@@ -71,6 +83,15 @@ public class MainActivity extends BridgeActivity {
         // The bridge always starts at server.url; a cold start from an App Link opens the linked page instead.
         Uri link = appLink(getIntent());
         if (savedInstanceState == null && link != null) webView.loadUrl(link.toString());
+    }
+
+    private void syncBarAppearance(int legacyFlags) {
+        int mask = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+        int appearance =
+            ((legacyFlags & View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR) != 0 ? WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS : 0) |
+            ((legacyFlags & View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR) != 0 ? WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS : 0);
+        WindowInsetsController controller = getWindow().getInsetsController();
+        if ((controller.getSystemBarsAppearance() & mask) != appearance) controller.setSystemBarsAppearance(appearance, mask);
     }
 
     private boolean sameOrigin(Uri url) {
