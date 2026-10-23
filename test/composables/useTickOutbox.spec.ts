@@ -262,4 +262,80 @@ describe('useTickOutbox', () => {
         expect(sent()).toEqual(['POST /api/me/ticks'])
         expect(idb.stores.get('outbox')!.size).toBe(0)
     })
+
+    const edited = (id: string, note: string): TickOutboxOp => ({
+        op: 'update',
+        id,
+        user: 'u1',
+        record: tick(id, note),
+        queued: '2026-10-01T10:00:00Z',
+    })
+    const deleted = (id: string): TickOutboxOp => ({
+        op: 'delete',
+        id,
+        user: 'u1',
+        queued: '2026-10-01T10:00:00Z',
+    })
+
+    it.each([502, 503, 429, 401])(
+        'keeps ops queued for the next flush after a %i',
+        async (status) => {
+            const outbox = await seed(
+                created('a'),
+                edited('b', 'x'),
+                deleted('c'),
+            )
+            api.fetchMock.mockImplementation(async () =>
+                jsonResponse({ message: 'try later' }, status),
+            )
+            await outbox.flush()
+            expect(sent()).toHaveLength(1)
+            expect(outbox.queue.value.map((op) => [op.id, op.failed])).toEqual([
+                ['a', undefined],
+                ['b', undefined],
+                ['c', undefined],
+            ])
+        },
+    )
+
+    it('marks an op the server rejects and replays the rest', async () => {
+        const outbox = await seed(edited('b', 'x'), deleted('c'))
+        api.fetchMock
+            .mockResolvedValueOnce(jsonResponse({ message: 'invalid' }, 400))
+            .mockResolvedValueOnce(new Response(null, { status: 204 }))
+        await outbox.flush()
+        expect(sent()).toEqual(['PATCH /api/ticks/b', 'DELETE /api/ticks/c'])
+        expect(outbox.queue.value).toMatchObject([
+            { id: 'b', failed: 'invalid' },
+        ])
+    })
+
+    it('replaces a failed edit with an online edit that keeps its values', async () => {
+        const outbox = await seed({ ...edited('b', 'crux'), failed: 'invalid' })
+        await outbox.flush()
+        api.fetchMock.mockResolvedValueOnce(
+            jsonResponse({ ...tick('b', 'crux'), attempts: 3 }),
+        )
+        await outbox.updateTick(
+            { ...tick('b', 'crux'), pending: true, syncFailed: 'invalid' },
+            { attempts: 3 },
+        )
+        expect(api.request().body).toEqual({
+            type: 'top',
+            attempts: 3,
+            date: '2026-10-01',
+            note: 'crux',
+        })
+        expect(outbox.queue.value).toEqual([])
+        await vi.waitFor(() => expect(idb.stores.get('outbox')!.size).toBe(0))
+    })
+
+    it('drops a queued edit once the tick is deleted online', async () => {
+        const outbox = await seed(edited('b', 'x'))
+        api.fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'))
+        await outbox.flush()
+        api.fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
+        await outbox.deleteTick('b')
+        expect(outbox.queue.value).toEqual([])
+    })
 })

@@ -103,12 +103,7 @@
                 data-testid="climber-locked"
             />
 
-            <LayoutEmptyState
-                v-else-if="ticksError"
-                variant="error"
-                :title="t('errors.loadFailed')"
-                data-testid="climber-ticks-error"
-            />
+            <LayoutLoadError v-else-if="ticksError" @retry="retryTicks" />
 
             <template v-else>
                 <div class="mb-4 flex flex-wrap items-center gap-2">
@@ -231,6 +226,7 @@ import {
 } from '#shared/utils/logbook'
 import type { FeedTick } from '~/utils/friends'
 import { reportContentUrl } from '~/utils/reports'
+import { requestErrorKey } from '~/utils/errors'
 
 definePageMeta({
     middleware: ['auth'],
@@ -288,7 +284,11 @@ const {
             : Promise.resolve([]),
     { default: () => [] },
 )
-const { data: myTicks, error: myTicksError } = await useAsyncData(
+const {
+    data: myTicks,
+    error: myTicksError,
+    refresh: refreshMine,
+} = await useAsyncData(
     `climber-compare-mine:${climberId}`,
     () =>
         isSelf
@@ -298,6 +298,7 @@ const { data: myTicks, error: myTicksError } = await useAsyncData(
 )
 
 const ticksError = computed(() => theirTicksError.value ?? myTicksError.value)
+const retryTicks = () => Promise.all([refreshTheirs(), refreshMine()])
 
 const kind = ref<LogbookKind>(preferredKind(theirTicks.value))
 const range = ref<LogbookRange>('12m')
@@ -403,7 +404,7 @@ async function run(action: () => Promise<unknown>) {
         await refreshTheirs()
     } catch (error) {
         console.error(error)
-        notifyError(t('notifications.error.generic'))
+        notifyError(t(requestErrorKey(error, 'notifications.error.generic')))
     } finally {
         busy.value = false
     }

@@ -83,13 +83,15 @@
 
 <script setup lang="ts">
 import type { Form } from '@nuxt/ui'
-import type { TickRecord } from '~/types/models'
+import type { RouteRecord, TickRecord } from '~/types/models'
 import { required, validateRules } from '~/utils/validation'
 import { TICK_TYPES, tickDay, type TickType } from '#shared/utils/ticks'
 import { localDay } from '#shared/utils/ticks'
 import { TICK_TYPE_ICONS } from '~/utils/ticks'
 import { formFieldErrors } from '~/utils/fieldErrors'
 import { useSessionEnded } from '~/composables/useSessionEnded'
+import { requestErrorKey } from '~/utils/errors'
+import { cacheKeys } from '~/utils/realtimeCache'
 
 const open = defineModel<boolean>({ default: false })
 
@@ -116,6 +118,55 @@ const typeItems = computed(() =>
 const { notify, error: notifyError } = useNotification()
 const { createTick, updateTick } = useTickOutbox()
 const noticeSessionEnded = useSessionEnded()
+const nuxtApp = useNuxtApp()
+const { gym } = useGym()
+
+function shownRoute(id: string): RouteRecord | undefined {
+    const cached = (key: string) => nuxtApp._asyncData?.[key]?.data.value
+    const single = cached(cacheKeys.route(id)) as RouteRecord | null | undefined
+    if (single?.id === id) return single
+    return (cached(cacheKeys.mapRoutes) as RouteRecord[] | undefined)?.find(
+        (route) => route.id === id,
+    )
+}
+
+// The server copies the route into a tick; a queued tick needs it to show in the logbook before it syncs.
+function routeSnapshot(id: string): Partial<TickRecord> {
+    const route = shownRoute(id)
+    if (!route) return {}
+    const routeGym = gym.value?.id === route.gym ? gym.value : null
+    return {
+        route_name: route.name,
+        grade: route.grade,
+        grade_system: route.grade_system,
+        grade_index: route.grade_index,
+        ...(routeGym && {
+            expand: {
+                route: {
+                    id: route.id,
+                    gym: route.gym,
+                    name: route.name,
+                    type: route.type,
+                    color: route.color,
+                    grade: route.grade,
+                    grade_system: route.grade_system,
+                    grade_index: route.grade_index,
+                    archived: route.archived,
+                    permanent: route.permanent,
+                    location: route.location,
+                    wall: route.wall,
+                    expand: {
+                        gym: {
+                            id: routeGym.id,
+                            slug: routeGym.slug,
+                            name: routeGym.name,
+                        },
+                    },
+                },
+            },
+        }),
+    }
+}
 
 const saving = ref(false)
 const today = ref(localToday())
@@ -173,6 +224,7 @@ async function submit() {
         const { tick: saved, queued } = props.tick
             ? await updateTick(props.tick, fields)
             : await createTick({
+                  ...routeSnapshot(props.routeId ?? ''),
                   ...fields,
                   user: authStore.record?.id ?? '',
                   route: props.routeId ?? '',
@@ -184,11 +236,13 @@ async function submit() {
         if (noticeSessionEnded(err)) return
         const fieldErrors = formFieldErrors(
             err,
-            ['type', 'attempts', 'note'],
+            ['type', 'attempts', 'note', 'date'],
             t,
+        ).map((error) =>
+            error.name === 'date' ? { ...error, name: 'day' } : error,
         )
         if (fieldErrors.length) formRef.value?.setErrors(fieldErrors)
-        else notifyError(t('ticks.saveError'))
+        else notifyError(t(requestErrorKey(err, 'ticks.saveError')))
     } finally {
         saving.value = false
     }

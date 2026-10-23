@@ -499,3 +499,53 @@ func TestCorrectedRouteGradeReachesTicksAndTheLeaderboard(t *testing.T) {
 		t.Errorf("own_ticks events = %d", len(updates))
 	}
 }
+
+func TestProfileChangesAnnounceTheClimbersLeaderboards(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	climber := f.users["climber"]
+	f.tick("climber", f.boulder(f.hallA, "7A", 18.5), "top", time.Now())
+	queued := func() (n int) {
+		f.app.DB.QueryRow(ctx, `SELECT count(*) FROM jobs WHERE kind = $1 AND key = $2`, leaderboardJob, f.gymA).Scan(&n)
+		return n
+	}
+	userUpdated := func(changed ...string) events.Event {
+		payload, _ := json.Marshal(map[string]any{"record": map[string]string{"id": climber}, "changed": changed})
+		return events.Event{Topic: "user:" + climber, Kind: "user.updated", Payload: payload}
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	for queued() == 0 && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	clearJobs := func() {
+		if _, err := f.app.DB.Exec(ctx, `DELETE FROM jobs`); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	clearJobs()
+	f.exec(`UPDATE users SET leaderboard_hidden = true WHERE id = $1 RETURNING id`, climber)
+	f.module.onUserEvent(userUpdated("leaderboard_hidden"))
+	if got := queued(); got != 1 {
+		t.Fatalf("opting out queued %d announcements, want 1", got)
+	}
+
+	clearJobs()
+	f.module.onUserEvent(userUpdated("firstname"))
+	if got := queued(); got != 0 {
+		t.Fatal("a hidden climber's rename announced the leaderboard")
+	}
+
+	f.exec(`UPDATE users SET leaderboard_hidden = false WHERE id = $1 RETURNING id`, climber)
+	f.module.onUserEvent(userUpdated("firstname"))
+	if got := queued(); got != 1 {
+		t.Fatalf("a rename queued %d announcements, want 1", got)
+	}
+
+	clearJobs()
+	f.module.onUserEvent(userUpdated("followed_walls"))
+	if got := queued(); got != 0 {
+		t.Fatal("a change off the leaderboard announced it")
+	}
+}

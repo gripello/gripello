@@ -174,7 +174,30 @@ func (m *module) onUserEvent(e events.Event) {
 		return
 	}
 	m.boards.markDirty()
-	if update.Changed == nil || slices.Contains(update.Changed, "leaderboard_hidden") || slices.Contains(update.Changed, "ticks_private") {
+	optedInOrOut := update.Changed == nil || slices.Contains(update.Changed, "leaderboard_hidden") || slices.Contains(update.Changed, "ticks_private")
+	if optedInOrOut {
 		m.refreshClimber("", update.Record.ID, "")
+	}
+	m.queueClimberGymsNews(update.Record.ID, optedInOrOut)
+}
+
+// Open boards in every gym the climber sent in must refetch; a hidden climber's renames stay silent.
+func (m *module) queueClimberGymsNews(user string, optedInOrOut bool) {
+	ctx := context.Background()
+	rows, err := m.app.DB.Query(ctx, `SELECT DISTINCT r.gym FROM ticks t JOIN routes r ON r.id = t.route JOIN users u ON u.id = t."user"
+		WHERE t."user" = $1 AND t.type <> 'attempt' AND t.grade_index > 0 AND ($2 OR NOT (u.leaderboard_hidden OR u.ticks_private))`, user, optedInOrOut)
+	if err != nil {
+		slog.Error("leaderboard: finding a climber's gyms failed", "error", err)
+		return
+	}
+	gyms, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		slog.Error("leaderboard: finding a climber's gyms failed", "error", err)
+		return
+	}
+	for _, gym := range gyms {
+		if err := jobs.Enqueue(ctx, m.app.DB, leaderboardJob, gym, nil, leaderboardWindow); err != nil {
+			slog.Error("leaderboard: enqueue failed", "gym", gym, "error", err)
+		}
 	}
 }

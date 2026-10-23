@@ -35,7 +35,18 @@ describe('social pages', () => {
         const source = page('climber')
         expect(source).toMatch(/error: theirTicksError/)
         expect(source).toMatch(/error: myTicksError/)
-        expect(source).toMatch(/v-else-if="ticksError"\s+variant="error"/)
+        expect(source).toContain(
+            '<LayoutLoadError v-else-if="ticksError" @retry="retryTicks" />',
+        )
+        expect(source).toContain(
+            'const retryTicks = () => Promise.all([refreshTheirs(), refreshMine()])',
+        )
+    })
+
+    it('tells a rate-limited follow apart from a generic failure', () => {
+        expect(page('climber')).toContain(
+            "notifyError(t(requestErrorKey(error, 'notifications.error.generic')))",
+        )
     })
 
     it.each(['friends', '[gym]/feed'])(
@@ -82,5 +93,20 @@ describe('social pages', () => {
         for (const binding of actionBindings)
             expect(binding).toBe(':actions="selected.actions ?? []"')
         expect(inbox).not.toMatch(/moderationActions|can\('manage_comments'/)
+    })
+
+    it('ignores a second follow action while one is running', () => {
+        const source = page('friends')
+        expect(source).toMatch(/busy\.value = id/)
+        expect(source).toMatch(/if \(busy\.value\) return\n\s+busy\.value = id/)
+        expect(source).toMatch(
+            /:loading="busy === request\.id"\s+data-testid="friends-decline"/,
+        )
+    })
+
+    it('keeps the feed title in the current language', () => {
+        expect(page('[gym]/feed')).toContain(
+            "useHead({ title: () => t('page.title.feed') })",
+        )
     })
 })
