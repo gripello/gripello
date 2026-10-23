@@ -45,6 +45,8 @@ export default defineNuxtConfig({
     experimental: {
         viewTransition: true,
         routeTypedFetch: false,
+        // @nuxtjs/i18n's server runtime and server/ (useStorage, defineCachedEventHandler) rely on Nitro auto-imports, off by default in compatibilityVersion 5 since Nuxt 4.6.2
+        nitroAutoImports: true,
         defaults: {
             nuxtLink: {
                 prefetchOn: { visibility: false, interaction: true },
