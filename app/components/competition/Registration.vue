@@ -170,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { useNow } from '@vueuse/core'
+import { useIntervalFn, useNow } from '@vueuse/core'
 import {
     createCompetitionEntry,
     listCompetitionCategories,
@@ -210,7 +210,7 @@ const authStore = useAuthStore()
 const { t } = useI18n()
 const { pending, run } = useAsyncAction()
 
-const now = useNow({ interval: 15_000 })
+const now = useNow({ scheduler: (update) => useIntervalFn(update, 15_000) })
 const currentYear = now.value.getFullYear()
 const userId = authStore.record?.id ?? ''
 const withdrawOpen = ref(false)
