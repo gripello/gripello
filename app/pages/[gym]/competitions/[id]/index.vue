@@ -140,6 +140,7 @@ import {
 } from '~/utils/competitions'
 import { JUDGE_ONLY_FORMATS } from '#shared/utils/competitionScoring'
 import { listCompetitionEntries } from '~/api/competitions'
+import { isNotFound } from '~/utils/errors'
 
 const gymPath = useGymPath()
 
@@ -171,6 +172,7 @@ const {
     if (kind === 'categories' || kind === 'resync') refreshCategoriesSoon()
     if (kind === 'routes' || kind === 'resync') refreshScorecardRoutesSoon()
 })
+if (isNotFound(error.value)) throw createError({ status: 404, fatal: true })
 
 const now = useNow({ scheduler: (update) => useIntervalFn(update, 15_000) })
 const phase = computed(() =>

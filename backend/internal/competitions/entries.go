@@ -22,11 +22,14 @@ func registrationOpen(c Competition, now time.Time) bool {
 	return c.Status == "open" && now.Before(c.EndsAt)
 }
 
-func ownerEntryStatus(current, requested string, registrationOpen bool) string {
+// withdrawalOpen reports whether owners may still withdraw: once closed, the scores stand as judged.
+func withdrawalOpen(c Competition) bool { return c.Status == "draft" || c.Status == "open" }
+
+func ownerEntryStatus(current, requested string, registrationOpen, withdrawalOpen bool) string {
 	switch {
 	case requested == current:
 		return current
-	case requested == "withdrawn" && current != "disqualified":
+	case requested == "withdrawn" && current != "disqualified" && withdrawalOpen:
 		return requested
 	case requested == "registered" && current == "withdrawn" && registrationOpen:
 		return requested
@@ -199,7 +202,7 @@ func (m *module) updateEntry(ctx context.Context, id string, raw json.RawMessage
 		if !v.manager {
 			open := registrationOpen(c, now)
 			e.Competition, e.User, e.Bib, e.Paid = before.Competition, before.User, before.Bib, before.Paid
-			e.Status = ownerEntryStatus(before.Status, e.Status, open)
+			e.Status = ownerEntryStatus(before.Status, e.Status, open, withdrawalOpen(c))
 			if e.Category != before.Category && !open {
 				return httpx.Invalid("category", "Categories can only change while registration is open.")
 			}

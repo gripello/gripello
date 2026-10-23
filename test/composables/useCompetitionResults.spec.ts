@@ -47,8 +47,9 @@ describe('useCompetitionResults', () => {
         expect(getCompetitionStandings).toHaveBeenCalledTimes(1)
     })
 
-    it('ignores changes that leave the standings alone', async () => {
+    it('refetches when categories change, since standings carry their names', async () => {
         vi.useFakeTimers()
+        vi.spyOn(Math, 'random').mockReturnValue(0)
         const { useCompetitionResults } =
             await import('~/composables/useCompetitionResults')
         useCompetitionResults(vueRef('c1'))
@@ -56,7 +57,7 @@ describe('useCompetitionResults', () => {
 
         onChange({ kind: 'categories' })
         vi.advanceTimersByTime(2_000)
-        expect(getCompetitionStandings).not.toHaveBeenCalled()
+        expect(getCompetitionStandings).toHaveBeenCalledTimes(1)
     })
 
     it('polls while mounted and stops on unmount', async () => {

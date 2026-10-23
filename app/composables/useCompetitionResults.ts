@@ -2,7 +2,14 @@ import { useEventListener, useIntervalFn, useTimeoutFn } from '@vueuse/core'
 import { getCompetitionStandings } from '~/api/competitions'
 import { useOfflineData } from '~/composables/useOfflineData'
 
-const RESULT_KINDS = ['competition', 'routes', 'entries', 'scores', 'resync']
+const RESULT_KINDS = [
+    'competition',
+    'routes',
+    'categories',
+    'entries',
+    'scores',
+    'resync',
+]
 // Later than nginx's shared 1 s standings cache can live (up to 2 s), so a refetch never gets the pre-change copy.
 const LIVE_REFRESH_DELAY_MS = 2_000
 const LIVE_REFRESH_JITTER_MS = 2_000

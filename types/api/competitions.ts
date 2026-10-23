@@ -57,7 +57,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description manage_competitions. Sets status published; on the first transition every non-voided top becomes a tick (flash for top_attempt 1, dated noon UTC of the end day or today, note = competition name, skipped when the climber already has a tick on that route that day) and every non-withdrawn entrant gets competition_published. */
+        /** @description manage_competitions. Sets status published; on every transition the competition's ticks are replaced: each non-voided top of a registered or checked-in entry becomes a tick (flash for top_attempt 1, dated noon UTC of the end day or today, note = competition name, skipped when the climber already has a tick on that route that day) and every non-withdrawn entrant gets competition_published. */
         post: operations["publishCompetition"];
         delete?: never;
         options?: never;
@@ -117,7 +117,7 @@ export interface paths {
         /** @description Visible unless a draft the caller can't manage. Sorted by number; items carry expand.route (with expand.wall). */
         get: operations["listCompetitionRoutes"];
         put?: never;
-        /** @description manage_competitions. The route must be in the competition's gym and of the discipline's type (Boulder/Route); rope routes drop zone, boulders drop hold_count. */
+        /** @description manage_competitions. The route must be in the competition's gym and of the discipline's type (Boulder/Route); rope routes drop zone, boulders drop hold_count. 400 while the competition is published. */
         post: operations["createCompetitionRoute"];
         delete?: never;
         options?: never;
@@ -137,11 +137,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description manage_competitions. Deletes its scores. */
+        /** @description manage_competitions. Deletes its scores; 400 while the competition is published. */
         delete: operations["deleteCompetitionRoute"];
         options?: never;
         head?: never;
-        /** @description manage_competitions. A different `competition` is rejected. */
+        /** @description manage_competitions. A different `competition` is rejected; 400 while the competition is published. */
         patch: operations["updateCompetitionRoute"];
         trace?: never;
     };
@@ -181,7 +181,7 @@ export interface paths {
         delete: operations["deleteCompetitionEntry"];
         options?: never;
         head?: never;
-        /** @description manage_competitions or the owner. Owners can't change competition, user, bib or paid (ignored); they may withdraw (unless disqualified), re-register while registration is open, and change category only then. A different `competition` from a manager is rejected. 403 for display_name/hidden changes while moderation keeps the entry hidden. */
+        /** @description manage_competitions or the owner. Owners can't change competition, user, bib or paid (ignored); they may withdraw (unless disqualified, and only before the competition closes), re-register while registration is open, and change category only then. A different `competition` from a manager is rejected. 403 for display_name/hidden changes while moderation keeps the entry hidden. */
         patch: operations["updateCompetitionEntry"];
         trace?: never;
     };
@@ -196,7 +196,7 @@ export interface paths {
         };
         /** @description manage/judge_competitions see all; others the scores of their own entry, and everyone's once published or while live_ranking runs on a non-draft competition before freeze_at. */
         get: operations["listCompetitionScores"];
-        /** @description Upserts by (entry, comp_route) in one transaction. Judges and managers score any entry; climbers only their own active entry, while the competition is open and inside starts_at..ends_at, never voided routes or lead_height, and never over a score a judge wrote (403). Judges don't score drafts. Scores are normalised to the discipline (zone/top clamping, rope style, lead height from hold_count). */
+        /** @description Upserts by (entry, comp_route) in one transaction. Judges and managers score any entry but their own (scored as a climber); climbers only their own active entry, while the competition is open and inside starts_at..ends_at, never voided routes or lead_height, and never over a score a judge wrote (403). Judges don't score drafts. Scores are normalised to the discipline (zone/top clamping, rope style, lead height from hold_count). */
         put: operations["upsertCompetitionScores"];
         post?: never;
         delete?: never;
@@ -788,6 +788,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["Error"];
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];

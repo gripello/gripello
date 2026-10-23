@@ -12,10 +12,15 @@ import {
     listCompetitionScores,
     upsertCompetitionScores,
 } from '~/api/competitions'
-import { isNetworkError } from '~/utils/errors'
+import { isRetryableSaveError } from '~/utils/errors'
 import type { CompetitionRouteRecord } from '~/types/models'
 
 type QueueStore = Record<string, Record<string, ScoreState>>
+
+function isKeptForRetry(error: unknown) {
+    const status = (error as { status?: number } | null)?.status
+    return isRetryableSaveError(error) || status === 401
+}
 
 function readStore(): QueueStore {
     try {
@@ -92,7 +97,7 @@ export function useScorecard(competitionId: Ref<string>, entryId: Ref<string>) {
                     await save(compRoute, score)
                     offline.value = false
                 } catch (error) {
-                    if (isNetworkError(error)) {
+                    if (isKeptForRetry(error)) {
                         offline.value = true
                         return
                     }

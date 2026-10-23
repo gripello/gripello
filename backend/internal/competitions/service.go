@@ -309,8 +309,12 @@ func competitionTickDate(endsAt, now time.Time) apitime.Date {
 	return apitime.DateOf(endsAt)
 }
 
-// publishResults copies every top into the climbers' logbooks (once per climber, route and competition or day) and notifies the entrants.
+// publishResults replaces the competition's ticks with every top of an active entry (skipping climbers who already logged
+// the route that day) and notifies the entrants.
 func (m *module) publishResults(ctx context.Context, tx pgx.Tx, c Competition, now time.Time) error {
+	if err := deleteCompetitionTicks(ctx, tx, c); err != nil {
+		return err
+	}
 	date := competitionTickDate(c.EndsAt, now)
 	rows, err := tx.Query(ctx, `SELECT e."user", cr.route, s.top_attempt, r.name, r.grade, r.grade_system, r.grade_index,
 			u.ticks_private
@@ -319,8 +323,8 @@ func (m *module) publishResults(ctx context.Context, tx pgx.Tx, c Competition, n
 		JOIN competition_routes cr ON cr.id = s.comp_route
 		JOIN routes r ON r.id = cr.route
 		JOIN users u ON u.id = e."user"
-		WHERE s.competition = $1 AND s.top_attempt > 0 AND NOT cr.voided
-			AND NOT EXISTS (SELECT 1 FROM ticks t WHERE t."user" = e."user" AND t.route = cr.route AND (t.competition = $1 OR t.date = $2))
+		WHERE s.competition = $1 AND s.top_attempt > 0 AND NOT cr.voided AND e.status IN ('registered', 'checked_in')
+			AND NOT EXISTS (SELECT 1 FROM ticks t WHERE t."user" = e."user" AND t.route = cr.route AND t.date = $2)
 		ORDER BY s.created, s.id`, c.ID, date)
 	if err != nil {
 		return err
@@ -350,7 +354,7 @@ func (m *module) publishResults(ctx context.Context, tx pgx.Tx, c Competition, n
 		if err != nil {
 			return err
 		}
-		if err := publishTick(ctx, tx, tick, c.Gym, t.private); err != nil {
+		if err := publishTick(ctx, tx, "create", tick, c.Gym, t.private); err != nil {
 			return err
 		}
 	}
@@ -365,6 +369,35 @@ func (m *module) publishResults(ctx context.Context, tx pgx.Tx, c Competition, n
 	}
 	return events.PublishNotify(ctx, tx, auth.UserID(ctx), events.Notify{Type: "competition_published", Users: users, Gym: c.Gym,
 		Params: map[string]any{"competition": c.Name}, URL: tenancy.GymPath(ctx, tx, c.Gym, "/competitions/"+c.ID)})
+}
+
+func deleteCompetitionTicks(ctx context.Context, tx pgx.Tx, c Competition) error {
+	rows, err := tx.Query(ctx, `DELETE FROM ticks t USING users u WHERE t.competition = $1 AND u.id = t."user"
+		RETURNING t.id, t.created, t.updated, t."user", COALESCE(t.route, ''), t.type, t.attempts, t.date, t.note, t.grade, t.grade_system,
+			t.grade_index, t.route_name, u.ticks_private`, c.ID)
+	if err != nil {
+		return err
+	}
+	type deleted struct {
+		tick    Tick
+		private bool
+	}
+	ticks, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (deleted, error) {
+		var d deleted
+		t := &d.tick
+		err := row.Scan(&t.ID, &t.Created, &t.Updated, &t.User, &t.Route, &t.Type, &t.Attempts, &t.Date, &t.Note, &t.Grade,
+			&t.GradeSystem, &t.GradeIndex, &t.RouteName, &d.private)
+		return d, err
+	})
+	if err != nil {
+		return err
+	}
+	for _, d := range ticks {
+		if err := publishTick(ctx, tx, "delete", d.tick, c.Gym, d.private); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func validateCategory(c Category) error {
@@ -496,6 +529,9 @@ func (m *module) saveCompRoute(ctx context.Context, competitionID, id string, ra
 		return CompRoute{}, err
 	}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if err := refuseWhilePublished(ctx, tx, &c); err != nil {
+			return err
+		}
 		if err := saveCompRoute(ctx, tx, route, id == ""); err != nil {
 			return err
 		}
@@ -513,6 +549,18 @@ func (m *module) saveCompRoute(ctx context.Context, competitionID, id string, ra
 	return route, err
 }
 
+// refuseWhilePublished locks the competition so published results only change after unpublishing.
+func refuseWhilePublished(ctx context.Context, tx pgx.Tx, c *Competition) error {
+	var err error
+	if *c, err = lockCompetition(ctx, tx, c.ID, "SHARE"); err != nil {
+		return err
+	}
+	if c.Status == "published" {
+		return httpx.BadRequest("Results are published; unpublish the competition first.")
+	}
+	return nil
+}
+
 func (m *module) deleteCompRoute(ctx context.Context, id string) error {
 	route, err := findCompRoute(ctx, m.app.DB, id)
 	if err != nil {
@@ -523,6 +571,9 @@ func (m *module) deleteCompRoute(ctx context.Context, id string) error {
 		return err
 	}
 	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
+		if err := refuseWhilePublished(ctx, tx, &c); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `DELETE FROM competition_routes WHERE id = $1`, id); err != nil {
 			return err
 		}

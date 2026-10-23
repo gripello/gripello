@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CompetitionRouteRecord } from '~/types/models'
+import { COMPETITION_SCORES_KEY } from '~/utils/clientStorage'
 
 vi.stubGlobal('useNotification', () => ({ error: vi.fn() }))
 
@@ -35,4 +36,21 @@ describe('useScorecard', () => {
         await loading
         expect(card.scores.value.cr1?.attempts).toBe(1)
     })
+
+    it.each([401, 429, 502, 503])(
+        'keeps a score queued after a %i',
+        async (status) => {
+            const { useScorecard } = await import('~/composables/useScorecard')
+            const card = useScorecard(ref('c1'), ref('e2'))
+            upsertCompetitionScores.mockRejectedValueOnce(
+                Object.assign(new Error('failed'), { status }),
+            )
+            card.act(boulder, { type: 'attempt' })
+            await vi.waitFor(() => expect(card.offline.value).toBe(true))
+            expect(card.pendingCount.value).toBe(1)
+            expect(
+                JSON.parse(localStorage.getItem(COMPETITION_SCORES_KEY)!).e2,
+            ).toHaveProperty('cr1')
+        },
+    )
 })
