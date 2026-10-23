@@ -543,6 +543,16 @@ const SECTION_TABS: Record<Zone, string[]> = {
     you: [],
 }
 
+export function offlineTabPaths(gymSlug: string) {
+    const gymPaths = gymSlug
+        ? [...SECTION_TABS.gym, '/route'].map((to) =>
+              to === '/' ? `/${gymSlug}` : `/${gymSlug}${to}`,
+          )
+        : []
+    const tabs = bottomNavLinks('/', gymSlug, 'gym').map((link) => link.to)
+    return [...new Set([...tabs, ...gymPaths])].filter(Boolean) as string[]
+}
+
 export function sectionTabs(path: string, slug: string, signedIn = true) {
     const local = path === '/friends' ? path : gymLocalPath(path)
     const zone = zoneOfPath(path)

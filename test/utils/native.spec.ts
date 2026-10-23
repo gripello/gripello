@@ -19,6 +19,7 @@ import {
     backAction,
     externalUrl,
     followSystemTheme,
+    isInstalledApp,
     foregroundPush,
     openSignInPage,
     rendersModernCss,
@@ -190,5 +191,26 @@ describe('followSystemTheme', () => {
         expect(plugin).toMatch(
             /watch\(\s+\(\) => \[colorMode\.value, colorMode\.preference\],\s+\(\) => followSystemTheme\(colorMode, systemTheme\),/,
         )
+    })
+})
+
+describe('isInstalledApp', () => {
+    const display = (standalone: boolean) =>
+        vi.stubGlobal('matchMedia', (query: string) => ({
+            matches: standalone && query === '(display-mode: standalone)',
+        }))
+
+    it('is true in the native app and a home-screen PWA, false in a browser tab', () => {
+        display(false)
+        expect(isInstalledApp()).toBe(false)
+
+        display(true)
+        expect(isInstalledApp()).toBe(true)
+
+        display(false)
+        vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true)
+        expect(isInstalledApp()).toBe(true)
+        vi.restoreAllMocks()
+        vi.unstubAllGlobals()
     })
 })

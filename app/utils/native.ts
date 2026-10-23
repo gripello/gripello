@@ -2,6 +2,11 @@ import { Capacitor } from '@capacitor/core'
 
 export const isNativeApp = () => Capacitor.isNativePlatform()
 
+export const isInstalledApp = () =>
+    isNativeApp() ||
+    matchMedia('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+
 export type BackAction = 'exitFullscreen' | 'history' | 'parent' | 'minimize'
 
 export function backAction(

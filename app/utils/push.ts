@@ -1,6 +1,6 @@
 import type { PushSubscriptionRecord } from '~/types/models'
 import type { NotificationSettings } from '~/api/notifications'
-import { isNativeApp } from './native'
+import { isInstalledApp, isNativeApp } from './native'
 
 export type PushSupport = 'ok' | 'install' | 'unsupported'
 
@@ -20,10 +20,7 @@ export function browserPushSupport(): PushSupport {
         hasPushManager: 'PushManager' in window,
         hasNotification: 'Notification' in window,
         isIos: /iPad|iPhone|iPod/.test(navigator.userAgent),
-        isStandalone:
-            matchMedia('(display-mode: standalone)').matches ||
-            (navigator as Navigator & { standalone?: boolean }).standalone ===
-                true,
+        isStandalone: isInstalledApp(),
     })
 }
 
