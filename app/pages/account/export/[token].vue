@@ -42,7 +42,7 @@
         </UButton>
         <UButton
             v-else-if="available === false"
-            to="/account/settings"
+            to="/account/settings?tab=security"
             color="neutral"
             variant="soft"
             size="xl"

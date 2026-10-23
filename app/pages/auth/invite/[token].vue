@@ -22,7 +22,8 @@
             }}</span>
         </template>
 
-        <div v-if="step === 'invalid'" data-testid="invite-invalid">
+        <LayoutLoadError v-if="step === 'error'" @retry="refresh()" />
+        <div v-else-if="step === 'invalid'" data-testid="invite-invalid">
             <UButton
                 color="neutral"
                 variant="soft"
@@ -123,9 +124,10 @@
 
 <script setup lang="ts">
 import { acceptInvite, showInvite } from '~/api/members'
-import { useAuthState } from '~/api/auth'
+import { logout, useAuthState } from '~/api/auth'
 import { inviteStep } from '~/utils/invites'
 import { blockedFieldError } from '~/utils/fieldErrors'
+import { nullIfNotFound } from '~/utils/errors'
 
 defineOptions({ name: 'InvitePage' })
 definePageMeta({ layout: 'blank' })
@@ -143,20 +145,21 @@ const {
     refresh,
 } = await useAsyncData(
     `invite-${token}`,
-    () => showInvite(token).catch(() => null),
+    () => nullIfNotFound(showInvite(token)),
     { server: false },
 )
 
 const currentEmail = ref(
     auth.isSignedIn() ? (auth.currentUser()?.email ?? '') : '',
 )
-const step = computed(() =>
-    status.value === 'success'
+const step = computed(() => {
+    if (status.value === 'error') return 'error'
+    return status.value === 'success'
         ? inviteStep(invite.value, currentEmail.value)
-        : 'loading',
-)
+        : 'loading'
+})
 const subtitle = computed(() => {
-    if (step.value === 'loading') return ''
+    if (step.value === 'loading' || step.value === 'error') return ''
     if (!invite.value) return t('invites.invalid')
     if (step.value === 'wrongAccount') {
         return t('invites.wrongAccount', {
@@ -186,7 +189,7 @@ const accepting = ref(false)
 const { error: notifyError } = useNotification()
 
 function signOut() {
-    auth.clearAuth()
+    logout()
     currentEmail.value = ''
 }
 

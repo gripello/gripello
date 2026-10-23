@@ -11,4 +11,11 @@ describe('account settings page', () => {
         expect(source).toMatch(/test-id-prefix="profile"/)
         expect(source).toMatch(/:unsaved-changes="hasChanges"/)
     })
+
+    it('explains a lockout and the last-admin refusal instead of a generic error', () => {
+        expect(source.match(/throttledErrorKey\(err\)\)/g)).toHaveLength(2)
+        expect(source).toMatch(
+            /fieldErrorCode\(err, 'gym'\) === 'validation_last_admin'\) \{\s+notifyError\(t\('account.lastAdmin'\)\)/,
+        )
+    })
 })

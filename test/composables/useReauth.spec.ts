@@ -43,4 +43,17 @@ describe('useReauth', () => {
         expect(text({ status: 400 })).toBe('last')
         expect(errorText('saveError')(new Error('x'))).toBe('saveError')
     })
+
+    it('explains a lockout instead of the fallback', () => {
+        const text = useReauth().errorText('generic')
+        expect(
+            text({
+                status: 429,
+                data: { message: 'Account temporarily locked.' },
+            }),
+        ).toBe('notifications.error.account_locked')
+        expect(
+            text({ status: 429, data: { message: 'Too many requests.' } }),
+        ).toBe('errors.rateLimited')
+    })
 })

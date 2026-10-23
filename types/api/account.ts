@@ -14,7 +14,7 @@ export interface paths {
         get: operations["getMe"];
         put?: never;
         post?: never;
-        /** @description Deletes the account and its files after checking the current password (400 `validation_invalid_password`); refused while the user is the only admin of a gym. */
+        /** @description Deletes the account and its files after checking the current password (400 `validation_invalid_password`); refused while the user is the only admin of a gym (400 `validation_last_admin` on field `gym`). */
         delete: operations["deleteMe"];
         options?: never;
         head?: never;

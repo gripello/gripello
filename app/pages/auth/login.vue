@@ -369,6 +369,7 @@ import {
     AUTH_ERROR_KEYS,
     authErrorKind,
     isCredentialError,
+    sessionRejected,
 } from '~/utils/authErrors'
 import { apiFieldErrors, blockedFieldError } from '~/utils/fieldErrors'
 import { authView, authViewQuery, type AuthView } from '~/utils/authView'
@@ -414,13 +415,14 @@ useHead({
     title: t('page.title.login'),
 })
 
-if (auth.isSignedIn()) {
+if (auth.isSignedIn() && authView(route.query.view) !== 'requestReset') {
     try {
         await refreshAuth()
-        await navigateTo(await afterLoginPath(), { replace: true })
-    } catch {
-        auth.clearAuth()
+    } catch (err) {
+        if (sessionRejected(err)) auth.clearAuth()
     }
+    if (auth.isSignedIn())
+        await navigateTo(await afterLoginPath(), { replace: true })
 }
 
 const { allowRegistration } = useOrgSettings()
@@ -455,7 +457,7 @@ const oauth2Ticket = route.query.oauth2
 const loading = ref(typeof oauth2Ticket === 'string' && !!oauth2Ticket)
 const identity = ref('')
 const password = ref('')
-const resetEmail = ref('')
+const resetEmail = ref<string>(auth.currentUser()?.email ?? '')
 const registerFirstname = ref('')
 const registerLastname = ref('')
 const registerUsername = ref('')
@@ -698,6 +700,7 @@ onMounted(completeOAuth2)
 
 async function finishLogin(result: AuthResult) {
     loading.value = true
+    setAuthPersistent(rememberMe.value)
     auth.saveAuth(result)
     await navigateTo(await afterLoginPath(), { replace: true })
 }
@@ -785,6 +788,8 @@ async function submitReset() {
             await capHeaders('password-reset'),
         )
         notify(t('notifications.success.resetPassword'))
+        if (auth.isSignedIn())
+            return navigateTo(await afterLoginPath(), { replace: true })
         returnToLogin()
         resetEmail.value = ''
     } catch (err) {

@@ -143,6 +143,7 @@ const heading = computed<Heading>(() => {
 })
 
 async function submit() {
+    if (submitting.value || step.value !== 'form') return
     submitting.value = true
     try {
         await props.action(token)

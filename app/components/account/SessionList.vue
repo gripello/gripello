@@ -107,7 +107,7 @@ import {
 import { useAuthState } from '~/api/auth'
 
 const { t, locale } = useI18n()
-const { token } = useAuthState()
+const { token, onAuthChange } = useAuthState()
 const { error: notifyError } = useNotification()
 const signOutOthers = useAsyncAction()
 
@@ -116,7 +116,11 @@ const loadError = ref(false)
 const loaded = ref(false)
 const revoking = ref('')
 const confirmOthers = ref(false)
-const currentId = computed(() => currentSessionId(token()))
+const currentId = ref(currentSessionId(token()))
+const stopAuthWatch = onAuthChange(
+    (changed) => (currentId.value = currentSessionId(changed)),
+)
+onBeforeUnmount(stopAuthWatch)
 
 function label(session: SessionRecord) {
     return (

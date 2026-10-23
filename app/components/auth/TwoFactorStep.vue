@@ -220,7 +220,11 @@ function endsStep(err: unknown) {
         status?: number
         response?: { message?: string }
     }
-    return status === 429 || /MFA session/i.test(response?.message ?? '')
+    return (
+        status === 403 ||
+        status === 429 ||
+        /MFA session/i.test(response?.message ?? '')
+    )
 }
 
 async function rejectCode(message: string) {
