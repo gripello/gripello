@@ -62,6 +62,7 @@
                 <UFormField
                     v-if="form.previous_slugs.length"
                     :label="$t('platform.gyms.previousSlugs')"
+                    name="previous_slugs"
                     :ui="SETTINGS_FIELD_UI"
                 >
                     <div class="flex flex-wrap gap-2">

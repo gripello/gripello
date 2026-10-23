@@ -67,6 +67,19 @@ const crossesMidnight = ([opens, closes]: OpeningInterval) =>
 const HOUR = 60
 const DAY_END = 24 * HOUR
 
+const clock = (total: number) => {
+    const wrapped = (total + DAY_END) % DAY_END
+    return `${String(Math.floor(wrapped / HOUR)).padStart(2, '0')}:${String(wrapped % HOUR).padStart(2, '0')}`
+}
+
+export function nextOpeningInterval(
+    intervals: OpeningInterval[],
+): OpeningInterval {
+    const last = intervals.at(-1)
+    if (!last) return ['09:00', '22:00']
+    return [last[1], clock(minutes(last[1]) + HOUR)]
+}
+
 export interface TimelineDay {
     day: Weekday
     intervals: OpeningInterval[]

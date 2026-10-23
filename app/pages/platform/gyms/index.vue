@@ -244,7 +244,7 @@ import {
     type PlatformGymStatus,
 } from '~/utils/platformGyms'
 import { required, validEmail, validateRules } from '~/utils/validation'
-import { blockedFieldError } from '~/utils/fieldErrors'
+import { blockedFieldError, fieldErrorCode } from '~/utils/fieldErrors'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
@@ -338,13 +338,32 @@ async function inviteFirstAdmin(gymId: string) {
     })
 }
 
+function showSlugError(error: unknown) {
+    const code = fieldErrorCode(error, 'slug')
+    if (!code) return false
+    gymForm.value?.setErrors([
+        {
+            name: 'slug',
+            message: t(
+                code === 'validation_slug_used'
+                    ? 'gymOnboarding.slugTaken'
+                    : 'platform.gyms.invalidSlug',
+            ),
+        },
+    ])
+    return true
+}
+
 async function createGym() {
-    const gym = await runSave(() =>
-        createGymRecord({
-            name: form.name.trim(),
-            slug: form.slug,
-            active: true,
-        }),
+    if (saving.value) return
+    const gym = await runSave(
+        () =>
+            createGymRecord({
+                name: form.name.trim(),
+                slug: form.slug,
+                active: true,
+            }),
+        { handled: showSlugError },
     )
     if (!gym) return
     dialogOpen.value = false

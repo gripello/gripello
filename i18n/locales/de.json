@@ -2461,7 +2461,8 @@
             "blockEmail": "{email} sperren",
             "blockDomain": "Alle Adressen bei {domain} sperren",
             "blockDomainShared": "{accounts} weiteres Konto, {suspended} gesperrt | {accounts} weitere Konten, {suspended} gesperrt",
-            "blockFailed": "Gesperrt, aber die E-Mail-Sperre konnte nicht gespeichert werden. Trage sie unter Einstellungen › Sperrlisten ein."
+            "blockFailed": "Gesperrt, aber die E-Mail-Sperre konnte nicht gespeichert werden. Trage sie unter Einstellungen › Sperrlisten ein.",
+            "hideContentFailed": "Gesperrt, aber die Inhalte konnten nicht ausgeblendet werden. Versuche es erneut."
         },
         "features": {
             "title": "Feature-Flags",

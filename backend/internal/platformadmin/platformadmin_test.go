@@ -205,6 +205,11 @@ func TestPlatformAdminsEditProfilesButNotSettingsOrOtherAdmins(t *testing.T) {
 	}
 	f.call(http.MethodPatch, "/platform/users/"+f.otherOp, `{"firstname": "X"}`, f.operator, http.StatusForbidden)
 	f.call(http.MethodPatch, "/platform/users/"+f.operator, `{"firstname": "Me"}`, f.operator, http.StatusOK)
+	operatorSession := f.session(f.operator)
+	f.callToken(http.MethodPatch, "/platform/users/"+f.operator, `{"email": "me-new@example.com"}`, f.reauthToken(f.operator), http.StatusForbidden)
+	if f.count(`SELECT count(*) FROM users WHERE email = 'me-new@example.com'`) != 0 || f.count(`SELECT count(*) FROM sessions WHERE id = $1`, operatorSession) != 1 {
+		t.Error("an own e-mail change through the platform endpoint went through")
+	}
 	f.call(http.MethodPatch, "/platform/users/"+f.climber, `{"username": "op"}`, f.operator, http.StatusBadRequest)
 	f.call(http.MethodPatch, "/platform/users/"+f.climber, `{"email": "not-an-email"}`, f.operator, http.StatusBadRequest)
 	f.call(http.MethodPatch, "/platform/users/"+f.climber, `{"email": "op2@example.com"}`, f.operator, http.StatusBadRequest)

@@ -786,13 +786,7 @@ async function save() {
                     return id ? { ...wall, id, key: id } : wall
                 }),
             }
-            const selected = editor.selection.value
-            editor.markSaved(next)
-            if (selected?.kind === 'wall' && idByKey.has(selected.key))
-                editor.selection.value = {
-                    kind: 'wall',
-                    key: idByKey.get(selected.key)!,
-                }
+            editor.markSaved(next, idByKey)
             await Promise.all([refreshLocations(), refreshWalls()])
         },
         {

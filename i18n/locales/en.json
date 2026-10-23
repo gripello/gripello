@@ -2461,7 +2461,8 @@
             "blockEmail": "Block {email}",
             "blockDomain": "Block all addresses at {domain}",
             "blockDomainShared": "{accounts} other account, {suspended} suspended | {accounts} other accounts, {suspended} suspended",
-            "blockFailed": "Suspended, but the e-mail block could not be saved. Add it under Settings › Blocklists."
+            "blockFailed": "Suspended, but the e-mail block could not be saved. Add it under Settings › Blocklists.",
+            "hideContentFailed": "Suspended, but the content could not be hidden. Try again."
         },
         "features": {
             "title": "Feature flags",

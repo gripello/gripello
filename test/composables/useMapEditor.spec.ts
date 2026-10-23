@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { useMapEditor } from '~/composables/useMapEditor'
-import { addWall, newFloorPlan, updateWall } from '~/utils/mapEditor'
+import {
+    addWall,
+    newFloorPlan,
+    updateWall,
+    wallChanges,
+} from '~/utils/mapEditor'
 
 function setup() {
     const editor = useMapEditor()
@@ -194,5 +199,43 @@ describe('useMapEditor', () => {
         expect(editor.canFinish.value).toBe(true)
         editor.finishDraft()
         expect(editor.state.value.map.shapes.at(-1)?.kind).toBe('line')
+    })
+
+    it('gives created walls their saved id in the undo and redo history', () => {
+        const editor = setup()
+        editor.addNewWall('Cave')
+        const key = editor.state.value.walls[0]!.key
+        editor.commit(updateWall(editor.state.value, key, { name: 'Roof' }))
+        editor.commit(updateWall(editor.state.value, key, { name: 'Slab' }))
+        editor.undo()
+
+        const savedId = 'w1234567890abcd'
+        const createdIdByKey = new Map([[key, savedId]])
+        editor.markSaved(
+            {
+                ...editor.state.value,
+                walls: editor.state.value.walls.map((wall) => ({
+                    ...wall,
+                    id: savedId,
+                    key: savedId,
+                })),
+            },
+            createdIdByKey,
+        )
+        expect(editor.selection.value).toEqual({ kind: 'wall', key: savedId })
+
+        editor.undo()
+        expect(editor.state.value.walls).toMatchObject([
+            { id: savedId, key: savedId, name: 'Cave' },
+        ])
+        expect(
+            wallChanges(editor.saved.value.walls, editor.state.value.walls),
+        ).toMatchObject({ create: [], remove: [], update: [{ id: savedId }] })
+
+        editor.redo()
+        editor.redo()
+        expect(editor.state.value.walls).toMatchObject([
+            { id: savedId, key: savedId, name: 'Slab' },
+        ])
     })
 })

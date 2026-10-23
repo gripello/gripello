@@ -58,4 +58,30 @@ describe('PlatformUserDialog', () => {
 
         expect((username.element as HTMLInputElement).value).toBe('renamed')
     })
+
+    it('locks the e-mail field on the own account', async () => {
+        const mountFor = (signedIn: string) => {
+            globalThis.__AUTH_STORE__ = { record: { id: signedIn } }
+            return mount(UserDialog, {
+                props: { modelValue: true, user, gyms: [], roles: [] },
+                global: {
+                    mocks: { $t: (key: string) => key },
+                    stubs: {
+                        LayoutDialogShell: slotStub,
+                        UForm: slotStub,
+                        UFormField: slotStub,
+                        UInput: inputStub,
+                    },
+                    renderStubDefaultSlot: true,
+                },
+                shallow: true,
+            })
+        }
+        const emailOf = (wrapper: ReturnType<typeof mountFor>) =>
+            wrapper.find('[data-testid="platform-user-email"]')
+                .element as HTMLInputElement
+
+        expect(emailOf(mountFor('u1')).disabled).toBe(true)
+        expect(emailOf(mountFor('other')).disabled).toBe(false)
+    })
 })

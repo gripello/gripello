@@ -2461,7 +2461,8 @@
             "blockEmail": "Bloquer {email}",
             "blockDomain": "Bloquer toutes les adresses de {domain}",
             "blockDomainShared": "{accounts} autre compte, {suspended} suspendu(s) | {accounts} autres comptes, {suspended} suspendu(s)",
-            "blockFailed": "Suspendu, mais le blocage de l'e-mail n'a pas pu être enregistré. Ajoute-le dans Paramètres › Listes de blocage."
+            "blockFailed": "Suspendu, mais le blocage de l'e-mail n'a pas pu être enregistré. Ajoute-le dans Paramètres › Listes de blocage.",
+            "hideContentFailed": "Suspendu, mais le contenu n'a pas pu être masqué. Réessaie."
         },
         "features": {
             "title": "Fonctionnalités",

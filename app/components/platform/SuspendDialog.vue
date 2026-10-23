@@ -171,6 +171,7 @@ const suggestions = ref<BlockSuggestions | null>(null)
 const choices = computed(() => blockChoices(suggestions.value))
 const blockEmail = ref(false)
 const blockDomain = ref(false)
+const suspendedUser = ref<string | null>(null)
 const userName = computed(() => displayName(props.user))
 const ready = computed(
     () =>
@@ -193,6 +194,7 @@ watch(open, (isOpen) => {
     reason.value = props.user?.suspension_reason ?? ''
     hideContent.value = false
     blockEmail.value = blockDomain.value = false
+    suspendedUser.value = null
     suggestions.value = null
     if (user)
         getBlockSuggestions(user.id)
@@ -213,13 +215,16 @@ function blockedPatterns() {
 }
 
 async function send(suspension?: Suspension) {
+    if (pending.value) return
+    const id = props.user!.id
     const done = await run(
         async () => {
-            const id = props.user!.id
-            if (suspension) {
+            if (!suspension) await liftSuspension(id)
+            else if (suspendedUser.value !== id) {
                 await reauthenticate()
                 await suspendUser(id, suspension)
-            } else await liftSuspension(id)
+                suspendedUser.value = id
+            }
             if (suspension && hideContent.value)
                 await hideAuthorContent(id, reason.value.trim())
             const patterns = suspension ? blockedPatterns() : []
@@ -232,7 +237,10 @@ async function send(suspension?: Suspension) {
         },
         {
             success: t('moderation.saved'),
-            error: reauthError(t('notifications.error.generic')),
+            error: (error) =>
+                suspendedUser.value === id
+                    ? t('platform.users.hideContentFailed')
+                    : reauthError(t('notifications.error.generic'))(error),
         },
     )
     if (!done) return

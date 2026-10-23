@@ -4,6 +4,7 @@ import {
     formatIntervals,
     hasOpeningHours,
     isValidOpeningHours,
+    nextOpeningInterval,
     openStatus,
     weekTimeline,
     toSchemaOrgHours,
@@ -188,5 +189,25 @@ describe('weekTimeline', () => {
             { from: 0.25, to: 0.5 },
             { from: 0.75, to: 1 },
         ])
+    })
+})
+
+describe('nextOpeningInterval', () => {
+    it('adds a valid hour after the last interval, wrapping past midnight', () => {
+        expect(nextOpeningInterval([])).toEqual(['09:00', '22:00'])
+        expect(nextOpeningInterval([['09:00', '22:00']])).toEqual([
+            '22:00',
+            '23:00',
+        ])
+        expect(nextOpeningInterval([['18:00', '23:30']])).toEqual([
+            '23:30',
+            '00:30',
+        ])
+        for (const intervals of [[], [['09:00', '22:00']]] as const)
+            expect(
+                isValidOpeningHours({
+                    mon: [...intervals, nextOpeningInterval([...intervals])],
+                }),
+            ).toBe(true)
     })
 })

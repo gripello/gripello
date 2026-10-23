@@ -2461,7 +2461,8 @@
             "blockEmail": "Bloquear {email}",
             "blockDomain": "Bloquear todas las direcciones de {domain}",
             "blockDomainShared": "{accounts} cuenta más, {suspended} suspendida(s) | {accounts} cuentas más, {suspended} suspendida(s)",
-            "blockFailed": "Suspendida, pero no se pudo guardar el bloqueo del correo. Añádelo en Ajustes › Listas de bloqueo."
+            "blockFailed": "Suspendida, pero no se pudo guardar el bloqueo del correo. Añádelo en Ajustes › Listas de bloqueo.",
+            "hideContentFailed": "Suspendida, pero no se pudo ocultar el contenido. Inténtalo de nuevo."
         },
         "features": {
             "title": "Funciones",
