@@ -34,12 +34,11 @@ async function openRows(page: Page, inbox: string) {
 }
 
 async function expectBadgeMatchesInbox(page: Page, inbox: string) {
-    await expect
-        .poll(async () => {
-            const rows = await openRows(page, inbox)
-            return (await inboxCount(page)) - rows
-        })
-        .toBe(0)
+    await expect(async () => {
+        const rows = await openRows(page, inbox)
+        // the badge loads only after hydration, so wait for it on this page instead of reloading
+        await expect.poll(() => inboxCount(page)).toBe(rows)
+    }).toPass({ timeout: 20_000 })
 }
 
 test('the moderation badge always counts the open rows of the inbox', async ({
