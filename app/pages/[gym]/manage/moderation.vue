@@ -8,7 +8,7 @@
 <script setup lang="ts">
 definePageMeta({
     middleware: ['auth'],
-    requiredPermission: ['manage_comments', 'manage_reports'],
+    requiredPermission: 'manage_comments',
 })
 
 const { t } = useI18n()

@@ -171,27 +171,6 @@ describe('auth middleware', () => {
         expect(navigateToMock).toHaveBeenCalledWith('/')
     })
 
-    it('lets in staff holding any one of several accepted permissions', async () => {
-        globalThis.__AUTH_STORE__ = { isValid: true }
-        canMock.mockImplementation(
-            (permission: string) => permission === 'manage_reports',
-        )
-        const { default: middleware } = await import('~/middleware/auth')
-        const to = {
-            path: '/gym/manage/moderation',
-            params: {},
-            meta: { requiredPermission: ['manage_comments', 'manage_reports'] },
-        }
-
-        await middleware(to, {})
-        expect(navigateToMock).not.toHaveBeenCalled()
-
-        canMock.mockReturnValue(false)
-        canMock.mockImplementation(() => false)
-        await middleware(to, {})
-        expect(navigateToMock).toHaveBeenCalledWith('/')
-    })
-
     it('loads the gym when it is not cached yet', async () => {
         globalThis.__AUTH_STORE__ = { isValid: true }
         cachedGym.value = null

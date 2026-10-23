@@ -1,8 +1,5 @@
 import { GYM_COOKIE } from '#shared/utils/cookies'
-import {
-    meetsRequirement,
-    type PermissionRequirement,
-} from '#shared/utils/permissions'
+import type { PermissionCheck } from '#shared/utils/permissions'
 import type { RouteLocationNormalized } from 'vue-router'
 import type { GymRecord } from '~/types/models'
 import { staffLandingPath } from '~/utils/nav'
@@ -52,15 +49,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
 
     const requiredPermission = to.meta.requiredPermission as
-        PermissionRequirement | undefined
+        PermissionCheck | undefined
     if (requiredPermission) {
         const { can, ensureLoaded } = usePermissions()
         const [gymId] = await Promise.all([targetGymId(to), ensureLoaded()])
-        if (
-            !meetsRequirement(requiredPermission, (permission) =>
-                can(permission, gymId),
-            )
-        ) {
+        if (!can(requiredPermission, gymId)) {
             return navigateTo('/')
         }
     }

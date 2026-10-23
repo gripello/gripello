@@ -145,21 +145,6 @@ describe('staffSections', () => {
         ])
     })
 
-    it('offers the moderation inbox to report handlers without comment rights', () => {
-        const can = allowing('manage_reports')
-        expect(
-            staffSections(can, 'gym-a').map((section) => [
-                section.key,
-                section.links.map((link) => link.path),
-            ]),
-        ).toEqual([['moderation', ['/manage/moderation']]])
-        expect(
-            bottomNavLinks('/gym-a/manage', 'gym-a', 'staff', can).map(
-                (link) => link.path,
-            ),
-        ).toEqual(['/manage/moderation', '/manage'])
-    })
-
     it('puts the open case count on the moderation links', () => {
         const { sections } = sidebarSections(
             allowing('manage_comments'),

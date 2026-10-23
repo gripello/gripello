@@ -1,10 +1,7 @@
 import {
-    MODERATION_PERMISSIONS,
     PLATFORM_ADMIN,
-    meetsRequirement,
     type Permission,
     type PermissionCheck,
-    type PermissionRequirement,
 } from '#shared/utils/permissions'
 import { navTestId } from '~/utils/nav'
 
@@ -13,7 +10,7 @@ export interface NavLink {
     path?: string
     icon: string
     label: string
-    permission?: PermissionRequirement
+    permission?: PermissionCheck
     signedIn?: boolean
     badge?: NavBadge
 }
@@ -75,7 +72,7 @@ export const STAFF_TABS: NavLink[] = [
         to: '/manage/moderation',
         icon: 'i-lucide-shield-check',
         label: 'moderation.title',
-        permission: MODERATION_PERMISSIONS,
+        permission: 'manage_comments',
         badge: 'moderation',
     },
     { to: '/manage', icon: 'i-lucide-ellipsis', label: 'nav.more' },
@@ -268,7 +265,7 @@ export const NAV_ITEMS: NavItem[] = [
                 to: '/manage/moderation',
                 icon: 'i-lucide-shield-check',
                 label: 'moderation.title',
-                permission: MODERATION_PERMISSIONS,
+                permission: 'manage_comments',
                 badge: 'moderation',
             },
             {
@@ -365,8 +362,8 @@ export function withGym<T extends { to?: string; children?: NavLink[] }>(
         }))
 }
 
-const allowed = (can: Can) => (link: { permission?: PermissionRequirement }) =>
-    !link.permission || meetsRequirement(link.permission, can)
+const allowed = (can: Can) => (link: { permission?: PermissionCheck }) =>
+    !link.permission || can(link.permission)
 
 const forViewer = (signedIn: boolean) => (link: { signedIn?: boolean }) =>
     signedIn || !link.signedIn
