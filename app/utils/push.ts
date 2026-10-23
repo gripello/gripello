@@ -75,6 +75,22 @@ export function subscriptionKeys(subscription: PushSubscription) {
 }
 
 export const PUSH_DECLINED_KEY = 'gripello-push-declined'
+export const PUSH_DEVICE_USER_KEY = 'gripello-push-user'
+
+export function pushDeviceUser() {
+    try {
+        return localStorage.getItem(PUSH_DEVICE_USER_KEY) ?? ''
+    } catch {
+        return ''
+    }
+}
+
+export function setPushDeviceUser(userId: string | undefined) {
+    try {
+        if (userId) localStorage.setItem(PUSH_DEVICE_USER_KEY, userId)
+        else localStorage.removeItem(PUSH_DEVICE_USER_KEY)
+    } catch {}
+}
 
 export function shouldOfferPush(state: {
     signedIn: boolean

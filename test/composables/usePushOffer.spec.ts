@@ -125,4 +125,37 @@ describe('usePushOffer', () => {
         })
         expect(onEndpoint).toHaveBeenCalledExactlyOnceWith('fresh')
     })
+
+    it('stops following the FCM token once another climber signs in', async () => {
+        let tokenChanged: ((token: string) => Promise<void>) | undefined
+        const remove = vi.fn(async () => {})
+        vi.doMock('~/utils/pushDevice', () => ({
+            pushDevice: () => ({
+                subscribe: async () => ({ kind: 'fcm', endpoint: 'first' }),
+            }),
+            onFcmTokenChange: async (
+                handler: (token: string) => Promise<void>,
+            ) => {
+                tokenChanged = handler
+                return { remove }
+            },
+        }))
+        api.mockImplementation(
+            async (_path: string, options?: { body?: any }) =>
+                options?.body
+                    ? { id: options.body.endpoint, ...options.body }
+                    : null,
+        )
+        const { subscribeThisDevice, stopFollowingFcmToken } =
+            await import('~/composables/usePushOffer')
+        await subscribeThisDevice('u1', '')
+        await new Promise((resolve) => setTimeout(resolve))
+        vi.doUnmock('~/utils/pushDevice')
+
+        stopFollowingFcmToken()
+        await new Promise((resolve) => setTimeout(resolve))
+
+        expect(remove).toHaveBeenCalledTimes(1)
+        expect(tokenChanged).toBeDefined()
+    })
 })

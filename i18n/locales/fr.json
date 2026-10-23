@@ -753,6 +753,7 @@
                 "inventorySession": "Conserve la progression d’un inventaire",
                 "offlineLogbook": "Garde votre carnet et les réussites non envoyées disponibles hors ligne",
                 "pushDeclined": "Mémorise que vous avez supprimé les notifications push sur cet appareil",
+                "pushDeviceUser": "Mémorise qui reçoit les notifications push sur cet appareil, afin qu’une autre connexion les arrête",
                 "offlineScores": "Conserve les scores de compétition saisis sans réseau jusqu’à leur envoi",
                 "gym": "Mémorise la dernière salle ouverte",
                 "recentGyms": "Affiche les salles récemment visitées sur la page d’accueil",

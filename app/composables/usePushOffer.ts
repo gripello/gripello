@@ -26,20 +26,31 @@ function followFcmToken(
     device: PushSubscriptionRecord,
     onEndpoint?: (endpoint: string) => void,
 ) {
-    void fcmTokenFollower?.then((handle) => handle.remove())
+    stopFollowingFcmToken()
     let current = device
     fcmTokenFollower = onFcmTokenChange(async (token) => {
         if (token === current.endpoint) return
         const replaced = current
         current = { ...replaced, endpoint: token }
-        current = await createPushSubscription({
-            kind: 'fcm',
-            endpoint: token,
-            device: replaced.device,
-        })
-        onEndpoint?.(token)
-        await deletePushSubscription(replaced.id).catch(() => null)
+        try {
+            current = await createPushSubscription({
+                kind: 'fcm',
+                endpoint: token,
+                device: replaced.device,
+            })
+            onEndpoint?.(token)
+            await deletePushSubscription(replaced.id).catch(() => null)
+        } catch (error) {
+            console.error('Storing the new FCM token failed:', error)
+        }
     })
+}
+
+// The follower belongs to the climber who turned push on; another sign-in must not inherit it.
+export function stopFollowingFcmToken() {
+    void fcmTokenFollower?.then((handle) => handle.remove())
+    fcmTokenFollower = undefined
+    subscribedHere.value = false
 }
 
 export async function subscribeThisDevice(

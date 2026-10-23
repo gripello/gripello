@@ -753,6 +753,7 @@
                 "inventorySession": "Speichert den Fortschritt einer Inventur",
                 "offlineLogbook": "Hält dein Logbuch und noch nicht gesendete Begehungen offline verfügbar",
                 "pushDeclined": "Merkt sich, dass du Push-Benachrichtigungen auf diesem Gerät entfernt hast",
+                "pushDeviceUser": "Merkt sich, wer auf diesem Gerät Push-Benachrichtigungen erhält, damit eine andere Anmeldung sie beendet",
                 "offlineScores": "Speichert Wettkampfergebnisse, die du ohne Netz eingetragen hast, bis sie gesendet sind",
                 "gym": "Merkt sich die zuletzt geöffnete Halle",
                 "recentGyms": "Zeigt die zuletzt besuchten Hallen auf der Startseite",
