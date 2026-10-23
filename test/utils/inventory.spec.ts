@@ -24,32 +24,37 @@ const route = (
 ): InventoryRoute => ({ id, name: id, location: 'loc-main', ...overrides })
 
 describe('loadSession', () => {
-    const stored = (gyms: Record<string, unknown>) =>
+    const stored = (session: Record<string, unknown>) =>
         localStorage.setItem(
             INVENTORY_STORAGE_KEY,
-            JSON.stringify({ v: INVENTORY_SESSION_VERSION, gyms }),
+            JSON.stringify({ v: INVENTORY_SESSION_VERSION, ...session }),
         )
 
     it('returns an empty session when nothing is stored', () => {
         expect(loadSession('g1')).toEqual({ location: null, ids: [] })
     })
 
-    it('reads the session of the given gym only', () => {
-        stored({
-            g1: { location: 'loc-main', ids: ['abc', 'def'] },
-            g2: { location: 'loc-other', ids: ['xyz'] },
-        })
+    it('reads the session of its own gym and ignores another gym', () => {
+        stored({ gym: 'g1', location: 'loc-main', ids: ['abc', 'def'] })
         expect(loadSession('g1')).toEqual({
             location: 'loc-main',
             ids: ['abc', 'def'],
         })
-        expect(loadSession('g3')).toEqual({ location: null, ids: [] })
+        expect(loadSession('g2')).toEqual({ location: null, ids: [] })
+    })
+
+    it('keeps the location of a session saved before sessions named their gym', () => {
+        stored({ location: 'loc-main', ids: ['abc'] })
+        expect(loadSession('g1')).toEqual({
+            location: 'loc-main',
+            ids: ['abc'],
+        })
     })
 
     it('keeps ids but drops the location of an older session version', () => {
         localStorage.setItem(
             INVENTORY_STORAGE_KEY,
-            JSON.stringify({ v: 3, location: 'Hall A', ids: ['abc'] }),
+            JSON.stringify({ v: 2, location: 'Hall A', ids: ['abc'] }),
         )
         expect(loadSession('g1')).toEqual({ location: null, ids: ['abc'] })
     })
@@ -67,13 +72,15 @@ describe('loadSession', () => {
 
     it('drops non-string and empty ids', () => {
         stored({
-            g1: { location: 'loc-main', ids: ['abc', 42, null, '', 'def'] },
+            gym: 'g1',
+            location: 'loc-main',
+            ids: ['abc', 42, null, '', 'def'],
         })
         expect(loadSession('g1').ids).toEqual(['abc', 'def'])
     })
 
     it('treats a blank stored location as unscoped', () => {
-        stored({ g1: { location: '', ids: ['abc'] } })
+        stored({ gym: 'g1', location: '', ids: ['abc'] })
         expect(loadSession('g1').location).toBeNull()
     })
 
@@ -89,23 +96,28 @@ describe('loadSession', () => {
 })
 
 describe('persistSession', () => {
-    it('round-trips through loadSession', () => {
+    it('round-trips through loadSession and names its gym', () => {
         persistSession('g1', { location: 'loc-other', ids: ['abc'] })
         expect(loadSession('g1')).toEqual({
             location: 'loc-other',
             ids: ['abc'],
         })
-    })
-
-    it('keeps the sessions of other gyms', () => {
-        persistSession('g1', { location: 'loc-main', ids: ['abc'] })
-        persistSession('g2', { location: 'loc-other', ids: [] })
-        persistSession('g2', { location: null, ids: [] })
         expect(
             JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY)!),
         ).toEqual({
             v: INVENTORY_SESSION_VERSION,
-            gyms: { g1: { location: 'loc-main', ids: ['abc'] } },
+            gym: 'g1',
+            location: 'loc-other',
+            ids: ['abc'],
+        })
+    })
+
+    it("leaves another gym's session alone when this gym has nothing to save", () => {
+        persistSession('g1', { location: 'loc-main', ids: ['abc'] })
+        persistSession('g2', { location: null, ids: [] })
+        expect(loadSession('g1')).toEqual({
+            location: 'loc-main',
+            ids: ['abc'],
         })
     })
 
@@ -119,7 +131,7 @@ describe('persistSession', () => {
         })
     })
 
-    it('removes the key once no gym has a session', () => {
+    it('removes the key once the session is empty', () => {
         persistSession('g1', { location: 'loc-main', ids: ['abc'] })
         persistSession('g1', { location: null, ids: [] })
         expect(localStorage.getItem(INVENTORY_STORAGE_KEY)).toBeNull()
@@ -131,14 +143,22 @@ describe('persistSession', () => {
     })
 })
 
+describe('a session saved before the gym was known', () => {
+    it("is not treated as another gym's session", () => {
+        persistSession('', { location: 'loc-main', ids: ['abc'] })
+        expect(loadSession('g1')).toEqual({
+            location: 'loc-main',
+            ids: ['abc'],
+        })
+    })
+})
+
 describe('clearSession', () => {
-    it('removes only the given gym session', () => {
+    it("clears only this gym's session", () => {
         persistSession('g1', { location: 'loc-main', ids: ['abc'] })
-        persistSession('g2', { location: 'loc-other', ids: ['xyz'] })
-        clearSession('g1')
-        expect(loadSession('g1')).toEqual({ location: null, ids: [] })
-        expect(loadSession('g2').ids).toEqual(['xyz'])
         clearSession('g2')
+        expect(loadSession('g1').ids).toEqual(['abc'])
+        clearSession('g1')
         expect(localStorage.getItem(INVENTORY_STORAGE_KEY)).toBeNull()
     })
 })
