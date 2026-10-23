@@ -85,6 +85,7 @@ export function useGymMapLocation(
 
     const state = {
         locations,
+        locationsError: locationsRequest.error,
         refreshLocations: locationsRequest.refresh,
         locationItems,
         locationId,

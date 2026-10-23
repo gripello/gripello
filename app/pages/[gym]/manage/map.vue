@@ -670,6 +670,8 @@ const {
     mapWalls,
     wallsError,
     refreshWalls,
+    locationsError,
+    refreshLocations,
 } = await useGymMapLocation('placement', {
     confirmLeave: async () => {
         const confirmed = await confirmDiscard()
@@ -695,9 +697,12 @@ const {
 )
 useLiveLocation([cacheKeys.placementRoutes], locationId)
 
-const loadFailed = computed(() => !!routesError.value || !!wallsError.value)
+const loadFailed = computed(
+    () => !!routesError.value || !!wallsError.value || !!locationsError.value,
+)
 
-function retryLoad() {
+async function retryLoad() {
+    await refreshLocations()
     return Promise.all([refreshRoutes(), refreshWalls()])
 }
 
