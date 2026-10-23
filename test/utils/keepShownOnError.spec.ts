@@ -1,4 +1,4 @@
-import { keepShownOnError } from '~/utils/keepShown'
+import { keepShownOnError } from '~/utils/errors'
 
 function store(data: unknown, { loaded = true, error = null as unknown } = {}) {
     return {
