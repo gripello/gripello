@@ -16,4 +16,17 @@ describe('inventory page', () => {
             /^const loadRoutes = async \(\) => \{\s+loadingRoutes\.value = allRoutes\.value\.length === 0\n/,
         )
     })
+
+    it('preselects only removable missing routes when finishing', () => {
+        const page = readFileSync(
+            path.resolve(
+                import.meta.dirname,
+                '../../app/pages/[gym]/manage/inventory.vue',
+            ),
+            'utf8',
+        )
+        expect(page).toContain(
+            'archiveSelection.value = new Set(removableRouteIds(missing.value))',
+        )
+    })
 })

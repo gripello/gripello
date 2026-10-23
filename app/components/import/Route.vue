@@ -200,6 +200,7 @@
 </template>
 <script setup lang="ts">
 import { ROUTE_TYPES } from '#shared/utils/routeTypes'
+import { decodeText } from '~/utils/decodeText'
 import { importRatings } from '~/api/ratings'
 import { createRoute, listRoutes, listWalls } from '~/api/routes'
 import { formatDate, normalizeCreators } from '#shared/utils/formatting'
@@ -212,6 +213,7 @@ import {
     guessImportMapping,
     matchReviewRoute,
     parseImportDateTime,
+    parseImportRating,
     tableFromCsv,
     tableFromJson,
     tableFromXlsx,
@@ -424,7 +426,7 @@ defineExpose({ open })
 const readTable = async (file: File) => {
     const extension = file.name.split('.').pop()?.toLowerCase()
     if (extension === 'xlsx') return tableFromXlsx(await file.arrayBuffer())
-    const text = await file.text()
+    const text = decodeText(await file.arrayBuffer())
     return extension === 'json' || file.type === 'application/json'
         ? tableFromJson(JSON.parse(text))
         : tableFromCsv(text)
@@ -653,13 +655,11 @@ function sanitizeRatingPayload(
 ) {
     return {
         route_id: meta.routeId,
-        rating:
-            rating.rating !== null &&
-            rating.rating !== undefined &&
-            rating.rating !== '' &&
-            Number.isFinite(Number(rating.rating))
-                ? Number(rating.rating)
-                : null,
+        rating: parseImportRating(
+            rating.rating === null || rating.rating === undefined
+                ? undefined
+                : String(rating.rating),
+        ),
         ...resolveImportedGrading(
             {
                 ...rating,

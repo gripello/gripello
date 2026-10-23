@@ -4,6 +4,7 @@ export interface InventoryRoute {
     location?: string | null
     anchor_point?: number | null
     archived?: boolean
+    permanent?: boolean
 }
 
 export interface InventorySession {
@@ -12,7 +13,7 @@ export interface InventorySession {
 }
 
 export const INVENTORY_STORAGE_KEY = 'inventory-scanned-route-ids'
-export const INVENTORY_SESSION_VERSION = 3
+export const INVENTORY_SESSION_VERSION = 4
 
 function emptySession(): InventorySession {
     return { location: null, ids: [] }
@@ -26,58 +27,67 @@ function validIds(value: unknown): string[] {
     )
 }
 
-export function loadSession(): InventorySession {
-    if (typeof localStorage === 'undefined') return emptySession()
-
+function readStored(): unknown {
     const raw = localStorage.getItem(INVENTORY_STORAGE_KEY)
-    if (!raw) return emptySession()
-
-    let parsed: unknown
+    if (!raw) return null
     try {
-        parsed = JSON.parse(raw)
+        return JSON.parse(raw)
     } catch {
-        return emptySession()
+        return null
     }
+}
 
-    if (Array.isArray(parsed)) {
-        return { location: null, ids: validIds(parsed) }
-    }
+function storedGyms(stored: unknown): Record<string, unknown> | null {
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored))
+        return null
+    const record = stored as Record<string, unknown>
+    return record.v === INVENTORY_SESSION_VERSION &&
+        record.gyms &&
+        typeof record.gyms === 'object'
+        ? (record.gyms as Record<string, unknown>)
+        : null
+}
 
-    if (!parsed || typeof parsed !== 'object') return emptySession()
-
-    const record = parsed as Record<string, unknown>
+function toSession(value: unknown): InventorySession {
+    if (!value || typeof value !== 'object') return emptySession()
+    const record = value as Record<string, unknown>
     return {
         location:
-            record.v === INVENTORY_SESSION_VERSION &&
-            typeof record.location === 'string' &&
-            record.location.length > 0
+            typeof record.location === 'string' && record.location.length > 0
                 ? record.location
                 : null,
         ids: validIds(record.ids),
     }
 }
 
-export function persistSession(session: InventorySession): void {
-    if (typeof localStorage === 'undefined') return
+export function loadSession(gymId: string): InventorySession {
+    if (typeof localStorage === 'undefined') return emptySession()
+    const stored = readStored()
+    const gyms = storedGyms(stored)
+    if (gyms) return toSession(gyms[gymId])
+    // Sessions saved before they were kept per gym: ids only, their location may belong to another gym.
+    if (Array.isArray(stored)) return { location: null, ids: validIds(stored) }
+    return { location: null, ids: toSession(stored).ids }
+}
 
-    if (session.ids.length === 0 && !session.location) {
+export function persistSession(gymId: string, session: InventorySession): void {
+    if (typeof localStorage === 'undefined') return
+    const gyms = { ...storedGyms(readStored()) }
+    if (session.ids.length === 0 && !session.location) delete gyms[gymId]
+    else gyms[gymId] = { location: session.location, ids: session.ids }
+
+    if (Object.keys(gyms).length === 0) {
         localStorage.removeItem(INVENTORY_STORAGE_KEY)
         return
     }
-
     localStorage.setItem(
         INVENTORY_STORAGE_KEY,
-        JSON.stringify({
-            v: INVENTORY_SESSION_VERSION,
-            location: session.location,
-            ids: session.ids,
-        }),
+        JSON.stringify({ v: INVENTORY_SESSION_VERSION, gyms }),
     )
 }
 
-export function clearSession(): void {
-    if (typeof localStorage === 'undefined') return
-    localStorage.removeItem(INVENTORY_STORAGE_KEY)
+export function clearSession(gymId: string): void {
+    persistSession(gymId, emptySession())
 }
 
 export function scopedRoutes<T extends InventoryRoute>(
@@ -144,3 +154,7 @@ export function extractRouteId(value: unknown): string | null {
 
     return null
 }
+
+export const removableRouteIds = (
+    routes: { id: string; permanent?: boolean | null }[],
+) => routes.filter((route) => !route.permanent).map((route) => route.id)

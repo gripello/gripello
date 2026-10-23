@@ -1,5 +1,9 @@
 import { displayName } from '~/utils/avatar'
-import type { PermissionCheck } from '#shared/utils/permissions'
+import {
+    MODERATION_PERMISSIONS,
+    meetsRequirement,
+    type PermissionRequirement,
+} from '#shared/utils/permissions'
 import { listGymRatings } from '~/api/ratings'
 import { listRoutes } from '~/api/routes'
 import { listMembers, listRoles } from '~/api/members'
@@ -198,7 +202,7 @@ export function useGlobalSearch() {
         {
             key: 'moderation',
             label: 'moderation.title',
-            permission: 'manage_comments',
+            permission: MODERATION_PERMISSIONS,
             search: searchModeration,
         },
         {
@@ -210,7 +214,7 @@ export function useGlobalSearch() {
     ] satisfies {
         key: string
         label: string
-        permission?: PermissionCheck
+        permission?: PermissionRequirement
         search: unknown
     }[]
 
@@ -218,7 +222,8 @@ export function useGlobalSearch() {
         const term = query.trim()
         if (!term) return []
         const allowed = sources.filter(
-            (source) => !source.permission || can(source.permission),
+            (source) =>
+                !source.permission || meetsRequirement(source.permission, can),
         )
         return Promise.all(
             allowed.map(async (source) => ({

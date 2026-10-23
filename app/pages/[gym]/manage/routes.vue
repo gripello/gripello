@@ -460,7 +460,11 @@ import {
     formatScore,
     locationName,
 } from '#shared/utils/formatting'
-import { toRouteRow, type RouteTableLoad } from '~/composables/useRouteTable'
+import {
+    latestRequestTracker,
+    toRouteRow,
+    type RouteTableLoad,
+} from '~/composables/useRouteTable'
 import {
     coalesce,
     coalesceIds,
@@ -637,10 +641,13 @@ const selectAll = async () => {
     }
 }
 
+const startRouteLoad = latestRequestTracker()
+
 const loadRoutes = async (
     options: RouteTableLoad = {},
     { background = false } = {},
 ) => {
+    const isLatest = startRouteLoad()
     const { page, itemsPerPage, sortBy } = options
 
     if (typeof page === 'number') {
@@ -666,15 +673,16 @@ const loadRoutes = async (
             limit: tableOptions.itemsPerPage,
             total: true,
         })
+        if (!isLatest()) return
 
         routes.value = list.items.map(toRouteRow)
         totalItems.value = list.total ?? 0
         listFailed.value = false
     } catch (error) {
-        if (isAbortError(error)) return
+        if (!isLatest() || isAbortError(error)) return
         if (!background || routes.value.length === 0) listFailed.value = true
     } finally {
-        loading.value = false
+        if (isLatest()) loading.value = false
     }
 }
 

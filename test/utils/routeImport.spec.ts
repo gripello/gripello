@@ -205,13 +205,19 @@ describe('review import', () => {
 
     it.each([
         ['4', 4],
-        ['4,5', 4.5],
+        ['4,5', 5],
+        ['4.4', 4],
         ['3/5', 3],
         ['9', 5],
         ['8/10', 4],
-        ['3 / 6', 2.5],
-        ['0/5', 1],
+        ['7/10', 4],
+        ['4/6', 3],
+        ['3 / 6', 3],
+        ['0.2', 1],
+        ['0', null],
+        ['0/5', null],
         ['', null],
+        ['  ', null],
         ['great', null],
         [undefined, null],
     ])('rating %s → %s', (value, expected) => {
@@ -408,6 +414,33 @@ describe('TopLogger exports', () => {
                 { ...context, gradeSystemFor: () => 'yds' },
             ),
         ).toMatchObject({ grade: '5.9', grade_system: 'yds' })
+    })
+
+    it('converts whole TopLogger grades that arrive as numbers', () => {
+        expect(
+            toImportedRoute(
+                { g: 7, t: 'Boulder' },
+                { grade: 'g', type: 't' },
+                context,
+            ),
+        ).toMatchObject({ grade: '7a', grade_system: 'font' })
+        expect(
+            toImportedRoute(
+                { g: 6, t: 'Route' },
+                { grade: 'g', type: 't' },
+                context,
+            ),
+        ).toMatchObject({ grade: '6', grade_system: 'uiaa' })
+    })
+
+    it('leaves a whole-number grade typed as text alone', () => {
+        expect(
+            toImportedRoute(
+                { g: '7', s: 'french' },
+                { grade: 'g', grade_system: 's' },
+                context,
+            ),
+        ).toMatchObject({ grade: '7' })
     })
 
     it('imports a TopLogger boulder with a Font grade', () => {

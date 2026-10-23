@@ -9,4 +9,11 @@ describe('placement page route drag', () => {
             /addEventListener\('touchmove', onTouchMove, \{\s*passive: false,\s*capture: true,/,
         )
     })
+
+    it('strips a wall without its permanent routes and counts only those', () => {
+        const page = readFileSync('app/pages/[gym]/manage/map.vue', 'utf8')
+        expect(page).toContain('const ids = removableRouteIds(items)')
+        expect(page).toContain('n: resettableRouteIds.length')
+        expect(page).not.toContain('savedWallRouteIds.value.length')
+    })
 })

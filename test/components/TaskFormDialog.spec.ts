@@ -1,7 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, reactive, ref, watch } from 'vue'
 import TaskFormDialog from '~/components/task/FormDialog.vue'
-import { createTask } from '~/api/tasks'
+import { createTask, updateTask } from '~/api/tasks'
+import { listWalls } from '~/api/routes'
 import { useAsyncAction } from '~/composables/useAsyncAction'
 import { dialogShellStub } from '../__stubs__/dialogShell'
 
@@ -15,9 +16,9 @@ vi.mock('~/api/routes', () => ({ listWalls: vi.fn(async () => []) }))
 const setErrors = vi.fn()
 const notifyError = vi.fn()
 
-function mountDialog() {
+function mountDialog(props: Record<string, unknown> = {}) {
     return mount(TaskFormDialog, {
-        props: { modelValue: false },
+        props: { modelValue: false, ...props },
         global: {
             mocks: { $t: (key: string) => key },
             stubs: {
@@ -106,5 +107,59 @@ describe('TaskFormDialog', () => {
         ])
         expect(notifyError).not.toHaveBeenCalled()
         expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    })
+
+    it('keeps the wall of an existing task while the walls are loading', async () => {
+        let resolveWalls!: (walls: unknown[]) => void
+        vi.mocked(listWalls).mockImplementationOnce(
+            () => new Promise((resolve) => (resolveWalls = resolve)) as never,
+        )
+        vi.mocked(updateTask).mockResolvedValueOnce({ id: 't1' } as never)
+        const wrapper = mountDialog({
+            task: {
+                id: 't1',
+                kind: 'maintenance',
+                title: 'Fix',
+                priority: 2,
+                status: 'open',
+                location: 'l2',
+                wall: 'w1',
+                created: '2026-01-01T00:00:00.000Z',
+            },
+        })
+        await wrapper.setProps({ modelValue: true })
+        await flushPromises()
+        resolveWalls([{ id: 'w1', name: 'Wall', location: 'l2' }])
+        await flushPromises()
+
+        await wrapper.get('[data-testid="task-form-save"]').trigger('click')
+        await flushPromises()
+
+        expect(vi.mocked(updateTask).mock.calls[0]![1]).not.toHaveProperty(
+            'wall',
+        )
+    })
+
+    it('sends only changed fields so a status set elsewhere survives the save', async () => {
+        vi.mocked(updateTask).mockReset()
+        vi.mocked(updateTask).mockResolvedValueOnce({ id: 't1' } as never)
+        const wrapper = mountDialog({
+            task: {
+                id: 't1',
+                kind: 'maintenance',
+                title: 'Fix',
+                priority: 2,
+                status: 'open',
+                location: 'l1',
+                created: '2026-01-01T00:00:00.000Z',
+            },
+        })
+        await wrapper.setProps({ modelValue: true })
+        await flushPromises()
+
+        await wrapper.get('[data-testid="task-form-save"]').trigger('click')
+        await flushPromises()
+
+        expect(updateTask).toHaveBeenCalledWith('t1', {}, null)
     })
 })

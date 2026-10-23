@@ -46,6 +46,10 @@ func (m *module) planRemoval(ctx context.Context, gym string, body removalBody) 
 		if _, err := apitime.ParseDate(*body.PlannedFor); err != nil {
 			return nil, httpx.Invalid("planned_for", "Must be a date.")
 		}
+		// The earliest "today" on Earth (UTC-12), so no gym's local today is refused.
+		if *body.PlannedFor < time.Now().UTC().Add(-12*time.Hour).Format(time.DateOnly) {
+			return nil, httpx.Invalid("planned_for", "Must not be in the past.")
+		}
 	}
 	out := []Route{}
 	err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {

@@ -275,12 +275,15 @@ export function toImportedRoute(
         ? (context.typeByLabel.get(typeText.toLowerCase()) ?? null)
         : null
     const rawGrade = text('grade')
+    const gradeCell = pick('grade')
+    const decimalGrade =
+        typeof gradeCell === 'number' ? gradeCell.toFixed(2) : (rawGrade ?? '')
     const mappedSystem = text('grade_system')?.toLowerCase()
     const convertedGrade =
         rawGrade &&
         gradeIndex(mappedSystem || context.gradeSystemFor(type), rawGrade) ===
             null
-            ? topLoggerGrade(rawGrade)
+            ? topLoggerGrade(decimalGrade)
             : null
     const grade = convertedGrade ?? rawGrade
     const convertedSystem = type === 'Boulder' ? 'font' : 'french'
@@ -343,8 +346,8 @@ export function parseImportRating(value: string | undefined): number | null {
         .split('/')
         .map((part) => Number(part.replace(',', '.').trim()))
     const rating = scale ? (points! / scale) * 5 : points
-    return value?.trim() && Number.isFinite(rating)
-        ? Math.min(5, Math.max(1, rating!))
+    return value?.trim() && Number.isFinite(rating) && rating! > 0
+        ? Math.min(5, Math.max(1, Math.round(rating!)))
         : null
 }
 

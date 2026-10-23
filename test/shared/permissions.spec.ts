@@ -1,6 +1,10 @@
 import { globSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { PERMISSIONS } from '#shared/utils/permissions'
+import {
+    MODERATION_PERMISSIONS,
+    PERMISSIONS,
+    meetsRequirement,
+} from '#shared/utils/permissions'
 
 function seededPermissions(): string[] {
     const names = new Set<string>()
@@ -27,5 +31,16 @@ function seededPermissions(): string[] {
 describe('permissions', () => {
     it('match the names the migrations seed', () => {
         expect([...PERMISSIONS].sort()).toEqual(seededPermissions())
+    })
+})
+
+describe('meetsRequirement', () => {
+    const can = (permission: string) => permission === 'manage_reports'
+
+    it('accepts one permission or any of several', () => {
+        expect(meetsRequirement('manage_reports', can)).toBe(true)
+        expect(meetsRequirement('manage_comments', can)).toBe(false)
+        expect(meetsRequirement(MODERATION_PERMISSIONS, can)).toBe(true)
+        expect(meetsRequirement(['manage_routes'], can)).toBe(false)
     })
 })

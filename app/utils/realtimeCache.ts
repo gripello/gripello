@@ -454,8 +454,18 @@ export interface StaffRouteUpdate<T> {
 }
 
 // Staff tables patch what they show; a rating only rescores its route instead of reloading the page.
+function expandedRecord(rows: Expandable[], id: string) {
+    for (const row of rows)
+        for (const field of ['wall', 'location'] as const) {
+            const linked = row.expand?.[field] as { id?: string } | undefined
+            if (linked?.id === id) return linked as { id: string }
+        }
+    return undefined
+}
+
 export function staffRouteChange<
-    T extends { id: string; archived?: boolean } & Expandable,
+    T extends { id: string; archived?: boolean } & Expandable &
+        Partial<Record<ExpandField, string | null>>,
 >(rows: T[], change: GymChange): StaffRouteUpdate<T> {
     const record = change.record as {
         id: string
@@ -478,7 +488,19 @@ export function staffRouteChange<
                 !!row.archived !== !!record.archived
             )
                 return { ...unchanged, reload: true }
-            return { ...unchanged, rows: upsertById(rows, record as T) }
+            const next = relinkRow(
+                upsertById(rows, record as T),
+                record.id,
+                (id) => expandedRecord(rows, id),
+            )
+            const moved = next.find((item) => item.id === record.id)!
+            const unknownTarget = (['wall', 'location'] as const).some(
+                (field) =>
+                    !!moved[field] &&
+                    !!row.expand?.[field] &&
+                    !moved.expand?.[field],
+            )
+            return { ...unchanged, rows: next, reload: unknownTarget }
         }
         case 'walls':
             return { ...unchanged, rows: patchExpanded(rows, 'wall', record) }
