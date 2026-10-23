@@ -74,7 +74,8 @@ UI_PID=$!
 # Until both listen, visitors get a refused connection (the service worker's offline fallback) instead of a 502.
 for port in 8080 3000; do
     until (exec 3<>/dev/tcp/127.0.0.1/$port) 2>/dev/null; do
-        kill -0 $API_PID $UI_PID 2>/dev/null || break 2
+        # one kill -0 per pid: with several it succeeds while any one of them is alive
+        kill -0 $API_PID 2>/dev/null && kill -0 $UI_PID 2>/dev/null || break 2
         sleep 0.05
     done
 done
