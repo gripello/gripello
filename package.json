@@ -63,7 +63,7 @@
         "concurrently": "10.0.6",
         "echarts": "6.1.0",
         "h3": "1.15.11",
-        "happy-dom": "21.0.3",
+        "happy-dom": "21.0.4",
         "maplibre-gl": "^6.15.0",
         "nuxt": "^4.6.2",
         "pako": "^3.0.2",
