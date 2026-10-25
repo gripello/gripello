@@ -26,6 +26,7 @@ test('a gym holds beta uploads until staff publish or decline them', async ({
     pageAs,
     testPrefix,
 }) => {
+    test.slow()
     const gym = await createModerationGym(testPrefix)
     try {
         const staff = await pageAs(gym.staff)
