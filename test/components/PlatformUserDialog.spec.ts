@@ -37,7 +37,7 @@ describe('PlatformUserDialog', () => {
 
     it('keeps typed changes when the list reloads the same user', async () => {
         const wrapper = mount(UserDialog, {
-            props: { modelValue: true, user, gyms: [], roles: [] },
+            props: { modelValue: true, user },
             global: {
                 mocks: { $t: (key: string) => key },
                 stubs: {
@@ -63,7 +63,7 @@ describe('PlatformUserDialog', () => {
         const mountFor = (signedIn: string) => {
             globalThis.__AUTH_STORE__ = { record: { id: signedIn } }
             return mount(UserDialog, {
-                props: { modelValue: true, user, gyms: [], roles: [] },
+                props: { modelValue: true, user },
                 global: {
                     mocks: { $t: (key: string) => key },
                     stubs: {

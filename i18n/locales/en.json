@@ -760,7 +760,8 @@
                 "mapRouteType": "Remembers whether the map shows boulders or routes",
                 "offlinePages": "Keeps the app shell, public pages, gym data and images available offline",
                 "moderationSeen": "Remembers when you last opened the moderation inbox, to mark new cases",
-                "mapConsent": "Remembers that you chose to load maps"
+                "mapConsent": "Remembers that you chose to load maps",
+                "platformUsersCompact": "Remembers whether the platform user table uses compact rows"
             },
             "durations": {
                 "session": "Until sign-out",
@@ -2463,7 +2464,68 @@
             "blockDomain": "Block all addresses at {domain}",
             "blockDomainShared": "{accounts} other account, {suspended} suspended | {accounts} other accounts, {suspended} suspended",
             "blockFailed": "Suspended, but the e-mail block could not be saved. Add it under Settings › Blocklists.",
-            "hideContentFailed": "Suspended, but the content could not be hidden. Try again."
+            "hideContentFailed": "Suspended, but the content could not be hidden. Try again.",
+            "noMemberships": "No gym memberships",
+            "lastActive": "Last active",
+            "joined": "Joined",
+            "ticks": "Ticks",
+            "reviews": "Reviews",
+            "never": "Never signed in",
+            "sessions": "Sessions",
+            "noSessions": "Not signed in anywhere",
+            "noActivity": "No activity yet",
+            "markVerified": "Mark as verified",
+            "selectUser": "Select a user",
+            "compact": "Compact rows",
+            "mfaOn": "2FA enabled",
+            "mfaOff": "No 2FA",
+            "tabs": {
+                "overview": "Overview",
+                "security": "Security",
+                "activity": "Activity"
+            },
+            "alerts": {
+                "suspended": "This account is suspended",
+                "locked": "Locked out after too many failed sign-ins",
+                "unverified": "E-mail address not verified",
+                "staffNoMfa": "Staff account without two-factor"
+            },
+            "kpis": {
+                "accounts": "Accounts",
+                "newThisWeek": "+{n} this week",
+                "active": "Active last 7 days",
+                "staffNoMfa": "Staff without 2FA",
+                "ofStaff": "of {n} staff",
+                "olderThanWeek": "{n} older than 7 days",
+                "locked": "{n} locked out",
+                "online": "{n} online now"
+            },
+            "filters": {
+                "staff": "Staff",
+                "locked": "Locked out",
+                "noMfa": "No 2FA"
+            },
+            "columns": {
+                "user": "User",
+                "status": "Status",
+                "gyms": "Gyms",
+                "mfa": "2FA"
+            },
+            "sorts": {
+                "email": "E-mail A–Z",
+                "-email": "E-mail Z–A",
+                "created": "Oldest accounts",
+                "-created": "Newest accounts",
+                "last_seen": "Least recently active",
+                "-last_seen": "Recently active",
+                "status": "Problems first",
+                "-status": "Problems last",
+                "gyms": "Fewest gyms",
+                "-gyms": "Most gyms",
+                "mfa": "Without 2FA first",
+                "-mfa": "With 2FA first"
+            },
+            "onlineNow": "Online now"
         },
         "features": {
             "title": "Feature flags",

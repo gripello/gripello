@@ -133,3 +133,12 @@ func TestALateSubscriptionChangeNeitherOverridesANewerOneNorSkipsSilently(t *tes
 		t.Fatalf("resync at %d: a late subscription missed events already sent live", resyncAt)
 	}
 }
+
+func TestSessionsListsSignedInStreamsOnce(t *testing.T) {
+	h, _ := hubWithClient(&auth.Principal{UserID: "u1", SessionID: "s1"})
+	h.clients["c2"] = &client{id: "c2", principal: &auth.Principal{UserID: "u1", SessionID: "s1"}}
+	h.clients["c3"] = &client{id: "c3"}
+	if got := h.Sessions(); len(got) != 1 || got[0] != "s1" {
+		t.Errorf("sessions = %v, want [s1]", got)
+	}
+}

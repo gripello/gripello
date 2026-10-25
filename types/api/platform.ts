@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/users/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["platformUserSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/users/{id}": {
         parameters: {
             query?: never;
@@ -188,7 +204,8 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /** @description Served by authn. The user's sessions, most recently seen first. */
+        get: operations["listUserSessions"];
         put?: never;
         post?: never;
         /** @description Served by authn. Ends every session of the user (realtime connections lose their auth). Refuses yourself and other platform admins. */
@@ -586,6 +603,34 @@ export interface components {
             /** @description null or "" clears */
             banner?: null | string;
         };
+        PlatformUserSummary: {
+            total: number;
+            new_7d: number;
+            active_7d: number;
+            /** @description accounts with a session seen in the last 2 minutes (open realtime streams refresh it every 30 s) */
+            online: number;
+            unverified: number;
+            /** @description unverified and created more than 7 days ago */
+            unverified_old: number;
+            suspended: number;
+            locked: number;
+            platform_admins: number;
+            /** @description accounts with any gym membership */
+            staff: number;
+            staff_no_mfa: number;
+        };
+        PlatformUserSession: {
+            id: string;
+            /** Format: date-time */
+            created: string;
+            /** @enum {string} */
+            method: "" | "password" | "totp" | "passkey" | "recovery";
+            user_agent: string;
+            ip: string;
+            /** Format: date-time */
+            last_seen?: string | null;
+            current: boolean;
+        };
         /** @description The users row without password_hash and token_key, plus memberships. */
         PlatformUser: {
             id: string;
@@ -601,6 +646,12 @@ export interface components {
             suspension_reason?: string;
             /** Format: date-time */
             created?: string;
+            /** Format: date-time */
+            last_seen?: null | string;
+            /** @description only on GET /platform/users/{id} */
+            ticks_count?: number;
+            /** @description only on GET /platform/users/{id} */
+            ratings_count?: number;
             memberships: {
                 id: string;
                 gym: string;
@@ -654,7 +705,10 @@ export interface operations {
             query?: {
                 /** @description case-insensitive substring of email, username, firstname or name */
                 q?: string;
-                filter?: "platform_admins" | "unverified" | "suspended";
+                filter?: "platform_admins" | "unverified" | "suspended" | "locked" | "no_mfa" | "staff" | "staff_no_mfa" | "active" | "online";
+                /** @description only members of this gym */
+                gym?: string;
+                sort?: "email" | "-email" | "created" | "-created" | "last_seen" | "-last_seen" | "status" | "-status" | "gyms" | "-gyms" | "mfa" | "-mfa";
                 page?: number;
                 /** @description 0 returns every match unpaged (page 1, limit 0) */
                 limit?: number;
@@ -665,7 +719,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One page of users, ordered by email */
+            /** @description One page of users */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -680,6 +734,28 @@ export interface operations {
                 };
             };
             400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    platformUserSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account counts for the users page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformUserSummary"];
+                };
+            };
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
         };
@@ -1022,6 +1098,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    listUserSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["PlatformUserSession"][];
+                    };
+                };
             };
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];

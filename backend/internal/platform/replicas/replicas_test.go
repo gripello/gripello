@@ -43,14 +43,18 @@ func TestReplicasReportThemselvesAndGoOfflineWhenSilent(t *testing.T) {
 		t.Errorf("app-1 = %+v", got[0])
 	}
 
+	pool.Exec(ctx, `INSERT INTO users (id, username, email, token_key, password_hash) VALUES ('u00000000000001', 'u1', 'u1@example.com', 'k', 'h')`)
+	pool.Exec(ctx, `INSERT INTO sessions (id, "user", last_seen) VALUES ('sess1', 'u00000000000001', now() - interval '1 hour')`)
+
 	ctx2, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {
 		Run(ctx2, pool, Replica{Name: "app-4", Started: started}, Probes{
-			RealtimeClients: func() int { return 0 },
-			RealtimeDropped: func() int64 { return 7 },
-			BusLag:          func(context.Context) (time.Duration, error) { return 1500 * time.Millisecond, nil },
-			BusQueueMax:     func() int { return 4 },
+			RealtimeClients:  func() int { return 0 },
+			RealtimeSessions: func() []string { return []string{"sess1"} },
+			RealtimeDropped:  func() int64 { return 7 },
+			BusLag:           func(context.Context) (time.Duration, error) { return 1500 * time.Millisecond, nil },
+			BusQueueMax:      func() int { return 4 },
 		})
 		close(done)
 	}()
@@ -66,6 +70,11 @@ func TestReplicasReportThemselvesAndGoOfflineWhenSilent(t *testing.T) {
 	<-done
 	if !reported {
 		t.Fatal("a running replica never reported itself")
+	}
+	var fresh bool
+	pool.QueryRow(ctx, `SELECT streamed_at > now() - interval '1 minute' AND last_seen < now() - interval '30 minutes' FROM sessions WHERE id = 'sess1'`).Scan(&fresh)
+	if !fresh {
+		t.Error("a session with an open stream kept its old last_seen")
 	}
 	if list, _ := List(ctx, pool); len(list) != 2 {
 		t.Errorf("a stopped replica stays listed: %+v", list)

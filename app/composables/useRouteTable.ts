@@ -1,8 +1,8 @@
-import { h, reactive, type Ref } from 'vue'
-import UButton from '@nuxt/ui/components/Button.vue'
+import { reactive, type Ref } from 'vue'
 import { useTimeoutFn } from '@vueuse/core'
 import { normalizeCreators } from '#shared/utils/formatting'
 import { toSortParam, type SortOption } from '~/utils/sorting'
+import { sortHeader } from '~/utils/tableSortHeader'
 import type { RouteListItem, RouteRecord } from '~/types/models'
 
 export interface RouteTableLoad {
@@ -60,20 +60,11 @@ export function useRouteTable({
     function sortableHeader(label: string, key: string) {
         return () => {
             const active = tableOptions.sortBy[0]
-            const order = active?.key === key ? active.order : undefined
-            return h(UButton, {
-                color: 'neutral',
-                variant: 'ghost',
+            return sortHeader(
                 label,
-                trailingIcon:
-                    order === 'asc'
-                        ? 'i-lucide-arrow-up'
-                        : order === 'desc'
-                          ? 'i-lucide-arrow-down'
-                          : 'i-lucide-arrow-up-down',
-                class: '-mx-2.5 w-[calc(100%+1.25rem)] font-semibold',
-                onClick: () => toggleSort(key),
-            })
+                active?.key === key ? active.order : undefined,
+                () => toggleSort(key),
+            )
         }
     }
 

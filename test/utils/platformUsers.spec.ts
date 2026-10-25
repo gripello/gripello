@@ -3,7 +3,15 @@ import {
     blockChoices,
     isPermanentlySuspended,
     isSuspended,
+    lastSeenLabel,
+    lastSeenTone,
+    mergeActivity,
+    nextPlatformUserSort,
+    platformUserFilterFrom,
+    platformUserSortFrom,
+    sortOrderOf,
     suspensionEnd,
+    userAlert,
     joinableGyms,
     membershipChips,
     rolesOfGym,
@@ -200,5 +208,127 @@ describe('blockChoices', () => {
             domain: false,
         })
         expect(blockChoices(null)).toEqual({ email: false, domain: false })
+    })
+})
+
+describe('users page query and sorting', () => {
+    it('reads only known filters and sorts from the URL', () => {
+        expect(platformUserFilterFrom('staff_no_mfa')).toBe('staff_no_mfa')
+        expect(platformUserFilterFrom('nope')).toBeNull()
+        expect(platformUserFilterFrom(['locked'])).toBeNull()
+        expect(platformUserSortFrom('created')).toBe('created')
+        expect(platformUserSortFrom(undefined)).toBe('-last_seen')
+        expect(platformUserSortFrom('name')).toBe('-last_seen')
+    })
+
+    it('cycles a column ascending, descending, then back to the default', () => {
+        expect(nextPlatformUserSort('-last_seen', 'email')).toBe('email')
+        expect(nextPlatformUserSort('email', 'email')).toBe('-email')
+        expect(nextPlatformUserSort('-email', 'email')).toBe('-last_seen')
+        expect(nextPlatformUserSort('-last_seen', 'last_seen')).toBe(
+            'last_seen',
+        )
+        expect(sortOrderOf('-created', 'created')).toBe('desc')
+        expect(sortOrderOf('-created', 'email')).toBeNull()
+        expect(nextPlatformUserSort('email', 'status')).toBe('status')
+        expect(nextPlatformUserSort('-gyms', 'gyms')).toBe('-last_seen')
+        expect(platformUserSortFrom('-mfa')).toBe('-mfa')
+    })
+})
+
+describe('lastSeenTone', () => {
+    const now = Date.parse('2026-10-24T12:00:00Z')
+    const ago = (minutes: number) =>
+        new Date(now - minutes * 60_000).toISOString()
+
+    it('buckets the last session activity', () => {
+        expect(lastSeenTone(null, now)).toBe('never')
+        expect(lastSeenTone(ago(1), now)).toBe('online')
+        expect(lastSeenTone(ago(3), now)).toBe('active')
+        expect(lastSeenTone(ago(60 * 24 * 3), now)).toBe('active')
+        expect(lastSeenTone(ago(60 * 24 * 30), now)).toBe('idle')
+        expect(lastSeenTone(ago(60 * 24 * 120), now)).toBe('dormant')
+    })
+
+    it('labels online and never-seen users instead of a time', () => {
+        const t = (key: string) => key
+        expect(lastSeenLabel(null, t, 'en', now)).toBe('platform.users.never')
+        expect(lastSeenLabel(new Date().toISOString(), t, 'en')).toBe(
+            'platform.users.onlineNow',
+        )
+        expect(lastSeenLabel(ago(60 * 24 * 3), t, 'en', now)).toBe(
+            'time.daysAgo',
+        )
+    })
+})
+
+describe('userAlert', () => {
+    const now = new Date('2026-10-24T12:00:00Z')
+    const base = { id: 'u', verified: true, mfa_enabled: true } as PlatformUser
+
+    it('ranks suspension over lockout over verification over 2FA', () => {
+        const all = {
+            ...base,
+            verified: false,
+            mfa_enabled: false,
+            memberships: [{ id: 'm', gym: 'g', role: 'r' }],
+            suspended_until: '2026-11-01T00:00:00.000Z',
+            locked_until: '2026-10-24T13:00:00.000Z',
+        }
+        expect(userAlert(all, now)).toBe('suspended')
+        expect(userAlert({ ...all, suspended_until: null }, now)).toBe('locked')
+        expect(
+            userAlert(
+                { ...all, suspended_until: null, locked_until: null },
+                now,
+            ),
+        ).toBe('unverified')
+        expect(
+            userAlert(
+                {
+                    ...all,
+                    suspended_until: null,
+                    locked_until: null,
+                    verified: true,
+                },
+                now,
+            ),
+        ).toBe('staffNoMfa')
+    })
+
+    it('stays quiet for climbers without 2FA and for expired states', () => {
+        expect(userAlert({ ...base, mfa_enabled: false }, now)).toBeNull()
+        expect(
+            userAlert(
+                {
+                    ...base,
+                    suspended_until: '2026-10-01T00:00:00.000Z',
+                    locked_until: '2026-10-24T11:00:00.000Z',
+                },
+                now,
+            ),
+        ).toBeNull()
+    })
+})
+
+describe('mergeActivity', () => {
+    it('drops duplicates and puts the newest first', () => {
+        const entry = (id: string, created: string) =>
+            ({ id, created }) as never
+        const merged = mergeActivity(
+            [
+                entry('a', '2026-10-01T00:00:00.000Z'),
+                entry('b', '2026-10-03T00:00:00.000Z'),
+            ],
+            [
+                entry('b', '2026-10-03T00:00:00.000Z'),
+                entry('c', '2026-10-02T00:00:00.000Z'),
+            ],
+        )
+        expect(merged.map((item: { id: string }) => item.id)).toEqual([
+            'b',
+            'c',
+            'a',
+        ])
     })
 })

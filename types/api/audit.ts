@@ -127,6 +127,8 @@ export interface components {
         Gym: string;
         Action: components["schemas"]["AuditAction"];
         Collection: string;
+        /** @description exact id of the changed record */
+        Record: string;
         /** @description a user id, `me`, `guest` (no actor, not a platform admin) or `platform` (platform admins acting without membership) */
         Actor: string;
         /** @description inclusive lower bound on created (RFC 3339 timestamp or YYYY-MM-DD) */
@@ -151,6 +153,8 @@ export interface operations {
                 collection?: components["parameters"]["Collection"];
                 /** @description a user id, `me`, `guest` (no actor, not a platform admin) or `platform` (platform admins acting without membership) */
                 actor?: components["parameters"]["Actor"];
+                /** @description exact id of the changed record */
+                record?: components["parameters"]["Record"];
                 /** @description inclusive lower bound on created (RFC 3339 timestamp or YYYY-MM-DD) */
                 from?: components["parameters"]["From"];
                 /** @description inclusive upper bound on created, same formats as from */
@@ -182,6 +186,8 @@ export interface operations {
                 collection?: components["parameters"]["Collection"];
                 /** @description a user id, `me`, `guest` (no actor, not a platform admin) or `platform` (platform admins acting without membership) */
                 actor?: components["parameters"]["Actor"];
+                /** @description exact id of the changed record */
+                record?: components["parameters"]["Record"];
                 /** @description inclusive lower bound on created (RFC 3339 timestamp or YYYY-MM-DD) */
                 from?: components["parameters"]["From"];
                 /** @description inclusive upper bound on created, same formats as from */
@@ -211,6 +217,8 @@ export interface operations {
                 collection?: components["parameters"]["Collection"];
                 /** @description a user id, `me`, `guest` (no actor, not a platform admin) or `platform` (platform admins acting without membership) */
                 actor?: components["parameters"]["Actor"];
+                /** @description exact id of the changed record */
+                record?: components["parameters"]["Record"];
                 /** @description inclusive lower bound on created (RFC 3339 timestamp or YYYY-MM-DD) */
                 from?: components["parameters"]["From"];
                 /** @description inclusive upper bound on created, same formats as from */

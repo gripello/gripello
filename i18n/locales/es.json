@@ -760,7 +760,8 @@
                 "mapRouteType": "Recuerda si el mapa muestra bloques o vías",
                 "offlinePages": "Mantiene disponibles sin conexión la estructura de la aplicación, las páginas públicas, los datos del rocódromo y las imágenes",
                 "moderationSeen": "Recuerda cuándo abriste la moderación por última vez para marcar casos nuevos",
-                "mapConsent": "Recuerda que elegiste cargar mapas"
+                "mapConsent": "Recuerda que elegiste cargar mapas",
+                "platformUsersCompact": "Recuerda si la tabla de personas de la plataforma usa filas compactas"
             },
             "durations": {
                 "session": "Hasta cerrar sesión",
@@ -2463,7 +2464,68 @@
             "blockDomain": "Bloquear todas las direcciones de {domain}",
             "blockDomainShared": "{accounts} cuenta más, {suspended} suspendida(s) | {accounts} cuentas más, {suspended} suspendida(s)",
             "blockFailed": "Suspendida, pero no se pudo guardar el bloqueo del correo. Añádelo en Ajustes › Listas de bloqueo.",
-            "hideContentFailed": "Suspendida, pero no se pudo ocultar el contenido. Inténtalo de nuevo."
+            "hideContentFailed": "Suspendida, pero no se pudo ocultar el contenido. Inténtalo de nuevo.",
+            "noMemberships": "Sin membresías de rocódromo",
+            "lastActive": "Última actividad",
+            "joined": "Alta",
+            "ticks": "Encadenes",
+            "reviews": "Reseñas",
+            "never": "Nunca ha iniciado sesión",
+            "sessions": "Sesiones",
+            "noSessions": "Sin sesión en ningún sitio",
+            "noActivity": "Aún sin actividad",
+            "markVerified": "Marcar como verificado",
+            "selectUser": "Elige una persona",
+            "compact": "Filas compactas",
+            "mfaOn": "2FA activada",
+            "mfaOff": "Sin 2FA",
+            "tabs": {
+                "overview": "Resumen",
+                "security": "Seguridad",
+                "activity": "Actividad"
+            },
+            "alerts": {
+                "suspended": "Esta cuenta está suspendida",
+                "locked": "Bloqueada tras demasiados inicios de sesión fallidos",
+                "unverified": "Correo electrónico sin verificar",
+                "staffNoMfa": "Cuenta de equipo sin verificación en dos pasos"
+            },
+            "kpis": {
+                "accounts": "Cuentas",
+                "newThisWeek": "+{n} esta semana",
+                "active": "Activas en 7 días",
+                "staffNoMfa": "Equipo sin 2FA",
+                "ofStaff": "de {n} del equipo",
+                "olderThanWeek": "{n} con más de 7 días",
+                "locked": "{n} bloqueadas",
+                "online": "{n} en línea"
+            },
+            "filters": {
+                "staff": "Equipo",
+                "locked": "Bloqueadas",
+                "noMfa": "Sin 2FA"
+            },
+            "columns": {
+                "user": "Persona",
+                "status": "Estado",
+                "gyms": "Rocódromos",
+                "mfa": "2FA"
+            },
+            "sorts": {
+                "email": "Correo A–Z",
+                "-email": "Correo Z–A",
+                "created": "Cuentas más antiguas",
+                "-created": "Cuentas más nuevas",
+                "last_seen": "Inactivas hace más tiempo",
+                "-last_seen": "Activas recientemente",
+                "status": "Problemas primero",
+                "-status": "Problemas al final",
+                "gyms": "Menos rocódromos",
+                "-gyms": "Más rocódromos",
+                "mfa": "Sin 2FA primero",
+                "-mfa": "Con 2FA primero"
+            },
+            "onlineNow": "En línea"
         },
         "features": {
             "title": "Funciones",

@@ -304,6 +304,8 @@ func TestListingScopesAndFilters(t *testing.T) {
 		"actor=guest":                   1,
 		"actor=platform":                1,
 		"actor=" + climber:              1,
+		"record=rec":                    4,
+		"record=re":                     0,
 		"from=2026-02-01&to=2026-03-15": 2,
 		"from=2026-02-01T00:00:00Z":     3,
 		"q=AUDITOR":                     1,

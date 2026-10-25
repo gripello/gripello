@@ -170,6 +170,14 @@ func TestListAndGetUsers(t *testing.T) {
 		"filter=platform_admins": 2,
 		"filter=unverified":      1,
 		"filter=suspended":       1,
+		"filter=locked":          0,
+		"filter=no_mfa":          3,
+		"gym=" + f.gym:           1,
+		"filter=staff":           1,
+		"filter=staff_no_mfa":    1,
+		"filter=active":          1,
+		"filter=online":          1,
+		"gym=missing":            0,
 		"limit=2&page=2":         3,
 	} {
 		if got := total(f.call(http.MethodGet, "/platform/users?"+query, "", f.operator, http.StatusOK)); got != want {
@@ -188,6 +196,17 @@ func TestListAndGetUsers(t *testing.T) {
 		t.Errorf("unpaged list = %v (limit %v), want all three by email", emails, all["limit"])
 	}
 	f.call(http.MethodGet, "/platform/users?filter=nope", "", f.operator, http.StatusBadRequest)
+	f.call(http.MethodGet, "/platform/users?sort=nope", "", f.operator, http.StatusBadRequest)
+	f.exec(`UPDATE sessions SET last_seen = now() + interval '1 day' WHERE id = $1`, f.session(f.climber))
+	f.exec(`UPDATE users SET created = now() - interval '1 year' WHERE id = $1`, f.climber)
+	firstEmail := func(query string) any {
+		return f.call(http.MethodGet, "/platform/users?limit=0&"+query, "", f.operator, http.StatusOK)["items"].([]any)[0].(map[string]any)["email"]
+	}
+	for query, want := range map[string]string{"sort=-email": emails[2], "sort=created": "climber@example.com", "sort=-last_seen": "climber@example.com", "sort=status": "climber@example.com", "sort=-gyms": "climber@example.com", "sort=gyms": emails[1]} {
+		if got := firstEmail(query); got != want {
+			t.Errorf("%s: first = %v, want %s", query, got, want)
+		}
+	}
 	user := f.call(http.MethodGet, "/platform/users/"+f.climber, "", f.operator, http.StatusOK)
 	if user["email"] != "climber@example.com" || user["token_key"] != nil || user["password_hash"] != nil {
 		t.Errorf("user = %v", user)
@@ -196,6 +215,19 @@ func TestListAndGetUsers(t *testing.T) {
 		t.Errorf("memberships = %v", memberships)
 	}
 	f.call(http.MethodGet, "/platform/users/missing", "", f.operator, http.StatusNotFound)
+	if user["ticks_count"] != 0.0 || user["ratings_count"] != 0.0 {
+		t.Errorf("detail counts = %v / %v", user["ticks_count"], user["ratings_count"])
+	}
+	summary := f.call(http.MethodGet, "/platform/users/summary", "", f.operator, http.StatusOK)
+	for key, want := range map[string]float64{"total": 3, "new_7d": 2, "active_7d": 2, "online": 2, "unverified": 1, "unverified_old": 1, "suspended": 1, "locked": 0, "platform_admins": 2, "staff": 1, "staff_no_mfa": 1} {
+		if summary[key] != want {
+			t.Errorf("summary %s = %v, want %v", key, summary[key], want)
+		}
+	}
+	f.exec(`UPDATE sessions SET last_seen = now() - interval '1 day', streamed_at = now() WHERE "user" = $1`, f.climber)
+	if got := total(f.call(http.MethodGet, "/platform/users?filter=online&q=climber", "", f.operator, http.StatusOK)); got != 1 {
+		t.Errorf("a climber with an open stream is not online (%d)", got)
+	}
 }
 
 func TestPlatformAdminsEditProfilesButNotSettingsOrOtherAdmins(t *testing.T) {

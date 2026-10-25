@@ -2,15 +2,25 @@
     <div class="w-full p-4">
         <LayoutPageHeader :title="t('platform.users.title')" />
 
+        <PlatformUserKpis v-model="kind" :summary="summary" class="mb-4" />
+
         <FilterBar
             v-model="search"
             :search-label="t('platform.users.search')"
-            :active-filter-count="kind ? 1 : 0"
-            @clear="kind = null"
+            :active-filter-count="activeFilterCount"
+            @clear="clearFilters"
         >
             <template #filters>
                 <div class="contents">
+                    <SegmentedControl
+                        v-if="lgAndUp"
+                        v-model="kindTab"
+                        :items="kindTabs"
+                        size="sm"
+                        test-id="platform-users-show"
+                    />
                     <FilterSelect
+                        v-else
                         v-model="kind"
                         :label="t('platform.users.show')"
                         :items="kindItems"
@@ -19,6 +29,35 @@
                         clear
                         data-testid="platform-users-filter"
                         @clear="kind = null"
+                    />
+                    <FilterSelect
+                        v-model="gym"
+                        :label="t('platform.users.gym')"
+                        :items="gymItems"
+                        value-key="value"
+                        :placeholder="t('filter.all')"
+                        clear
+                        data-testid="platform-users-gym"
+                        @clear="gym = null"
+                    />
+                    <FilterSelect
+                        v-if="!lgAndUp"
+                        v-model="sort"
+                        :label="t('table.sort_by')"
+                        :items="sortItems"
+                        value-key="value"
+                        data-testid="platform-users-sort"
+                    />
+                    <UButton
+                        v-if="lgAndUp"
+                        :icon="compact ? 'i-lucide-rows-4' : 'i-lucide-rows-3'"
+                        color="neutral"
+                        :variant="compact ? 'soft' : 'ghost'"
+                        class="icon-btn"
+                        :aria-label="t('platform.users.compact')"
+                        :aria-pressed="compact"
+                        data-testid="platform-users-compact"
+                        @click="compact = !compact"
                     />
                 </div>
             </template>
@@ -49,133 +88,160 @@
             :title="t('users.noUsers')"
         />
 
-        <LayoutListGroup v-else data-testid="platform-user-list">
-            <li
-                v-for="user in rows"
-                :key="user.id"
-                class="relative flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3"
-                :data-testid="`platform-user-${user.id}`"
-            >
-                <button
-                    type="button"
-                    class="min-w-0 flex-1 text-left max-md:after:absolute max-md:after:inset-0 md:max-w-1/2 md:min-w-72 md:flex-none"
-                    data-testid="platform-user-open"
-                    @click="openEdit(user.id)"
+        <div v-else-if="lgAndUp" class="flex items-start gap-4">
+            <div class="min-w-0 flex-1">
+                <UTable
+                    :data="rows"
+                    :columns="columns"
+                    :get-row-id="(row: UserRow) => row.id"
+                    :meta="tableMeta"
+                    :ui="{ td: compact ? 'py-1.5' : 'py-3' }"
+                    data-testid="platform-user-table"
+                    @select="(_event, row) => select(row.original.id)"
                 >
-                    <AdminMemberIdentity :member="user.identity" />
-                </button>
-                <div
-                    class="flex min-w-0 shrink-0 flex-wrap items-center gap-1.5 empty:hidden max-md:order-last max-md:basis-full md:flex-1"
-                >
-                    <UBadge
-                        v-if="!user.verified"
-                        size="sm"
-                        color="warning"
-                        variant="soft"
-                        icon="i-lucide-mail-warning"
-                        data-testid="platform-user-verified-badge"
-                    >
-                        {{ t('platform.users.unverified') }}
-                    </UBadge>
-                    <UBadge
-                        size="sm"
-                        v-if="user.platform_admin"
-                        color="primary"
-                        variant="soft"
-                        icon="i-lucide-shield-check"
-                        data-testid="platform-user-admin-badge"
-                    >
-                        {{ t('platform.users.platformAdmin') }}
-                    </UBadge>
-                    <UBadge
-                        size="sm"
-                        v-if="isSuspended(user)"
-                        color="error"
-                        variant="soft"
-                        icon="i-lucide-ban"
-                        data-testid="platform-user-suspended-badge"
-                    >
-                        {{
-                            isPermanentlySuspended(user)
-                                ? t('platform.users.suspendedPermanently')
-                                : t('platform.users.suspendedUntil', {
-                                      date: formatDate(user.suspended_until!, {
-                                          locale,
-                                      }),
-                                  })
-                        }}
-                    </UBadge>
-                    <UBadge
-                        v-for="chip in user.chips"
-                        :key="chip.id"
-                        size="sm"
-                        color="neutral"
-                        variant="outline"
-                        class="max-w-full max-md:hidden"
-                        :data-testid="`platform-user-chip-${chip.gym}`"
-                    >
-                        <span
-                            class="size-2 shrink-0 rounded-full"
-                            :class="{ 'bg-muted': !chip.roleColor }"
-                            :style="{
-                                backgroundColor: chip.roleColor || undefined,
-                            }"
+                    <template #user-cell="{ row }">
+                        <div
+                            class="max-w-80 min-w-0"
+                            :data-testid="`platform-user-${row.original.id}`"
+                        >
+                            <AdminMemberIdentity
+                                :member="row.original.identity"
+                            />
+                        </div>
+                    </template>
+                    <template #status-cell="{ row }">
+                        <PlatformUserBadges :user="row.original" />
+                    </template>
+                    <template #gyms-cell="{ row }">
+                        <PlatformUserChips
+                            :chips="row.original.chips"
+                            class="max-w-56"
                         />
-                        <span class="truncate">
-                            {{ chip.gymTitle }} · {{ chip.roleName }}
+                    </template>
+                    <template #mfa-cell="{ row }">
+                        <PlatformUserMfa
+                            :enabled="row.original.mfa_enabled"
+                            :staff="row.original.chips.length > 0"
+                        />
+                    </template>
+                    <template #last_seen-cell="{ row }">
+                        <PlatformUserLastSeen
+                            :last-seen="row.original.last_seen"
+                            :compact="compact"
+                        />
+                    </template>
+                    <template #created-cell="{ row }">
+                        <span class="whitespace-nowrap text-muted">
+                            {{ joined(row.original) }}
                         </span>
-                    </UBadge>
-                </div>
-                <UIcon
-                    name="i-lucide-chevron-right"
-                    class="size-5 shrink-0 text-dimmed md:hidden"
+                    </template>
+                    <template #actions-cell="{ row }">
+                        <div class="flex justify-end" @click.stop>
+                            <UDropdownMenu :items="rowMenu(row.original)">
+                                <UButton
+                                    icon="i-lucide-ellipsis-vertical"
+                                    color="neutral"
+                                    variant="ghost"
+                                    class="icon-btn"
+                                    :aria-label="t('actions.more')"
+                                    data-testid="platform-user-menu"
+                                />
+                            </UDropdownMenu>
+                        </div>
+                    </template>
+                </UTable>
+                <LayoutLoadMore
+                    v-if="hasMore"
+                    :loading="loadingMore"
+                    test-id="platform-users-load-more"
+                    @load="loadMore"
                 />
-                <div
-                    class="ml-auto flex shrink-0 justify-end gap-1 max-md:hidden"
-                >
-                    <UButton
-                        icon="i-lucide-pencil"
-                        color="neutral"
-                        variant="ghost"
-                        class="icon-btn"
-                        :aria-label="t('users.edit')"
-                        data-testid="platform-user-edit"
-                        @click="openEdit(user.id)"
-                    />
-                    <UDropdownMenu :items="rowMenu(user)">
-                        <UButton
-                            icon="i-lucide-ellipsis-vertical"
-                            color="neutral"
-                            variant="ghost"
-                            class="icon-btn"
-                            :aria-label="t('actions.more')"
-                            data-testid="platform-user-menu"
-                        />
-                    </UDropdownMenu>
-                </div>
-            </li>
-        </LayoutListGroup>
-
-        <div v-if="hasMore" class="mt-4 text-center">
-            <UButton
-                color="neutral"
-                variant="soft"
-                :loading="loadingMore"
-                data-testid="platform-users-load-more"
-                @click="loadMore"
-            >
-                {{ t('actions.load_more') }}
-            </UButton>
+            </div>
+            <PlatformUserInspector
+                v-if="selectedUser"
+                :user="selectedUser"
+                :gyms="gyms"
+                :roles="roles"
+                class="sticky top-20 w-96 shrink-0"
+                @changed="reloadLoaded"
+                @edit="openEdit"
+                @suspend="openSuspend"
+                @delete="openDelete"
+            />
+            <LayoutEmptyState
+                v-else
+                icon="i-lucide-mouse-pointer-click"
+                :title="t('platform.users.selectUser')"
+                class="sticky top-20 w-96 shrink-0"
+                data-testid="platform-user-no-selection"
+            />
         </div>
+
+        <template v-else>
+            <LayoutListGroup data-testid="platform-user-list">
+                <li
+                    v-for="user in rows"
+                    :key="user.id"
+                    :data-testid="`platform-user-${user.id}`"
+                >
+                    <button
+                        type="button"
+                        class="flex w-full items-center gap-3 px-4 py-3 text-left"
+                        data-testid="platform-user-open"
+                        @click="select(user.id)"
+                    >
+                        <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+                            <AdminMemberIdentity :member="user.identity" />
+                            <PlatformUserBadges :user="user" />
+                            <PlatformUserChips
+                                :chips="user.chips"
+                                class="max-md:hidden"
+                            />
+                        </div>
+                        <PlatformUserLastSeen
+                            :last-seen="user.last_seen"
+                            compact
+                            class="shrink-0 text-xs"
+                        />
+                        <UIcon
+                            name="i-lucide-chevron-right"
+                            class="size-5 shrink-0 text-muted"
+                        />
+                    </button>
+                </li>
+            </LayoutListGroup>
+            <LayoutLoadMore
+                v-if="hasMore"
+                :loading="loadingMore"
+                test-id="platform-users-load-more"
+                @load="loadMore"
+            />
+
+            <LayoutDialogShell
+                v-model="sheetOpen"
+                :title="t('platform.users.columns.user')"
+                sheet-on-mobile
+                flush
+                closable
+            >
+                <PlatformUserInspector
+                    v-if="selectedUser"
+                    :user="selectedUser"
+                    :gyms="gyms"
+                    :roles="roles"
+                    class="ring-0"
+                    @changed="reloadLoaded"
+                    @edit="openEdit"
+                    @suspend="openSuspend"
+                    @delete="openDelete"
+                />
+            </LayoutDialogShell>
+        </template>
 
         <PlatformUserDialog
             v-model="editOpen"
             :user="editingUser"
-            :gyms="gyms"
-            :roles="roles"
             @changed="reloadLoaded"
-            @delete="openDelete"
-            @suspend="openSuspend"
         />
 
         <PlatformSuspendDialog
@@ -205,24 +271,39 @@
 </template>
 
 <script setup lang="ts">
-import { useTimeoutFn } from '@vueuse/core'
+import type { TableColumn } from '@nuxt/ui'
+import { useIntervalFn, useTimeoutFn } from '@vueuse/core'
 import { listGyms } from '~/api/gyms'
 import { listRoles } from '~/api/members'
-import { deletePlatformUser, listPlatformUsers } from '~/api/platform'
-import { avatarUrl, displayName, nameInitials } from '~/utils/avatar'
-import { formatDate } from '#shared/utils/formatting'
 import {
-    isPermanentlySuspended,
-    isSuspended,
+    deletePlatformUser,
+    listPlatformUsers,
+    platformUserSummary,
+} from '~/api/platform'
+import { avatarUrl, displayName, nameInitials } from '~/utils/avatar'
+import { gymTitle } from '~/utils/gymNames'
+import { PLATFORM_USERS_COMPACT_KEY } from '~/utils/clientStorage'
+import { formatDate } from '#shared/utils/formatting'
+import { sortHeader } from '~/utils/tableSortHeader'
+import {
+    DEFAULT_PLATFORM_USER_SORT,
+    PLATFORM_USER_SORTS,
     membershipChips,
+    nextPlatformUserSort,
+    platformUserFilterFrom,
+    platformUserSortFrom,
+    sortOrderOf,
     userKeptThroughReload,
     type PlatformUser,
     type PlatformUserFilter,
+    type PlatformUserSortColumn,
 } from '~/utils/platformUsers'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
 
 const { t, locale } = useI18n()
+const route = useRoute()
+const { lgAndUp } = useDisplay()
 
 useHead({ title: () => t('platform.users.title') })
 
@@ -244,17 +325,84 @@ const {
 const gyms = computed(() => lookups.value.gyms)
 const roles = computed(() => lookups.value.roles)
 
+const { data: summary, refresh: refreshSummary } = useAsyncData(
+    'platform-user-summary',
+    platformUserSummary,
+    { server: false },
+)
+
 const search = ref('')
 const kind = ref<PlatformUserFilter | null>(
-    (['platform_admins', 'unverified', 'suspended'] as const).find(
-        (value) => value === useRoute().query.show,
-    ) ?? null,
+    platformUserFilterFrom(route.query.show),
 )
-const kindItems = computed(() => [
-    { label: t('platform.overview.admins'), value: 'platform_admins' },
-    { label: t('platform.users.unverified'), value: 'unverified' },
-    { label: t('platform.overview.suspended'), value: 'suspended' },
+const gym = ref<string | null>(
+    typeof route.query.gym === 'string' ? route.query.gym : null,
+)
+const sort = ref(platformUserSortFrom(route.query.sort))
+const selectedId = ref<string | null>(
+    typeof route.query.user === 'string' ? route.query.user : null,
+)
+
+const activeFilterCount = computed(
+    () => Number(!!kind.value) + Number(!!gym.value),
+)
+
+function clearFilters() {
+    kind.value = null
+    gym.value = null
+}
+
+const FILTER_LABELS: Record<PlatformUserFilter, string> = {
+    staff: 'platform.users.filters.staff',
+    platform_admins: 'platform.overview.admins',
+    unverified: 'platform.users.unverified',
+    suspended: 'platform.overview.suspended',
+    locked: 'platform.users.filters.locked',
+    no_mfa: 'platform.users.filters.noMfa',
+    staff_no_mfa: 'platform.users.kpis.staffNoMfa',
+    active: 'platform.users.kpis.active',
+    online: 'platform.users.onlineNow',
+}
+const TAB_FILTERS = [
+    'online',
+    'staff',
+    'platform_admins',
+    'unverified',
+    'suspended',
+    'locked',
+    'no_mfa',
+] as const
+
+const kindItems = computed(() =>
+    (Object.keys(FILTER_LABELS) as PlatformUserFilter[]).map((value) => ({
+        label: t(FILTER_LABELS[value]),
+        value,
+    })),
+)
+const kindTabs = computed(() => [
+    { label: t('filter.all'), value: 'all' },
+    ...TAB_FILTERS.map((value) => ({ label: t(FILTER_LABELS[value]), value })),
+    // KPI-only filters still show as the selected tab while active.
+    ...(kind.value && !(TAB_FILTERS as readonly string[]).includes(kind.value)
+        ? [{ label: t(FILTER_LABELS[kind.value]), value: kind.value }]
+        : []),
 ])
+const kindTab = computed({
+    get: () => kind.value ?? 'all',
+    set: (value: string) => {
+        kind.value = platformUserFilterFrom(value)
+    },
+})
+
+const gymItems = computed(() =>
+    gyms.value.map((entry) => ({ label: gymTitle(entry), value: entry.id })),
+)
+const sortItems = computed(() =>
+    PLATFORM_USER_SORTS.map((value) => ({
+        label: t(`platform.users.sorts.${value}`),
+        value,
+    })),
+)
 
 const {
     items: users,
@@ -263,7 +411,7 @@ const {
     hasMore,
     error,
     refresh: reloadUsers,
-    reloadLoaded,
+    reloadLoaded: reloadLoadedUsers,
     loadMore,
     prefetch,
 } = useList<PlatformUser>(
@@ -271,15 +419,56 @@ const {
         listPlatformUsers({
             q: search.value,
             filter: kind.value,
+            gym: gym.value,
+            sort: sort.value,
             page,
             limit,
             total: true,
         }),
     { perPage: 48, requestKey: 'platformUsers' },
 )
+
+function reloadLoaded() {
+    void refreshSummary()
+    return reloadLoadedUsers()
+}
+
 usePlatformLive(['platform_users.changed'], reloadLoaded)
+// Online status changes without an event.
+useIntervalFn(() => {
+    if (document.visibilityState === 'visible') void reloadLoaded()
+}, 60_000)
 
 await prefetch('platform-users')
+
+const { start: reloadUsersSoon } = useTimeoutFn(() => void reloadUsers(), 300, {
+    immediate: false,
+})
+watch(search, () => reloadUsersSoon())
+watch([kind, gym, sort], () => reloadUsers())
+
+watch([kind, gym, sort, selectedId], () =>
+    navigateTo(
+        {
+            query: {
+                ...route.query,
+                show: kind.value ?? undefined,
+                gym: gym.value ?? undefined,
+                sort:
+                    sort.value === DEFAULT_PLATFORM_USER_SORT
+                        ? undefined
+                        : sort.value,
+                user: selectedId.value ?? undefined,
+            },
+        },
+        { replace: true },
+    ),
+)
+
+function reloadAll() {
+    void refreshSummary()
+    return Promise.all([refreshLookups(), reloadUsers()])
+}
 
 const rows = computed(() =>
     users.value.map((user) => {
@@ -297,16 +486,101 @@ const rows = computed(() =>
         }
     }),
 )
+type UserRow = (typeof rows.value)[number]
 
-const { start: reloadUsersSoon } = useTimeoutFn(() => void reloadUsers(), 300, {
-    immediate: false,
-})
-watch(search, () => reloadUsersSoon())
-watch(kind, () => reloadUsers())
-
-function reloadAll() {
-    return Promise.all([refreshLookups(), reloadUsers()])
+function joined(user: PlatformUser) {
+    return user.created
+        ? formatDate(user.created, { locale: locale.value })
+        : ''
 }
+
+const compact = ref(false)
+onMounted(() => {
+    try {
+        compact.value = localStorage.getItem(PLATFORM_USERS_COMPACT_KEY) === '1'
+    } catch {}
+})
+watch(compact, (on) => {
+    try {
+        localStorage.setItem(PLATFORM_USERS_COMPACT_KEY, on ? '1' : '0')
+    } catch {}
+})
+
+function sortable(label: string, column: PlatformUserSortColumn) {
+    return () =>
+        sortHeader(
+            label,
+            sortOrderOf(sort.value, column),
+            () => {
+                sort.value = nextPlatformUserSort(sort.value, column)
+            },
+            `platform-users-sort-${column}`,
+        )
+}
+
+const xlOnly = {
+    class: { th: 'hidden xl:table-cell', td: 'hidden xl:table-cell' },
+}
+const widestOnly = {
+    class: {
+        th: 'hidden min-[1800px]:table-cell',
+        td: 'hidden min-[1800px]:table-cell',
+    },
+}
+
+const columns = computed<TableColumn<UserRow>[]>(() => [
+    {
+        id: 'user',
+        header: sortable(t('platform.users.columns.user'), 'email'),
+    },
+    {
+        id: 'status',
+        header: sortable(t('platform.users.columns.status'), 'status'),
+    },
+    {
+        id: 'gyms',
+        header: sortable(t('platform.users.columns.gyms'), 'gyms'),
+        meta: xlOnly,
+    },
+    { id: 'mfa', header: sortable(t('platform.users.columns.mfa'), 'mfa') },
+    {
+        id: 'last_seen',
+        header: sortable(t('platform.users.lastActive'), 'last_seen'),
+    },
+    {
+        id: 'created',
+        header: sortable(t('platform.users.joined'), 'created'),
+        meta: widestOnly,
+    },
+    { id: 'actions', header: '', meta: { class: { td: 'w-12' } } },
+])
+
+const tableMeta = {
+    class: {
+        tr: (row: { original: UserRow }) =>
+            row.original.id === selectedId.value
+                ? 'cursor-pointer bg-elevated'
+                : 'cursor-pointer',
+    },
+}
+
+const selectedUser = computed<PlatformUser | null>((previous) =>
+    userKeptThroughReload(users.value, selectedId.value, previous),
+)
+const sheetOpen = ref(false)
+
+function select(id: string) {
+    selectedId.value = id
+    if (!lgAndUp.value) sheetOpen.value = true
+}
+
+onMounted(() => {
+    if (selectedUser.value && !lgAndUp.value) sheetOpen.value = true
+})
+
+watch(sheetOpen, (open) => {
+    if (!open && !lgAndUp.value) selectedId.value = null
+})
 
 const editingId = ref<string | null>(null)
 const editingUser = computed<PlatformUser | null>((previous) =>
@@ -325,8 +599,13 @@ const suspendingUser = computed(
 )
 const suspendOpen = ref(false)
 
-function rowMenu(user: { id: string; platform_admin?: boolean }) {
+function rowMenu(user: PlatformUser) {
     return [
+        {
+            label: t('users.edit'),
+            icon: 'i-lucide-pencil',
+            onSelect: () => openEdit(user.id),
+        },
         {
             label: t('platform.users.suspend'),
             icon: 'i-lucide-ban',
@@ -373,8 +652,11 @@ async function deleteUser() {
             await reauthenticate()
             await deletePlatformUser(id)
             users.value = users.value.filter((user) => user.id !== id)
+            if (selectedId.value === id) selectedId.value = null
             deleteOpen.value = false
             editOpen.value = false
+            sheetOpen.value = false
+            void refreshSummary()
         },
         {
             success: t('users.deleteSuccess'),

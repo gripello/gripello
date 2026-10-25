@@ -93,6 +93,9 @@ func (m *module) list(w http.ResponseWriter, r *http.Request, p auth.Principal, 
 	if collection := params.Get("collection"); collection != "" {
 		q.Add("a.collection_name = ?", collection)
 	}
+	if record := params.Get("record"); record != "" {
+		q.Add("a.record_id = ?", record)
+	}
 	switch actor := params.Get("actor"); actor {
 	case "":
 	case "me":

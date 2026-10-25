@@ -43,10 +43,11 @@ type Replica struct {
 
 // Probes reads this replica's live numbers; the counters are totals since start, Run turns them into per-heartbeat deltas.
 type Probes struct {
-	RealtimeClients func() int
-	RealtimeDropped func() int64
-	BusLag          func(context.Context) (time.Duration, error)
-	BusQueueMax     func() int
+	RealtimeClients  func() int
+	RealtimeSessions func() []string
+	RealtimeDropped  func() int64
+	BusLag           func(context.Context) (time.Duration, error)
+	BusQueueMax      func() int
 }
 
 // Run reports this replica until ctx ends; a clean shutdown removes its row so scaled-down replicas disappear at once.
@@ -70,6 +71,9 @@ func Run(ctx context.Context, pool *pgxpool.Pool, self Replica, probes Probes) {
 			slog.Warn("replicas: heartbeat failed", "error", err)
 		}
 		warnIfStrained(r)
+		if err := TouchSessions(ctx, pool, probes.RealtimeSessions()); err != nil && ctx.Err() == nil {
+			slog.Warn("replicas: session touch failed", "error", err)
+		}
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -79,6 +83,15 @@ func Run(ctx context.Context, pool *pgxpool.Pool, self Replica, probes Probes) {
 			return
 		}
 	}
+}
+
+// TouchSessions stamps sessions with an open stream; last_seen stays the token refresh time that session pruning reads.
+func TouchSessions(ctx context.Context, pool *pgxpool.Pool, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	_, err := pool.Exec(ctx, `UPDATE sessions SET streamed_at = now() WHERE id = ANY($1)`, ids)
+	return err
 }
 
 type counters struct {

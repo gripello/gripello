@@ -234,7 +234,7 @@ func serve(ctx context.Context, args []string) error {
 	})
 	stopping.Go(func() {
 		replicas.Run(ctx, app.DB, replicas.Replica{Name: replica, Version: config.Version, Role: cfg.Role, Started: time.Now()},
-			replicas.Probes{RealtimeClients: app.Realtime.Clients, RealtimeDropped: app.Realtime.Dropped, BusLag: app.Bus.Lag, BusQueueMax: app.Bus.QueueMax})
+			replicas.Probes{RealtimeClients: app.Realtime.Clients, RealtimeSessions: app.Realtime.Sessions, RealtimeDropped: app.Realtime.Dropped, BusLag: app.Bus.Lag, BusQueueMax: app.Bus.QueueMax})
 	})
 	app.Cron.Add("requestStatsPrune", "17 3 * * *", func(ctx context.Context) error {
 		return metrics.Prune(ctx, app.DB)

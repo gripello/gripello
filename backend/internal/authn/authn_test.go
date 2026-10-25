@@ -1158,6 +1158,18 @@ func TestAdminActionsRefuseSelfOtherAdminsAndClimbers(t *testing.T) {
 	if status, _ := f.send(http.MethodDelete, "/platform/users/missing/lockout", admin, nil); status != http.StatusNotFound {
 		t.Errorf("missing user = %d", status)
 	}
+	if status, body := f.send(http.MethodGet, "/platform/users/"+climber+"/sessions", admin, nil); status != http.StatusOK || len(body["items"].([]any)) != 1 {
+		t.Errorf("list sessions = %d %v", status, body)
+	}
+	if status, _ := f.send(http.MethodGet, "/platform/users/"+otherID+"/sessions", admin, nil); status != http.StatusOK {
+		t.Errorf("list sessions of another admin = %d", status)
+	}
+	if status, _ := f.send(http.MethodGet, "/platform/users/"+climber+"/sessions", climberToken, nil); status != http.StatusForbidden {
+		t.Errorf("climber lists sessions = %d", status)
+	}
+	if status, _ := f.send(http.MethodGet, "/platform/users/missing/sessions", admin, nil); status != http.StatusNotFound {
+		t.Errorf("sessions of missing user = %d", status)
+	}
 }
 
 func TestBlockedEmailsAndProtectedNames(t *testing.T) {

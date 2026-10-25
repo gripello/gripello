@@ -1,14 +1,132 @@
-import type { GymRecord, RoleRecord, UserRecord } from '~/types/models'
+import type {
+    AuditLogRecord,
+    GymRecord,
+    RoleRecord,
+    UserRecord,
+} from '~/types/models'
 import type { BlockSuggestions } from '~/api/platform'
 import { gymTitle } from '~/utils/gymNames'
+import { timeAgo } from '#shared/utils/formatting'
 
-export type PlatformUserFilter = 'platform_admins' | 'unverified' | 'suspended'
+export const PLATFORM_USER_FILTERS = [
+    'staff',
+    'platform_admins',
+    'unverified',
+    'suspended',
+    'locked',
+    'no_mfa',
+    'staff_no_mfa',
+    'active',
+    'online',
+] as const
+
+export type PlatformUserFilter = (typeof PLATFORM_USER_FILTERS)[number]
+
+export const PLATFORM_USER_SORT_COLUMNS = [
+    'email',
+    'status',
+    'gyms',
+    'mfa',
+    'last_seen',
+    'created',
+] as const
+
+export type PlatformUserSortColumn = (typeof PLATFORM_USER_SORT_COLUMNS)[number]
+
+export const PLATFORM_USER_SORTS = PLATFORM_USER_SORT_COLUMNS.flatMap(
+    (column) => [column, `-${column}`] as const,
+)
+
+export type PlatformUserSort =
+    PlatformUserSortColumn | `-${PlatformUserSortColumn}`
+
+export const DEFAULT_PLATFORM_USER_SORT: PlatformUserSort = '-last_seen'
 
 export type PlatformUser = UserRecord & {
     memberships?: { id: string; gym: string; role: string }[]
     mfa_enabled?: boolean
     session_count?: number
+    last_seen?: string | null
     locked_until?: string | null
+    ticks_count?: number
+    ratings_count?: number
+}
+
+function pick<T extends string>(values: readonly T[], value: unknown) {
+    return values.find((candidate) => candidate === value) ?? null
+}
+
+export function platformUserFilterFrom(value: unknown) {
+    return pick(PLATFORM_USER_FILTERS, value)
+}
+
+export function platformUserSortFrom(value: unknown) {
+    return pick(PLATFORM_USER_SORTS, value) ?? DEFAULT_PLATFORM_USER_SORT
+}
+
+// Clicking a column sorts ascending, then descending, then back to the default.
+export function nextPlatformUserSort(
+    current: PlatformUserSort,
+    column: PlatformUserSortColumn,
+): PlatformUserSort {
+    if (current === column) return `-${column}`
+    if (current === `-${column}`) {
+        return column === 'last_seen' ? column : DEFAULT_PLATFORM_USER_SORT
+    }
+    return column
+}
+
+export function sortOrderOf(
+    current: PlatformUserSort,
+    column: PlatformUserSortColumn,
+) {
+    if (current === column) return 'asc'
+    if (current === `-${column}`) return 'desc'
+    return null
+}
+
+export type LastSeenTone = 'online' | 'active' | 'idle' | 'dormant' | 'never'
+
+export function lastSeenTone(
+    lastSeen: string | null | undefined,
+    now = Date.now(),
+): LastSeenTone {
+    if (!lastSeen) return 'never'
+    const minutes = (now - new Date(lastSeen).getTime()) / 60_000
+    if (minutes < 2) return 'online'
+    if (minutes < 7 * 24 * 60) return 'active'
+    if (minutes < 90 * 24 * 60) return 'idle'
+    return 'dormant'
+}
+
+export function lastSeenLabel(
+    lastSeen: string | null | undefined,
+    t: Parameters<typeof timeAgo>[1],
+    locale: string,
+    now = Date.now(),
+) {
+    const tone = lastSeenTone(lastSeen, now)
+    if (tone === 'never') return t('platform.users.never')
+    if (tone === 'online') return t('platform.users.onlineNow')
+    return timeAgo(lastSeen, t, locale)
+}
+
+export type UserAlertKind = 'suspended' | 'locked' | 'unverified' | 'staffNoMfa'
+
+export function userAlert(
+    user: PlatformUser,
+    now = new Date(),
+): UserAlertKind | null {
+    if (isSuspended(user, now)) return 'suspended'
+    if (user.locked_until && new Date(user.locked_until) > now) return 'locked'
+    if (!user.verified) return 'unverified'
+    if (!user.mfa_enabled && user.memberships?.length) return 'staffNoMfa'
+    return null
+}
+
+export function mergeActivity(...lists: AuditLogRecord[][]) {
+    const byId = new Map(lists.flat().map((entry) => [entry.id, entry]))
+    return [...byId.values()].sort((a, b) => b.created.localeCompare(a.created))
 }
 
 export interface UserSecurityState {

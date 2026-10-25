@@ -1,12 +1,32 @@
-import type { GymRecord, UserRecord } from '../../types/models'
+import type { GymRecord, SessionRecord, UserRecord } from '../../types/models'
 import type { FeatureFlag } from '../../shared/utils/featureFlags'
-import type { PlatformUser, PlatformUserFilter } from '../utils/platformUsers'
+import type {
+    PlatformUser,
+    PlatformUserFilter,
+    PlatformUserSort,
+} from '../utils/platformUsers'
 import { toFormData, useApi } from './client'
 import type { PageQuery, Page } from './client'
 
 export interface PlatformUserQuery extends PageQuery {
     q?: string
     filter?: PlatformUserFilter | null
+    gym?: string | null
+    sort?: PlatformUserSort | null
+}
+
+export interface PlatformUserSummary {
+    total: number
+    new_7d: number
+    active_7d: number
+    online: number
+    unverified: number
+    unverified_old: number
+    suspended: number
+    locked: number
+    platform_admins: number
+    staff: number
+    staff_no_mfa: number
 }
 
 export type PlatformUserInput = Partial<
@@ -42,10 +62,23 @@ export function listPlatformUsers(query: PlatformUserQuery = {}) {
         query: {
             q: query.q?.trim() || undefined,
             filter: query.filter || undefined,
+            gym: query.gym || undefined,
+            sort: query.sort || undefined,
             page: query.page,
             limit: query.page ? query.limit : 0,
         },
     })
+}
+
+export function platformUserSummary() {
+    return useApi()<PlatformUserSummary>('/platform/users/summary')
+}
+
+export async function listUserSessions(user: string) {
+    const { items } = await useApi()<{ items: SessionRecord[] }>(
+        `/platform/users/${user}/sessions`,
+    )
+    return items
 }
 
 export function getPlatformUser(id: string) {

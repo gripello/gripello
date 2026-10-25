@@ -82,6 +82,23 @@ func (m *module) adminResetMFA(w http.ResponseWriter, r *http.Request) error {
 	return httpx.NoContent(w, nil)
 }
 
+func (m *module) adminListSessions(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
+	if _, err := auth.RequirePlatformAdmin(ctx); err != nil {
+		return err
+	}
+	id := r.PathValue("id")
+	var exists bool
+	if err := m.db.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1)`, id).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return httpx.ErrNotFound
+	}
+	items, err := listSessions(ctx, m.db, id, "")
+	return httpx.Respond(w, http.StatusOK, map[string]any{"items": items}, err)
+}
+
 func (m *module) adminRevokeSessions(w http.ResponseWriter, r *http.Request) error {
 	p, user, err := m.adminTarget(r, false)
 	if err != nil {

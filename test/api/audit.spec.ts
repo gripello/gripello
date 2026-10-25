@@ -37,6 +37,11 @@ describe('audit', () => {
         expect(api.request().url).toBe('/api/platform/audit?gym=g2&page=1')
     })
 
+    it('filters the platform rows by the changed record', async () => {
+        await listPlatformAudit({ record: 'u1', limit: 20 })
+        expect(api.request().url).toBe('/api/platform/audit?record=u1&limit=20')
+    })
+
     it('lists the own rows across gyms', async () => {
         await listOwnAudit({ page: 1 })
         expect(api.request().url).toBe('/api/me/audit?page=1')

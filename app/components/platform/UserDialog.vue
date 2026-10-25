@@ -92,110 +92,8 @@
                     >
                         {{ t('platform.users.sendPasswordReset') }}
                     </UButton>
-                    <UButton
-                        color="neutral"
-                        variant="soft"
-                        icon="i-lucide-ban"
-                        :disabled="!!user.platform_admin"
-                        data-testid="platform-user-suspend-account"
-                        @click="emit('suspend', user.id)"
-                    >
-                        {{ t('platform.users.suspend') }}
-                    </UButton>
-                    <UButton
-                        color="error"
-                        variant="soft"
-                        icon="i-lucide-trash-2"
-                        :disabled="!!user.platform_admin"
-                        data-testid="platform-user-delete-account"
-                        @click="emit('delete', user.id)"
-                    >
-                        {{ t('users.delete') }}
-                    </UButton>
                 </div>
             </UForm>
-
-            <PlatformUserSecurity :user="user" @changed="emit('changed')" />
-
-            <section class="mt-6 flex flex-col gap-3">
-                <h3 class="text-sm font-semibold text-highlighted">
-                    {{ t('platform.users.memberships') }}
-                </h3>
-                <LayoutListGroup
-                    v-if="chips.length"
-                    data-testid="platform-user-memberships"
-                >
-                    <li
-                        v-for="chip in chips"
-                        :key="chip.id"
-                        class="flex flex-wrap items-center gap-2 px-4 py-3"
-                        :data-testid="`platform-user-membership-${chip.gym}`"
-                    >
-                        <span
-                            class="min-w-0 basis-full sm:basis-0 sm:flex-1 truncate text-sm font-medium"
-                        >
-                            {{ chip.gymTitle }}
-                        </span>
-                        <USelect
-                            :model-value="chip.role"
-                            :items="roleItems(chip.gym)"
-                            value-key="value"
-                            :aria-label="t('members.role')"
-                            class="min-w-0 flex-1 sm:w-40 sm:flex-none"
-                            :disabled="membershipBusy"
-                            data-testid="platform-user-membership-role"
-                            @update:model-value="
-                                (role) => changeRole(chip, String(role))
-                            "
-                        />
-                        <UButton
-                            icon="i-lucide-user-minus"
-                            color="error"
-                            variant="ghost"
-                            class="icon-btn"
-                            :aria-label="t('members.remove')"
-                            :disabled="membershipBusy"
-                            data-testid="platform-user-membership-remove"
-                            @click="removeMembership(chip)"
-                        />
-                    </li>
-                </LayoutListGroup>
-                <div
-                    v-if="joinable.length"
-                    class="flex flex-wrap items-center gap-2"
-                >
-                    <USelect
-                        v-model="newMembership.gym"
-                        :items="joinable"
-                        value-key="value"
-                        :placeholder="t('platform.users.gym')"
-                        :aria-label="t('platform.users.gym')"
-                        class="min-w-0 basis-full sm:basis-0 sm:flex-1"
-                        data-testid="platform-user-add-gym"
-                    />
-                    <USelect
-                        v-model="newMembership.role"
-                        :items="roleItems(newMembership.gym)"
-                        value-key="value"
-                        :placeholder="t('members.role')"
-                        :aria-label="t('members.role')"
-                        :disabled="!newMembership.gym"
-                        class="min-w-0 flex-1 sm:w-40 sm:flex-none"
-                        data-testid="platform-user-add-role"
-                    />
-                    <UButton
-                        icon="i-lucide-plus"
-                        color="primary"
-                        variant="soft"
-                        :loading="membershipBusy"
-                        :disabled="!newMembership.gym || !newMembership.role"
-                        data-testid="platform-user-add-membership"
-                        @click="grantMembership"
-                    >
-                        {{ t('platform.users.addMembership') }}
-                    </UButton>
-                </div>
-            </section>
         </template>
     </LayoutDialogShell>
 </template>
@@ -205,22 +103,10 @@ import { avatarUrl } from '~/utils/avatar'
 import { THUMBS } from '#shared/utils/thumbs'
 import { useObjectUrl } from '@vueuse/core'
 import type { Form } from '@nuxt/ui'
-import {
-    changeMembershipRole,
-    addMembership,
-    deleteMembership,
-} from '~/api/members'
-import type { GymRecord, RoleRecord, UserRecord } from '~/types/models'
+import type { UserRecord } from '~/types/models'
 import { updatePlatformUser } from '~/api/platform'
 import { requestPasswordReset, useAuthState } from '~/api/auth'
-import { gymTitle } from '~/utils/gymNames'
-import {
-    joinableGyms,
-    membershipChips,
-    rolesOfGym,
-    type MembershipChip,
-    type PlatformUser,
-} from '~/utils/platformUsers'
+import type { PlatformUser } from '~/utils/platformUsers'
 import {
     required,
     validEmail,
@@ -229,16 +115,8 @@ import {
 } from '~/utils/validation'
 
 const open = defineModel<boolean>({ default: false })
-const props = defineProps<{
-    user: PlatformUser | null
-    gyms: GymRecord[]
-    roles: RoleRecord[]
-}>()
-const emit = defineEmits<{
-    changed: []
-    delete: [id: string]
-    suspend: [id: string]
-}>()
+const props = defineProps<{ user: PlatformUser | null }>()
+const emit = defineEmits<{ changed: [] }>()
 
 const { t } = useI18n()
 
@@ -269,11 +147,9 @@ const emailChanged = computed(
     () => !!props.user && form.email.trim() !== (props.user.email ?? ''),
 )
 const userForm = ref<Form<typeof form> | null>(null)
-const newMembership = reactive({ gym: '', role: '' })
 
 watch([open, () => props.user?.id], () => {
     Object.assign(form, formFrom(props.user))
-    Object.assign(newMembership, { gym: '', role: '' })
     avatarFile.value = null
     avatarRemoved.value = false
     resetPassword()
@@ -296,34 +172,6 @@ function selectAvatar(file: File) {
 function removeAvatar() {
     avatarFile.value = null
     avatarRemoved.value = true
-}
-
-watch(
-    () => newMembership.gym,
-    (gym) => {
-        const gymRoles = rolesOfGym(props.roles, gym)
-        newMembership.role =
-            gymRoles.find((role) => role.name !== 'admin')?.id ??
-            gymRoles[0]?.id ??
-            ''
-    },
-)
-
-const chips = computed(() =>
-    props.user ? membershipChips(props.user, props.gyms, props.roles) : [],
-)
-const joinable = computed(() =>
-    joinableGyms(chips.value, props.gyms).map((gym) => ({
-        label: gymTitle(gym),
-        value: gym.id,
-    })),
-)
-
-function roleItems(gymId: string) {
-    return rolesOfGym(props.roles, gymId).map((role) => ({
-        label: role.name,
-        value: role.id,
-    }))
 }
 
 function validateUser(state: typeof form) {
@@ -383,54 +231,5 @@ async function sendPasswordReset() {
             error: t('notifications.error.resetPassword'),
         },
     )
-}
-
-const { pending: membershipBusy, run: runMembership } = useAsyncAction()
-
-function membershipError(error: unknown) {
-    return (error as { status?: number })?.status === 400
-        ? t('platform.users.lastAdmin')
-        : t('notifications.error.generic')
-}
-
-async function updateMemberships(
-    action: () => Promise<unknown>,
-    error: string | ((error: unknown) => string) = membershipError,
-) {
-    const done = await runMembership(
-        async () => {
-            await action()
-            return true
-        },
-        {
-            success: t('notifications.success.edit'),
-            error,
-        },
-    )
-    if (done) emit('changed')
-}
-
-function changeRole(chip: MembershipChip, role: string) {
-    if (role === chip.role) return
-    return updateMemberships(() => changeMembershipRole(chip.id, role))
-}
-
-function removeMembership(chip: MembershipChip) {
-    return updateMemberships(() => deleteMembership(chip.id))
-}
-
-async function grantMembership() {
-    const user = props.user
-    if (!user) return
-    await updateMemberships(
-        () =>
-            addMembership({
-                user: user.id,
-                gym: newMembership.gym,
-                role: newMembership.role,
-            }),
-        t('notifications.error.generic'),
-    )
-    Object.assign(newMembership, { gym: '', role: '' })
 }
 </script>

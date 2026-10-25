@@ -3,6 +3,22 @@ import { nextTick } from 'vue'
 import Tabs from '~/components/layout/Tabs.vue'
 
 describe('LayoutTabs', () => {
+    it('spreads filled tabs over the full width with a visible indicator', () => {
+        vi.stubGlobal('nextTick', nextTick)
+        vi.stubGlobal('useTemplateRef', () => ref())
+        const UTabs = { props: ['ui'], template: '<div />' }
+        const ui = (fill: boolean) =>
+            mount(Tabs, {
+                props: { items: [{ label: 'A', value: 'a' }], fill },
+                global: { stubs: { UTabs } },
+            })
+                .findComponent(UTabs)
+                .props('ui')
+        expect(ui(true).trigger).toContain('justify-center')
+        expect(ui(false).trigger).toContain('md:flex-none')
+        expect(ui(true).indicator).toBe('h-0.5')
+    })
+
     it('scrolls the active tab into view when it changes', async () => {
         vi.stubGlobal('nextTick', nextTick)
         const tabsRef = ref<{ $el: Element }>()
@@ -55,6 +71,7 @@ describe('LayoutTabs stacked', () => {
     }
 
     function mountStacked(badge?: unknown) {
+        vi.stubGlobal('nextTick', nextTick)
         vi.stubGlobal('useTemplateRef', () => ref())
         return mount(Tabs, {
             props: {

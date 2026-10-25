@@ -1,11 +1,5 @@
 <template>
-    <section
-        class="mt-6 flex flex-col gap-3"
-        data-testid="platform-user-security"
-    >
-        <h3 class="text-sm font-semibold text-highlighted">
-            {{ t('platform.users.security') }}
-        </h3>
+    <section class="flex flex-col gap-3" data-testid="platform-user-security">
         <USwitch
             :model-value="!!user.platform_admin"
             :label="t('platform.users.platformAdmin')"

@@ -124,6 +124,19 @@ func (h *Hub) Clients() int {
 	return len(h.clients)
 }
 
+// Sessions lists the sessions with an open stream on this replica.
+func (h *Hub) Sessions() []string {
+	ids := []string{}
+	for _, c := range h.snapshot() {
+		c.mu.Lock()
+		if c.principal != nil && !slices.Contains(ids, c.principal.SessionID) {
+			ids = append(ids, c.principal.SessionID)
+		}
+		c.mu.Unlock()
+	}
+	return ids
+}
+
 // Membership, role, follow and account changes reach the hub as events; they drop every cached answer.
 func invalidatesPermissions(topic string) bool {
 	for _, prefix := range []string{"gym:", "follow", "user:"} {
