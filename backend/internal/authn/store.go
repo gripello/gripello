@@ -126,7 +126,7 @@ func insertSession(ctx context.Context, q db.Querier, userID, method, userAgent,
 }
 
 func listSessions(ctx context.Context, q db.Querier, userID, currentID string) ([]session, error) {
-	rows, err := q.Query(ctx, `SELECT id, created, method, user_agent, ip, last_seen FROM sessions WHERE "user" = $1 ORDER BY last_seen DESC NULLS LAST`, userID)
+	rows, err := q.Query(ctx, `SELECT id, created, method, user_agent, ip, greatest(last_seen, streamed_at) AS last_seen FROM sessions WHERE "user" = $1 ORDER BY 6 DESC NULLS LAST`, userID)
 	if err != nil {
 		return nil, err
 	}

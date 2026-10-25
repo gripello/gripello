@@ -65,6 +65,7 @@ func Register(app *platform.App) {
 	app.Handle("POST /me/password", httpx.Handler(m.changePassword))
 	app.Handle("POST /me/reauthenticate", httpx.Handler(m.reauthenticate))
 	app.Handle("DELETE /platform/users/{id}/mfa", httpx.Handler(m.adminResetMFA))
+	app.Handle("GET /platform/users/{id}/sessions", httpx.Handler(m.adminListSessions))
 	app.Handle("DELETE /platform/users/{id}/sessions", httpx.Handler(m.adminRevokeSessions))
 	app.Handle("DELETE /platform/users/{id}/lockout", httpx.Handler(m.adminClearLockout))
 	app.Handle("POST /platform/users/{id}/password", httpx.Handler(m.adminSetPassword))

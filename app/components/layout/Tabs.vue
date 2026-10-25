@@ -5,7 +5,7 @@
         :items="items"
         variant="link"
         class="w-full"
-        :ui="stacked ? STACKED_UI : DEFAULT_UI"
+        :ui="stacked ? STACKED_UI : fill ? FILL_UI : DEFAULT_UI"
     >
         <template v-if="stacked" #leading="{ item }">
             <span class="relative inline-flex shrink-0" data-tab-icon>
@@ -50,7 +50,11 @@ import type { TabsItem } from '@nuxt/ui'
 
 type Item = TabsItem & { value: T }
 
-const props = defineProps<{ items: Item[]; stacked?: boolean }>()
+const props = defineProps<{
+    items: Item[]
+    stacked?: boolean
+    fill?: boolean
+}>()
 const slots =
     defineSlots<
         Record<string, (props: { item: Item; index: number }) => unknown>
@@ -62,12 +66,19 @@ const SCROLLING_LIST =
     'overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
 const DEFAULT_UI = {
     list: SCROLLING_LIST,
+    indicator: 'h-0.5',
     trigger:
         'min-w-fit flex-1 flex-col gap-1 px-2 text-xs md:flex-none md:flex-row md:gap-1.5 md:text-sm',
     label: 'overflow-visible whitespace-nowrap',
 }
+const FILL_UI = {
+    ...DEFAULT_UI,
+    trigger:
+        'min-w-fit flex-1 justify-center gap-1.5 px-2 py-2.5 text-sm font-medium',
+}
 const STACKED_UI = {
     list: SCROLLING_LIST,
+    indicator: 'h-0.5',
     trigger:
         'min-w-0 flex-1 basis-0 flex-col gap-1 px-1 py-2 text-[11px] md:flex-none md:basis-auto md:flex-row md:gap-2.5 md:px-3 md:text-sm',
     label: 'max-w-full truncate',

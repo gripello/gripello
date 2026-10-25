@@ -15,7 +15,14 @@ paths:
           schema: { type: string }
         - name: filter
           in: query
-          schema: { type: string, enum: [platform_admins, unverified, suspended] }
+          schema: { type: string, enum: [platform_admins, unverified, suspended, locked, no_mfa, staff, staff_no_mfa, active, online] }
+        - name: gym
+          in: query
+          description: only members of this gym
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [email, -email, created, -created, last_seen, -last_seen, status, -status, gyms, -gyms, mfa, -mfa], default: email }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
         - name: limit
           in: query
@@ -23,7 +30,7 @@ paths:
           schema: { type: integer, minimum: 0, maximum: 200, default: 50 }
       responses:
         '200':
-          description: One page of users, ordered by email
+          description: One page of users
           content:
             application/json:
               schema:
@@ -35,6 +42,18 @@ paths:
                   limit: { type: integer }
                   total: { type: integer }
         '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+  /platform/users/summary:
+    get:
+      operationId: platformUserSummary
+      tags: [platform]
+      responses:
+        '200':
+          description: Account counts for the users page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlatformUserSummary' }
         '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/users/{id}:
@@ -283,6 +302,19 @@ paths:
   /platform/users/{id}/sessions:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listUserSessions
+      tags: [platform]
+      description: Served by authn. The user's sessions, most recently seen first.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/PlatformUserSession' } } } }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
     delete:
       operationId: revokeUserSessions
       tags: [platform]
@@ -767,6 +799,32 @@ components:
         language: { type: string, enum: ['', en, de, nl, fr, es] }
         avatar: { type: ['null', string], description: null or "" clears }
         banner: { type: ['null', string], description: null or "" clears }
+    PlatformUserSummary:
+      type: object
+      required: [total, new_7d, active_7d, online, unverified, unverified_old, suspended, locked, platform_admins, staff, staff_no_mfa]
+      properties:
+        total: { type: integer }
+        new_7d: { type: integer }
+        active_7d: { type: integer }
+        online: { type: integer, description: accounts with a session seen in the last 2 minutes (open realtime streams refresh it every 30 s) }
+        unverified: { type: integer }
+        unverified_old: { type: integer, description: unverified and created more than 7 days ago }
+        suspended: { type: integer }
+        locked: { type: integer }
+        platform_admins: { type: integer }
+        staff: { type: integer, description: accounts with any gym membership }
+        staff_no_mfa: { type: integer }
+    PlatformUserSession:
+      type: object
+      required: [id, created, method, user_agent, ip, current]
+      properties:
+        id: { type: string }
+        created: { type: string, format: date-time }
+        method: { type: string, enum: ['', password, totp, passkey, recovery] }
+        user_agent: { type: string }
+        ip: { type: string }
+        last_seen: { type: [string, 'null'], format: date-time }
+        current: { type: boolean }
     PlatformUser:
       type: object
       description: The users row without password_hash and token_key, plus memberships.
@@ -783,6 +841,9 @@ components:
         suspended_until: { type: ['null', string], format: date-time }
         suspension_reason: { type: string }
         created: { type: string, format: date-time }
+        last_seen: { type: ['null', string], format: date-time }
+        ticks_count: { type: integer, description: 'only on GET /platform/users/{id}' }
+        ratings_count: { type: integer, description: 'only on GET /platform/users/{id}' }
         memberships:
           type: array
           items:

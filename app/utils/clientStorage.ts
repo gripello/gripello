@@ -22,6 +22,7 @@ export const COMPETITION_SCORES_KEY = 'gripello:competition-scores'
 export const MAP_ROUTE_TYPE_KEY = 'map-route-type'
 export const MAP_CONSENT_KEY = 'gripello-map-consent'
 export const MODERATION_SEEN_KEY = 'gripello.moderation-seen'
+export const PLATFORM_USERS_COMPACT_KEY = 'gripello.platform-users-compact'
 export const SERVICE_WORKER_CACHES = 'gripello-*'
 
 export type ClientStorageKind =
@@ -64,6 +65,12 @@ export const CLIENT_STORAGE: ClientStorageEntry[] = [
         name: MODERATION_SEEN_KEY,
         kind: 'localStorage',
         purpose: 'moderationSeen',
+        duration: 'persistent',
+    },
+    {
+        name: PLATFORM_USERS_COMPACT_KEY,
+        kind: 'localStorage',
+        purpose: 'platformUsersCompact',
         duration: 'persistent',
     },
     {

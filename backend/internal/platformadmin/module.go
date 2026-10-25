@@ -32,6 +32,7 @@ func Register(app *platform.App) {
 	m := &module{app: app, testMails: ratelimit.New(5, time.Minute), clientErrors: ratelimit.New(60, time.Minute), clientIPs: ratelimit.New(10, time.Minute)}
 	for pattern, handler := range map[string]httpx.Handler{
 		"GET /platform/users":                           m.listUsers,
+		"GET /platform/users/summary":                   m.userSummary,
 		"GET /platform/users/{id}":                      m.getUser,
 		"PATCH /platform/users/{id}":                    m.updateUser,
 		"DELETE /platform/users/{id}":                   m.deleteUser,

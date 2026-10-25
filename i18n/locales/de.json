@@ -760,7 +760,8 @@
                 "mapRouteType": "Merkt sich, ob die Karte Boulder oder Routen zeigt",
                 "offlinePages": "Hält App-Grundgerüst, öffentliche Seiten, Hallendaten und Bilder offline verfügbar",
                 "moderationSeen": "Merkt sich, wann du die Moderation zuletzt geöffnet hast, um neue Fälle zu markieren",
-                "mapConsent": "Merkt sich, dass du Karten laden möchtest"
+                "mapConsent": "Merkt sich, dass du Karten laden möchtest",
+                "platformUsersCompact": "Merkt sich, ob die Personenliste der Plattform kompakte Zeilen nutzt"
             },
             "durations": {
                 "session": "Bis zur Abmeldung",
@@ -2463,7 +2464,68 @@
             "blockDomain": "Alle Adressen bei {domain} sperren",
             "blockDomainShared": "{accounts} weiteres Konto, {suspended} gesperrt | {accounts} weitere Konten, {suspended} gesperrt",
             "blockFailed": "Gesperrt, aber die E-Mail-Sperre konnte nicht gespeichert werden. Trage sie unter Einstellungen › Sperrlisten ein.",
-            "hideContentFailed": "Gesperrt, aber die Inhalte konnten nicht ausgeblendet werden. Versuche es erneut."
+            "hideContentFailed": "Gesperrt, aber die Inhalte konnten nicht ausgeblendet werden. Versuche es erneut.",
+            "noMemberships": "Keine Gym-Mitgliedschaften",
+            "lastActive": "Zuletzt aktiv",
+            "joined": "Beigetreten",
+            "ticks": "Begehungen",
+            "reviews": "Bewertungen",
+            "never": "Nie angemeldet",
+            "sessions": "Sitzungen",
+            "noSessions": "Nirgends angemeldet",
+            "noActivity": "Noch keine Aktivität",
+            "markVerified": "Als bestätigt markieren",
+            "selectUser": "Person auswählen",
+            "compact": "Kompakte Zeilen",
+            "mfaOn": "2FA aktiv",
+            "mfaOff": "Ohne 2FA",
+            "tabs": {
+                "overview": "Übersicht",
+                "security": "Sicherheit",
+                "activity": "Aktivität"
+            },
+            "alerts": {
+                "suspended": "Dieses Konto ist gesperrt",
+                "locked": "Nach zu vielen fehlgeschlagenen Anmeldungen gesperrt",
+                "unverified": "E-Mail-Adresse nicht bestätigt",
+                "staffNoMfa": "Team-Konto ohne Zwei-Faktor"
+            },
+            "kpis": {
+                "accounts": "Konten",
+                "newThisWeek": "+{n} diese Woche",
+                "active": "Aktiv in 7 Tagen",
+                "staffNoMfa": "Team ohne 2FA",
+                "ofStaff": "von {n} im Team",
+                "olderThanWeek": "{n} älter als 7 Tage",
+                "locked": "{n} ausgesperrt",
+                "online": "{n} gerade online"
+            },
+            "filters": {
+                "staff": "Team",
+                "locked": "Ausgesperrt",
+                "noMfa": "Ohne 2FA"
+            },
+            "columns": {
+                "user": "Person",
+                "status": "Status",
+                "gyms": "Gyms",
+                "mfa": "2FA"
+            },
+            "sorts": {
+                "email": "E-Mail A–Z",
+                "-email": "E-Mail Z–A",
+                "created": "Älteste Konten",
+                "-created": "Neueste Konten",
+                "last_seen": "Am längsten inaktiv",
+                "-last_seen": "Zuletzt aktiv",
+                "status": "Probleme zuerst",
+                "-status": "Probleme zuletzt",
+                "gyms": "Wenigste Gyms",
+                "-gyms": "Meiste Gyms",
+                "mfa": "Ohne 2FA zuerst",
+                "-mfa": "Mit 2FA zuerst"
+            },
+            "onlineNow": "Gerade online"
         },
         "features": {
             "title": "Feature-Flags",

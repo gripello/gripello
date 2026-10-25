@@ -760,7 +760,8 @@
                 "mapRouteType": "Mémorise si la carte affiche les blocs ou les voies",
                 "offlinePages": "Garde la structure de l’application, les pages publiques, les données de la salle et les images disponibles hors ligne",
                 "moderationSeen": "Retient quand tu as ouvert la modération pour la dernière fois, pour marquer les nouveaux cas",
-                "mapConsent": "Mémorise que vous avez choisi de charger les cartes"
+                "mapConsent": "Mémorise que vous avez choisi de charger les cartes",
+                "platformUsersCompact": "Retient si le tableau des personnes de la plateforme utilise des lignes compactes"
             },
             "durations": {
                 "session": "Jusqu’à la déconnexion",
@@ -2463,7 +2464,68 @@
             "blockDomain": "Bloquer toutes les adresses de {domain}",
             "blockDomainShared": "{accounts} autre compte, {suspended} suspendu(s) | {accounts} autres comptes, {suspended} suspendu(s)",
             "blockFailed": "Suspendu, mais le blocage de l'e-mail n'a pas pu être enregistré. Ajoute-le dans Paramètres › Listes de blocage.",
-            "hideContentFailed": "Suspendu, mais le contenu n'a pas pu être masqué. Réessaie."
+            "hideContentFailed": "Suspendu, mais le contenu n'a pas pu être masqué. Réessaie.",
+            "noMemberships": "Aucune adhésion à une salle",
+            "lastActive": "Dernière activité",
+            "joined": "Inscription",
+            "ticks": "Croix",
+            "reviews": "Avis",
+            "never": "Jamais connecté",
+            "sessions": "Sessions",
+            "noSessions": "Connecté nulle part",
+            "noActivity": "Aucune activité",
+            "markVerified": "Marquer comme vérifié",
+            "selectUser": "Sélectionne une personne",
+            "compact": "Lignes compactes",
+            "mfaOn": "2FA activée",
+            "mfaOff": "Sans 2FA",
+            "tabs": {
+                "overview": "Aperçu",
+                "security": "Sécurité",
+                "activity": "Activité"
+            },
+            "alerts": {
+                "suspended": "Ce compte est suspendu",
+                "locked": "Bloqué après trop de connexions échouées",
+                "unverified": "Adresse e-mail non vérifiée",
+                "staffNoMfa": "Compte d’équipe sans double authentification"
+            },
+            "kpis": {
+                "accounts": "Comptes",
+                "newThisWeek": "+{n} cette semaine",
+                "active": "Actifs sur 7 jours",
+                "staffNoMfa": "Équipe sans 2FA",
+                "ofStaff": "sur {n} membres d’équipe",
+                "olderThanWeek": "{n} depuis plus de 7 jours",
+                "locked": "{n} bloqués",
+                "online": "{n} en ligne"
+            },
+            "filters": {
+                "staff": "Équipe",
+                "locked": "Bloqués",
+                "noMfa": "Sans 2FA"
+            },
+            "columns": {
+                "user": "Personne",
+                "status": "Statut",
+                "gyms": "Salles",
+                "mfa": "2FA"
+            },
+            "sorts": {
+                "email": "E-mail A–Z",
+                "-email": "E-mail Z–A",
+                "created": "Comptes les plus anciens",
+                "-created": "Comptes les plus récents",
+                "last_seen": "Inactifs depuis le plus longtemps",
+                "-last_seen": "Actifs récemment",
+                "status": "Problèmes d’abord",
+                "-status": "Problèmes en dernier",
+                "gyms": "Moins de salles",
+                "-gyms": "Plus de salles",
+                "mfa": "Sans 2FA d’abord",
+                "-mfa": "Avec 2FA d’abord"
+            },
+            "onlineNow": "En ligne"
         },
         "features": {
             "title": "Fonctionnalités",

@@ -12,6 +12,8 @@ import {
     listFeatureFlags,
     listOAuthProviderSettings,
     listPlatformUsers,
+    listUserSessions,
+    platformUserSummary,
     listServerLogs,
     resetUserMfa,
     revokePlatformAdmin,
@@ -59,6 +61,28 @@ describe('platform users', () => {
         expect(api.request().url).toBe(
             '/api/platform/users?q=ada@&filter=suspended&page=2&limit=20',
         )
+    })
+
+    it('sends gym and sort and reads the summary and sessions', async () => {
+        api.respond({ items: [], page: 1, limit: 48, total: 0 })
+        await listPlatformUsers({
+            filter: 'staff_no_mfa',
+            gym: 'g1',
+            sort: '-created',
+            page: 1,
+            limit: 48,
+        })
+        expect(api.request().url).toBe(
+            '/api/platform/users?filter=staff_no_mfa&gym=g1&sort=-created&page=1&limit=48',
+        )
+
+        api.respond({ total: 3 })
+        expect(await platformUserSummary()).toEqual({ total: 3 })
+        expect(api.request().url).toBe('/api/platform/users/summary')
+
+        api.respond({ items: [{ id: 's1' }] })
+        expect(await listUserSessions('u1')).toEqual([{ id: 's1' }])
+        expect(api.request().url).toBe('/api/platform/users/u1/sessions')
     })
 
     it('lists every match without a page', async () => {

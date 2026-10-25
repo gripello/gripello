@@ -6,6 +6,7 @@ export interface AuditQuery {
     action?: AuditAction | null
     collection?: string | null
     actor?: string | null
+    record?: string | null
     from?: Date | string
     to?: Date | string
     q?: string
@@ -27,6 +28,7 @@ function listAudit(
             action: query.action || undefined,
             collection: query.collection || undefined,
             actor: query.actor || undefined,
+            record: query.record || undefined,
             from: isoDate(query.from),
             to: isoDate(query.to),
             q: query.q?.trim() || undefined,

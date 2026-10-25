@@ -760,7 +760,8 @@
                 "mapRouteType": "Onthoudt of de kaart boulders of routes toont",
                 "offlinePages": "Houdt de basis van de app, openbare pagina’s, gegevens van de hal en afbeeldingen offline beschikbaar",
                 "moderationSeen": "Onthoudt wanneer je de moderatie voor het laatst opende, om nieuwe zaken te markeren",
-                "mapConsent": "Onthoudt dat je kaarten wilt laden"
+                "mapConsent": "Onthoudt dat je kaarten wilt laden",
+                "platformUsersCompact": "Onthoudt of de gebruikerstabel van het platform compacte rijen gebruikt"
             },
             "durations": {
                 "session": "Tot het uitloggen",
@@ -2463,7 +2464,68 @@
             "blockDomain": "Alle adressen bij {domain} blokkeren",
             "blockDomainShared": "{accounts} ander account, {suspended} geschorst | {accounts} andere accounts, {suspended} geschorst",
             "blockFailed": "Geschorst, maar de e-mailblokkade kon niet worden opgeslagen. Voeg die toe onder Instellingen › Blokkeerlijsten.",
-            "hideContentFailed": "Geschorst, maar de inhoud kon niet worden verborgen. Probeer het opnieuw."
+            "hideContentFailed": "Geschorst, maar de inhoud kon niet worden verborgen. Probeer het opnieuw.",
+            "noMemberships": "Geen gymlidmaatschappen",
+            "lastActive": "Laatst actief",
+            "joined": "Lid sinds",
+            "ticks": "Beklimmingen",
+            "reviews": "Beoordelingen",
+            "never": "Nooit aangemeld",
+            "sessions": "Sessies",
+            "noSessions": "Nergens ingelogd",
+            "noActivity": "Nog geen activiteit",
+            "markVerified": "Als bevestigd markeren",
+            "selectUser": "Kies een gebruiker",
+            "compact": "Compacte rijen",
+            "mfaOn": "2FA actief",
+            "mfaOff": "Geen 2FA",
+            "tabs": {
+                "overview": "Overzicht",
+                "security": "Beveiliging",
+                "activity": "Activiteit"
+            },
+            "alerts": {
+                "suspended": "Dit account is geschorst",
+                "locked": "Geblokkeerd na te veel mislukte inlogpogingen",
+                "unverified": "E-mailadres niet bevestigd",
+                "staffNoMfa": "Teamaccount zonder tweestapsverificatie"
+            },
+            "kpis": {
+                "accounts": "Accounts",
+                "newThisWeek": "+{n} deze week",
+                "active": "Actief afgelopen 7 dagen",
+                "staffNoMfa": "Team zonder 2FA",
+                "ofStaff": "van {n} in het team",
+                "olderThanWeek": "{n} ouder dan 7 dagen",
+                "locked": "{n} geblokkeerd",
+                "online": "{n} nu online"
+            },
+            "filters": {
+                "staff": "Team",
+                "locked": "Geblokkeerd",
+                "noMfa": "Geen 2FA"
+            },
+            "columns": {
+                "user": "Gebruiker",
+                "status": "Status",
+                "gyms": "Gyms",
+                "mfa": "2FA"
+            },
+            "sorts": {
+                "email": "E-mail A–Z",
+                "-email": "E-mail Z–A",
+                "created": "Oudste accounts",
+                "-created": "Nieuwste accounts",
+                "last_seen": "Langst inactief",
+                "-last_seen": "Recent actief",
+                "status": "Problemen eerst",
+                "-status": "Problemen laatst",
+                "gyms": "Minste gyms",
+                "-gyms": "Meeste gyms",
+                "mfa": "Zonder 2FA eerst",
+                "-mfa": "Met 2FA eerst"
+            },
+            "onlineNow": "Nu online"
         },
         "features": {
             "title": "Feature flags",

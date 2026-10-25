@@ -20,14 +20,18 @@ test('platform admin edits a user, manages memberships and deletes the account',
     try {
         await gotoSettled(page, '/platform/users')
         await page.getByTestId('filter-search').fill(email)
-        const row = page.getByTestId(`platform-user-${user.id}`)
+        const row = page.locator('tr', {
+            has: page.getByTestId(`platform-user-${user.id}`),
+        })
         await expect(row).toBeVisible()
         await expect(
             row.getByTestId('platform-user-verified-badge'),
         ).toBeVisible()
 
-        await row.getByTestId('platform-user-edit').click()
-        const dialog = page.getByTestId('platform-user-dialog')
+        await row.click()
+        const inspector = page.getByTestId('platform-user-inspector')
+        await expect(inspector.getByTestId('platform-user-alert')).toBeVisible()
+        await inspector.getByRole('tab', { name: 'Security' }).click()
         for (const admin of [true, false]) {
             await page.getByTestId('platform-user-platform-admin').click()
             await page
@@ -44,6 +48,8 @@ test('platform admin edits a user, manages memberships and deletes the account',
                 )
                 .toBe(admin)
         }
+        await inspector.getByTestId('platform-user-edit').click()
+        const dialog = page.getByTestId('platform-user-dialog')
         await page
             .getByTestId('platform-user-username')
             .fill(`e2e_renamed_${stamp}`)
@@ -58,7 +64,8 @@ test('platform admin edits a user, manages memberships and deletes the account',
             })
             .toEqual([`e2e_renamed_${stamp}`, 'Renamed', true])
 
-        await row.getByTestId('platform-user-edit').click()
+        await expect(inspector.getByTestId('platform-user-alert')).toBeHidden()
+        await inspector.getByRole('tab', { name: 'Overview' }).click()
         await page.getByTestId('platform-user-add-gym').click()
         await page
             .getByRole('option')
@@ -98,9 +105,8 @@ test('platform admins appear read-only and cannot be deleted', async ({
     platformPage: page,
 }) => {
     await gotoSettled(page, '/platform/users')
-    await page.getByTestId('platform-users-filter').click()
-    await page.getByRole('option').first().click()
-    const rows = page.getByTestId('platform-user-list').locator('li')
+    await page.getByTestId('platform-users-show-platform_admins').click()
+    const rows = page.getByTestId('platform-user-table').locator('tbody tr')
     await expect(rows.first()).toBeVisible()
     await expect(
         rows.first().getByTestId('platform-user-admin-badge'),

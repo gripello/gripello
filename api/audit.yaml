@@ -14,6 +14,7 @@ paths:
         - $ref: '#/components/parameters/Action'
         - $ref: '#/components/parameters/Collection'
         - $ref: '#/components/parameters/Actor'
+        - $ref: '#/components/parameters/Record'
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
         - $ref: '#/components/parameters/Q'
@@ -33,6 +34,7 @@ paths:
         - $ref: '#/components/parameters/Action'
         - $ref: '#/components/parameters/Collection'
         - $ref: '#/components/parameters/Actor'
+        - $ref: '#/components/parameters/Record'
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
         - $ref: '#/components/parameters/Q'
@@ -55,6 +57,7 @@ paths:
         - $ref: '#/components/parameters/Action'
         - $ref: '#/components/parameters/Collection'
         - $ref: '#/components/parameters/Actor'
+        - $ref: '#/components/parameters/Record'
         - $ref: '#/components/parameters/From'
         - $ref: '#/components/parameters/To'
         - $ref: '#/components/parameters/Q'
@@ -80,6 +83,11 @@ components:
     Collection:
       name: collection
       in: query
+      schema: { type: string }
+    Record:
+      name: record
+      in: query
+      description: exact id of the changed record
       schema: { type: string }
     Actor:
       name: actor

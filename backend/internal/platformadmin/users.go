@@ -52,7 +52,48 @@ const userJSON = climbers.OwnRecordSQL + ` || jsonb_build_object('memberships', 
 	(SELECT jsonb_agg(jsonb_build_object('id', m.id, 'gym', m.gym, 'role', m.role) ORDER BY m.created) FROM memberships m WHERE m."user" = u.id), '[]'),
 	'mfa_enabled', EXISTS (SELECT 1 FROM mfa_factors f WHERE f."user" = u.id),
 	'session_count', (SELECT count(*) FROM sessions s WHERE s."user" = u.id),
+	'last_seen', ` + lastSeenSQL + `,
 	'locked_until', (SELECT l.locked_until FROM login_lockouts l WHERE l.key = u.id AND l.locked_until > now()))`
+
+const lastSeenSQL = `(SELECT max(greatest(s.last_seen, s.streamed_at)) FROM sessions s WHERE s."user" = u.id)`
+
+const (
+	isStaffSQL = `EXISTS (SELECT 1 FROM memberships m WHERE m."user" = u.id)`
+	noMfaSQL   = `NOT EXISTS (SELECT 1 FROM mfa_factors f WHERE f."user" = u.id)`
+)
+
+var userFilters = map[string]string{
+	"platform_admins": `u.platform_admin`,
+	"unverified":      `NOT u.verified`,
+	"suspended":       `u.suspended_until > now()`,
+	"locked":          `EXISTS (SELECT 1 FROM login_lockouts l WHERE l.key = u.id AND l.locked_until > now())`,
+	"no_mfa":          noMfaSQL,
+	"staff":           isStaffSQL,
+	"staff_no_mfa":    isStaffSQL + ` AND ` + noMfaSQL,
+	"active":          lastSeenSQL + ` > now() - interval '7 days'`,
+	"online":          lastSeenSQL + ` > now() - interval '2 minutes'`,
+}
+
+var userSorts = map[string]string{
+	"":           `lower(u.email), u.id`,
+	"email":      `lower(u.email), u.id`,
+	"-email":     `lower(u.email) DESC, u.id`,
+	"created":    `u.created, u.id`,
+	"-created":   `u.created DESC, u.id`,
+	"last_seen":  lastSeenSQL + ` ASC NULLS FIRST, u.id`,
+	"-last_seen": lastSeenSQL + ` DESC NULLS LAST, u.id`,
+	"status":     statusRankSQL + `, lower(u.email), u.id`,
+	"-status":    statusRankSQL + ` DESC, lower(u.email), u.id`,
+	"gyms":       gymCountSQL + `, lower(u.email), u.id`,
+	"-gyms":      gymCountSQL + ` DESC, lower(u.email), u.id`,
+	"mfa":        `NOT ` + noMfaSQL + `, lower(u.email), u.id`,
+	"-mfa":       `NOT ` + noMfaSQL + ` DESC, lower(u.email), u.id`,
+}
+
+const (
+	statusRankSQL = `(CASE WHEN u.suspended_until > now() THEN 0 WHEN EXISTS (SELECT 1 FROM login_lockouts l WHERE l.key = u.id AND l.locked_until > now()) THEN 1 WHEN NOT u.verified THEN 2 WHEN u.platform_admin THEN 3 ELSE 4 END)`
+	gymCountSQL   = `(SELECT count(*) FROM memberships m WHERE m."user" = u.id)`
+)
 
 type target struct {
 	ID            string
@@ -88,16 +129,20 @@ func (m *module) listUsers(w http.ResponseWriter, r *http.Request) error {
 		where = append(where, `NOT EXISTS (SELECT 1 FROM unnest($1::text[]) w
 			WHERE NOT (u.email ILIKE w OR u.username ILIKE w OR u.firstname ILIKE w OR u.name ILIKE w))`)
 	}
-	switch params.Get("filter") {
-	case "":
-	case "platform_admins":
-		where = append(where, "u.platform_admin")
-	case "unverified":
-		where = append(where, "NOT u.verified")
-	case "suspended":
-		where = append(where, "u.suspended_until > now()")
-	default:
-		return httpx.BadRequest("Unknown filter.")
+	if filter := params.Get("filter"); filter != "" {
+		cond, ok := userFilters[filter]
+		if !ok {
+			return httpx.BadRequest("Unknown filter.")
+		}
+		where = append(where, cond)
+	}
+	if gym := params.Get("gym"); gym != "" {
+		args = append(args, gym)
+		where = append(where, fmt.Sprintf(`EXISTS (SELECT 1 FROM memberships m WHERE m."user" = u.id AND m.gym = $%d)`, len(args)))
+	}
+	order, ok := userSorts[params.Get("sort")]
+	if !ok {
+		return httpx.BadRequest("Unknown sort.")
 	}
 	page := httpx.Page(r, defaultPageSize, maxPageSize)
 	paging := page.SQL()
@@ -109,7 +154,7 @@ func (m *module) listUsers(w http.ResponseWriter, r *http.Request) error {
 	if err := m.app.DB.QueryRow(r.Context(), `SELECT count(*)`+from, args...).Scan(&total); err != nil {
 		return err
 	}
-	rows, err := m.app.DB.Query(r.Context(), `SELECT `+userJSON+from+` ORDER BY lower(u.email), u.id`+paging, args...)
+	rows, err := m.app.DB.Query(r.Context(), `SELECT `+userJSON+from+` ORDER BY `+order+paging, args...)
 	if err != nil {
 		return err
 	}
@@ -123,9 +168,28 @@ func (m *module) listUsers(w http.ResponseWriter, r *http.Request) error {
 	return httpx.Respond(w, http.StatusOK, httpx.PageOf[json.RawMessage]{Items: items, Page: page.Page, Limit: page.Limit, Total: &total}, nil)
 }
 
+func (m *module) userSummary(w http.ResponseWriter, r *http.Request) error {
+	var summary json.RawMessage
+	err := m.app.DB.QueryRow(r.Context(), `SELECT jsonb_build_object(
+		'total', count(*),
+		'new_7d', count(*) FILTER (WHERE u.created > now() - interval '7 days'),
+		'active_7d', count(*) FILTER (WHERE `+userFilters["active"]+`),
+		'online', count(*) FILTER (WHERE `+userFilters["online"]+`),
+		'unverified', count(*) FILTER (WHERE `+userFilters["unverified"]+`),
+		'unverified_old', count(*) FILTER (WHERE `+userFilters["unverified"]+` AND u.created < now() - interval '7 days'),
+		'suspended', count(*) FILTER (WHERE `+userFilters["suspended"]+`),
+		'locked', count(*) FILTER (WHERE `+userFilters["locked"]+`),
+		'platform_admins', count(*) FILTER (WHERE `+userFilters["platform_admins"]+`),
+		'staff', count(*) FILTER (WHERE `+userFilters["staff"]+`),
+		'staff_no_mfa', count(*) FILTER (WHERE `+userFilters["staff_no_mfa"]+`)) FROM users u`).Scan(&summary)
+	return httpx.Respond(w, http.StatusOK, summary, err)
+}
+
 func (m *module) getUser(w http.ResponseWriter, r *http.Request) error {
 	var record json.RawMessage
-	if err := m.app.DB.QueryRow(r.Context(), `SELECT `+userJSON+` FROM users u WHERE id = $1`, r.PathValue("id")).Scan(&record); err != nil {
+	if err := m.app.DB.QueryRow(r.Context(), `SELECT `+userJSON+` || jsonb_build_object(
+		'ticks_count', (SELECT count(*) FROM ticks t WHERE t."user" = u.id),
+		'ratings_count', (SELECT count(*) FROM ratings ra WHERE ra."user" = u.id)) FROM users u WHERE id = $1`, r.PathValue("id")).Scan(&record); err != nil {
 		return db.NotFound(err)
 	}
 	return httpx.Respond(w, http.StatusOK, record, nil)
