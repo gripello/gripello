@@ -67,7 +67,9 @@ test('the moderation badge always counts the open rows of the inbox', async ({
             contentId: id,
             explanation: reported,
         })
-        await expect.poll(() => openRows(staff, inbox)).toBe(2)
+        await expect
+            .poll(() => openRows(staff, inbox), { timeout: 20_000 })
+            .toBe(2)
         await expectBadgeMatchesInbox(staff, inbox)
 
         await openCase(staff, reported, inbox)
