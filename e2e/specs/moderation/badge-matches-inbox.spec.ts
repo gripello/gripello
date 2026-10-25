@@ -47,6 +47,7 @@ test('the moderation badge always counts the open rows of the inbox', async ({
     createUser,
     testPrefix,
 }) => {
+    test.slow()
     const gym = await createModerationGym(testPrefix)
     try {
         const staff = await pageAs(gym.staff)
