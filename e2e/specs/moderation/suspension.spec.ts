@@ -16,10 +16,13 @@ test('a platform admin suspends a person for good and lifts it again', async ({
     await gotoSettled(platformPage, '/platform/users')
     await platformPage.getByTestId('filter-search').fill(person.email)
     // The search reloads the list after a debounce, which would close an open row menu.
-    await expect(
-        platformPage.getByTestId('platform-user-list').locator('li'),
-    ).toHaveCount(1)
-    const row = platformPage.getByTestId(`platform-user-${person.id}`)
+    const rows = platformPage
+        .getByTestId('platform-user-table')
+        .locator('tbody tr')
+    await expect(rows).toHaveCount(1)
+    const row = rows.filter({
+        has: platformPage.getByTestId(`platform-user-${person.id}`),
+    })
     await row.getByTestId('platform-user-menu').click()
     await platformPage.getByRole('menuitem', { name: 'Suspend' }).click()
     await platformPage.getByTestId('platform-suspend-permanent').click()
@@ -83,10 +86,13 @@ test('the 7-day preset suspends for a week and needs a reason', async ({
     await gotoSettled(platformPage, '/platform/users')
     await platformPage.getByTestId('filter-search').fill(person.email)
     // The search reloads the list after a debounce, which would close an open row menu.
-    await expect(
-        platformPage.getByTestId('platform-user-list').locator('li'),
-    ).toHaveCount(1)
-    const row = platformPage.getByTestId(`platform-user-${person.id}`)
+    const rows = platformPage
+        .getByTestId('platform-user-table')
+        .locator('tbody tr')
+    await expect(rows).toHaveCount(1)
+    const row = rows.filter({
+        has: platformPage.getByTestId(`platform-user-${person.id}`),
+    })
     await row.getByTestId('platform-user-menu').click()
     await platformPage.getByRole('menuitem', { name: 'Suspend' }).click()
     await platformPage.getByTestId('platform-suspend-week').click()
