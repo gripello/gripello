@@ -8228,7 +8228,7 @@ __metadata:
     vite: "npm:8.3.4"
     vitest: "npm:5.0.5"
     vue: "npm:3.5.44"
-    zxing-wasm: "npm:3.1.5"
+    zxing-wasm: "npm:3.1.6"
   languageName: unknown
   linkType: soft
 
@@ -14053,14 +14053,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zxing-wasm@npm:3.1.5":
-  version: 3.1.5
-  resolution: "zxing-wasm@npm:3.1.5"
+"zxing-wasm@npm:3.1.6":
+  version: 3.1.6
+  resolution: "zxing-wasm@npm:3.1.6"
   dependencies:
     "@types/emscripten": "npm:^1.41.6"
     type-fest: "npm:^5.10.0"
   peerDependencies:
     "@types/emscripten": ">=1.39.6"
-  checksum: 10c0/860426ec50a3384a17287132d8e70858814fd87cf886d930709e8fc2108b311f69126168d7a142575ffaabc156945ac50161365a19bb06bbbc95ff4359a11791
+  checksum: 10c0/5df631ec1ca2ef53c6c22ffbc0cb4a27f28cf40d120eb64733bfa7c3070e844f46ad1c9c629f345e110c128db6a46afd3663c26f402d360b997f000ca7925387
   languageName: node
   linkType: hard
