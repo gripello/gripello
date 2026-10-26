@@ -21,8 +21,8 @@ vi.mock('~/api/audit', () => ({
 }))
 
 const alertStub = {
-    props: ['actions', 'title'],
-    template: `<div data-testid="platform-user-alert">{{ title }}
+    props: ['actions', 'title', 'orientation'],
+    template: `<div data-testid="platform-user-alert" :data-orientation="orientation">{{ title }}
         <button v-for="action in actions ?? []" :key="action.label"
             :data-testid="action['data-testid']" @click="action.onClick()">
             {{ action.label }}</button></div>`,
@@ -90,6 +90,18 @@ describe('PlatformUserInspector', () => {
                 .find('[data-testid="platform-user-alert-resend"]')
                 .exists(),
         ).toBe(false)
+    })
+
+    it('stacks the alert actions under the title so the narrow inspector keeps it readable', () => {
+        const wrapper = mountFor({
+            verified: false,
+            email: 'ada@gripello.test',
+        })
+        expect(
+            wrapper
+                .get('[data-testid="platform-user-alert"]')
+                .attributes('data-orientation'),
+        ).toBeUndefined()
     })
 
     it('lifts a suspension before anything else', async () => {
