@@ -206,7 +206,8 @@
         "exportAgain": "Neuen Export anfordern",
         "exportTooLarge": "Dein Datenexport ist zu groß",
         "exportTooLargeHint": "Er überschreitet 2 GB. Kontaktiere uns, um deine Daten auf anderem Weg zu erhalten.",
-        "exportNone": "Kein Datenexport bereit"
+        "exportNone": "Kein Datenexport bereit",
+        "removeAvatar": "Profilbild entfernen"
     },
     "routes": {
         "generate_name": "Namen generieren",
@@ -604,7 +605,7 @@
             },
             "accounts": {
                 "title": "Benutzerkonto",
-                "body": "Wenn der Betreiber die Registrierung zulässt, kannst du dir selbst ein Konto mit E-Mail-Adresse und Passwort anlegen; zur Bestätigung senden wir dir eine Verifizierungs-E-Mail. Außerdem können Administratorinnen und Administratoren einer Halle dich als Mitarbeiterin oder Mitarbeiter hinzufügen, indem sie deine E-Mail-Adresse sowie Vor- und Nachnamen eingeben: Hast du noch kein Konto, wird damit sofort ein noch nicht bestätigtes Konto mit diesen Angaben samt Mitgliedschaft angelegt, und du erhältst eine E-Mail, mit der du dein Passwort festlegst; ein bestehendes Konto erhält die Mitgliedschaft direkt. Zum Konto speichern wir E-Mail-Adresse, Benutzername, Vor- und Nachname, optional ein Profilbild und ein Profilbanner, deine Sprache, Benachrichtigungs- und Privatsphäre-Einstellungen sowie die Wände, denen du folgst. Das Passwort wird nur als Hash gespeichert. Rechte als Mitarbeiterin oder Mitarbeiter einer Halle ergeben sich aus einer Mitgliedschaft (Konto, Halle, Rolle), die die Administratorinnen und Administratoren der Halle verwalten. Deine E-Mail-Adresse wird anderen Kletternden und den Mitarbeitenden der Halle nicht angezeigt; die Administratorinnen und Administratoren der Plattform können sie sehen, und meldest du Inhalte, erhalten die Moderation der Halle und ihre Kontaktadresse deinen Namen und deine E-Mail-Adresse (siehe Meldungen von Inhalten). Rechtsgrundlage ist die Erfüllung des Nutzungsvertrags (Art. 6 Abs. 1 lit. b DSGVO). Die Daten bleiben gespeichert, solange dein Konto besteht; du kannst sie in den Einstellungen jederzeit ändern und das Konto selbst löschen."
+                "body": "Wenn der Betreiber die Registrierung zulässt, kannst du dir selbst ein Konto mit E-Mail-Adresse und Passwort anlegen; zur Bestätigung senden wir dir eine Verifizierungs-E-Mail. Bestätigst du die Adresse nicht innerhalb von 7 Tagen, wird das Konto gelöscht. Außerdem können Administratorinnen und Administratoren einer Halle dich als Mitarbeiterin oder Mitarbeiter einladen, indem sie deine E-Mail-Adresse und optional deinen Vor- und Nachnamen eingeben. Du erhältst dann einen Einladungslink, der 7 Tage gültig ist; die Einladung speichern wir, bis du sie annimmst, sie abläuft oder die Halle sie zurückzieht. Ohne dich wird nichts angelegt: Zum Annehmen meldest du dich mit dieser E-Mail-Adresse an oder legst ein Konto mit deinem eigenen Passwort an, und erst dann wirst du Mitglied. Zum Konto speichern wir E-Mail-Adresse, Benutzername, Vor- und Nachname, optional ein Profilbild und ein Profilbanner, deine Sprache, Benachrichtigungs- und Privatsphäre-Einstellungen sowie die Wände, denen du folgst. Das Passwort wird nur als Hash gespeichert. Rechte als Mitarbeiterin oder Mitarbeiter einer Halle ergeben sich aus einer Mitgliedschaft (Konto, Halle, Rolle), die die Administratorinnen und Administratoren der Halle verwalten. Deine E-Mail-Adresse wird anderen Kletternden und den Mitarbeitenden der Halle nicht angezeigt; die Administratorinnen und Administratoren der Plattform können sie sehen, und meldest du Inhalte, erhalten die Moderation der Halle und ihre Kontaktadresse deinen Namen und deine E-Mail-Adresse (siehe Meldungen von Inhalten). Rechtsgrundlage ist die Erfüllung des Nutzungsvertrags (Art. 6 Abs. 1 lit. b DSGVO). Die Daten bleiben gespeichert, solange dein Konto besteht; du kannst sie in den Einstellungen jederzeit ändern und das Konto selbst löschen."
             },
             "privacySettings": {
                 "title": "Privatsphäre-Einstellungen",
@@ -1370,6 +1371,10 @@
             "password_reset": "Passwort zurückgesetzt",
             "email_change_request": "E-Mail-Änderung angefordert",
             "email_change": "E-Mail geändert",
+            "register": "Registriert",
+            "register_existing": "Registrierung mit bestehender Adresse",
+            "verification_request": "Bestätigungs-E-Mail angefordert",
+            "email_verified": "E-Mail bestätigt",
             "login_second_factor": "Passwort bestätigt, zweiter Faktor ausstehend",
             "account_locked": "Konto nach Fehlversuchen gesperrt",
             "mfa_enabled": "Authenticator-App hinzugefügt",
@@ -2390,6 +2395,8 @@
             "addMembership": "Hinzufügen",
             "sendPasswordReset": "E-Mail zum Zurücksetzen des Passworts senden",
             "passwordResetSent": "E-Mail zum Zurücksetzen des Passworts gesendet.",
+            "resendVerification": "Bestätigungs-E-Mail erneut senden",
+            "verificationSent": "Bestätigungs-E-Mail gesendet.",
             "deleteConfirm": "{name} mit allen Daten löschen? Das kann nicht rückgängig gemacht werden.",
             "lastAdmin": "Diese Person ist die einzige Admin einer Halle. Ernenne zuerst jemand anderen zur Admin.",
             "suspend": "Sperren",
@@ -2496,7 +2503,7 @@
                 "active": "Aktiv in 7 Tagen",
                 "staffNoMfa": "Team ohne 2FA",
                 "ofStaff": "von {n} im Team",
-                "olderThanWeek": "{n} älter als 7 Tage",
+                "linkExpired": "{n} mit abgelaufenem Link",
                 "locked": "{n} ausgesperrt",
                 "online": "{n} gerade online"
             },
@@ -2525,7 +2532,10 @@
                 "mfa": "Ohne 2FA zuerst",
                 "-mfa": "Mit 2FA zuerst"
             },
-            "onlineNow": "Gerade online"
+            "onlineNow": "Gerade online",
+            "discard": "Verwerfen",
+            "emailVisible": "E-Mail für Hallenteam sichtbar",
+            "browserLanguage": "Browsersprache"
         },
         "features": {
             "title": "Feature-Flags",
@@ -2656,7 +2666,7 @@
             "subject": "Bestätige deine E-Mail-Adresse",
             "body": "Danke für deine Registrierung bei {app}. Bestätige deine E-Mail-Adresse, um dein Konto fertig einzurichten.",
             "action": "E-Mail-Adresse bestätigen",
-            "note": "Falls du dich nicht registriert hast, kannst du diese E-Mail ignorieren."
+            "note": "Der Link ist 48 Stunden gültig. Falls du dich nicht registriert hast, kannst du diese E-Mail ignorieren."
         },
         "passwordReset": {
             "subject": "Passwort zurücksetzen",

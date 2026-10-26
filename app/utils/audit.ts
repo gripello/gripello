@@ -71,15 +71,21 @@ export function actionIcon(action: AuditAction | string): string {
     if (action === 'password_reset' || action === 'password_reset_request') {
         return 'i-lucide-rotate-ccw'
     }
+    if (action === 'register' || action === 'register_existing') {
+        return 'i-lucide-user-plus'
+    }
+    if (action === 'email_verified') return 'i-lucide-badge-check'
     return 'i-lucide-mail-check'
 }
 
 export function actionColor(action: AuditAction | string): string {
-    if (action === 'create') return 'success'
+    if (action === 'create' || action === 'register') return 'success'
     if (action === 'update') return 'info'
     if (action === 'delete') return 'error'
     if (action === 'login') return 'primary'
-    if (action === 'login_failed') return 'warning'
+    if (action === 'login_failed' || action === 'register_existing') {
+        return 'warning'
+    }
     return 'medium-emphasis'
 }
 

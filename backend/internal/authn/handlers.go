@@ -18,6 +18,7 @@ import (
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/db"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/locales"
@@ -230,9 +231,23 @@ func (m *module) register(w http.ResponseWriter, r *http.Request) error {
 	if code != "" && !taken {
 		invalid.Field("email", code, message)
 	}
-	if body.Username == "" {
+	var unverifiedOwner *account
+	if taken {
+		if owner, err := findAccountByEmail(ctx, m.db, body.Email); err == nil && !owner.Verified {
+			unverifiedOwner = &owner
+		} else if err != nil && !isNoRows(err) {
+			return err
+		}
+	}
+	exceptID := ""
+	if unverifiedOwner != nil {
+		exceptID = unverifiedOwner.ID
+	}
+	if body.Username == "" && unverifiedOwner != nil {
+		body.Username = unverifiedOwner.Username
+	} else if body.Username == "" {
 		body.Username = m.generateUsername(r)
-	} else if code, message, err := m.validateUsername(r, body.Username); err != nil {
+	} else if code, message, err := m.validateUsername(r, body.Username, exceptID); err != nil {
 		return err
 	} else if code != "" {
 		invalid.Field("username", code, message)
@@ -258,30 +273,106 @@ func (m *module) register(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	signup := signupDetails{Username: body.Username, Firstname: strings.TrimSpace(body.Firstname), Name: strings.TrimSpace(body.Name), Language: body.Language, PasswordHash: hash}
 	if taken {
-		m.notifyAccountExists(ctx, body.Email)
+		if err := m.registerTakenAddress(r, body.Email, signup); err != nil {
+			return err
+		}
 		w.WriteHeader(http.StatusAccepted)
 		return nil
 	}
 	user, err := scanAccount(m.db.QueryRow(ctx, `INSERT INTO users (id, email, username, firstname, name, language, password_hash, token_key)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING `+accountColumns,
-		ids.New(), body.Email, body.Username, strings.TrimSpace(body.Firstname), strings.TrimSpace(body.Name), body.Language, hash, newTokenKey()))
+		ids.New(), body.Email, signup.Username, signup.Firstname, signup.Name, signup.Language, hash, newTokenKey()))
 	if db.IsUnique(err, "email") {
-		m.notifyAccountExists(ctx, body.Email)
+		if err := m.registerTakenAddress(r, body.Email, signup); err != nil {
+			return err
+		}
 		w.WriteHeader(http.StatusAccepted)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	m.sendVerification(r, user)
+	m.sendVerification(ctx, user)
+	go m.audit(context.WithoutCancel(ctx), AuthEvent{Action: "register", User: user.ID, Label: user.label(), IP: httpx.ClientIP(r)})
 	w.WriteHeader(http.StatusAccepted)
 	return nil
 }
 
-// notifyAccountExists answers a sign-up or e-mail change to a taken address by telling its owner instead of the requester.
-func (m *module) notifyAccountExists(ctx context.Context, email string) {
-	if owner, err := findAccountByEmail(ctx, m.db, email); err == nil {
+type signupDetails struct {
+	Username, Firstname, Name, Language, PasswordHash string
+}
+
+// registerTakenAddress lets a sign-up take over an unverified account and tells a verified owner the address is taken.
+func (m *module) registerTakenAddress(r *http.Request, email string, signup signupDetails) error {
+	ctx := r.Context()
+	owner, err := findAccountByEmail(ctx, m.db, email)
+	if isNoRows(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !owner.Verified {
+		claimed, err := m.claimUnverified(ctx, owner.ID, signup)
+		if err != nil {
+			return err
+		}
+		if claimed != nil {
+			m.sendVerification(ctx, *claimed)
+			m.auditRequestFor(r, "register_existing", *claimed)
+			return nil
+		}
+		if owner, err = findAccount(ctx, m.db, owner.ID); isNoRows(err) {
+			return nil
+		} else if err != nil {
+			return err
+		}
+	}
+	m.notifyAccountExists(ctx, owner)
+	m.auditRequestFor(r, "register_existing", owner)
+	return nil
+}
+
+// claimUnverified overwrites an unverified account and rotates its token key; nil means it got verified meanwhile.
+func (m *module) claimUnverified(ctx context.Context, id string, signup signupDetails) (*account, error) {
+	var claimed *account
+	err := pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
+		before, err := climbers.OwnRecord(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		tag, err := tx.Exec(ctx, `UPDATE users SET username = $2, firstname = $3, name = $4, language = $5, password_hash = $6
+			WHERE id = $1 AND NOT verified`, id, signup.Username, signup.Firstname, signup.Name, signup.Language, signup.PasswordHash)
+		if db.IsUnique(err, "users_username_idx") {
+			return httpx.BadRequest("Failed to create record.").Field("username", "validation_not_unique", "Value must be unique.")
+		}
+		if err != nil || tag.RowsAffected() == 0 {
+			return err
+		}
+		if err := rotateTokenKey(ctx, tx, id); err != nil {
+			return err
+		}
+		after, err := climbers.OwnRecord(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if changed := events.ChangedFields(before, after, climbers.DerivedUserFields...); len(changed) > 0 {
+			if err := climbers.PublishUserUpdated(ctx, tx, "", id, after, changed); err != nil {
+				return err
+			}
+		}
+		user, err := findAccount(ctx, tx, id)
+		claimed = &user
+		return err
+	})
+	return claimed, err
+}
+
+// notifyAccountExists tells a verified owner that someone tried to sign up with or move to their address.
+func (m *module) notifyAccountExists(ctx context.Context, owner account) {
+	if owner.Verified {
 		m.sendAuthMail(ctx, owner, owner.Email, platformmail.Content{Key: "accountExists", Name: owner.Firstname, Action: "/auth/login"})
 	}
 }
@@ -302,7 +393,7 @@ func (m *module) validateNewEmail(r *http.Request, email, exceptID string) (stri
 	return "", "", nil
 }
 
-func (m *module) validateUsername(r *http.Request, username string) (string, string, error) {
+func (m *module) validateUsername(r *http.Request, username, exceptID string) (string, string, error) {
 	if length := utf8.RuneCountInString(username); length < 3 || length > 150 {
 		return "validation_length_out_of_range", "The length must be between 3 and 150.", nil
 	}
@@ -312,7 +403,7 @@ func (m *module) validateUsername(r *http.Request, username string) (string, str
 	if protected, err := blocklist.NameProtected(r.Context(), m.db, username); err != nil || protected {
 		return blocklist.CodeNameProtected, "This name is reserved.", err
 	}
-	if taken, err := usernameTaken(r.Context(), m.db, username); err != nil || taken {
+	if taken, err := usernameTaken(r.Context(), m.db, username, exceptID); err != nil || taken {
 		return "validation_not_unique", "Value must be unique.", err
 	}
 	return "", "", nil
@@ -322,7 +413,7 @@ func (m *module) generateUsername(r *http.Request) string {
 	for {
 		n, _ := rand.Int(rand.Reader, big.NewInt(1_000_000))
 		username := fmt.Sprintf("users%06d", n.Int64())
-		if taken, err := usernameTaken(r.Context(), m.db, username); err != nil || !taken {
+		if taken, err := usernameTaken(r.Context(), m.db, username, ""); err != nil || !taken {
 			return username
 		}
 	}
@@ -339,10 +430,10 @@ func validatePassword(invalid *httpx.Error, field, password, confirm string) {
 	}
 }
 
-func (m *module) sendVerification(r *http.Request, user account) {
+func (m *module) sendVerification(ctx context.Context, user account) {
 	token, err := m.signMailToken(user, "verification", "", verificationTokenTTL)
 	if err == nil {
-		m.sendAuthMail(r.Context(), user, user.Email, platformmail.Verification(user.Firstname, token))
+		m.sendAuthMail(ctx, user, user.Email, platformmail.Verification(user.Firstname, token))
 	}
 }
 
@@ -429,7 +520,8 @@ func (m *module) requestVerification(w http.ResponseWriter, r *http.Request) err
 	}
 	user, err := findAccountByEmail(r.Context(), m.db, strings.TrimSpace(body.Email))
 	if err == nil && !user.Verified {
-		m.sendVerification(r, user)
+		m.sendVerification(r.Context(), user)
+		m.auditRequestFor(r, "verification_request", user)
 	} else if err != nil && !isNoRows(err) {
 		return err
 	}
@@ -457,7 +549,10 @@ func (m *module) confirmVerification(w http.ResponseWriter, r *http.Request) err
 		if err != nil {
 			return err
 		}
-		return climbers.PublishUserUpdated(ctx, tx, "", user.ID, record, []string{"verified"})
+		if err := climbers.PublishUserUpdated(ctx, tx, "", user.ID, record, []string{"verified"}); err != nil {
+			return err
+		}
+		return publishAuthEvent(ctx, tx, AuthEvent{Action: "email_verified", User: user.ID, Label: user.label(), IP: httpx.ClientIP(r)})
 	})
 	if err != nil {
 		return err
@@ -486,7 +581,9 @@ func (m *module) requestEmailChange(w http.ResponseWriter, r *http.Request) erro
 		return err
 	} else if code == codeNotUnique {
 		if newEmail != user.Email {
-			m.notifyAccountExists(ctx, newEmail)
+			if owner, err := findAccountByEmail(ctx, m.db, newEmail); err == nil {
+				m.notifyAccountExists(ctx, owner)
+			}
 		}
 		return httpx.NoContent(w, nil)
 	} else if code != "" {

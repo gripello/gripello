@@ -299,7 +299,7 @@ func (m *module) writeProfile(ctx context.Context, userID string, update func(tx
 		if record, err = climbers.OwnRecord(ctx, tx, userID); err != nil {
 			return err
 		}
-		if changed := events.ChangedFields(before, record, "updated"); len(changed) > 0 {
+		if changed := events.ChangedFields(before, record, climbers.DerivedUserFields...); len(changed) > 0 {
 			return climbers.PublishUserUpdated(ctx, tx, "", userID, record, changed)
 		}
 		return nil
@@ -413,7 +413,7 @@ func (m *module) deleteMe(w http.ResponseWriter, r *http.Request) error {
 		if err := publishSessionsRevoked(ctx, tx, p.UserID, sessions); err != nil {
 			return err
 		}
-		return publishUser(ctx, tx, p.UserID, KindUserDeleted, UserDeleted{ID: p.UserID})
+		return events.PublishAs(ctx, tx, p.UserID, userTopic(p.UserID), KindUserDeleted, UserDeleted{ID: p.UserID}, events.Audience{Users: []string{p.UserID}})
 	})
 	if err != nil {
 		return err

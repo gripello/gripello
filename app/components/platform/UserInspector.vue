@@ -18,15 +18,6 @@
                         <span class="font-mono">{{ user.id }}</span>
                     </p>
                 </div>
-                <UButton
-                    icon="i-lucide-pencil"
-                    color="neutral"
-                    variant="outline"
-                    class="icon-btn"
-                    :aria-label="t('users.edit')"
-                    data-testid="platform-user-edit"
-                    @click="emit('edit', user.id)"
-                />
             </div>
             <PlatformUserBadges :user="user" />
             <UAlert
@@ -44,6 +35,11 @@
 
         <div class="flex flex-col gap-4 p-4">
             <template v-if="tab === 'overview'">
+                <PlatformUserProfile
+                    :key="user.id"
+                    :user="user"
+                    @changed="emit('changed')"
+                />
                 <div
                     class="grid grid-cols-2 gap-3 rounded-lg bg-elevated p-3"
                     data-testid="platform-user-overview"
@@ -188,6 +184,7 @@
 <script setup lang="ts">
 import type { AlertProps } from '@nuxt/ui'
 import { listPlatformAudit } from '~/api/audit'
+import { requestVerification } from '~/api/auth'
 import {
     clearUserLockout,
     getPlatformUser,
@@ -217,7 +214,6 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{
     changed: []
-    edit: [id: string]
     delete: [id: string]
     suspend: [id: string]
 }>()
@@ -336,10 +332,13 @@ const ALERT_FIXES: Partial<
     },
 }
 
+const { capHeaders } = useCapToken()
+const { pending: resending, run: runResend } = useAsyncAction()
+
 const alertActions = computed(() => {
     const fix = alert.value && ALERT_FIXES[alert.value]
     if (!fix) return undefined
-    return [
+    const actions = [
         {
             label: t(fix.label),
             color: 'neutral' as const,
@@ -349,7 +348,31 @@ const alertActions = computed(() => {
             onClick: () => fixAlert(fix.call),
         },
     ]
+    if (alert.value === 'unverified' && props.user.email) {
+        actions.push({
+            label: t('platform.users.resendVerification'),
+            color: 'neutral' as const,
+            variant: 'outline' as const,
+            loading: resending.value,
+            'data-testid': 'platform-user-alert-resend',
+            onClick: () => resendVerification(),
+        })
+    }
+    return actions
 })
+
+async function resendVerification() {
+    const email = props.user.email
+    if (resending.value || !email) return
+    await runResend(
+        async () =>
+            requestVerification(email, await capHeaders('verification')),
+        {
+            success: t('platform.users.verificationSent'),
+            error: t('notifications.error.generic'),
+        },
+    )
+}
 
 async function fixAlert(call: (id: string) => unknown) {
     if (fixing.value) return

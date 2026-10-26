@@ -196,6 +196,41 @@ func TestAuthEventsAreAuditedAndUnknownActionsSkipped(t *testing.T) {
 	}
 }
 
+func TestDeletionsWithoutAnActorStayAnonymous(t *testing.T) {
+	f := newFixture(t)
+	gone := f.user("gone@example.com", false)
+	f.publish("user:"+gone, "user.deleted", map[string]string{"id": gone}, events.Audience{Users: []string{gone}})
+	f.publish("user:"+gone, "user.updated", map[string]any{"record": map[string]string{"id": gone}, "changed": []string{"firstname"}}, events.Audience{Users: []string{gone}})
+	got := f.rows()
+	if len(got) != 2 {
+		t.Fatalf("rows = %+v", got)
+	}
+	if got[0].Action != "delete" || got[0].Actor != "" || got[0].Record != gone {
+		t.Errorf("cleanup deletion = %+v, want no actor", got[0])
+	}
+	if got[1].Actor != gone {
+		t.Errorf("own update = %+v, want the account as actor", got[1])
+	}
+}
+
+func TestMailsRequestedForAnAccountNameTheRequester(t *testing.T) {
+	f := newFixture(t)
+	owner := f.user("owner@example.com", true)
+	admin := f.user("admin@example.com", true)
+	f.publish("audit", "auth.register_existing", map[string]any{"action": "register_existing", "user": owner, "label": "owner@example.com", "ip": "10.0.0.3"}, events.Audience{})
+	f.publishAs(admin, "audit", "auth.verification_request", map[string]any{"action": "verification_request", "user": owner, "label": "owner@example.com", "ip": "10.0.0.4"}, events.Audience{})
+	got := f.rows()
+	if len(got) != 2 {
+		t.Fatalf("rows = %+v", got)
+	}
+	if got[0].Actor != "" || got[0].Label != "" || got[0].Record != owner || got[0].Action != "register_existing" {
+		t.Errorf("guest sign-up with a taken address = %+v, want an anonymous actor on the owner's record", got[0])
+	}
+	if got[1].Actor != admin || got[1].Label != "admin@example.com" || got[1].Record != owner {
+		t.Errorf("verification requested by another user = %+v, want that user as actor", got[1])
+	}
+}
+
 func TestPlatformAdminsWithoutMembershipAreLabelled(t *testing.T) {
 	f := newFixture(t)
 	gym := f.gym("north")

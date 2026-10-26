@@ -176,7 +176,7 @@ func (m *module) userSummary(w http.ResponseWriter, r *http.Request) error {
 		'active_7d', count(*) FILTER (WHERE `+userFilters["active"]+`),
 		'online', count(*) FILTER (WHERE `+userFilters["online"]+`),
 		'unverified', count(*) FILTER (WHERE `+userFilters["unverified"]+`),
-		'unverified_old', count(*) FILTER (WHERE `+userFilters["unverified"]+` AND u.created < now() - interval '7 days'),
+		'unverified_old', count(*) FILTER (WHERE `+userFilters["unverified"]+` AND u.created < now() - interval '48 hours'),
 		'suspended', count(*) FILTER (WHERE `+userFilters["suspended"]+`),
 		'locked', count(*) FILTER (WHERE `+userFilters["locked"]+`),
 		'platform_admins', count(*) FILTER (WHERE `+userFilters["platform_admins"]+`),
@@ -216,7 +216,7 @@ func (m *module) changeUser(ctx context.Context, userID string, mutate func(tx p
 		if err := tx.QueryRow(ctx, `SELECT `+climbers.OwnRecordSQL+`, `+userJSON+` FROM users u WHERE id = $1`, userID).Scan(&own, record); err != nil {
 			return err
 		}
-		changed := events.ChangedFields(before, own, "updated")
+		changed := events.ChangedFields(before, own, climbers.DerivedUserFields...)
 		if len(changed) == 0 {
 			return nil
 		}

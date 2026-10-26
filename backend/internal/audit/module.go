@@ -26,9 +26,10 @@ const (
 )
 
 var (
-	authActions        = []string{"login", "login_failed", "password_reset_request", "password_reset", "email_change_request", "email_change"}
-	skippedCollections = []string{"audit_logs", "mfa_factors", "mfa_recovery_codes", "login_lockouts", "cap_nonces", "sessions"}
-	kindCollections    = map[string]string{"gym": "gyms", "membership": "memberships", "role": "roles", "invite": "invites", "user": "users", "tick": "ticks", "task": "tasks",
+	authActions         = []string{"login", "login_failed", "password_reset_request", "password_reset", "email_change_request", "email_change", "register", "register_existing", "verification_request", "email_verified"}
+	requestedForActions = []string{"register_existing", "verification_request"}
+	skippedCollections  = []string{"audit_logs", "mfa_factors", "mfa_recovery_codes", "login_lockouts", "cap_nonces", "sessions"}
+	kindCollections     = map[string]string{"gym": "gyms", "membership": "memberships", "role": "roles", "invite": "invites", "user": "users", "tick": "ticks", "task": "tasks",
 		"platform_config": "platform_config", "oauth2_provider": "oauth2_providers", "retired_slug": "retired_slugs", "backup": "backups"}
 	recordActions = map[string]string{"create": "create", "created": "create", "update": "update", "updated": "update", "accepted": "update", "delete": "delete", "deleted": "delete"}
 )
@@ -83,6 +84,9 @@ func entryFor(e events.Event) (entry, bool) {
 		if !slices.Contains(authActions, p.Action) {
 			return entry{}, false
 		}
+		if slices.Contains(requestedForActions, p.Action) {
+			return entry{Actor: e.Actor, Action: p.Action, Collection: "users", RecordID: p.User, IP: p.IP}, true
+		}
 		return entry{Actor: cmp.Or(e.Actor, p.User), ActorLabel: p.Label, Action: p.Action, Collection: "users", RecordID: p.User, IP: p.IP}, true
 	}
 	prefix, suffix, _ := strings.Cut(e.Kind, ".")
@@ -111,7 +115,7 @@ func entryFor(e events.Event) (entry, bool) {
 		en.Gym = cmp.Or(en.Gym, id)
 	case "user":
 		en.RecordID = id
-		if en.Actor == "" {
+		if en.Actor == "" && e.Kind != "user.deleted" {
 			en.Actor = id
 		}
 	case "own_ticks":

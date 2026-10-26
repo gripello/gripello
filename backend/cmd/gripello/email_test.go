@@ -39,20 +39,20 @@ func TestEmailVerdictsIgnoreCase(t *testing.T) {
 				t.Errorf("login as %s = %d", identity, code)
 			}
 		}
-		accountExists := func() int {
+		mailsTo := func(subject string) int {
 			n := 0
 			for _, m := range testapp.Mails(w.app) {
-				if strings.HasPrefix(m.Subject, "You already have an account") && m.To[0] == platformmail.NormalizeAddress(folded) {
+				if strings.HasPrefix(m.Subject, subject) && m.To[0] == platformmail.NormalizeAddress(folded) {
 					n++
 				}
 			}
 			return n
 		}
-		testapp.WaitFor(t, func() bool { return accountExists() == 1 })
+		testapp.WaitFor(t, func() bool { return mailsTo("Verify your email address") == 2 })
 		if code := w.call("climber", "POST", "/auth/email-change/request", `{"newEmail":"`+strings.ToUpper(folded)+`"}`).Code; code != http.StatusNoContent {
 			t.Errorf("e-mail change to a taken address in other case = %d", code)
 		}
-		testapp.WaitFor(t, func() bool { return accountExists() == 2 })
+		testapp.WaitFor(t, func() bool { return mailsTo("You already have an account") == 1 })
 		sent := len(testapp.Mails(w.app))
 		if code := w.call("adminA", "POST", "/gyms/"+w.gymA+"/members", `{"email":"`+strings.ToUpper(typed)+`","role":"`+w.records["role"]+`"}`).Code; code != http.StatusAccepted {
 			t.Fatalf("invite = %d", code)

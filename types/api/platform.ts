@@ -610,7 +610,7 @@ export interface components {
             /** @description accounts with a session seen in the last 2 minutes (open realtime streams refresh it every 30 s) */
             online: number;
             unverified: number;
-            /** @description unverified and created more than 7 days ago */
+            /** @description unverified and created more than 48 hours ago, so the verification link has expired */
             unverified_old: number;
             suspended: number;
             locked: number;
@@ -640,6 +640,8 @@ export interface components {
             name?: string;
             avatar?: string;
             verified: boolean;
+            /** Format: date-time */
+            verified_at?: null | string;
             platform_admin: boolean;
             /** Format: date-time */
             suspended_until?: null | string;

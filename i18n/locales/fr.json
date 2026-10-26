@@ -206,7 +206,8 @@
         "exportAgain": "Demander un nouvel export",
         "exportTooLarge": "Votre export de données est trop volumineux",
         "exportTooLargeHint": "Il dépasse 2 Go. Contactez-nous pour recevoir vos données autrement.",
-        "exportNone": "Aucun export de données prêt"
+        "exportNone": "Aucun export de données prêt",
+        "removeAvatar": "Supprimer l'avatar"
     },
     "routes": {
         "generate_name": "Générer un nom",
@@ -604,7 +605,7 @@
             },
             "accounts": {
                 "title": "Compte utilisateur",
-                "body": "Si l’exploitant autorise les inscriptions, vous pouvez créer un compte avec une adresse e-mail et un mot de passe ; un e-mail de vérification confirme l’adresse. Un administrateur d’une salle peut aussi vous ajouter comme membre du personnel en saisissant votre adresse e-mail, votre prénom et votre nom : si vous n’avez pas encore de compte, cela crée immédiatement un compte non vérifié avec ces informations ainsi que l’adhésion, et vous recevez un e-mail pour définir votre mot de passe ; un compte existant reçoit directement l’adhésion. Nous conservons votre adresse e-mail, votre nom d’utilisateur, votre prénom et votre nom, une photo de profil et une bannière facultatives, votre langue, vos préférences de notification, vos paramètres de confidentialité et les murs que vous suivez. Le mot de passe n’est stocké que sous forme chiffrée (hachée). Si une salle vous donne un rôle (par ex. ouvreur ou administrateur), nous enregistrons cette adhésion et ce rôle pour la salle concernée. Votre adresse e-mail n’est pas affichée aux autres grimpeurs ni au personnel des salles ; les administrateurs de la plateforme peuvent la voir et, si vous signalez un contenu, les modérateurs de la salle et l’adresse de contact de la salle reçoivent votre nom et votre adresse e-mail (voir Signalements de contenu). Base légale : exécution du contrat d’utilisation du service (article 6, paragraphe 1, point b), du RGPD). Durée de conservation : tant que le compte existe ; vous pouvez modifier ces données ou supprimer votre compte à tout moment dans les paramètres."
+                "body": "Si l’exploitant autorise les inscriptions, vous pouvez créer un compte avec une adresse e-mail et un mot de passe ; un e-mail de vérification confirme l’adresse. Si vous ne confirmez pas l’adresse dans les 7 jours, le compte est supprimé. Un administrateur d’une salle peut aussi vous inviter comme membre du personnel en saisissant votre adresse e-mail et, si besoin, votre prénom et votre nom. Vous recevez alors un lien d’invitation valable 7 jours ; nous conservons l’invitation jusqu’à ce que vous l’acceptiez, qu’elle expire ou que la salle la retire. Rien n’est créé sans vous : pour accepter, vous vous connectez avec cette adresse e-mail ou créez un compte avec votre propre mot de passe, et ce n’est qu’à ce moment que vous devenez membre. Nous conservons votre adresse e-mail, votre nom d’utilisateur, votre prénom et votre nom, une photo de profil et une bannière facultatives, votre langue, vos préférences de notification, vos paramètres de confidentialité et les murs que vous suivez. Le mot de passe n’est stocké que sous forme chiffrée (hachée). Si une salle vous donne un rôle (par ex. ouvreur ou administrateur), nous enregistrons cette adhésion et ce rôle pour la salle concernée. Votre adresse e-mail n’est pas affichée aux autres grimpeurs ni au personnel des salles ; les administrateurs de la plateforme peuvent la voir et, si vous signalez un contenu, les modérateurs de la salle et l’adresse de contact de la salle reçoivent votre nom et votre adresse e-mail (voir Signalements de contenu). Base légale : exécution du contrat d’utilisation du service (article 6, paragraphe 1, point b), du RGPD). Durée de conservation : tant que le compte existe ; vous pouvez modifier ces données ou supprimer votre compte à tout moment dans les paramètres."
             },
             "privacySettings": {
                 "title": "Vos paramètres de confidentialité",
@@ -1370,6 +1371,10 @@
             "password_reset": "Mot de passe réinitialisé",
             "email_change_request": "Changement d'e-mail demandé",
             "email_change": "E-mail modifié",
+            "register": "Inscription",
+            "register_existing": "Inscription avec une adresse existante",
+            "verification_request": "E-mail de vérification demandé",
+            "email_verified": "E-mail vérifié",
             "login_second_factor": "Mot de passe confirmé, second facteur en attente",
             "account_locked": "Compte bloqué après des tentatives échouées",
             "mfa_enabled": "Application d’authentification ajoutée",
@@ -2390,6 +2395,8 @@
             "addMembership": "Ajouter",
             "sendPasswordReset": "Envoyer un e-mail de réinitialisation du mot de passe",
             "passwordResetSent": "E-mail de réinitialisation envoyé.",
+            "resendVerification": "Renvoyer l'e-mail de vérification",
+            "verificationSent": "E-mail de vérification envoyé.",
             "deleteConfirm": "Supprimer {name} et toutes ses données ? Cette action est irréversible.",
             "lastAdmin": "Cette personne est la seule admin d'une salle. Nommez d'abord quelqu'un d'autre admin.",
             "suspend": "Suspendre",
@@ -2496,7 +2503,7 @@
                 "active": "Actifs sur 7 jours",
                 "staffNoMfa": "Équipe sans 2FA",
                 "ofStaff": "sur {n} membres d’équipe",
-                "olderThanWeek": "{n} depuis plus de 7 jours",
+                "linkExpired": "{n} avec lien expiré",
                 "locked": "{n} bloqués",
                 "online": "{n} en ligne"
             },
@@ -2525,7 +2532,10 @@
                 "mfa": "Sans 2FA d’abord",
                 "-mfa": "Avec 2FA d’abord"
             },
-            "onlineNow": "En ligne"
+            "onlineNow": "En ligne",
+            "discard": "Annuler les modifications",
+            "emailVisible": "Afficher l'e-mail à l'équipe de la salle",
+            "browserLanguage": "Langue du navigateur"
         },
         "features": {
             "title": "Fonctionnalités",
@@ -2656,7 +2666,7 @@
             "subject": "Confirmez votre adresse e-mail",
             "body": "Merci de votre inscription sur {app}. Confirmez votre adresse e-mail pour finaliser votre compte.",
             "action": "Confirmer l’adresse e-mail",
-            "note": "Si vous ne vous êtes pas inscrit, vous pouvez ignorer cet e-mail."
+            "note": "Le lien est valable 48 heures. Si vous ne vous êtes pas inscrit, vous pouvez ignorer cet e-mail."
         },
         "passwordReset": {
             "subject": "Réinitialisez votre mot de passe",

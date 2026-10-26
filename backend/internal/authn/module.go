@@ -9,11 +9,13 @@ import (
 
 	"github.com/go-webauthn/webauthn/webauthn"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"gripello/internal/platform"
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/captcha"
+	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/lockout"
 	"gripello/internal/platform/mail"
@@ -85,12 +87,40 @@ func Register(app *platform.App) {
 	app.Cron.Add("sessionCleanup", "23 4 * * *", m.pruneSessions)
 	app.Cron.Add("capNoncePrune", "41 * * * *", func(ctx context.Context) error { return captcha.PruneNonces(ctx, m.db) })
 	app.Cron.Add("mfaChallengePrune", "*/10 * * * *", m.pruneChallenges)
+	app.Cron.Add("unverifiedAccountCleanup", "53 3 * * *", m.pruneUnverifiedAccounts)
 }
 
 // A session not refreshed within the token lifetime can't hold a valid token anymore.
 func (m *module) pruneSessions(ctx context.Context) error {
 	_, err := m.db.Exec(ctx, `DELETE FROM sessions WHERE last_seen < now() - $1::interval`, m.tokens.Duration.String())
 	return err
+}
+
+// Sign-ups never confirmed within unverifiedAccountTTL are deleted; anything ever verified, signed in or holding data stays.
+func (m *module) pruneUnverifiedAccounts(ctx context.Context) error {
+	return pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `DELETE FROM users WHERE id IN (SELECT id FROM users u
+			WHERE NOT verified AND verified_at IS NULL AND NOT platform_admin AND created < now() - $1::interval
+			AND NOT EXISTS (SELECT 1 FROM sessions WHERE "user" = u.id) AND NOT EXISTS (SELECT 1 FROM user_identities WHERE "user" = u.id)
+			AND NOT EXISTS (SELECT 1 FROM memberships WHERE "user" = u.id) AND NOT EXISTS (SELECT 1 FROM ticks WHERE "user" = u.id)
+			AND NOT EXISTS (SELECT 1 FROM ratings WHERE "user" = u.id) AND NOT EXISTS (SELECT 1 FROM beta_videos WHERE "user" = u.id)
+			AND NOT EXISTS (SELECT 1 FROM competition_entries WHERE "user" = u.id)
+			AND NOT EXISTS (SELECT 1 FROM follows WHERE follower = u.id OR followee = u.id)
+			ORDER BY created LIMIT 500) RETURNING id`, unverifiedAccountTTL.String())
+		if err != nil {
+			return err
+		}
+		deleted, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		if err != nil {
+			return err
+		}
+		for _, id := range deleted {
+			if err := events.Publish(ctx, tx, "user:"+id, "user.deleted", map[string]string{"id": id}, events.Audience{Users: []string{id}}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (m *module) pruneChallenges(ctx context.Context) error {

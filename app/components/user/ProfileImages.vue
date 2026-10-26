@@ -62,10 +62,21 @@
             </span>
         </button>
         <p
-            class="absolute start-32 end-0 bottom-2 truncate text-lg font-bold text-highlighted sm:start-36"
+            class="absolute start-32 bottom-2 truncate text-lg font-bold text-highlighted sm:start-36"
+            :class="removableAvatar && avatar ? 'end-12' : 'end-0'"
         >
             {{ name }}
         </p>
+        <UButton
+            v-if="removableAvatar && avatar"
+            icon="i-lucide-trash-2"
+            color="neutral"
+            variant="ghost"
+            class="icon-btn absolute end-0 bottom-0"
+            :aria-label="$t('account.removeAvatar')"
+            data-testid="profile-avatar-remove"
+            @click="emit('removeAvatar')"
+        />
         <ImageCropDialog
             :file="pending?.file ?? null"
             :title="
@@ -91,11 +102,13 @@ defineProps<{
     avatar: string | null
     name: string
     userId?: string
+    removableAvatar?: boolean
 }>()
 const emit = defineEmits<{
     banner: [file: File]
     avatar: [file: File]
     removeBanner: []
+    removeAvatar: []
 }>()
 
 const bannerInput = useTemplateRef<HTMLInputElement>('bannerInput')

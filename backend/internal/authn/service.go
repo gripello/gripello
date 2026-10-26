@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
 
+	"gripello/internal/platform/auth"
 	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
@@ -28,7 +29,8 @@ const (
 
 	sessionUserAgentMax = 300
 
-	verificationTokenTTL  = 7 * 24 * time.Hour
+	verificationTokenTTL  = 48 * time.Hour
+	unverifiedAccountTTL  = 7 * 24 * time.Hour
 	passwordResetTokenTTL = 30 * time.Minute
 	emailChangeTokenTTL   = 30 * time.Minute
 )
@@ -69,9 +71,19 @@ func (m *module) recordLoginFailure(ctx context.Context, r *http.Request, key st
 }
 
 func (m *module) audit(ctx context.Context, event AuthEvent) {
-	if err := pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error { return publishAuthEvent(ctx, tx, event) }); err != nil {
+	m.auditAs(ctx, "", event)
+}
+
+func (m *module) auditAs(ctx context.Context, actor string, event AuthEvent) {
+	if err := pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error { return publishAuthEventAs(ctx, tx, actor, event) }); err != nil {
 		slog.Error("authn: audit event failed", "action", event.Action, "error", err)
 	}
+}
+
+// auditRequestFor records a mail someone (a guest or the signed-in caller) asked for on another account.
+func (m *module) auditRequestFor(r *http.Request, action string, owner account) {
+	ctx := context.WithoutCancel(r.Context())
+	go m.auditAs(ctx, auth.UserID(ctx), AuthEvent{Action: action, User: owner.ID, Label: owner.label(), IP: httpx.ClientIP(r)})
 }
 
 func maskedIdentity(identity string) string {

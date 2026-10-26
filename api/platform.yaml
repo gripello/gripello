@@ -808,7 +808,7 @@ components:
         active_7d: { type: integer }
         online: { type: integer, description: accounts with a session seen in the last 2 minutes (open realtime streams refresh it every 30 s) }
         unverified: { type: integer }
-        unverified_old: { type: integer, description: unverified and created more than 7 days ago }
+        unverified_old: { type: integer, description: 'unverified and created more than 48 hours ago, so the verification link has expired' }
         suspended: { type: integer }
         locked: { type: integer }
         platform_admins: { type: integer }
@@ -837,6 +837,7 @@ components:
         name: { type: string }
         avatar: { type: string }
         verified: { type: boolean }
+        verified_at: { type: ['null', string], format: date-time }
         platform_admin: { type: boolean }
         suspended_until: { type: ['null', string], format: date-time }
         suspension_reason: { type: string }

@@ -22,6 +22,11 @@ describe('actionColor', () => {
         expect(actionColor('create')).toBe('success')
     })
 
+    it('marks a sign-up with an existing address as a warning', () => {
+        expect(actionColor('register')).toBe('success')
+        expect(actionColor('register_existing')).toBe('warning')
+    })
+
     it('degrades to a neutral colour for an unknown action', () => {
         expect(actionColor('something-else')).toBe('medium-emphasis')
     })
@@ -38,6 +43,13 @@ describe('actionIcon', () => {
         for (const action of AUDIT_ACTIONS) {
             expect(actionIcon(action)).toMatch(/^i-lucide-/)
         }
+    })
+
+    it('separates sign-ups from verification steps', () => {
+        expect(actionIcon('register')).toBe('i-lucide-user-plus')
+        expect(actionIcon('register_existing')).toBe('i-lucide-user-plus')
+        expect(actionIcon('email_verified')).toBe('i-lucide-badge-check')
+        expect(actionIcon('verification_request')).toBe('i-lucide-mail-check')
     })
 })
 
@@ -91,6 +103,10 @@ describe('AUDIT_ACTIONS', () => {
                 'password_reset',
                 'email_change_request',
                 'email_change',
+                'register',
+                'register_existing',
+                'verification_request',
+                'email_verified',
             ].sort(),
         )
     })

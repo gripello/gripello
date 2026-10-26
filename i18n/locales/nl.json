@@ -206,7 +206,8 @@
         "exportAgain": "Nieuwe export aanvragen",
         "exportTooLarge": "Je gegevensexport is te groot",
         "exportTooLargeHint": "Hij is groter dan 2 GB. Neem contact met ons op om je gegevens op een andere manier te ontvangen.",
-        "exportNone": "Geen gegevensexport klaar"
+        "exportNone": "Geen gegevensexport klaar",
+        "removeAvatar": "Profielfoto verwijderen"
     },
     "routes": {
         "generate_name": "Naam genereren",
@@ -604,7 +605,7 @@
             },
             "accounts": {
                 "title": "Gebruikersaccounts",
-                "body": "Als de exploitant registratie toestaat, kun je een account aanmaken met e-mailadres en wachtwoord; je ontvangt een verificatiemail. Beheerders van een hal kunnen je ook als medewerker toevoegen door je e-mailadres en je voor- en achternaam in te voeren: heb je nog geen account, dan wordt daarmee direct een nog niet geverifieerd account met deze gegevens en het lidmaatschap aangemaakt en ontvang je een e-mail om je wachtwoord in te stellen; een bestaand account krijgt het lidmaatschap meteen. Wij slaan je e-mailadres, gebruikersnaam, voor- en achternaam, wachtwoord (alleen als veilige hash), een optionele profielfoto en profielbanner, je taal, je meldingsvoorkeuren, je privacy-instellingen en de muren die je volgt op. Als je medewerker van een hal bent, komt daar je lidmaatschap met rol per hal bij. Je e-mailadres wordt niet getoond aan andere klimmers of aan medewerkers van de hal; de beheerders van het platform kunnen het zien, en als je inhoud meldt, ontvangen de moderatoren van de hal en het contactadres van de hal je naam en e-mailadres (zie Meldingen van inhoud). De grondslag is de uitvoering van de overeenkomst voor het gebruik van de dienst (art. 6, lid 1, onder b, AVG). De gegevens worden bewaard zolang je account bestaat."
+                "body": "Als de exploitant registratie toestaat, kun je een account aanmaken met e-mailadres en wachtwoord; je ontvangt een verificatiemail. Bevestig je het adres niet binnen 7 dagen, dan wordt het account verwijderd. Beheerders van een hal kunnen je ook als medewerker uitnodigen door je e-mailadres en eventueel je voor- en achternaam in te voeren. Je ontvangt dan een uitnodigingslink die 7 dagen geldig is; we bewaren de uitnodiging tot je die accepteert, ze verloopt of de hal ze intrekt. Zonder jou wordt niets aangemaakt: om te accepteren meld je je aan met dat e-mailadres of maak je een account aan met je eigen wachtwoord, en pas dan word je lid. Wij slaan je e-mailadres, gebruikersnaam, voor- en achternaam, wachtwoord (alleen als veilige hash), een optionele profielfoto en profielbanner, je taal, je meldingsvoorkeuren, je privacy-instellingen en de muren die je volgt op. Als je medewerker van een hal bent, komt daar je lidmaatschap met rol per hal bij. Je e-mailadres wordt niet getoond aan andere klimmers of aan medewerkers van de hal; de beheerders van het platform kunnen het zien, en als je inhoud meldt, ontvangen de moderatoren van de hal en het contactadres van de hal je naam en e-mailadres (zie Meldingen van inhoud). De grondslag is de uitvoering van de overeenkomst voor het gebruik van de dienst (art. 6, lid 1, onder b, AVG). De gegevens worden bewaard zolang je account bestaat."
             },
             "privacySettings": {
                 "title": "Jouw privacy-instellingen",
@@ -1370,6 +1371,10 @@
             "password_reset": "Wachtwoord hersteld",
             "email_change_request": "E-mailwijziging aangevraagd",
             "email_change": "E-mailadres gewijzigd",
+            "register": "Geregistreerd",
+            "register_existing": "Registratie met bestaand adres",
+            "verification_request": "Verificatie-e-mail aangevraagd",
+            "email_verified": "E-mailadres bevestigd",
             "login_second_factor": "Wachtwoord bevestigd, tweede stap open",
             "account_locked": "Account geblokkeerd na mislukte pogingen",
             "mfa_enabled": "Authenticator-app toegevoegd",
@@ -2390,6 +2395,8 @@
             "addMembership": "Toevoegen",
             "sendPasswordReset": "E-mail voor wachtwoordherstel sturen",
             "passwordResetSent": "E-mail voor wachtwoordherstel verstuurd.",
+            "resendVerification": "Verificatie-e-mail opnieuw sturen",
+            "verificationSent": "Verificatie-e-mail verstuurd.",
             "deleteConfirm": "{name} met alle gegevens verwijderen? Dit kan niet ongedaan worden gemaakt.",
             "lastAdmin": "Deze persoon is de enige beheerder van een hal. Maak eerst iemand anders beheerder.",
             "suspend": "Schorsen",
@@ -2496,7 +2503,7 @@
                 "active": "Actief afgelopen 7 dagen",
                 "staffNoMfa": "Team zonder 2FA",
                 "ofStaff": "van {n} in het team",
-                "olderThanWeek": "{n} ouder dan 7 dagen",
+                "linkExpired": "{n} met verlopen link",
                 "locked": "{n} geblokkeerd",
                 "online": "{n} nu online"
             },
@@ -2525,7 +2532,10 @@
                 "mfa": "Zonder 2FA eerst",
                 "-mfa": "Met 2FA eerst"
             },
-            "onlineNow": "Nu online"
+            "onlineNow": "Nu online",
+            "discard": "Verwerpen",
+            "emailVisible": "E-mail tonen aan hallenteam",
+            "browserLanguage": "Browsertaal"
         },
         "features": {
             "title": "Feature flags",
@@ -2656,7 +2666,7 @@
             "subject": "Bevestig je e-mailadres",
             "body": "Bedankt voor je aanmelding bij {app}. Bevestig je e-mailadres om je account af te ronden.",
             "action": "E-mailadres bevestigen",
-            "note": "Heb je je niet aangemeld? Dan kun je deze e-mail negeren."
+            "note": "De link is 48 uur geldig. Heb je je niet aangemeld? Dan kun je deze e-mail negeren."
         },
         "passwordReset": {
             "subject": "Wachtwoord opnieuw instellen",

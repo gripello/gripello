@@ -8,4 +8,8 @@ export const AUDIT_ACTIONS = [
     'password_reset',
     'email_change_request',
     'email_change',
+    'register',
+    'register_existing',
+    'verification_request',
+    'email_verified',
 ] as const

@@ -589,6 +589,8 @@ export interface components {
             email: string;
             email_visibility: boolean;
             verified: boolean;
+            /** Format: date-time */
+            verified_at?: null | string;
             username: string;
             firstname: string;
             name: string;
