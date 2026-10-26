@@ -59,6 +59,17 @@
             >
                 {{ t('platform.users.setPassword') }}
             </UButton>
+            <UButton
+                color="neutral"
+                variant="soft"
+                icon="i-lucide-mail"
+                :loading="sendingReset"
+                :disabled="!user.email"
+                data-testid="platform-user-password-reset"
+                @click="sendPasswordReset"
+            >
+                {{ t('platform.users.sendPasswordReset') }}
+            </UButton>
         </div>
 
         <LayoutDialogShell
@@ -107,7 +118,7 @@
 
 <script setup lang="ts">
 import { displayName } from '~/utils/avatar'
-import { useAuthState } from '~/api/auth'
+import { requestPasswordReset, useAuthState } from '~/api/auth'
 import {
     clearUserLockout,
     grantPlatformAdmin,
@@ -199,6 +210,22 @@ async function perform(next: SecurityAction) {
         close()
         emit('changed')
     } else if (next === 'unlock') close()
+}
+
+const { pending: sendingReset, run: runReset } = useAsyncAction()
+const { capHeaders } = useCapToken()
+
+async function sendPasswordReset() {
+    const email = props.user.email
+    if (sendingReset.value || !email) return
+    await runReset(
+        async () =>
+            requestPasswordReset(email, await capHeaders('password-reset')),
+        {
+            success: t('platform.users.passwordResetSent'),
+            error: t('notifications.error.resetPassword'),
+        },
+    )
 }
 
 function confirmAction() {

@@ -164,7 +164,6 @@
                 :roles="roles"
                 class="sticky top-20 w-96 shrink-0"
                 @changed="reloadLoaded"
-                @edit="openEdit"
                 @suspend="openSuspend"
                 @delete="openDelete"
             />
@@ -231,18 +230,11 @@
                     :roles="roles"
                     class="ring-0"
                     @changed="reloadLoaded"
-                    @edit="openEdit"
                     @suspend="openSuspend"
                     @delete="openDelete"
                 />
             </LayoutDialogShell>
         </template>
-
-        <PlatformUserDialog
-            v-model="editOpen"
-            :user="editingUser"
-            @changed="reloadLoaded"
-        />
 
         <PlatformSuspendDialog
             v-model="suspendOpen"
@@ -582,17 +574,6 @@ watch(sheetOpen, (open) => {
     if (!open && !lgAndUp.value) selectedId.value = null
 })
 
-const editingId = ref<string | null>(null)
-const editingUser = computed<PlatformUser | null>((previous) =>
-    userKeptThroughReload(users.value, editingId.value, previous),
-)
-const editOpen = ref(false)
-
-function openEdit(id: string) {
-    editingId.value = id
-    editOpen.value = true
-}
-
 const suspendingId = ref<string | null>(null)
 const suspendingUser = computed(
     () => users.value.find((user) => user.id === suspendingId.value) ?? null,
@@ -604,7 +585,7 @@ function rowMenu(user: PlatformUser) {
         {
             label: t('users.edit'),
             icon: 'i-lucide-pencil',
-            onSelect: () => openEdit(user.id),
+            onSelect: () => select(user.id),
         },
         {
             label: t('platform.users.suspend'),
@@ -654,7 +635,6 @@ async function deleteUser() {
             users.value = users.value.filter((user) => user.id !== id)
             if (selectedId.value === id) selectedId.value = null
             deleteOpen.value = false
-            editOpen.value = false
             sheetOpen.value = false
             void refreshSummary()
         },

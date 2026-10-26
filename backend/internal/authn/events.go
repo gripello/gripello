@@ -43,7 +43,11 @@ func authEventKind(action string) string {
 }
 
 func publishAuthEvent(ctx context.Context, tx pgx.Tx, e AuthEvent) error {
-	return events.Publish(ctx, tx, TopicAudit, authEventKind(e.Action), e, events.Audience{})
+	return publishAuthEventAs(ctx, tx, "", e)
+}
+
+func publishAuthEventAs(ctx context.Context, tx pgx.Tx, actor string, e AuthEvent) error {
+	return events.PublishAs(ctx, tx, actor, TopicAudit, authEventKind(e.Action), e, events.Audience{})
 }
 
 func publishSessionRevoked(ctx context.Context, tx pgx.Tx, userID string, sessionIDs []string) error {

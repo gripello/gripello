@@ -63,7 +63,7 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {string} */
-        AuditAction: "create" | "update" | "delete" | "login" | "login_failed" | "password_reset_request" | "password_reset" | "email_change_request" | "email_change";
+        AuditAction: "create" | "update" | "delete" | "login" | "login_failed" | "password_reset_request" | "password_reset" | "email_change_request" | "email_change" | "register" | "register_existing" | "verification_request" | "email_verified";
         AuditEntry: {
             id: string;
             /** Format: date-time */

@@ -64,9 +64,9 @@ func emailTaken(ctx context.Context, q db.Querier, email, exceptID string) (bool
 	return taken, err
 }
 
-func usernameTaken(ctx context.Context, q db.Querier, username string) (bool, error) {
+func usernameTaken(ctx context.Context, q db.Querier, username, exceptID string) (bool, error) {
 	var taken bool
-	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE lower(username) = lower($1))`, username).Scan(&taken)
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE lower(username) = lower($1) AND id <> $2)`, username, exceptID).Scan(&taken)
 	return taken, err
 }
 

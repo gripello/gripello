@@ -48,15 +48,14 @@ test('platform admin edits a user, manages memberships and deletes the account',
                 )
                 .toBe(admin)
         }
-        await inspector.getByTestId('platform-user-edit').click()
-        const dialog = page.getByTestId('platform-user-dialog')
-        await page
+        await inspector.getByRole('tab', { name: 'Overview' }).click()
+        await inspector
             .getByTestId('platform-user-username')
             .fill(`e2e_renamed_${stamp}`)
-        await page.getByTestId('platform-user-firstname').fill('Renamed')
-        await page.getByTestId('platform-user-verified').click()
-        await page.getByTestId('platform-user-save').click()
-        await expect(dialog).toBeHidden()
+        await inspector.getByTestId('platform-user-firstname').fill('Renamed')
+        await inspector.getByTestId('platform-user-verified').click()
+        await inspector.getByTestId('platform-user-save').click()
+        await expect(inspector.getByTestId('platform-user-save')).toBeHidden()
         await expect
             .poll(async () => {
                 const saved = await getPlatformUser(api, user.id)
@@ -65,7 +64,6 @@ test('platform admin edits a user, manages memberships and deletes the account',
             .toEqual([`e2e_renamed_${stamp}`, 'Renamed', true])
 
         await expect(inspector.getByTestId('platform-user-alert')).toBeHidden()
-        await inspector.getByRole('tab', { name: 'Overview' }).click()
         await page.getByTestId('platform-user-add-gym').click()
         await page
             .getByRole('option')

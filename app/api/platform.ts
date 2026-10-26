@@ -30,7 +30,16 @@ export interface PlatformUserSummary {
 }
 
 export type PlatformUserInput = Partial<
-    Pick<UserRecord, 'username' | 'firstname' | 'name' | 'email' | 'verified'>
+    Pick<
+        UserRecord,
+        | 'username'
+        | 'firstname'
+        | 'name'
+        | 'email'
+        | 'verified'
+        | 'email_visibility'
+        | 'language'
+    >
 >
 
 export type PlatformUserFiles = Partial<

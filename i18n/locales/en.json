@@ -206,7 +206,8 @@
         "exportAgain": "Request a new export",
         "exportTooLarge": "Your data export is too large",
         "exportTooLargeHint": "It exceeds 2 GB. Contact us to receive your data another way.",
-        "exportNone": "No data export ready"
+        "exportNone": "No data export ready",
+        "removeAvatar": "Remove avatar"
     },
     "routes": {
         "generate_name": "Generate name",
@@ -604,7 +605,7 @@
             },
             "accounts": {
                 "title": "Your account",
-                "body": "If the operator allows sign-up, you can register with an e-mail address and password; we send a verification e-mail to confirm the address. A gym admin can also add you as a staff member by entering your e-mail address and your first and last name: if you have no account yet, this immediately creates an unverified account with these details together with the membership, and we send you an e-mail to set your password; an existing account gets the membership straight away. We store your e-mail address, username, first and last name, password (only as a secure hash), language, notification preferences, privacy settings, the walls you follow and, if you add them, an avatar and a profile banner. If you work for a gym, your staff rights come from your membership in that gym and its role. We use this data to provide your account and the features you use (Art. 6(1)(b) GDPR). Your e-mail address is not shown to other climbers or to gym staff; the platform administrators can see it, and if you report content, the gym's moderators and the gym's contact address receive your name and e-mail address (see Content reports). Your account data is kept until you delete your account."
+                "body": "If the operator allows sign-up, you can register with an e-mail address and password; we send a verification e-mail to confirm the address. If you don't confirm the address within 7 days, the account is deleted. A gym admin can also invite you as a staff member by entering your e-mail address and, optionally, your first and last name. We then send you an invitation link that is valid for 7 days and keep the invitation until you accept it, it expires or the gym withdraws it. Nothing is created without you: to accept, you sign in with that e-mail address or create an account with your own password, and only then do you become a member. We store your e-mail address, username, first and last name, password (only as a secure hash), language, notification preferences, privacy settings, the walls you follow and, if you add them, an avatar and a profile banner. If you work for a gym, your staff rights come from your membership in that gym and its role. We use this data to provide your account and the features you use (Art. 6(1)(b) GDPR). Your e-mail address is not shown to other climbers or to gym staff; the platform administrators can see it, and if you report content, the gym's moderators and the gym's contact address receive your name and e-mail address (see Content reports). Your account data is kept until you delete your account."
             },
             "privacySettings": {
                 "title": "Your privacy settings",
@@ -1370,6 +1371,10 @@
             "password_reset": "Password reset",
             "email_change_request": "Email change requested",
             "email_change": "Email changed",
+            "register": "Signed up",
+            "register_existing": "Sign-up with existing address",
+            "verification_request": "Verification email requested",
+            "email_verified": "Email verified",
             "login_second_factor": "Password confirmed, second factor pending",
             "account_locked": "Account locked after failed attempts",
             "mfa_enabled": "Authenticator app added",
@@ -2390,6 +2395,8 @@
             "addMembership": "Add",
             "sendPasswordReset": "Send password reset email",
             "passwordResetSent": "Password reset email sent.",
+            "resendVerification": "Resend verification email",
+            "verificationSent": "Verification email sent.",
             "deleteConfirm": "Delete {name} with all their data? This cannot be undone.",
             "lastAdmin": "This person is the only admin of a gym. Make someone else admin first.",
             "suspend": "Suspend",
@@ -2496,7 +2503,7 @@
                 "active": "Active last 7 days",
                 "staffNoMfa": "Staff without 2FA",
                 "ofStaff": "of {n} staff",
-                "olderThanWeek": "{n} older than 7 days",
+                "linkExpired": "{n} with expired link",
                 "locked": "{n} locked out",
                 "online": "{n} online now"
             },
@@ -2525,7 +2532,10 @@
                 "mfa": "Without 2FA first",
                 "-mfa": "With 2FA first"
             },
-            "onlineNow": "Online now"
+            "onlineNow": "Online now",
+            "discard": "Discard",
+            "emailVisible": "Show e-mail to gym staff",
+            "browserLanguage": "Browser language"
         },
         "features": {
             "title": "Feature flags",
@@ -2656,7 +2666,7 @@
             "subject": "Verify your email address",
             "body": "Thanks for signing up for {app}. Confirm your email address to finish setting up your account.",
             "action": "Verify email address",
-            "note": "If you didn't sign up, you can ignore this email."
+            "note": "The link is valid for 48 hours. If you didn't sign up, you can ignore this email."
         },
         "passwordReset": {
             "subject": "Reset your password",

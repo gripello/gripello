@@ -561,6 +561,7 @@ components:
         email: { type: string }
         email_visibility: { type: boolean }
         verified: { type: boolean }
+        verified_at: { type: ['null', string], format: date-time }
         username: { type: string }
         firstname: { type: string }
         name: { type: string }

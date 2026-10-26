@@ -3,6 +3,7 @@ package authn
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -21,6 +22,7 @@ import (
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/captcha"
 	"gripello/internal/platform/events"
+	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 	"gripello/internal/platform/lockout"
 	"gripello/internal/platform/mail"
@@ -743,6 +745,13 @@ func TestCaptchaGuardsLogin(t *testing.T) {
 var tokenInLink = regexp.MustCompile(`/auth/confirm-[a-z-]+/([A-Za-z0-9_.\-]+)`)
 
 // mails waits for the asynchronous auth mails until at least want were sent.
+func (f *fixture) waitAuthEvent(action, user string) {
+	f.t.Helper()
+	testapp.WaitFor(f.t, func() bool {
+		return f.count(`SELECT count(*) FROM events WHERE topic = 'audit' AND kind = $1 AND payload->>'user' = $2`, "auth."+action, user) > 0
+	})
+}
+
 func (f *fixture) mails(want int) []mail.Message {
 	f.t.Helper()
 	testapp.WaitFor(f.t, func() bool { return len(testapp.Mails(f.app)) >= want })
@@ -830,9 +839,15 @@ func TestVerificationFlow(t *testing.T) {
 	if n := f.count(`SELECT count(*) FROM events WHERE topic = $1 AND kind = 'user.updated' AND payload->'changed' = '["verified"]'`, "user:"+id); n != 1 {
 		t.Errorf("%d verified events, cached principals would keep verified = false", n)
 	}
+	f.waitAuthEvent("verification_request", id)
+	f.waitAuthEvent("email_verified", id)
+	f.send(http.MethodPost, "/auth/verification/request", "", map[string]string{"email": "nobody@example.com"})
 	f.send(http.MethodPost, "/auth/verification/request", "", map[string]string{"email": "verify@example.com"})
 	if len(testapp.Mails(f.app)) != 1 {
 		t.Error("verified account got another verification mail")
+	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = 'audit' AND kind = 'auth.verification_request'`); n != 1 {
+		t.Errorf("%d verification_request events, want only the unverified account's", n)
 	}
 	t.Setenv("CAP_SECRET", "cap-secret")
 	if status, _ := f.send(http.MethodPost, "/auth/verification/request", "", map[string]string{"email": "verify@example.com"}); status != http.StatusBadRequest {
@@ -869,6 +884,10 @@ func TestEmailChangeFlow(t *testing.T) {
 	}
 	if mails := f.mails(1); len(mails) != 1 || mails[0].To[0] != "taken@example.com" || !strings.HasPrefix(mails[0].Subject, "You already have an account") {
 		t.Errorf("taken address owner was not told: %v", mails)
+	}
+	f.exec(`UPDATE users SET verified = false WHERE email = 'taken@example.com'`)
+	if status, _ := f.send(http.MethodPost, "/auth/email-change/request", token, map[string]string{"newEmail": "taken@example.com"}); status != http.StatusNoContent {
+		t.Errorf("unverified taken email = %d", status)
 	}
 	if status, _ := f.send(http.MethodPost, "/auth/email-change/request", "", map[string]string{"newEmail": "after@example.com"}); status != http.StatusUnauthorized {
 		t.Errorf("guest request = %d", status)
@@ -931,6 +950,19 @@ func TestRegistration(t *testing.T) {
 	if mails := f.mails(2); len(mails) != 2 || mails[1].To[0] != "existing@example.com" || !strings.HasPrefix(mails[1].Subject, "You already have an account") {
 		t.Errorf("owner of the taken address was not told: %v", mails)
 	}
+	again := map[string]string{"email": "new@example.com", "password": testPassword, "passwordConfirm": testPassword}
+	if status, _ := f.send(http.MethodPost, "/auth/register", "", again); status != http.StatusAccepted {
+		t.Errorf("signing up again = %d", status)
+	}
+	if mails := f.mails(3); len(mails) != 3 || mails[2].To[0] != "new@example.com" || !strings.Contains(mails[2].Text, "/auth/confirm-verification/") {
+		t.Errorf("signing up again with an unverified address sent no verification link: %v", mails)
+	}
+	var newID string
+	if err := f.app.DB.QueryRow(context.Background(), `SELECT id FROM users WHERE email = 'new@example.com'`).Scan(&newID); err != nil {
+		t.Fatal(err)
+	}
+	f.waitAuthEvent("register", newID)
+	f.waitAuthEvent("register_existing", newID)
 	if status, _ := f.login("new@example.com", testPassword); status != http.StatusForbidden {
 		t.Errorf("unverified login = %d", status)
 	}
@@ -947,6 +979,112 @@ func TestRegistration(t *testing.T) {
 	}
 	if status, _ := f.send(http.MethodPost, "/auth/register", "", body, captcha.Header, capToken("cap-secret", "register", "r1")); status != http.StatusAccepted {
 		t.Errorf("registration with captcha = %d", status)
+	}
+}
+
+func TestSignupTakesOverAnUnverifiedAccount(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	f.exec(`INSERT INTO settings (id, allow_registration) VALUES ('platformsetting', true)`)
+	f.user("verified@example.com")
+	f.user("other@example.com")
+	f.exec(`UPDATE users SET username = 'someone' WHERE email = 'other@example.com'`)
+
+	squatter := map[string]string{"email": "owner@example.com", "username": "squatter", "firstname": "Sam", "password": "squatter-pass-1", "passwordConfirm": "squatter-pass-1"}
+	if status, _ := f.send(http.MethodPost, "/auth/register", "", squatter); status != http.StatusAccepted {
+		t.Fatalf("first sign-up = %d", status)
+	}
+	squatterToken, _ := f.lastMailToken(1)
+
+	taken := map[string]string{"email": "owner@example.com", "username": "someone", "password": "owner-pass-12", "passwordConfirm": "owner-pass-12"}
+	if status, res := f.send(http.MethodPost, "/auth/register", "", taken); status != http.StatusBadRequest || !strings.Contains(mustJSON(res), `"username":{"code":"validation_not_unique"`) {
+		t.Errorf("another account's username = %d %v", status, res)
+	}
+	owner := map[string]string{"email": "Owner@Example.com", "username": "Squatter", "firstname": "Olga", "password": "owner-pass-12", "passwordConfirm": "owner-pass-12", "language": "de"}
+	if status, res := f.send(http.MethodPost, "/auth/register", "", owner); status != http.StatusAccepted {
+		t.Fatalf("second sign-up = %d %v", status, res)
+	}
+	ownerToken, to := f.lastMailToken(2)
+	if to != "owner@example.com" {
+		t.Errorf("verification sent to %s", to)
+	}
+	if n := f.count(`SELECT count(*) FROM users WHERE email = 'owner@example.com' AND username = 'Squatter' AND firstname = 'Olga' AND language = 'de' AND NOT verified`); n != 1 {
+		t.Error("the second sign-up did not replace the unverified account")
+	}
+
+	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": squatterToken}); status != http.StatusBadRequest {
+		t.Errorf("link of the first sign-up = %d, want it dead", status)
+	}
+	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": ownerToken}); status != http.StatusNoContent {
+		t.Fatalf("link of the second sign-up = %d", status)
+	}
+	if status, _ := f.login("owner@example.com", "squatter-pass-1"); status == http.StatusOK {
+		t.Error("the first sign-up's password still signs in")
+	}
+	if status, _ := f.login("owner@example.com", "owner-pass-12"); status != http.StatusOK {
+		t.Errorf("owner login = %d", status)
+	}
+
+	again := map[string]string{"email": "verified@example.com", "password": "another-pass-1", "passwordConfirm": "another-pass-1"}
+	if status, _ := f.send(http.MethodPost, "/auth/register", "", again); status != http.StatusAccepted {
+		t.Errorf("verified address = %d", status)
+	}
+	if mails := f.mails(3); !strings.HasPrefix(mails[2].Subject, "You already have an account") {
+		t.Errorf("verified owner got %q", mails[2].Subject)
+	}
+	if status, _ := f.login("verified@example.com", testPassword); status != http.StatusOK {
+		t.Errorf("a sign-up changed a verified account's password: login = %d", status)
+	}
+}
+
+func TestUnconfirmedSignupsExpire(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	stale, fresh, unverifiedLater := f.user("stale@example.com"), f.user("fresh@example.com"), f.user("later@example.com")
+	if n := f.count(`SELECT count(*) FROM users WHERE id = $1 AND verified_at IS NOT NULL`, unverifiedLater); n != 1 {
+		t.Fatal("a verified account got no verified_at")
+	}
+	f.exec(`UPDATE users SET verified = false, verified_at = NULL, created = now() - interval '8 days' WHERE id = $1`, stale)
+	f.exec(`UPDATE users SET verified = false, verified_at = NULL, created = now() - interval '6 days' WHERE id = $1`, fresh)
+	f.exec(`UPDATE users SET verified = false, created = now() - interval '30 days' WHERE id = $1`, unverifiedLater)
+	admin, follower := f.user("cli-admin@example.com"), f.user("follower@example.com")
+	f.exec(`UPDATE users SET verified = false, verified_at = NULL, platform_admin = true, created = now() - interval '30 days' WHERE id = $1`, admin)
+	f.exec(`UPDATE users SET verified = false, verified_at = NULL, created = now() - interval '30 days' WHERE id = $1`, follower)
+	f.exec(`INSERT INTO follows (id, follower, followee, status) VALUES ($1, $2, $3, 'accepted')`, ids.New(), follower, fresh)
+
+	m := &module{db: f.app.DB, tokens: f.app.Tokens}
+	if err := m.pruneUnverifiedAccounts(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if n := f.count(`SELECT count(*) FROM users WHERE id = ANY($1)`, []string{stale, fresh, unverifiedLater, admin, follower}); n != 4 {
+		t.Errorf("%d of 5 accounts left, want only the 8-day-old empty sign-up gone (platform admins and accounts with data stay)", n)
+	}
+	if n := f.count(`SELECT count(*) FROM users WHERE id = $1`, stale); n != 0 {
+		t.Error("the stale sign-up survived")
+	}
+	if n := f.count(`SELECT count(*) FROM events WHERE topic = $1 AND kind = 'user.deleted'`, "user:"+stale); n != 1 {
+		t.Errorf("%d user.deleted events for the removed sign-up", n)
+	}
+
+	f.exec(`UPDATE users SET verified = true WHERE id = $1`, fresh)
+	if n := f.count(`SELECT count(*) FROM users WHERE id = $1 AND verified_at > now() - interval '1 minute'`, fresh); n != 1 {
+		t.Error("verifying an account did not stamp verified_at")
+	}
+}
+
+func TestClaimingAnotherAccountsUsernameIsAFieldError(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	f.user("someone@example.com")
+	f.exec(`UPDATE users SET username = 'someone' WHERE email = 'someone@example.com'`)
+	id := f.user("unverified@example.com")
+	f.exec(`UPDATE users SET verified = false WHERE id = $1`, id)
+
+	m := &module{db: f.app.DB, tokens: f.app.Tokens}
+	_, err := m.claimUnverified(context.Background(), id, signupDetails{Username: "Someone", PasswordHash: "x"})
+	var httpErr *httpx.Error
+	if !errors.As(err, &httpErr) || httpErr.Status != http.StatusBadRequest || !strings.Contains(mustJSON(httpErr.Data), "validation_not_unique") {
+		t.Errorf("username taken after validation = %v, want a 400 field error", err)
 	}
 }
 

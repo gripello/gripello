@@ -13,9 +13,12 @@ const cropStub = {
     template: '<div data-testid="crop" :data-aspect="aspect" />',
 }
 
-function mountImages(banner: string | null) {
+function mountImages(
+    banner: string | null,
+    extra: { avatar?: string; removableAvatar?: boolean } = {},
+) {
     return mount(ProfileImages, {
-        props: { banner, avatar: null, name: 'Anna Berg' },
+        props: { banner, avatar: null, name: 'Anna Berg', ...extra },
         global: {
             components: { ClimberBanner, ClimberAvatar },
             stubs: {
@@ -86,5 +89,21 @@ describe('ProfileImages', () => {
         expect(set.get('img').attributes('src')).toBe('blob:banner')
         await set.get('[data-testid="profile-banner-remove"]').trigger('click')
         expect(set.emitted('removeBanner')).toHaveLength(1)
+    })
+
+    it('offers avatar removal only when asked and an avatar is set', async () => {
+        const remove = '[data-testid="profile-avatar-remove"]'
+        expect(
+            mountImages(null, { avatar: 'blob:a' }).find(remove).exists(),
+        ).toBe(false)
+        expect(
+            mountImages(null, { removableAvatar: true }).find(remove).exists(),
+        ).toBe(false)
+        const set = mountImages(null, {
+            avatar: 'blob:a',
+            removableAvatar: true,
+        })
+        await set.get(remove).trigger('click')
+        expect(set.emitted('removeAvatar')).toHaveLength(1)
     })
 })

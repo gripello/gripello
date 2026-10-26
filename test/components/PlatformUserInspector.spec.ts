@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import UserInspector from '~/components/platform/UserInspector.vue'
 import { liftSuspension, updatePlatformUser } from '~/api/platform'
 import { useMountedNow } from '~/composables/useMountedNow'
+import { requestVerification } from '~/api/auth'
 
 vi.stubGlobal('useMountedNow', useMountedNow)
 
@@ -11,6 +12,9 @@ vi.mock('~/api/platform', () => ({
     liftSuspension: vi.fn(),
     listUserSessions: vi.fn(async () => []),
     updatePlatformUser: vi.fn(),
+}))
+vi.mock('~/api/auth', () => ({
+    requestVerification: vi.fn(),
 }))
 vi.mock('~/api/audit', () => ({
     listPlatformAudit: vi.fn(async () => ({ items: [] })),
@@ -25,6 +29,9 @@ const alertStub = {
 }
 
 function mountFor(user: Record<string, unknown>) {
+    vi.stubGlobal('useCapToken', () => ({
+        capHeaders: async () => ({ 'X-Cap-Token': 'token' }),
+    }))
     vi.stubGlobal('useAsyncAction', () => ({
         pending: ref(false),
         run: async (action: () => Promise<unknown>) => action(),
@@ -64,6 +71,25 @@ describe('PlatformUserInspector', () => {
             verified: true,
         })
         expect(wrapper.emitted('changed')).toHaveLength(1)
+    })
+
+    it('resends the verification e-mail from the unverified alert', async () => {
+        const wrapper = mountFor({
+            verified: false,
+            email: 'ada@gripello.test',
+        })
+        await wrapper
+            .get('[data-testid="platform-user-alert-resend"]')
+            .trigger('click')
+        await flushPromises()
+        expect(requestVerification).toHaveBeenCalledWith('ada@gripello.test', {
+            'X-Cap-Token': 'token',
+        })
+        expect(
+            mountFor({ verified: false })
+                .find('[data-testid="platform-user-alert-resend"]')
+                .exists(),
+        ).toBe(false)
     })
 
     it('lifts a suspension before anything else', async () => {

@@ -206,7 +206,8 @@
         "exportAgain": "Solicitar una nueva exportación",
         "exportTooLarge": "Tu exportación de datos es demasiado grande",
         "exportTooLargeHint": "Supera los 2 GB. Ponte en contacto con nosotros para recibir tus datos de otra forma.",
-        "exportNone": "No hay ninguna exportación de datos lista"
+        "exportNone": "No hay ninguna exportación de datos lista",
+        "removeAvatar": "Quitar avatar"
     },
     "routes": {
         "generate_name": "Generar nombre",
@@ -604,7 +605,7 @@
             },
             "accounts": {
                 "title": "Cuentas de usuario",
-                "body": "Si el operador permite el registro, puedes crear una cuenta con tu correo electrónico y una contraseña; te enviamos un correo de verificación. Además, la administración de un rocódromo puede añadirte como miembro del personal introduciendo tu correo electrónico, tu nombre y tus apellidos: si aún no tienes cuenta, se crea en ese momento una cuenta sin verificar con esos datos junto con la membresía y recibes un correo para establecer tu contraseña; a una cuenta existente se le añade la membresía directamente. Guardamos la dirección de correo electrónico, el nombre de usuario, el nombre y los apellidos, la contraseña (solo como hash seguro), una foto de perfil y un banner de perfil opcionales, tu idioma, tus preferencias de notificaciones y de privacidad y las paredes que sigues. Los derechos del personal de un rocódromo se derivan de su membresía en ese rocódromo y de su rol. Tu correo electrónico no se muestra a otros escaladores ni al personal de los rocódromos; pueden verlo los administradores de la plataforma y, si denuncias un contenido, la moderación del rocódromo y su dirección de contacto reciben tu nombre y tu correo electrónico (consulta Denuncias de contenido). Base jurídica: ejecución del contrato de uso de la aplicación (art. 6, apartado 1, letra b), del RGPD). Los datos se conservan mientras exista la cuenta; puedes eliminarla tú mismo en cualquier momento en los ajustes."
+                "body": "Si el operador permite el registro, puedes crear una cuenta con tu correo electrónico y una contraseña; te enviamos un correo de verificación. Si no confirmas la dirección en 7 días, la cuenta se elimina. Además, la administración de un rocódromo puede invitarte como miembro del personal introduciendo tu correo electrónico y, opcionalmente, tu nombre y apellidos. Entonces recibes un enlace de invitación válido durante 7 días; guardamos la invitación hasta que la aceptes, caduque o el rocódromo la retire. No se crea nada sin ti: para aceptarla, inicias sesión con ese correo o creas una cuenta con tu propia contraseña, y solo entonces pasas a ser miembro. Guardamos la dirección de correo electrónico, el nombre de usuario, el nombre y los apellidos, la contraseña (solo como hash seguro), una foto de perfil y un banner de perfil opcionales, tu idioma, tus preferencias de notificaciones y de privacidad y las paredes que sigues. Los derechos del personal de un rocódromo se derivan de su membresía en ese rocódromo y de su rol. Tu correo electrónico no se muestra a otros escaladores ni al personal de los rocódromos; pueden verlo los administradores de la plataforma y, si denuncias un contenido, la moderación del rocódromo y su dirección de contacto reciben tu nombre y tu correo electrónico (consulta Denuncias de contenido). Base jurídica: ejecución del contrato de uso de la aplicación (art. 6, apartado 1, letra b), del RGPD). Los datos se conservan mientras exista la cuenta; puedes eliminarla tú mismo en cualquier momento en los ajustes."
             },
             "privacySettings": {
                 "title": "Ajustes de privacidad",
@@ -1370,6 +1371,10 @@
             "password_reset": "Contraseña restablecida",
             "email_change_request": "Cambio de correo solicitado",
             "email_change": "Correo cambiado",
+            "register": "Registro",
+            "register_existing": "Registro con una dirección existente",
+            "verification_request": "Correo de verificación solicitado",
+            "email_verified": "Correo verificado",
             "login_second_factor": "Contraseña confirmada, falta el segundo paso",
             "account_locked": "Cuenta bloqueada tras intentos fallidos",
             "mfa_enabled": "App de autenticación añadida",
@@ -2390,6 +2395,8 @@
             "addMembership": "Añadir",
             "sendPasswordReset": "Enviar email para restablecer la contraseña",
             "passwordResetSent": "Email para restablecer la contraseña enviado.",
+            "resendVerification": "Reenviar correo de verificación",
+            "verificationSent": "Correo de verificación enviado.",
             "deleteConfirm": "¿Eliminar a {name} con todos sus datos? No se puede deshacer.",
             "lastAdmin": "Esta persona es la única admin de un rocódromo. Nombra primero a otra persona admin.",
             "suspend": "Suspender",
@@ -2496,7 +2503,7 @@
                 "active": "Activas en 7 días",
                 "staffNoMfa": "Equipo sin 2FA",
                 "ofStaff": "de {n} del equipo",
-                "olderThanWeek": "{n} con más de 7 días",
+                "linkExpired": "{n} con enlace caducado",
                 "locked": "{n} bloqueadas",
                 "online": "{n} en línea"
             },
@@ -2525,7 +2532,10 @@
                 "mfa": "Sin 2FA primero",
                 "-mfa": "Con 2FA primero"
             },
-            "onlineNow": "En línea"
+            "onlineNow": "En línea",
+            "discard": "Descartar",
+            "emailVisible": "Mostrar el correo al equipo del rocódromo",
+            "browserLanguage": "Idioma del navegador"
         },
         "features": {
             "title": "Funciones",
@@ -2656,7 +2666,7 @@
             "subject": "Confirma tu dirección de correo",
             "body": "Gracias por registrarte en {app}. Confirma tu dirección de correo para terminar de configurar tu cuenta.",
             "action": "Confirmar correo",
-            "note": "Si no te has registrado, puedes ignorar este correo."
+            "note": "El enlace es válido durante 48 horas. Si no te has registrado, puedes ignorar este correo."
         },
         "passwordReset": {
             "subject": "Restablece tu contraseña",

@@ -83,7 +83,7 @@ const cards = computed(() => {
             icon: 'i-lucide-mail-warning',
             color: 'warning',
             subtitle: s
-                ? t('platform.users.kpis.olderThanWeek', {
+                ? t('platform.users.kpis.linkExpired', {
                       n: s.unverified_old,
                   })
                 : '',

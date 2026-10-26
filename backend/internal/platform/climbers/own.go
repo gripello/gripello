@@ -13,6 +13,9 @@ import (
 // OwnRecordSQL selects a users row aliased u the way its owner sees it: every column but the credentials.
 const OwnRecordSQL = `to_jsonb(u) - 'password_hash' - 'token_key'`
 
+// DerivedUserFields change with other fields and never count as edits.
+var DerivedUserFields = []string{"updated", "verified_at"}
+
 func OwnRecord(ctx context.Context, q db.Querier, userID string) (json.RawMessage, error) {
 	var record json.RawMessage
 	err := q.QueryRow(ctx, `SELECT `+OwnRecordSQL+` FROM users u WHERE id = $1`, userID).Scan(&record)
