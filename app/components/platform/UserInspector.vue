@@ -27,7 +27,6 @@
                 :icon="ALERT_ICONS[alert]"
                 :title="t(`platform.users.alerts.${alert}`)"
                 :actions="alertActions"
-                orientation="horizontal"
                 data-testid="platform-user-alert"
             />
         </header>
