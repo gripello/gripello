@@ -38,8 +38,6 @@ async function readExportBody(event: H3Event): Promise<ExportBody | null> {
     return event.context._exportBody
 }
 
-export const MAX_TAG_ROUTES = 500
-
 export async function resolveRouteIds(event: H3Event): Promise<string[]> {
     const body = await readExportBody(event)
     if (body && Array.isArray(body.ids)) {

@@ -4,7 +4,6 @@ import {
     resolveRouteIds,
     requireRouteIds,
     pdfBuffer,
-    MAX_TAG_ROUTES,
     resolveApplicationUrl,
     resolveExportGymId,
     fetchRoutesByIds,
@@ -14,6 +13,7 @@ import {
     resolveExportTemplate,
     TAG_QR_ERROR_CORRECTION,
 } from '../../utils/export'
+import { MAX_TAG_ROUTES } from '#shared/utils/routeExport'
 import { drawRouteTag, TAG_PADDING } from '../../utils/routeTag'
 import { TAG_GEOMETRY, tagSlot } from '#shared/utils/tagTemplates'
 import { gymBandsFrom } from '#shared/utils/gradeReference'

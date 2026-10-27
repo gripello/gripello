@@ -5,7 +5,9 @@ import {
     resolveExportGymId,
     fetchRatingsByRoutes,
     fetchRoutesByIds,
+    requireRouteIds,
 } from '../../utils/export'
+import { MAX_SHEET_ROUTES } from '#shared/utils/routeExport'
 import {
     locationName,
     normalizeCreators,
@@ -16,7 +18,7 @@ import type { RatingRecord, RouteRecord } from '../../../types/models'
 export default eventHandler(async (event) => {
     const gymId = await resolveExportGymId(event)
     const api = await requirePermission(event, 'manage_routes', gymId)
-    const ids = await resolveRouteIds(event)
+    const ids = requireRouteIds(await resolveRouteIds(event), MAX_SHEET_ROUTES)
 
     if (ids.length === 0) {
         throw createError({
