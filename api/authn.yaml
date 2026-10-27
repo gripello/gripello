@@ -191,15 +191,16 @@ paths:
     post:
       operationId: confirmVerification
       tags: [authn]
-      description: Tokens live 7 days.
+      description: Tokens live 7 days; the password proves the link belongs to the clicker (a sign-up retry replaces it).
       requestBody:
         required: true
         content:
           application/json:
-            schema: { type: object, required: [token], properties: { token: { type: string } } }
+            schema: { type: object, required: [token, password], properties: { token: { type: string }, password: { type: string } } }
       responses:
         '204': { description: Done }
         '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/email-change/request:
     post:
       operationId: requestEmailChange
@@ -213,6 +214,7 @@ paths:
       responses:
         '204': { description: Done }
         '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '429': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /auth/email-change/confirm:
     post:

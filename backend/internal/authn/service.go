@@ -47,7 +47,7 @@ func lockoutKey(user *account, identity string) string {
 	if user != nil {
 		return user.ID
 	}
-	return ids.Hash(strings.ToLower(strings.TrimSpace(identity)))
+	return ids.Hash(mail.NormalizeAddress(identity))
 }
 
 func (m *module) recordLoginFailure(ctx context.Context, r *http.Request, key string, user *account, label string) {

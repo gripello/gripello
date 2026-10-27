@@ -18,6 +18,13 @@ describe('auth token pages', () => {
         },
     )
 
+    it('verifies an address only with the password of the sign-up that sent the link', () => {
+        const source = page('confirm-verification/[token]')
+        expect(source).not.toMatch(/<AuthTokenAction[^>]*\sauto[\s>]/)
+        expect(source).toContain('data-testid="verify-password"')
+        expect(source).toContain('confirmVerification(token, password.value)')
+    })
+
     it('signs out on the server from the wrong-account step', () => {
         expect(page('invite/[token]')).toMatch(
             /function signOut\(\) \{\n\s+logout\(\)/,

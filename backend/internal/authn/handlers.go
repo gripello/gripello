@@ -343,8 +343,8 @@ func (m *module) claimUnverified(ctx context.Context, id string, signup signupDe
 		if err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `UPDATE users SET username = $2, firstname = $3, name = $4, language = $5, password_hash = $6
-			WHERE id = $1 AND NOT verified`, id, signup.Username, signup.Firstname, signup.Name, signup.Language, signup.PasswordHash)
+		tag, err := tx.Exec(ctx, `UPDATE users u SET username = $2, firstname = $3, name = $4, language = $5, password_hash = $6
+			WHERE u.id = $1 AND `+emptySignupSQL, id, signup.Username, signup.Firstname, signup.Name, signup.Language, signup.PasswordHash)
 		if db.IsUnique(err, "users_username_idx") {
 			return httpx.BadRequest("Failed to create record.").Field("username", "validation_not_unique", "Value must be unique.")
 		}
@@ -530,7 +530,8 @@ func (m *module) requestVerification(w http.ResponseWriter, r *http.Request) err
 
 func (m *module) confirmVerification(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
-		Token string `json:"token"`
+		Token    string `json:"token"`
+		Password string `json:"password"`
 	}
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
@@ -538,6 +539,10 @@ func (m *module) confirmVerification(w http.ResponseWriter, r *http.Request) err
 	user, _, ok := m.parseMailToken(r.Context(), m.db, body.Token, "verification")
 	if !ok {
 		return invalidToken()
+	}
+	// The link alone must not verify: a sign-up retry may have replaced the password (claimUnverified), so the clicker proves it is theirs.
+	if err := m.confirmPassword(r, user, "password", body.Password, "validation_invalid_password"); err != nil {
+		return err
 	}
 	ctx := r.Context()
 	err := pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
@@ -577,17 +582,24 @@ func (m *module) requestEmailChange(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 	newEmail := platformmail.NormalizeAddress(body.NewEmail)
-	if code, message, err := m.validateNewEmail(r, newEmail, ""); err != nil {
+	code, message, err := m.validateNewEmail(r, newEmail, "")
+	if err != nil {
 		return err
-	} else if code == codeNotUnique {
+	}
+	if code != "" && code != codeNotUnique {
+		return httpx.BadRequest("Failed to validate.").Field("newEmail", code, message)
+	}
+	// Both outcomes below send a mail to an address the caller chose, so both count toward the limit.
+	if err := m.emailChanges.Check(w, p.UserID); err != nil {
+		return err
+	}
+	if code == codeNotUnique {
 		if newEmail != user.Email {
 			if owner, err := findAccountByEmail(ctx, m.db, newEmail); err == nil {
 				m.notifyAccountExists(ctx, owner)
 			}
 		}
 		return httpx.NoContent(w, nil)
-	} else if code != "" {
-		return httpx.BadRequest("Failed to validate.").Field("newEmail", code, message)
 	}
 	token, err := m.signMailToken(user, "emailChange", newEmail, emailChangeTokenTTL)
 	if err != nil {

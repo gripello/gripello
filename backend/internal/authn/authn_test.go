@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -830,7 +831,13 @@ func TestVerificationFlow(t *testing.T) {
 	if to != "verify@example.com" {
 		t.Errorf("sent to %s", to)
 	}
-	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": token}); status != http.StatusNoContent {
+	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": token}); status != http.StatusBadRequest {
+		t.Fatalf("confirm without password = %d", status)
+	}
+	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": token, "password": "not-the-password"}); status != http.StatusBadRequest {
+		t.Fatalf("confirm with a wrong password = %d", status)
+	}
+	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": token, "password": testPassword}); status != http.StatusNoContent {
 		t.Fatalf("confirm = %d", status)
 	}
 	if status, _ := f.login("verify@example.com", testPassword); status != http.StatusOK {
@@ -898,6 +905,15 @@ func TestEmailChangeFlow(t *testing.T) {
 	mailToken, to := f.lastMailToken(2)
 	if to != "after@example.com" {
 		t.Errorf("sent to %s", to)
+	}
+	// Two "taken" requests and the real one already counted: every outcome that mails a chosen address uses the quota.
+	for i := range emailChangeRequestsPerHour - 3 {
+		if status, _ := f.send(http.MethodPost, "/auth/email-change/request", token, map[string]string{"newEmail": fmt.Sprintf("relay%d@example.com", i)}); status != http.StatusNoContent {
+			t.Fatalf("request %d = %d", i, status)
+		}
+	}
+	if status, _ := f.send(http.MethodPost, "/auth/email-change/request", token, map[string]string{"newEmail": "relay-more@example.com"}); status != http.StatusTooManyRequests {
+		t.Errorf("request above the hourly limit = %d, want 429", status)
 	}
 	if status, body := f.send(http.MethodPost, "/auth/email-change/confirm", "", map[string]string{"token": mailToken, "password": "wrong"}); status != http.StatusBadRequest || !strings.Contains(mustJSON(body), "validation_invalid_password") {
 		t.Errorf("wrong password = %d %v", status, body)
@@ -1012,10 +1028,14 @@ func TestSignupTakesOverAnUnverifiedAccount(t *testing.T) {
 		t.Error("the second sign-up did not replace the unverified account")
 	}
 
-	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": squatterToken}); status != http.StatusBadRequest {
+	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": squatterToken, "password": "squatter-pass-1"}); status != http.StatusBadRequest {
 		t.Errorf("link of the first sign-up = %d, want it dead", status)
 	}
-	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": ownerToken}); status != http.StatusNoContent {
+	// The mailbox owner can't be tricked into verifying someone else's sign-up: the link needs the password that came with it.
+	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": ownerToken, "password": "squatter-pass-1"}); status != http.StatusBadRequest {
+		t.Errorf("link of the second sign-up with the first password = %d, want 400", status)
+	}
+	if status, _ := f.send(http.MethodPost, "/auth/verification/confirm", "", map[string]string{"token": ownerToken, "password": "owner-pass-12"}); status != http.StatusNoContent {
 		t.Fatalf("link of the second sign-up = %d", status)
 	}
 	if status, _ := f.login("owner@example.com", "squatter-pass-1"); status == http.StatusOK {
@@ -1078,7 +1098,7 @@ func TestClaimingAnotherAccountsUsernameIsAFieldError(t *testing.T) {
 	f.user("someone@example.com")
 	f.exec(`UPDATE users SET username = 'someone' WHERE email = 'someone@example.com'`)
 	id := f.user("unverified@example.com")
-	f.exec(`UPDATE users SET verified = false WHERE id = $1`, id)
+	f.exec(`UPDATE users SET verified = false, verified_at = NULL WHERE id = $1`, id)
 
 	m := &module{db: f.app.DB, tokens: f.app.Tokens}
 	_, err := m.claimUnverified(context.Background(), id, signupDetails{Username: "Someone", PasswordHash: "x"})
@@ -1422,5 +1442,24 @@ func TestUnicodeAndPunycodeDomainsAreOneAddress(t *testing.T) {
 	body["email"], body["username"] = "a@xn--bcher-kva.de", "bookish"
 	if status, res := f.send(http.MethodPost, "/auth/register", "", body); status != http.StatusBadRequest || !strings.Contains(mustJSON(res), "validation_email_blocked") {
 		t.Errorf("blocked IDN domain in punycode = %d %v", status, res)
+	}
+}
+
+func TestSignupNeverClaimsAnAccountHoldingData(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	f.exec(`INSERT INTO settings (id, allow_registration) VALUES ('platformsetting', true)`)
+	id := f.user("unverified@example.com")
+	f.exec(`UPDATE users SET verified = false, verified_at = NULL WHERE id = $1`, id)
+	f.exec(`INSERT INTO sessions (id, "user") VALUES ($1, $2)`, ids.New(), id)
+	body := map[string]string{"email": "unverified@example.com", "username": "takeover", "password": "takeover-pass-1", "passwordConfirm": "takeover-pass-1"}
+	if status, _ := f.send(http.MethodPost, "/auth/register", "", body); status != http.StatusAccepted {
+		t.Fatalf("sign-up = %d", status)
+	}
+	if n := f.count(`SELECT count(*) FROM users WHERE id = $1 AND username = 'unverified' AND password_hash = $2`, id, f.hash); n != 1 {
+		t.Error("a sign-up replaced the credentials of an account that had signed in")
+	}
+	if mails := f.mails(0); len(mails) != 0 {
+		t.Errorf("mails = %v, want none (the unverified owner is not told, the squatter learns nothing)", mails)
 	}
 }
