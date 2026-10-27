@@ -174,7 +174,7 @@ test('a report on a profile that is already hidden is answered at once', async (
     expect(`${decision.HTML}${decision.Text}`).toContain('Offensive name.')
 })
 
-test('a profile edited after being hidden comes back for review', async ({
+test('a hidden profile refuses edits until it is restored', async ({
     platformPage,
     api,
     apiAs,
@@ -187,15 +187,14 @@ test('a profile edited after being hidden comes back for review', async ({
     await openCase(platformPage, `${testPrefix}-Rude`, '/platform/moderation')
     await decide(platformPage, 'hide', 'Offensive name.')
 
-    await updateMe(personApi, { firstname: `${testPrefix}-Again` })
+    await expect(
+        updateMe(personApi, { firstname: `${testPrefix}-Again` }),
+    ).rejects.toMatchObject({
+        status: 403,
+        response: { data: { profile: { code: 'moderation_hidden' } } },
+    })
 
-    const detail = await openCase(
-        platformPage,
-        `${testPrefix}-Again`,
-        '/platform/moderation',
-    )
-    await expect(detail).toContainText(`${testPrefix}-Again`)
-    expect((await caseFor(api, `${testPrefix}-Again`)).state).toBe('unreviewed')
+    expect((await caseFor(api, `${testPrefix}-Rude`)).state).toBe('hidden')
 })
 
 test('undo after someone else restored the post explains instead of failing', async ({

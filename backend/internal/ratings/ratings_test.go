@@ -271,15 +271,20 @@ func TestRatingEventsPerAudience(t *testing.T) {
 	if len(got) != 4 || got[0]+"|"+got[1] != want {
 		t.Errorf("events = %v", got)
 	}
-	if actors := f.exec(`SELECT COALESCE(string_agg(DISTINCT actor, ','), '') FROM events WHERE topic LIKE 'gym_changes:%'`); actors != "" {
-		t.Errorf("actors on the author's own review events = %q, want none (the gym audit log must not name reviewers)", actors)
+	if actors := f.exec(`SELECT string_agg(DISTINCT actor, ',') FROM events WHERE topic LIKE 'gym_changes:%'`); actors != f.users["climber"] {
+		t.Errorf("actors on a named author's review events = %q, want the author", actors)
+	}
+	f.exec(`UPDATE users SET reviews_anonymous = true WHERE username = 'shy' RETURNING id`)
+	f.rate("shy", `{"rating":3}`)
+	if actors := f.exec(`SELECT COALESCE(string_agg(DISTINCT actor, ','), '') FROM events WHERE topic LIKE 'gym_changes:%' AND actor = $1`, f.users["shy"]); actors != "" {
+		t.Errorf("actors on an anonymous author's review events = %q, want none (the gym audit log must not name them)", actors)
 	}
 	f.rate("", `{"rating":2}`)
 	var audience string
 	if err := f.app.DB.QueryRow(context.Background(), `SELECT audience::text FROM events WHERE topic LIKE 'gym_changes:%' ORDER BY id DESC LIMIT 1`).Scan(&audience); err != nil {
 		t.Fatal(err)
 	}
-	if n := f.exec(`SELECT COUNT(*)::text FROM events WHERE topic LIKE 'gym_changes:%'`); n != "4" || audience != `{"public": true}` {
+	if n := f.exec(`SELECT COUNT(*)::text FROM events WHERE topic LIKE 'gym_changes:%'`); n != "7" || audience != `{"public": true}` {
 		t.Errorf("guest rating events = %s, audience %s", n, audience)
 	}
 }
