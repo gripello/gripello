@@ -238,6 +238,7 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["Error"];
+            404: components["responses"]["Error"];
         };
     };
     issueFileToken: {

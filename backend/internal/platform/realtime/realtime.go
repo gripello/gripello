@@ -533,6 +533,11 @@ func sendRetryLater(w http.ResponseWriter, flusher http.Flusher) {
 	flusher.Flush()
 }
 
+const (
+	MaxTopics      = 64
+	maxTopicLength = 120
+)
+
 // Subscriptions is PUT /realtime/{clientId}/subscriptions {"topics": [...], "since"?: id}; the auth of this request becomes the stream's principal.
 // The stream may live on another replica, so the change travels over the bus; the deliver loop applies it in event order.
 // since replays what the stream's previous principal couldn't receive, e.g. after signing in.
@@ -543,6 +548,18 @@ func (h *Hub) Subscriptions(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err := httpx.Decode(r, &body); err != nil {
 		return err
+	}
+	// Checked before PublishNow: the request needs no auth, so junk must never reach the outbox.
+	if !ids.Valid(r.PathValue("clientId")) {
+		return httpx.ErrNotFound
+	}
+	if len(body.Topics) > MaxTopics {
+		return httpx.Invalid("topics", fmt.Sprintf("At most %d topics.", MaxTopics))
+	}
+	for _, topic := range body.Topics {
+		if topic == "" || len(topic) > maxTopicLength {
+			return httpx.Invalid("topics", fmt.Sprintf("Topics must be 1 to %d characters.", maxTopicLength))
+		}
 	}
 	change := subscriptionChange{Client: r.PathValue("clientId"), Topics: body.Topics, Since: body.Since}
 	if p, ok := auth.From(r.Context()); ok {
