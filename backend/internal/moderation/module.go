@@ -161,6 +161,7 @@ func (m *module) onUser(e events.Event) {
 		if payload.Record.ID == "" || !slices.ContainsFunc(payload.Changed, func(f string) bool { return slices.Contains(profileFields, f) }) {
 			return
 		}
+		logFailure("re-hiding profile", payload.Record.ID, m.rehide(ctx, "profile", payload.Record.ID))
 		logFailure("queueing profile", payload.Record.ID, m.inTx(ctx, func(w *work) error {
 			// A restore announces the profile it put back; that is the content the case already decided on.
 			if it, err := itemOf(ctx, w.tx, "profile", payload.Record.ID); err == nil && it.State == "approved" {

@@ -12,6 +12,12 @@ describe('account settings page', () => {
         expect(source).toMatch(/:unsaved-changes="hasChanges"/)
     })
 
+    it('explains a profile frozen by moderation instead of a generic error', () => {
+        expect(source).toMatch(
+            /fieldErrorCode\(err, 'profile'\) === 'moderation_hidden'\) \{\s+notifyError\(t\('account.profileHidden'\)\)/,
+        )
+    })
+
     it('explains a lockout and the last-admin refusal instead of a generic error', () => {
         expect(source.match(/throttledErrorKey\(err\)\)/g)).toHaveLength(2)
         expect(source).toMatch(

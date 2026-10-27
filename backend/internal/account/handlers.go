@@ -94,6 +94,9 @@ func (m *module) updateMe(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if err := m.refuseWhileHidden(r.Context(), p.UserID, changes, files); err != nil {
+		return err
+	}
 	return m.saveProfile(w, r, p.UserID, changes, files)
 }
 
@@ -223,6 +226,29 @@ func (m *module) checkProtectedNames(ctx context.Context, userID string, changes
 	return nil
 }
 
+// moderatedProfileFields mirrors moderation's profile kind: while a hidden case exists only a restore brings them back.
+var moderatedProfileFields = []string{"username", "firstname", "name", "avatar", "banner"}
+
+func (m *module) refuseWhileHidden(ctx context.Context, userID string, changes map[string]any, files map[string]*multipart.FileHeader) error {
+	touched := slices.ContainsFunc(moderatedProfileFields, func(f string) bool {
+		_, inChanges := changes[f]
+		_, inFiles := files[f]
+		return inChanges || inFiles
+	})
+	if !touched {
+		return nil
+	}
+	var hidden bool
+	err := m.db.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM moderation_items WHERE content_type = 'profile' AND content_id = $1 AND state = 'hidden')`, userID).Scan(&hidden)
+	if err != nil {
+		return err
+	}
+	if hidden {
+		return httpx.NewError(http.StatusForbidden, "Your profile was hidden by moderation.").Field("profile", "moderation_hidden", "Your profile was hidden by moderation.")
+	}
+	return nil
+}
+
 // saveProfile stores uploads first, writes the row with the user.updated event, then drops replaced files.
 func (m *module) saveProfile(w http.ResponseWriter, r *http.Request, userID string, changes map[string]any, files map[string]*multipart.FileHeader) error {
 	ctx := r.Context()
@@ -269,7 +295,11 @@ func (m *module) clearFile(field string) httpx.Handler {
 		if err != nil {
 			return err
 		}
-		return m.saveProfile(w, r, p.UserID, map[string]any{field: ""}, nil)
+		changes := map[string]any{field: ""}
+		if err := m.refuseWhileHidden(r.Context(), p.UserID, changes, nil); err != nil {
+			return err
+		}
+		return m.saveProfile(w, r, p.UserID, changes, nil)
 	}
 }
 

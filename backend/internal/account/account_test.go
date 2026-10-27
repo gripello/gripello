@@ -371,6 +371,11 @@ func TestExportContainsOnlyOwnData(t *testing.T) {
 	if !strings.Contains(files["logbook.csv"], "Crimpy") || !strings.Contains(files["logbook.csv"], "my send") || !strings.Contains(files["logbook.csv"], ",A\n") {
 		t.Errorf("logbook = %q", files["logbook.csv"])
 	}
+	for in, want := range map[string]string{"=HYPERLINK(1)": "'=HYPERLINK(1)", "+1": "'+1", "-1": "'-1", "@x": "'@x", "Crimpy": "Crimpy", "": ""} {
+		if got := csvText(in); got != want {
+			t.Errorf("csvText(%q) = %q, want %q", in, got, want)
+		}
+	}
 	if strings.Contains(files["logbook.csv"]+files["ticks.json"], "other send") {
 		t.Error("export contains another user's tick")
 	}
@@ -693,4 +698,14 @@ func TestDeleteMeAnnouncesWhatTheCascadeRemoves(t *testing.T) {
 			t.Errorf("%s %s reached others %d times", want.topic, want.kind, n)
 		}
 	}
+}
+
+func TestHiddenProfileStaysHidden(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`INSERT INTO moderation_items (id, content_type, content_id, author, state, hidden_by, snapshot) VALUES ($1, 'profile', $2, $2, 'hidden', 'platform', '{}')`, ids.New(), f.climber)
+	f.call(f.climber, http.MethodPatch, "/me", `{"firstname":"Still"}`, http.StatusForbidden, "moderation_hidden")
+	f.call(f.climber, http.MethodPatch, "/me", `{"username":"still.here"}`, http.StatusForbidden, "moderation_hidden")
+	f.call(f.climber, http.MethodPatch, "/me", `{"ticks_private":true,"language":"de"}`, http.StatusOK, `"ticks_private":true`)
+	f.exec(`UPDATE moderation_items SET state = 'approved' WHERE content_id = $1`, f.climber)
+	f.call(f.climber, http.MethodPatch, "/me", `{"firstname":"Back"}`, http.StatusOK, `"firstname":"Back"`)
 }
