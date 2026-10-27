@@ -16,7 +16,10 @@ import (
 	"gripello/internal/platform/tenancy"
 )
 
-const invalidInvite = "This invitation is invalid or has expired."
+const (
+	invalidInvite     = "This invitation is invalid or has expired."
+	maxMemberPageSize = 500
+)
 
 type handlers struct {
 	app   *platform.App
@@ -33,15 +36,15 @@ func (h *handlers) listMembers(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	params := r.URL.Query()
-	query := memberQuery{Search: strings.TrimSpace(params.Get("q")), Role: params.Get("role"), Sort: params.Get("sort"), Page: 1}
+	query := memberQuery{Search: strings.TrimSpace(params.Get("q")), Role: params.Get("role"), Sort: params.Get("sort"), Page: 1, Limit: maxMemberPageSize}
 	if _, ok := memberSorts[query.Sort]; !ok {
 		return httpx.BadRequest("Unknown sort.").Field("sort", "validation_invalid_sort", "Unknown sort.")
 	}
 	if page, err := strconv.Atoi(params.Get("page")); err == nil && page > 0 {
-		query.Page = page
+		query.Page = min(page, httpx.MaxPage)
 	}
 	if limit, err := strconv.Atoi(params.Get("limit")); err == nil && limit > 0 {
-		query.Limit = min(limit, 500)
+		query.Limit = min(limit, maxMemberPageSize)
 	}
 	members, err := listMembers(r.Context(), h.app.DB, gymID, query)
 	if err != nil {

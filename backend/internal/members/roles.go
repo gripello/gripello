@@ -233,6 +233,9 @@ func (h *handlers) setRolePermissions(w http.ResponseWriter, r *http.Request) er
 		if !callerHoldsPermissions(ctx, tx, p, before.Gym, append(slices.Clone(added), removed...)) {
 			return httpx.NewError(http.StatusForbidden, "You cannot grant or revoke permissions you do not hold.")
 		}
+		if !callerMayAssignRole(ctx, tx, p, before) {
+			return httpx.NewError(http.StatusForbidden, "You cannot edit a role with permissions you do not hold.")
+		}
 		updated = before
 		updated.Permissions = permissions
 		err = tx.QueryRow(ctx, `UPDATE roles SET permissions = $2 WHERE id = $1 RETURNING updated`, updated.ID, permissions).Scan(&updated.Updated)

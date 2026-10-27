@@ -249,7 +249,7 @@ export interface components {
         MemberPage: {
             items: components["schemas"]["Member"][];
             page: number;
-            /** @description 0 when every member was returned */
+            /** @description Page size that was applied */
             limit: number;
             /** @description Only with total=true */
             total?: number;
@@ -397,7 +397,7 @@ export interface operations {
                 role?: string;
                 sort?: "name" | "-name" | "created" | "-created";
                 page?: number;
-                /** @description Omitted lists every member */
+                /** @description Defaults to the maximum of 500 */
                 limit?: number;
                 total?: boolean;
             };
