@@ -70,7 +70,7 @@ describe('GradeLabel', () => {
         }).find('[data-testid="grade-label-band"]')
 
         expect(band.attributes('title')).toBe('Mint')
-        expect(band.attributes('style')).toContain('#3eb489')
+        expect(band.attributes('style')).toContain('#3EB489')
     })
 
     it('adds the short system label for an unexpected system', () => {

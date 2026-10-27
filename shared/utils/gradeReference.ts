@@ -1,3 +1,4 @@
+import { normalizeHexColor } from './color'
 import {
     BOULDER_GRADE_SYSTEMS,
     canonicalGrade,
@@ -19,6 +20,9 @@ export interface GymBand {
     name?: string
 }
 
+export const MAX_BOULDER_BANDS = 12
+export const MAX_BOULDER_BAND_NAME = 50
+
 export interface BoulderBandSetting {
     name: string
     color: string
@@ -36,7 +40,7 @@ export const DEFAULT_GYM_BANDS: GymBand[] = [
 export function gymBandsFrom(
     settings: BoulderBandSetting[] | null | undefined,
 ): GymBand[] {
-    if (!settings?.length) return DEFAULT_GYM_BANDS
+    if (!Array.isArray(settings) || !settings.length) return DEFAULT_GYM_BANDS
     const font = gradeLabels('font')
     let start = 0
     const bands = settings.flatMap((band, i): GymBand[] => {
@@ -46,7 +50,12 @@ export function gymBandsFrom(
         const span = end - start + 1
         start = end + 1
         return [
-            { key: `custom-${i}`, name: band.name, color: band.color, span },
+            {
+                key: `custom-${i}`,
+                name: band.name,
+                color: normalizeHexColor(band.color),
+                span,
+            },
         ]
     })
     return bands.length ? bands : DEFAULT_GYM_BANDS

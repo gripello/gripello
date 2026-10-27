@@ -37,8 +37,8 @@ describe('gradeWheel', () => {
         expect(spokes[0]).toEqual({ label: '<2', angle: -90 })
         expect(spokes.at(-1)).toEqual({ label: '6C+', angle: 240 })
         expect(arcs).toEqual([
-            { color: '#22c55e', from: -105, to: 45, ring: 0 },
-            { color: '#a855f7', from: 45, to: 255, ring: 1 },
+            { color: '#22C55E', from: -105, to: 45, ring: 0 },
+            { color: '#A855F7', from: 45, to: 255, ring: 1 },
         ])
     })
 

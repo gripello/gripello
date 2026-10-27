@@ -143,3 +143,10 @@ describe('band editor', () => {
         expect(splitBand(single, 0)).toBe(single)
     })
 })
+
+describe('gymBandsFrom with broken settings', () => {
+    it('falls back to the default bands when the stored value is not a list', () => {
+        expect(gymBandsFrom('abc' as never)).toEqual(DEFAULT_GYM_BANDS)
+        expect(gymBandsFrom({} as never)).toEqual(DEFAULT_GYM_BANDS)
+    })
+})

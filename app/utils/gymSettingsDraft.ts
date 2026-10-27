@@ -64,7 +64,11 @@ export function gymSettingsDraft(
         tv_settings: tvSettingsFrom(rec ?? null),
         ...legalFieldsFrom(rec ?? {}),
         boulder_bands: rec?.boulder_bands?.length
-            ? rec.boulder_bands.map((band) => ({ ...band }))
+            ? rec.boulder_bands.map(({ name, color, to }) => ({
+                  name,
+                  color,
+                  to,
+              }))
             : defaultBands(),
     }
 }
@@ -95,9 +99,10 @@ function gymSettingsPayload(state: GymSettingsDraft) {
         amenities: state.amenities,
         tv_settings: tvSettingsPayload(state.tv_settings),
         ...legalPayload(state),
-        boulder_bands: state.boulder_bands.map((band) => ({
-            ...band,
-            name: band.name.trim(),
+        boulder_bands: state.boulder_bands.map(({ name, color, to }) => ({
+            name: name.trim(),
+            color,
+            to,
         })),
     }
 }

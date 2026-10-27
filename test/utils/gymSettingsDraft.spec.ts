@@ -41,4 +41,22 @@ describe('gym settings draft', () => {
             short_name: 'GG',
         })
     })
+
+    it('sends bands as exactly name, colour and upper grade', () => {
+        const record = {
+            boulder_bands: [
+                { name: 'Green', color: '#00ff00', to: '5', key: 'x', span: 3 },
+            ],
+        } as unknown as GymRecord
+        const pristine = gymSettingsDraft(null, bands as never)
+        const draft = gymSettingsDraft(record, bands as never)
+        expect(draft.boulder_bands).toEqual([
+            { name: 'Green', color: '#00ff00', to: '5' },
+        ])
+        Object.assign(draft.boulder_bands[0]!, { from: 0, label: 'x' })
+        draft.boulder_bands[0]!.name = ' Green '
+        expect(changedGymSettings(draft, pristine).boulder_bands).toEqual([
+            { name: 'Green', color: '#00ff00', to: '5' },
+        ])
+    })
 })

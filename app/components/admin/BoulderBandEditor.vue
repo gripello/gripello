@@ -76,6 +76,7 @@
                 <UInput
                     v-model="current.name"
                     class="w-full"
+                    :maxlength="MAX_BOULDER_BAND_NAME"
                     data-testid="boulder-band-name"
                 />
             </UFormField>
@@ -92,7 +93,10 @@
                     color="neutral"
                     variant="soft"
                     icon="i-lucide-split"
-                    :disabled="bands[selected]!.span < 2"
+                    :disabled="
+                        bands[selected]!.span < 2 ||
+                        model.length >= MAX_BOULDER_BANDS
+                    "
                     data-testid="boulder-band-split"
                     @click="split"
                 >
@@ -120,8 +124,11 @@ import {
     gymBandsFrom,
     moveBandBoundary,
     splitBand,
+    MAX_BOULDER_BANDS,
+    MAX_BOULDER_BAND_NAME,
     type BoulderBandSetting,
 } from '#shared/utils/gradeReference'
+import { toHex6 } from '#shared/utils/color'
 import { gradeLabels } from '#shared/utils/grades'
 import { renamedForColor, translatedColorName } from '~/utils/colorName'
 
@@ -176,7 +183,7 @@ function setColor(color: string | undefined) {
     const band = current.value
     if (!band || !color) return
     band.name = renamedForColor(t, band.name, band.color, color)
-    band.color = color
+    band.color = toHex6(color)
 }
 
 function split() {

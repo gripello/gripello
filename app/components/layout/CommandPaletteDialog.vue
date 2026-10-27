@@ -28,7 +28,7 @@
                     <span
                         v-if="item.color"
                         class="size-3.5 shrink-0 rounded-full ring-1 ring-default"
-                        :style="{ background: item.color }"
+                        :style="{ background: routeDotColor(item.color) }"
                     />
                     <UIcon
                         v-else-if="item.icon"
@@ -69,6 +69,7 @@
 import { useTimeoutFn } from '@vueuse/core'
 import type { SearchGroup, SearchResult } from '~/composables/useGlobalSearch'
 import { paletteGroups } from '~/utils/commandPalette'
+import { routeDotColor } from '~/utils/color'
 
 const props = defineProps<{
     pages: { to: string; icon: string; label: string }[]
