@@ -102,7 +102,8 @@
         "eyebrowVerifyEmail": "E-MAIL-BESTÄTIGUNG",
         "eyebrowEmailChange": "E-MAIL-ÄNDERUNG",
         "verifyEmail": "E-Mail-Adresse bestätigen",
-        "verifyEmailHint": "E-Mail-Adresse wird bestätigt…",
+        "verifyEmailHint": "Gib das Passwort deiner Anmeldung ein, um die Adresse zu bestätigen.",
+        "wrongPassword": "Falsches Passwort",
         "emailChange": "Neue E-Mail-Adresse bestätigen",
         "emailChangeHint": "Gib dein Passwort ein, um die Änderung zu bestätigen.",
         "passwordSet": "Passwort aktualisiert",
@@ -111,6 +112,7 @@
         "linkInvalid": "Link nicht mehr gültig",
         "emailChangeConfirmHint": "An die neue Adresse wird ein Bestätigungslink gesendet. Deine aktuelle Adresse bleibt aktiv, bis du ihn öffnest.",
         "emailChangeSent": "Bestätigungslink an die neue Adresse gesendet. Deine aktuelle Adresse bleibt aktiv, bis du ihn öffnest.",
+        "profileHidden": "Dein Profil wurde von der Moderation ausgeblendet und kann gerade nicht geändert werden.",
         "emailChangeFailed": "Der Bestätigungslink konnte nicht gesendet werden. Deine E-Mail-Adresse wurde nicht geändert.",
         "exportData": "Deine Daten herunterladen",
         "exportDataHint": "Eine ZIP-Datei mit deinem Profil, Logbuch, Mitgliedschaften, Wettkampfanmeldungen, Benachrichtigungen, gemeldeten Mängeln und Kontoaktivitäten, die du als Download-Link per E-Mail bekommst.",
@@ -377,6 +379,8 @@
         "loadError": "Bewertungen konnten nicht geladen werden.",
         "deleteOwn": "Meine Bewertung löschen",
         "deleteOwnConfirm": "Deine Bewertung wird endgültig entfernt.",
+        "editOwn": "Meine Bewertung bearbeiten",
+        "alreadyReviewed": "Du hast diese Route bereits bewertet. Bearbeite stattdessen deine Bewertung.",
         "perceived": "Gefühlt",
         "votes": "1 Stimme | {n} Stimmen",
         "ratingCount": "1 Bewertung | {n} Bewertungen"
@@ -1147,7 +1151,8 @@
         "qr_code": "QR-Code",
         "move_up": "Nach oben",
         "move_down": "Nach unten",
-        "fileName": "kletterrouten"
+        "fileName": "kletterrouten",
+        "tooMany": "Exportiere höchstens {max} Routen auf einmal."
     },
     "importRoutes": {
         "title": "Import bestätigen",

@@ -97,9 +97,13 @@ func adminCreateUser(ctx context.Context, pool *pgxpool.Pool, args []string) (st
 	err = pool.QueryRow(ctx, `INSERT INTO users (id, email, email_visibility, verified, password_hash, token_key, username, firstname, name, platform_admin)
 		VALUES ($1, $2, true, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (email) WHERE email <> '' DO UPDATE SET verified = EXCLUDED.verified, password_hash = EXCLUDED.password_hash,
-			platform_admin = EXCLUDED.platform_admin, updated = now()
+			platform_admin = EXCLUDED.platform_admin, token_key = EXCLUDED.token_key, updated = now()
 		RETURNING id`,
 		ids.New(), *email, *verified, hash, rand.Text()+rand.Text(), *username, *firstname, *name, *platformAdmin).Scan(&id)
+	if err != nil {
+		return "", err
+	}
+	_, err = pool.Exec(ctx, `DELETE FROM sessions WHERE "user" = $1`, id)
 	return id, err
 }
 

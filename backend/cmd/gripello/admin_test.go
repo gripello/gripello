@@ -33,8 +33,19 @@ func TestAdminSeedsGymUserAndMembershipIdempotently(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var keyBefore string
+	pool.QueryRow(ctx, `SELECT token_key FROM users WHERE id = $1`, user).Scan(&keyBefore)
+	if _, err := pool.Exec(ctx, `INSERT INTO sessions (id, "user") VALUES ($1, $2)`, "sess"+user[:11], user); err != nil {
+		t.Fatal(err)
+	}
 	if again, err := adminCreateUser(ctx, pool, []string{"--email", "a@gripello.test", "--password", "Other-pw-123", "--username", "e2ea", "--verified", "--platform-admin"}); err != nil || again != user {
 		t.Fatalf("second create-user = %q, %v", again, err)
+	}
+	var keyAfter string
+	var sessions int
+	pool.QueryRow(ctx, `SELECT token_key, (SELECT count(*) FROM sessions WHERE "user" = users.id) FROM users WHERE id = $1`, user).Scan(&keyAfter, &sessions)
+	if keyAfter == keyBefore || sessions != 0 {
+		t.Errorf("re-created user kept token_key (%v) or %d sessions", keyAfter == keyBefore, sessions)
 	}
 	if _, err := adminAddMembership(ctx, pool, []string{"--user", "a@gripello.test", "--gym", "e2e", "--role", "routesetter"}); err != nil {
 		t.Fatal(err)

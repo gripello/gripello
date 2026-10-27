@@ -134,10 +134,10 @@ func (m *module) setFeatures(w http.ResponseWriter, r *http.Request) error {
 	if len(invalid.Data) > 0 {
 		return invalid
 	}
-	var gym json.RawMessage
+	var gym, public json.RawMessage
 	err := pgx.BeginFunc(r.Context(), m.app.DB, func(tx pgx.Tx) error {
 		var active bool
-		err := tx.QueryRow(r.Context(), `UPDATE gyms g SET features = $2 WHERE id = $1 RETURNING to_jsonb(g), active`, r.PathValue("id"), features).Scan(&gym, &active)
+		err := tx.QueryRow(r.Context(), `UPDATE gyms g SET features = $2 WHERE id = $1 RETURNING to_jsonb(g) - 'trial_notice', (to_jsonb(g) - 'trial_notice' - 'trial_ends_at'), active`, r.PathValue("id"), features).Scan(&gym, &public, &active)
 		if err != nil {
 			return db.NotFound(err)
 		}
@@ -147,7 +147,7 @@ func (m *module) setFeatures(w http.ResponseWriter, r *http.Request) error {
 		}
 		p, _ := auth.From(r.Context())
 		return events.PublishAs(r.Context(), tx, p.UserID, "gym:"+r.PathValue("id"), "gym.updated",
-			map[string]any{"record": gym, "changed": []string{"features"}}, audience)
+			map[string]any{"record": public, "changed": []string{"features"}}, audience)
 	})
 	if err != nil {
 		return err

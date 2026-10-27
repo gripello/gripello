@@ -102,7 +102,8 @@
         "eyebrowVerifyEmail": "VÉRIFICATION DE L'E-MAIL",
         "eyebrowEmailChange": "CHANGEMENT D'E-MAIL",
         "verifyEmail": "Vérifiez votre e-mail",
-        "verifyEmailHint": "Confirmation de votre adresse e-mail…",
+        "verifyEmailHint": "Saisissez le mot de passe de votre inscription pour confirmer l'adresse.",
+        "wrongPassword": "Mot de passe incorrect",
         "emailChange": "Confirmez votre nouvel e-mail",
         "emailChangeHint": "Saisissez votre mot de passe pour confirmer la modification.",
         "passwordSet": "Mot de passe mis à jour",
@@ -111,6 +112,7 @@
         "linkInvalid": "Ce lien n'est plus valide",
         "emailChangeConfirmHint": "Un lien de confirmation est envoyé à la nouvelle adresse. Votre adresse actuelle reste active jusqu'à ce que vous l'ouvriez.",
         "emailChangeSent": "Lien de confirmation envoyé à la nouvelle adresse. Votre adresse actuelle reste active jusqu'à ce que vous l'ouvriez.",
+        "profileHidden": "Ton profil a été masqué par la modération et ne peut pas être modifié pour le moment.",
         "emailChangeFailed": "Le lien de confirmation n'a pas pu être envoyé. Votre adresse e-mail n'a pas changé.",
         "exportData": "Télécharger vos données",
         "exportDataHint": "Un fichier ZIP avec votre profil, carnet, adhésions, inscriptions aux compétitions, notifications, défauts signalés et activité du compte, envoyé sous forme de lien de téléchargement par e-mail.",
@@ -377,6 +379,8 @@
         "loadError": "Impossible de charger les avis.",
         "deleteOwn": "Supprimer mon avis",
         "deleteOwnConfirm": "Ton avis sera définitivement supprimé.",
+        "editOwn": "Modifier mon avis",
+        "alreadyReviewed": "Tu as déjà donné un avis sur cette voie. Modifie plutôt ton avis.",
         "perceived": "Ressenti",
         "votes": "1 vote | {n} votes",
         "ratingCount": "1 avis | {n} avis"
@@ -1147,7 +1151,8 @@
         "qr_code": "Code QR",
         "move_up": "Monter",
         "move_down": "Descendre",
-        "fileName": "voies-escalade"
+        "fileName": "voies-escalade",
+        "tooMany": "Exportez au maximum {max} voies à la fois."
     },
     "importRoutes": {
         "title": "Confirmer l’import",

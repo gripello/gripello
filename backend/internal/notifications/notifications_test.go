@@ -213,9 +213,14 @@ func TestNotifyEventStoresPublishesAndPushes(t *testing.T) {
 	f.subscribe("climber", alive.URL+"/a")
 	f.subscribe("climber", gone.URL+"/b")
 
-	f.notify(events.Notify{Type: "task_defect_fixed", Users: []string{f.users["climber"], "unknownuser0000"}, Gym: f.gym,
+	f.user("suspended")
+	f.exec(`UPDATE users SET suspended_until = now() + interval '1 day' WHERE id = $1 RETURNING id`, f.users["suspended"])
+	f.notify(events.Notify{Type: "task_defect_fixed", Users: []string{f.users["climber"], f.users["suspended"], "unknownuser0000"}, Gym: f.gym,
 		Params: map[string]any{"route": "Crimp"}, URL: "/route?id=x"})
 	testapp.WaitFor(t, func() bool { return f.count(`SELECT COUNT(*) FROM jobs WHERE kind = 'push'`) == 1 })
+	if n := f.count(`SELECT COUNT(*) FROM notifications WHERE "user" = $1`, f.users["suspended"]); n != 0 {
+		t.Errorf("suspended user got %d notifications", n)
+	}
 
 	body := f.call("climber", "GET", "/me/notifications", "", http.StatusOK)
 	items := body["items"].([]any)

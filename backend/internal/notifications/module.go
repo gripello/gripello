@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -67,13 +66,8 @@ func (m *module) list(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	query := r.URL.Query()
-	page, _ := strconv.Atoi(query.Get("page"))
-	limit, _ := strconv.Atoi(query.Get("limit"))
-	page = max(page, 1)
-	if limit < 1 {
-		limit = defaultPageSize
-	}
-	limit = min(limit, maxPageSize)
+	paging := httpx.Page(r, defaultPageSize, maxPageSize)
+	page, limit := paging.Page, paging.Limit
 	unread := query.Get("unread") == "true" || query.Get("unread") == "1"
 	where := ` FROM notifications WHERE "user" = $1`
 	if unread {

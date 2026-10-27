@@ -177,6 +177,7 @@
                     :inset-bottom="sheetCover"
                     :grid="grid"
                     :trace-url="traceUrl"
+                    @trace-error="renewTrace"
                 />
                 <div v-if="!preview" class="editor-overlay">
                     <UAlert
@@ -669,12 +670,20 @@ const routeCounts = computed(() => {
 const traceFiles = new Map<string, { file: File; url: string }>()
 const { error: notifyError } = useNotification()
 
+const { token: traceToken, renew: renewTrace } = useFileToken(() =>
+    location.value?.map_trace
+        ? { table: 'locations', id: location.value.id }
+        : null,
+)
 const traceUrl = computed(() => {
     const change = editor.state.value.trace
     if (change && 'file' in change)
         return traceFiles.get(change.file)?.url ?? null
-    if (change?.removed || !location.value?.map_trace) return null
-    return fileUrl('locations', location.value, location.value.map_trace)
+    if (change?.removed || !location.value?.map_trace || !traceToken.value)
+        return null
+    return fileUrl('locations', location.value, location.value.map_trace, {
+        token: traceToken.value,
+    })
 })
 
 function uploadTrace(file: File) {

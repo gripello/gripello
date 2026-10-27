@@ -102,7 +102,8 @@
         "eyebrowVerifyEmail": "EMAIL VERIFICATION",
         "eyebrowEmailChange": "EMAIL CHANGE",
         "verifyEmail": "Verify your email",
-        "verifyEmailHint": "Confirming your email address…",
+        "verifyEmailHint": "Enter the password you signed up with to confirm your address.",
+        "wrongPassword": "Wrong password",
         "emailChange": "Confirm your new email",
         "emailChangeHint": "Enter your password to confirm the change.",
         "passwordSet": "Password updated",
@@ -111,6 +112,7 @@
         "linkInvalid": "Link no longer valid",
         "emailChangeConfirmHint": "A confirmation link is sent to the new address. Your current address stays active until you open it.",
         "emailChangeSent": "Confirmation link sent to the new address. Your current address stays active until you open it.",
+        "profileHidden": "Your profile was hidden by moderation and cannot be changed right now.",
         "emailChangeFailed": "The confirmation link could not be sent. Your email address is unchanged.",
         "exportData": "Download your data",
         "exportDataHint": "A ZIP file with your profile, logbook, memberships, competition entries, notifications, reported defects and account activity, sent to you as a download link by e-mail.",
@@ -377,6 +379,8 @@
         "loadError": "Failed to load reviews.",
         "deleteOwn": "Delete my review",
         "deleteOwnConfirm": "Your review will be removed for good.",
+        "editOwn": "Edit my review",
+        "alreadyReviewed": "You already reviewed this route. Edit your review instead.",
         "perceived": "Felt",
         "votes": "1 vote | {n} votes",
         "ratingCount": "1 rating | {n} ratings"
@@ -1147,7 +1151,8 @@
         "qr_code": "QR code",
         "move_up": "Move up",
         "move_down": "Move down",
-        "fileName": "climbing-routes"
+        "fileName": "climbing-routes",
+        "tooMany": "Export at most {max} routes at once."
     },
     "importRoutes": {
         "title": "Confirm import",

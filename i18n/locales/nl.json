@@ -102,7 +102,8 @@
         "eyebrowVerifyEmail": "E-MAILVERIFICATIE",
         "eyebrowEmailChange": "E-MAIL WIJZIGEN",
         "verifyEmail": "Bevestig je e-mailadres",
-        "verifyEmailHint": "E-mailadres wordt bevestigd…",
+        "verifyEmailHint": "Voer het wachtwoord van je aanmelding in om je adres te bevestigen.",
+        "wrongPassword": "Verkeerd wachtwoord",
         "emailChange": "Bevestig je nieuwe e-mailadres",
         "emailChangeHint": "Voer je wachtwoord in om de wijziging te bevestigen.",
         "passwordSet": "Wachtwoord bijgewerkt",
@@ -111,6 +112,7 @@
         "linkInvalid": "Link niet meer geldig",
         "emailChangeConfirmHint": "Er wordt een bevestigingslink naar het nieuwe adres gestuurd. Je huidige adres blijft actief totdat je die link opent.",
         "emailChangeSent": "Bevestigingslink naar het nieuwe adres gestuurd. Je huidige adres blijft actief totdat je die link opent.",
+        "profileHidden": "Je profiel is door moderatie verborgen en kan nu niet worden gewijzigd.",
         "emailChangeFailed": "De bevestigingslink kon niet worden verstuurd. Je e-mailadres is niet gewijzigd.",
         "exportData": "Je gegevens downloaden",
         "exportDataHint": "Een ZIP-bestand met je profiel, logboek, lidmaatschappen, wedstrijdinschrijvingen, meldingen, gemelde gebreken en accountactiviteit, dat je als downloadlink per e-mail ontvangt.",
@@ -377,6 +379,8 @@
         "loadError": "Beoordelingen konden niet worden geladen.",
         "deleteOwn": "Mijn review verwijderen",
         "deleteOwnConfirm": "Je review wordt definitief verwijderd.",
+        "editOwn": "Mijn beoordeling bewerken",
+        "alreadyReviewed": "Je hebt deze route al beoordeeld. Bewerk in plaats daarvan je beoordeling.",
         "perceived": "Gevoeld",
         "votes": "1 stem | {n} stemmen",
         "ratingCount": "1 beoordeling | {n} beoordelingen"
@@ -1147,7 +1151,8 @@
         "qr_code": "QR-code",
         "move_up": "Omhoog",
         "move_down": "Omlaag",
-        "fileName": "klimroutes"
+        "fileName": "klimroutes",
+        "tooMany": "Exporteer maximaal {max} routes tegelijk."
     },
     "importRoutes": {
         "title": "Import bevestigen",

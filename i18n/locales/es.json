@@ -102,7 +102,8 @@
         "eyebrowVerifyEmail": "VERIFICACIÓN DEL CORREO",
         "eyebrowEmailChange": "CAMBIO DE CORREO",
         "verifyEmail": "Verifica tu correo electrónico",
-        "verifyEmailHint": "Confirmando tu correo electrónico…",
+        "verifyEmailHint": "Introduce la contraseña de tu registro para confirmar la dirección.",
+        "wrongPassword": "Contraseña incorrecta",
         "emailChange": "Confirma tu nuevo correo electrónico",
         "emailChangeHint": "Introduce tu contraseña para confirmar el cambio.",
         "passwordSet": "Contraseña actualizada",
@@ -111,6 +112,7 @@
         "linkInvalid": "El enlace ya no es válido",
         "emailChangeConfirmHint": "Se enviará un enlace de confirmación a la nueva dirección. Tu dirección actual seguirá activa hasta que lo abras.",
         "emailChangeSent": "Enlace de confirmación enviado a la nueva dirección. Tu dirección actual seguirá activa hasta que lo abras.",
+        "profileHidden": "La moderación ha ocultado tu perfil y ahora no se puede cambiar.",
         "emailChangeFailed": "No se pudo enviar el enlace de confirmación. Tu correo electrónico no ha cambiado.",
         "exportData": "Descargar tus datos",
         "exportDataHint": "Un archivo ZIP con tu perfil, registro, membresías, inscripciones a competiciones, notificaciones, defectos comunicados y actividad de la cuenta, que recibes como enlace de descarga por correo electrónico.",
@@ -377,6 +379,8 @@
         "loadError": "No se pudieron cargar las valoraciones.",
         "deleteOwn": "Eliminar mi reseña",
         "deleteOwnConfirm": "Tu reseña se eliminará definitivamente.",
+        "editOwn": "Editar mi reseña",
+        "alreadyReviewed": "Ya has valorado esta vía. Edita tu reseña en su lugar.",
         "perceived": "Percibido",
         "votes": "1 voto | {n} votos",
         "ratingCount": "1 valoración | {n} valoraciones"
@@ -1147,7 +1151,8 @@
         "qr_code": "Código QR",
         "move_up": "Subir",
         "move_down": "Bajar",
-        "fileName": "vias-escalada"
+        "fileName": "vias-escalada",
+        "tooMany": "Exporta como máximo {max} vías a la vez."
     },
     "importRoutes": {
         "title": "Confirmar importación",

@@ -414,6 +414,11 @@ func TestSetFeatures(t *testing.T) {
 	if record := e["record"].(map[string]any); record["id"] != f.gym || record["features"].(map[string]any)["beta_links"] != true || e["changed"].([]any)[0] != "features" {
 		t.Errorf("gym.updated = %v", e)
 	}
+	for _, internal := range []string{"trial_ends_at", "trial_notice"} {
+		if _, leaked := e["record"].(map[string]any)[internal]; leaked {
+			t.Errorf("public gym.updated carries %s", internal)
+		}
+	}
 	f.assertActors(f.operator)
 }
 
