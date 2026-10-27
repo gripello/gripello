@@ -126,6 +126,10 @@ func TestCreateRatingSetsUserFromAuth(t *testing.T) {
 	if _, leaked := own["user"]; leaked || own["mine"] != true || own["gym"] != f.gymA {
 		t.Errorf("created rating = %v", own)
 	}
+	f.call("climber", "POST", "/routes/"+f.route+"/ratings", `{"rating":1}`, http.StatusConflict)
+	if n := f.exec(`SELECT count(*)::text FROM ratings WHERE "user" = $1 AND route_id = $2`, f.users["climber"], f.route); n != "1" {
+		t.Errorf("reviews of one climber on one route = %s", n)
+	}
 	if author := own["author"].(map[string]any); author["name"] != "Anna Muster" {
 		t.Errorf("author = %v", author)
 	}
@@ -158,13 +162,19 @@ func TestRouteRatingsEnrichForSignedInViewers(t *testing.T) {
 func TestRatingUpdateAndDeleteRules(t *testing.T) {
 	f := newFixture(t)
 	id := f.rate("climber", `{"rating":5,"comment":"great"}`)
-	f.call("climber", "PATCH", "/ratings/"+id, `{"comment":"edited"}`, http.StatusForbidden)
+	f.call("shy", "PATCH", "/ratings/"+id, `{"comment":"edited"}`, http.StatusForbidden)
 	f.call("moderatorB", "PATCH", "/ratings/"+id, `{"comment":"edited"}`, http.StatusForbidden)
+	if own := f.call("climber", "PATCH", "/ratings/"+id, `{"rating":4}`, http.StatusOK); own["rating"] != float64(4) || own["mine"] != true {
+		t.Errorf("own edit = %v", own)
+	}
 	updated := f.call("moderator", "PATCH", "/ratings/"+id, `{"comment":"edited"}`, http.StatusOK)
-	if updated["comment"] != "edited" || updated["rating"] != float64(5) || f.ratingUser(id) != f.users["climber"] {
+	if actors := f.exec(`SELECT string_agg(DISTINCT actor, ',') FROM events WHERE kind = 'rating.updated' AND payload->>'changed' = '["comment"]'`); actors != f.users["moderator"] {
+		t.Errorf("staff edit actor = %q", actors)
+	}
+	if updated["comment"] != "edited" || updated["rating"] != float64(4) || f.ratingUser(id) != f.users["climber"] {
 		t.Errorf("update = %v, user %q", updated, f.ratingUser(id))
 	}
-	if changed := f.exec(`SELECT string_agg(payload->>'changed', '|') FROM events WHERE kind = 'rating.updated'`); changed != `["comment"]|["comment"]|["comment"]` {
+	if changed := f.exec(`SELECT string_agg(payload->>'changed', '|' ORDER BY id) FROM events WHERE kind = 'rating.updated'`); changed != `["rating"]|["rating"]|["rating"]|["comment"]|["comment"]|["comment"]` {
 		t.Errorf("changed per variant = %s", changed)
 	}
 	f.call("", "DELETE", "/ratings/"+id, "", http.StatusUnauthorized)
@@ -261,15 +271,20 @@ func TestRatingEventsPerAudience(t *testing.T) {
 	if len(got) != 4 || got[0]+"|"+got[1] != want {
 		t.Errorf("events = %v", got)
 	}
-	if actors := f.exec(`SELECT string_agg(DISTINCT actor, ',') FROM events`); actors != f.users["climber"] {
-		t.Errorf("actors = %q", actors)
+	if actors := f.exec(`SELECT string_agg(DISTINCT actor, ',') FROM events WHERE topic LIKE 'gym_changes:%'`); actors != f.users["climber"] {
+		t.Errorf("actors on a named author's review events = %q, want the author", actors)
+	}
+	f.exec(`UPDATE users SET reviews_anonymous = true WHERE username = 'shy' RETURNING id`)
+	f.rate("shy", `{"rating":3}`)
+	if actors := f.exec(`SELECT COALESCE(string_agg(DISTINCT actor, ','), '') FROM events WHERE topic LIKE 'gym_changes:%' AND actor = $1`, f.users["shy"]); actors != "" {
+		t.Errorf("actors on an anonymous author's review events = %q, want none (the gym audit log must not name them)", actors)
 	}
 	f.rate("", `{"rating":2}`)
 	var audience string
 	if err := f.app.DB.QueryRow(context.Background(), `SELECT audience::text FROM events WHERE topic LIKE 'gym_changes:%' ORDER BY id DESC LIMIT 1`).Scan(&audience); err != nil {
 		t.Fatal(err)
 	}
-	if n := f.exec(`SELECT COUNT(*)::text FROM events WHERE topic LIKE 'gym_changes:%'`); n != "4" || audience != `{"public": true}` {
+	if n := f.exec(`SELECT COUNT(*)::text FROM events WHERE topic LIKE 'gym_changes:%'`); n != "7" || audience != `{"public": true}` {
 		t.Errorf("guest rating events = %s, audience %s", n, audience)
 	}
 }

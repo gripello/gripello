@@ -203,10 +203,24 @@ func (p *phone) tick(route string, burst bool) {
 }
 
 func (p *phone) review(r route) {
-	p.write("POST /routes/{id}/ratings", "POST", "/api/routes/"+r.ID+"/ratings", map[string]any{
-		"route_id": r.ID, "rating": 1 + p.rng.IntN(5), "grade": r.Grade, "grade_system": r.GradeSystem, "grade_index": r.GradeIndex,
+	body := map[string]any{
+		"rating": 1 + p.rng.IntN(5), "grade": r.Grade, "grade_system": r.GradeSystem, "grade_index": r.GradeIndex,
 		"comment": pick(p, []string{"", "", "loadtest review: crimpy start, nice top"}),
-	}, nil)
+	}
+	var reviews struct {
+		Items []struct {
+			ID   string `json:"id"`
+			Mine bool   `json:"mine"`
+		} `json:"items"`
+	}
+	p.get("GET /routes/{id}/ratings", "/api/routes/"+r.ID+"/ratings", &reviews)
+	for _, review := range reviews.Items {
+		if review.Mine {
+			p.write("PATCH /ratings/{id}", "PATCH", "/api/ratings/"+review.ID, body, nil)
+			return
+		}
+	}
+	p.write("POST /routes/{id}/ratings", "POST", "/api/routes/"+r.ID+"/ratings", body, nil)
 }
 
 func (p *phone) reportDefect(route string) {

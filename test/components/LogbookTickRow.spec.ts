@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import TickRow from '~/components/logbook/TickRow.vue'
 import type { TickRecord } from '~/types/models'
 
-function mountRow(syncFailed?: string) {
+function mountRow(syncFailed?: string, expand?: TickRecord['expand']) {
     return mount(TickRow, {
         props: {
             tick: {
@@ -12,12 +12,17 @@ function mountRow(syncFailed?: string) {
                 attempts: 1,
                 route_name: 'Arete',
                 syncFailed,
+                expand,
             } as TickRecord & { syncFailed?: string },
         },
         global: {
             mocks: { $t: (key: string) => key },
             stubs: {
-                RouteSummary: { template: '<div><slot name="meta" /></div>' },
+                RouteSummary: {
+                    props: ['route'],
+                    template:
+                        '<div><span data-testid="name">{{ route.name }}</span><slot name="meta" /></div>',
+                },
                 UBadge: { template: '<span><slot /></span>' },
                 UDropdownMenu: true,
                 UButton: true,
@@ -35,5 +40,13 @@ describe('LogbookTickRow', () => {
             wrapper.find('[data-testid="logbook-tick-sync-failed"]').text(),
         ).toBe('ticks.syncFailed')
         expect(wrapper.html()).not.toContain('Internal Server Error')
+    })
+
+    it('keeps a moderation-blanked route name blank instead of the snapshot', () => {
+        const wrapper = mountRow(undefined, {
+            route: { id: 'r1', name: '' },
+        } as TickRecord['expand'])
+        expect(wrapper.find('[data-testid="name"]').text()).toBe('')
+        expect(mountRow().find('[data-testid="name"]').text()).toBe('Arete')
     })
 })

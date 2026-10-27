@@ -159,7 +159,7 @@ func platformContactEmail(ctx context.Context, q db.Querier) string {
 }
 
 const managersSQL = `SELECT DISTINCT m."user" FROM memberships m JOIN roles r ON r.id = m.role
-	WHERE m.gym = $1 AND 'manage_tasks' = ANY (r.permissions)`
+	WHERE m.gym = $1 AND 'manage_tasks' = ANY (effective_permissions(m.gym, r.permissions))`
 
 func taskManagers(ctx context.Context, q db.Querier, gym string) ([]string, error) {
 	rows, err := q.Query(ctx, managersSQL+` ORDER BY 1`, gym)

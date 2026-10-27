@@ -6,7 +6,9 @@ import {
     resolveApplicationUrl,
     resolveExportGymId,
     fetchRoutesByIds,
+    requireRouteIds,
 } from '../../utils/export'
+import { MAX_SHEET_ROUTES } from '#shared/utils/routeExport'
 import { normalizeHexColor } from '#shared/utils/color'
 
 const QR_PX = 240 // generated QR bitmap size
@@ -23,13 +25,7 @@ export default eventHandler(async (event) => {
     const api = await requirePermission(event, 'manage_routes', gymId)
     const res = event.node.res
 
-    const ids = await resolveRouteIds(event)
-    if (ids.length === 0) {
-        throw createError({
-            statusCode: 400,
-            statusMessage: 'No IDs provided.',
-        })
-    }
+    const ids = requireRouteIds(await resolveRouteIds(event), MAX_SHEET_ROUTES)
 
     const columns = await resolveExportColumns(event)
     if (columns.length === 0) {

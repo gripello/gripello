@@ -1,6 +1,7 @@
 package gyms
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/url"
 	"reflect"
@@ -10,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"gripello/internal/platform/blob"
+	"gripello/internal/platform/grades"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/locales"
 	platformmail "gripello/internal/platform/mail"
@@ -84,7 +86,7 @@ var gymFields = map[string]field{
 	"contact_email":         {kind: "email"},
 	"route_grade_system":    {kind: "text", max: 50},
 	"boulder_grade_system":  {kind: "text", max: 50},
-	"boulder_bands":         {kind: "json", max: 5000},
+	"boulder_bands":         {kind: "bands", max: 5000},
 	"legal_address":         {kind: "text", max: 1000},
 	"legal_phone":           {kind: "text", max: 100},
 	"legal_register":        {kind: "text", max: 500},
@@ -236,6 +238,17 @@ func validateValue(spec field, raw json.RawMessage) (any, string) {
 		}
 		if isNull(raw) {
 			return nil, ""
+		}
+		return raw, ""
+	case "bands":
+		if len(raw) > int(spec.max) {
+			return nil, "Too large."
+		}
+		if isNull(raw) {
+			return nil, ""
+		}
+		if !validBoulderBands(raw) {
+			return nil, "Bands are a list of at most 12 entries with a hex colour, a name of at most 50 characters and a grade."
 		}
 		return raw, ""
 	case "privacy":
@@ -414,4 +427,28 @@ func slugHistory(current *gymState, changes map[string]any) (slug string, previo
 		previous = append(previous, current.Slug)
 	}
 	return slug, slices.DeleteFunc(previous, func(p string) bool { return p == slug })
+}
+
+var hexColorPattern = regexp.MustCompile(`^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$`)
+
+const maxBoulderBands = 12
+
+// validBoulderBands mirrors BoulderBandSetting in shared/utils/gradeReference.ts; the colour reaches every visitor's CSS, so only hex passes.
+func validBoulderBands(raw json.RawMessage) bool {
+	var bands []struct {
+		Name  string `json:"name"`
+		Color string `json:"color"`
+		To    string `json:"to"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if decoder.Decode(&bands) != nil || len(bands) > maxBoulderBands {
+		return false
+	}
+	for _, band := range bands {
+		if utf8.RuneCountInString(band.Name) > 50 || utf8.RuneCountInString(band.To) > grades.MaxLength || !hexColorPattern.MatchString(band.Color) {
+			return false
+		}
+	}
+	return true
 }

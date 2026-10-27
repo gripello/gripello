@@ -59,11 +59,15 @@ func (m *module) publishRatingChange(ctx context.Context, tx pgx.Tx, actor, acti
 	if rating.User == "" {
 		return events.PublishAs(ctx, tx, actor, topic, kind, GymChange{"ratings", action, bare, changed}, events.Audience{Public: true})
 	}
-	if err := events.PublishAs(ctx, tx, actor, topic, kind, GymChange{"ratings", action, bare, changed}, events.Audience{GuestsOnly: true}); err != nil {
-		return err
-	}
 	found, err := m.authors(ctx, []string{rating.User}, true)
 	if err != nil {
+		return err
+	}
+	// The envelope actor feeds the gym audit log: an anonymous reviewer's own actions must not name them there either.
+	if _, named := found[rating.User]; actor == rating.User && !named {
+		actor = ""
+	}
+	if err := events.PublishAs(ctx, tx, actor, topic, kind, GymChange{"ratings", action, bare, changed}, events.Audience{GuestsOnly: true}); err != nil {
 		return err
 	}
 	signedIn := bare

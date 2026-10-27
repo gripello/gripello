@@ -42,6 +42,51 @@ describe('docker nginx config', () => {
         expect(Number(count) * Number(sizeKb)).toBeGreaterThanOrEqual(512)
     })
 
+    it('lets signage players frame the TV screen and nothing else', () => {
+        const config = readFileSync('.docker/nginx.conf', 'utf8')
+        const tv = config.match(
+            /location ~ \^\/\[a-z0-9-\]\+\/tv\$ \{([^}]*)\}/,
+        )?.[1]
+        expect(tv).toBeDefined()
+        expect(tv).not.toContain('frame-ancestors')
+        expect(tv).toContain('Strict-Transport-Security')
+        expect(tv).toMatch(/proxy_pass http:\/\/nuxt;/)
+    })
+
+    it('forbids framing and pins HTTPS on every response, also where a location adds its own headers', () => {
+        const config = readFileSync('.docker/nginx.conf', 'utf8')
+        const tls = config.slice(config.indexOf('listen 443 ssl;'))
+        expect(tls).toMatch(
+            /\n {8}add_header Content-Security-Policy "frame-ancestors 'none'" always;/,
+        )
+        expect(tls).toMatch(
+            /\n {8}add_header Strict-Transport-Security "max-age=\d+" always;/,
+        )
+        const withOwnHeaders = [...tls.matchAll(/location [^{]+\{([^}]*)\}/g)]
+            .filter(([, body]) => /add_header/.test(body!))
+            .filter(([block]) => !block.includes('/tv$'))
+        expect(withOwnHeaders.length).toBeGreaterThan(0)
+        for (const [block, body] of withOwnHeaders) {
+            expect(body, block.split('\n')[0]).toContain(
+                "frame-ancestors 'none'",
+            )
+            expect(body, block.split('\n')[0]).toContain(
+                'Strict-Transport-Security',
+            )
+        }
+    })
+
+    it('rate-limits every api location, including the ones served by Nuxt', () => {
+        const config = readFileSync('.docker/nginx.conf', 'utf8')
+        const unlimited = [
+            ...config.matchAll(/location (?:= |~ )?(\S*api\S*) \{([^}]*)\}/g),
+        ]
+            .filter(([, , body]) => !/limit_req zone=api/.test(body!))
+            .map(([, path]) => path)
+
+        expect(unlimited).toEqual([])
+    })
+
     it('sends exactly the Nuxt api prefixes to Nuxt', () => {
         const config = readFileSync('.docker/nginx.conf', 'utf8')
         const toNuxt = [

@@ -1,8 +1,15 @@
 import { ROUTE_TYPES } from '#shared/utils/routeTypes'
+import { MAX_SHEET_ROUTES, MAX_TAG_ROUTES } from '#shared/utils/routeExport'
 import type { ExportOptions } from '~/components/export/OptionsDialog.vue'
 import { saveBlob } from '~/utils/download'
 
 type ExportFormat = 'pdf' | 'xlsx' | 'json'
+
+const MAX_ROUTES: Record<ExportFormat, number> = {
+    pdf: MAX_TAG_ROUTES,
+    xlsx: MAX_SHEET_ROUTES,
+    json: MAX_SHEET_ROUTES,
+}
 
 const MIME_TYPES: Record<ExportFormat, string> = {
     pdf: 'application/pdf',
@@ -37,6 +44,10 @@ export function useRouteExport() {
         payload: Record<string, unknown> = {},
     ) => {
         if (!ids.length || exportingFormat.value) return
+        if (ids.length > MAX_ROUTES[format]) {
+            notifyError(t('export.tooMany', { max: MAX_ROUTES[format] }))
+            return
+        }
 
         exportingFormat.value = format
         try {

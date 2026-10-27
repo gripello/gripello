@@ -337,7 +337,10 @@ test('heatmap switches years and shows day counts', async ({
 
 test('reports routes whose grade votes are harder than the set grade', async ({
     adminPage: page,
+    api,
     adminApi,
+    apiAs,
+    createUser,
     testPrefix,
     workerLocation,
 }) => {
@@ -352,8 +355,8 @@ test('reports routes whose grade votes are harder than the set grade', async ({
             screw_date: new Date().toISOString().slice(0, 10),
         },
     )
-    for (let vote = 0; vote < 3; vote++) {
-        await createRating(adminApi, route.id, { rating: 4, ...uiaa('10') })
+    for (const voter of [adminApi, api, await apiAs(await createUser())]) {
+        await createRating(voter, route.id, { rating: 4, ...uiaa('10') })
     }
     await gotoSettled(page, '/manage/analytics?range=all&type=Route')
     await expect(

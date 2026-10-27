@@ -45,6 +45,7 @@
             preserveAspectRatio="none"
             pointer-events="none"
             data-testid="map-editor-trace"
+            @error="emit('trace-error')"
         />
         <rect
             v-if="grid > 0"
@@ -302,6 +303,8 @@ const props = defineProps<{
     insetBottom?: number
 }>()
 
+const emit = defineEmits<{ 'trace-error': [] }>()
+
 const HANDLE_PX = { fine: 12, coarse: 22 }
 const HIT_PX = { fine: 12, coarse: 22 }
 const SNAP_PX = { fine: 10, coarse: 18 }
@@ -357,6 +360,9 @@ watch(
         image.onload = () => {
             if (props.traceUrl === url && image.naturalWidth)
                 traceRatio.value = image.naturalHeight / image.naturalWidth
+        }
+        image.onerror = () => {
+            if (props.traceUrl === url) emit('trace-error')
         }
         image.src = url
     },

@@ -29,7 +29,7 @@ func Verify(ctx context.Context, pool *pgxpool.Pool, secret, token, scope string
 		return httpx.NewError(http.StatusBadRequest, "Captcha verification required.")
 	}
 	claims := jwt.MapClaims{}
-	_, err := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"})).ParseWithClaims(token, claims, func(*jwt.Token) (any, error) {
+	_, err := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired()).ParseWithClaims(token, claims, func(*jwt.Token) (any, error) {
 		return []byte(secret), nil
 	})
 	tokenScope, _ := claims["scope"].(string)

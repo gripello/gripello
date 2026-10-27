@@ -64,6 +64,7 @@ type routeInput struct {
 	GradeSystem  string
 	GradeIndex   float64
 	Permanent    bool
+	stored       bool
 }
 
 func inputOf(r Route) routeInput {
@@ -71,6 +72,7 @@ func inputOf(r Route) routeInput {
 		Name: r.Name, AnchorPoint: r.AnchorPoint, Type: r.Type, Comment: r.Comment, Creator: r.Creator,
 		Archived: r.Archived, Color: r.Color, Location: r.Location, Wall: r.Wall, WallPosition: r.WallPosition,
 		Grade: r.Grade, GradeSystem: r.GradeSystem, GradeIndex: r.GradeIndex, Permanent: r.Permanent, ScrewDate: r.ScrewDate,
+		stored: true,
 	}
 	return in
 }
@@ -101,7 +103,8 @@ func (in *routeInput) apply(p patch) error {
 		in.ScrewDate = date
 	}
 	in.Name = strings.TrimSpace(in.Name)
-	if httpx.Blank(in.Name) {
+	_, nameSent := p["name"]
+	if httpx.Blank(in.Name) && (nameSent || !in.stored) {
 		return httpx.Required("name")
 	}
 	if httpx.Blank(in.Grade) {

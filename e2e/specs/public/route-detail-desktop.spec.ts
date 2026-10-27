@@ -47,6 +47,7 @@ test('the actions sit in the stats bar', async ({ page, route }) => {
 
 test('a review comment lines up with the author name', async ({
     page,
+    api,
     adminApi,
     route,
 }) => {
@@ -58,7 +59,7 @@ test('a review comment lines up with the author name', async ({
             ),
         ...uiaa('7-'),
     })
-    await createRating(adminApi, route.id, {
+    await createRating(api, route.id, {
         rating: 0,
         grade: '',
         grade_system: '',

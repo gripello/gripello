@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
@@ -313,7 +314,9 @@ func (m *module) release(ctx context.Context, w *work, it *Item) error {
 			columns = append(columns, `"`+column+`"`)
 		}
 		list := strings.Join(columns, ", ")
-		if _, err := w.tx.Exec(ctx, `INSERT INTO `+k.table+` (`+list+`) SELECT `+list+` FROM jsonb_populate_record(NULL::`+k.table+`, $1)`, values); err != nil {
+		if _, err := w.tx.Exec(ctx, `INSERT INTO `+k.table+` (`+list+`) SELECT `+list+` FROM jsonb_populate_record(NULL::`+k.table+`, $1)`, values); db.IsUnique(err, "ratings_route_user_idx") {
+			return httpx.NewError(http.StatusConflict, "The author has reviewed this route again since; delete that review first.")
+		} else if err != nil {
 			slog.Warn("moderation: restoring content failed", "item", it.ID, "error", err)
 			return httpx.BadRequest("The content could not be restored.")
 		}
@@ -499,7 +502,7 @@ func (m *module) sendReceipt(ctx context.Context, report Report, caseID string) 
 	}
 	var to []mail.Recipient
 	rows, err := m.app.DB.Query(ctx, `SELECT email, language FROM users WHERE email <> '' AND id IN (
-		SELECT m."user" FROM memberships m JOIN roles r ON r.id = m.role WHERE m.gym = $1 AND $2 = ANY (r.permissions))`, report.Gym, tenancy.PermManageReports)
+		SELECT m."user" FROM memberships m JOIN roles r ON r.id = m.role WHERE m.gym = $1 AND $2 = ANY (effective_permissions(m.gym, r.permissions)))`, report.Gym, tenancy.PermManageReports)
 	if err == nil {
 		to, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (mail.Recipient, error) {
 			var r mail.Recipient
@@ -581,30 +584,32 @@ func (m *module) dropContent(ctx context.Context, kindName, contentID string) er
 
 // rehide is the safety net behind the owning modules' guards: content they let show again while its case is hidden goes back.
 func (m *module) rehide(ctx context.Context, kindName, contentID string) error {
+	return m.inTx(ctx, func(w *work) error { return m.rehideIn(ctx, w, kindName, contentID) })
+}
+
+func (m *module) rehideIn(ctx context.Context, w *work, kindName, contentID string) error {
 	k := kinds[kindName]
-	return m.inTx(ctx, func(w *work) error {
-		it, err := itemOf(ctx, w.tx, kindName, contentID)
-		if errors.Is(err, httpx.ErrNotFound) {
-			return nil
+	it, err := itemOf(ctx, w.tx, kindName, contentID)
+	if errors.Is(err, httpx.ErrNotFound) {
+		return nil
+	}
+	if err != nil || it.State != "hidden" {
+		return err
+	}
+	var current map[string]any
+	err = w.tx.QueryRow(ctx, `SELECT to_jsonb(t) FROM `+k.table+` t WHERE t.id = $1 AND `+k.exposed+` FOR UPDATE`, contentID).Scan(&current)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for _, field := range k.files {
+		if name, _ := current[field].(string); name != "" {
+			w.drop = append(w.drop, k.table+"/"+contentID+"/"+name)
 		}
-		if err != nil || it.State != "hidden" {
-			return err
-		}
-		var current map[string]any
-		err = w.tx.QueryRow(ctx, `SELECT to_jsonb(t) FROM `+k.table+` t WHERE t.id = $1 AND `+k.exposed+` FOR UPDATE`, contentID).Scan(&current)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		for _, field := range k.files {
-			if name, _ := current[field].(string); name != "" {
-				w.drop = append(w.drop, k.table+"/"+contentID+"/"+name)
-			}
-		}
-		return m.hideContent(ctx, w, &it)
-	})
+	}
+	return m.hideContent(ctx, w, &it)
 }
 
 // dropOrphans settles the cases of content a cascade took away (a deleted route takes its reviews, betas and tasks).

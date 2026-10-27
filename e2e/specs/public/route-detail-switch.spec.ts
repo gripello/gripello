@@ -37,12 +37,16 @@ test.describe('german locale', () => {
 
     test('formats the average rating with a decimal comma', async ({
         page,
+        api,
         adminApi,
         route,
         testPrefix,
     }) => {
-        for (const rating of [4, 5]) {
-            await createRating(adminApi, route.id, {
+        for (const [rater, rating] of [
+            [adminApi, 4],
+            [api, 5],
+        ] as const) {
+            await createRating(rater, route.id, {
                 rating,
                 comment: `${testPrefix}-rated`,
             })

@@ -592,6 +592,8 @@ async function saveUser(section: Section) {
             notifyError(t(throttledErrorKey(err)!))
         } else if (blockedFieldError(err, ['username', 'name'])) {
             notifyError(t('errors.nameProtected'))
+        } else if (fieldErrorCode(err, 'profile') === 'moderation_hidden') {
+            notifyError(t('account.profileHidden'))
         } else {
             notifyError(t('notifications.error.edit'))
         }

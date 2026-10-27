@@ -36,7 +36,7 @@ type Store struct {
 	warming     sync.WaitGroup
 }
 
-var ProtectedTables = []string{"tasks", "moderation_items"}
+var ProtectedTables = []string{"tasks", "moderation_items", "locations"}
 
 // PrivateTables are never served under /files; their owners stream them with their own checks (account exports).
 var PrivateTables = []string{"account_exports"}
@@ -75,6 +75,9 @@ func StaffView(pool *pgxpool.Pool, perms *tenancy.Permissions) func(context.Cont
 			return moderates(ctx, p, `SELECT COALESCE(gym, '') FROM moderation_items WHERE content_type = 'task' AND content_id = $1`, id)
 		case "moderation_items":
 			return moderates(ctx, p, `SELECT COALESCE(gym, '') FROM moderation_items WHERE id = $1`, id)
+		case "locations":
+			var gym string
+			return pool.QueryRow(ctx, `SELECT gym FROM locations WHERE id = $1`, id).Scan(&gym) == nil && perms.Can(ctx, p.UserID, gym, tenancy.PermManageSettings)
 		}
 		return false
 	}

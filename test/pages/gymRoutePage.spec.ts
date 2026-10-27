@@ -14,6 +14,16 @@ describe('gym route page', () => {
         expect(source).toContain('await nullIfNotFound(')
     })
 
+    it('turns the review CTA into editing once the climber has reviewed the route', () => {
+        expect(source).toMatch(
+            /const myReview = computed\(\s+\(\) => routeRatings\.data\.value\.find\(\(rating\) => rating\.mine\) \?\? null,/,
+        )
+        expect(source).toMatch(/<ReviewFormDialog[\s\S]+?:review="myReview"/)
+        expect(source).toMatch(
+            /data-testid="review-open-cta"[\s\S]+?myReview\s+\? 'ratings\.editOwn'\s+: 'ratings\.createReview'/,
+        )
+    })
+
     it('offers a retry when reviews or defects fail to load instead of hiding them', () => {
         expect(source).toMatch(
             /keepShownOnError\(ratingsKey,[\s\S]+?\{ default: \(\) => \[\] \}/,

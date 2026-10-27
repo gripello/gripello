@@ -98,6 +98,8 @@ test('a climber signs up, verifies the email and signs in', async ({
 
     const mail = await waitForMail(page, email, { subject: /verify/i })
     await gotoSettled(page, linkPath(mail, VERIFY_LINK))
+    await page.getByTestId('verify-password').fill(PASSWORD)
+    await page.getByTestId('verify-submit').click()
     await expect(page.getByTestId('verify-done')).toBeVisible()
 
     await gotoSettled(page, '/auth/login')
@@ -123,5 +125,7 @@ test('an unverified climber resends the verification mail from the sign-in page'
 
     const mail = await waitForMail(page, email, { subject: /verify/i })
     await gotoSettled(page, linkPath(mail, VERIFY_LINK))
+    await page.getByTestId('verify-password').fill(password)
+    await page.getByTestId('verify-submit').click()
     await expect(page.getByTestId('verify-done')).toBeVisible()
 })

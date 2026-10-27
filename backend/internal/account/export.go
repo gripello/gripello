@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/fs"
 	"strconv"
+	"strings"
 	"time"
 
 	"gripello/internal/platform/apitime"
@@ -206,11 +207,19 @@ func (m *module) writeLogbook(ctx context.Context, w io.Writer, userID string) e
 		if err := rows.Scan(&date, &route, &grade, &system, &kind, &attempts, &note, &gym); err != nil {
 			return err
 		}
-		out.Write([]string{date.Format(time.DateOnly), route, grade, system, kind, strconv.Itoa(attempts), note, gym})
+		out.Write([]string{date.Format(time.DateOnly), csvText(route), csvText(grade), system, kind, strconv.Itoa(attempts), csvText(note), csvText(gym)})
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
 	out.Flush()
 	return out.Error()
+}
+
+// csvText keeps spreadsheet apps from running a cell as a formula.
+func csvText(s string) string {
+	if s != "" && strings.ContainsRune("=+-@\t\r", rune(s[0])) {
+		return "'" + s
+	}
+	return s
 }

@@ -217,7 +217,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Tokens live 7 days. */
+        /** @description Tokens live 7 days; the password proves the link belongs to the clicker (a sign-up retry replaces it). */
         post: operations["confirmVerification"];
         delete?: never;
         options?: never;
@@ -1037,6 +1037,7 @@ export interface operations {
             content: {
                 "application/json": {
                     token: string;
+                    password: string;
                 };
             };
         };
@@ -1049,6 +1050,7 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
         };
     };
     requestEmailChange: {
@@ -1075,6 +1077,7 @@ export interface operations {
             };
             400: components["responses"]["Error"];
             401: components["responses"]["Error"];
+            429: components["responses"]["Error"];
         };
     };
     confirmEmailChange: {

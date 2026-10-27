@@ -404,7 +404,8 @@ func TestOAuth2CopiesTheProviderPictureIntoNewAccounts(t *testing.T) {
 func TestAvatarDownloadsStayOffTheInternalNetwork(t *testing.T) {
 	t.Parallel()
 	for address, allowed := range map[string]bool{"142.250.185.65:443": true, "127.0.0.1:443": false, "10.0.0.5:443": false, "192.168.178.100:443": false,
-		"169.254.169.254:80": false, "[::1]:443": false, "[::ffff:127.0.0.1]:443": false, "[fd00::1]:443": false} {
+		"169.254.169.254:80": false, "[::1]:443": false, "[::ffff:127.0.0.1]:443": false, "[fd00::1]:443": false,
+		"100.64.0.1:443": false, "198.18.0.1:443": false, "0.0.0.1:443": false, "240.0.0.1:443": false, "192.0.0.1:443": false} {
 		if err := publicHostsOnly("tcp", address, nil); (err == nil) != allowed {
 			t.Errorf("%s allowed = %v", address, err == nil)
 		}

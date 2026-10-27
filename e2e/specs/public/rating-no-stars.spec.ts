@@ -11,14 +11,18 @@ import {
 import { uiaa } from '../../support/seed'
 import type { RouteScoreRecord } from '../../../types/models'
 
-async function seedRoute(api: Api, prefix: string, stars: number[]) {
+async function seedRoute(
+    api: Api,
+    prefix: string,
+    stars: [rater: Api, rating: number][],
+) {
     const locations = await ensureLocations(api)
     const route = await createRoute(
         api,
         routeInput(`${prefix}-stars`, locations['Hall A']!, uiaa('6')),
     )
-    for (const rating of stars) {
-        await createRating(api, route.id, {
+    for (const [rater, rating] of stars) {
+        await createRating(rater, route.id, {
             rating,
             ...uiaa('6'),
             comment: `${prefix} ${rating} stars`,
@@ -33,10 +37,14 @@ async function seedRoute(api: Api, prefix: string, stars: number[]) {
 
 test('a comment-only review does not pull down the average', async ({
     page,
+    api,
     adminApi,
     testPrefix,
 }) => {
-    const seeded = await seedRoute(adminApi, testPrefix, [4, 0])
+    const seeded = await seedRoute(adminApi, testPrefix, [
+        [adminApi, 4],
+        [api, 0],
+    ])
     try {
         const score = await seeded.api.get<RouteScoreRecord>(
             `/routes/${seeded.routeId}`,

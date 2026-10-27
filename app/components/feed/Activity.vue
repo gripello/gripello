@@ -93,8 +93,9 @@ const nameOf = (userId: string) =>
     props.climbers?.get(userId)?.name || t('feed.someone')
 const summaryRoute = (tick: FeedTick) => ({
     ...tick.expand?.route,
-    name:
-        tick.expand?.route?.name || tick.route_name || t('ticks.removedRoute'),
+    name: tick.expand?.route
+        ? tick.expand.route.name
+        : tick.route_name || t('ticks.removedRoute'),
 })
 const routeLink = (tick: FeedTick) =>
     tick.route ? `/route?id=${tick.route}` : undefined

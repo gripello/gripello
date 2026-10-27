@@ -245,6 +245,9 @@ func (m *module) postRating(w http.ResponseWriter, r *http.Request) error {
 		return events.PublishAs(ctx, tx, auth.UserID(ctx), TopicRatingCreated, TopicRatingCreated,
 			RatingCreated{ID: rating.ID, Gym: rating.Gym, Route: rating.RouteID, User: rating.User}, events.Audience{})
 	}, rating.ID)
+	if db.IsUnique(err, "ratings_route_user_idx") {
+		return httpx.NewError(http.StatusConflict, "You already reviewed this route.").Field("rating", "validation_already_reviewed", "You already reviewed this route.")
+	}
 	if err != nil {
 		return err
 	}
@@ -261,8 +264,11 @@ func (m *module) patchRating(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := m.perms.Require(ctx, rating.Gym, tenancy.PermManageComments); err != nil {
-		return err
+	// One review per climber and route, so the author edits it instead of writing a second one; staff edit any.
+	if rating.User == "" || rating.User != auth.UserID(ctx) {
+		if err := m.perms.Require(ctx, rating.Gym, tenancy.PermManageComments); err != nil {
+			return err
+		}
 	}
 	before := rating
 	if err := in.applyTo(&rating); err != nil {

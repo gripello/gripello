@@ -132,7 +132,7 @@ func (c *Client) SendMessage(ctx context.Context, m Message) error {
 }
 
 func logMessage(_ context.Context, m Message) error {
-	slog.Info("mail (SMTP not configured)", "to", m.To, "subject", m.Subject)
+	slog.Info("mail (SMTP not configured)", "recipients", len(m.To), "subject", m.Subject)
 	return nil
 }
 

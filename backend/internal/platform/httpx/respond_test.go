@@ -8,7 +8,7 @@ import (
 
 func TestPageCapsPageAndLimit(t *testing.T) {
 	for query, want := range map[string]Paging{
-		"/?page=9223372036854775807&limit=1000": {Page: maxPage, Limit: 500},
+		"/?page=9223372036854775807&limit=1000": {Page: MaxPage, Limit: 500},
 		"/?page=0&limit=0":                      {Page: 1, Limit: 1},
 		"/?page=x&limit=y":                      {Page: 1, Limit: 50},
 		"/?page=3&limit=20":                     {Page: 3, Limit: 20},
@@ -18,7 +18,7 @@ func TestPageCapsPageAndLimit(t *testing.T) {
 			t.Errorf("%s: %+v, want %+v", query, got, want)
 		}
 	}
-	if tail := (Paging{Page: maxPage, Limit: 500}).SQL(); tail != " LIMIT 500 OFFSET 499999500" {
+	if tail := (Paging{Page: MaxPage, Limit: 500}).SQL(); tail != " LIMIT 500 OFFSET 499999500" {
 		t.Errorf("tail %q", tail)
 	}
 }

@@ -190,9 +190,9 @@ describe('token flows', () => {
                 { email: 'a@b.c' },
             ],
             [
-                () => confirmVerification('t'),
+                () => confirmVerification('t', 'pw'),
                 '/auth/verification/confirm',
-                { token: 't' },
+                { token: 't', password: 'pw' },
             ],
             [
                 () => requestEmailChange('new@b.c'),

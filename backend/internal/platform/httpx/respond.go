@@ -43,7 +43,7 @@ func TooLong(field, value string, limit int) error {
 	return nil
 }
 
-const maxPage = 1_000_000
+const MaxPage = 1_000_000
 
 type Paging struct {
 	Page  int
@@ -53,7 +53,7 @@ type Paging struct {
 // Page reads ?page= (1 to 1e6) and ?limit= (1 to maxLimit, def when absent or not a number).
 func Page(r *http.Request, def, maxLimit int) Paging {
 	query := r.URL.Query()
-	return Paging{Page: min(maxPage, max(1, Atoi(query.Get("page"), 1))), Limit: min(maxLimit, max(1, Atoi(query.Get("limit"), def)))}
+	return Paging{Page: min(MaxPage, max(1, Atoi(query.Get("page"), 1))), Limit: min(maxLimit, max(1, Atoi(query.Get("limit"), def)))}
 }
 
 func (p Paging) SQL() string {

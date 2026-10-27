@@ -1,25 +1,31 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSubscribed } from '../../support/nav'
 import { uiaa } from '../../support/seed'
-import { createRating, e2eGymId, updateRating } from '../../support/api'
+import {
+    createRating,
+    e2eGymId,
+    updateRating,
+    type Api,
+} from '../../support/api'
 
 const RATINGS_PATH = /^\/api\/gyms\/[^/]+\/ratings$/
 
 test('an edit landing after a new review does not duplicate the card', async ({
     adminPage: page,
+    api,
     adminApi,
     testPrefix,
     createRoute,
 }) => {
     const route = await createRoute({ name: `${testPrefix}-dedupe` })
-    const review = (comment: string) =>
-        createRating(adminApi, route.id, {
+    const review = (author: Api, comment: string) =>
+        createRating(author, route.id, {
             rating: 4,
             ...uiaa('5'),
             comment: `${testPrefix} ${comment}`,
         })
     try {
-        const edited = await review('edited')
+        const edited = await review(adminApi, 'edited')
         await gotoSubscribed(
             page,
             '/manage/comments',
@@ -54,7 +60,7 @@ test('an edit landing after a new review does not duplicate the card', async ({
             comment: `${testPrefix} edited later`,
         })
 
-        const added = await review('added')
+        const added = await review(api, 'added')
         const addedCard = page.getByTestId(`comment-card-${added.id}`)
         await expect(addedCard).toBeVisible()
 

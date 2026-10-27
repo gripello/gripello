@@ -170,8 +170,8 @@ export function requestVerification(email: string, headers?: Headers) {
     return post('/auth/verification/request', { email }, headers)
 }
 
-export function confirmVerification(token: string) {
-    return post('/auth/verification/confirm', { token })
+export function confirmVerification(token: string, password: string) {
+    return post('/auth/verification/confirm', { token, password })
 }
 
 export function requestEmailChange(newEmail: string) {

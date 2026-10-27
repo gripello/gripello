@@ -35,7 +35,18 @@ func publicHostsOnly(_, address string, _ syscall.RawConn) error {
 	if ip = ip.Unmap(); err != nil || !ip.IsGlobalUnicast() || ip.IsPrivate() {
 		return errors.New("avatar host is not public")
 	}
+	for _, reserved := range reservedNets {
+		if reserved.Contains(ip) {
+			return errors.New("avatar host is not public")
+		}
+	}
 	return nil
+}
+
+// Blocks that IsGlobalUnicast/IsPrivate let through but never belong to a picture CDN (CGNAT, benchmark, reserved, "this" network).
+var reservedNets = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"), netip.MustParsePrefix("100.64.0.0/10"), netip.MustParsePrefix("192.0.0.0/24"),
+	netip.MustParsePrefix("198.18.0.0/15"), netip.MustParsePrefix("240.0.0.0/4"),
 }
 
 // importAvatar copies the provider's profile picture into a new account; a failure only costs the picture.

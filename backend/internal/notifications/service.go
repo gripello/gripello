@@ -107,6 +107,7 @@ func (m *module) deliver(ctx context.Context, eventID int64, n events.Notify) er
 	err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `INSERT INTO notifications (id, "user", type, params, url)
 			SELECT n.id, n.u, $3, $4, $5 FROM unnest($1::text[], $2::text[]) AS n(id, u) JOIN users ON users.id = n.u
+			WHERE users.suspended_until IS NULL OR users.suspended_until <= now()
 			ON CONFLICT (id) DO NOTHING RETURNING `+notificationColumns, notificationIDs, n.Users, n.Type, params, n.URL)
 		if err != nil {
 			return err

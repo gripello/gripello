@@ -409,8 +409,11 @@ func TestGymAdminsSaveGymInfo(t *testing.T) {
 	f.call(admin, "PATCH", path, `{"website_url":"javascript:alert(1)"}`, http.StatusBadRequest)
 	f.call(admin, "PATCH", path, `{"name":""}`, http.StatusBadRequest)
 	f.call(admin, "PATCH", path, `{"language":"it"}`, http.StatusBadRequest)
-	f.call(admin, "PATCH", path, `{"opening_hours":null,"boulder_bands":[{"from":0}],"description":"Hi","premoderate_betas":true}`,
-		http.StatusOK, `"opening_hours":null`, `"premoderate_betas":true`)
+	f.call(admin, "PATCH", path, `{"boulder_bands":[{"from":0}]}`, http.StatusBadRequest, `"boulder_bands"`)
+	f.call(admin, "PATCH", path, `{"boulder_bands":[{"name":"x","color":"url(https://evil.test/p)","to":"7A"}]}`, http.StatusBadRequest, `"boulder_bands"`)
+	f.call(admin, "PATCH", path, `{"boulder_bands":"abc"}`, http.StatusBadRequest, `"boulder_bands"`)
+	f.call(admin, "PATCH", path, `{"opening_hours":null,"boulder_bands":[{"name":"Easy","color":"#facc15","to":"5"}],"description":"Hi","premoderate_betas":true}`,
+		http.StatusOK, `"opening_hours":null`, `"premoderate_betas":true`, `"color":"#facc15"`)
 }
 
 func TestGymAdminsSaveTvSettings(t *testing.T) {

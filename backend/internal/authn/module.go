@@ -19,24 +19,29 @@ import (
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/lockout"
 	"gripello/internal/platform/mail"
+	"gripello/internal/platform/ratelimit"
 )
 
 type module struct {
-	db         *pgxpool.Pool
-	tokens     auth.Issuer
-	mail       platform.Mailer
-	templates  *mail.Templates
-	appURL     string
-	appName    string
-	rp         func() (*webauthn.WebAuthn, error)
-	httpClient *http.Client
-	blob       platform.BlobStore
+	db           *pgxpool.Pool
+	tokens       auth.Issuer
+	mail         platform.Mailer
+	templates    *mail.Templates
+	appURL       string
+	appName      string
+	rp           func() (*webauthn.WebAuthn, error)
+	httpClient   *http.Client
+	blob         platform.BlobStore
+	emailChanges *ratelimit.Limiter
 }
+
+const emailChangeRequestsPerHour = 3
 
 func Register(app *platform.App) {
 	m := &module{db: app.DB, tokens: app.Tokens, mail: app.Mail, templates: app.MailTemplates, blob: app.Blob,
 		appURL: strings.TrimRight(app.Cfg.AppURL, "/"), appName: app.Cfg.AppName}
 	m.rp = sync.OnceValues(m.newRelyingParty)
+	m.emailChanges = ratelimit.New(emailChangeRequestsPerHour, time.Hour)
 	m.httpClient = &http.Client{Timeout: 15 * time.Second}
 
 	app.Handle("GET /auth/methods", httpx.Handler(m.authMethods))
@@ -96,16 +101,19 @@ func (m *module) pruneSessions(ctx context.Context) error {
 	return err
 }
 
+// emptySignupSQL (alias u) matches a sign-up that was never verified, never signed in and holds no data: the only accounts a retry may claim or the prune may delete.
+const emptySignupSQL = `NOT u.verified AND u.verified_at IS NULL AND NOT u.platform_admin
+	AND NOT EXISTS (SELECT 1 FROM sessions WHERE "user" = u.id) AND NOT EXISTS (SELECT 1 FROM user_identities WHERE "user" = u.id)
+	AND NOT EXISTS (SELECT 1 FROM memberships WHERE "user" = u.id) AND NOT EXISTS (SELECT 1 FROM ticks WHERE "user" = u.id)
+	AND NOT EXISTS (SELECT 1 FROM ratings WHERE "user" = u.id) AND NOT EXISTS (SELECT 1 FROM beta_videos WHERE "user" = u.id)
+	AND NOT EXISTS (SELECT 1 FROM competition_entries WHERE "user" = u.id)
+	AND NOT EXISTS (SELECT 1 FROM follows WHERE follower = u.id OR followee = u.id)`
+
 // Sign-ups never confirmed within unverifiedAccountTTL are deleted; anything ever verified, signed in or holding data stays.
 func (m *module) pruneUnverifiedAccounts(ctx context.Context) error {
 	return pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `DELETE FROM users WHERE id IN (SELECT id FROM users u
-			WHERE NOT verified AND verified_at IS NULL AND NOT platform_admin AND created < now() - $1::interval
-			AND NOT EXISTS (SELECT 1 FROM sessions WHERE "user" = u.id) AND NOT EXISTS (SELECT 1 FROM user_identities WHERE "user" = u.id)
-			AND NOT EXISTS (SELECT 1 FROM memberships WHERE "user" = u.id) AND NOT EXISTS (SELECT 1 FROM ticks WHERE "user" = u.id)
-			AND NOT EXISTS (SELECT 1 FROM ratings WHERE "user" = u.id) AND NOT EXISTS (SELECT 1 FROM beta_videos WHERE "user" = u.id)
-			AND NOT EXISTS (SELECT 1 FROM competition_entries WHERE "user" = u.id)
-			AND NOT EXISTS (SELECT 1 FROM follows WHERE follower = u.id OR followee = u.id)
+			WHERE `+emptySignupSQL+` AND u.created < now() - $1::interval
 			ORDER BY created LIMIT 500) RETURNING id`, unverifiedAccountTTL.String())
 		if err != nil {
 			return err

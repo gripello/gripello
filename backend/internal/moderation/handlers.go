@@ -120,7 +120,7 @@ func (m *module) createReport(w http.ResponseWriter, r *http.Request) error {
 	}
 	if report.Gym != "" {
 		if err := tenancy.RequireGym(ctx, m.app.DB, report.Gym); err != nil {
-			return err
+			return httpx.BadRequest("The reported content does not exist.")
 		}
 	}
 	err = m.inTx(ctx, func(w *work) error {
@@ -336,6 +336,9 @@ func (m *module) hideAuthor(w http.ResponseWriter, r *http.Request) error {
 }
 
 // openCase opens a case for content from before the inbox existed.
+// A hide archives the route, so a route case needs the permission that edits routes; climber-reported tasks stay with comment moderators.
+var owningPermission = map[string]string{"route": tenancy.PermManageRoutes}
+
 func (m *module) openCase(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	p, err := auth.Require(ctx)
@@ -358,6 +361,9 @@ func (m *module) openCase(w http.ResponseWriter, r *http.Request) error {
 	}
 	if !p.PlatformAdmin && !m.perms.Has(ctx, c.Gym, tenancy.PermManageComments) {
 		return httpx.ErrNotFound
+	}
+	if owning := owningPermission[body.ContentType]; !p.PlatformAdmin && owning != "" && !m.perms.Has(ctx, c.Gym, owning) {
+		return httpx.ErrForbidden
 	}
 	var it Item
 	err = m.inTx(ctx, func(w *work) error {

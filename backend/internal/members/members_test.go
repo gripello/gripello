@@ -359,6 +359,8 @@ func TestRoles(t *testing.T) {
 
 	f.call(http.MethodPut, "/roles/"+f.setterRoleA+"/permissions", `{"permissions":["manage_routes"]}`, managerUser, http.StatusForbidden, "grant or revoke")
 	f.call(http.MethodPut, "/roles/"+helper.ID+"/permissions", `{"permissions":["manage_routes","manage_users"]}`, managerUser, http.StatusOK, `"manage_users"`)
+	coAdmin := f.role(f.gymA, "co-admin", []string{"manage_users", "manage_routes", "manage_settings"})
+	f.call(http.MethodPut, "/roles/"+coAdmin+"/permissions", `{"permissions":["manage_routes","manage_settings"]}`, managerUser, http.StatusForbidden, "edit a role")
 
 	helperUser := f.user("helper@example.com", false)
 	f.member(helperUser, f.gymA, helper.ID)
@@ -777,5 +779,21 @@ func TestInvitesRejectBlockedEmailsAndProtectedNames(t *testing.T) {
 	f.call(http.MethodPost, "/invites/"+token+"/accept", `{"password":"1234567890","passwordConfirm":"1234567890"}`, "", http.StatusForbidden, "{")
 	if n := f.count(`SELECT count(*) FROM users WHERE email = 'late@later.test'`); n != 0 {
 		t.Error("account created for a blocked address")
+	}
+}
+
+func TestMemberListIsPaged(t *testing.T) {
+	f := newFixture(t)
+	var page struct {
+		Items []any `json:"items"`
+		Limit int   `json:"limit"`
+	}
+	json.Unmarshal([]byte(f.call(http.MethodGet, "/gyms/"+f.gymA+"/members", "", f.adminA, http.StatusOK)), &page)
+	if page.Limit != maxMemberPageSize || len(page.Items) == 0 {
+		t.Errorf("default page = %+v", page)
+	}
+	json.Unmarshal([]byte(f.call(http.MethodGet, "/gyms/"+f.gymA+"/members?limit=9999", "", f.adminA, http.StatusOK)), &page)
+	if page.Limit != maxMemberPageSize {
+		t.Errorf("limit above the cap = %d", page.Limit)
 	}
 }

@@ -14,8 +14,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform"
+	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
+	"gripello/internal/platform/tenancy"
 	"gripello/internal/platform/testapp"
 )
 
@@ -121,9 +123,13 @@ func (f *fixture) publish(topic, kind string, payload any, audience events.Audie
 // rating stores a review the way the ratings module does, including its rating.created event.
 func (f *fixture) rating(user, comment string) string {
 	f.t.Helper()
+	route := f.route
+	if f.count(`SELECT count(*) FROM ratings WHERE route_id = $1 AND "user" = $2`, f.route, f.users[user]) > 0 {
+		route = f.exec(`INSERT INTO routes SELECT (jsonb_populate_record(r, jsonb_build_object('id', $1::text))).* FROM routes r WHERE id = $2 RETURNING id`, ids.New(), f.route)
+	}
 	id := f.exec(`INSERT INTO ratings (id, gym, route_id, "user", rating, comment) VALUES ($1, $2, $3, $4, 3, $5) RETURNING id`,
-		ids.New(), f.gymA, f.route, f.users[user], comment)
-	f.publish("rating.created", "rating.created", map[string]string{"id": id, "gym": f.gymA, "route": f.route, "user": f.users[user]}, events.Audience{})
+		ids.New(), f.gymA, route, f.users[user], comment)
+	f.publish("rating.created", "rating.created", map[string]string{"id": id, "gym": f.gymA, "route": route, "user": f.users[user]}, events.Audience{})
 	return id
 }
 
@@ -602,15 +608,15 @@ func TestReportedRoutesAreArchivedOnHide(t *testing.T) {
 	f.report("route", f.route, "ip_infringement")
 	url := "/moderation/" + f.item("route", f.route).ID
 	f.call("setterA", "POST", url, action("hide"), http.StatusOK)
-	if f.count(`SELECT count(*) FROM routes WHERE id = $1 AND archived AND archived_at IS NOT NULL`, f.route) != 1 {
-		t.Error("hidden route stays on the wall")
+	if f.count(`SELECT count(*) FROM routes WHERE id = $1 AND archived AND archived_at IS NOT NULL AND name = '' AND comment = ''`, f.route) != 1 {
+		t.Error("hidden route keeps its text on the wall")
 	}
 	if f.count(`SELECT count(*) FROM events WHERE topic = 'route.archived'`) != 1 || f.count(`SELECT count(*) FROM events WHERE kind = 'route.updated'`) != 1 {
 		t.Error("archiving sent no route events")
 	}
 	f.call("setterA", "POST", url, action("restore"), http.StatusOK)
-	if f.count(`SELECT count(*) FROM routes WHERE id = $1 AND NOT archived AND archived_at IS NULL`, f.route) != 1 {
-		t.Error("restored route stays archived")
+	if f.count(`SELECT count(*) FROM routes WHERE id = $1 AND NOT archived AND archived_at IS NULL AND name = 'Crimp'`, f.route) != 1 {
+		t.Error("restored route stays archived or lost its name")
 	}
 }
 
@@ -661,7 +667,7 @@ func TestLongReviewsStillGetACase(t *testing.T) {
 	}
 }
 
-func TestEditingHiddenContentReopensTheCase(t *testing.T) {
+func TestEditingAHiddenProfileIsReHidden(t *testing.T) {
 	f := newFixture(t)
 	f.editProfile("climber", "Rude")
 	it := f.item("profile", f.users["climber"])
@@ -669,11 +675,17 @@ func TestEditingHiddenContentReopensTheCase(t *testing.T) {
 	if state := f.item("profile", f.users["climber"]).State; state != "hidden" {
 		t.Fatalf("hiding reopened the case: %s", state)
 	}
-	f.editProfile("climber", "Ruder")
-	testapp.WaitFor(t, func() bool {
-		reopened, _ := f.find("profile", f.users["climber"])
-		return reopened.State == "unreviewed" && reopened.HiddenBy == ""
-	})
+	f.exec(`UPDATE users SET firstname = 'Ruder' WHERE id = $1 RETURNING id`, f.users["climber"])
+	payload, _ := json.Marshal(map[string]any{"record": map[string]string{"id": f.users["climber"]}, "changed": []string{"firstname"}})
+	(&module{app: f.app, perms: tenancy.New(f.app.DB), climbers: climbers.New(f.app.DB)}).onUser(events.Event{Kind: "user.updated", Payload: payload})
+	var firstname string
+	f.app.DB.QueryRow(context.Background(), `SELECT firstname FROM users WHERE id = $1`, f.users["climber"]).Scan(&firstname)
+	if firstname != "" {
+		t.Fatal("the edited hidden profile was not re-hidden")
+	}
+	if again := f.item("profile", f.users["climber"]); again.State != "hidden" || again.HiddenBy == "" {
+		t.Fatalf("edit of a hidden profile reopened the case: %s/%s", again.State, again.HiddenBy)
+	}
 }
 
 func TestReportsAlwaysGetADecision(t *testing.T) {
@@ -928,7 +940,7 @@ func TestHiddenGymContentCannotBeReportedByOutsiders(t *testing.T) {
 	rating := f.rating("climber", "rude")
 	f.exec(`UPDATE gyms SET hidden = true WHERE id = $1 RETURNING id`, f.gymA)
 	body := `{"content_type":"rating","content_id":"` + rating + `","reason":"spam_fraud","explanation":"x","notifier_name":"N","notifier_email":"n@example.com","good_faith":true}`
-	f.call("", "POST", "/reports", body, http.StatusNotFound)
+	f.call("", "POST", "/reports", body, http.StatusBadRequest, "does not exist")
 	f.call("setterA", "POST", "/reports", body, http.StatusCreated)
 }
 
@@ -1030,4 +1042,12 @@ func TestHiddenEntriesLeadToTheirCompetition(t *testing.T) {
 	if got := f.notificationURL("content_hidden"); got != "/alpha/competitions/"+competition {
 		t.Errorf("content_hidden url = %s, want the competition", got)
 	}
+}
+
+func TestOpeningARouteCaseNeedsManageRoutes(t *testing.T) {
+	f := newFixture(t)
+	f.user("commentsOnly", f.gymA, "manage_comments")
+	body := `{"content_type":"route","content_id":"` + f.route + `"}`
+	f.call("commentsOnly", "POST", "/moderation/cases", body, http.StatusForbidden)
+	f.call("setterA", "POST", "/moderation/cases", body, http.StatusOK)
 }

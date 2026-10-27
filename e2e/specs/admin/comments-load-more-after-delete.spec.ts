@@ -1,7 +1,7 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { uiaa } from '../../support/seed'
-import { createRating, deleteRating } from '../../support/api'
+import { createRating, deleteRating, guestApi } from '../../support/api'
 
 const REVIEW_COUNT = 60
 
@@ -14,7 +14,7 @@ test('loading more after deletes still reaches every review', async ({
     const route = await createRoute({ name: `${testPrefix}-paging` })
     const ratingIds: string[] = []
     for (let index = 0; index < REVIEW_COUNT; index++) {
-        const rating = await createRating(adminApi, route.id, {
+        const rating = await createRating(guestApi(), route.id, {
             rating: 3,
             ...uiaa('5'),
             comment: `${testPrefix} paging ${index}`,

@@ -337,7 +337,7 @@ func TestListByIDsAcrossGyms(t *testing.T) {
 func TestHiddenRouteStaysHidden(t *testing.T) {
 	f := newFixture(t)
 	id := f.route("")
-	f.exec(`UPDATE routes SET archived = true, archived_at = now() WHERE id = $1 RETURNING id`, id)
+	f.exec(`UPDATE routes SET archived = true, archived_at = now(), name = '', comment = '' WHERE id = $1 RETURNING id`, id)
 	f.exec(`INSERT INTO moderation_items (id, gym, content_type, content_id, snapshot, files, state) VALUES ($1, $2, 'route', $3, '{}', '{}', 'hidden') RETURNING id`,
 		ids.New(), f.gymA, id)
 	f.call("setter", "POST", "/routes/"+id+"/archive", `{"archived":false}`, http.StatusForbidden)
@@ -345,6 +345,7 @@ func TestHiddenRouteStaysHidden(t *testing.T) {
 	f.call("setter", "PATCH", "/routes/"+id, `{"archived":false}`, http.StatusForbidden)
 	f.call("setter", "PATCH", "/routes/"+id, `{"name":"Renamed"}`, http.StatusForbidden)
 	f.call("setter", "PATCH", "/routes/"+id, `{"grade":"6b"}`, http.StatusOK)
+	f.call("setter", "PATCH", "/routes/"+id, `{"name":" "}`, http.StatusBadRequest)
 }
 
 func TestDeleteRouteWithHistoryNeedsForce(t *testing.T) {

@@ -19,7 +19,7 @@ type locationInput struct {
 }
 
 func (in *locationInput) apply(p patch) error {
-	if err := p.decodeAll(map[string]any{"name": &in.Name, "map_area": &in.MapArea, "map": &in.Map}); err != nil {
+	if err := p.decodeAll(map[string]any{"name": &in.Name, "map": &in.Map}); err != nil {
 		return err
 	}
 	in.Name = strings.TrimSpace(in.Name)
