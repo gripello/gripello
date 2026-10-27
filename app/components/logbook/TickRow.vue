@@ -108,7 +108,9 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const route = computed(() => props.tick.expand?.route)
 const summaryRoute = computed(() => ({
-    name: route.value?.name || props.tick.route_name || t('ticks.removedRoute'),
+    name: route.value
+        ? route.value.name
+        : props.tick.route_name || t('ticks.removedRoute'),
     color: route.value?.color,
     grade: props.tick.grade,
     grade_system: props.tick.grade_system,

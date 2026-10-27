@@ -97,6 +97,17 @@ describe('FeedActivity', () => {
         },
     )
 
+    it('shows a moderation-blanked route name instead of the tick snapshot', () => {
+        const blanked = {
+            ...tick('c', 'u1', '2026-09-03T10:00:00.000Z'),
+            route_name: 'Old name',
+            expand: { route: { id: 'r1', name: '' } },
+        } as FeedTick
+        const wrapper = mountActivity({ ticks: [blanked] })
+        expect(wrapper.text()).not.toContain('Old name')
+        expect(wrapper.text()).not.toContain('ticks.removedRoute')
+    })
+
     it('waits for hydration before showing relative times', () => {
         const wrapper = mountActivity({ ticks: [ticks[0]] }, false)
         expect(wrapper.text()).not.toContain('time.')

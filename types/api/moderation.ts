@@ -486,6 +486,7 @@ export interface operations {
             200: components["responses"]["Decision"];
             400: components["responses"]["Error"];
             401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
             404: components["responses"]["Error"];
         };
     };
@@ -536,6 +537,7 @@ export interface operations {
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     hideAuthorContent: {

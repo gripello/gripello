@@ -165,6 +165,7 @@ paths:
         '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /moderation/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -206,6 +207,7 @@ paths:
         '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '409': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /moderation/authors/{id}/hide:
     parameters:
       - $ref: '#/components/parameters/Id'

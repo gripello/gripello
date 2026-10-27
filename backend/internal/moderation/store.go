@@ -32,9 +32,9 @@ var kinds = map[string]kind{
 	"beta_video": {table: "beta_videos", author: "user", gym: "t.gym", files: []string{"file"}},
 	"route": {
 		table: "routes", gym: "t.gym", fields: []string{"name", "comment", "archived"},
-		hide:    "archived = true, archived_at = COALESCE(t.archived_at, now())",
+		hide:    "archived = true, archived_at = COALESCE(t.archived_at, now()), name = '', comment = ''",
 		restore: "archived_at = CASE WHEN s.archived THEN t.archived_at END",
-		exposed: "NOT t.archived",
+		exposed: "(NOT t.archived OR t.name <> '' OR t.comment <> '')",
 	},
 	"profile": {
 		table: "users", author: "id", gym: "NULL", fields: []string{"username", "firstname", "name", "avatar", "banner"},
@@ -196,7 +196,7 @@ func usersWith(ctx context.Context, q db.Querier, gym, permission string) ([]str
 		return nil, nil
 	}
 	rows, err := q.Query(ctx, `SELECT DISTINCT m."user" FROM memberships m JOIN roles r ON r.id = m.role
-		WHERE m.gym = $1 AND $2 = ANY (r.permissions) ORDER BY 1`, gym, permission)
+		WHERE m.gym = $1 AND $2 = ANY (effective_permissions(m.gym, r.permissions)) ORDER BY 1`, gym, permission)
 	if err != nil {
 		return nil, err
 	}

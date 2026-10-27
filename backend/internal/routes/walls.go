@@ -249,6 +249,9 @@ func (m *module) saveFloorPlan(ctx context.Context, id string, plan floorPlan) (
 	if _, err := parseGymMap(plan.Map); err != nil {
 		return floorPlanResult{}, err
 	}
+	if len(plan.Walls) > maxFloorPlanWalls {
+		return floorPlanResult{}, httpx.Invalid("walls", fmt.Sprintf("At most %d walls per floor plan.", maxFloorPlanWalls))
+	}
 	result := floorPlanResult{Walls: []Wall{}}
 	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		if original, err = lockLocation(ctx, tx, id); err != nil {

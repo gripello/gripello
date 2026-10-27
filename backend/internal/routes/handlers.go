@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	defaultPageSize = 50
-	maxPageSize     = 1000
-	maxTraceSize    = 10 << 20
+	defaultPageSize   = 50
+	maxPageSize       = 1000
+	maxTraceSize      = 10 << 20
+	maxFloorPlanWalls = 200
 )
 
 var routeSorts = map[string]string{
