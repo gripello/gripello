@@ -100,10 +100,6 @@ func OTP(name, code string) Content {
 	return Content{Key: "otp", Name: name, Code: code}
 }
 
-func AuthAlert(name, info string) Content {
-	return Content{Key: "authAlert", Name: name, Details: []Detail{{Label: "location", Value: info}}}
-}
-
 func Invite(name, role, token string) Content {
 	return Content{Key: "invite", Name: name, Params: map[string]any{"role": role}, Action: "/auth/invite/" + token}
 }

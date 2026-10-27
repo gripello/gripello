@@ -117,7 +117,6 @@ import type { ReportContentType, ReportReason } from '~/types/models'
 const props = defineProps<{
     contentType: ReportContentType
     contentId: string
-    contentUrl: string
     modelValue?: boolean
 }>()
 

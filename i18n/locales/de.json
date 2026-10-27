@@ -38,22 +38,17 @@
         "lastname": "Nachname",
         "username": "Benutzername",
         "password": "Passwort",
-        "newPassword": "Neues Passwort",
         "email": "E-Mail",
         "username_or_email": "Benutzername oder E-Mail",
         "reset_password": "Passwort zurücksetzen",
         "reset_hint": "Gib die E-Mail-Adresse deines Kontos ein.",
-        "userProfile": "Benutzerprofil",
         "oldPassword": "Aktuelles Passwort",
-        "or_login_with": "Oder anmelden mit",
         "remember_me": "Angemeldet bleiben",
         "changeAvatar": "Avatar ändern",
-        "emailLocked": "E-Mail kann hier nicht geändert werden",
         "passwordStrength": "Passwortstärke",
         "unsavedChanges": "Ungespeicherte Änderungen",
         "wrongOldPassword": "Aktuelles Passwort ist falsch",
         "passwordRequired": "Dein Konto hat noch kein Passwort. Lege zuerst über „Passwort zurücksetzen“ auf der Anmeldeseite eines fest.",
-        "passwordChangedSignInAgain": "Passwort geändert. Bitte melde dich mit dem neuen Passwort erneut an.",
         "unknownUser": "Unbekannter Benutzer",
         "tabs": {
             "profile": "Profil",
@@ -376,7 +371,6 @@
         "comment": "Kommentar",
         "climber_reviews": "Bewertungen",
         "perceived_difficulty": "Gefühlter Grad",
-        "loadError": "Bewertungen konnten nicht geladen werden.",
         "deleteOwn": "Meine Bewertung löschen",
         "deleteOwnConfirm": "Deine Bewertung wird endgültig entfernt.",
         "editOwn": "Meine Bewertung bearbeiten",
@@ -388,7 +382,6 @@
     "table": {
         "actions": "Aktionen",
         "no_data": "Keine Daten",
-        "created_at": "Erstellt am",
         "sort_by": "Sortieren nach",
         "sort_asc": "Aufsteigend",
         "sort_desc": "Absteigend",
@@ -482,8 +475,6 @@
             "health": "Server online",
             "verifyEmail": "Deine E-Mail-Adresse wurde bestätigt. Du kannst dich jetzt anmelden.",
             "emailChange": "Deine E-Mail-Adresse wurde geändert. Bitte melde dich erneut an.",
-            "userInvited": "Benutzer erstellt. Eine Einladungs-E-Mail wurde versendet.",
-            "userCreatedNoInvite": "Benutzer erstellt, aber keine Einladungs-E-Mail versendet, da kein E-Mail-Versand eingerichtet ist.",
             "passwordChanged": "Dein Passwort wurde gesetzt. Du kannst dich jetzt anmelden.",
             "registered": "Konto erstellt. Bestätige deine E-Mail-Adresse über den Link in deinem Postfach und melde dich dann an.",
             "verificationSent": "Falls ein unbestätigtes Konto existiert, ist ein neuer Bestätigungslink unterwegs."
@@ -493,7 +484,6 @@
             "edit": "Änderungen konnten nicht gespeichert werden.",
             "delete": "Löschen fehlgeschlagen.",
             "health": "Server offline",
-            "no_auth_methods_available": "Keine Anmeldemethoden verfügbar.",
             "invalid_credentials": "Benutzername oder Passwort ist falsch.",
             "email_not_verified": "Deine E-Mail-Adresse ist noch nicht bestätigt.",
             "too_many_attempts": "Zu viele Anmeldeversuche. Bitte versuche es später erneut.",
@@ -501,7 +491,6 @@
             "generic": "Etwas ist schiefgelaufen.",
             "verifyEmail": "Dieser Bestätigungslink ist ungültig oder abgelaufen.",
             "emailChange": "Dieser Link zur E-Mail-Änderung ist ungültig oder abgelaufen.",
-            "userInviteMail": "Benutzer erstellt, aber die Einladungs-E-Mail konnte nicht versendet werden.",
             "resetLinkInvalid": "Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Fordere auf der Anmeldeseite einen neuen an.",
             "captcha": "Die Spam-Prüfung ist fehlgeschlagen. Bitte versuche es erneut.",
             "verificationMail": "Dein Konto wurde erstellt, aber die Bestätigungs-E-Mail konnte nicht gesendet werden. Fordere auf der Anmeldeseite eine neue an.",
@@ -511,7 +500,6 @@
         },
         "deleteItem": "Diesen Eintrag löschen? Das kann nicht rückgängig gemacht werden.",
         "deleteRouteWithHistory": "Diese Route hat Bewertungen, Beta-Videos oder Wettkampfergebnisse. Beim Löschen werden sie mit entfernt. Archiviere sie stattdessen, um sie zu behalten.",
-        "deleteMoreItems": "Die ausgewählten Einträge löschen? Das kann nicht rückgängig gemacht werden.",
         "archiveMoreItems": "Die ausgewählten Routen archivieren?",
         "updateAvailable": "Update verfügbar",
         "releaseNotes": {
@@ -797,7 +785,6 @@
             "notFound": "Seite nicht gefunden - Gripello",
             "routeNamed": "{name} - Gripello",
             "inventory": "Inventur - Gripello",
-            "reports": "Inhaltsmeldungen - Gripello",
             "tasks": "Aufgaben - Gripello",
             "activity": "Aktivitätsprotokoll - Gripello",
             "verifyEmail": "E-Mail bestätigen - Gripello",
@@ -805,7 +792,6 @@
             "logbook": "Logbuch - Gripello",
             "map": "Hallenplan - Gripello",
             "mapEditor": "Plan-Editor - Gripello",
-            "mapPlacement": "Routen platzieren - Gripello",
             "scan": "Route scannen - Gripello",
             "me": "Mein Konto - Gripello",
             "overview": "Übersicht - Gripello",
@@ -830,7 +816,6 @@
             "users": "Benutzer",
             "dashboard": "Routen verwalten",
             "inventory": "Inventur",
-            "reports": "Inhaltsmeldungen",
             "activity": "Aufgezeichnete Konto- und Inhaltsaktivitäten einsehen."
         }
     },
@@ -864,11 +849,7 @@
         "noCommentsHint": "Probier andere Filter oder einen anderen Suchbegriff.",
         "editReview": "Bewertung bearbeiten",
         "anonymous": "Anonym",
-        "selected": "{n} ausgewählt",
-        "deleteSelected": "{n} löschen",
-        "bulkDeleteTitle": "{n} Bewertung löschen? | {n} Bewertungen löschen?",
-        "showing": "{n} von {total} Bewertungen",
-        "select": "Auswählen"
+        "showing": "{n} von {total} Bewertungen"
     },
     "nav": {
         "paletteGroupRoles": "Rollen",
@@ -885,7 +866,6 @@
         "themeSystemHint": "Folgt der Einstellung deines Geräts",
         "themeLight": "Helles Design",
         "themeDark": "Dunkles Design",
-        "openMenu": "Menü öffnen",
         "skipToContent": "Zum Inhalt springen",
         "mainNavigation": "Hauptnavigation",
         "toggleSidebar": "Seitenleiste umschalten",
@@ -908,26 +888,17 @@
         "noStaffTools": "Du hast in dieser Halle keine Team-Werkzeuge"
     },
     "users": {
-        "create": "Benutzer hinzufügen",
-        "createHint": "Der Benutzer erhält eine E-Mail, um sein Passwort festzulegen.",
         "edit": "Benutzer bearbeiten",
         "title": "Benutzer",
         "delete": "Benutzer löschen",
-        "deleteConfirm": "Diesen Benutzer löschen? Das kann nicht rückgängig gemacht werden.",
         "deleteSuccess": "Benutzer gelöscht.",
         "deleteError": "Benutzer konnte nicht gelöscht werden.",
-        "searchUsers": "Benutzer suchen…",
-        "role": "Rolle",
         "noUsers": "Keine Benutzer gefunden",
         "noUsersHint": "Probier eine andere Suche oder andere Filter.",
-        "showing": "{n} von {total} Benutzern",
-        "inviteMailNotConfigured": "E-Mail ist nicht konfiguriert, daher kann keine Einladung versendet werden. Der neue Benutzer kann sich nicht anmelden.",
-        "emailTaken": "Es gibt bereits einen Benutzer mit dieser E-Mail-Adresse.",
         "usernameTaken": "Dieser Benutzername ist bereits vergeben."
     },
     "permissions": {
         "title": "Rollen & Berechtigungen",
-        "role": "Rolle",
         "features": {
             "manage_routes": "Routen verwalten",
             "view_analytics": "Analysen anzeigen",
@@ -1181,8 +1152,6 @@
         "reviewsUnmatched": "{count} Bewertung ohne Route | {count} Bewertungen ohne Route"
     },
     "reports": {
-        "title": "Inhaltsmeldungen",
-        "subtitle": "Meldungen nach Artikel 16 des Gesetzes über digitale Dienste.",
         "reportAction": "Diesen Kommentar melden",
         "dialogTitle": "Inhalt melden",
         "dialogIntro": "Sag uns, was an diesem Inhalt nicht in Ordnung ist. Jede Meldung wird von einem Menschen geprüft.",
@@ -1205,32 +1174,11 @@
         "goodFaith": "Ich versichere nach bestem Wissen und Gewissen, dass meine Angaben in dieser Meldung richtig und vollständig sind.",
         "submit": "Meldung absenden",
         "submitted": "Meldung übermittelt. Wir haben dir eine Bestätigung per E-Mail geschickt.",
-        "snapshot": "Inhalt zum Zeitpunkt der Meldung",
-        "contentUnavailable": "Inhalt nicht mehr verfügbar",
-        "notifier": "Gemeldet von",
-        "viewContent": "Inhalt ansehen",
-        "filterStatus": "Status",
         "status": {
             "open": "Offen",
             "actioned": "Bearbeitet",
             "rejected": "Abgelehnt"
         },
-        "decision": {
-            "content_removed": "Inhalt entfernt",
-            "content_kept": "Inhalt beibehalten"
-        },
-        "decideTitle": "Entscheidung festhalten",
-        "decisionReason": "Begründung der Entscheidung",
-        "decisionReasonHint": "Wird als interner Nachweis der Entscheidungsgründe gespeichert.",
-        "removeContent": "Inhalt entfernen",
-        "removeNotAllowed": "Du darfst diesen Inhalt nicht entfernen oder er konnte nicht entfernt werden.",
-        "keepContent": "Inhalt behalten",
-        "decided": "Entscheidung gespeichert. Die meldende Person wurde benachrichtigt.",
-        "receiptPending": "Bestätigung nicht zugestellt",
-        "empty": "Keine Meldungen",
-        "emptyHint": "Gemeldete Inhalte erscheinen hier zur Prüfung.",
-        "mailWarning": "E-Mail ist nicht konfiguriert, daher erhalten meldende Personen weder die Eingangsbestätigung noch die Entscheidungsmitteilung nach Artikel 16.",
-        "mailWarningAction": "Einstellungen öffnen",
         "reportProfile": "Profil melden"
     },
     "tasks": {
@@ -1255,7 +1203,6 @@
         "saved": "Aufgabe gespeichert.",
         "openRoute": "Route öffnen",
         "addForRoute": "Aufgabe anlegen",
-        "loadError": "Aufgaben konnten nicht geladen werden.",
         "kinds": {
             "defect": "Defekt",
             "wish": "Routenwunsch",
@@ -1345,8 +1292,7 @@
         "assignToMe": "Mir zuweisen",
         "unassigned": "Nicht zugewiesen",
         "forThisRoute": "Für diese Route",
-        "newSubtitle": "Arbeit für das Schrauberteam festhalten",
-        "deletedElsewhere": "Diese Aufgabe wurde gelöscht."
+        "newSubtitle": "Arbeit für das Schrauberteam festhalten"
     },
     "audit": {
         "title": "Aktivitätsprotokoll",
@@ -1635,8 +1581,6 @@
         "moveUp": "Nach oben",
         "moveDown": "Nach unten",
         "wallName": "Name",
-        "drawOutline": "Umriss zeichnen",
-        "drawEdge": "Kletterkante zeichnen",
         "placeLabel": "Beschriftung setzen",
         "deleteWall": "Wand löschen",
         "shapeKind": "Art",
@@ -1715,7 +1659,6 @@
         }
     },
     "mapPlacement": {
-        "title": "Routen platzieren",
         "noMap": "Für diesen Standort gibt es noch keinen Plan.",
         "discard": "Verwerfen",
         "save": "Speichern ({n})",
@@ -1744,8 +1687,7 @@
         "resetDone": "{n} Route archiviert. | {n} Routen archiviert.",
         "unplacedBanner": "{n} Route ist noch nicht auf dem Plan. | {n} Routen sind noch nicht auf dem Plan.",
         "placeThis": "Auf dem Plan platzieren",
-        "more": "Weitere Aktionen",
-        "routes": "Routen"
+        "more": "Weitere Aktionen"
     },
     "scan": {
         "title": "Route scannen",
@@ -1867,7 +1809,6 @@
         "results": "Ergebnisse",
         "liveRanking": "Live-Rangliste",
         "freezeMinutes": "Rangliste einfrieren (Minuten vor Ende)",
-        "status": "Status",
         "statuses": {
             "draft": "Entwurf",
             "open": "Offen",
@@ -2395,7 +2336,6 @@
             "verified": "Bestätigt",
             "unverified": "Unbestätigt",
             "platformAdmin": "Plattform-Admin",
-            "memberships": "Hallen-Mitgliedschaften",
             "gym": "Halle",
             "addMembership": "Hinzufügen",
             "sendPasswordReset": "E-Mail zum Zurücksetzen des Passworts senden",
@@ -2427,7 +2367,6 @@
                 "lift": "Unter Personen kannst du die Sperre jederzeit aufheben."
             },
             "suspendPermanently": "Dauerhaft sperren",
-            "security": "Sicherheit",
             "locked": "Gesperrt",
             "unlock": "Entsperren",
             "revokeSessions": "Überall abmelden",
@@ -2558,7 +2497,6 @@
         },
         "logs": {
             "title": "Server-Logs",
-            "refresh": "Aktualisieren",
             "runtimeLevel": "Log-Level",
             "levelChanged": "Log-Level auf allen Servern geändert",
             "empty": "Keine Log-Zeilen auf dieser Stufe",
@@ -3008,12 +2946,6 @@
             "competition_entry": "Wettkampfname",
             "task": "Mangel / Wunsch",
             "route": "Route"
-        },
-        "states": {
-            "unreviewed": "Zu entscheiden",
-            "approved": "Geprüft",
-            "pending": "Wartet auf Freigabe",
-            "hidden": "Ausgeblendet"
         },
         "actions": {
             "keep": "Sichtbar lassen",

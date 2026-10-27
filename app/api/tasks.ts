@@ -89,13 +89,6 @@ export function updateTask(id: string, patch: TaskInput, photo?: File | null) {
     })
 }
 
-export function assignTask(id: string, assignee: string | null) {
-    return useApi()<TaskRecord>(`/tasks/${id}/assign`, {
-        method: 'POST',
-        body: { assignee },
-    })
-}
-
 export function setTaskStatus(id: string, status: TaskStatus, note?: string) {
     return useApi()<TaskRecord>(`/tasks/${id}/status`, {
         method: 'POST',
@@ -104,10 +97,6 @@ export function setTaskStatus(id: string, status: TaskStatus, note?: string) {
             ...(note !== undefined ? { resolution_note: note } : {}),
         },
     })
-}
-
-export function deleteTask(id: string) {
-    return useApi()(`/tasks/${id}`, { method: 'DELETE' })
 }
 
 export async function listOpenDefects(

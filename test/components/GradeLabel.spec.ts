@@ -85,27 +85,6 @@ describe('GradeLabel', () => {
         expect(system.find('.sr-only').text()).toBe('gradeSystems.yds')
     })
 
-    it('uses an explicit showSystem without asking the composable', () => {
-        const wrapper = createWrapper({
-            source: { grade: '6a+', grade_system: 'french' },
-            showSystem: true,
-        })
-
-        expect(
-            wrapper.find('.grade-label__system [aria-hidden="true"]').text(),
-        ).toBe('gradeSystemsShort.french')
-        expect(isUnexpectedSystem).not.toHaveBeenCalled()
-    })
-
-    it('hides the hint when showSystem is false', () => {
-        const wrapper = createWrapper({
-            source: { grade: '5.10a', grade_system: 'yds' },
-            showSystem: false,
-        })
-
-        expect(wrapper.find('.grade-label__system').exists()).toBe(false)
-    })
-
     it('renders nothing visible for a missing grade', () => {
         const wrapper = createWrapper({ source: null })
 

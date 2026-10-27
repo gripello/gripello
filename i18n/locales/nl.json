@@ -38,22 +38,17 @@
         "lastname": "Achternaam",
         "username": "Gebruikersnaam",
         "password": "Wachtwoord",
-        "newPassword": "Nieuw wachtwoord",
         "email": "E-mail",
         "username_or_email": "Gebruikersnaam of e-mail",
         "reset_password": "Wachtwoord herstellen",
         "reset_hint": "Voer het e-mailadres van je account in.",
-        "userProfile": "Gebruikersprofiel",
         "oldPassword": "Huidig wachtwoord",
-        "or_login_with": "Of inloggen met",
         "remember_me": "Ingelogd blijven",
         "changeAvatar": "Avatar wijzigen",
-        "emailLocked": "E-mail kan hier niet worden gewijzigd",
         "passwordStrength": "Wachtwoordsterkte",
         "unsavedChanges": "Niet-opgeslagen wijzigingen",
         "wrongOldPassword": "Huidig wachtwoord is onjuist",
         "passwordRequired": "Je account heeft nog geen wachtwoord. Stel er eerst een in via wachtwoord herstellen op de inlogpagina.",
-        "passwordChangedSignInAgain": "Wachtwoord gewijzigd. Log opnieuw in met je nieuwe wachtwoord.",
         "unknownUser": "Onbekende gebruiker",
         "tabs": {
             "profile": "Profiel",
@@ -376,7 +371,6 @@
         "comment": "Opmerking",
         "climber_reviews": "Beoordelingen",
         "perceived_difficulty": "Gevoelsgraad",
-        "loadError": "Beoordelingen konden niet worden geladen.",
         "deleteOwn": "Mijn review verwijderen",
         "deleteOwnConfirm": "Je review wordt definitief verwijderd.",
         "editOwn": "Mijn beoordeling bewerken",
@@ -388,7 +382,6 @@
     "table": {
         "actions": "Acties",
         "no_data": "Geen gegevens",
-        "created_at": "Aangemaakt op",
         "sort_by": "Sorteren op",
         "sort_asc": "Oplopend",
         "sort_desc": "Aflopend",
@@ -482,8 +475,6 @@
             "health": "Server online",
             "verifyEmail": "Je e-mailadres is bevestigd. Je kunt nu inloggen.",
             "emailChange": "Je e-mailadres is gewijzigd. Log opnieuw in.",
-            "userInvited": "Gebruiker aangemaakt. Er is een uitnodiging per e-mail verstuurd.",
-            "userCreatedNoInvite": "Gebruiker aangemaakt, maar er is geen uitnodiging verstuurd omdat e-mail niet is ingesteld.",
             "passwordChanged": "Je wachtwoord is ingesteld. Je kunt nu inloggen.",
             "registered": "Account aangemaakt. Bevestig je e-mailadres via de link in je inbox en log daarna in.",
             "verificationSent": "Als er een onbevestigd account bestaat, is er een nieuwe bevestigingslink onderweg."
@@ -493,7 +484,6 @@
             "edit": "Wijzigingen konden niet worden opgeslagen.",
             "delete": "Verwijderen mislukt.",
             "health": "Server offline",
-            "no_auth_methods_available": "Er zijn geen inlogmethoden beschikbaar.",
             "invalid_credentials": "Gebruikersnaam of wachtwoord is onjuist.",
             "email_not_verified": "Je e-mailadres is nog niet bevestigd.",
             "too_many_attempts": "Te veel inlogpogingen. Probeer het later opnieuw.",
@@ -501,7 +491,6 @@
             "generic": "Er is iets misgegaan.",
             "verifyEmail": "Deze bevestigingslink is ongeldig of verlopen.",
             "emailChange": "Deze link om je e-mailadres te wijzigen is ongeldig of verlopen.",
-            "userInviteMail": "Gebruiker aangemaakt, maar de uitnodiging kon niet per e-mail worden verstuurd.",
             "resetLinkInvalid": "Deze link om je wachtwoord te resetten is ongeldig of verlopen. Vraag op de inlogpagina een nieuwe aan.",
             "captcha": "De spamcontrole is mislukt. Probeer het opnieuw.",
             "verificationMail": "Je account is aangemaakt, maar de bevestigingsmail kon niet worden verstuurd. Vraag op de inlogpagina een nieuwe aan.",
@@ -511,7 +500,6 @@
         },
         "deleteItem": "Dit item verwijderen? Dit kan niet ongedaan worden gemaakt.",
         "deleteRouteWithHistory": "Deze route heeft beoordelingen, beta-video’s of wedstrijdresultaten. Verwijderen wist die ook. Archiveer de route om ze te bewaren.",
-        "deleteMoreItems": "De geselecteerde items verwijderen? Dit kan niet ongedaan worden gemaakt.",
         "archiveMoreItems": "De geselecteerde routes archiveren?",
         "updateAvailable": "Update beschikbaar",
         "releaseNotes": {
@@ -797,7 +785,6 @@
             "notFound": "Pagina niet gevonden - Gripello",
             "routeNamed": "{name} - Gripello",
             "inventory": "Inventarisatie - Gripello",
-            "reports": "Inhoudsmeldingen - Gripello",
             "tasks": "Taken - Gripello",
             "activity": "Activiteitenlog - Gripello",
             "verifyEmail": "E-mail bevestigen - Gripello",
@@ -805,7 +792,6 @@
             "logbook": "Logboek - Gripello",
             "map": "Plattegrond - Gripello",
             "mapEditor": "Plattegrondeditor - Gripello",
-            "mapPlacement": "Routes plaatsen - Gripello",
             "scan": "Route scannen - Gripello",
             "me": "Mijn account - Gripello",
             "overview": "Overzicht - Gripello",
@@ -830,7 +816,6 @@
             "users": "Gebruikers",
             "dashboard": "Routes beheren",
             "inventory": "Inventarisatie",
-            "reports": "Inhoudsmeldingen",
             "activity": "Bekijk de vastgelegde account- en inhoudsactiviteit."
         }
     },
@@ -864,11 +849,7 @@
         "noCommentsHint": "Probeer andere filters of een andere zoekterm.",
         "editReview": "Beoordeling bewerken",
         "anonymous": "Anoniem",
-        "selected": "{n} geselecteerd",
-        "deleteSelected": "{n} verwijderen",
-        "bulkDeleteTitle": "{n} beoordeling verwijderen? | {n} beoordelingen verwijderen?",
-        "showing": "{n} van {total} beoordelingen",
-        "select": "Selecteren"
+        "showing": "{n} van {total} beoordelingen"
     },
     "nav": {
         "paletteGroupRoles": "Rollen",
@@ -885,7 +866,6 @@
         "themeSystemHint": "Volgt de instelling van je apparaat",
         "themeLight": "Licht thema",
         "themeDark": "Donker thema",
-        "openMenu": "Menu openen",
         "skipToContent": "Naar inhoud springen",
         "mainNavigation": "Hoofdnavigatie",
         "toggleSidebar": "Zijbalk tonen/verbergen",
@@ -908,26 +888,17 @@
         "noStaffTools": "Je hebt geen teamtools in deze hal"
     },
     "users": {
-        "create": "Gebruiker toevoegen",
-        "createHint": "De gebruiker krijgt een e-mail om een wachtwoord in te stellen.",
         "edit": "Gebruiker bewerken",
         "title": "Gebruikers",
         "delete": "Gebruiker verwijderen",
-        "deleteConfirm": "Deze gebruiker verwijderen? Dit kan niet ongedaan worden gemaakt.",
         "deleteSuccess": "Gebruiker verwijderd.",
         "deleteError": "De gebruiker kon niet worden verwijderd.",
-        "searchUsers": "Gebruikers zoeken…",
-        "role": "Rol",
         "noUsers": "Geen gebruikers gevonden",
         "noUsersHint": "Probeer een andere zoekopdracht of andere filters.",
-        "showing": "{n} van {total} gebruikers",
-        "inviteMailNotConfigured": "E-mail is niet geconfigureerd, dus er kan geen uitnodiging worden verstuurd. De nieuwe gebruiker kan niet inloggen.",
-        "emailTaken": "Er bestaat al een gebruiker met dit e-mailadres.",
         "usernameTaken": "Deze gebruikersnaam is al bezet."
     },
     "permissions": {
         "title": "Rollen en rechten",
-        "role": "Rol",
         "features": {
             "manage_routes": "Routes beheren",
             "view_analytics": "Analyses bekijken",
@@ -1181,8 +1152,6 @@
         "reviewsUnmatched": "{count} beoordeling zonder route | {count} beoordelingen zonder route"
     },
     "reports": {
-        "title": "Inhoudsmeldingen",
-        "subtitle": "Meldingen ingediend op grond van artikel 16 van de digitaledienstenverordening.",
         "reportAction": "Deze reactie melden",
         "dialogTitle": "Inhoud melden",
         "dialogIntro": "Vertel ons wat er mis is met deze inhoud. Elke melding wordt door een mens beoordeeld.",
@@ -1205,32 +1174,11 @@
         "goodFaith": "Ik verklaar te goeder trouw dat de informatie in deze melding juist en volledig is.",
         "submit": "Melding indienen",
         "submitted": "Melding ingediend. We hebben je een bevestiging per e-mail gestuurd.",
-        "snapshot": "Inhoud op het moment van melden",
-        "contentUnavailable": "Inhoud niet meer beschikbaar",
-        "notifier": "Gemeld door",
-        "viewContent": "Inhoud bekijken",
-        "filterStatus": "Status",
         "status": {
             "open": "Open",
             "actioned": "Afgehandeld",
             "rejected": "Afgewezen"
         },
-        "decision": {
-            "content_removed": "Inhoud verwijderd",
-            "content_kept": "Inhoud behouden"
-        },
-        "decideTitle": "Besluit vastleggen",
-        "decisionReason": "Reden voor het besluit",
-        "decisionReasonHint": "Wordt intern bewaard als vastlegging van de reden voor dit besluit.",
-        "removeContent": "Inhoud verwijderen",
-        "removeNotAllowed": "Je mag deze inhoud niet verwijderen, of hij kon niet worden verwijderd.",
-        "keepContent": "Inhoud behouden",
-        "decided": "Besluit vastgelegd. De melder is op de hoogte gebracht.",
-        "receiptPending": "Bevestiging niet bezorgd",
-        "empty": "Geen meldingen",
-        "emptyHint": "Gemelde inhoud verschijnt hier ter beoordeling.",
-        "mailWarning": "E-mail is niet ingesteld, dus melders ontvangen niet de ontvangstbevestigingen en besluiten die artikel 16 vereist.",
-        "mailWarningAction": "Instellingen openen",
         "reportProfile": "Profiel melden"
     },
     "tasks": {
@@ -1255,7 +1203,6 @@
         "saved": "Taak opgeslagen.",
         "openRoute": "Route openen",
         "addForRoute": "Taak toevoegen",
-        "loadError": "Taken konden niet worden geladen.",
         "kinds": {
             "defect": "Defect",
             "wish": "Routewens",
@@ -1345,8 +1292,7 @@
         "assignToMe": "Aan mij toewijzen",
         "unassigned": "Niet toegewezen",
         "forThisRoute": "Voor deze route",
-        "newSubtitle": "Werk voor het routebouwteam bijhouden",
-        "deletedElsewhere": "Deze taak is verwijderd."
+        "newSubtitle": "Werk voor het routebouwteam bijhouden"
     },
     "audit": {
         "title": "Activiteitenlogboek",
@@ -1635,8 +1581,6 @@
         "moveUp": "Omhoog",
         "moveDown": "Omlaag",
         "wallName": "Naam",
-        "drawOutline": "Omtrek tekenen",
-        "drawEdge": "Klimrand tekenen",
         "placeLabel": "Label plaatsen",
         "deleteWall": "Wand verwijderen",
         "shapeKind": "Soort",
@@ -1715,7 +1659,6 @@
         }
     },
     "mapPlacement": {
-        "title": "Routes plaatsen",
         "noMap": "Deze locatie heeft nog geen plattegrond.",
         "discard": "Verwerpen",
         "save": "Opslaan ({n})",
@@ -1744,8 +1687,7 @@
         "resetDone": "{n} route gearchiveerd. | {n} routes gearchiveerd.",
         "unplacedBanner": "{n} route staat nog niet op de plattegrond. | {n} routes staan nog niet op de plattegrond.",
         "placeThis": "Op plattegrond plaatsen",
-        "more": "Meer acties",
-        "routes": "Routes"
+        "more": "Meer acties"
     },
     "scan": {
         "title": "Route scannen",
@@ -1867,7 +1809,6 @@
         "results": "Uitslagen",
         "liveRanking": "Live ranglijst",
         "freezeMinutes": "Ranglijst bevriezen (minuten voor het einde)",
-        "status": "Status",
         "statuses": {
             "draft": "Concept",
             "open": "Open",
@@ -2395,7 +2336,6 @@
             "verified": "Bevestigd",
             "unverified": "Niet bevestigd",
             "platformAdmin": "Platformbeheerder",
-            "memberships": "Hal-lidmaatschappen",
             "gym": "Hal",
             "addMembership": "Toevoegen",
             "sendPasswordReset": "E-mail voor wachtwoordherstel sturen",
@@ -2427,7 +2367,6 @@
                 "lift": "Onder Gebruikers kun je de schorsing altijd opheffen."
             },
             "suspendPermanently": "Permanent schorsen",
-            "security": "Beveiliging",
             "locked": "Geblokkeerd",
             "unlock": "Deblokkeren",
             "revokeSessions": "Overal uitloggen",
@@ -2558,7 +2497,6 @@
         },
         "logs": {
             "title": "Serverlogs",
-            "refresh": "Vernieuwen",
             "runtimeLevel": "Logniveau",
             "levelChanged": "Logniveau op alle servers gewijzigd",
             "empty": "Geen logregels op dit niveau",
@@ -3008,12 +2946,6 @@
             "competition_entry": "Wedstrijdnaam",
             "task": "Defect / wens",
             "route": "Route"
-        },
-        "states": {
-            "unreviewed": "Beslissing nodig",
-            "approved": "Gecontroleerd",
-            "pending": "Wacht op goedkeuring",
-            "hidden": "Verborgen"
         },
         "actions": {
             "keep": "Zichtbaar laten",

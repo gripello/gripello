@@ -79,7 +79,6 @@ const {
     status,
     error,
     refresh,
-    competitionId,
 } = await useCompetitionRecord()
 
 const rules = computed(() =>

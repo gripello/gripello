@@ -209,7 +209,6 @@
             v-model="reportOpen"
             content-type="profile"
             :content-id="climberId"
-            :content-url="reportContentUrl('profile', climberId)"
         />
     </div>
 </template>
@@ -225,7 +224,6 @@ import {
     type LogbookRange,
 } from '#shared/utils/logbook'
 import type { FeedTick } from '~/utils/friends'
-import { reportContentUrl } from '~/utils/reports'
 import { requestErrorKey } from '~/utils/errors'
 
 definePageMeta({

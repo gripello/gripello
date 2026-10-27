@@ -125,22 +125,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/platform/features": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listFeatureFlags"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/platform/gyms/{id}/features": {
         parameters: {
             query?: never;
@@ -998,30 +982,6 @@ export interface operations {
                             routes: number;
                             users: number;
                         };
-                    };
-                };
-            };
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-        };
-    };
-    listFeatureFlags: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The feature flag registry */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        flags: string[];
                     };
                 };
             };

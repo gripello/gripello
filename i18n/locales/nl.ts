@@ -1,6 +1,6 @@
 import messages from './nl.json'
 
-export default defineI18nLocale(async (locale) => {
+export default defineI18nLocale(async () => {
     return {
         ...messages,
     }

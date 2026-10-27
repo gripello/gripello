@@ -55,7 +55,7 @@ async function saveAndReload(page: Page) {
 test('auto-place puts routes on the wall that covers their anchor', async ({
     setterPage: page,
 }) => {
-    await updateWall(seeded.api, seeded.islandWallId, {
+    await updateWall(seeded.api, seeded.locationId, seeded.islandWallId, {
         anchor_from: 10,
         anchor_to: 20,
     })
@@ -188,7 +188,7 @@ test('the route form picks the wall from the anchor number', async ({
     adminPage: page,
     testPrefix,
 }) => {
-    await updateWall(seeded.api, seeded.islandWallId, {
+    await updateWall(seeded.api, seeded.locationId, seeded.islandWallId, {
         anchor_from: 30,
         anchor_to: 40,
     })

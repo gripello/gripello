@@ -14,7 +14,6 @@ import (
 	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
-	"gripello/internal/platform/tenancy"
 )
 
 func traceKey(locationID, file string) string { return "locations/" + locationID + "/" + file }
@@ -31,19 +30,7 @@ type wallInput struct {
 	AnchorTo   int             `json:"anchor_to"`
 }
 
-func (in *wallInput) apply(p patch) error {
-	return p.decodeAll(map[string]any{
-		"location": &in.Location, "name": &in.Name, "outline": &in.Outline, "edge": &in.Edge, "label": &in.Label,
-		"sort": &in.Sort, "anchor_from": &in.AnchorFrom, "anchor_to": &in.AnchorTo,
-	})
-}
-
-func inputOfWall(w Wall) wallInput {
-	return wallInput{ID: w.ID, Location: w.Location, Name: w.Name, Outline: w.Outline, Edge: w.Edge, Label: w.Label,
-		Sort: w.Sort, AnchorFrom: w.AnchorFrom, AnchorTo: w.AnchorTo}
-}
-
-func checkWall(ctx context.Context, q db.Querier, gym string, isNew bool, in *wallInput) error {
+func checkWall(ctx context.Context, q db.Querier, gym string, in *wallInput) error {
 	in.Name = strings.TrimSpace(in.Name)
 	if httpx.Blank(in.Name) {
 		return httpx.Required("name")
@@ -59,10 +46,7 @@ func checkWall(ctx context.Context, q db.Querier, gym string, isNew bool, in *wa
 		return notFoundAs(err, "Unknown location.")
 	}
 	if location.Gym != gym {
-		if isNew {
-			return httpx.BadRequest("The location belongs to another gym.")
-		}
-		return tenancy.ErrGymMove
+		return httpx.BadRequest("The location belongs to another gym.")
 	}
 	floorPlan, err := parseGymMap(location.Map)
 	if err != nil {
@@ -72,7 +56,7 @@ func checkWall(ctx context.Context, q db.Querier, gym string, isNew bool, in *wa
 }
 
 func (m *module) insertWall(ctx context.Context, tx pgx.Tx, gym string, in wallInput) (Wall, error) {
-	if err := checkWall(ctx, tx, gym, true, &in); err != nil {
+	if err := checkWall(ctx, tx, gym, &in); err != nil {
 		return Wall{}, err
 	}
 	id := ids.New()
@@ -87,7 +71,7 @@ func (m *module) insertWall(ctx context.Context, tx pgx.Tx, gym string, in wallI
 }
 
 func (m *module) saveWall(ctx context.Context, tx pgx.Tx, original Wall, in wallInput) (Wall, error) {
-	if err := checkWall(ctx, tx, original.Gym, false, &in); err != nil {
+	if err := checkWall(ctx, tx, original.Gym, &in); err != nil {
 		return Wall{}, err
 	}
 	if err := updateWall(ctx, tx, original.ID, in); err != nil {
@@ -97,31 +81,7 @@ func (m *module) saveWall(ctx context.Context, tx pgx.Tx, original Wall, in wall
 	if err != nil {
 		return Wall{}, err
 	}
-	if wall.Location != original.Location {
-		if err := m.moveWallRoutes(ctx, tx, wall); err != nil {
-			return Wall{}, err
-		}
-	}
 	return wall, publishUpdate(ctx, tx, wall.Gym, "walls", original, wall)
-}
-
-// moveWallRoutes takes a wall's routes along to its new location.
-func (m *module) moveWallRoutes(ctx context.Context, tx pgx.Tx, wall Wall) error {
-	where := &db.Where{}
-	where.Add("wall = ?", wall.ID)
-	routes, err := queryRoutes(ctx, tx, where, "")
-	if err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `UPDATE routes SET location = $2, updated = now() WHERE wall = $1`, wall.ID, wall.Location); err != nil {
-		return err
-	}
-	for _, original := range routes {
-		if _, err := m.afterRouteUpdate(ctx, tx, original); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (m *module) removeWall(ctx context.Context, tx pgx.Tx, id string) error {
@@ -149,67 +109,6 @@ func (m *module) removeWall(ctx context.Context, tx pgx.Tx, id string) error {
 		return err
 	}
 	return publishGymChange(ctx, tx, wall.Gym, "walls", "delete", wall)
-}
-
-func (m *module) createWall(ctx context.Context, gym string, p patch) (Wall, error) {
-	if err := m.perms.Require(ctx, gym, tenancy.PermManageSettings); err != nil {
-		return Wall{}, err
-	}
-	if err := tenancy.RejectGymMove(p, gym); err != nil {
-		return Wall{}, httpx.BadRequest("The location belongs to another gym.")
-	}
-	in := wallInput{}
-	if err := in.apply(p); err != nil {
-		return Wall{}, err
-	}
-	var wall Wall
-	err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) (err error) {
-		wall, err = m.insertWall(ctx, tx, gym, in)
-		return err
-	})
-	return wall, err
-}
-
-func (m *module) editableWall(ctx context.Context, id string) (Wall, error) {
-	wall, err := findWall(ctx, m.app.DB, id)
-	if err != nil {
-		return Wall{}, err
-	}
-	return wall, m.perms.Require(ctx, wall.Gym, tenancy.PermManageSettings)
-}
-
-func (m *module) updateWall(ctx context.Context, id string, p patch) (Wall, error) {
-	original, err := m.editableWall(ctx, id)
-	if err != nil {
-		return Wall{}, err
-	}
-	if err := tenancy.RejectGymMove(p, original.Gym); err != nil {
-		return Wall{}, err
-	}
-	var wall Wall
-	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		if err := lockWallRoutes(ctx, tx, id); err != nil {
-			return err
-		}
-		if original, err = lockWall(ctx, tx, id); err != nil {
-			return err
-		}
-		in := inputOfWall(original)
-		if err := in.apply(p); err != nil {
-			return err
-		}
-		wall, err = m.saveWall(ctx, tx, original, in)
-		return err
-	})
-	return wall, err
-}
-
-func (m *module) deleteWall(ctx context.Context, id string) error {
-	wall, err := m.editableWall(ctx, id)
-	if err != nil {
-		return err
-	}
-	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error { return m.removeWall(ctx, tx, wall.ID) })
 }
 
 type floorPlan struct {

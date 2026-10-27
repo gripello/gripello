@@ -96,15 +96,12 @@ describe('VirtualWindow', () => {
         expect(wrapper.attributes('style')).toContain('height')
     })
 
-    it('observes with the configured margins', () => {
-        createWrapper({
-            mountMargin: '100px 0px',
-            unmountMargin: '900px 0px',
-        })
+    it('mounts early and unmounts late', () => {
+        createWrapper()
         const { near, far } = observers()
 
-        expect(near.options?.rootMargin).toBe('100px 0px')
-        expect(far.options?.rootMargin).toBe('900px 0px')
+        expect(near.options?.rootMargin).toBe('200px 0px')
+        expect(far.options?.rootMargin).toBe('800px 0px')
     })
 
     it('disconnects both observers on unmount', () => {

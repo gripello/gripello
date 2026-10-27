@@ -32,13 +32,6 @@ export function readableTextOn(hex: string | null | undefined): string {
         : '#000000'
 }
 
-export function isLightColor(hex: string): boolean {
-    const rgb = rgbChannels(hex)
-    if (!rgb) return false
-    const [red, green, blue] = rgb
-    return red * 0.299 + green * 0.587 + blue * 0.114 > 160
-}
-
 export function shadeColor(hex: string, amount: number): string {
     const rgb = rgbChannels(hex)
     if (!rgb) return hex

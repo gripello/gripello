@@ -38,22 +38,17 @@
         "lastname": "Apellidos",
         "username": "Nombre de usuario",
         "password": "Contraseña",
-        "newPassword": "Nueva contraseña",
         "email": "Correo electrónico",
         "username_or_email": "Usuario o correo electrónico",
         "reset_password": "Restablecer contraseña",
         "reset_hint": "Introduce el correo electrónico de tu cuenta.",
-        "userProfile": "Perfil de usuario",
         "oldPassword": "Contraseña actual",
-        "or_login_with": "O inicia sesión con",
         "remember_me": "Mantener la sesión iniciada",
         "changeAvatar": "Cambiar avatar",
-        "emailLocked": "El correo no se puede cambiar aquí",
         "passwordStrength": "Seguridad de la contraseña",
         "unsavedChanges": "Cambios sin guardar",
         "wrongOldPassword": "La contraseña actual es incorrecta",
         "passwordRequired": "Tu cuenta aún no tiene contraseña. Crea una primero con el restablecimiento de contraseña en la página de inicio de sesión.",
-        "passwordChangedSignInAgain": "Contraseña cambiada. Vuelve a iniciar sesión con tu nueva contraseña.",
         "unknownUser": "Usuario desconocido",
         "tabs": {
             "profile": "Perfil",
@@ -376,7 +371,6 @@
         "comment": "Comentario",
         "climber_reviews": "Valoraciones",
         "perceived_difficulty": "Grado percibido",
-        "loadError": "No se pudieron cargar las valoraciones.",
         "deleteOwn": "Eliminar mi reseña",
         "deleteOwnConfirm": "Tu reseña se eliminará definitivamente.",
         "editOwn": "Editar mi reseña",
@@ -388,7 +382,6 @@
     "table": {
         "actions": "Acciones",
         "no_data": "Sin datos",
-        "created_at": "Creado el",
         "sort_by": "Ordenar por",
         "sort_asc": "Ascendente",
         "sort_desc": "Descendente",
@@ -482,8 +475,6 @@
             "health": "Servidor en línea",
             "verifyEmail": "Tu dirección de correo se ha verificado. Ya puedes iniciar sesión.",
             "emailChange": "Tu dirección de correo se ha cambiado. Vuelve a iniciar sesión.",
-            "userInvited": "Usuario creado. Se ha enviado un correo de invitación.",
-            "userCreatedNoInvite": "Usuario creado, pero no se ha enviado ningún correo de invitación porque el correo no está configurado.",
             "passwordChanged": "Tu contraseña se ha establecido. Ya puedes iniciar sesión.",
             "registered": "Cuenta creada. Verifica tu dirección con el enlace que te hemos enviado por correo y después inicia sesión.",
             "verificationSent": "Si existe una cuenta sin verificar, te hemos enviado un nuevo enlace de verificación."
@@ -493,7 +484,6 @@
             "edit": "No se pudieron guardar los cambios.",
             "delete": "No se pudo eliminar.",
             "health": "Servidor sin conexión",
-            "no_auth_methods_available": "No hay métodos de inicio de sesión disponibles.",
             "invalid_credentials": "Nombre de usuario o contraseña incorrectos.",
             "email_not_verified": "Tu dirección de correo aún no se ha verificado.",
             "too_many_attempts": "Demasiados intentos de inicio de sesión. Inténtalo de nuevo más tarde.",
@@ -501,7 +491,6 @@
             "generic": "Algo ha salido mal.",
             "verifyEmail": "Este enlace de verificación no es válido o ha caducado.",
             "emailChange": "Este enlace para cambiar el correo no es válido o ha caducado.",
-            "userInviteMail": "Usuario creado, pero no se pudo enviar el correo de invitación.",
             "resetLinkInvalid": "Este enlace para restablecer la contraseña no es válido o ha caducado. Solicita uno nuevo en la página de inicio de sesión.",
             "captcha": "La comprobación antispam ha fallado. Inténtalo de nuevo.",
             "verificationMail": "Tu cuenta se ha creado, pero no se pudo enviar el correo de verificación. Solicita uno nuevo en la página de inicio de sesión.",
@@ -511,7 +500,6 @@
         },
         "deleteItem": "¿Eliminar este elemento? No se puede deshacer.",
         "deleteRouteWithHistory": "Esta vía tiene reseñas, vídeos beta o resultados de competición. Al eliminarla también se borran. Archívala para conservarlos.",
-        "deleteMoreItems": "¿Eliminar los elementos seleccionados? No se puede deshacer.",
         "archiveMoreItems": "¿Archivar las vías seleccionadas?",
         "updateAvailable": "Actualización disponible",
         "releaseNotes": {
@@ -797,7 +785,6 @@
             "notFound": "Página no encontrada - Gripello",
             "routeNamed": "{name} - Gripello",
             "inventory": "Inventario de vías - Gripello",
-            "reports": "Denuncias de contenido - Gripello",
             "tasks": "Tareas - Gripello",
             "activity": "Registro de actividad - Gripello",
             "verifyEmail": "Verificar correo - Gripello",
@@ -805,7 +792,6 @@
             "logbook": "Libreta - Gripello",
             "map": "Plano del rocódromo - Gripello",
             "mapEditor": "Editor de plano - Gripello",
-            "mapPlacement": "Colocar vías - Gripello",
             "scan": "Escanear vía - Gripello",
             "me": "Mi cuenta - Gripello",
             "overview": "Resumen - Gripello",
@@ -830,7 +816,6 @@
             "users": "Usuarios",
             "dashboard": "Gestionar vías",
             "inventory": "Inventario de vías",
-            "reports": "Denuncias de contenido",
             "activity": "Consulta la actividad registrada de cuentas y contenidos."
         }
     },
@@ -864,11 +849,7 @@
         "noCommentsHint": "Prueba otros filtros u otro término de búsqueda.",
         "editReview": "Editar valoración",
         "anonymous": "Anónimo",
-        "selected": "Seleccionadas: {n}",
-        "deleteSelected": "Eliminar {n}",
-        "bulkDeleteTitle": "¿Eliminar {n} valoración? | ¿Eliminar {n} valoraciones?",
-        "showing": "{n} de {total} valoraciones",
-        "select": "Seleccionar"
+        "showing": "{n} de {total} valoraciones"
     },
     "nav": {
         "paletteGroupRoles": "Roles",
@@ -885,7 +866,6 @@
         "themeSystemHint": "Sigue el ajuste de tu dispositivo",
         "themeLight": "Tema claro",
         "themeDark": "Tema oscuro",
-        "openMenu": "Abrir menú",
         "skipToContent": "Saltar al contenido",
         "mainNavigation": "Navegación principal",
         "toggleSidebar": "Mostrar/ocultar barra lateral",
@@ -908,26 +888,17 @@
         "noStaffTools": "No tienes herramientas del equipo en este rocódromo"
     },
     "users": {
-        "create": "Añadir usuario",
-        "createHint": "El usuario recibirá un correo para establecer su contraseña.",
         "edit": "Editar usuario",
         "title": "Usuarios",
         "delete": "Eliminar usuario",
-        "deleteConfirm": "¿Eliminar este usuario? Esta acción no se puede deshacer.",
         "deleteSuccess": "Usuario eliminado.",
         "deleteError": "No se pudo eliminar el usuario.",
-        "searchUsers": "Buscar usuarios…",
-        "role": "Rol",
         "noUsers": "No se encontraron usuarios",
         "noUsersHint": "Prueba con otra búsqueda u otros filtros.",
-        "showing": "{n} de {total} usuarios",
-        "inviteMailNotConfigured": "El correo no está configurado, así que no se puede enviar ninguna invitación. El nuevo usuario no podrá iniciar sesión.",
-        "emailTaken": "Ya existe un usuario con este correo.",
         "usernameTaken": "Este nombre de usuario ya está en uso."
     },
     "permissions": {
         "title": "Roles y permisos",
-        "role": "Rol",
         "features": {
             "manage_routes": "Gestionar vías",
             "view_analytics": "Ver estadísticas",
@@ -1181,8 +1152,6 @@
         "reviewsUnmatched": "{count} reseña sin vía | {count} reseñas sin vía"
     },
     "reports": {
-        "title": "Denuncias de contenido",
-        "subtitle": "Denuncias presentadas conforme al artículo 16 del Reglamento de Servicios Digitales.",
         "reportAction": "Denunciar este comentario",
         "dialogTitle": "Denunciar contenido",
         "dialogIntro": "Cuéntanos qué tiene de malo este contenido. Una persona revisa cada denuncia.",
@@ -1205,32 +1174,11 @@
         "goodFaith": "Declaro de buena fe que la información de esta denuncia es exacta y completa.",
         "submit": "Enviar denuncia",
         "submitted": "Denuncia enviada. Te hemos mandado una confirmación por correo.",
-        "snapshot": "Contenido en el momento de la denuncia",
-        "contentUnavailable": "El contenido ya no está disponible",
-        "notifier": "Denunciado por",
-        "viewContent": "Ver contenido",
-        "filterStatus": "Estado",
         "status": {
             "open": "Abierta",
             "actioned": "Tramitada",
             "rejected": "Rechazada"
         },
-        "decision": {
-            "content_removed": "Contenido eliminado",
-            "content_kept": "Contenido mantenido"
-        },
-        "decideTitle": "Registrar tu decisión",
-        "decisionReason": "Motivo de la decisión",
-        "decisionReasonHint": "Se guarda como registro interno de por qué se tomó esta decisión.",
-        "removeContent": "Eliminar contenido",
-        "removeNotAllowed": "No tienes permiso para eliminar este contenido o no se ha podido eliminar.",
-        "keepContent": "Mantener contenido",
-        "decided": "Decisión registrada. Se ha avisado a quien presentó la denuncia.",
-        "receiptPending": "Acuse de recibo no entregado",
-        "empty": "No hay denuncias",
-        "emptyHint": "El contenido denunciado aparecerá aquí para su revisión.",
-        "mailWarning": "El correo no está configurado, así que los denunciantes no reciben los acuses de recibo ni las notificaciones de decisión que exige el artículo 16.",
-        "mailWarningAction": "Abrir ajustes",
         "reportProfile": "Denunciar perfil"
     },
     "tasks": {
@@ -1255,7 +1203,6 @@
         "saved": "Tarea guardada.",
         "openRoute": "Abrir vía",
         "addForRoute": "Añadir tarea",
-        "loadError": "No se pudieron cargar las tareas.",
         "kinds": {
             "defect": "Desperfecto",
             "wish": "Deseo de vía",
@@ -1345,8 +1292,7 @@
         "assignToMe": "Asignármela",
         "unassigned": "Sin asignar",
         "forThisRoute": "Para esta vía",
-        "newSubtitle": "Organiza el trabajo del equipo de equipadores",
-        "deletedElsewhere": "Esta tarea se ha eliminado."
+        "newSubtitle": "Organiza el trabajo del equipo de equipadores"
     },
     "audit": {
         "title": "Registro de actividad",
@@ -1635,8 +1581,6 @@
         "moveUp": "Subir",
         "moveDown": "Bajar",
         "wallName": "Nombre",
-        "drawOutline": "Dibujar contorno",
-        "drawEdge": "Dibujar cara de escalada",
         "placeLabel": "Colocar etiqueta",
         "deleteWall": "Eliminar pared",
         "shapeKind": "Tipo",
@@ -1715,7 +1659,6 @@
         }
     },
     "mapPlacement": {
-        "title": "Colocar vías",
         "noMap": "Esta ubicación aún no tiene plano.",
         "discard": "Descartar",
         "save": "Guardar ({n})",
@@ -1744,8 +1687,7 @@
         "resetDone": "{n} vía archivada. | {n} vías archivadas.",
         "unplacedBanner": "{n} vía aún no está en el plano. | {n} vías aún no están en el plano.",
         "placeThis": "Colocar en el plano",
-        "more": "Más acciones",
-        "routes": "Vías"
+        "more": "Más acciones"
     },
     "scan": {
         "title": "Escanear una vía",
@@ -1867,7 +1809,6 @@
         "results": "Resultados",
         "liveRanking": "Clasificación en directo",
         "freezeMinutes": "Congelar clasificación (minutos antes del fin)",
-        "status": "Estado",
         "statuses": {
             "draft": "Borrador",
             "open": "Abierta",
@@ -2395,7 +2336,6 @@
             "verified": "Verificado",
             "unverified": "Sin verificar",
             "platformAdmin": "Admin de plataforma",
-            "memberships": "Membresías de rocódromos",
             "gym": "Rocódromo",
             "addMembership": "Añadir",
             "sendPasswordReset": "Enviar email para restablecer la contraseña",
@@ -2427,7 +2367,6 @@
                 "lift": "Puedes levantar la suspensión cuando quieras en Usuarios."
             },
             "suspendPermanently": "Suspender permanentemente",
-            "security": "Seguridad",
             "locked": "Bloqueado",
             "unlock": "Desbloquear",
             "revokeSessions": "Cerrar sesión en todas partes",
@@ -2558,7 +2497,6 @@
         },
         "logs": {
             "title": "Registros del servidor",
-            "refresh": "Actualizar",
             "runtimeLevel": "Nivel de registro",
             "levelChanged": "Nivel de registro cambiado en todos los servidores",
             "empty": "No hay líneas en este nivel",
@@ -3008,12 +2946,6 @@
             "competition_entry": "Nombre de competición",
             "task": "Defecto / deseo",
             "route": "Vía"
-        },
-        "states": {
-            "unreviewed": "Por decidir",
-            "approved": "Revisado",
-            "pending": "Pendiente de aprobación",
-            "hidden": "Oculto"
         },
         "actions": {
             "keep": "Dejar visible",

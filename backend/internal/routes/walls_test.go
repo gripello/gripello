@@ -48,43 +48,40 @@ func TestClampUnit(t *testing.T) {
 
 func TestWallValidation(t *testing.T) {
 	f := newFixture(t)
-	post := func(location, shape string, status int) {
+	save := func(wall string, status int) map[string]any {
 		t.Helper()
-		f.call("admin", "POST", "/gyms/"+f.gymA+"/walls", `{"location":"`+location+`","name":"W"`+shape+`}`, status)
+		return f.floorPlan("admin", f.hall, wall, "", status)
 	}
-	valid := `,"outline":[[1,1],[2,1],[2,2]],"edge":[[1,1],[2,1]]`
-	post(f.hallB, valid, http.StatusBadRequest)
-	post(f.otherGym, valid, http.StatusBadRequest)
-	post(f.hall, `,"outline":[[1,1],[2,1]],"edge":[[1,1],[2,1]]`, http.StatusBadRequest)
-	post(f.hall, `,"outline":[[1,1],[2,1],[2,2]],"edge":[[1,1]]`, http.StatusBadRequest)
-	post(f.hall, `,"outline":[[1,1],[2,1],[2,2]],"edge":[[1,1],[1,1]]`, http.StatusBadRequest)
-	post(f.hall, `,"outline":[[1,1],[2,1],[2,99]],"edge":[[1,1],[2,1]]`, http.StatusBadRequest)
-	post(f.hall, valid+`,"label":[50,50]`, http.StatusBadRequest)
-	f.call("climber", "POST", "/gyms/"+f.gymA+"/walls", `{"location":"`+f.hall+`","name":"W"`+valid+`}`, http.StatusForbidden)
-	f.call("operator", "POST", "/gyms/"+f.gymA+"/walls", `{"location":"`+f.hall+`","name":"Operator"`+valid+`}`, http.StatusCreated)
-	post(f.hall, valid+`,"label":[5,5]`, http.StatusCreated)
-	post(f.hall, valid, http.StatusBadRequest)
+	save(`{"name":"W","outline":[[1,1],[2,1]],"edge":[[1,1],[2,1]]}`, http.StatusBadRequest)
+	save(`{"name":"W","outline":[[1,1],[2,1],[2,2]],"edge":[[1,1]]}`, http.StatusBadRequest)
+	save(`{"name":"W","outline":[[1,1],[2,1],[2,2]],"edge":[[1,1],[1,1]]}`, http.StatusBadRequest)
+	save(`{"name":"W","outline":[[1,1],[2,1],[2,99]],"edge":[[1,1],[2,1]]}`, http.StatusBadRequest)
+	save(`{"name":"W",`+wallShape+`,"label":[50,50]}`, http.StatusBadRequest)
+	save(`{"name":"`+strings.Repeat("ü", 101)+`",`+wallShape+`}`, http.StatusBadRequest)
+	save(`{"name":"`+strings.Repeat("ü", 100)+`",`+wallShape+`}`, http.StatusOK)
+	f.call("admin", "PUT", "/locations/"+f.hallB+"/floor-plan", `{"map":null,"walls":[{"name":"W",`+wallShape+`}]}`, http.StatusBadRequest)
+	f.floorPlan("climber", f.hall, `{"name":"W",`+wallShape+`}`, "", http.StatusForbidden)
+	f.floorPlan("operator", f.hall, `{"name":"Operator",`+wallShape+`}`, "", http.StatusOK)
+	id := save(`{"name":"W",`+wallShape+`,"label":[5,5]}`, http.StatusOK)["walls"].([]any)[0].(map[string]any)["id"].(string)
+	save(`{"name":"w",`+wallShape+`}`, http.StatusBadRequest)
 
-	walls := items(f.call("", "GET", "/gyms/"+f.gymA+"/walls?location="+f.hall, "", http.StatusOK))
-	if len(walls) != 2 {
+	if walls := items(f.call("", "GET", "/gyms/"+f.gymA+"/walls?location="+f.hall, "", http.StatusOK)); len(walls) != 3 {
 		t.Fatalf("walls = %v", walls)
 	}
-	id := walls[0].(map[string]any)["id"].(string)
-	f.call("admin", "PATCH", "/walls/"+id, `{"edge":[[1,1]]}`, http.StatusBadRequest)
-	f.call("admin", "PATCH", "/walls/"+id, `{"location":"`+f.otherGym+`"}`, http.StatusBadRequest)
-	f.call("admin", "PATCH", "/walls/"+id, `{"sort":3,"label":null}`, http.StatusOK)
+	save(`{"id":"`+id+`","name":"W","outline":[[1,1],[2,1],[2,2]],"edge":[[1,1]]}`, http.StatusBadRequest)
+	save(`{"id":"`+id+`","name":"W",`+wallShape+`,"sort":3,"label":null}`, http.StatusOK)
 }
 
 func TestWallDeleteBlockedByActiveRoutes(t *testing.T) {
 	f := newFixture(t)
 	wall := f.wall(f.hall, "Slab")
 	route := f.route(`,"wall":"` + wall + `"`)
-	f.call("setter", "DELETE", "/walls/"+wall, "", http.StatusForbidden)
-	f.call("admin", "DELETE", "/walls/"+wall, "", http.StatusBadRequest)
+	f.floorPlan("setter", f.hall, "", `"`+wall+`"`, http.StatusForbidden)
+	f.floorPlan("admin", f.hall, "", `"`+wall+`"`, http.StatusBadRequest)
 	f.call("setter", "POST", "/routes/"+route+"/archive", "", http.StatusOK)
 	other := f.wall(f.hall, "Roof")
 	follower := f.exec(`UPDATE users SET followed_walls = ARRAY[$1, $2] WHERE username = 'setter' RETURNING id`, wall, other)
-	f.call("admin", "DELETE", "/walls/"+wall, "", http.StatusNoContent)
+	f.floorPlan("admin", f.hall, "", `"`+wall+`"`, http.StatusOK)
 	if followed := f.exec(`SELECT array_to_string(followed_walls, ',') FROM users WHERE id = $1`, follower); followed != other {
 		t.Fatalf("followed walls after delete = %q", followed)
 	}

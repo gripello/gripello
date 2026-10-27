@@ -148,7 +148,7 @@ func TestAdminTruncatePrefixDeletesOnlyPrefixedTestRows(t *testing.T) {
 	if verified || !platformAdmin || suspended {
 		t.Fatalf("after reset: verified %v platform admin %v suspended %v", verified, platformAdmin, suspended)
 	}
-	if _, err := adminDeleteUser(ctx, pool, []string{"--user", keptUser}); err != nil {
+	if err := adminDeleteUser(ctx, pool, []string{"--user", keptUser}); err != nil {
 		t.Fatal(err)
 	}
 	pool.QueryRow(ctx, `SELECT count(*) FROM users`).Scan(&users)

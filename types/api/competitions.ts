@@ -177,8 +177,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description manage_competitions, or the owner while the entry is not disqualified and has no scores (403; withdraw instead). */
-        delete: operations["deleteCompetitionEntry"];
+        delete?: never;
         options?: never;
         head?: never;
         /** @description manage_competitions or the owner. Owners can't change competition, user, bib or paid (ignored); they may withdraw (unless disqualified, and only before the competition closes), re-register while registration is open, and change category only then. A different `competition` from a manager is rejected. 403 for display_name/hidden changes while moderation keeps the entry hidden. */
@@ -200,25 +199,6 @@ export interface paths {
         put: operations["upsertCompetitionScores"];
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/competition-scores/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** @description manage_competitions. */
-        delete: operations["deleteCompetitionScore"];
         options?: never;
         head?: never;
         patch?: never;
@@ -866,29 +846,6 @@ export interface operations {
             404: components["responses"]["Error"];
         };
     };
-    deleteCompetitionEntry: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            404: components["responses"]["Error"];
-        };
-    };
     updateCompetitionEntry: {
         parameters: {
             query?: never;
@@ -965,30 +922,6 @@ export interface operations {
                         items: components["schemas"]["Score"][];
                     };
                 };
-            };
-            400: components["responses"]["Error"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            404: components["responses"]["Error"];
-        };
-    };
-    deleteCompetitionScore: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             400: components["responses"]["Error"];
             401: components["responses"]["Error"];

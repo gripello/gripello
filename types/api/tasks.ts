@@ -97,31 +97,11 @@ export interface paths {
         get: operations["getTask"];
         put?: never;
         post?: never;
-        /** @description manage_tasks. */
-        delete: operations["deleteTask"];
+        delete?: never;
         options?: never;
         head?: never;
         /** @description manage_tasks. Kind, reporter and done stamps are ignored; closing stamps done_at/done_by, reopening clears them. 403 for description/photo changes while moderation keeps the report hidden. */
         patch: operations["updateTask"];
-        trace?: never;
-    };
-    "/tasks/{id}/assign": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description manage_tasks. The assignee must hold manage_tasks in the task's gym; null unassigns. */
-        post: operations["assignTask"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/tasks/{id}/status": {
@@ -461,29 +441,6 @@ export interface operations {
             404: components["responses"]["Error"];
         };
     };
-    deleteTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            404: components["responses"]["Error"];
-        };
-    };
     updateTask: {
         parameters: {
             query?: never;
@@ -504,30 +461,6 @@ export interface operations {
                 "application/json": components["schemas"]["TaskInput"] & {
                     status?: components["schemas"]["TaskStatus"];
                     resolution_note?: string;
-                };
-            };
-        };
-        responses: {
-            200: components["responses"]["Task"];
-            400: components["responses"]["Error"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            404: components["responses"]["Error"];
-        };
-    };
-    assignTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    assignee: string | null;
                 };
             };
         };

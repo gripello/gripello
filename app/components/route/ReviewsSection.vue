@@ -76,19 +76,16 @@
             v-model="reportDialog"
             content-type="rating"
             :content-id="reportTarget"
-            :content-url="reportUrl"
         />
     </section>
 </template>
 
 <script setup lang="ts">
 import { deleteRating } from '~/api/ratings'
-import { reportContentUrl } from '~/utils/reports'
 import type { ReviewDisplay } from '~/utils/routeReviews'
 
-const props = defineProps<{
+defineProps<{
     reviews: ReviewDisplay[]
-    routeId: string
     targetCommentId: string
 }>()
 const emit = defineEmits<{ deleted: [id: string] }>()
@@ -98,11 +95,6 @@ const { error: notifyError } = useNotification()
 
 const reportDialog = ref(false)
 const reportTarget = ref<string | null>(null)
-const reportUrl = computed(() =>
-    reportTarget.value
-        ? reportContentUrl('rating', reportTarget.value, props.routeId)
-        : '',
-)
 
 function openReport(id: string) {
     reportTarget.value = id

@@ -4,7 +4,6 @@ import type {
     ModerationItemRecord,
     ModerationState,
     ReportRecord,
-    ReportStatus,
 } from '../../types/models'
 import type { ModerationSummary } from '../utils/moderation'
 import { useApi } from './client'
@@ -21,10 +20,6 @@ export type ReportInput = Pick<
     | 'good_faith'
 > &
     Partial<Pick<ReportRecord, 'language'>>
-
-export interface ReportQuery extends PageQuery {
-    status?: ReportStatus
-}
 
 export type CaseSort = 'reviewed' | 'newest'
 
@@ -53,24 +48,6 @@ export function createReport(
         body: input,
         headers,
     })
-}
-
-function listReports(path: string, query: ReportQuery) {
-    return useApi()<Page<ReportRecord>>(path, {
-        query: {
-            status: query.status || undefined,
-            page: query.page,
-            limit: query.limit,
-        },
-    })
-}
-
-export function listGymReports(gym: string, query: ReportQuery = {}) {
-    return listReports(`/gyms/${gym}/reports`, query)
-}
-
-export function listPlatformReports(query: ReportQuery = {}) {
-    return listReports('/platform/reports', query)
 }
 
 export function moderationSummary(gym?: string) {

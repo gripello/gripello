@@ -329,10 +329,6 @@ func (m *module) patchEntry(w http.ResponseWriter, r *http.Request) error {
 	return httpx.Respond(w, http.StatusOK, e, err)
 }
 
-func (m *module) deleteEntryHandler(w http.ResponseWriter, r *http.Request) error {
-	return httpx.NoContent(w, m.deleteEntry(r.Context(), r.PathValue("id")))
-}
-
 func scoresPublic(c Competition, now time.Time) bool {
 	return c.Status == "published" ||
 		(c.Status != "draft" && c.LiveRanking && (c.FreezeAt == nil || c.FreezeAt.After(now)))
@@ -364,10 +360,6 @@ func (m *module) putScores(w http.ResponseWriter, r *http.Request) error {
 	}
 	items, err := m.upsertScores(r.Context(), r.PathValue("id"), body.Scores)
 	return respondItems(w, items, err)
-}
-
-func (m *module) deleteScoreHandler(w http.ResponseWriter, r *http.Request) error {
-	return httpx.NoContent(w, m.deleteScore(r.Context(), r.PathValue("id")))
 }
 
 func (m *module) standings(ctx context.Context, competition string, staff bool) ([]Standing, error) {

@@ -129,7 +129,7 @@ func allowedActions(it Item, platform, gymStaff bool) []string {
 }
 
 func allowed(it Item, action string, platform, gymStaff bool) error {
-	ok := false
+	var ok bool
 	switch action {
 	case "approve":
 		ok = it.State == "unreviewed" || (it.State == "pending" && gymStaff)

@@ -29,8 +29,6 @@ func Register(app *platform.App) {
 	m := &module{app: app, perms: tenancy.New(app.DB), climbers: climbers.New(app.DB)}
 	for pattern, handler := range map[string]httpx.Handler{
 		"POST /reports":                      m.createReport,
-		"GET /gyms/{gym}/reports":            m.listGymReports,
-		"GET /platform/reports":              m.listPlatformReports,
 		"GET /moderation/summary":            m.summary,
 		"GET /moderation/cases":              m.listCases,
 		"POST /moderation/cases":             m.openCase,
@@ -191,14 +189,12 @@ func (m *module) onTaskChange(e events.Event) {
 	if json.Unmarshal(e.Payload, &change) != nil || change.Record.ID == "" {
 		return
 	}
+	if e.Kind != "task.updated" {
+		return
+	}
 	ctx, cancel := handlerContext()
 	defer cancel()
-	switch e.Kind {
-	case "task.updated":
-		logFailure("re-hiding task", change.Record.ID, m.rehide(ctx, "task", change.Record.ID))
-	case "task.deleted":
-		logFailure("dropping case", change.Record.ID, m.dropContent(ctx, "task", change.Record.ID))
-	}
+	logFailure("re-hiding task", change.Record.ID, m.rehide(ctx, "task", change.Record.ID))
 }
 
 func (m *module) onCompetitionChange(e events.Event) {

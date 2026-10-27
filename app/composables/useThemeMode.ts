@@ -1,7 +1,6 @@
 export type ThemeMode = 'system' | 'light' | 'dark'
 type ThemeName = 'light' | 'dark'
 
-const THEME_MODES: ThemeMode[] = ['system', 'light', 'dark']
 const THEME_CHANNEL = 'gripello-theme'
 const REVEAL_MS = 450
 

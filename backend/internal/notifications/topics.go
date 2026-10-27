@@ -44,7 +44,7 @@ func topicOf(notificationType string) string {
 type prefs map[string]map[string]bool
 
 // Anything not set to false is on.
-func (p prefs) wants(channel, notificationType string) bool {
-	enabled, set := p[channel][topicOf(notificationType)]
+func (p prefs) wantsPush(notificationType string) bool {
+	enabled, set := p[pushChannel][topicOf(notificationType)]
 	return !set || enabled
 }

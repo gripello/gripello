@@ -98,16 +98,6 @@ func TestEntryCategoryChangeWhileRegistrationClosesIsRefused(t *testing.T) {
 	}
 }
 
-func TestOwnerCannotDeleteAnEntryDisqualifiedMeanwhile(t *testing.T) {
-	f := newFixture(t)
-	id, category, _, _ := f.competition("")
-	entry := f.register("climber", id, category, "")
-	if code := f.whileHeld(`UPDATE competition_entries SET status = 'disqualified' WHERE id = $1`, []any{entry},
-		"climber", "DELETE", "/competition-entries/"+entry, ""); code != http.StatusForbidden {
-		t.Fatalf("deleting an entry disqualified meanwhile = %d, want 403", code)
-	}
-}
-
 func TestCompetitionWritesDoNotWaitForChildInserts(t *testing.T) {
 	f := newFixture(t)
 	id, category, _, _ := f.competition("")

@@ -44,11 +44,6 @@ func TestAudienceSetsMatchTheSingleQuestions(t *testing.T) {
 	if err != nil || !slices.Equal(followers, []string{"friend"}) {
 		t.Fatalf("Followers = %v, %v; want only the accepted follower", followers, err)
 	}
-	for _, user := range []string{"friend", "asking", "setter"} {
-		if perms.Follows(ctx, user, "climber") != slices.Contains(followers, user) {
-			t.Errorf("Follows and Followers disagree for %s", user)
-		}
-	}
 }
 
 func TestGymVisibility(t *testing.T) {

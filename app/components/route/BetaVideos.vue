@@ -141,7 +141,6 @@
             :model-value="!!reportTarget"
             content-type="beta_video"
             :content-id="reportTarget"
-            :content-url="reportContentUrl('beta_video', reportTarget, routeId)"
             @update:model-value="reportTarget = null"
         />
 
@@ -168,7 +167,6 @@ import {
     betaPlatformIcon,
     betaVideoPlatform,
 } from '#shared/utils/betaVideos'
-import { reportContentUrl } from '~/utils/reports'
 
 const props = defineProps<{
     routeId: string

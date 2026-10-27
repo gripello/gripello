@@ -7,8 +7,6 @@ import {
     moderationSummary,
     hideAuthorContent,
     listModerationCases,
-    listGymReports,
-    listPlatformReports,
     openModerationCase,
 } from '~/api/moderation'
 import { mockApi } from './apiMock'
@@ -41,20 +39,6 @@ describe('reports', () => {
         expect(request.method).toBe('POST')
         expect(request.headers.get('X-Cap-Token')).toBe('t')
         expect(request.body).toEqual(report)
-    })
-
-    it('pages the open reports of a gym', async () => {
-        api.respond({ items: [], page: 2, limit: 10 })
-        await listGymReports('g1', { status: 'open', page: 2, limit: 10 })
-        expect(api.request().url).toBe(
-            '/api/gyms/g1/reports?status=open&page=2&limit=10',
-        )
-    })
-
-    it('lists every report for the platform', async () => {
-        api.respond({ items: [], page: 1, limit: 30 })
-        await listPlatformReports()
-        expect(api.request().url).toBe('/api/platform/reports')
     })
 })
 

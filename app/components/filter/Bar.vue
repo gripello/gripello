@@ -5,11 +5,9 @@ const props = withDefaults(
     defineProps<{
         searchLabel?: string
         searchPlaceholder?: string
-        searchIcon?: string
         activeFilterCount?: number
     }>(),
     {
-        searchIcon: 'i-lucide-search',
         activeFilterCount: 0,
     },
 )
@@ -34,7 +32,7 @@ function handleClear() {
                     v-model="search"
                     :placeholder="(smAndUp && searchPlaceholder) || searchLabel"
                     :aria-label="searchLabel"
-                    :icon="searchIcon"
+                    icon="i-lucide-search"
                     class="min-w-0 flex-1 sm:min-w-72"
                     data-testid="filter-search"
                 >

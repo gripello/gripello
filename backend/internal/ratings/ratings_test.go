@@ -378,7 +378,7 @@ func mp4Bytes() []byte {
 	return append(head, bytes.Repeat([]byte{0}, 1024)...)
 }
 
-func (f *fixture) upload(user, route string, content []byte, extra map[string]string, status int) map[string]any {
+func (f *fixture) upload(route string, content []byte, extra map[string]string, status int) map[string]any {
 	f.t.Helper()
 	var body bytes.Buffer
 	form := multipart.NewWriter(&body)
@@ -390,7 +390,7 @@ func (f *fixture) upload(user, route string, content []byte, extra map[string]st
 	form.Close()
 	request := httptest.NewRequest("POST", "/api/routes/"+route+"/betas", &body)
 	request.Header.Set("Content-Type", form.FormDataContentType())
-	return f.send(user, request, status)
+	return f.send("climber", request, status)
 }
 
 func (f *fixture) blobExists(key string) bool {
@@ -405,9 +405,9 @@ func (f *fixture) blobExists(key string) bool {
 
 func TestBetaUploads(t *testing.T) {
 	f := newFixture(t)
-	f.upload("climber", f.route, []byte("not a video at all"), nil, http.StatusBadRequest)
-	f.upload("climber", f.route, mp4Bytes(), map[string]string{"url": "https://youtube.com/shorts/1"}, http.StatusBadRequest)
-	created := f.upload("climber", f.route, mp4Bytes(), nil, http.StatusCreated)
+	f.upload(f.route, []byte("not a video at all"), nil, http.StatusBadRequest)
+	f.upload(f.route, mp4Bytes(), map[string]string{"url": "https://youtube.com/shorts/1"}, http.StatusBadRequest)
+	created := f.upload(f.route, mp4Bytes(), nil, http.StatusCreated)
 	key := betaKey(created["id"].(string), created["file"].(string))
 	if !strings.HasPrefix(created["file"].(string), "my_beta_") || !f.blobExists(key) {
 		t.Fatalf("upload = %v", created)
@@ -448,13 +448,13 @@ func TestBetaFlagsGateEachKind(t *testing.T) {
 
 	f.exec(`UPDATE gyms SET features = '{"beta_uploads":true}', premoderate_betas = false WHERE id = $1 RETURNING id`, f.gymA)
 	f.call("climber", "POST", path, link, http.StatusForbidden)
-	f.upload("climber", f.route, mp4Bytes(), nil, http.StatusCreated)
+	f.upload(f.route, mp4Bytes(), nil, http.StatusCreated)
 }
 
 func TestBetaPremoderation(t *testing.T) {
 	f := newFixture(t)
 	f.exec(`UPDATE gyms SET premoderate_betas = true WHERE id = $1 RETURNING id`, f.gymA)
-	pending := f.upload("climber", f.route, mp4Bytes(), nil, http.StatusAccepted)
+	pending := f.upload(f.route, mp4Bytes(), nil, http.StatusAccepted)
 	if pending["pending"] != true {
 		t.Fatalf("pending = %v", pending)
 	}

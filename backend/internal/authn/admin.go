@@ -140,7 +140,7 @@ func (m *module) adminSetPassword(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	invalid := httpx.BadRequest("Failed to validate.")
-	validatePassword(invalid, "password", body.Password, body.PasswordConfirm)
+	validatePassword(invalid, body.Password, body.PasswordConfirm)
 	if len(invalid.Data) > 0 {
 		return invalid
 	}

@@ -159,8 +159,6 @@ export async function listLocations(api: Api, gym = E2E_GYM_SLUG) {
 }
 export const createLocation = (api: Api, name: string, gym = E2E_GYM_SLUG) =>
     api.post<LocationRecord>(`/gyms/${gym}/locations`, { name })
-export const updateLocation = (api: Api, id: string, patch: Body) =>
-    api.patch<LocationRecord>(`/locations/${id}`, patch)
 export const deleteLocation = (api: Api, id: string) =>
     api.delete(`/locations/${id}`)
 export const saveFloorPlan = (
@@ -192,11 +190,43 @@ export async function listWalls(
         await api.get<Items<WallRecord>>(`/gyms/${gym}/walls`, { location })
     ).items
 }
-export const createWall = (api: Api, input: Body, gym = E2E_GYM_SLUG) =>
-    api.post<WallRecord>(`/gyms/${gym}/walls`, input)
-export const updateWall = (api: Api, id: string, patch: Body) =>
-    api.patch<WallRecord>(`/walls/${id}`, patch)
-export const deleteWall = (api: Api, id: string) => api.delete(`/walls/${id}`)
+async function floorPlanOf(api: Api, locationId: string) {
+    const location = (await listLocations(api)).find(
+        (candidate) => candidate.id === locationId,
+    )
+    return {
+        map: location?.map ?? null,
+        walls: await listWalls(api, locationId),
+    }
+}
+const wallInput = (wall: WallRecord) => ({
+    id: wall.id,
+    name: wall.name,
+    outline: wall.outline,
+    edge: wall.edge,
+    label: wall.label,
+    sort: wall.sort,
+    anchor_from: wall.anchor_from,
+    anchor_to: wall.anchor_to,
+})
+export async function updateWall(
+    api: Api,
+    locationId: string,
+    id: string,
+    patch: Body,
+) {
+    const { map, walls } = await floorPlanOf(api, locationId)
+    const wall = walls.find((candidate) => candidate.id === id)
+    if (!wall) throw new Error(`wall ${id} is not in location ${locationId}`)
+    return saveFloorPlan(api, locationId, {
+        map,
+        walls: [{ ...wallInput(wall), ...patch }],
+    })
+}
+export async function deleteWalls(api: Api, locationId: string, ids: string[]) {
+    const { map } = await floorPlanOf(api, locationId)
+    return saveFloorPlan(api, locationId, { map, walls: [], removed: ids })
+}
 
 export function routeInput(name: string, location: string, data: Body = {}) {
     return {
@@ -252,12 +282,6 @@ export const createBetaLink = (api: Api, routeId: string, url: string) =>
     api.post<BetaVideoRecord | { pending: true }>(`/routes/${routeId}/betas`, {
         url,
     })
-export const uploadBeta = (api: Api, routeId: string, file: UploadFile) =>
-    api.upload<BetaVideoRecord | { pending: true }>(
-        `/routes/${routeId}/betas`,
-        {},
-        { file },
-    )
 export const deleteBeta = (api: Api, id: string) => api.delete(`/betas/${id}`)
 export async function listBetas(api: Api, routeId: string) {
     return (await api.get<Items<BetaVideoRecord>>(`/routes/${routeId}/betas`))
@@ -292,9 +316,6 @@ export const setTaskStatus = (
         status,
         ...(note === undefined ? {} : { resolution_note: note }),
     })
-export const assignTask = (api: Api, id: string, assignee: string | null) =>
-    api.post<TaskRecord>(`/tasks/${id}/assign`, { assignee })
-export const deleteTask = (api: Api, id: string) => api.delete(`/tasks/${id}`)
 export async function listTasks(
     api: Api,
     query: Query = {},

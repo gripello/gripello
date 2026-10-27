@@ -158,26 +158,3 @@ func (m *module) upsertScores(ctx context.Context, competitionID string, inputs 
 	})
 	return saved, err
 }
-
-func (m *module) deleteScore(ctx context.Context, id string) error {
-	s, err := findScore(ctx, m.app.DB, id)
-	if err != nil {
-		return err
-	}
-	c, err := m.loadManaged(ctx, s.Competition)
-	if err != nil {
-		return err
-	}
-	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		if c, err = lockCompetition(ctx, tx, c.ID, "SHARE"); err != nil {
-			return err
-		}
-		if !scoringOpen(c) {
-			return httpx.BadRequest("Scoring is closed.")
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM competition_scores WHERE id = $1`, id); err != nil {
-			return err
-		}
-		return publishChange(ctx, tx, c, "scores", "", s.Entry)
-	})
-}

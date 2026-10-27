@@ -58,7 +58,7 @@ func admin(ctx context.Context, args []string) error {
 	case "set-user":
 		id, err = adminSetUser(ctx, pool, args[1:])
 	case "delete-user":
-		id, err = adminDeleteUser(ctx, pool, args[1:])
+		err = adminDeleteUser(ctx, pool, args[1:])
 	case "create-notification":
 		id, err = adminCreateNotification(ctx, pool, args[1:])
 	case "truncate-prefix":
@@ -214,15 +214,15 @@ func adminSetUser(ctx context.Context, pool *pgxpool.Pool, args []string) (strin
 	return id, err
 }
 
-func adminDeleteUser(ctx context.Context, pool *pgxpool.Pool, args []string) (string, error) {
+func adminDeleteUser(ctx context.Context, pool *pgxpool.Pool, args []string) error {
 	fs := flag.NewFlagSet("delete-user", flag.ExitOnError)
 	user := fs.String("user", "", "user id or e-mail")
 	fs.Parse(args)
 	if *user == "" {
-		return "", errors.New("delete-user needs --user")
+		return errors.New("delete-user needs --user")
 	}
 	_, err := pool.Exec(ctx, `DELETE FROM users WHERE id = $1 OR email = lower($1)`, *user)
-	return "", err
+	return err
 }
 
 func adminCreateNotification(ctx context.Context, pool *pgxpool.Pool, args []string) (string, error) {

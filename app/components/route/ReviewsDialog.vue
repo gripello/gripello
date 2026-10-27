@@ -51,7 +51,6 @@
         v-model="reportDialog"
         content-type="rating"
         :content-id="reportTarget"
-        :content-url="reportUrl"
     />
 </template>
 
@@ -60,7 +59,6 @@ import { listRouteRatings } from '~/api/ratings'
 import type { RatingRecord } from '~/types/models'
 import type { CommentCardItem } from '~/components/comments/Card.vue'
 import { formatGrade } from '#shared/utils/grades'
-import { reportContentUrl } from '~/utils/reports'
 import { cacheKeys } from '~/utils/realtimeCache'
 
 const { t } = useI18n()
@@ -88,11 +86,6 @@ const reviews = computed(() =>
 
 const reportDialog = ref(false)
 const reportTarget = ref<string | null>(null)
-const reportUrl = computed(() =>
-    reportTarget.value
-        ? reportContentUrl('rating', reportTarget.value, props.routeId)
-        : '',
-)
 
 function openReport(id: string) {
     reportTarget.value = id

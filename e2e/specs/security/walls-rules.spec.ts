@@ -1,15 +1,15 @@
 import { test, expect } from '../../support/fixtures'
 import { uiaa } from '../../support/seed'
 import { apiOf, gotoSettled } from '../../support/nav'
-import { seedMap } from '../../support/map'
+import { seedMap, TEST_MAP } from '../../support/map'
 import {
     ApiError,
     archiveRoute,
     createLocation,
     createRoute,
-    createWall,
     deleteLocation,
-    deleteWall,
+    deleteWalls,
+    saveFloorPlan,
     updateRoute,
     updateWall,
 } from '../../support/api'
@@ -41,18 +41,18 @@ test('only settings managers may draw walls', async ({
         const setter = await apiOf(page)
         expect([400, 403]).toContain(
             await statusOf(
-                createWall(setter, {
-                    location: seeded.locationId,
-                    name: `${testPrefix} Setter Wall`,
-                    outline,
-                    edge,
+                saveFloorPlan(setter, seeded.locationId, {
+                    map: TEST_MAP,
+                    walls: [
+                        { name: `${testPrefix} Setter Wall`, outline, edge },
+                    ],
                 }),
             ),
         )
 
         expect([403, 404]).toContain(
             await statusOf(
-                updateWall(setter, seeded.northWallId, {
+                updateWall(setter, seeded.locationId, seeded.northWallId, {
                     name: 'Renamed by setter',
                 }),
             ),
@@ -73,24 +73,26 @@ test('walls must fit the floor plan and routes must stay in their location', asy
     )
     try {
         await expect(
-            createWall(adminApi, {
-                location: otherLocation.id,
-                name: `${testPrefix} No Plan`,
-                outline,
-                edge,
+            saveFloorPlan(adminApi, otherLocation.id, {
+                map: null,
+                walls: [{ name: `${testPrefix} No Plan`, outline, edge }],
             }),
         ).rejects.toMatchObject({ status: 400 })
 
         await expect(
-            createWall(adminApi, {
-                location: seeded.locationId,
-                name: `${testPrefix} Outside`,
-                outline: [
-                    [1, 1],
-                    [99, 1],
-                    [4, 3],
+            saveFloorPlan(adminApi, seeded.locationId, {
+                map: TEST_MAP,
+                walls: [
+                    {
+                        name: `${testPrefix} Outside`,
+                        outline: [
+                            [1, 1],
+                            [99, 1],
+                            [4, 3],
+                        ],
+                        edge,
+                    },
                 ],
-                edge,
             }),
         ).rejects.toMatchObject({ status: 400 })
 
@@ -122,11 +124,11 @@ test('a wall with active routes cannot be deleted', async ({
     const seeded = await seedMap(adminApi, testPrefix, { routes: 2 })
     try {
         await expect(
-            deleteWall(adminApi, seeded.northWallId),
+            deleteWalls(adminApi, seeded.locationId, [seeded.northWallId]),
         ).rejects.toMatchObject({ status: 400 })
 
         await archiveRoute(adminApi, seeded.routeIds[0]!)
-        await deleteWall(adminApi, seeded.northWallId)
+        await deleteWalls(adminApi, seeded.locationId, [seeded.northWallId])
     } finally {
         await seeded.cleanup()
     }

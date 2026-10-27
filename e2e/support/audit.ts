@@ -14,11 +14,6 @@ export async function fetchAuditRows(
     return listAudit(await apiOf(page), scope, query)
 }
 
-export async function fetchAuditRowsAnonymously(page: Page) {
-    const response = await page.request.get(`/api/gyms/${E2E_GYM_SLUG}/audit`)
-    return { status: response.status(), body: await response.json() }
-}
-
 export async function waitForAuditRow(
     page: Page,
     query: AuditQuery,

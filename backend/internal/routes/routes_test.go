@@ -96,10 +96,18 @@ func (f *fixture) route(fields string) string {
 	return f.call("setter", "POST", "/gyms/"+f.gymA+"/routes", body, http.StatusCreated)["id"].(string)
 }
 
+const wallShape = `"outline":[[1,1],[2,1],[2,2]],"edge":[[1,1],[2,1]]`
+
+func (f *fixture) floorPlan(user, location, walls, removed string, status int) map[string]any {
+	f.t.Helper()
+	body := `{"map":` + floorPlanJSON + `,"walls":[` + walls + `],"removed":[` + removed + `]}`
+	return f.call(user, "PUT", "/locations/"+location+"/floor-plan", body, status)
+}
+
 func (f *fixture) wall(location, name string) string {
 	f.t.Helper()
-	body := `{"location":"` + location + `","name":"` + name + `","outline":[[1,1],[2,1],[2,2]],"edge":[[1,1],[2,1]]}`
-	return f.call("admin", "POST", "/gyms/"+f.gymA+"/walls", body, http.StatusCreated)["id"].(string)
+	walls := f.floorPlan("admin", location, `{"name":"`+name+`",`+wallShape+`}`, "", http.StatusOK)["walls"].([]any)
+	return walls[0].(map[string]any)["id"].(string)
 }
 
 func items(body map[string]any) []any {
@@ -300,7 +308,6 @@ func TestMapPlacements(t *testing.T) {
 	if placed := items(f.call("setter", "PUT", "/gyms/"+f.gymA+"/map/placements", kept, http.StatusOK)); placed[0].(map[string]any)["wall_position"] != 0.25 {
 		t.Fatalf("a null position moved the route: %v", placed)
 	}
-	f.exec(`UPDATE locations SET map = $2 WHERE id = $1 RETURNING id`, f.hallB, floorPlanJSON)
 	annexWall := f.wall(f.hallB, "Annex wall")
 	bad := `{"placements":[{"route":"` + first + `","wall":""},{"route":"` + second + `","wall":"` + annexWall + `"}]}`
 	f.call("setter", "PUT", "/gyms/"+f.gymA+"/map/placements", bad, http.StatusBadRequest)
@@ -384,18 +391,6 @@ func TestRouteListPageOverflowAndRepeatedIncludes(t *testing.T) {
 	listed := f.call("", "GET", "/gyms/"+f.gymA+"/routes?include="+strings.Repeat("location,", 300)+"location", "", http.StatusOK)
 	if len(items(listed)) != 1 {
 		t.Errorf("repeated include = %v", listed)
-	}
-}
-
-func TestMovingAWallTakesItsRoutes(t *testing.T) {
-	f := newFixture(t)
-	f.exec(`UPDATE locations SET map = $2 WHERE id = $1 RETURNING id`, f.hallB, floorPlanJSON)
-	wall := f.wall(f.hall, "North")
-	id := f.route(`,"wall":"` + wall + `"`)
-	f.call("admin", "PATCH", "/walls/"+wall, `{"location":"`+f.hallB+`"}`, http.StatusOK)
-	got := f.call("", "GET", "/routes/"+id, "", http.StatusOK)
-	if got["location"] != f.hallB || got["wall"] != wall {
-		t.Errorf("route after wall move = %v", got)
 	}
 }
 

@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatMonthLabel, niceAxis, readChartColors } from '~/utils/echarts'
-
-describe('niceAxis', () => {
-    it('rounds the max up to a nice interval', () => {
-        expect(niceAxis([7])).toEqual({ max: 8, interval: 2 })
-        expect(niceAxis([])).toEqual({ max: 1, interval: 0.5 })
-    })
-})
+import { formatMonthLabel, readChartColors } from '~/utils/echarts'
 
 describe('formatMonthLabel', () => {
     it('formats a month key with the given locale', () => {

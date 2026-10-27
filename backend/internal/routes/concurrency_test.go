@@ -107,20 +107,6 @@ func (f *fixture) held(sql string, args ...any) pgx.Tx {
 	return tx
 }
 
-func TestWallEditKeepsAConcurrentChange(t *testing.T) {
-	f := newFixture(t)
-	wall := f.wall(f.hall, "Slab")
-	tx := f.held(`UPDATE walls SET sort = 7 WHERE id = $1`, wall)
-	done := f.async("admin", "PATCH", "/walls/"+wall, `{"name":"Roof"}`)
-	waitForLockWaiter(t, f.app.DB)
-	if err := tx.Commit(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if res := <-done; res.body["sort"] != 7.0 || res.body["name"] != "Roof" {
-		t.Fatalf("wall edit undid the concurrent change: %d %v", res.code, res.body)
-	}
-}
-
 func TestRemovingATraceDeletesTheFileStoredMeanwhile(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
@@ -185,8 +171,6 @@ func TestEditsDoNotWaitForChildInserts(t *testing.T) {
 		"setter", "PATCH", "/routes/"+route, `{"name":"Renamed"}`)
 	f.answersWhile(`INSERT INTO routes (id, gym, name, grade, location, wall) VALUES ($1, $2, 'New', '6a', $3, $4)`, []any{ids.New(), f.gymA, f.hall, wall},
 		"admin", "PATCH", "/locations/"+f.hall, `{"name":"Main hall"}`)
-	f.answersWhile(`INSERT INTO routes (id, gym, name, grade, location, wall) VALUES ($1, $2, 'New', '6a', $3, $4)`, []any{ids.New(), f.gymA, f.hall, wall},
-		"admin", "PATCH", "/walls/"+wall, `{"name":"Roof"}`)
 }
 
 func TestDeleteRouteRacingAReviewNeedsForce(t *testing.T) {
@@ -208,31 +192,12 @@ func TestDeleteWallRacingARouteMoveIsRefused(t *testing.T) {
 	wall := f.wall(f.hall, "Slab")
 	route := f.route("")
 	tx := f.held(`UPDATE routes SET wall = $2 WHERE id = $1`, route, wall)
-	done := f.async("admin", "DELETE", "/walls/"+wall, "")
+	done := f.async("admin", "PUT", "/locations/"+f.hall+"/floor-plan", `{"map":`+floorPlanJSON+`,"walls":[],"removed":["`+wall+`"]}`)
 	waitForLockWaiter(t, f.app.DB)
 	if err := tx.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	if res := <-done; res.code != http.StatusBadRequest {
 		t.Fatalf("wall delete racing a route move = %d, want 400", res.code)
-	}
-}
-
-func TestWallMoveLocksItsRoutesBeforeTheWall(t *testing.T) {
-	f := newFixture(t)
-	wall := f.wall(f.hall, "Slab")
-	other := f.exec(`INSERT INTO locations (id, gym, name, map) VALUES ($1, $2, 'Side room', $3) RETURNING id`, ids.New(), f.gymA, floorPlanJSON)
-	route := f.exec(`INSERT INTO routes (id, gym, name, grade, location, wall) VALUES ($1, $2, 'On wall', '6a', $3, $4) RETURNING id`, ids.New(), f.gymA, f.hall, wall)
-	tx := f.held(`SELECT 1 FROM routes WHERE id = $1 FOR NO KEY UPDATE`, route)
-	done := f.async("admin", "PATCH", "/walls/"+wall, `{"location":"`+other+`"}`)
-	waitForLockWaiter(t, f.app.DB)
-	if _, err := tx.Exec(context.Background(), `SELECT 1 FROM walls WHERE id = $1 FOR UPDATE`, wall); err != nil {
-		t.Fatalf("the wall move held the wall before its routes: %v", err)
-	}
-	if err := tx.Commit(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if res := <-done; res.code != http.StatusOK {
-		t.Fatalf("wall move = %d %v", res.code, res.body)
 	}
 }

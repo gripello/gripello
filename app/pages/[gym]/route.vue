@@ -152,7 +152,6 @@
                     <RouteReviewsSection
                         v-else-if="route_id"
                         :reviews="reviews"
-                        :route-id="route_id"
                         :target-comment-id="targetCommentId"
                         @deleted="dropReview"
                     />

@@ -223,20 +223,6 @@ func (m *module) update(w http.ResponseWriter, r *http.Request, in map[string]st
 	return m.respondTask(r.Context(), w, http.StatusOK, t)
 }
 
-func (m *module) assignTask(w http.ResponseWriter, r *http.Request) error {
-	var body struct {
-		Assignee *string `json:"assignee"`
-	}
-	if err := httpx.Decode(r, &body); err != nil {
-		return err
-	}
-	assignee := ""
-	if body.Assignee != nil {
-		assignee = *body.Assignee
-	}
-	return m.update(w, r, map[string]string{"assignee": assignee}, nil)
-}
-
 func (m *module) setStatus(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		Status         string  `json:"status"`
@@ -250,10 +236,6 @@ func (m *module) setStatus(w http.ResponseWriter, r *http.Request) error {
 		in["resolution_note"] = *body.ResolutionNote
 	}
 	return m.update(w, r, in, nil)
-}
-
-func (m *module) deleteTaskHandler(w http.ResponseWriter, r *http.Request) error {
-	return httpx.NoContent(w, m.deleteTask(r.Context(), r.PathValue("id")))
 }
 
 func (m *module) listAssignees(w http.ResponseWriter, r *http.Request) error {

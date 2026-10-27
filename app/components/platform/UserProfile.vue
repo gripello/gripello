@@ -1,6 +1,5 @@
 <template>
     <UForm
-        ref="userForm"
         :state="form"
         :validate="validateUser"
         :disabled="locked"
@@ -108,7 +107,6 @@
 
 <script setup lang="ts">
 import { useObjectUrl } from '@vueuse/core'
-import type { Form } from '@nuxt/ui'
 import { fileUrl } from '~/api/client'
 import { updatePlatformUser } from '~/api/platform'
 import { useAuthState } from '~/api/auth'
@@ -177,7 +175,6 @@ const {
 const emailChanged = computed(
     () => form.email.trim() !== (props.user.email ?? ''),
 )
-const userForm = ref<Form<typeof form> | null>(null)
 
 const avatarFile = ref<File | null>(null)
 const avatarRemoved = ref(false)

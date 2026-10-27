@@ -36,10 +36,8 @@ func register(app *platform.App) *module {
 		"GET /competitions/{id}/entries":      m.listEntries,
 		"POST /competitions/{id}/entries":     m.postEntry,
 		"PATCH /competition-entries/{id}":     m.patchEntry,
-		"DELETE /competition-entries/{id}":    m.deleteEntryHandler,
 		"GET /competitions/{id}/scores":       m.listScores,
 		"PUT /competitions/{id}/scores":       m.putScores,
-		"DELETE /competition-scores/{id}":     m.deleteScoreHandler,
 		"GET /competitions/{id}/standings":    m.getStandings,
 	} {
 		app.Handle(pattern, handler)

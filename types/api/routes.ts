@@ -312,32 +312,11 @@ export interface paths {
         /** @description Public, ordered by sort, name. */
         get: operations["listWalls"];
         put?: never;
-        /** @description manage_settings. The location needs a floor plan; outline is a closed polygon (3+ points), edge an open polyline (2+ points, non-zero length), label a point, all inside the map. */
-        post: operations["createWall"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/walls/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** @description manage_settings. 400 while active routes hang on it; archived routes lose the wall. */
-        delete: operations["deleteWall"];
-        options?: never;
-        head?: never;
-        /** @description manage_settings. Same validation as create; never moves to another gym. A new location moves the wall's routes along. */
-        patch: operations["updateWall"];
         trace?: never;
     };
 }
@@ -610,15 +589,6 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["Location"];
-            };
-        };
-        /** @description Wall */
-        Wall: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Wall"];
             };
         };
         /** @description Error */
@@ -1270,75 +1240,6 @@ export interface operations {
                     };
                 };
             };
-            404: components["responses"]["Error"];
-        };
-    };
-    createWall: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description gym id or slug */
-                gym: components["parameters"]["Gym"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WallInput"] & unknown;
-            };
-        };
-        responses: {
-            201: components["responses"]["Wall"];
-            400: components["responses"]["Error"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            404: components["responses"]["Error"];
-        };
-    };
-    deleteWall: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["Error"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            404: components["responses"]["Error"];
-        };
-    };
-    updateWall: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WallInput"];
-            };
-        };
-        responses: {
-            200: components["responses"]["Wall"];
-            400: components["responses"]["Error"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
             404: components["responses"]["Error"];
         };
     };

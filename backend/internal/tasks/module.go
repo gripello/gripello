@@ -30,9 +30,7 @@ func Register(app *platform.App) {
 		"GET /routes/{id}/defects":        m.listRouteDefects,
 		"GET /tasks/{id}":                 m.getTask,
 		"PATCH /tasks/{id}":               m.patchTask,
-		"POST /tasks/{id}/assign":         m.assignTask,
 		"POST /tasks/{id}/status":         m.setStatus,
-		"DELETE /tasks/{id}":              m.deleteTaskHandler,
 	} {
 		app.Handle(pattern, handler)
 	}

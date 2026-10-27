@@ -189,7 +189,6 @@ import {
     progression,
     type LogbookKind,
     type LogbookRange,
-    type LogbookTick,
 } from '#shared/utils/logbook'
 import { applyTickOutbox } from '~/utils/tickOutbox'
 import { cacheKeys } from '~/utils/realtimeCache'

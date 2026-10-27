@@ -57,10 +57,6 @@ type App struct {
 	Routes        []string
 }
 
-type Module interface {
-	Register(app *App)
-}
-
 // Handle mounts a handler under /api using Go 1.22 method+path patterns ("GET /gyms/{gym}/routes").
 func (a *App) Handle(pattern string, h http.Handler) {
 	method, path, _ := cutSpace(pattern)

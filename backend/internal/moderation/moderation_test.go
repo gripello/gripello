@@ -133,19 +133,12 @@ func (f *fixture) rating(user, comment string) string {
 	return id
 }
 
-func (f *fixture) beta(user, url, file string) string {
+func (f *fixture) editProfile() {
 	f.t.Helper()
-	id := f.exec(`INSERT INTO beta_videos (id, gym, route, "user", url, file) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-		ids.New(), f.gymA, f.route, f.users[user], url, file)
-	f.publish("beta.created", "beta.created", map[string]string{"id": id, "gym": f.gymA, "route": f.route, "user": f.users[user]}, events.Audience{})
-	return id
-}
-
-func (f *fixture) editProfile(user, firstname string) {
-	f.t.Helper()
-	f.exec(`UPDATE users SET firstname = $2 WHERE id = $1 RETURNING id`, f.users[user], firstname)
-	f.publish("user:"+f.users[user], "user.updated", map[string]any{"record": map[string]string{"id": f.users[user]}, "changed": []string{"firstname"}},
-		events.Audience{Users: []string{f.users[user]}})
+	climber := f.users["climber"]
+	f.exec(`UPDATE users SET firstname = 'Rude' WHERE id = $1 RETURNING id`, climber)
+	f.publish("user:"+climber, "user.updated", map[string]any{"record": map[string]string{"id": climber}, "changed": []string{"firstname"}},
+		events.Audience{Users: []string{climber}})
 }
 
 func (f *fixture) gymChange(kind, id string) {
@@ -282,7 +275,7 @@ func (f *fixture) exists(key string) bool {
 
 func TestModerationOfProfilesIsPlatformOnly(t *testing.T) {
 	f := newFixture(t)
-	f.editProfile("climber", "Rude")
+	f.editProfile()
 	item := f.item("profile", f.users["climber"])
 	url := "/moderation/" + item.ID
 	f.call("operator", "GET", "/moderation/cases?q=rude+climber", "", http.StatusOK, item.ID)
@@ -342,12 +335,9 @@ func TestReportsRaiseTheQueue(t *testing.T) {
 	if gym != nil || link != "/climber?id="+f.users["climber"] {
 		t.Errorf("profile report gym = %v, url = %q", gym, link)
 	}
-	f.call("operator", "GET", "/platform/reports", "", http.StatusOK, profileReport)
-	if body := f.request("adminA", "GET", "/gyms/alpha/reports", "").Body.String(); strings.Contains(body, profileReport) || !strings.Contains(body, rating) {
-		t.Errorf("gym reports = %s", body)
+	if n := f.count(`SELECT count(*) FROM reports WHERE gym = $1 AND content_id = $2`, f.gymA, rating); n != 2 {
+		t.Errorf("gym reports of the rating = %d", n)
 	}
-	f.call("setterA", "GET", "/gyms/alpha/reports", "", http.StatusForbidden)
-	f.call("adminA", "GET", "/platform/reports", "", http.StatusForbidden)
 }
 
 func TestReportsAreValidatedAndAcknowledged(t *testing.T) {
@@ -669,7 +659,7 @@ func TestLongReviewsStillGetACase(t *testing.T) {
 
 func TestEditingAHiddenProfileIsReHidden(t *testing.T) {
 	f := newFixture(t)
-	f.editProfile("climber", "Rude")
+	f.editProfile()
 	it := f.item("profile", f.users["climber"])
 	f.call("operator", "POST", "/moderation/"+it.ID, action("hide"), http.StatusOK)
 	if state := f.item("profile", f.users["climber"]).State; state != "hidden" {
@@ -704,7 +694,7 @@ func TestReportsAlwaysGetADecision(t *testing.T) {
 		t.Errorf("deleted content's report_decided_removed url = %s, want the inbox (the case is gone)", got)
 	}
 
-	f.editProfile("climber", "Rude")
+	f.editProfile()
 	f.call("operator", "POST", "/moderation/"+f.item("profile", f.users["climber"]).ID, action("hide"), http.StatusOK)
 	f.report("profile", f.users["climber"], "spam_fraud")
 	if f.count(`SELECT count(*) FROM reports WHERE content_id = $1 AND status = 'open'`, f.users["climber"]) != 0 {
@@ -724,7 +714,7 @@ func TestOnlyThePlatformFiltersCasesByAuthor(t *testing.T) {
 
 func TestConcurrentDecisionsApplyOnce(t *testing.T) {
 	f := newFixture(t)
-	f.editProfile("climber", "Rude")
+	f.editProfile()
 	it := f.item("profile", f.users["climber"])
 	codes := make(chan int, 2)
 	var wait sync.WaitGroup
@@ -791,24 +781,19 @@ func TestContentShownAgainIsHiddenAgain(t *testing.T) {
 	})
 }
 
-func TestCasesFollowDeletedTasksEntriesAndRoutes(t *testing.T) {
+func TestCasesFollowDeletedEntriesAndRoutes(t *testing.T) {
 	f := newFixture(t)
-	task := f.exec(`INSERT INTO tasks (id, gym, kind, priority, status, route, description, reporter)
-		VALUES ($1, $2, 'defect', 2, 'open', $3, 'hm', $4) RETURNING id`, ids.New(), f.gymA, f.route, f.users["climber"])
 	entry := f.entry()
 	rating := f.rating("climber", "meh")
 	f.item("rating", rating)
-	f.call("operator", "POST", "/moderation/cases", `{"content_type":"task","content_id":"`+task+`"}`, http.StatusOK)
 	f.call("operator", "POST", "/moderation/cases", `{"content_type":"competition_entry","content_id":"`+entry+`"}`, http.StatusOK)
 
-	f.exec(`DELETE FROM tasks WHERE id = $1 RETURNING id`, task)
-	f.publish("tasks:"+f.gymA, "task.deleted", map[string]any{"action": "delete", "record": map[string]string{"id": task}}, events.Audience{})
 	f.exec(`DELETE FROM competition_entries WHERE id = $1 RETURNING id`, entry)
 	f.publish("entry.deleted", "entry.deleted", map[string]string{"id": entry}, events.Audience{})
 	f.exec(`DELETE FROM routes WHERE id = $1 RETURNING id`, f.route)
 	f.gymChange("route.deleted", f.route)
 	testapp.WaitFor(t, func() bool {
-		return f.count(`SELECT count(*) FROM moderation_items WHERE content_id IN ($1, $2, $3)`, task, entry, rating) == 0
+		return f.count(`SELECT count(*) FROM moderation_items WHERE content_id IN ($1, $2)`, entry, rating) == 0
 	})
 }
 
@@ -861,7 +846,7 @@ func TestHidingAndRestoringTellTheOwningModules(t *testing.T) {
 	competition := f.exec(`SELECT competition FROM competition_entries WHERE id = $1`, entry)
 	task := f.exec(`INSERT INTO tasks (id, gym, kind, priority, status, route, description, reporter)
 		VALUES ($1, $2, 'defect', 2, 'open', $3, 'insult', $4) RETURNING id`, ids.New(), f.gymA, f.route, f.users["climber"])
-	f.editProfile("climber", "Rude")
+	f.editProfile()
 	profile := f.item("profile", f.users["climber"]).ID
 	entryCase := f.call("operator", "POST", "/moderation/cases", `{"content_type":"competition_entry","content_id":"`+entry+`"}`, http.StatusOK)["id"].(string)
 	taskCase := f.call("operator", "POST", "/moderation/cases", `{"content_type":"task","content_id":"`+task+`"}`, http.StatusOK)["id"].(string)

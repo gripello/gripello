@@ -151,7 +151,7 @@ func (m *module) pushWorker(ctx context.Context, job jobs.Job) error {
 	err := m.app.DB.QueryRow(ctx, `SELECT n.type, n.params, n.url, n."user", u.language, u.notification_prefs
 		FROM notifications n JOIN users u ON u.id = n."user" WHERE n.id = $1`, job.Key).
 		Scan(&n.Type, &n.Params, &n.URL, &n.User, &language, &muted)
-	if err == pgx.ErrNoRows || (err == nil && !muted.wants(pushChannel, n.Type)) {
+	if err == pgx.ErrNoRows || (err == nil && !muted.wantsPush(n.Type)) {
 		return nil
 	}
 	if err != nil {

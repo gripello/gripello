@@ -395,7 +395,6 @@ export interface components {
             legal_editorial: string;
             legal_representatives: unknown;
             allow_registration: boolean;
-            floor_plan: string;
             privacy_doc: components["schemas"]["PrivacyDoc"];
         };
         Permission: {

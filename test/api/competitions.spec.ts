@@ -9,8 +9,6 @@ import {
     deleteCompetitionCategory,
     deleteCompetition,
     deleteCompetitionRoute,
-    deleteCompetitionEntry,
-    deleteCompetitionScore,
     getCompetition,
     getCompetitionStandings,
     listCompetitionCategories,
@@ -181,13 +179,12 @@ describe('entries', () => {
         )
     })
 
-    it('creates, updates and deletes', async () => {
+    it('creates and updates', async () => {
         await createCompetitionEntry('c1', {
             category: 'k1',
             display_name: 'Ann',
         })
         await updateCompetitionEntry('e1', { status: 'withdrawn' })
-        await deleteCompetitionEntry('e1')
         expect(calls()).toEqual([
             [
                 'POST',
@@ -195,7 +192,6 @@ describe('entries', () => {
                 { category: 'k1', display_name: 'Ann' },
             ],
             ['PATCH', '/api/competition-entries/e1', { status: 'withdrawn' }],
-            ['DELETE', '/api/competition-entries/e1'],
         ])
     })
 })
@@ -233,11 +229,6 @@ describe('scores', () => {
         await expect(
             upsertCompetitionScores('c1', [{ entry: 'e1', comp_route: 'cr1' }]),
         ).rejects.toMatchObject({ status: 0 })
-    })
-
-    it('deletes a score', async () => {
-        await deleteCompetitionScore('s1')
-        expect(calls()).toEqual([['DELETE', '/api/competition-scores/s1']])
     })
 })
 

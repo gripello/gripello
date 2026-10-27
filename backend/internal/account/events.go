@@ -19,10 +19,6 @@ type UserDeleted struct {
 
 func userTopic(id string) string { return "user:" + id }
 
-func publishUser(ctx context.Context, tx pgx.Tx, userID, kind string, payload any) error {
-	return events.Publish(ctx, tx, userTopic(userID), kind, payload, events.Audience{Users: []string{userID}})
-}
-
 // Same payload the authn module sends, so the realtime hub drops the connections of a deleted account.
 func publishSessionsRevoked(ctx context.Context, tx pgx.Tx, userID string, sessionIDs []string) error {
 	for _, id := range sessionIDs {

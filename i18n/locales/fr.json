@@ -38,22 +38,17 @@
         "lastname": "Nom",
         "username": "Nom d'utilisateur",
         "password": "Mot de passe",
-        "newPassword": "Nouveau mot de passe",
         "email": "E-mail",
         "username_or_email": "Nom d'utilisateur ou e-mail",
         "reset_password": "Réinitialiser le mot de passe",
         "reset_hint": "Saisissez l'adresse e-mail de votre compte.",
-        "userProfile": "Profil utilisateur",
         "oldPassword": "Mot de passe actuel",
-        "or_login_with": "Ou se connecter avec",
         "remember_me": "Rester connecté",
         "changeAvatar": "Changer d'avatar",
-        "emailLocked": "L'e-mail ne peut pas être modifié ici",
         "passwordStrength": "Robustesse du mot de passe",
         "unsavedChanges": "Modifications non enregistrées",
         "wrongOldPassword": "Le mot de passe actuel est incorrect",
         "passwordRequired": "Votre compte n’a pas encore de mot de passe. Définissez-en un d’abord via la réinitialisation du mot de passe sur la page de connexion.",
-        "passwordChangedSignInAgain": "Mot de passe modifié. Veuillez vous reconnecter avec votre nouveau mot de passe.",
         "unknownUser": "Utilisateur inconnu",
         "tabs": {
             "profile": "Profil",
@@ -376,7 +371,6 @@
         "comment": "Commentaire",
         "climber_reviews": "Avis",
         "perceived_difficulty": "Cotation ressentie",
-        "loadError": "Impossible de charger les avis.",
         "deleteOwn": "Supprimer mon avis",
         "deleteOwnConfirm": "Ton avis sera définitivement supprimé.",
         "editOwn": "Modifier mon avis",
@@ -388,7 +382,6 @@
     "table": {
         "actions": "Actions",
         "no_data": "Aucune donnée",
-        "created_at": "Créé le",
         "sort_by": "Trier par",
         "sort_asc": "Croissant",
         "sort_desc": "Décroissant",
@@ -482,8 +475,6 @@
             "health": "Serveur en ligne",
             "verifyEmail": "Votre adresse e-mail a été confirmée. Vous pouvez maintenant vous connecter.",
             "emailChange": "Votre adresse e-mail a été modifiée. Veuillez vous reconnecter.",
-            "userInvited": "Utilisateur créé. Un e-mail d’invitation a été envoyé.",
-            "userCreatedNoInvite": "Utilisateur créé, mais aucun e-mail d’invitation n’a été envoyé car l’envoi d’e-mails n’est pas configuré.",
             "passwordChanged": "Votre mot de passe a été défini. Vous pouvez maintenant vous connecter.",
             "registered": "Compte créé. Confirmez votre adresse via le lien reçu par e-mail, puis connectez-vous.",
             "verificationSent": "Si un compte non confirmé existe, un nouveau lien de confirmation vous a été envoyé."
@@ -493,7 +484,6 @@
             "edit": "Impossible d’enregistrer les modifications.",
             "delete": "Impossible de supprimer.",
             "health": "Serveur hors ligne",
-            "no_auth_methods_available": "Aucune méthode de connexion n’est disponible.",
             "invalid_credentials": "Nom d’utilisateur ou mot de passe incorrect.",
             "email_not_verified": "Votre adresse e-mail n’a pas encore été confirmée.",
             "too_many_attempts": "Trop de tentatives de connexion. Veuillez réessayer plus tard.",
@@ -501,7 +491,6 @@
             "generic": "Une erreur s’est produite.",
             "verifyEmail": "Ce lien de confirmation n’est pas valide ou a expiré.",
             "emailChange": "Ce lien de modification d’e-mail n’est pas valide ou a expiré.",
-            "userInviteMail": "Utilisateur créé, mais l’e-mail d’invitation n’a pas pu être envoyé.",
             "resetLinkInvalid": "Ce lien de réinitialisation du mot de passe n’est pas valide ou a expiré. Demandez-en un nouveau depuis la page de connexion.",
             "captcha": "La vérification anti-spam a échoué. Veuillez réessayer.",
             "verificationMail": "Votre compte a été créé, mais l’e-mail de confirmation n’a pas pu être envoyé. Demandez-en un nouveau depuis la page de connexion.",
@@ -511,7 +500,6 @@
         },
         "deleteItem": "Supprimer cet élément ? Cette action est irréversible.",
         "deleteRouteWithHistory": "Cette voie a des avis, des vidéos bêta ou des résultats de compétition. La supprimer les efface aussi. Archivez-la pour les conserver.",
-        "deleteMoreItems": "Supprimer les éléments sélectionnés ? Cette action est irréversible.",
         "archiveMoreItems": "Archiver les voies sélectionnées ?",
         "updateAvailable": "Mise à jour disponible",
         "releaseNotes": {
@@ -797,7 +785,6 @@
             "notFound": "Page introuvable - Gripello",
             "routeNamed": "{name} - Gripello",
             "inventory": "Inventaire des voies - Gripello",
-            "reports": "Signalements - Gripello",
             "tasks": "Tâches - Gripello",
             "activity": "Journal d’activité - Gripello",
             "verifyEmail": "Vérifier l’e-mail - Gripello",
@@ -805,7 +792,6 @@
             "logbook": "Carnet - Gripello",
             "map": "Plan de la salle - Gripello",
             "mapEditor": "Éditeur de plan - Gripello",
-            "mapPlacement": "Placer les voies - Gripello",
             "scan": "Scanner une voie - Gripello",
             "me": "Mon compte - Gripello",
             "overview": "Vue d’ensemble - Gripello",
@@ -830,7 +816,6 @@
             "users": "Utilisateurs",
             "dashboard": "Gérer les voies",
             "inventory": "Inventaire des voies",
-            "reports": "Signalements",
             "activity": "Consultez l’activité enregistrée des comptes et des contenus."
         }
     },
@@ -864,11 +849,7 @@
         "noCommentsHint": "Essayez d'autres filtres ou un autre terme de recherche.",
         "editReview": "Modifier l'avis",
         "anonymous": "Anonyme",
-        "selected": "Sélection : {n}",
-        "deleteSelected": "Supprimer {n}",
-        "bulkDeleteTitle": "Supprimer {n} avis ? | Supprimer {n} avis ?",
-        "showing": "{n} avis sur {total}",
-        "select": "Sélectionner"
+        "showing": "{n} avis sur {total}"
     },
     "nav": {
         "paletteGroupRoles": "Rôles",
@@ -885,7 +866,6 @@
         "themeSystemHint": "Suit le réglage de votre appareil",
         "themeLight": "Thème clair",
         "themeDark": "Thème sombre",
-        "openMenu": "Ouvrir le menu",
         "skipToContent": "Aller au contenu",
         "mainNavigation": "Navigation principale",
         "toggleSidebar": "Afficher/masquer la barre latérale",
@@ -908,26 +888,17 @@
         "noStaffTools": "Tu n’as pas d’outils équipe dans cette salle"
     },
     "users": {
-        "create": "Ajouter un utilisateur",
-        "createHint": "L’utilisateur reçoit un e-mail pour définir son mot de passe.",
         "edit": "Modifier l’utilisateur",
         "title": "Utilisateurs",
         "delete": "Supprimer l’utilisateur",
-        "deleteConfirm": "Supprimer cet utilisateur ? Cette action est irréversible.",
         "deleteSuccess": "Utilisateur supprimé.",
         "deleteError": "Impossible de supprimer l’utilisateur.",
-        "searchUsers": "Rechercher des utilisateurs…",
-        "role": "Rôle",
         "noUsers": "Aucun utilisateur trouvé",
         "noUsersHint": "Essayez une autre recherche ou d’autres filtres.",
-        "showing": "{n} sur {total} utilisateurs",
-        "inviteMailNotConfigured": "L’e-mail n’est pas configuré, aucune invitation ne peut donc être envoyée. Le nouvel utilisateur ne pourra pas se connecter.",
-        "emailTaken": "Un utilisateur avec cet e-mail existe déjà.",
         "usernameTaken": "Ce nom d’utilisateur est déjà pris."
     },
     "permissions": {
         "title": "Rôles et autorisations",
-        "role": "Rôle",
         "features": {
             "manage_routes": "Gérer les voies",
             "view_analytics": "Voir les statistiques",
@@ -1181,8 +1152,6 @@
         "reviewsUnmatched": "{count} avis sans voie | {count} avis sans voie"
     },
     "reports": {
-        "title": "Signalements de contenu",
-        "subtitle": "Signalements déposés au titre de l'article 16 du règlement sur les services numériques.",
         "reportAction": "Signaler ce commentaire",
         "dialogTitle": "Signaler un contenu",
         "dialogIntro": "Dites-nous ce qui ne va pas avec ce contenu. Chaque signalement est examiné par une personne.",
@@ -1205,32 +1174,11 @@
         "goodFaith": "Je déclare de bonne foi que les informations contenues dans ce signalement sont exactes et complètes.",
         "submit": "Envoyer le signalement",
         "submitted": "Signalement envoyé. Nous vous avons envoyé une confirmation par e-mail.",
-        "snapshot": "Contenu au moment du signalement",
-        "contentUnavailable": "Contenu plus disponible",
-        "notifier": "Signalé par",
-        "viewContent": "Voir le contenu",
-        "filterStatus": "Statut",
         "status": {
             "open": "Ouvert",
             "actioned": "Traité",
             "rejected": "Rejeté"
         },
-        "decision": {
-            "content_removed": "Contenu supprimé",
-            "content_kept": "Contenu conservé"
-        },
-        "decideTitle": "Enregistrer votre décision",
-        "decisionReason": "Motif de la décision",
-        "decisionReasonHint": "Conservé en interne comme trace des raisons de cette décision.",
-        "removeContent": "Supprimer le contenu",
-        "removeNotAllowed": "Vous n'êtes pas autorisé à supprimer ce contenu, ou il n'a pas pu être supprimé.",
-        "keepContent": "Conserver le contenu",
-        "decided": "Décision enregistrée. L'auteur du signalement a été informé.",
-        "receiptPending": "Accusé de réception non remis",
-        "empty": "Aucun signalement",
-        "emptyHint": "Les contenus signalés apparaîtront ici pour examen.",
-        "mailWarning": "L'e-mail n'est pas configuré : les auteurs de signalements ne reçoivent pas les accusés de réception ni les notifications de décision exigés par l'article 16.",
-        "mailWarningAction": "Ouvrir les paramètres",
         "reportProfile": "Signaler le profil"
     },
     "tasks": {
@@ -1255,7 +1203,6 @@
         "saved": "Tâche enregistrée.",
         "openRoute": "Ouvrir la voie",
         "addForRoute": "Ajouter une tâche",
-        "loadError": "Impossible de charger les tâches.",
         "kinds": {
             "defect": "Défaut",
             "wish": "Souhait de voie",
@@ -1345,8 +1292,7 @@
         "assignToMe": "M'attribuer",
         "unassigned": "Non attribuée",
         "forThisRoute": "Pour cette voie",
-        "newSubtitle": "Suivre le travail de l'équipe d'ouverture",
-        "deletedElsewhere": "Cette tâche a été supprimée."
+        "newSubtitle": "Suivre le travail de l'équipe d'ouverture"
     },
     "audit": {
         "title": "Journal d'activité",
@@ -1635,8 +1581,6 @@
         "moveUp": "Monter",
         "moveDown": "Descendre",
         "wallName": "Nom",
-        "drawOutline": "Dessiner le contour",
-        "drawEdge": "Dessiner la face d'escalade",
         "placeLabel": "Placer l'étiquette",
         "deleteWall": "Supprimer le mur",
         "shapeKind": "Type",
@@ -1715,7 +1659,6 @@
         }
     },
     "mapPlacement": {
-        "title": "Placer les voies",
         "noMap": "Ce site n'a pas encore de plan.",
         "discard": "Abandonner",
         "save": "Enregistrer ({n})",
@@ -1744,8 +1687,7 @@
         "resetDone": "{n} voie archivée. | {n} voies archivées.",
         "unplacedBanner": "{n} voie n'est pas encore sur le plan. | {n} voies ne sont pas encore sur le plan.",
         "placeThis": "Placer sur le plan",
-        "more": "Plus d'actions",
-        "routes": "Voies"
+        "more": "Plus d'actions"
     },
     "scan": {
         "title": "Scanner une voie",
@@ -1867,7 +1809,6 @@
         "results": "Résultats",
         "liveRanking": "Classement en direct",
         "freezeMinutes": "Geler le classement (minutes avant la fin)",
-        "status": "Statut",
         "statuses": {
             "draft": "Brouillon",
             "open": "Ouverte",
@@ -2395,7 +2336,6 @@
             "verified": "Vérifié",
             "unverified": "Non vérifié",
             "platformAdmin": "Admin plateforme",
-            "memberships": "Adhésions aux salles",
             "gym": "Salle",
             "addMembership": "Ajouter",
             "sendPasswordReset": "Envoyer un e-mail de réinitialisation du mot de passe",
@@ -2427,7 +2367,6 @@
                 "lift": "Tu peux lever la suspension à tout moment sous Utilisateurs."
             },
             "suspendPermanently": "Suspendre définitivement",
-            "security": "Sécurité",
             "locked": "Bloqué",
             "unlock": "Débloquer",
             "revokeSessions": "Déconnecter partout",
@@ -2558,7 +2497,6 @@
         },
         "logs": {
             "title": "Journaux du serveur",
-            "refresh": "Actualiser",
             "runtimeLevel": "Niveau de journalisation",
             "levelChanged": "Niveau de journalisation modifié sur tous les serveurs",
             "empty": "Aucune ligne à ce niveau",
@@ -3008,12 +2946,6 @@
             "competition_entry": "Nom de compétition",
             "task": "Défaut / souhait",
             "route": "Voie"
-        },
-        "states": {
-            "unreviewed": "À décider",
-            "approved": "Vérifié",
-            "pending": "En attente d’approbation",
-            "hidden": "Masqué"
         },
         "actions": {
             "keep": "Laisser visible",

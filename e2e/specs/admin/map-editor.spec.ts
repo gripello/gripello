@@ -3,7 +3,7 @@ import { test, expect } from '../../support/fixtures'
 import {
     createLocation,
     deleteLocation,
-    deleteWall,
+    deleteWalls,
     listLocations,
     listWalls,
     updateWall,
@@ -71,8 +71,11 @@ test('admins draw a floor plan with a wall and it survives a reload', async ({
         expect(walls[0]!.outline).toHaveLength(4)
         expect(walls[0]!.edge).toHaveLength(2)
     } finally {
-        for (const wall of await listWalls(adminApi, location.id))
-            await deleteWall(adminApi, wall.id)
+        await deleteWalls(
+            adminApi,
+            location.id,
+            (await listWalls(adminApi, location.id)).map((wall) => wall.id),
+        )
         await deleteLocation(adminApi, location.id)
     }
 })
@@ -412,7 +415,7 @@ test('an edit made elsewhere is offered instead of being overwritten', async ({
         await page.keyboard.press('Enter')
         await expect(page.getByTestId('map-editor-save')).toBeEnabled()
 
-        await updateWall(adminApi, seeded.northWallId, {
+        await updateWall(adminApi, seeded.locationId, seeded.northWallId, {
             name: `${testPrefix} Renamed`,
         })
         const notice = page.getByTestId('map-editor-changed-elsewhere')

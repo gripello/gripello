@@ -251,13 +251,6 @@ export function snapPoint(point: MapPoint, grid: number): MapPoint {
     ]
 }
 
-export function clampPoint(point: MapPoint, map: GymMap): MapPoint {
-    return [
-        Math.min(map.width, Math.max(0, point[0])),
-        Math.min(map.height, Math.max(0, point[1])),
-    ]
-}
-
 export function clampUnit(value: number) {
     return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0
 }

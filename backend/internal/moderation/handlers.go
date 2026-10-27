@@ -177,44 +177,6 @@ func (m *module) countReport(ctx context.Context, w *work, report Report) (caseI
 	return it.ID, m.save(ctx, w, &it)
 }
 
-func (m *module) listReports(w http.ResponseWriter, r *http.Request, gym string) error {
-	where, args := "WHERE true", []any{}
-	if gym != "" {
-		args = append(args, gym)
-		where += " AND gym = $1"
-	}
-	if status := r.URL.Query().Get("status"); status != "" {
-		args = append(args, status)
-		where += " AND status = $" + strconv.Itoa(len(args))
-	}
-	page := httpx.Page(r, defaultPageSize, maxPageSize)
-	items, err := queryReports(r.Context(), m.app.DB, `SELECT `+reportColumns+` FROM reports `+where+` ORDER BY created DESC, id`+page.SQL(), args...)
-	return httpx.Respond(w, http.StatusOK, httpx.PageOf[Report]{Items: items, Page: page.Page, Limit: page.Limit}, err)
-}
-
-func (m *module) listGymReports(w http.ResponseWriter, r *http.Request) error {
-	ctx := r.Context()
-	p, err := auth.Require(ctx)
-	if err != nil {
-		return err
-	}
-	gym, err := tenancy.ResolveGym(ctx, m.app.DB, r.PathValue("gym"))
-	if err != nil {
-		return err
-	}
-	if !p.PlatformAdmin && !m.perms.Has(ctx, gym, tenancy.PermManageReports) {
-		return httpx.ErrForbidden
-	}
-	return m.listReports(w, r, gym)
-}
-
-func (m *module) listPlatformReports(w http.ResponseWriter, r *http.Request) error {
-	if _, err := auth.RequirePlatformAdmin(r.Context()); err != nil {
-		return err
-	}
-	return m.listReports(w, r, "")
-}
-
 func (m *module) decide(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	p, err := auth.Require(ctx)
