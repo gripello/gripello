@@ -584,30 +584,32 @@ func (m *module) dropContent(ctx context.Context, kindName, contentID string) er
 
 // rehide is the safety net behind the owning modules' guards: content they let show again while its case is hidden goes back.
 func (m *module) rehide(ctx context.Context, kindName, contentID string) error {
+	return m.inTx(ctx, func(w *work) error { return m.rehideIn(ctx, w, kindName, contentID) })
+}
+
+func (m *module) rehideIn(ctx context.Context, w *work, kindName, contentID string) error {
 	k := kinds[kindName]
-	return m.inTx(ctx, func(w *work) error {
-		it, err := itemOf(ctx, w.tx, kindName, contentID)
-		if errors.Is(err, httpx.ErrNotFound) {
-			return nil
+	it, err := itemOf(ctx, w.tx, kindName, contentID)
+	if errors.Is(err, httpx.ErrNotFound) {
+		return nil
+	}
+	if err != nil || it.State != "hidden" {
+		return err
+	}
+	var current map[string]any
+	err = w.tx.QueryRow(ctx, `SELECT to_jsonb(t) FROM `+k.table+` t WHERE t.id = $1 AND `+k.exposed+` FOR UPDATE`, contentID).Scan(&current)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for _, field := range k.files {
+		if name, _ := current[field].(string); name != "" {
+			w.drop = append(w.drop, k.table+"/"+contentID+"/"+name)
 		}
-		if err != nil || it.State != "hidden" {
-			return err
-		}
-		var current map[string]any
-		err = w.tx.QueryRow(ctx, `SELECT to_jsonb(t) FROM `+k.table+` t WHERE t.id = $1 AND `+k.exposed+` FOR UPDATE`, contentID).Scan(&current)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		for _, field := range k.files {
-			if name, _ := current[field].(string); name != "" {
-				w.drop = append(w.drop, k.table+"/"+contentID+"/"+name)
-			}
-		}
-		return m.hideContent(ctx, w, &it)
-	})
+	}
+	return m.hideContent(ctx, w, &it)
 }
 
 // dropOrphans settles the cases of content a cascade took away (a deleted route takes its reviews, betas and tasks).
