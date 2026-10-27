@@ -15,10 +15,12 @@ test('the platform hides everything a spammer posted and suspends them', async (
     adminApi,
     apiAs,
     route,
+    createRoute,
     createUser,
     pageAs,
     testPrefix,
 }) => {
+    const otherRoute = await createRoute()
     const spammer = await createUser('user', 'spammer')
     const spamPage = await pageAs(spammer)
     await gotoSettled(spamPage, gymPath('/'))
@@ -29,7 +31,7 @@ test('the platform hides everything a spammer posted and suspends them', async (
     )
     const second = await createComment(
         spamPage,
-        route.id,
+        otherRoute.id,
         `${testPrefix}-buy-two`,
     )
     await createReport({
@@ -48,10 +50,13 @@ test('the platform hides everything a spammer posted and suspends them', async (
     await platformPage.getByTestId('moderation-reason').fill('Advertising.')
     await platformPage.getByTestId('moderation-decision-confirm').click()
 
-    for (const id of [first, second]) {
+    for (const [id, routeId] of [
+        [first, route.id],
+        [second, otherRoute.id],
+    ] as const) {
         await expect
             .poll(async () =>
-                (await listRouteRatings(adminApi, route.id)).some(
+                (await listRouteRatings(adminApi, routeId)).some(
                     (rating) => rating.id === id,
                 )
                     ? 'visible'

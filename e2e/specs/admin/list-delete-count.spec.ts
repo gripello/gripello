@@ -6,12 +6,13 @@ test('a comment deleted elsewhere lowers the total by exactly one', async ({
     adminPage: page,
     testPrefix,
     route,
+    createRoute,
 }) => {
     await gotoSettled(page, '/manage/comments')
     await createComment(page, route.id, `${testPrefix}-count-kept`)
     const deletedId = await createComment(
         page,
-        route.id,
+        (await createRoute()).id,
         `${testPrefix}-count-deleted`,
     )
     await gotoSettled(page, '/manage/comments')
@@ -30,6 +31,7 @@ test('a realtime comment outside the active filter is not inserted', async ({
     adminPage: page,
     testPrefix,
     route,
+    createRoute,
 }) => {
     await gotoSettled(page, '/manage/comments')
     await page.getByTestId('filter-search').fill(testPrefix)
@@ -43,7 +45,7 @@ test('a realtime comment outside the active filter is not inserted', async ({
     )
     const visibleId = await createComment(
         page,
-        route.id,
+        (await createRoute()).id,
         `${testPrefix}-one-star`,
         1,
     )
@@ -59,6 +61,7 @@ test('a realtime comment under a non-date sort refetches instead of inflating th
     adminPage: page,
     testPrefix,
     route,
+    createRoute,
 }) => {
     await gotoSettled(page, '/manage/comments')
     await page.getByTestId('filter-search').fill(testPrefix)
@@ -73,7 +76,7 @@ test('a realtime comment under a non-date sort refetches instead of inflating th
     )
     const highId = await createComment(
         page,
-        route.id,
+        (await createRoute()).id,
         `${testPrefix}-sort-high`,
         5,
     )

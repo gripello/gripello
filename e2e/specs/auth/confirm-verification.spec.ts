@@ -5,6 +5,8 @@ test('shows the invalid-link state for a bogus verification token', async ({
     page,
 }) => {
     await gotoSettled(page, '/auth/confirm-verification/not-a-real-token')
+    await page.getByTestId('verify-password').fill('any-password-1')
+    await page.getByTestId('verify-submit').click()
     await expect(page.getByTestId('verify-invalid')).toBeVisible()
 })
 
@@ -14,6 +16,8 @@ test('confirms a verification token and offers sign-in', async ({ page }) => {
     )
 
     await gotoSettled(page, '/auth/confirm-verification/looks-like-a-token')
+    await page.getByTestId('verify-password').fill('any-password-1')
+    await page.getByTestId('verify-submit').click()
     await expect(page.getByTestId('verify-done')).toBeVisible()
 
     await page.getByTestId('verify-goto-login').click()

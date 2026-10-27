@@ -14,6 +14,7 @@ test('the platform queue holds reported cases, all gyms holds the rest', async (
     platformPage,
     userPage,
     route,
+    createRoute,
     createUser,
     pageAs,
     testPrefix,
@@ -21,7 +22,11 @@ test('the platform queue holds reported cases, all gyms holds the rest', async (
     const author = await pageAs(await createUser('user', 'author'))
     await gotoSettled(author, gymPath('/'))
     await createComment(author, route.id, `${testPrefix}-quiet`)
-    const loud = await createComment(author, route.id, `${testPrefix}-loud`)
+    const loud = await createComment(
+        author,
+        (await createRoute()).id,
+        `${testPrefix}-loud`,
+    )
     await reportAs(userPage, {
         contentType: 'rating',
         contentId: loud,

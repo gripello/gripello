@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform/auth"
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
@@ -313,7 +314,9 @@ func (m *module) release(ctx context.Context, w *work, it *Item) error {
 			columns = append(columns, `"`+column+`"`)
 		}
 		list := strings.Join(columns, ", ")
-		if _, err := w.tx.Exec(ctx, `INSERT INTO `+k.table+` (`+list+`) SELECT `+list+` FROM jsonb_populate_record(NULL::`+k.table+`, $1)`, values); err != nil {
+		if _, err := w.tx.Exec(ctx, `INSERT INTO `+k.table+` (`+list+`) SELECT `+list+` FROM jsonb_populate_record(NULL::`+k.table+`, $1)`, values); db.IsUnique(err, "ratings_route_user_idx") {
+			return httpx.NewError(http.StatusConflict, "The author has reviewed this route again since; delete that review first.")
+		} else if err != nil {
 			slog.Warn("moderation: restoring content failed", "item", it.ID, "error", err)
 			return httpx.BadRequest("The content could not be restored.")
 		}
@@ -499,7 +502,7 @@ func (m *module) sendReceipt(ctx context.Context, report Report, caseID string) 
 	}
 	var to []mail.Recipient
 	rows, err := m.app.DB.Query(ctx, `SELECT email, language FROM users WHERE email <> '' AND id IN (
-		SELECT m."user" FROM memberships m JOIN roles r ON r.id = m.role WHERE m.gym = $1 AND $2 = ANY (r.permissions))`, report.Gym, tenancy.PermManageReports)
+		SELECT m."user" FROM memberships m JOIN roles r ON r.id = m.role WHERE m.gym = $1 AND $2 = ANY (effective_permissions(m.gym, r.permissions)))`, report.Gym, tenancy.PermManageReports)
 	if err == nil {
 		to, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (mail.Recipient, error) {
 			var r mail.Recipient

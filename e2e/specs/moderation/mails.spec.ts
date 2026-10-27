@@ -35,6 +35,7 @@ test('hiding everything of one person sends a single statement', async ({
     platformPage,
     userPage,
     route,
+    createRoute,
     createUser,
     pageAs,
     testPrefix,
@@ -43,8 +44,12 @@ test('hiding everything of one person sends a single statement', async ({
     const spamPage = await pageAs(spammer)
     await gotoSettled(spamPage, gymPath('/'))
     const first = await createComment(spamPage, route.id, `${testPrefix}-ad-1`)
-    await createComment(spamPage, route.id, `${testPrefix}-ad-2`)
-    await createComment(spamPage, route.id, `${testPrefix}-ad-3`)
+    for (const ad of ['ad-2', 'ad-3'])
+        await createComment(
+            spamPage,
+            (await createRoute()).id,
+            `${testPrefix}-${ad}`,
+        )
     await reportAs(userPage, {
         contentType: 'rating',
         contentId: first,

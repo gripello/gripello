@@ -34,6 +34,7 @@ test('a rating from another visitor updates the open route page in place', async
 
 test('a rating from another visitor updates the open overview in place', async ({
     page,
+    api,
     adminApi,
     route,
 }) => {
@@ -46,7 +47,7 @@ test('a rating from another visitor updates the open overview in place', async (
     await expect(popularRow).toHaveCount(0)
     await stallRefetches(page)
 
-    await createRating(adminApi, route.id, { rating: 5 })
+    await createRating(api, route.id, { rating: 5 })
 
     await expect(popularRow).toBeVisible()
 })

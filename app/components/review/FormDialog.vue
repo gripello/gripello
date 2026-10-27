@@ -33,14 +33,18 @@
         data-testid="review-form-dialog"
         :submit-label="isEditMode ? $t('actions.save') : $t('actions.submit')"
         :submit-loading="saving"
-        :submit-disabled="!isEditMode && (!isFormValid || !form.rating)"
+        :submit-disabled="
+            isEditMode
+                ? !staffEdit && !form.rating
+                : !isFormValid || !form.rating
+        "
         :captcha="!isEditMode"
         submit-test-id="review-form-submit"
         cancel-test-id="review-form-cancel"
         @submit="submit"
     >
         <div
-            v-if="isEditMode && review"
+            v-if="staffEdit && review?.userName"
             class="flex items-center gap-3 mb-4 p-3 rounded-lg review-form__context"
         >
             <ClimberAvatar :name="review.userName ?? ''" size="sm" />
@@ -124,7 +128,7 @@
 
             <UFormField
                 :label="$t('ratings.comment')"
-                :hint="isEditMode ? `${form.comment.length}/1000` : undefined"
+                :hint="staffEdit ? `${form.comment.length}/1000` : undefined"
                 name="comment"
             >
                 <UTextarea
@@ -157,7 +161,7 @@ import {
 } from '#shared/utils/grades'
 import type { RatingRecord } from '~/types/models'
 import { newRecordId } from '~/utils/realtimeCache'
-import { formFieldErrors } from '~/utils/fieldErrors'
+import { fieldErrorCode, formFieldErrors } from '~/utils/fieldErrors'
 import { isAbortError } from '~/utils/errors'
 import { useSessionEnded } from '~/composables/useSessionEnded'
 
@@ -194,6 +198,7 @@ const { capHeaders } = useCapToken()
 const { $realtimeCache } = useNuxtApp()
 
 const isEditMode = computed(() => !!props.review)
+const staffEdit = computed(() => isEditMode.value && !props.review?.mine)
 
 const gradeSystem = computed(() => {
     const system = props.review?.grade_system || props.gradeSystem
@@ -316,6 +321,10 @@ const noticeSessionEnded = useSessionEnded()
 
 function showSaveError(error: unknown) {
     if (isAbortError(error) || noticeSessionEnded(error)) return
+    if (fieldErrorCode(error, 'rating') === 'validation_already_reviewed') {
+        notifyError(t('ratings.alreadyReviewed'))
+        return
+    }
     const fieldErrors = formFieldErrors(
         error,
         ['rating', 'grade', 'comment'],
@@ -371,9 +380,9 @@ async function saveEdit() {
     saving.value = true
     try {
         const updated = await updateRating(props.review!.id, {
-            rating: form.rating,
+            rating: form.rating ?? 0,
             ...gradingFields(),
-            comment: form.comment,
+            comment: form.comment.trim(),
         })
         emit('saved', updated)
         close()

@@ -206,6 +206,32 @@ describe('ReviewFormDialog', () => {
         expect(createRating).toHaveBeenCalledTimes(2)
     })
 
+    it('tells a climber who already reviewed the route to edit that review', async () => {
+        vi.mocked(createRating).mockReset()
+        setErrors.mockReset()
+        notifyError.mockReset()
+        vi.mocked(createRating).mockRejectedValueOnce(
+            Object.assign(new Error('conflict'), {
+                status: 409,
+                response: {
+                    data: { rating: { code: 'validation_already_reviewed' } },
+                },
+            }),
+        )
+        const wrapper = await openDialog('5')
+        wrapper
+            .getComponent({ name: 'UInputRating' })
+            .vm.$emit('update:modelValue', 4)
+        await wrapper.get('textarea').setValue('Again')
+        await wrapper.get('[data-testid="review-form-submit"]').trigger('click')
+        await vi.waitFor(() =>
+            expect(notifyError).toHaveBeenCalledWith('ratings.alreadyReviewed'),
+        )
+        expect(setErrors).not.toHaveBeenCalled()
+        expect(realtimeCache.revertRating).toHaveBeenCalled()
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    })
+
     it('maps server field errors onto the form and emits saved only after success', async () => {
         vi.mocked(createRating).mockReset()
         setErrors.mockReset()
@@ -238,6 +264,27 @@ describe('ReviewFormDialog', () => {
         await submit.trigger('click')
         await vi.waitFor(() =>
             expect(wrapper.emitted('saved')).toEqual([[{ id: 'saved' }]]),
+        )
+    })
+
+    it('lets the author edit their own review under the create rules and sends it cleaned', async () => {
+        vi.mocked(updateRating).mockReset()
+        vi.mocked(updateRating).mockResolvedValueOnce({ id: 'rev1' } as never)
+        const wrapper = await openDialog('5', {
+            id: 'rev1',
+            mine: true,
+            rating: 3,
+            grade: '5',
+            comment: 'Old',
+            grade_system: 'uiaa',
+        })
+        expect(wrapper.find('.review-form__context').exists()).toBe(false)
+        await wrapper.get('textarea').setValue('  Better  ')
+        await wrapper.get('[data-testid="review-form-submit"]').trigger('click')
+        await vi.waitFor(() => expect(updateRating).toHaveBeenCalled())
+        expect(updateRating).toHaveBeenCalledWith(
+            'rev1',
+            expect.objectContaining({ rating: 3, comment: 'Better' }),
         )
     })
 

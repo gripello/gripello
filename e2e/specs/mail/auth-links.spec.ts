@@ -9,7 +9,7 @@ test('the verification mail links into the app, not the admin panel', async ({
     api,
     createUser,
 }) => {
-    const { email, id } = await createUser('user', 'verify')
+    const { email, id, password } = await createUser('user', 'verify')
     setUserFlags(id, { verified: false })
     await guestApi().post('/auth/verification/request', { email })
 
@@ -21,6 +21,8 @@ test('the verification mail links into the app, not the admin panel', async ({
         /https?:\/\/[^"'\s]*\/auth\/confirm-verification\/[^"'\s]+/,
     )
     await gotoSettled(page, path)
+    await page.getByTestId('verify-password').fill(password)
+    await page.getByTestId('verify-submit').click()
     await expect(page.getByTestId('verify-done')).toBeVisible()
 
     const after = await getPlatformUser(api, id)

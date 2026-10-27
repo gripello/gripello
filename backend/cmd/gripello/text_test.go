@@ -32,7 +32,7 @@ func (w *world) textFields() map[string]textField {
 		"gym name":                {"adminA", "PATCH", "/gyms/" + w.gymA, "name", nil},
 		"gym description":         {"adminA", "PATCH", "/gyms/" + w.gymA, "description", nil},
 		"tick note":               {"climber", "PATCH", "/ticks/" + r["tick"], "note", nil},
-		"review comment":          {"climber", "POST", "/routes/" + r["route"] + "/ratings", "comment", map[string]any{"rating": 3}},
+		"review comment":          {"climber", "PATCH", "/ratings/" + r["rating"], "comment", nil},
 		"profile first name":      {"climber", "PATCH", "/me", "firstname", nil},
 		"invite first name":       {"adminA", "POST", "/gyms/" + w.gymA + "/members", "firstname", map[string]any{"email": "new@example.com", "role": r["role"]}},
 		"invite last name":        {"adminA", "POST", "/gyms/" + w.gymA + "/members", "name", map[string]any{"email": "new@example.com", "role": r["role"]}},

@@ -8,6 +8,7 @@ test('a moderator decides cases from a phone', async ({
     adminPage,
     adminApi,
     route,
+    createRoute,
     createUser,
     pageAs,
     testPrefix,
@@ -15,7 +16,11 @@ test('a moderator decides cases from a phone', async ({
     const author = await pageAs(await createUser('user', 'author'))
     await gotoSettled(author, gymPath('/'))
     await createComment(author, route.id, `${testPrefix}-keep-phone`)
-    await createComment(author, route.id, `${testPrefix}-hide-phone`)
+    await createComment(
+        author,
+        (await createRoute()).id,
+        `${testPrefix}-hide-phone`,
+    )
 
     await gotoSettled(adminPage, '/manage/routes')
     await expect(

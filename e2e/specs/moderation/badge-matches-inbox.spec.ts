@@ -52,13 +52,14 @@ test('the moderation badge always counts the open rows of the inbox', async ({
     try {
         const staff = await pageAs(gym.staff)
         const inbox = `/${gym.slug}/manage/moderation`
-        const climberApi = await apiAs(await createUser('user', 'badge-author'))
         const kept = `${testPrefix}-kept`
         const reported = `${testPrefix}-reported`
-        await createRating(climberApi, gym.routeId, {
-            rating: 4,
-            comment: kept,
-        })
+        await createRating(
+            await apiAs(await createUser('user', 'badge-keeper')),
+            gym.routeId,
+            { rating: 4, comment: kept },
+        )
+        const climberApi = await apiAs(await createUser('user', 'badge-author'))
         const { id } = await createRating(climberApi, gym.routeId, {
             rating: 1,
             comment: reported,

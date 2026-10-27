@@ -48,11 +48,21 @@
                             :variant="isLoggedIn ? 'soft' : 'solid'"
                             size="lg"
                             class="grow justify-center lg:grow-0"
-                            icon="i-lucide-star-plus"
+                            :icon="
+                                myReview
+                                    ? 'i-lucide-pencil'
+                                    : 'i-lucide-star-plus'
+                            "
                             data-testid="review-open-cta"
                             @click="reviewDialog = true"
                         >
-                            {{ t('ratings.createReview') }}
+                            {{
+                                t(
+                                    myReview
+                                        ? 'ratings.editOwn'
+                                        : 'ratings.createReview',
+                                )
+                            }}
                         </UButton>
                         <UDropdownMenu
                             v-if="moreActions.length"
@@ -90,6 +100,7 @@
                         <ReviewFormDialog
                             v-model="reviewDialog"
                             :route-id="route_id"
+                            :review="myReview"
                             :grade-system="metadata?.grade_system"
                             :route-grade="metadata?.grade"
                         />
@@ -275,6 +286,10 @@ const reviews = computed(() =>
     routeRatings.data.value
         .filter((rating) => !isBlocked(rating.author?.id))
         .map((rating) => reviewDisplay(rating, t('comments.anonymous'))),
+)
+
+const myReview = computed(
+    () => routeRatings.data.value.find((rating) => rating.mine) ?? null,
 )
 
 function dropReview(id: string) {

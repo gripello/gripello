@@ -64,6 +64,7 @@ test('legal reports reach the platform, “something else” stays with the gym'
     userPage,
     api,
     route,
+    createRoute,
     createUser,
     pageAs,
     testPrefix,
@@ -71,7 +72,11 @@ test('legal reports reach the platform, “something else” stays with the gym'
     const author = await pageAs(await createUser('user', 'author'))
     await gotoSettled(author, gymPath('/'))
     const legal = await createComment(author, route.id, `${testPrefix}-legal`)
-    const other = await createComment(author, route.id, `${testPrefix}-other`)
+    const other = await createComment(
+        author,
+        (await createRoute()).id,
+        `${testPrefix}-other`,
+    )
     await reportAs(userPage, {
         contentType: 'rating',
         contentId: legal,
