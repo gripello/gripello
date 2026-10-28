@@ -204,7 +204,8 @@
         "exportTooLarge": "Dein Datenexport ist zu groß",
         "exportTooLargeHint": "Er überschreitet 2 GB. Kontaktiere uns, um deine Daten auf anderem Weg zu erhalten.",
         "exportNone": "Kein Datenexport bereit",
-        "removeAvatar": "Profilbild entfernen"
+        "removeAvatar": "Profilbild entfernen",
+        "removeBanner": "Banner entfernen"
     },
     "routes": {
         "generate_name": "Namen generieren",

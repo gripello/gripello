@@ -204,7 +204,8 @@
         "exportTooLarge": "Tu exportación de datos es demasiado grande",
         "exportTooLargeHint": "Supera los 2 GB. Ponte en contacto con nosotros para recibir tus datos de otra forma.",
         "exportNone": "No hay ninguna exportación de datos lista",
-        "removeAvatar": "Quitar avatar"
+        "removeAvatar": "Quitar avatar",
+        "removeBanner": "Quitar banner"
     },
     "routes": {
         "generate_name": "Generar nombre",

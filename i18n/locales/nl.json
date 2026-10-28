@@ -204,7 +204,8 @@
         "exportTooLarge": "Je gegevensexport is te groot",
         "exportTooLargeHint": "Hij is groter dan 2 GB. Neem contact met ons op om je gegevens op een andere manier te ontvangen.",
         "exportNone": "Geen gegevensexport klaar",
-        "removeAvatar": "Profielfoto verwijderen"
+        "removeAvatar": "Profielfoto verwijderen",
+        "removeBanner": "Banner verwijderen"
     },
     "routes": {
         "generate_name": "Naam genereren",
