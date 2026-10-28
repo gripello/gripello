@@ -92,14 +92,6 @@ export async function changePassword(change: PasswordChange) {
     return result.record as Me
 }
 
-export async function deleteAvatar() {
-    return saveMe(await useApi()<Me>('/me/avatar', { method: 'DELETE' }))
-}
-
-export async function deleteBanner() {
-    return saveMe(await useApi()<Me>('/me/banner', { method: 'DELETE' }))
-}
-
 export function deleteMe(password: string) {
     return useApi()('/me', { method: 'DELETE', body: { password } })
 }

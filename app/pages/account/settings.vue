@@ -251,13 +251,7 @@ import { SUPPORTED_LOCALES, isLocaleCode } from '~/utils/locales'
 import type { ThemeMode } from '~/composables/useThemeMode'
 import type { UserRecord } from '~/types/models'
 import { requestEmailChange, useAuthState } from '~/api/auth'
-import {
-    changePassword,
-    deleteAvatar,
-    deleteBanner,
-    deleteMe,
-    updateMe,
-} from '~/api/account'
+import { changePassword, deleteMe, updateMe } from '~/api/account'
 
 type EditableSelf = Partial<Omit<UserRecord, 'language' | 'avatar'>> &
     Pick<UserRecord, 'id' | 'username' | 'firstname' | 'name' | 'email'> & {
@@ -552,13 +546,15 @@ async function saveUser(section: Section) {
         formData.append('firstname', user.firstname ?? '')
         formData.append('name', user.name ?? '')
         if (avatarFile.value) formData.append('avatar', avatarFile.value)
+        else if (avatarRemoved.value) formData.append('avatar', '')
         if (bannerFile.value) formData.append('banner', bannerFile.value)
+        else if (bannerRemoved.value) formData.append('banner', '')
     } else if (section === 'preferences') {
         formData.append('language', user.language)
     }
 
     try {
-        let updated =
+        const updated =
             section === 'security'
                 ? await changePassword({
                       oldPassword: user.oldPassword,
@@ -568,8 +564,6 @@ async function saveUser(section: Section) {
                 : await updateMe(formData)
 
         if (section === 'profile') {
-            if (avatarRemoved.value) updated = await deleteAvatar()
-            if (bannerRemoved.value) updated = await deleteBanner()
             user.firstname = updated.firstname
             user.name = updated.name
             user.avatar = updated.avatar

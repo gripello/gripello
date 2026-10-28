@@ -22,8 +22,6 @@ func Register(app *platform.App) {
 	app.Handle("GET /me", httpx.Handler(m.getMe))
 	app.Handle("PATCH /me", httpx.Handler(m.updateMe))
 	app.Handle("DELETE /me", httpx.Handler(m.deleteMe))
-	app.Handle("DELETE /me/avatar", m.clearFile("avatar"))
-	app.Handle("DELETE /me/banner", m.clearFile("banner"))
 	app.Handle("POST /me/followed-walls/{wall}", httpx.Handler(m.followWall))
 	app.Handle("DELETE /me/followed-walls/{wall}", httpx.Handler(m.unfollowWall))
 	app.Handle("POST /me/export", httpx.Handler(m.requestExport))

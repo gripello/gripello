@@ -11,7 +11,6 @@ import (
 
 	"gripello/internal/platform/auth"
 	"gripello/internal/platform/climbers"
-	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 	"gripello/internal/platform/ids"
 )
@@ -30,7 +29,7 @@ type wallInput struct {
 	AnchorTo   int             `json:"anchor_to"`
 }
 
-func checkWall(ctx context.Context, q db.Querier, gym string, in *wallInput) error {
+func checkWall(in *wallInput, floorPlan *gymMap) error {
 	in.Name = strings.TrimSpace(in.Name)
 	if httpx.Blank(in.Name) {
 		return httpx.Required("name")
@@ -38,25 +37,11 @@ func checkWall(ctx context.Context, q db.Querier, gym string, in *wallInput) err
 	if err := httpx.TooLong("name", in.Name, 100); err != nil {
 		return err
 	}
-	if in.Location == "" {
-		return httpx.Required("location")
-	}
-	location, err := findLocation(ctx, q, in.Location)
-	if err != nil {
-		return notFoundAs(err, "Unknown location.")
-	}
-	if location.Gym != gym {
-		return httpx.BadRequest("The location belongs to another gym.")
-	}
-	floorPlan, err := parseGymMap(location.Map)
-	if err != nil {
-		return err
-	}
 	return validateWallShape(in, floorPlan)
 }
 
-func (m *module) insertWall(ctx context.Context, tx pgx.Tx, gym string, in wallInput) (Wall, error) {
-	if err := checkWall(ctx, tx, gym, &in); err != nil {
+func (m *module) insertWall(ctx context.Context, tx pgx.Tx, gym string, floorPlan *gymMap, in wallInput) (Wall, error) {
+	if err := checkWall(&in, floorPlan); err != nil {
 		return Wall{}, err
 	}
 	id := ids.New()
@@ -70,8 +55,8 @@ func (m *module) insertWall(ctx context.Context, tx pgx.Tx, gym string, in wallI
 	return wall, publishGymChange(ctx, tx, gym, "walls", "create", wall)
 }
 
-func (m *module) saveWall(ctx context.Context, tx pgx.Tx, original Wall, in wallInput) (Wall, error) {
-	if err := checkWall(ctx, tx, original.Gym, &in); err != nil {
+func (m *module) saveWall(ctx context.Context, tx pgx.Tx, original Wall, floorPlan *gymMap, in wallInput) (Wall, error) {
+	if err := checkWall(&in, floorPlan); err != nil {
 		return Wall{}, err
 	}
 	if err := updateWall(ctx, tx, original.ID, in); err != nil {
@@ -145,7 +130,8 @@ func (m *module) saveFloorPlan(ctx context.Context, id string, plan floorPlan) (
 	if err != nil {
 		return floorPlanResult{}, err
 	}
-	if _, err := parseGymMap(plan.Map); err != nil {
+	floorMap, err := parseGymMap(plan.Map)
+	if err != nil {
 		return floorPlanResult{}, err
 	}
 	if len(plan.Walls) > maxFloorPlanWalls {
@@ -194,9 +180,9 @@ func (m *module) saveFloorPlan(ctx context.Context, id string, plan floorPlan) (
 			in.Location = id
 			var wall Wall
 			if in.ID == "" {
-				wall, err = m.insertWall(ctx, tx, original.Gym, in)
+				wall, err = m.insertWall(ctx, tx, original.Gym, floorMap, in)
 			} else {
-				wall, err = m.saveWall(ctx, tx, existing[in.ID], in)
+				wall, err = m.saveWall(ctx, tx, existing[in.ID], floorMap, in)
 			}
 			if err != nil {
 				return atIndex("walls", index, err)

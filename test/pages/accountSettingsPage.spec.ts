@@ -25,13 +25,16 @@ describe('account settings page', () => {
         )
     })
 
-    it('lets the climber remove avatar and banner and saves the removals through their DELETE endpoints', () => {
+    it('lets the climber remove avatar and banner and saves the removals with the profile in one request', () => {
         expect(source).toMatch(
             /<UserProfileImages[\s\S]*removable-avatar[\s\S]*@remove-avatar="removeAvatar"/,
         )
         expect(source).toMatch(
-            /if \(avatarRemoved\.value\) updated = await deleteAvatar\(\)\s+if \(bannerRemoved\.value\) updated = await deleteBanner\(\)/,
+            /else if \(avatarRemoved\.value\) formData\.append\('avatar', ''\)/,
         )
-        expect(source).not.toMatch(/formData\.append\('banner', ''\)/)
+        expect(source).toMatch(
+            /else if \(bannerRemoved\.value\) formData\.append\('banner', ''\)/,
+        )
+        expect(source).not.toMatch(/deleteAvatar|deleteBanner/)
     })
 })

@@ -198,7 +198,7 @@ func TestAvatarUploadAndClear(t *testing.T) {
 		r.Close()
 	}
 
-	f.call(f.climber, http.MethodDelete, "/me/avatar", "", http.StatusOK, `"avatar":""`)
+	f.call(f.climber, http.MethodPatch, "/me", `{"avatar":""}`, http.StatusOK, `"avatar":""`)
 	if _, err := f.app.Blob.Open(ctx, "users/"+f.climber+"/"+record.Avatar); err == nil {
 		t.Error("cleared avatar file kept")
 	}

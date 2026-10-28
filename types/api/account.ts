@@ -22,38 +22,6 @@ export interface paths {
         patch: operations["updateMe"];
         trace?: never;
     };
-    "/me/avatar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["deleteAvatar"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me/banner": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["deleteBanner"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/me/followed-walls/{wall}": {
         parameters: {
             query?: never;
@@ -366,48 +334,6 @@ export interface operations {
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
             413: components["responses"]["Error"];
-        };
-    };
-    deleteAvatar: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Updated record */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["User"];
-                };
-            };
-            401: components["responses"]["Error"];
-        };
-    };
-    deleteBanner: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Updated record */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["User"];
-                };
-            };
-            401: components["responses"]["Error"];
         };
     };
     followWall: {
