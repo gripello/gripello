@@ -33,15 +33,11 @@ import {
 } from '#shared/utils/grades'
 import { gymBandFor } from '#shared/utils/gradeReference'
 
-const props = withDefaults(
-    defineProps<{
-        source: (GradeSource & { type?: string | null }) | null | undefined
-        showSystem?: boolean
-    }>(),
-    { showSystem: undefined },
-)
+const props = defineProps<{
+    source: (GradeSource & { type?: string | null }) | null | undefined
+}>()
 
-const gradeSystems = props.showSystem === undefined ? useGradeSystems() : null
+const gradeSystems = useGradeSystems()
 
 const grade = computed(() => formatGrade(props.source))
 
@@ -51,9 +47,7 @@ const band = computed(() => gymBandFor(props.source, bands.value))
 const system = computed(() => {
     const value = props.source?.grade_system
     if (!grade.value || !isGradeSystem(value)) return null
-    const visible =
-        props.showSystem ?? gradeSystems?.isUnexpectedSystem(props.source!)
-    return visible ? value : null
+    return gradeSystems.isUnexpectedSystem(props.source!) ? value : null
 })
 </script>
 

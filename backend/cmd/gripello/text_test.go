@@ -25,7 +25,6 @@ func (w *world) textFields() map[string]textField {
 		"route name":              {"adminA", "PATCH", "/routes/" + r["route"], "name", nil},
 		"route comment":           {"adminA", "PATCH", "/routes/" + r["route"], "comment", nil},
 		"location name":           {"adminA", "PATCH", "/locations/" + r["location"], "name", nil},
-		"wall name":               {"adminA", "PATCH", "/walls/" + r["wall"], "name", nil},
 		"season name":             {"adminA", "PATCH", "/seasons/" + r["season"], "name", nil},
 		"role name":               {"adminA", "PATCH", "/roles/" + r["role"], "name", nil},
 		"role description":        {"adminA", "PATCH", "/roles/" + r["role"], "description", nil},
@@ -65,7 +64,7 @@ type responseSummary struct {
 }
 
 var requiredText = []string{"competition name", "category name", "entry display name", "task title", "route name", "location name",
-	"wall name", "season name", "role name", "gym name", "report explanation", "report notifier name"}
+	"season name", "role name", "gym name", "report explanation", "report notifier name"}
 
 var blankCodes = map[string]string{"gym name": "validation_invalid_name", "report explanation": "validation_invalid_value", "report notifier name": "validation_invalid_value"}
 
@@ -95,7 +94,7 @@ func TestTextLimitsCountCharacters(t *testing.T) {
 	limits := map[string]int{
 		"competition name": 200, "competition description": 5000, "category name": 100, "entry display name": 60,
 		"task title": 200, "task description": 2000, "route name": 100, "route comment": 2000, "location name": 100,
-		"wall name": 100, "season name": 60, "role name": 50, "role description": 200, "gym name": 100, "gym description": 2000,
+		"season name": 60, "role name": 50, "role description": 200, "gym name": 100, "gym description": 2000,
 		"tick note": 500, "review comment": 5000, "profile first name": 5000, "invite first name": 100, "invite last name": 100,
 		"report explanation": 2000, "report notifier name": 100,
 	}

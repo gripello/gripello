@@ -76,13 +76,6 @@ func (p *Permissions) holdsAny(ctx context.Context, userID, gym string, permissi
 	return ok
 }
 
-func (p *Permissions) Follows(ctx context.Context, followerID, followeeID string) bool {
-	var ok bool
-	p.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM follows WHERE follower = $1 AND followee = $2 AND status = 'accepted')`,
-		followerID, followeeID).Scan(&ok)
-	return ok
-}
-
 // UsersWith lists everyone holding permission in gym, so one query answers a whole fan-out.
 func (p *Permissions) UsersWith(ctx context.Context, gym, permission string) ([]string, error) {
 	return p.userIDs(ctx, `SELECT m."user" FROM memberships m JOIN roles r ON r.id = m.role

@@ -30,8 +30,10 @@
                         :user-id="user.id"
                         class="lg:col-span-2"
                         @banner="selectBanner"
+                        removable-avatar
                         @remove-banner="removeBanner"
                         @avatar="selectAvatar"
+                        @remove-avatar="removeAvatar"
                     />
                     <UFormField
                         :label="t('account.firstname')"
@@ -327,6 +329,7 @@ const themeIcon = computed(
 const setThemeMode = (next: string) => setMode(next as ThemeMode)
 
 const avatarFile = ref<File | null>(null)
+const avatarRemoved = ref(false)
 const avatarPreview = ref<string | null>(null)
 
 const savedAvatarUrl = () =>
@@ -381,7 +384,20 @@ function resetBanner() {
 
 function selectAvatar(file: File) {
     avatarFile.value = file
+    avatarRemoved.value = false
     avatarPreview.value = URL.createObjectURL(file)
+}
+
+function removeAvatar() {
+    avatarFile.value = null
+    avatarRemoved.value = !!user.avatar
+    avatarPreview.value = null
+}
+
+function resetAvatar() {
+    avatarFile.value = null
+    avatarRemoved.value = false
+    avatarPreview.value = savedAvatarUrl()
 }
 
 const passwordChangeRequested = computed(
@@ -449,6 +465,7 @@ const twoFactor = useTemplateRef<{
 const sectionChanged = computed<Record<Section, boolean>>(() => ({
     profile:
         !!avatarFile.value ||
+        avatarRemoved.value ||
         !!bannerFile.value ||
         bannerRemoved.value ||
         emailChangeRequested.value ||
@@ -469,8 +486,7 @@ function resetSection(section: Section) {
         user.firstname = original.firstname
         user.name = original.name
         user.email = original.email
-        avatarFile.value = null
-        avatarPreview.value = savedAvatarUrl()
+        resetAvatar()
         resetBanner()
     } else if (section === 'preferences') {
         user.language = original.language
@@ -530,6 +546,7 @@ async function saveUser(section: Section) {
         formData.append('firstname', user.firstname ?? '')
         formData.append('name', user.name ?? '')
         if (avatarFile.value) formData.append('avatar', avatarFile.value)
+        else if (avatarRemoved.value) formData.append('avatar', '')
         if (bannerFile.value) formData.append('banner', bannerFile.value)
         else if (bannerRemoved.value) formData.append('banner', '')
     } else if (section === 'preferences') {
@@ -550,8 +567,7 @@ async function saveUser(section: Section) {
             user.firstname = updated.firstname
             user.name = updated.name
             user.avatar = updated.avatar
-            avatarFile.value = null
-            avatarPreview.value = savedAvatarUrl()
+            resetAvatar()
             user.banner = updated.banner
             resetBanner()
             original.firstname = updated.firstname

@@ -1,26 +1,13 @@
 <template>
-    <template v-if="modelValue === undefined">
-        <UButton
-            v-if="callToAction"
-            color="primary"
-            size="xl"
-            block
-            icon="i-lucide-star-plus"
-            data-testid="review-open-cta"
-            @click="internalOpen = true"
-        >
-            {{ $t('ratings.createReview') }}
-        </UButton>
-        <UButton
-            v-else
-            color="neutral"
-            variant="soft"
-            data-testid="review-open"
-            @click="internalOpen = true"
-        >
-            {{ $t('ratings.createReview') }}
-        </UButton>
-    </template>
+    <UButton
+        v-if="modelValue === undefined"
+        color="neutral"
+        variant="soft"
+        data-testid="review-open"
+        @click="internalOpen = true"
+    >
+        {{ $t('ratings.createReview') }}
+    </UButton>
 
     <LayoutDialogShell
         v-model="sheetOpen"
@@ -174,7 +161,6 @@ const props = withDefaults(
         gradeSystem?: string | null
         routeGrade?: string | null
         review?: EditableReview | null
-        callToAction?: boolean
     }>(),
     {
         modelValue: undefined,
@@ -182,7 +168,6 @@ const props = withDefaults(
         gradeSystem: null,
         routeGrade: null,
         review: null,
-        callToAction: false,
     },
 )
 const gymId = useCurrentGymId()

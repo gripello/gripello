@@ -432,29 +432,6 @@ func (m *module) notifyReporterOfDone(ctx context.Context, tx pgx.Tx, t Task) er
 	return nil
 }
 
-func (m *module) deleteTask(ctx context.Context, id string) error {
-	t, err := findTask(ctx, m.app.DB, id)
-	if err != nil {
-		return err
-	}
-	if err := m.perms.Require(ctx, t.Gym, tenancy.PermManageTasks); err != nil {
-		return err
-	}
-	err = pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `DELETE FROM tasks WHERE id = $1`, id); err != nil {
-			return err
-		}
-		if err := publishTaskChange(ctx, tx, "delete", t); err != nil {
-			return err
-		}
-		return publishOpenDefects(ctx, tx, t.Gym, defectRoutes(t))
-	})
-	if err == nil && m.app.Blob != nil {
-		m.app.Blob.Delete(ctx, "tasks/"+id)
-	}
-	return err
-}
-
 func (m *module) storePhoto(ctx context.Context, t *Task, photo *multipart.FileHeader) error {
 	if photo == nil || m.app.Blob == nil {
 		return nil

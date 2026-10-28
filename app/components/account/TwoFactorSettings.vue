@@ -232,7 +232,7 @@ type PendingAction =
 
 const { t, locale } = useI18n()
 const { currentUser } = useAuthState()
-const { success, error: notifyError } = useNotification()
+const { success } = useNotification()
 const addPasskey = useAsyncAction()
 const withPassword = useAsyncAction()
 

@@ -40,7 +40,6 @@ import {
     COMPETITION_PHASE_COLORS,
     competitionPhase,
     formatCompetitionWindow,
-    type CompetitionPhase,
 } from '~/utils/competitions'
 import type { CompetitionRecord } from '~/types/models'
 

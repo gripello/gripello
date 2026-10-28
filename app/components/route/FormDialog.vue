@@ -225,7 +225,7 @@ import {
     type RouteInput,
 } from '~/api/routes'
 import type { Form } from '@nuxt/ui'
-import type { RouteRecord, WallRecord } from '~/types/models'
+import type { RouteRecord } from '~/types/models'
 import {
     freePosition,
     insertByAnchor,

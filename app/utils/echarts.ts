@@ -123,33 +123,6 @@ export function yAxisBase(colors: ChartColors) {
     }
 }
 
-export function makeBarSeries(
-    name: string,
-    data: number[],
-    color: string,
-    emphasisColor: string,
-) {
-    return {
-        name,
-        type: 'bar',
-        barMaxWidth: 32,
-        data,
-        itemStyle: { color, borderRadius: [4, 4, 0, 0] },
-        emphasis: { itemStyle: { color: emphasisColor } },
-        animationDelay: (idx: number) => idx * 40,
-    }
-}
-
-export function niceAxis(values: number[]) {
-    const maxVal = Math.max(...values, 1)
-    const rawStep = maxVal / 4
-    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep || 1)))
-    const interval =
-        [1, 2, 5, 10].map((f) => f * magnitude).find((s) => s >= rawStep) ??
-        magnitude * 10
-    return { max: Math.ceil(maxVal / interval) * interval, interval }
-}
-
 export function formatMonthLabel(monthKey: string, locale?: string) {
     const [year, month] = monthKey.split('-').map(Number)
     if (!year || !month) return monthKey

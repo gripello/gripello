@@ -30,6 +30,11 @@ function mountImages(
                     template:
                         '<button :data-testid="$attrs[\'data-testid\']" @click="$attrs.onClick" />',
                 },
+                UDropdownMenu: {
+                    props: ['items'],
+                    template:
+                        '<div><slot /><button v-for="item in items" :key="item.label" :data-testid="item[\'data-testid\']" @click="item.onSelect()" /></div>',
+                },
             },
             mocks: { $t: (key: string) => key },
         },
@@ -79,19 +84,19 @@ describe('ProfileImages', () => {
         expect(wrapper.getComponent(cropStub).props('file')).toBeNull()
     })
 
-    it('shows initials and offers removal only for a set banner', async () => {
+    it('offers banner removal in the banner menu only for a set banner', async () => {
         const empty = mountImages(null)
         expect(empty.text()).toContain('AB')
-        expect(
-            empty.find('[data-testid="profile-banner-remove"]').exists(),
-        ).toBe(false)
+        expect(empty.find('[data-testid="profile-banner-menu"]').exists()).toBe(
+            false,
+        )
         const set = mountImages('blob:banner')
         expect(set.get('img').attributes('src')).toBe('blob:banner')
         await set.get('[data-testid="profile-banner-remove"]').trigger('click')
         expect(set.emitted('removeBanner')).toHaveLength(1)
     })
 
-    it('offers avatar removal only when asked and an avatar is set', async () => {
+    it('opens a change/remove menu on the avatar only when it can be removed', async () => {
         const remove = '[data-testid="profile-avatar-remove"]'
         expect(
             mountImages(null, { avatar: 'blob:a' }).find(remove).exists(),
@@ -105,5 +110,8 @@ describe('ProfileImages', () => {
         })
         await set.get(remove).trigger('click')
         expect(set.emitted('removeAvatar')).toHaveLength(1)
+        expect(set.find('[data-testid="profile-avatar-change"]').exists()).toBe(
+            true,
+        )
     })
 })

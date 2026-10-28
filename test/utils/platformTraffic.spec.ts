@@ -5,7 +5,6 @@ import {
     errorRateColor,
     formatUptime,
     methodShares,
-    relativeChange,
     sortEndpoints,
     trafficLabel,
 } from '~/utils/platformTraffic'
@@ -51,11 +50,6 @@ describe('platformTraffic', () => {
         expect(errorRateColor(errorRate(list[1]!))).toBe('error')
         expect(errorRateColor(0.02)).toBe('warning')
         expect(errorRateColor(0.001)).toBe('success')
-    })
-
-    it('compares with the previous window only when it had traffic', () => {
-        expect(relativeChange(120, 100)).toBeCloseTo(0.2)
-        expect(relativeChange(5, 0)).toBeNull()
     })
 
     it('formats uptime and sign-in method shares', () => {

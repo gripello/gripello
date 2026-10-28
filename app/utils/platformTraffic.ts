@@ -14,11 +14,6 @@ export function clientErrorRate(
     return totals.requests ? totals.client_errors / totals.requests : 0
 }
 
-// Relative change, null when there is nothing to compare with.
-export function relativeChange(current: number, previous: number) {
-    return previous ? (current - previous) / previous : null
-}
-
 export function sortEndpoints(endpoints: TrafficEndpoint[], by: EndpointSort) {
     const key: Record<EndpointSort, (e: TrafficEndpoint) => number> = {
         errors: (e) => errorRate(e) * 1e6 + clientErrorRate(e),

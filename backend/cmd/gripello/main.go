@@ -170,9 +170,6 @@ func serve(ctx context.Context, args []string) error {
 		return err
 	}
 	defer app.DB.Close()
-	if err := punycodeEmails(ctx, app.DB); err != nil {
-		slog.Error("punycode: converting stored addresses failed", "error", err)
-	}
 	if *role != "" {
 		cfg.Role = *role
 	}

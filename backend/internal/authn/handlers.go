@@ -252,7 +252,7 @@ func (m *module) register(w http.ResponseWriter, r *http.Request) error {
 	} else if code != "" {
 		invalid.Field("username", code, message)
 	}
-	validatePassword(invalid, "password", body.Password, body.PasswordConfirm)
+	validatePassword(invalid, body.Password, body.PasswordConfirm)
 	for field, value := range map[string]string{"firstname": body.Firstname, "name": body.Name} {
 		if utf8.RuneCountInString(value) > nameMax {
 			invalid.Field(field, "validation_max_text_constraint", fmt.Sprintf("Must be no more than %d character(s).", nameMax))
@@ -419,14 +419,14 @@ func (m *module) generateUsername(r *http.Request) string {
 	}
 }
 
-func validatePassword(invalid *httpx.Error, field, password, confirm string) {
+func validatePassword(invalid *httpx.Error, password, confirm string) {
 	if password == "" {
-		invalid.Field(field, "validation_required", "Cannot be blank.")
+		invalid.Field("password", "validation_required", "Cannot be blank.")
 	} else if pw.TooShort(password) {
-		invalid.Field(field, "validation_length_out_of_range", fmt.Sprintf("Must be at least %d characters.", pw.MinLength))
+		invalid.Field("password", "validation_length_out_of_range", fmt.Sprintf("Must be at least %d characters.", pw.MinLength))
 	}
 	if password != confirm {
-		invalid.Field(field+"Confirm", "validation_values_mismatch", "Values don't match.")
+		invalid.Field("passwordConfirm", "validation_values_mismatch", "Values don't match.")
 	}
 }
 
@@ -473,7 +473,7 @@ func (m *module) confirmPasswordReset(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 	invalid := httpx.BadRequest("Failed to validate.")
-	validatePassword(invalid, "password", body.Password, body.PasswordConfirm)
+	validatePassword(invalid, body.Password, body.PasswordConfirm)
 	if len(invalid.Data) > 0 {
 		return invalid
 	}
@@ -674,7 +674,7 @@ func (m *module) changePassword(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	invalid := httpx.BadRequest("Failed to validate.")
-	validatePassword(invalid, "password", body.Password, body.PasswordConfirm)
+	validatePassword(invalid, body.Password, body.PasswordConfirm)
 	if len(invalid.Data) > 0 {
 		return invalid
 	}

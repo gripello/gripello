@@ -28,35 +28,6 @@ paths:
               schema: { type: object, required: [id], properties: { id: { type: string } } }
         '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
-  /gyms/{gym}/reports:
-    parameters:
-      - $ref: '#/components/parameters/Gym'
-    get:
-      operationId: listGymReports
-      tags: [moderation]
-      description: manage_reports (or platform admin). Newest first. Reports are decided only through moderation decisions.
-      parameters:
-        - { name: status, in: query, schema: { $ref: '#/components/schemas/ReportStatus' } }
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200': { $ref: '#/components/responses/ReportPage' }
-        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
-        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
-        '404': { $ref: 'shared/error.yaml#/components/responses/Error' }
-  /platform/reports:
-    get:
-      operationId: listPlatformReports
-      tags: [moderation]
-      description: Platform admins. All reports, including those on profiles (no gym).
-      parameters:
-        - { name: status, in: query, schema: { $ref: '#/components/schemas/ReportStatus' } }
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200': { $ref: '#/components/responses/ReportPage' }
-        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
-        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /moderation/summary:
     get:
       operationId: moderationSummary
@@ -266,17 +237,6 @@ components:
               id: { type: string }
               state: { $ref: '#/components/schemas/ModerationState' }
               hidden_by: { type: string, enum: ['', gym, platform] }
-    ReportPage:
-      description: One page of reports
-      content:
-        application/json:
-          schema:
-            type: object
-            required: [items, page, limit]
-            properties:
-              items: { type: array, items: { $ref: '#/components/schemas/Report' } }
-              page: { type: integer }
-              limit: { type: integer }
   schemas:
     ReportStatus: { type: string, enum: [open, actioned, rejected] }
     ReportReason:

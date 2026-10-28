@@ -89,7 +89,7 @@ func TestUpdateEventsNameChangedFields(t *testing.T) {
 	expect("route.updated", "archived", "archived_at")
 	f.call("setter", "PUT", "/gyms/"+f.gymA+"/map/placements", `{"placements":[{"route":"`+id+`","wall":"`+wall+`","wall_position":0.5}]}`, http.StatusOK)
 	expect("route.updated", "wall", "wall_position")
-	f.call("admin", "PATCH", "/walls/"+wall, `{"sort":4,"name":"Slab"}`, http.StatusOK)
+	f.floorPlan("admin", f.hall, `{"id":"`+wall+`","name":"Slab",`+wallShape+`,"sort":4}`, "", http.StatusOK)
 	expect("wall.updated", "sort")
 	f.call("admin", "PATCH", "/locations/"+f.hall, `{"name":"Main"}`, http.StatusOK)
 	expect("location.updated", "name")

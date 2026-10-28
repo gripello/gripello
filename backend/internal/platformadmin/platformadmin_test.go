@@ -145,7 +145,7 @@ func TestEverythingNeedsAPlatformAdmin(t *testing.T) {
 	for _, route := range []string{
 		"GET /platform/users", "GET /platform/users/" + f.climber, "PATCH /platform/users/" + f.climber, "DELETE /platform/users/" + f.climber,
 		"POST /platform/users/" + f.climber + "/suspension", "DELETE /platform/users/" + f.climber + "/suspension",
-		"GET /platform/stats", "GET /platform/features", "PUT /platform/gyms/" + f.gym + "/features", "POST /platform/admins", "DELETE /platform/admins/" + f.climber,
+		"GET /platform/stats", "PUT /platform/gyms/" + f.gym + "/features", "POST /platform/admins", "DELETE /platform/admins/" + f.climber,
 		"GET /platform/blocklists", "PUT /platform/blocklists", "POST /platform/blocklists/emails", "GET /platform/users/" + f.climber + "/block-suggestions", "PUT /platform/blocklists/sources/mailchecker", "POST /platform/blocklists/sources/mailchecker/sync", "GET /platform/blocklists/sources/mailchecker/domains", "POST /platform/blocklists/check",
 	} {
 		method, url, _ := strings.Cut(route, " ")
@@ -400,9 +400,6 @@ func TestFeatureFlagsMirrorTheFrontendRegistry(t *testing.T) {
 
 func TestSetFeatures(t *testing.T) {
 	f := newFixture(t)
-	if flags := f.call(http.MethodGet, "/platform/features", "", f.operator, http.StatusOK)["flags"].([]any); len(flags) != len(tenancy.FeatureFlags) {
-		t.Errorf("flags = %v", flags)
-	}
 	f.call(http.MethodPut, "/platform/gyms/"+f.gym+"/features", `{"teleport": true}`, f.operator, http.StatusBadRequest)
 	f.call(http.MethodPut, "/platform/gyms/"+f.gym+"/features", `{"beta_links": 1}`, f.operator, http.StatusBadRequest)
 	f.call(http.MethodPut, "/platform/gyms/missing/features", `{"beta_links": true}`, f.operator, http.StatusNotFound)

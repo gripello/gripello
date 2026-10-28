@@ -40,10 +40,10 @@ func (f *fixture) exec(sql string, args ...any) {
 	}
 }
 
-func (f *fixture) count(sql string, args ...any) int {
+func (f *fixture) count(sql string) int {
 	f.t.Helper()
 	var n int
-	if err := f.app.DB.QueryRow(context.Background(), sql, args...).Scan(&n); err != nil {
+	if err := f.app.DB.QueryRow(context.Background(), sql).Scan(&n); err != nil {
 		f.t.Fatal(err)
 	}
 	return n

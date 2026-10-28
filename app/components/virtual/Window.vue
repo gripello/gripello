@@ -12,14 +12,8 @@
 const props = withDefaults(
     defineProps<{
         estimatedHeight?: number
-        mountMargin?: string
-        unmountMargin?: string
     }>(),
-    {
-        estimatedHeight: 240,
-        mountMargin: '200px 0px',
-        unmountMargin: '800px 0px',
-    },
+    { estimatedHeight: 240 },
 )
 
 const el = ref<HTMLElement | null>(null)
@@ -41,7 +35,7 @@ onMounted(() => {
                 rendered.value = true
             }
         },
-        { rootMargin: props.mountMargin },
+        { rootMargin: '200px 0px' },
     )
     nearObserver.observe(el.value)
 
@@ -55,7 +49,7 @@ onMounted(() => {
                 rendered.value = false
             }
         },
-        { rootMargin: props.unmountMargin },
+        { rootMargin: '800px 0px' },
     )
     farObserver.observe(el.value)
 })

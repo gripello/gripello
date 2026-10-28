@@ -123,13 +123,6 @@
             :model-value="!!reportTarget"
             content-type="beta_video"
             :content-id="reportTarget.id"
-            :content-url="
-                reportContentUrl(
-                    'beta_video',
-                    reportTarget.id,
-                    reportTarget.route,
-                )
-            "
             @update:model-value="reportTarget = null"
         />
 
@@ -153,7 +146,6 @@ import type { FeedBeta, FeedRoute } from '~/utils/feed'
 import type { FeedTick } from '~/utils/friends'
 import { cacheKeys } from '~/utils/realtimeCache'
 import { NEW_ROUTE_WINDOW_DAYS } from '~/utils/overview'
-import { reportContentUrl } from '~/utils/reports'
 
 const BETA_LIMIT = 20
 const ROUTE_PREVIEW = 8

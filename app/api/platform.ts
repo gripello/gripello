@@ -266,10 +266,6 @@ export function getPlatformSystem() {
     return useApi()<PlatformSystem>('/platform/system')
 }
 
-export function listFeatureFlags() {
-    return useApi()<{ flags: FeatureFlag[] }>('/platform/features')
-}
-
 export function setGymFeatures(
     gymId: string,
     features: Partial<Record<FeatureFlag, boolean>>,

@@ -157,10 +157,6 @@ func findEntry(ctx context.Context, q db.Querier, id string) (Entry, error) {
 	return db.One[Entry](ctx, q, `SELECT `+entryColumns+` FROM competition_entries WHERE id = $1`, id)
 }
 
-func findScore(ctx context.Context, q db.Querier, id string) (Score, error) {
-	return db.One[Score](ctx, q, `SELECT `+scoreColumns+` FROM competition_scores WHERE id = $1`, id)
-}
-
 func locationGym(ctx context.Context, q db.Querier, id string) (string, error) {
 	var gym string
 	err := q.QueryRow(ctx, `SELECT gym FROM locations WHERE id = $1`, id).Scan(&gym)

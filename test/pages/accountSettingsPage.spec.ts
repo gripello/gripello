@@ -24,4 +24,17 @@ describe('account settings page', () => {
             /fieldErrorCode\(err, 'gym'\) === 'validation_last_admin'\) \{\s+notifyError\(t\('account.lastAdmin'\)\)/,
         )
     })
+
+    it('lets the climber remove avatar and banner and saves the removals with the profile in one request', () => {
+        expect(source).toMatch(
+            /<UserProfileImages[\s\S]*removable-avatar[\s\S]*@remove-avatar="removeAvatar"/,
+        )
+        expect(source).toMatch(
+            /else if \(avatarRemoved\.value\) formData\.append\('avatar', ''\)/,
+        )
+        expect(source).toMatch(
+            /else if \(bannerRemoved\.value\) formData\.append\('banner', ''\)/,
+        )
+        expect(source).not.toMatch(/deleteAvatar|deleteBanner/)
+    })
 })

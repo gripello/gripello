@@ -289,20 +289,6 @@ func (m *module) saveProfile(w http.ResponseWriter, r *http.Request, userID stri
 	return httpx.Respond(w, http.StatusOK, record, nil)
 }
 
-func (m *module) clearFile(field string) httpx.Handler {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		p, err := auth.Require(r.Context())
-		if err != nil {
-			return err
-		}
-		changes := map[string]any{field: ""}
-		if err := m.refuseWhileHidden(r.Context(), p.UserID, changes, nil); err != nil {
-			return err
-		}
-		return m.saveProfile(w, r, p.UserID, changes, nil)
-	}
-}
-
 func blobKey(userID, name string) string { return "users/" + userID + "/" + name }
 
 func (m *module) deleteBlobs(r *http.Request, userID string, names []string) {

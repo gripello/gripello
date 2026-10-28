@@ -114,8 +114,6 @@ export type InviteRecord = MembersApi['schemas']['Invite']
 
 export type InviteDetails = MembersApi['schemas']['InvitePreview']
 
-export type MembershipRecord = MembersApi['schemas']['Membership']
-
 export interface LegalPerson {
     name: string
     role?: string
@@ -124,7 +122,6 @@ export interface LegalPerson {
 export type ReportContentType = 'rating' | 'route' | 'beta_video' | 'profile'
 export type ReportReason = (typeof REPORT_REASONS)[number]
 export type ReportStatus = (typeof REPORT_STATUSES)[number]
-export type ReportDecision = 'content_removed' | 'content_kept'
 
 export type ReportRecord = ModerationApi['schemas']['Report']
 

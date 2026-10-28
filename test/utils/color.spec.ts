@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest'
 import {
     FALLBACK_DOT_COLOR,
     gradientEndColor,
-    isLightColor,
     readableTextOn,
     routeDotColor,
     shadeColor,
@@ -84,25 +83,6 @@ describe('readableTextOn', () => {
             const ratio = (Math.max(bg, fg) + 0.05) / (Math.min(bg, fg) + 0.05)
             expect(ratio, `${hex} contrast`).toBeGreaterThanOrEqual(4.5)
         }
-    })
-})
-
-describe('isLightColor', () => {
-    it('detects light hold colors', () => {
-        expect(isLightColor('#FFFFFF')).toBe(true)
-        expect(isLightColor('#FFEB3B')).toBe(true)
-        expect(isLightColor('#fff')).toBe(true)
-    })
-
-    it('detects dark hold colors', () => {
-        expect(isLightColor('#000000')).toBe(false)
-        expect(isLightColor('#6200EA')).toBe(false)
-        expect(isLightColor('#E53935')).toBe(false)
-    })
-
-    it('treats unparseable input as dark', () => {
-        expect(isLightColor('')).toBe(false)
-        expect(isLightColor('red')).toBe(false)
     })
 })
 

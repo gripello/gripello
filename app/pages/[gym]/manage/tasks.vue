@@ -91,7 +91,7 @@ import { translatedItems } from '~/utils/translatedItems'
 import { gymTopic, tasksTopic } from '#shared/utils/topics'
 import { TASK_KINDS } from '#shared/utils/tasks'
 import { useTimeoutFn } from '@vueuse/core'
-import type { GymEvent, RecordChange } from '~/composables/useRealtime'
+import type { GymEvent } from '~/composables/useRealtime'
 import { listTaskAssignees, type TaskQuery } from '~/api/tasks'
 import { useAuthState } from '~/api/auth'
 import type { TaskKind, TaskRecord } from '~/types/models'
@@ -203,18 +203,6 @@ const { start: setSearchSoon } = useTimeoutFn(
 watch(search, (term) => setSearchSoon(term))
 
 useLiveRefresh(() => tasksTopic(gymId.value), reload, { delayMs: 500 })
-
-const { warning: notifyWarning } = useNotification()
-// the dialog can't delete, so a delete of the open task always came from someone else
-useRealtime(
-    () => tasksTopic(gymId.value),
-    ({ action, record }: RecordChange<TaskRecord>) => {
-        if (action !== 'delete' || !formOpen.value) return
-        if (record.id !== editedTask.value?.id) return
-        formOpen.value = false
-        notifyWarning(t('tasks.deletedElsewhere'))
-    },
-)
 
 function clearFilters() {
     kindFilter.value = null

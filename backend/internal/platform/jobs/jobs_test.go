@@ -107,10 +107,10 @@ func TestQueueClaimsOnlyWithAFreeSlot(t *testing.T) {
 	}
 }
 
-func countJobs(t *testing.T, pool *pgxpool.Pool, kind string) int {
+func countJobs(t *testing.T, pool *pgxpool.Pool) int {
 	t.Helper()
 	var n int
-	pool.QueryRow(context.Background(), `SELECT count(*) FROM jobs WHERE kind = $1`, kind).Scan(&n)
+	pool.QueryRow(context.Background(), `SELECT count(*) FROM jobs WHERE kind = 'k'`).Scan(&n)
 	return n
 }
 
@@ -124,7 +124,7 @@ func TestEnqueueDuringTheLastFailedAttemptKeepsTheJob(t *testing.T) {
 		Enqueue(ctx, pool, "k", "a", nil, 0)
 		return errors.New("fails for good")
 	}}, job)
-	if countJobs(t, pool, "k") != 1 {
+	if countJobs(t, pool) != 1 {
 		t.Fatal("an enqueue during the last failed attempt was dropped")
 	}
 }
@@ -138,7 +138,7 @@ func TestEnqueueAfterTheLeaseLapsedKeepsTheJob(t *testing.T) {
 		pool.Exec(ctx, `UPDATE jobs SET locked_until = now() - interval '1 second'`)
 		return Enqueue(ctx, pool, "k", "a", nil, 0)
 	}}, job)
-	if countJobs(t, pool, "k") != 1 {
+	if countJobs(t, pool) != 1 {
 		t.Fatal("an enqueue after the lease lapsed was removed with the finished run")
 	}
 }
@@ -164,7 +164,7 @@ func TestQueueFinishesRunningJobsOnShutdown(t *testing.T) {
 	case <-time.After(stopTimeout + time.Second):
 		t.Fatal("RunQueue did not return")
 	}
-	if countJobs(t, pool, "k") != 0 {
+	if countJobs(t, pool) != 0 {
 		t.Fatal("a job that finished during shutdown was left to run again")
 	}
 }
@@ -251,7 +251,7 @@ func TestJobCutOffByShutdownKeepsItsAttempts(t *testing.T) {
 		cancel()
 		return ctx.Err()
 	}}, job)
-	if countJobs(t, pool, "k") != 1 {
+	if countJobs(t, pool) != 1 {
 		t.Fatal("a job cut off by shutdown was dropped")
 	}
 	if again, ok := claim(context.Background(), pool); !ok || again.Attempts != maxAttempts {

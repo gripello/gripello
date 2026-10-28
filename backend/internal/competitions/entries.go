@@ -3,7 +3,6 @@ package competitions
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"slices"
 	"time"
 
@@ -160,31 +159,31 @@ func entryConflict(err error) error {
 	return err
 }
 
-func (m *module) loadOwnedEntry(ctx context.Context, id string) (Entry, Competition, viewer, error) {
+func (m *module) loadOwnedEntry(ctx context.Context, id string) (Competition, viewer, error) {
 	p, err := auth.Require(ctx)
 	if err != nil {
-		return Entry{}, Competition{}, viewer{}, err
+		return Competition{}, viewer{}, err
 	}
 	e, err := findEntry(ctx, m.app.DB, id)
 	if err != nil {
-		return e, Competition{}, viewer{}, err
+		return Competition{}, viewer{}, err
 	}
 	c, err := findVisibleCompetition(ctx, m.app.DB, e.Competition)
 	if err != nil {
-		return e, c, viewer{}, err
+		return c, viewer{}, err
 	}
 	v := m.viewerFor(ctx, c)
 	if !v.manager && e.User != p.UserID {
 		if v.staff || (c.Status != "draft" && !e.Hidden) {
-			return e, c, v, httpx.ErrForbidden
+			return c, v, httpx.ErrForbidden
 		}
-		return e, c, v, httpx.ErrNotFound
+		return c, v, httpx.ErrNotFound
 	}
-	return e, c, v, nil
+	return c, v, nil
 }
 
 func (m *module) updateEntry(ctx context.Context, id string, raw json.RawMessage) (Entry, error) {
-	_, c, v, err := m.loadOwnedEntry(ctx, id)
+	c, v, err := m.loadOwnedEntry(ctx, id)
 	if err != nil {
 		return Entry{}, err
 	}
@@ -245,33 +244,4 @@ func (m *module) lockEntry(ctx context.Context, tx pgx.Tx, c *Competition, id st
 		return Entry{}, err
 	}
 	return db.One[Entry](ctx, tx, `SELECT `+entryColumns+` FROM competition_entries WHERE id = $1 FOR UPDATE`, id)
-}
-
-func (m *module) deleteEntry(ctx context.Context, id string) error {
-	_, c, v, err := m.loadOwnedEntry(ctx, id)
-	if err != nil {
-		return err
-	}
-	return pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
-		e, err := m.lockEntry(ctx, tx, &c, id)
-		if err != nil {
-			return err
-		}
-		if !v.manager {
-			var scored bool
-			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM competition_scores WHERE entry = $1)`, id).Scan(&scored); err != nil {
-				return err
-			}
-			if scored || e.Status == "disqualified" {
-				return httpx.NewError(http.StatusForbidden, "This entry can no longer be deleted; withdraw instead.")
-			}
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM competition_entries WHERE id = $1`, id); err != nil {
-			return err
-		}
-		if err := publishEntryDeleted(ctx, tx, e, c.Gym); err != nil {
-			return err
-		}
-		return publishChange(ctx, tx, c, "entries", e.User, e.ID)
-	})
 }

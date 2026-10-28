@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
     changePassword,
-    deleteAvatar,
-    deleteBanner,
     deleteMe,
     deleteMFAFactor,
     dataExportAvailable,
@@ -123,19 +121,6 @@ describe('updateMe', () => {
         await unfollowWall('w1')
         expect(api.request()).toMatchObject({
             url: '/api/me/followed-walls/w1',
-            method: 'DELETE',
-        })
-    })
-
-    it('clears avatar and banner through their endpoints', async () => {
-        await deleteAvatar()
-        expect(api.request()).toMatchObject({
-            url: '/api/me/avatar',
-            method: 'DELETE',
-        })
-        await deleteBanner()
-        expect(api.request()).toMatchObject({
-            url: '/api/me/banner',
             method: 'DELETE',
         })
     })

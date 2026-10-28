@@ -38,22 +38,17 @@
         "lastname": "Last name",
         "username": "Username",
         "password": "Password",
-        "newPassword": "New password",
         "email": "Email",
         "username_or_email": "Username or email",
         "reset_password": "Reset password",
         "reset_hint": "Enter the email address of your account.",
-        "userProfile": "User profile",
         "oldPassword": "Current password",
-        "or_login_with": "Or sign in with",
         "remember_me": "Remember me",
         "changeAvatar": "Change avatar",
-        "emailLocked": "Email cannot be changed here",
         "passwordStrength": "Password strength",
         "unsavedChanges": "Unsaved changes",
         "wrongOldPassword": "Current password is incorrect",
         "passwordRequired": "Your account has no password yet. Set one first via the password reset on the sign-in page.",
-        "passwordChangedSignInAgain": "Password changed. Please sign in again with your new password.",
         "unknownUser": "Unknown user",
         "tabs": {
             "profile": "Profile",
@@ -209,7 +204,8 @@
         "exportTooLarge": "Your data export is too large",
         "exportTooLargeHint": "It exceeds 2 GB. Contact us to receive your data another way.",
         "exportNone": "No data export ready",
-        "removeAvatar": "Remove avatar"
+        "removeAvatar": "Remove avatar",
+        "removeBanner": "Remove banner"
     },
     "routes": {
         "generate_name": "Generate name",
@@ -376,7 +372,6 @@
         "comment": "Comment",
         "climber_reviews": "Reviews",
         "perceived_difficulty": "Felt grade",
-        "loadError": "Failed to load reviews.",
         "deleteOwn": "Delete my review",
         "deleteOwnConfirm": "Your review will be removed for good.",
         "editOwn": "Edit my review",
@@ -388,7 +383,6 @@
     "table": {
         "actions": "Actions",
         "no_data": "No data",
-        "created_at": "Created at",
         "sort_by": "Sort by",
         "sort_asc": "Ascending",
         "sort_desc": "Descending",
@@ -482,8 +476,6 @@
             "health": "Server online",
             "verifyEmail": "Your email address has been verified. You can sign in now.",
             "emailChange": "Your email address has been changed. Please sign in again.",
-            "userInvited": "User created. An invitation email has been sent.",
-            "userCreatedNoInvite": "User created, but no invitation email was sent because email is not configured.",
             "passwordChanged": "Your password has been set. You can sign in now.",
             "registered": "Account created. Check your email to verify your address, then sign in.",
             "verificationSent": "If an unverified account exists, a new verification link is on its way."
@@ -493,7 +485,6 @@
             "edit": "Could not save changes.",
             "delete": "Could not delete.",
             "health": "Server offline",
-            "no_auth_methods_available": "No sign-in methods are available.",
             "invalid_credentials": "Wrong username or password.",
             "email_not_verified": "Your email address has not been verified.",
             "too_many_attempts": "Too many sign-in attempts. Please try again later.",
@@ -501,7 +492,6 @@
             "generic": "Something went wrong.",
             "verifyEmail": "This verification link is invalid or has expired.",
             "emailChange": "This email change link is invalid or has expired.",
-            "userInviteMail": "User created, but the invitation email could not be sent.",
             "resetLinkInvalid": "This password reset link is invalid or has expired. Request a new one from the sign-in page.",
             "captcha": "The spam check failed. Please try again.",
             "verificationMail": "Your account was created, but the verification email could not be sent. Request a new one from the sign-in page.",
@@ -511,7 +501,6 @@
         },
         "deleteItem": "Delete this item? This cannot be undone.",
         "deleteRouteWithHistory": "This route has reviews, beta videos or competition results. Deleting it removes them too. Archive it instead to keep them.",
-        "deleteMoreItems": "Delete the selected items? This cannot be undone.",
         "archiveMoreItems": "Archive the selected routes?",
         "updateAvailable": "Update available",
         "releaseNotes": {
@@ -797,7 +786,6 @@
             "notFound": "Page not found - Gripello",
             "routeNamed": "{name} - Gripello",
             "inventory": "Route inventory - Gripello",
-            "reports": "Content reports - Gripello",
             "tasks": "Tasks - Gripello",
             "activity": "Activity log - Gripello",
             "verifyEmail": "Verify email - Gripello",
@@ -805,7 +793,6 @@
             "logbook": "Logbook - Gripello",
             "map": "Gym map - Gripello",
             "mapEditor": "Map editor - Gripello",
-            "mapPlacement": "Place routes - Gripello",
             "scan": "Scan route - Gripello",
             "me": "My account - Gripello",
             "overview": "Overview - Gripello",
@@ -830,7 +817,6 @@
             "users": "Users",
             "dashboard": "Manage routes",
             "inventory": "Route inventory",
-            "reports": "Content reports",
             "activity": "Review recorded account and content activity."
         }
     },
@@ -864,11 +850,7 @@
         "noCommentsHint": "Try other filters or another search term.",
         "editReview": "Edit review",
         "anonymous": "Anonymous",
-        "selected": "{n} selected",
-        "deleteSelected": "Delete {n}",
-        "bulkDeleteTitle": "Delete {n} review? | Delete {n} reviews?",
-        "showing": "Showing {n} of {total} reviews",
-        "select": "Select"
+        "showing": "Showing {n} of {total} reviews"
     },
     "nav": {
         "paletteGroupRoles": "Roles",
@@ -885,7 +867,6 @@
         "themeSystemHint": "Follows your device setting",
         "themeLight": "Light theme",
         "themeDark": "Dark theme",
-        "openMenu": "Open menu",
         "skipToContent": "Skip to content",
         "mainNavigation": "Main navigation",
         "toggleSidebar": "Toggle sidebar",
@@ -908,26 +889,17 @@
         "noStaffTools": "You have no staff tools in this gym"
     },
     "users": {
-        "create": "Add user",
-        "createHint": "The user gets an email to set their password.",
         "edit": "Edit user",
         "title": "Users",
         "delete": "Delete user",
-        "deleteConfirm": "Delete this user? This cannot be undone.",
         "deleteSuccess": "User deleted.",
         "deleteError": "Could not delete the user.",
-        "searchUsers": "Search users…",
-        "role": "Role",
         "noUsers": "No users found",
         "noUsersHint": "Try another search or other filters.",
-        "showing": "Showing {n} of {total} users",
-        "inviteMailNotConfigured": "Email is not configured, so no invitation can be sent. The new user will not be able to sign in.",
-        "emailTaken": "A user with this email already exists.",
         "usernameTaken": "This username is already taken."
     },
     "permissions": {
         "title": "Roles & permissions",
-        "role": "Role",
         "features": {
             "manage_routes": "Manage routes",
             "view_analytics": "View analytics",
@@ -1181,8 +1153,6 @@
         "reviewsUnmatched": "{count} review without a route | {count} reviews without a route"
     },
     "reports": {
-        "title": "Content reports",
-        "subtitle": "Reports submitted under Article 16 of the Digital Services Act.",
         "reportAction": "Report this comment",
         "dialogTitle": "Report content",
         "dialogIntro": "Tell us what is wrong with this content. A person reviews every report.",
@@ -1205,32 +1175,11 @@
         "goodFaith": "I declare in good faith that the information in this report is accurate and complete.",
         "submit": "Submit report",
         "submitted": "Report submitted. We have sent a confirmation to your email.",
-        "snapshot": "Content when reported",
-        "contentUnavailable": "Content no longer available",
-        "notifier": "Reported by",
-        "viewContent": "View content",
-        "filterStatus": "Status",
         "status": {
             "open": "Open",
             "actioned": "Actioned",
             "rejected": "Rejected"
         },
-        "decision": {
-            "content_removed": "Content removed",
-            "content_kept": "Content kept"
-        },
-        "decideTitle": "Record your decision",
-        "decisionReason": "Reason for the decision",
-        "decisionReasonHint": "Kept as the internal record of why this decision was made.",
-        "removeContent": "Remove content",
-        "removeNotAllowed": "You are not allowed to remove this content, or it could not be removed.",
-        "keepContent": "Keep content",
-        "decided": "Decision recorded. The reporter has been notified.",
-        "receiptPending": "Receipt not delivered",
-        "empty": "No reports",
-        "emptyHint": "Reported content will appear here for review.",
-        "mailWarning": "Email is not configured, so reporters are not receiving the confirmations and decision notices required by Article 16.",
-        "mailWarningAction": "Open settings",
         "reportProfile": "Report profile"
     },
     "tasks": {
@@ -1255,7 +1204,6 @@
         "saved": "Task saved.",
         "openRoute": "Open route",
         "addForRoute": "Add task",
-        "loadError": "Tasks could not be loaded.",
         "kinds": {
             "defect": "Defect",
             "wish": "Route wish",
@@ -1345,8 +1293,7 @@
         "assignToMe": "Assign to me",
         "unassigned": "Unassigned",
         "forThisRoute": "For this route",
-        "newSubtitle": "Track work for the setting team",
-        "deletedElsewhere": "This task was deleted."
+        "newSubtitle": "Track work for the setting team"
     },
     "audit": {
         "title": "Activity log",
@@ -1635,8 +1582,6 @@
         "moveUp": "Move up",
         "moveDown": "Move down",
         "wallName": "Name",
-        "drawOutline": "Draw outline",
-        "drawEdge": "Draw climbing edge",
         "placeLabel": "Place label",
         "deleteWall": "Delete wall",
         "shapeKind": "Type",
@@ -1715,7 +1660,6 @@
         }
     },
     "mapPlacement": {
-        "title": "Place routes",
         "noMap": "This location has no map yet.",
         "discard": "Discard",
         "save": "Save ({n})",
@@ -1744,8 +1688,7 @@
         "resetDone": "{n} route archived. | {n} routes archived.",
         "unplacedBanner": "{n} route is not on the map yet. | {n} routes are not on the map yet.",
         "placeThis": "Place on map",
-        "more": "More actions",
-        "routes": "Routes"
+        "more": "More actions"
     },
     "scan": {
         "title": "Scan a route",
@@ -1867,7 +1810,6 @@
         "results": "Results",
         "liveRanking": "Live ranking",
         "freezeMinutes": "Freeze ranking (minutes before end)",
-        "status": "Status",
         "statuses": {
             "draft": "Draft",
             "open": "Open",
@@ -2395,7 +2337,6 @@
             "verified": "Verified",
             "unverified": "Unverified",
             "platformAdmin": "Platform admin",
-            "memberships": "Gym memberships",
             "gym": "Gym",
             "addMembership": "Add",
             "sendPasswordReset": "Send password reset email",
@@ -2427,7 +2368,6 @@
                 "lift": "You can lift the suspension any time under Users."
             },
             "suspendPermanently": "Suspend permanently",
-            "security": "Security",
             "locked": "Locked out",
             "unlock": "Unlock",
             "revokeSessions": "Sign out everywhere",
@@ -2558,7 +2498,6 @@
         },
         "logs": {
             "title": "Server logs",
-            "refresh": "Refresh",
             "runtimeLevel": "Log level",
             "levelChanged": "Log level changed on every server",
             "empty": "No log lines at this level",
@@ -3008,12 +2947,6 @@
             "competition_entry": "Competition name",
             "task": "Defect / wish",
             "route": "Route"
-        },
-        "states": {
-            "unreviewed": "Needs decision",
-            "approved": "Checked",
-            "pending": "Waiting for approval",
-            "hidden": "Hidden"
         },
         "actions": {
             "keep": "Keep visible",

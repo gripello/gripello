@@ -121,7 +121,6 @@ test('inventory may archive and restore routes but not edit them', async ({
 })
 
 test('a report handler without moderation rights cannot remove reported content', async ({
-    api,
     adminApi,
     createRoute,
     testPrefix,
@@ -150,14 +149,11 @@ test('a report handler without moderation rights cannot remove reported content'
 
     // Deleting the content decides its open reports as removed.
     await deleteRoute(adminApi, route.id)
-    await expect
-        .poll(async () => (await findReport(api, reportId))?.status)
-        .toBe('actioned')
-    expect((await findReport(api, reportId))?.decision).toBe('content_removed')
+    await expect.poll(() => findReport(reportId).status).toBe('actioned')
+    expect(findReport(reportId).decision).toBe('content_removed')
 })
 
 test('a decided report keeps its decision and server-owned fields', async ({
-    api,
     adminApi,
     route,
     testPrefix,
@@ -176,16 +172,16 @@ test('a decided report keeps its decision and server-owned fields', async ({
     const item = await openModerationCase(moderator.api, 'rating', rating.id)
 
     await decideModerationCase(moderator.api, item.id, 'approve')
-    const kept = await findReport(api, reportId)
-    expect(kept?.status).toBe('rejected')
-    expect(kept?.decision).toBe('content_kept')
-    expect(kept?.decided_by).toBe(moderator.userId)
-    expect(kept?.decided_at).toBeTruthy()
+    const kept = findReport(reportId)
+    expect(kept.status).toBe('rejected')
+    expect(kept.decision).toBe('content_kept')
+    expect(kept.decided_by).toBe(moderator.userId)
+    expect(kept.decided_at).toBeTruthy()
 
     await decideModerationCase(moderator.api, item.id, 'hide', 'Changed.')
 
-    const stored = await findReport(api, reportId)
-    expect(stored?.decision).toBe('content_kept')
-    expect(stored?.notifier_email).toBe('e2e-reporter@example.com')
-    expect(stored?.content_snapshot).toContain(`${testPrefix}-reported-rating`)
+    const stored = findReport(reportId)
+    expect(stored.decision).toBe('content_kept')
+    expect(stored.notifier_email).toBe('e2e-reporter@example.com')
+    expect(stored.content_snapshot).toContain(`${testPrefix}-reported-rating`)
 })

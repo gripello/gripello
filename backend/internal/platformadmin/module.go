@@ -41,7 +41,6 @@ func Register(app *platform.App) {
 		"GET /platform/stats":                           m.stats,
 		"GET /platform/traffic":                         m.traffic,
 		"GET /platform/system":                          m.system,
-		"GET /platform/features":                        m.features,
 		"PUT /platform/gyms/{id}/features":              m.setFeatures,
 		"POST /platform/admins":                         m.addAdmin,
 		"DELETE /platform/admins/{user}":                m.removeAdmin,
@@ -109,10 +108,6 @@ func (m *module) stats(w http.ResponseWriter, r *http.Request) error {
 		gyms = []gymStats{}
 	}
 	return httpx.Respond(w, http.StatusOK, map[string]any{"gyms": gyms, "totals": totals}, nil)
-}
-
-func (m *module) features(w http.ResponseWriter, r *http.Request) error {
-	return httpx.Respond(w, http.StatusOK, map[string]any{"flags": tenancy.FeatureFlags}, nil)
 }
 
 func (m *module) setFeatures(w http.ResponseWriter, r *http.Request) error {

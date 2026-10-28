@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"gripello/internal/platform/db"
@@ -148,11 +149,35 @@ func TestAdminTruncatePrefixDeletesOnlyPrefixedTestRows(t *testing.T) {
 	if verified || !platformAdmin || suspended {
 		t.Fatalf("after reset: verified %v platform admin %v suspended %v", verified, platformAdmin, suspended)
 	}
-	if _, err := adminDeleteUser(ctx, pool, []string{"--user", keptUser}); err != nil {
+	if err := adminDeleteUser(ctx, pool, []string{"--user", keptUser}); err != nil {
 		t.Fatal(err)
 	}
 	pool.QueryRow(ctx, `SELECT count(*) FROM users`).Scan(&users)
 	if users != 0 {
 		t.Fatalf("%d users left", users)
+	}
+}
+
+func TestAdminShowReportPrintsTheStoredNotice(t *testing.T) {
+	ctx := context.Background()
+	pool := testkit.Pool(t)
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	id := ids.New()
+	if _, err := pool.Exec(ctx, `INSERT INTO reports (id, content_type, content_id, content_url, reason, explanation, notifier_name, notifier_email, good_faith, status)
+		VALUES ($1, 'profile', 'someone', '/climber?id=someone', 'other', 'Rude', 'N', 'n@example.com', true, 'open')`, id); err != nil {
+		t.Fatal(err)
+	}
+	out, err := adminShowReport(ctx, pool, []string{"--id", id})
+	var report struct {
+		Status        string `json:"status"`
+		NotifierEmail string `json:"notifier_email"`
+	}
+	if err != nil || json.Unmarshal([]byte(out), &report) != nil || report.Status != "open" || report.NotifierEmail != "n@example.com" {
+		t.Fatalf("show-report = %s, %v", out, err)
+	}
+	if _, err := adminShowReport(ctx, pool, []string{"--id", "missing"}); err == nil {
+		t.Fatal("show-report of an unknown id succeeded")
 	}
 }

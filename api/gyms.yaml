@@ -467,7 +467,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/SettingsFields'
         - type: object
-          required: [id, created, updated, imprint_url, privacy_url, contact_email, audit_retention_days, legal_name, legal_address, legal_phone, legal_register, legal_vat_id, legal_editorial, legal_representatives, allow_registration, floor_plan, privacy_doc]
+          required: [id, created, updated, imprint_url, privacy_url, contact_email, audit_retention_days, legal_name, legal_address, legal_phone, legal_register, legal_vat_id, legal_editorial, legal_representatives, allow_registration, privacy_doc]
           properties:
             id: { type: string }
             created: { type: string, format: date-time }
@@ -484,7 +484,6 @@ components:
             legal_editorial: { type: string }
             legal_representatives: {}
             allow_registration: { type: boolean }
-            floor_plan: { type: string }
             privacy_doc: { $ref: '#/components/schemas/PrivacyDoc' }
     Permission:
       type: object

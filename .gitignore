@@ -8,9 +8,6 @@ dist
 .nitro
 .output
 
-pb_data/
-pocketbase/
-
 # Environment variables
 .env
 .env.*

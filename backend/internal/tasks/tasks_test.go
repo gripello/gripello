@@ -455,7 +455,6 @@ func TestTaskReadsNeedManageTasks(t *testing.T) {
 	f.call("setterB", "GET", "/gyms/"+f.gymA+"/tasks", "", http.StatusForbidden)
 	f.call("member", "GET", "/tasks/"+id, "", http.StatusForbidden)
 	f.call("climber", "PATCH", "/tasks/"+id, `{"status":"done"}`, http.StatusForbidden)
-	f.call("climber", "DELETE", "/tasks/"+id, "", http.StatusForbidden)
 	got := f.call("setter", "GET", "/tasks/"+id, "", http.StatusOK)
 	expand := got["expand"].(map[string]any)
 	if expand["route"].(map[string]any)["name"] != "Crimp" || expand["reporter"].(map[string]any)["id"] != f.users["climber"] {
@@ -536,11 +535,11 @@ func TestUpdateLocksServerFieldsAndStampsDone(t *testing.T) {
 	if reopened["done_at"] != nil || reopened["done_by"] != "" {
 		t.Errorf("reopened = %v", reopened)
 	}
-	f.call("setter", "POST", "/tasks/"+id+"/assign", `{"assignee":"`+f.users["member"]+`"}`, http.StatusBadRequest)
-	if assigned := f.call("setter", "POST", "/tasks/"+id+"/assign", `{"assignee":"`+f.users["setter2"]+`"}`, http.StatusOK); assigned["assignee"] != f.users["setter2"] {
+	f.call("setter", "PATCH", "/tasks/"+id, `{"assignee":"`+f.users["member"]+`"}`, http.StatusBadRequest)
+	if assigned := f.call("setter", "PATCH", "/tasks/"+id, `{"assignee":"`+f.users["setter2"]+`"}`, http.StatusOK); assigned["assignee"] != f.users["setter2"] {
 		t.Errorf("assigned = %v", assigned)
 	}
-	if cleared := f.call("setter", "POST", "/tasks/"+id+"/assign", `{"assignee":null}`, http.StatusOK); cleared["assignee"] != "" {
+	if cleared := f.call("setter", "PATCH", "/tasks/"+id, `{"assignee":""}`, http.StatusOK); cleared["assignee"] != "" {
 		t.Errorf("unassigned = %v", cleared)
 	}
 	f.call("setter", "PATCH", "/tasks/"+id, `{"wall":"`+f.wallB+`"}`, http.StatusBadRequest)
@@ -559,24 +558,17 @@ func TestDefectChangesReachOpenRouteDefects(t *testing.T) {
 	if got := items(f.call("", "GET", "/gyms/alpha/defects/open?route=other", "", http.StatusOK)); len(got) != 0 {
 		t.Errorf("other route defects = %v", got)
 	}
-	f.call("setter", "DELETE", "/tasks/"+id, "", http.StatusNoContent)
-	var deletion TaskChange
-	if deletes := f.events("task.deleted"); len(deletes) == 1 {
-		json.Unmarshal(deletes[0].Payload, &deletion)
-	}
-	if deletion.Action != "delete" || deletion.Record.ID != id {
-		t.Errorf("task.deleted = %+v", deletion)
-	}
+	f.call("setter", "POST", "/tasks/"+id+"/status", `{"status":"done"}`, http.StatusOK)
 	changes := f.events(KindDefectsChange)
 	if len(changes) != 2 || changes[0].Topic != "open_route_defects:"+f.gymA || string(changes[0].Audience) != `{"public": true}` {
 		t.Fatalf("defect events = %+v", changes)
 	}
-	var created, deleted OpenDefectsChange
+	var created, closed OpenDefectsChange
 	json.Unmarshal(changes[0].Payload, &created)
-	json.Unmarshal(changes[1].Payload, &deleted)
+	json.Unmarshal(changes[1].Payload, &closed)
 	if created.Gym != f.gymA || len(created.Routes) != 1 || len(created.Defects) != 1 || created.Defects[0].ID != id ||
-		len(deleted.Defects) != 0 || deleted.Routes[0] != f.route {
-		t.Errorf("payloads = %+v / %+v", created, deleted)
+		len(closed.Defects) != 0 || closed.Routes[0] != f.route {
+		t.Errorf("payloads = %+v / %+v", created, closed)
 	}
 	f.call("setter", "POST", "/gyms/"+f.gymA+"/tasks", `{"kind":"reset","title":"x"}`, http.StatusCreated)
 	if len(f.events(KindDefectsChange)) != 2 {

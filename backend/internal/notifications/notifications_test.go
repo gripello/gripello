@@ -31,14 +31,14 @@ import (
 
 func TestPrefsDefaultToOn(t *testing.T) {
 	var none prefs
-	if !none.wants(pushChannel, "task_assigned") {
+	if !none.wantsPush("task_assigned") {
 		t.Error("no prefs muted a notification")
 	}
 	p := prefs{"push": {"tasks": false}, "email": {"new_routes": false}}
-	if p.wants(pushChannel, "task_assigned") {
+	if p.wantsPush("task_assigned") {
 		t.Error("muted tasks topic still pushed")
 	}
-	if !p.wants(pushChannel, "report_filed") || !p.wants(pushChannel, "wall_new_routes") || !p.wants(pushChannel, "some_future_type") {
+	if !p.wantsPush("report_filed") || !p.wantsPush("wall_new_routes") || !p.wantsPush("some_future_type") {
 		t.Error("mute leaked into another topic, channel or untyped notification")
 	}
 }
@@ -163,7 +163,7 @@ func (f *fixture) notify(n events.Notify) {
 	}
 }
 
-func (f *fixture) subscribe(user, endpoint string) string {
+func (f *fixture) subscribe(user, endpoint string) {
 	f.t.Helper()
 	key, err := ecdh.P256().GenerateKey(rand.Reader)
 	if err != nil {
@@ -171,7 +171,7 @@ func (f *fixture) subscribe(user, endpoint string) string {
 	}
 	secret := make([]byte, 16)
 	rand.Read(secret)
-	return f.exec(`INSERT INTO push_subscriptions (id, "user", endpoint, p256dh, auth) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+	f.exec(`INSERT INTO push_subscriptions (id, "user", endpoint, p256dh, auth) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
 		ids.New(), f.users[user], endpoint,
 		base64.RawURLEncoding.EncodeToString(key.PublicKey().Bytes()), base64.RawURLEncoding.EncodeToString(secret))
 }

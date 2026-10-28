@@ -9,7 +9,6 @@ import {
     getPlatformUser,
     grantPlatformAdmin,
     liftSuspension,
-    listFeatureFlags,
     listOAuthProviderSettings,
     listPlatformUsers,
     listUserSessions,
@@ -267,12 +266,6 @@ describe('platform stats and features', () => {
         api.respond({ version: 'dev' })
         expect(await getPlatformSystem()).toEqual({ version: 'dev' })
         expect(api.request().url).toBe('/api/platform/system')
-    })
-
-    it('lists the flag registry', async () => {
-        api.respond({ flags: ['beta_links'] })
-        expect(await listFeatureFlags()).toEqual({ flags: ['beta_links'] })
-        expect(api.request().url).toBe('/api/platform/features')
     })
 
     it('replaces the flags of a gym', async () => {

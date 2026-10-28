@@ -21,43 +21,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/gyms/{gym}/reports": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description gym id or slug */
-                gym: components["parameters"]["Gym"];
-            };
-            cookie?: never;
-        };
-        /** @description manage_reports (or platform admin). Newest first. Reports are decided only through moderation decisions. */
-        get: operations["listGymReports"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/platform/reports": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Platform admins. All reports, including those on profiles (no gym). */
-        get: operations["listPlatformReports"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/moderation/summary": {
         parameters: {
             query?: never;
@@ -273,19 +236,6 @@ export interface components {
                 };
             };
         };
-        /** @description One page of reports */
-        ReportPage: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": {
-                    items: components["schemas"]["Report"][];
-                    page: number;
-                    limit: number;
-                };
-            };
-        };
         /** @description Error */
         Error: {
             headers: {
@@ -337,46 +287,6 @@ export interface operations {
             };
             400: components["responses"]["Error"];
             404: components["responses"]["Error"];
-        };
-    };
-    listGymReports: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["ReportStatus"];
-                page?: components["parameters"]["Page"];
-                limit?: components["parameters"]["Limit"];
-            };
-            header?: never;
-            path: {
-                /** @description gym id or slug */
-                gym: components["parameters"]["Gym"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: components["responses"]["ReportPage"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            404: components["responses"]["Error"];
-        };
-    };
-    listPlatformReports: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["ReportStatus"];
-                page?: components["parameters"]["Page"];
-                limit?: components["parameters"]["Limit"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: components["responses"]["ReportPage"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
         };
     };
     moderationSummary: {

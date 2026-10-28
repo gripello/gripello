@@ -225,10 +225,6 @@ export function updateCompetitionEntry(id: string, patch: EntryInput) {
     )
 }
 
-export function deleteCompetitionEntry(id: string) {
-    return remove(`/competition-entries/${id}`)
-}
-
 export function listCompetitionScores(
     competitionId: string,
     query: CompetitionScoreQuery = {},
@@ -250,10 +246,6 @@ export async function upsertCompetitionScores(
             { scores },
         )
     ).items
-}
-
-export function deleteCompetitionScore(id: string) {
-    return remove(`/competition-scores/${id}`)
 }
 
 export function getCompetitionStandings(

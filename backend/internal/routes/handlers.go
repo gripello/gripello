@@ -491,18 +491,6 @@ func (m *module) listWalls(w http.ResponseWriter, r *http.Request) error {
 	return httpx.Respond(w, http.StatusOK, map[string]any{"items": walls}, nil)
 }
 
-func (m *module) postWall(w http.ResponseWriter, r *http.Request) error {
-	return m.createInGym(w, r, func(ctx context.Context, gym string, p patch) (any, error) { return m.createWall(ctx, gym, p) })
-}
-
-func (m *module) patchWall(w http.ResponseWriter, r *http.Request) error {
-	return m.patchByID(w, r, func(ctx context.Context, id string, p patch) (any, error) { return m.updateWall(ctx, id, p) })
-}
-
-func (m *module) deleteWallHandler(w http.ResponseWriter, r *http.Request) error {
-	return httpx.NoContent(w, m.deleteWall(r.Context(), r.PathValue("id")))
-}
-
 func (m *module) createInGym(w http.ResponseWriter, r *http.Request, create func(context.Context, string, patch) (any, error)) error {
 	gym, err := tenancy.ResolveGym(r.Context(), m.app.DB, r.PathValue("gym"))
 	if err != nil {

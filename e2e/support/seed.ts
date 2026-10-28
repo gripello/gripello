@@ -47,10 +47,6 @@ export function ensureGym() {
     )
 }
 
-export async function getRoleIds(): Promise<Record<string, string>> {
-    return { admin: 'admin', routesetter: 'routesetter' }
-}
-
 export async function setMembership(
     userId: string,
     roleId: string | undefined,

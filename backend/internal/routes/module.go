@@ -36,9 +36,6 @@ func Register(app *platform.App) {
 		"PUT /locations/{id}/map-trace":      m.putMapTrace,
 		"DELETE /locations/{id}/map-trace":   m.deleteMapTrace,
 		"GET /gyms/{gym}/walls":              m.listWalls,
-		"POST /gyms/{gym}/walls":             m.postWall,
-		"PATCH /walls/{id}":                  m.patchWall,
-		"DELETE /walls/{id}":                 m.deleteWallHandler,
 	} {
 		app.Handle(pattern, handler)
 	}

@@ -329,7 +329,7 @@ const panZoom = useSvgPanZoom({
     canStartPan: (event) =>
         !(event.target as Element).closest('[data-draggable]'),
 })
-const { pixelsPerUnit, toMap, fitAll, zoomBy } = panZoom
+const { pixelsPerUnit, fitAll, zoomBy } = panZoom
 const coarsePointer = useCoarsePointer()
 const pointerKind = computed(() => (coarsePointer.value ? 'coarse' : 'fine'))
 const snapPx = computed(() => SNAP_PX[pointerKind.value])

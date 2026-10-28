@@ -533,8 +533,6 @@ func TestScoring(t *testing.T) {
 	}
 	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
 	f.call("climber", "PUT", "/competitions/"+id+"/scores", `{"scores":[{"entry":"`+mine+`","comp_route":"`+route1+`","top_attempt":1}]}`, http.StatusBadRequest)
-	f.call("climber", "DELETE", "/competition-scores/"+saved[0].(map[string]any)["id"].(string), "", http.StatusForbidden)
-	f.call("manager", "DELETE", "/competition-scores/"+saved[0].(map[string]any)["id"].(string), "", http.StatusNoContent)
 }
 
 func TestJudgeOnlyFormat(t *testing.T) {
@@ -805,21 +803,12 @@ func TestChangeAudiences(t *testing.T) {
 	}
 }
 
-func TestOwnerCannotDeleteADisqualifiedOrScoredEntry(t *testing.T) {
+func TestDisqualifiedClimberCannotRegisterAgain(t *testing.T) {
 	f := newFixture(t)
-	id, category, route1, _ := f.competition("")
+	id, category, _, _ := f.competition("")
 	disqualified := f.register("climber", id, category, "")
 	f.call("manager", "PATCH", "/competition-entries/"+disqualified, `{"status":"disqualified"}`, http.StatusOK)
-	f.call("climber", "DELETE", "/competition-entries/"+disqualified, "", http.StatusForbidden)
 	f.call("climber", "POST", "/competitions/"+id+"/entries", `{"category":"`+category+`","display_name":"C","birth_year":1990}`, http.StatusBadRequest)
-
-	scored := f.register("other", id, category, "")
-	f.call("other", "PUT", "/competitions/"+id+"/scores", `{"scores":[{"entry":"`+scored+`","comp_route":"`+route1+`","top_attempt":1}]}`, http.StatusOK)
-	f.call("other", "DELETE", "/competition-entries/"+scored, "", http.StatusForbidden)
-	f.call("manager", "DELETE", "/competition-entries/"+scored, "", http.StatusNoContent)
-	if got := f.events(TopicEntryDeleted); len(got) != 1 {
-		t.Errorf("entry.deleted events = %d", len(got))
-	}
 }
 
 func TestClimberCannotOverwriteAJudgesScore(t *testing.T) {
@@ -1032,13 +1021,12 @@ func TestStaffScoringStopsOncePublished(t *testing.T) {
 	entry := f.register("climber", id, category, "")
 	score := `{"scores":[{"entry":"` + entry + `","comp_route":"` + route1 + `","top_attempt":1}]}`
 	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
-	saved := items(f.call("judge", "PUT", "/competitions/"+id+"/scores", score, http.StatusOK))
+	f.call("judge", "PUT", "/competitions/"+id+"/scores", score, http.StatusOK)
 	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"draft"}`, http.StatusOK)
 	f.call("manager", "PUT", "/competitions/"+id+"/scores", score, http.StatusBadRequest)
 	f.call("manager", "PATCH", "/competitions/"+id, `{"status":"closed"}`, http.StatusOK)
 	f.call("manager", "POST", "/competitions/"+id+"/publish", "", http.StatusOK)
 	f.call("judge", "PUT", "/competitions/"+id+"/scores", score, http.StatusBadRequest)
-	f.call("manager", "DELETE", "/competition-scores/"+saved[0].(map[string]any)["id"].(string), "", http.StatusBadRequest)
 }
 
 func TestJudgeScoresTheirOwnEntryAsAClimber(t *testing.T) {

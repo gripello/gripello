@@ -71,9 +71,9 @@ func (f *fixture) user(name, gym string, permissions ...string) {
 	f.users[name], f.tokens[name] = id, token
 }
 
-func (f *fixture) follow(follower, followee, status string) {
+func (f *fixture) follow(follower, status string) {
 	f.t.Helper()
-	f.exec(`INSERT INTO follows (id, follower, followee, status) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), f.users[follower], f.users[followee], status)
+	f.exec(`INSERT INTO follows (id, follower, followee, status) VALUES ($1, $2, $3, $4) RETURNING id`, ids.New(), f.users[follower], f.users["climber"], status)
 }
 
 func (f *fixture) boulder(hall, grade string, index float64) string {
@@ -290,8 +290,8 @@ func TestFeedShowsAcceptedFollowsOnly(t *testing.T) {
 	routeA, routeB := f.boulder(f.hallA, "6A", 15.7), f.boulder(f.hallB, "7A", 18.5)
 	f.tick("climber", routeA, "top", time.Now().Add(-time.Hour))
 	f.tick("climber", routeB, "flash", time.Now())
-	f.follow("friend", "climber", "accepted")
-	f.follow("stranger", "climber", "pending")
+	f.follow("friend", "accepted")
+	f.follow("stranger", "pending")
 
 	var page httpx.PageOf[Tick]
 	json.Unmarshal([]byte(f.call("friend", "GET", "/me/feed", "", http.StatusOK)), &page)
@@ -319,8 +319,8 @@ func TestHiddenGymTicksStayWithItsMembers(t *testing.T) {
 	routeA, routeB := f.boulder(f.hallA, "6A", 15.7), f.boulder(f.hallB, "7A", 18.5)
 	f.tick("climber", routeA, "top", time.Now().Add(-time.Hour))
 	f.tick("climber", routeB, "top", time.Now())
-	f.follow("friend", "climber", "accepted")
-	f.follow("memberA", "climber", "accepted")
+	f.follow("friend", "accepted")
+	f.follow("memberA", "accepted")
 	f.exec(`UPDATE gyms SET hidden = true WHERE id = $1 RETURNING id`, f.gymA)
 
 	f.call("friend", "GET", "/me/feed?total=true", "", http.StatusOK, `"total":1`, `"route":"`+routeB+`"`)

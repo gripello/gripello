@@ -231,9 +231,9 @@ func rowOf(board leaderboardBoard, user string) *leaderboardRow {
 	return nil
 }
 
-func (f *fixture) waitForRow(kind, user string, matches func(*leaderboardRow) bool) {
+func (f *fixture) waitForRow(matches func(*leaderboardRow) bool) {
 	f.t.Helper()
-	testapp.WaitFor(f.t, func() bool { return matches(rowOf(f.liveBoard(kind), f.users[user])) })
+	testapp.WaitFor(f.t, func() bool { return matches(rowOf(f.liveBoard("boulder"), f.users["climber"])) })
 }
 
 func TestASendShowsWithoutReloadingTheBoard(t *testing.T) {
@@ -245,7 +245,7 @@ func TestASendShowsWithoutReloadingTheBoard(t *testing.T) {
 	loaded := f.loadedAt("boulder")
 
 	f.tick("climber", route, "flash", time.Now())
-	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Score == 1850+leaderboardFlashBonus })
+	f.waitForRow(func(row *leaderboardRow) bool { return row != nil && row.Score == 1850+leaderboardFlashBonus })
 	if !f.loadedAt("boulder").Equal(loaded) {
 		t.Fatal("the send reloaded the whole board")
 	}
@@ -261,13 +261,13 @@ func TestUpdatingOrDeletingATickRefreshesItsPair(t *testing.T) {
 	f.liveBoard("boulder")
 
 	f.call("climber", "PATCH", "/ticks/"+easy.ID, `{"type":"flash"}`, http.StatusOK)
-	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Score == 1850+leaderboardFlashBonus })
+	f.waitForRow(func(row *leaderboardRow) bool { return row != nil && row.Score == 1850+leaderboardFlashBonus })
 	f.call("climber", "DELETE", "/ticks/"+hard.ID, "", http.StatusNoContent)
-	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool {
+	f.waitForRow(func(row *leaderboardRow) bool {
 		return row != nil && row.Score == 1570+leaderboardFlashBonus && row.Hardest == "6A"
 	})
 	f.call("climber", "PATCH", "/ticks/"+easy.ID, `{"date":"`+time.Now().AddDate(0, 0, -90).UTC().Format(time.DateOnly)+`"}`, http.StatusOK)
-	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row == nil })
+	f.waitForRow(func(row *leaderboardRow) bool { return row == nil })
 }
 
 func TestChangesDuringALoadAreReplayed(t *testing.T) {
@@ -292,7 +292,7 @@ func TestChangesDuringALoadAreReplayed(t *testing.T) {
 	if err := f.module.loadBoard(failing, b); err == nil {
 		t.Fatal("want the cancelled load to fail")
 	}
-	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Score == 1850 })
+	f.waitForRow(func(row *leaderboardRow) bool { return row != nil && row.Score == 1850 })
 }
 
 func TestOptOutsAndDeletedClimbersLeaveLiveBoards(t *testing.T) {
@@ -308,14 +308,14 @@ func TestOptOutsAndDeletedClimbersLeaveLiveBoards(t *testing.T) {
 	for _, field := range []string{"leaderboard_hidden", "ticks_private"} {
 		f.exec(`UPDATE users SET `+field+` = true WHERE id = $1 RETURNING id`, climber)
 		publishUserUpdate(t, f, climber, []string{field})
-		f.waitForRow("boulder", "climber", absent)
+		f.waitForRow(absent)
 		f.exec(`UPDATE users SET `+field+` = false WHERE id = $1 RETURNING id`, climber)
 		publishUserUpdate(t, f, climber, []string{field})
-		f.waitForRow("boulder", "climber", present)
+		f.waitForRow(present)
 	}
 	f.exec(`UPDATE users SET firstname = 'Cleo', name = 'Climber' WHERE id = $1 RETURNING id`, climber)
 	publishUserUpdate(t, f, climber, []string{"firstname", "name"})
-	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Name == "Cleo C." })
+	f.waitForRow(func(row *leaderboardRow) bool { return row != nil && row.Name == "Cleo C." })
 
 	f.exec(`DELETE FROM users WHERE id = $1 RETURNING id`, climber)
 	err := pgx.BeginFunc(context.Background(), f.app.DB, func(tx pgx.Tx) error {
@@ -324,7 +324,7 @@ func TestOptOutsAndDeletedClimbersLeaveLiveBoards(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.waitForRow("boulder", "climber", absent)
+	f.waitForRow(absent)
 }
 
 type comparableBoard struct {
@@ -474,7 +474,7 @@ func TestCorrectedRouteGradeReachesTicksAndTheLeaderboard(t *testing.T) {
 	f := newFixture(t)
 	route := f.boulder(f.hallA, "8A", 25.1)
 	f.tick("climber", route, "top", time.Now())
-	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Score == 2510 })
+	f.waitForRow(func(row *leaderboardRow) bool { return row != nil && row.Score == 2510 })
 
 	f.exec(`UPDATE routes SET grade = '6A', grade_index = 15.7 WHERE id = $1 RETURNING id`, route)
 	err := pgx.BeginFunc(context.Background(), f.app.DB, func(tx pgx.Tx) error {
@@ -493,7 +493,7 @@ func TestCorrectedRouteGradeReachesTicksAndTheLeaderboard(t *testing.T) {
 	if err := f.app.Workers[routeGradesJob](context.Background(), jobs.Job{Kind: routeGradesJob, Key: route}); err != nil {
 		t.Fatal(err)
 	}
-	f.waitForRow("boulder", "climber", func(row *leaderboardRow) bool { return row != nil && row.Score == 1570 })
+	f.waitForRow(func(row *leaderboardRow) bool { return row != nil && row.Score == 1570 })
 	f.call("climber", "GET", "/me/ticks", "", http.StatusOK, `"grade":"6A"`, `"grade_index":15.7`)
 	if updates := f.outbox(TopicOwnTicks); len(updates) != 2 || updates[1].Kind != "tick.updated" {
 		t.Errorf("own_ticks events = %d", len(updates))

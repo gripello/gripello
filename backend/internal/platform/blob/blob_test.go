@@ -161,7 +161,7 @@ func TestServeFilePublicWithThumbAndETag(t *testing.T) {
 	}
 }
 
-func requestToken(t *testing.T, s *Store, secret, userID, table, id string) (int, string) {
+func requestToken(s *Store, secret, userID, table, id string) (int, string) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/files/token", strings.NewReader(`{"table":"`+table+`","id":"`+id+`"}`))
 	if userID != "" {
@@ -186,27 +186,27 @@ func TestProtectedFilesNeedATokenForThatRecord(t *testing.T) {
 	if code := get("t1", ""); code != http.StatusNotFound {
 		t.Errorf("no token = %d", code)
 	}
-	if code, _ := requestToken(t, s, "secret", "", "tasks", "t1"); code != http.StatusUnauthorized {
+	if code, _ := requestToken(s, "secret", "", "tasks", "t1"); code != http.StatusUnauthorized {
 		t.Errorf("guest token = %d", code)
 	}
-	if code, _ := requestToken(t, s, "secret", "climber", "tasks", "t1"); code != http.StatusNotFound {
+	if code, _ := requestToken(s, "secret", "climber", "tasks", "t1"); code != http.StatusNotFound {
 		t.Errorf("token for a record the caller can't view = %d", code)
 	}
-	if code, _ := requestToken(t, s, "secret", "climber", "gyms", "g1"); code != http.StatusOK {
+	if code, _ := requestToken(s, "secret", "climber", "gyms", "g1"); code != http.StatusOK {
 		t.Errorf("token for a public table = %d", code)
 	}
-	_, token := requestToken(t, s, "secret", "staff", "tasks", "t1")
+	_, token := requestToken(s, "secret", "staff", "tasks", "t1")
 	if code := get("t1", token); code != http.StatusOK {
 		t.Errorf("valid token = %d", code)
 	}
 	if code := get("t2", token); code != http.StatusNotFound {
 		t.Errorf("token reused for another record = %d", code)
 	}
-	if _, forged := requestToken(t, s, "other-secret", "staff", "tasks", "t1"); forged == "" || get("t1", forged) != http.StatusNotFound {
+	if _, forged := requestToken(s, "other-secret", "staff", "tasks", "t1"); forged == "" || get("t1", forged) != http.StatusNotFound {
 		t.Error("token signed with another secret accepted")
 	}
 	s.MayView = nil
-	if code, _ := requestToken(t, s, "secret", "staff", "tasks", "t1"); code != http.StatusNotFound {
+	if code, _ := requestToken(s, "secret", "staff", "tasks", "t1"); code != http.StatusNotFound {
 		t.Errorf("protected token without a view rule = %d", code)
 	}
 }
@@ -395,7 +395,7 @@ func TestPrivateTablesAreNeverServed(t *testing.T) {
 	s, _ := newStore(t)
 	s.Put(context.Background(), "account_exports/e1/data_abc.zip", bytes.NewReader([]byte("PK")))
 	m := mux(s)
-	_, token := requestToken(t, s, "secret", "staff", "account_exports", "e1")
+	_, token := requestToken(s, "secret", "staff", "account_exports", "e1")
 	for _, target := range []string{"/files/account_exports/e1/data_abc.zip", "/files/account_exports/e1/data_abc.zip?token=" + token} {
 		rec := httptest.NewRecorder()
 		m.ServeHTTP(rec, httptest.NewRequest("GET", target, nil))

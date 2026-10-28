@@ -4,7 +4,7 @@ import {
     createRoute,
     deleteLocation,
     deleteRoute,
-    deleteWall,
+    deleteWalls,
     saveFloorPlan,
     type Api,
 } from './api'
@@ -103,8 +103,9 @@ export async function seedMap(
         routeIds,
         cleanup: async () => {
             for (const id of routeIds) await deleteRoute(api, id).catch(ignore)
-            for (const id of [north.id, island.id])
-                await deleteWall(api, id).catch(ignore)
+            await deleteWalls(api, location.id, [north.id, island.id]).catch(
+                ignore,
+            )
             await deleteLocation(api, location.id).catch(ignore)
         },
     }

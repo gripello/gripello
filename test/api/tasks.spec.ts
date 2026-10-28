@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
-    assignTask,
     createTask,
-    deleteTask,
     getTask,
     listOpenDefects,
     listRouteDefects,
@@ -93,15 +91,7 @@ describe('task mutations', () => {
         })
     })
 
-    it('assigns, unassigns and changes the status', async () => {
-        await assignTask('t1', 'u1')
-        expect(api.request()).toMatchObject({
-            url: '/api/tasks/t1/assign',
-            method: 'POST',
-            body: { assignee: 'u1' },
-        })
-        await assignTask('t1', null)
-        expect(api.request().body).toEqual({ assignee: null })
+    it('changes the status', async () => {
         await setTaskStatus('t1', 'done', 'Tightened')
         expect(api.request()).toMatchObject({
             url: '/api/tasks/t1/status',
@@ -110,14 +100,6 @@ describe('task mutations', () => {
         })
         await setTaskStatus('t1', 'open')
         expect(api.request().body).toEqual({ status: 'open' })
-    })
-
-    it('deletes a task', async () => {
-        await deleteTask('t1')
-        expect(api.request()).toMatchObject({
-            url: '/api/tasks/t1',
-            method: 'DELETE',
-        })
     })
 })
 

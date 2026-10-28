@@ -53,7 +53,7 @@ type TaskChange struct {
 	Record Task   `json:"record"`
 }
 
-var taskChangeKinds = map[string]string{"create": "task.created", "update": "task.updated", "delete": "task.deleted"}
+var taskChangeKinds = map[string]string{"create": "task.created", "update": "task.updated"}
 
 // publishTaskChange feeds both the staff task board (live) and the audit log (prefix "tasks:").
 func publishTaskChange(ctx context.Context, tx pgx.Tx, action string, t Task) error {
