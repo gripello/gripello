@@ -345,16 +345,8 @@ export function fileReport(
         good_faith: true,
     })
 }
-export async function listReports(api: Api, query: Query = {}, gym?: string) {
-    return (
-        await api.get<Page<ReportRecord>>(
-            gym ? `/gyms/${gym}/reports` : '/platform/reports',
-            { limit: 200, ...query },
-        )
-    ).items
-}
-export async function findReport(api: Api, id: string, gym?: string) {
-    return (await listReports(api, {}, gym)).find((report) => report.id === id)
+export function findReport(id: string): ReportRecord {
+    return JSON.parse(gripelloAdmin('show-report', '--id', id))
 }
 
 export async function listModerationCases(api: Api, query: Query = {}) {

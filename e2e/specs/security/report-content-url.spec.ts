@@ -6,7 +6,6 @@ for (const contentUrl of [
     'https://phishing.example/login',
 ]) {
     test(`a report cannot choose its own content link: ${contentUrl}`, async ({
-        api,
         route,
         testPrefix,
     }) => {
@@ -21,7 +20,7 @@ for (const contentUrl of [
             good_faith: true,
         })
 
-        const stored = await findReport(api, id)
-        expect(stored?.content_url).toBe(`/route?id=${route.id}`)
+        const stored = findReport(id)
+        expect(stored.content_url).toBe(`/route?id=${route.id}`)
     })
 }

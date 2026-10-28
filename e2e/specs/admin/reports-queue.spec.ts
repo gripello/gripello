@@ -1,7 +1,11 @@
 import { test, expect } from '../../support/fixtures'
 import { apiOf, gotoSettled } from '../../support/nav'
 import { E2E_GYM_SLUG } from '../../support/seed'
-import { findReport, listReports, listRouteRatings } from '../../support/api'
+import {
+    findReport,
+    listModerationCases,
+    listRouteRatings,
+} from '../../support/api'
 import { createComment } from '../../support/comments'
 import { createReport } from '../../support/reports'
 import { decide, openCase } from '../../support/moderation'
@@ -47,12 +51,7 @@ test('hiding a reported comment closes the report', async ({
     await openCase(page, `${testPrefix}-remove-me`)
     await decide(page, 'hide', 'Breaches the rules.')
 
-    await expect
-        .poll(
-            async () =>
-                (await findReport(adminApi, reportId, E2E_GYM_SLUG))?.status,
-        )
-        .toBe('actioned')
+    await expect.poll(() => findReport(reportId).status).toBe('actioned')
     const ratings = await listRouteRatings(adminApi, route.id)
     expect(ratings.map((rating) => rating.id)).not.toContain(commentId)
 })
@@ -77,12 +76,7 @@ test('keeping a reported comment rejects the report and leaves it in place', asy
     await openCase(page, `${testPrefix}-keep-me`)
     await decide(page, 'approve')
 
-    await expect
-        .poll(
-            async () =>
-                (await findReport(adminApi, reportId, E2E_GYM_SLUG))?.status,
-        )
-        .toBe('rejected')
+    await expect.poll(() => findReport(reportId).status).toBe('rejected')
     const ratings = await listRouteRatings(adminApi, route.id)
     expect(ratings.map((rating) => rating.id)).toContain(commentId)
 })
@@ -94,6 +88,6 @@ test('a user without moderation rights cannot reach the inbox or reports', async
     await page.waitForURL((url) => !url.pathname.endsWith('/manage/moderation'))
 
     await expect(
-        listReports(await apiOf(page), {}, E2E_GYM_SLUG),
+        listModerationCases(await apiOf(page), { gym: E2E_GYM_SLUG }),
     ).rejects.toMatchObject({ status: 403 })
 })

@@ -29,7 +29,7 @@ import (
 	pw "gripello/internal/platform/password"
 )
 
-const adminUsage = "usage: gripello admin create-user|set-user|delete-user|create-gym|add-membership|create-notification|truncate-prefix|restore [flags]"
+const adminUsage = "usage: gripello admin create-user|set-user|delete-user|create-gym|add-membership|create-notification|show-report|truncate-prefix|restore [flags]"
 
 func admin(ctx context.Context, args []string) error {
 	if len(args) == 0 {
@@ -61,6 +61,8 @@ func admin(ctx context.Context, args []string) error {
 		err = adminDeleteUser(ctx, pool, args[1:])
 	case "create-notification":
 		id, err = adminCreateNotification(ctx, pool, args[1:])
+	case "show-report":
+		id, err = adminShowReport(ctx, pool, args[1:])
 	case "truncate-prefix":
 		id, err = adminTruncatePrefix(ctx, pool, args[1:])
 	default:
@@ -260,6 +262,18 @@ var truncatePrefixStatements = []string{
 	`DELETE FROM memberships WHERE "user" IN (SELECT id FROM prefixed_users) OR role IN (SELECT id FROM roles WHERE name LIKE $1)`,
 	`DELETE FROM users WHERE id IN (SELECT id FROM prefixed_users)`,
 	`DELETE FROM roles WHERE name LIKE $1`,
+}
+
+func adminShowReport(ctx context.Context, pool *pgxpool.Pool, args []string) (string, error) {
+	fs := flag.NewFlagSet("show-report", flag.ExitOnError)
+	id := fs.String("id", "", "report id")
+	fs.Parse(args)
+	if *id == "" {
+		return "", errors.New("show-report needs --id")
+	}
+	var record string
+	err := pool.QueryRow(ctx, `SELECT to_jsonb(r)::text FROM reports r WHERE id = $1`, *id).Scan(&record)
+	return record, err
 }
 
 func adminTruncatePrefix(ctx context.Context, pool *pgxpool.Pool, args []string) (string, error) {

@@ -103,16 +103,14 @@ test('going back or reloading after a decision does not decide again', async ({
     await gotoSettled(adminPage, '/manage/routes')
     await openCase(adminPage, text)
     await decide(adminPage, 'approve')
-    await expect
-        .poll(async () => (await findReport(api, reportId))?.status)
-        .toBe('rejected')
-    const decidedAt = (await findReport(api, reportId))?.decided_at
+    await expect.poll(() => findReport(reportId).status).toBe('rejected')
+    const decidedAt = findReport(reportId).decided_at
 
     await adminPage.goBack()
     await reloadSettled(adminPage)
     await adminPage.goForward()
     await reloadSettled(adminPage)
-    expect((await findReport(api, reportId))?.decided_at).toBe(decidedAt)
+    expect(findReport(reportId).decided_at).toBe(decidedAt)
     expect((await caseFor(api, text)).state).toBe('approved')
 })
 

@@ -19,7 +19,6 @@ const toasts = (page: import('@playwright/test').Page) =>
 test('two moderators hiding the same case at once decide it only once', async ({
     adminPage,
     setterPage,
-    api,
     route,
     createUser,
     pageAs,
@@ -57,7 +56,7 @@ test('two moderators hiding the same case at once decide it only once', async ({
     await expect.poll(messages).toMatch(/Hidden/)
     await expect.poll(messages).toMatch(/decided elsewhere/i)
 
-    expect((await findReport(api, reportId))?.status).toBe('actioned')
+    expect(findReport(reportId).status).toBe('actioned')
     await waitForMail(adminPage, notifier, { subject: /decision/i })
     await waitForMail(adminPage, author.email, { subject: /hidden/i })
     await expect.poll(() => mailCount(adminPage, notifier)).toBe(2)
