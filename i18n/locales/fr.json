@@ -1760,6 +1760,7 @@
             "install": "Installez d'abord l'application",
             "unsupported": "Non disponible dans ce navigateur",
             "blocked": "Les notifications sont bloquées dans les paramètres de votre navigateur.",
+            "refused": "Votre navigateur n'autorise pas les notifications push pour ce site.",
             "followedWalls": "Murs suivis",
             "sendTest": "Envoyer une notification de test",
             "testSent": "Notification de test envoyée",

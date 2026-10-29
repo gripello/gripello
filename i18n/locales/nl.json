@@ -1760,6 +1760,7 @@
             "install": "Installeer eerst de app",
             "unsupported": "Niet beschikbaar in deze browser",
             "blocked": "Meldingen zijn geblokkeerd in je browserinstellingen.",
+            "refused": "Je browser staat geen pushmeldingen toe voor deze site.",
             "followedWalls": "Gevolgde wanden",
             "sendTest": "Testmelding sturen",
             "testSent": "Testmelding verstuurd",

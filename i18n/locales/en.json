@@ -1760,6 +1760,7 @@
             "install": "Install the app first",
             "unsupported": "Not available in this browser",
             "blocked": "Notifications are blocked in your browser settings.",
+            "refused": "Your browser doesn't allow push notifications for this site.",
             "followedWalls": "Followed walls",
             "sendTest": "Send test notification",
             "testSent": "Test notification sent",

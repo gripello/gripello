@@ -58,6 +58,10 @@ export function isMobileDevice(label: string) {
     return /iPhone|iPad|Android/.test(label)
 }
 
+// The browser refuses the push subscription despite granted notifications (e.g. Brave without Google push services).
+export const isPushRefused = (error: unknown) =>
+    (error as { name?: string } | null)?.name === 'NotAllowedError'
+
 export function urlBase64ToUint8Array(base64: string) {
     const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4))
         .replace(/-/g, '+')

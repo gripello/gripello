@@ -182,7 +182,7 @@ import {
     withTopic,
     type NotificationPrefs,
 } from '~/utils/notificationPrefs'
-import { isMobileDevice } from '~/utils/push'
+import { isMobileDevice, isPushRefused } from '~/utils/push'
 import type {
     PushSubscriptionRecord,
     UserRecord,
@@ -256,6 +256,8 @@ async function addThisDevice() {
         if (!(await push.addThisDevice()))
             notifyError(t('accountSettings.push.blocked'))
     } catch (err) {
+        if (isPushRefused(err))
+            return notifyError(t('accountSettings.push.refused'))
         console.error('Push subscription failed:', err)
         notifyError(t('notifications.error.edit'))
         globalThis.reportError?.(err)
