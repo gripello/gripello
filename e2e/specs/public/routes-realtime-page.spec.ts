@@ -15,13 +15,9 @@ test('a route change elsewhere keeps the visitor on their page', async ({
     await page.getByRole('button', { name: /next page/i }).click()
     await expect(range).toContainText(/^\s*21\D.*\b25\s*$/)
 
-    const reload = page.waitForResponse(
-        (response) =>
-            /\/api\/gyms\/[^/]+\/routes$/.test(
-                new URL(response.url()).pathname,
-            ) && response.request().method() === 'GET',
-    )
     await createRoute()
-    await reload
-    await expect(range).toContainText(/^\s*21\D.*\b26\s*$/)
+    // the live list refetch is spread over 5–10 s
+    await expect(range).toContainText(/^\s*21\D.*\b26\s*$/, {
+        timeout: 15_000,
+    })
 })
