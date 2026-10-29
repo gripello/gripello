@@ -1760,6 +1760,7 @@
             "install": "Instala primero la app",
             "unsupported": "No disponible en este navegador",
             "blocked": "Las notificaciones están bloqueadas en los ajustes de tu navegador.",
+            "refused": "Tu navegador no permite notificaciones push para este sitio.",
             "followedWalls": "Paredes que sigues",
             "sendTest": "Enviar notificación de prueba",
             "testSent": "Notificación de prueba enviada",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+    isPushRefused,
     applyDeviceEvent,
     deviceLabel,
     isMobileDevice,
@@ -176,5 +177,20 @@ describe('pushReady', () => {
                 'Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/149.0 Mobile Safari/537.36 GripelloApp',
             ),
         ).toBe('Gripello app · Android')
+    })
+})
+
+describe('isPushRefused', () => {
+    it('recognises the browser refusing the push subscription', () => {
+        expect(
+            isPushRefused(
+                new DOMException(
+                    'Registration failed - permission denied',
+                    'NotAllowedError',
+                ),
+            ),
+        ).toBe(true)
+        expect(isPushRefused(new Error('boom'))).toBe(false)
+        expect(isPushRefused(null)).toBe(false)
     })
 })

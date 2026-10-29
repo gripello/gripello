@@ -122,6 +122,7 @@ import { timeAgo } from '#shared/utils/formatting'
 import type { RecordChange } from '~/composables/useRealtime'
 import type { NotificationRecord } from '~/types/models'
 import { notificationLabelKey } from '~/utils/notificationLabel'
+import { isPushRefused } from '~/utils/push'
 
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
@@ -156,6 +157,8 @@ async function turnOnPush() {
     try {
         if (!(await turnOn())) notifyError(t('accountSettings.push.blocked'))
     } catch (err) {
+        if (isPushRefused(err))
+            return notifyError(t('accountSettings.push.refused'))
         console.error('Push subscription failed:', err)
         notifyError(t('notifications.error.edit'))
         globalThis.reportError?.(err)

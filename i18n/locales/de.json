@@ -1760,6 +1760,7 @@
             "install": "Zuerst die App installieren",
             "unsupported": "In diesem Browser nicht verfügbar",
             "blocked": "Benachrichtigungen sind in den Browser-Einstellungen blockiert.",
+            "refused": "Dein Browser lässt keine Push-Benachrichtigungen für diese Seite zu.",
             "followedWalls": "Gefolgte Wände",
             "sendTest": "Testbenachrichtigung senden",
             "testSent": "Testbenachrichtigung gesendet",
