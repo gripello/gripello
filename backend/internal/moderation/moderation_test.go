@@ -14,10 +14,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"gripello/internal/platform"
-	"gripello/internal/platform/climbers"
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
-	"gripello/internal/platform/tenancy"
 	"gripello/internal/platform/testapp"
 )
 
@@ -665,14 +663,13 @@ func TestEditingAHiddenProfileIsReHidden(t *testing.T) {
 	if state := f.item("profile", f.users["climber"]).State; state != "hidden" {
 		t.Fatalf("hiding reopened the case: %s", state)
 	}
-	f.exec(`UPDATE users SET firstname = 'Ruder' WHERE id = $1 RETURNING id`, f.users["climber"])
-	payload, _ := json.Marshal(map[string]any{"record": map[string]string{"id": f.users["climber"]}, "changed": []string{"firstname"}})
-	(&module{app: f.app, perms: tenancy.New(f.app.DB), climbers: climbers.New(f.app.DB)}).onUser(events.Event{Kind: "user.updated", Payload: payload})
-	var firstname string
-	f.app.DB.QueryRow(context.Background(), `SELECT firstname FROM users WHERE id = $1`, f.users["climber"]).Scan(&firstname)
-	if firstname != "" {
-		t.Fatal("the edited hidden profile was not re-hidden")
-	}
+	climber := f.users["climber"]
+	f.exec(`UPDATE users SET firstname = 'Ruder' WHERE id = $1 RETURNING id`, climber)
+	f.publish("user:"+climber, "user.updated", map[string]any{"record": map[string]string{"id": climber}, "changed": []string{"firstname"}},
+		events.Audience{Users: []string{climber}})
+	testapp.WaitFor(t, func() bool {
+		return f.count(`SELECT count(*) FROM users WHERE id = $1 AND firstname = ''`, climber) == 1
+	})
 	if again := f.item("profile", f.users["climber"]); again.State != "hidden" || again.HiddenBy == "" {
 		t.Fatalf("edit of a hidden profile reopened the case: %s/%s", again.State, again.HiddenBy)
 	}

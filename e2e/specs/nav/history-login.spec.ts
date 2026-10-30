@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled, gymPath } from '../../support/nav'
+import { assertSettledUrl, gotoSettled, gymPath } from '../../support/nav'
 import { fillLogin, totp, typeCode } from '../../support/auth'
 
 const target = '/account/settings?tab=privacy#e2e-anchor'
@@ -18,7 +18,7 @@ test('signing in from a protected deep link returns to its query and hash', asyn
 }) => {
     const user = await createUser('user', 'return-url')
     await page.goto(target)
-    await page.waitForURL(/\/auth\/login/)
+    await assertSettledUrl(page, /\/auth\/login/)
     await fillLogin(page, user.email, user.password)
     await page.getByTestId('login-submit').click()
 
@@ -43,7 +43,7 @@ test('the return URL survives the authenticator step', async ({
     })
 
     await page.goto(target)
-    await page.waitForURL(/\/auth\/login/)
+    await assertSettledUrl(page, /\/auth\/login/)
     await fillLogin(page, user.email, user.password)
     await page.getByTestId('login-submit').click()
     await typeCode(page, 'two-factor-code', totp(secret, 1))
