@@ -12,7 +12,7 @@ require (
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
-	golang.org/x/net v0.61.0
+	golang.org/x/net v0.62.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/text v0.43.0
 )
