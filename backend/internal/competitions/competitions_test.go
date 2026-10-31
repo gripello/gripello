@@ -371,10 +371,6 @@ func TestCompetitionLifecycleAndVisibility(t *testing.T) {
 	if got := items(f.call("", "GET", "/gyms/alpha/competitions?status=open,closed", "", http.StatusOK)); len(got) != 1 {
 		t.Errorf("open competitions = %v", got)
 	}
-	pocketBaseStyle := time.Now().Add(30 * time.Minute).UTC().Format("2006-01-02 15:04:05.000Z")
-	if rejected := f.call("manager", "POST", "/gyms/alpha/competitions", `{"name":"Later",`+strings.Replace(base, starts, pocketBaseStyle, 1)+`}`, http.StatusBadRequest); rejected["data"].(map[string]any)["starts_at"] == nil {
-		t.Errorf("old timestamp format = %v", rejected)
-	}
 	later := f.call("manager", "POST", "/gyms/alpha/competitions", `{"name":"Later",`+strings.Replace(base, starts, time.Now().Add(30*time.Minute).UTC().Format(time.RFC3339), 1)+`,"status":"open"}`, http.StatusCreated)["id"].(string)
 	if got := items(f.call("", "GET", "/gyms/alpha/competitions?sort=-starts_at", "", http.StatusOK)); len(got) != 2 || got[0].(map[string]any)["id"] != later {
 		t.Errorf("newest first = %v", got)

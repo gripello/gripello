@@ -1305,7 +1305,7 @@
         "empty": "Rien d'enregistré pour l'instant",
         "emptyHint": "Les actions apparaissent ici au fur et à mesure.",
         "anonymous": "Anonyme",
-        "superuser": "Administrateur de la plateforme",
+        "platformAdmin": "Administrateur de la plateforme",
         "retentionNote": "Les entrées sont supprimées automatiquement après {days} jour. | Les entrées sont supprimées automatiquement après {days} jours.",
         "period": {
             "24h": "Dernières 24 heures",

@@ -341,7 +341,7 @@ const {
             limit,
             total: true,
         }),
-    { perPage: 48, requestKey: 'membersList', map: mapMember },
+    { perPage: 48, map: mapMember },
 )
 
 function clearFilters() {

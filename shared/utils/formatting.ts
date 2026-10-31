@@ -12,8 +12,6 @@ export interface FormatDateOptions extends Intl.DateTimeFormatOptions {
 }
 
 const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/
-// cached records from before the API switched to RFC 3339 still carry "YYYY-MM-DD HH:MM:SS.sssZ"
-const LEGACY_TIMESTAMP = /^(\d{4}-\d{2}-\d{2}) (?=\d)/
 
 export function parseDate(
     value: string | Date | null | undefined,
@@ -26,7 +24,7 @@ export function parseDate(
             ? value
             : day
               ? new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3]))
-              : new Date(text.replace(LEGACY_TIMESTAMP, '$1T'))
+              : new Date(text)
     return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 

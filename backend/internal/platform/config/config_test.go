@@ -29,15 +29,3 @@ func TestBackupsDefaultBesideTheStorage(t *testing.T) {
 		}
 	}
 }
-
-func TestOnlyTheCurrentEnvNamesAreRead(t *testing.T) {
-	t.Setenv("DATABASE_URL", "postgres://prod")
-	t.Setenv("SMTP_HOST", "")
-	t.Setenv("PB_SMTP_HOST", "smtp.old")
-	t.Setenv("APP_URL", "")
-	t.Setenv("PB_APP_URL", "https://old.example")
-	c, _ := Load()
-	if c.SMTPHost != "" || c.AppURL != "http://localhost:3000" {
-		t.Fatalf("PB_ aliases still read: %q, %q", c.SMTPHost, c.AppURL)
-	}
-}

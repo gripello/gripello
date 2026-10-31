@@ -397,7 +397,10 @@ export function parseImportDateTime(
     if (value instanceof Date) return value.toISOString()
     const raw = String(value ?? '').trim()
     if (/^\d{4}-\d{2}-\d{2}[T ]\d{1,2}:\d{2}/.test(raw)) {
-        return parseDate(raw)?.toISOString() ?? null
+        return (
+            parseDate(`${raw.slice(0, 10)}T${raw.slice(11)}`)?.toISOString() ??
+            null
+        )
     }
     const [datePart = '', timePart = '0:00'] = raw.split(/[ T,]+/)
     const day = parseImportDate(datePart, locale)

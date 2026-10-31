@@ -306,7 +306,6 @@ const {
     loadMore: loadMoreFeed,
 } = useList<FeedTick>((page, limit) => listFeed({ page, limit, total: true }), {
     perPage: 60,
-    requestKey: 'friendsFeed',
 })
 const { data: feedPage } = await useAsyncData(
     cacheKeys.friendsFeed,

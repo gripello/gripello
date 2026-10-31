@@ -5,22 +5,21 @@ import { useList } from '~/composables/useList'
 const notifyError = vi.fn()
 vi.stubGlobal('useNotification', () => ({ error: notifyError }))
 
-const getList = vi.fn()
+const loadPage = vi.fn()
 
 function pageOf(ids: string[], totalItems: number) {
     return { items: ids.map((id) => ({ id })), total: totalItems }
 }
 
 beforeEach(() => {
-    getList.mockReset()
+    loadPage.mockReset()
     notifyError.mockReset()
     vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
 function createList() {
-    const list = useList<{ id: string }>(getList, {
+    const list = useList<{ id: string }>(loadPage, {
         perPage: 2,
-        requestKey: 'thingsList',
     })
     return {
         ...list,
@@ -30,7 +29,7 @@ function createList() {
 
 describe('useList', () => {
     it('keeps the loaded rows quietly when a reload has no network', async () => {
-        getList
+        loadPage
             .mockResolvedValueOnce(pageOf(['a', 'b'], 2))
             .mockRejectedValueOnce(
                 Object.assign(new Error('offline'), { status: 0 }),
@@ -44,10 +43,10 @@ describe('useList', () => {
     })
 
     it('loads the first page with the query options', async () => {
-        getList.mockResolvedValue(pageOf(['a', 'b'], 3))
+        loadPage.mockResolvedValue(pageOf(['a', 'b'], 3))
         const list = createList()
         await list.refresh()
-        expect(getList).toHaveBeenCalledWith(1, 2)
+        expect(loadPage).toHaveBeenCalledWith(1, 2)
         expect(list.ids.value).toEqual(['a', 'b'])
         expect(list.totalItems.value).toBe(3)
         expect(list.hasMore.value).toBe(true)
@@ -55,7 +54,7 @@ describe('useList', () => {
     })
 
     it('reloads every loaded row in one request without clearing the list', async () => {
-        getList
+        loadPage
             .mockResolvedValueOnce(pageOf(['a', 'b'], 5))
             .mockResolvedValueOnce(pageOf(['c', 'd'], 5))
             .mockResolvedValueOnce(pageOf(['new', 'a', 'b', 'c'], 6))
@@ -68,28 +67,28 @@ describe('useList', () => {
         expect(list.loading.value).toBe(false)
         await reloading
 
-        expect(getList).toHaveBeenLastCalledWith(1, 4)
+        expect(loadPage).toHaveBeenLastCalledWith(1, 4)
         expect(list.ids.value).toEqual(['new', 'a', 'b', 'c'])
         expect(list.totalItems.value).toBe(6)
     })
 
     it('appends the next page and stops when exhausted', async () => {
-        getList
+        loadPage
             .mockResolvedValueOnce(pageOf(['a', 'b'], 3))
             .mockResolvedValueOnce(pageOf(['c'], 3))
         const list = createList()
         await list.refresh()
         await list.loadMore()
-        expect(getList).toHaveBeenLastCalledWith(2, 2)
+        expect(loadPage).toHaveBeenLastCalledWith(2, 2)
         expect(list.ids.value).toEqual(['a', 'b', 'c'])
         expect(list.hasMore.value).toBe(false)
 
         await list.loadMore()
-        expect(getList).toHaveBeenCalledTimes(2)
+        expect(loadPage).toHaveBeenCalledTimes(2)
     })
 
     it('skips rows already shown when a page overlaps after an insert', async () => {
-        getList
+        loadPage
             .mockResolvedValueOnce(pageOf(['b', 'c'], 4))
             .mockResolvedValueOnce(pageOf(['c', 'd'], 5))
         const list = createList()
@@ -101,7 +100,7 @@ describe('useList', () => {
     })
 
     it('reloads the shifted page after a removal so no row is skipped', async () => {
-        getList
+        loadPage
             .mockResolvedValueOnce(pageOf(['a', 'b'], 5))
             .mockResolvedValueOnce(pageOf(['c', 'd'], 5))
             .mockResolvedValueOnce(pageOf(['c', 'd'], 4))
@@ -111,12 +110,12 @@ describe('useList', () => {
         list.items.value = list.items.value.filter((item) => item.id !== 'a')
         list.totalItems.value--
         await list.loadMore()
-        expect(getList).toHaveBeenLastCalledWith(2, 2)
+        expect(loadPage).toHaveBeenLastCalledWith(2, 2)
         expect(list.ids.value).toEqual(['b', 'c', 'd'])
     })
 
     it('stops loading when a page brings nothing new', async () => {
-        getList
+        loadPage
             .mockResolvedValueOnce(pageOf(['a', 'b'], 5))
             .mockResolvedValueOnce(pageOf([], 5))
         const list = createList()
@@ -124,11 +123,11 @@ describe('useList', () => {
         await list.loadMore()
         expect(list.hasMore.value).toBe(false)
         await list.loadMore()
-        expect(getList).toHaveBeenCalledTimes(2)
+        expect(loadPage).toHaveBeenCalledTimes(2)
     })
 
     it('refresh resets to the first page', async () => {
-        getList
+        loadPage
             .mockResolvedValueOnce(pageOf(['a', 'b'], 3))
             .mockResolvedValueOnce(pageOf(['c'], 3))
             .mockResolvedValueOnce(pageOf(['x'], 1))
@@ -136,14 +135,14 @@ describe('useList', () => {
         await list.refresh()
         await list.loadMore()
         await list.refresh()
-        expect(getList).toHaveBeenLastCalledWith(1, 2)
+        expect(loadPage).toHaveBeenLastCalledWith(1, 2)
         expect(list.ids.value).toEqual(['x'])
         expect(list.totalItems.value).toBe(1)
     })
 
     it('stores the error and notifies', async () => {
         const failure = new Error('down')
-        getList.mockRejectedValue(failure)
+        loadPage.mockRejectedValue(failure)
         const list = createList()
         await list.refresh()
         expect(list.error.value).toBe(failure)
@@ -152,7 +151,7 @@ describe('useList', () => {
     })
 
     it('ignores aborted requests', async () => {
-        getList.mockRejectedValue({ isAbort: true })
+        loadPage.mockRejectedValue({ isAbort: true })
         const list = createList()
         await list.refresh()
         expect(list.error.value).toBeNull()
@@ -161,7 +160,7 @@ describe('useList', () => {
 
     it('lets only the newest request fill the list', async () => {
         const answers: ((page: ReturnType<typeof pageOf>) => void)[] = []
-        getList.mockImplementation(
+        loadPage.mockImplementation(
             () => new Promise((resolve) => answers.push(resolve)),
         )
         const list = createList()
@@ -176,15 +175,15 @@ describe('useList', () => {
     })
 
     it('drops a page still loading when the list is refreshed', async () => {
-        getList.mockResolvedValueOnce(pageOf(['a', 'b'], 4))
+        loadPage.mockResolvedValueOnce(pageOf(['a', 'b'], 4))
         const list = createList()
         await list.refresh()
         let answerMore!: (page: ReturnType<typeof pageOf>) => void
-        getList.mockImplementationOnce(
+        loadPage.mockImplementationOnce(
             () => new Promise((resolve) => (answerMore = resolve)),
         )
         const more = list.loadMore()
-        getList.mockResolvedValueOnce(pageOf(['x', 'y'], 4))
+        loadPage.mockResolvedValueOnce(pageOf(['x', 'y'], 4))
         await list.refresh()
         answerMore(pageOf(['c', 'd'], 4))
         await more
@@ -194,12 +193,12 @@ describe('useList', () => {
 
     it('stops loading when a live reload overtakes a refresh', async () => {
         let answerRefresh!: (page: ReturnType<typeof pageOf>) => void
-        getList.mockImplementationOnce(
+        loadPage.mockImplementationOnce(
             () => new Promise((resolve) => (answerRefresh = resolve)),
         )
         const list = createList()
         const refreshing = list.refresh()
-        getList.mockResolvedValueOnce(pageOf(['a', 'b'], 2))
+        loadPage.mockResolvedValueOnce(pageOf(['a', 'b'], 2))
         await list.reloadLoaded()
         answerRefresh(pageOf(['x'], 1))
         await refreshing
@@ -208,11 +207,11 @@ describe('useList', () => {
     })
 
     it('keeps loading while a live reload replaces a refresh', async () => {
-        getList.mockImplementationOnce(() => new Promise(() => {}))
+        loadPage.mockImplementationOnce(() => new Promise(() => {}))
         const list = createList()
         void list.refresh()
         let answerReload!: (page: ReturnType<typeof pageOf>) => void
-        getList.mockImplementationOnce(
+        loadPage.mockImplementationOnce(
             () => new Promise((resolve) => (answerReload = resolve)),
         )
         const reloading = list.reloadLoaded()
@@ -223,18 +222,18 @@ describe('useList', () => {
     })
 
     it('loads no next page while a live reload runs', async () => {
-        getList.mockResolvedValueOnce(pageOf(['a', 'b'], 4))
+        loadPage.mockResolvedValueOnce(pageOf(['a', 'b'], 4))
         const list = createList()
         await list.refresh()
         let answerReload!: (page: ReturnType<typeof pageOf>) => void
-        getList.mockImplementationOnce(
+        loadPage.mockImplementationOnce(
             () => new Promise((resolve) => (answerReload = resolve)),
         )
         const reloading = list.reloadLoaded()
         await list.loadMore()
         answerReload(pageOf(['new', 'a'], 5))
         await reloading
-        expect(getList).toHaveBeenCalledTimes(2)
+        expect(loadPage).toHaveBeenCalledTimes(2)
         expect(list.ids.value).toEqual(['new', 'a'])
     })
 })

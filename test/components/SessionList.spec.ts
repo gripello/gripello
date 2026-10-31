@@ -7,11 +7,11 @@ import { AuthStore } from '~/composables/authStore'
 const tokenFor = (sid: string) => `x.${btoa(JSON.stringify({ sid }))}.y`
 const token = tokenFor('here')
 let store: AuthStore
-const getFullList = vi.fn()
+const listSessionsMock = vi.fn()
 const remove = vi.fn()
 const send = vi.fn()
 vi.mock('~/api/account', () => ({
-    listSessions: () => getFullList(),
+    listSessions: () => listSessionsMock(),
     revokeSession: (id: string) => remove(id),
     signOutOtherSessions: () => send(),
 }))
@@ -52,7 +52,7 @@ function mountList() {
 
 describe('SessionList', () => {
     beforeEach(() => {
-        getFullList
+        listSessionsMock
             .mockReset()
             .mockResolvedValue([
                 session(

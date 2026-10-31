@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest'
 import type { TickRecord } from '~/types/models'
 import {
     applyTickOutbox,
-    currentTickOp,
-    currentTickRecord,
     enqueueTickOp,
     isAlreadyApplied,
     opsOfUser,
@@ -231,66 +229,5 @@ describe('settleReplayedOp', () => {
         const sent = remove('srv')
         const newer = { ...remove('srv'), queued: 'later' }
         expect(settleReplayedOp([newer], sent)).toEqual([newer])
-    })
-})
-
-describe('currentTickRecord', () => {
-    it('reads ticks cached by the old client', () => {
-        expect(
-            currentTickRecord({
-                id: 'a',
-                date: '2026-10-01 12:00:00.000Z',
-                created: '2026-10-01 10:00:00.000Z',
-                updated: '2026-10-01T10:00:00.000Z',
-            } as TickRecord),
-        ).toMatchObject({
-            date: '2026-10-01',
-            created: '2026-10-01T10:00:00.000Z',
-            updated: '2026-10-01T10:00:00.000Z',
-        })
-    })
-
-    it('keeps current records unchanged', () => {
-        const record = {
-            id: 'a',
-            date: '2026-10-01',
-            created: '2026-10-01T10:00:00.000Z',
-        } as TickRecord
-        expect(currentTickRecord(record)).toEqual({
-            ...record,
-            updated: undefined,
-        })
-    })
-})
-
-describe('currentTickOp', () => {
-    it('migrates a queued op of the old client', () => {
-        expect(
-            currentTickOp({
-                op: 'create',
-                id: 'a',
-                queued: '2026-10-01 10:00:00.000Z',
-                record: {
-                    id: 'a',
-                    date: '2026-10-01 12:00:00.000Z',
-                    created: '2026-10-01 10:00:00.000Z',
-                } as TickRecord,
-            }),
-        ).toMatchObject({
-            queued: '2026-10-01T10:00:00.000Z',
-            record: {
-                date: '2026-10-01',
-                created: '2026-10-01T10:00:00.000Z',
-            },
-        })
-    })
-
-    it('keeps a delete op without a record', () => {
-        const op: TickOutboxOp = {
-            op: 'delete',
-            id: 'a',
-            queued: '2026-10-01T10:00:00.000Z',
-        }
-        expect(currentTickOp(op)).toEqual({ ...op, record: undefined })
     })
 })

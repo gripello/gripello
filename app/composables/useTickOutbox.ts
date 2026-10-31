@@ -7,8 +7,6 @@ import {
 } from '~/api/ticks'
 import { newRecordId } from '~/utils/realtimeCache'
 import {
-    currentTickOp,
-    currentTickRecord,
     enqueueTickOp,
     countServerError,
     isAlreadyApplied,
@@ -115,7 +113,7 @@ export function useTickOutbox() {
             await pending
             rows = await readAll<TickOutboxOp>('outbox').catch(() => null)
         } while (pending !== outboxWrites)
-        if (rows) queue.value = rows.map(currentTickOp)
+        if (rows) queue.value = rows
         loaded.value = true
     }
 
@@ -133,7 +131,6 @@ export function useTickOutbox() {
             ).catch(() => null)
         } while (pending !== outboxWrites)
         if (stored === null) return queue.value
-        if (stored) stored = currentTickOp(stored)
         const current =
             stored && JSON.stringify(stored) === JSON.stringify(op)
                 ? op
@@ -338,12 +335,7 @@ export function useTickOutbox() {
     }
 
     function cachedTicks<T extends TickRecord>() {
-        return available
-            ? readAll<T>('ticks').then(
-                  (ticks) => ticks.map(currentTickRecord),
-                  () => [],
-              )
-            : []
+        return available ? readAll<T>('ticks').catch(() => []) : []
     }
 
     async function clearCachedTicks() {

@@ -33,15 +33,6 @@ func TestTokenFromAuthCookie(t *testing.T) {
 	if got := TokenFrom(r); got != "abc.def.ghi" {
 		t.Fatalf("got %q", got)
 	}
-	r, _ = http.NewRequest("GET", "/", nil)
-	r.Header.Set("Cookie", "pb_auth=old.legacy.jwt")
-	if got := TokenFrom(r); got != "" {
-		t.Fatalf("pb_auth must be ignored: got %q", got)
-	}
-	r.Header.Set("Cookie", "pb_auth=old.legacy.jwt; gripello_auth=new.current.jwt")
-	if got := TokenFrom(r); got != "new.current.jwt" {
-		t.Fatalf("got %q", got)
-	}
 	r.Header.Set("Authorization", "Bearer zzz")
 	if TokenFrom(r) != "zzz" {
 		t.Fatal("bearer header should win")

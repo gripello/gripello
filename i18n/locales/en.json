@@ -1305,7 +1305,7 @@
         "empty": "Nothing recorded yet",
         "emptyHint": "Actions appear here as they happen.",
         "anonymous": "Anonymous",
-        "superuser": "Platform administrator",
+        "platformAdmin": "Platform administrator",
         "retentionNote": "Entries are deleted automatically after {days} day. | Entries are deleted automatically after {days} days.",
         "period": {
             "24h": "Last 24 hours",

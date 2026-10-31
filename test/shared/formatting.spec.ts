@@ -164,12 +164,6 @@ describe('parseDate', () => {
         )
     })
 
-    it('still reads the old space-separated form from cached records', () => {
-        expect(parseDate('2026-10-20 10:36:12.123Z')?.toISOString()).toBe(
-            '2026-10-20T10:36:12.123Z',
-        )
-    })
-
     it('returns null for empty or invalid input', () => {
         expect(parseDate('')).toBeNull()
         expect(parseDate('not-a-date')).toBeNull()

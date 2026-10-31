@@ -2,7 +2,7 @@
 -- each, a running season, a live boulder competition, open tasks), climbers loadtest+1..M@example.com with ticks,
 -- reviews and follows, and per gym two setters loadtest+staff-<gym>-<n>@example.com (routes, tasks, settings, judging).
 -- Ids derive from names, so re-running only adds what is missing and moves the season/competition window to now.
--- yarn loadtest:seed [-v gyms=3 -v climbers=3000 -v password_hash='<bcrypt>']; the default password is loadtest-password.
+-- yarn loadtest:seed [-v gyms=3 -v climbers=3000 -v password_hash='<sha256$bcrypt>']; the default password is loadtest-password.
 -- Remove: gripello admin truncate-prefix --prefix loadtest, then DELETE FROM gyms WHERE slug LIKE 'loadtest-%'.
 \set ON_ERROR_STOP on
 \if :{?gyms}
@@ -15,7 +15,7 @@
 \endif
 \if :{?password_hash}
 \else
-\set password_hash '$2a$10$fDZ/ApKOf5M1bKJU.B.shuMr3Q1ni7wilDo8fLjr36mnsj7Kthqgu'
+\set password_hash 'sha256$$2a$10$5AgYcaVVt.H3nsdKinYXrOYwbw1ybLRgYy1W7MnTEjq9ysKigjyS2'
 \endif
 
 BEGIN;

@@ -81,7 +81,7 @@ const props = defineProps<{ entry: AuditLogRecord }>()
 const { t, te, locale } = useI18n()
 
 const actorName = computed(() => {
-    if (isPlatformAdminEntry(props.entry)) return t('audit.superuser')
+    if (isPlatformAdminEntry(props.entry)) return t('audit.platformAdmin')
     return props.entry.actor_label || t('audit.anonymous')
 })
 

@@ -211,7 +211,7 @@ const {
             limit,
             total: true,
         }),
-    { perPage: 48, requestKey: 'commentsList', map: mapComment },
+    { perPage: 48, map: mapComment },
 )
 
 const stats = ref({ totalReviews: 0, avgRating: '—', thisWeek: 0, lowRated: 0 })

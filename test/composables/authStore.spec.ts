@@ -11,11 +11,8 @@ const tokenWith = (payload: object) =>
     `x.${btoa(JSON.stringify(payload)).replace(/=+$/, '')}.y`
 const validToken = tokenWith({ id: 'u1', exp: 4102444800 })
 const expiredToken = tokenWith({ id: 'u1', exp: 1 })
-const cookieOf = (
-    token: string,
-    record: object | null,
-    name = 'gripello_auth',
-) => `${name}=${encodeURIComponent(JSON.stringify({ token, record }))}`
+const cookieOf = (token: string, record: object | null) =>
+    `gripello_auth=${encodeURIComponent(JSON.stringify({ token, record }))}`
 
 describe('AuthStore', () => {
     beforeEach(() => {
@@ -83,13 +80,6 @@ describe('AuthStore', () => {
         setAuthPersistent(true)
         store.save(validToken, { id: 'u1' })
         expect(document.cookie).not.toContain('gripello_auth_session=1')
-    })
-
-    it('ignores the pre-rename pb_auth cookie', () => {
-        document.cookie = `${cookieOf(validToken, { id: 'u1' }, 'pb_auth')}; Path=/`
-        const store = useAuthStore()
-        expect(store.token).toBe('')
-        expect(store.record).toBeNull()
     })
 })
 

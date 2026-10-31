@@ -112,7 +112,7 @@ export function useModerationInbox(options: {
                 limit,
                 total: true,
             }),
-        { perPage: 30, requestKey: 'moderationInbox' },
+        { perPage: 30 },
     )
 
     const loaded = ref(false)

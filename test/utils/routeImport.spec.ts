@@ -228,6 +228,9 @@ describe('review import', () => {
         expect(parseImportDateTime('4.3.2021 14:05', 'de')).toBe(
             new Date(2021, 2, 4, 14, 5).toISOString(),
         )
+        expect(parseImportDateTime('2021-03-04 14:05:06.000Z', 'de')).toBe(
+            '2021-03-04T14:05:06.000Z',
+        )
         expect(parseImportDateTime('2021-03-04', 'de')).toBe(
             new Date(2021, 2, 4).toISOString(),
         )
