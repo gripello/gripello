@@ -62,6 +62,7 @@ test.describe('login', () => {
         await expect(page.getByTestId('login-form')).toBeVisible()
 
         await page.getByTestId('login-goto-reset').click()
+        await expect(page.getByTestId('reset-form')).toBeVisible()
         await page.getByTestId('auth-back').click()
         await expect(page.getByTestId('login-form')).toBeVisible()
     })

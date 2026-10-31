@@ -182,10 +182,13 @@ pipeline {
                 stage('E2E Install') {
                     when { expression { env.SKIP_TESTS != 'true' } }
                     steps {
-                        sh '''
-                            docker volume create gripello-e2e-yarn-cache
-                            $E2E_COMPOSE run --rm --no-deps e2e sh -c "corepack enable && yarn install --immutable --mode=skip-build"
-                        '''
+                        // mcr.microsoft.com resets connections while pulling the Playwright image
+                        retry(3) {
+                            sh '''
+                                docker volume create gripello-e2e-yarn-cache
+                                $E2E_COMPOSE run --rm --no-deps e2e sh -c "corepack enable && yarn install --immutable --mode=skip-build"
+                            '''
+                        }
                     }
                 }
             }
