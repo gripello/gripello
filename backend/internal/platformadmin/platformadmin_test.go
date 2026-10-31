@@ -925,3 +925,85 @@ func TestGymAndUserChangesReachThePlatformPages(t *testing.T) {
 		t.Errorf("%d platform events reach no client", n)
 	}
 }
+
+func TestDailySyncRefreshesOnlyEnabledSourcesAndKeepsListsOnFailure(t *testing.T) {
+	f := newFixture(t)
+	lines := []string{}
+	for i := range emailSourceMinDomains {
+		lines = append(lines, fmt.Sprintf("trash%d.test", i))
+	}
+	status, body := http.StatusOK, strings.Join(lines, "\n")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(status)
+		io.WriteString(w, body)
+	}))
+	defer server.Close()
+	original := emailSources
+	emailSources = slices.Clone(original)
+	emailSources[0].url = server.URL
+	emailSources[1].url, emailSources[1].licenseURL = server.URL, server.URL
+	defer func() { emailSources = original }()
+	f.exec(`UPDATE email_blocklist_sources SET enabled = true WHERE id = 'disposable-email-domains'`)
+	f.exec(`INSERT INTO disposable_domains (domain, source) VALUES ('old.test', 'disposable-email-domains'), ('kept.test', 'mailchecker')`)
+	m := &module{app: f.app}
+	ctx := context.Background()
+	domains := func(source string) int {
+		return f.count(`SELECT count(*) FROM disposable_domains WHERE source = $1`, source)
+	}
+	lastError := func() string {
+		var message string
+		f.app.DB.QueryRow(ctx, `SELECT last_error FROM email_blocklist_sources WHERE id = 'disposable-email-domains'`).Scan(&message)
+		return message
+	}
+
+	if err := m.syncEnabledEmailSources(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if domains("disposable-email-domains") != emailSourceMinDomains || f.count(`SELECT count(*) FROM disposable_domains WHERE domain = 'old.test'`) != 0 {
+		t.Error("the enabled source was not replaced by the download")
+	}
+	if domains("mailchecker") != 1 || f.count(`SELECT count(*) FROM email_blocklist_sources WHERE id = 'mailchecker' AND attempted_at IS NULL`) != 1 {
+		t.Error("the disabled source was synced")
+	}
+
+	status = http.StatusInternalServerError
+	if err := m.syncEnabledEmailSources(ctx); err == nil || !strings.Contains(lastError(), "HTTP 500") {
+		t.Errorf("failed download: err = %v, last_error = %q", err, lastError())
+	}
+	if domains("disposable-email-domains") != emailSourceMinDomains {
+		t.Error("a failed download dropped the stored list")
+	}
+
+	status, body = http.StatusOK, "spam.test"
+	if err := m.syncEnabledEmailSources(ctx); err == nil || !strings.Contains(lastError(), "keeping the previous list") {
+		t.Errorf("short download: err = %v, last_error = %q", err, lastError())
+	}
+	if domains("disposable-email-domains") != emailSourceMinDomains {
+		t.Error("a short download replaced the stored list")
+	}
+}
+
+func TestUserFilesAreRemovedWhenClearedOrDeleted(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	for _, key := range []string{"users/" + f.climber + "/face.png", "users/" + f.climber + "/thumbs_face.png/100x100.webp", "users/" + f.climber + "/sky.png"} {
+		if err := f.app.Blob.Put(ctx, key, strings.NewReader("x")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.exec(`UPDATE users SET avatar = 'face.png', banner = 'sky.png' WHERE id = $1`, f.climber)
+	exists := func(name string) bool {
+		_, err := os.Stat(f.app.Cfg.BlobDir + "/users/" + f.climber + "/" + name)
+		return err == nil
+	}
+
+	f.call(http.MethodPatch, "/platform/users/"+f.climber, `{"avatar": null}`, f.operator, http.StatusOK)
+	if exists("face.png") || exists("thumbs_face.png") || !exists("sky.png") {
+		t.Error("clearing the avatar did not remove exactly its file and thumbs")
+	}
+
+	f.callToken(http.MethodDelete, "/platform/users/"+f.climber, "", f.reauthToken(f.operator), http.StatusNoContent)
+	if exists("") {
+		t.Error("the deleted user's files are still stored")
+	}
+}

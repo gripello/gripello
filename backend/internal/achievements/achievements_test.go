@@ -343,7 +343,8 @@ func TestSeasonTopTens(t *testing.T) {
 	f := newFixture(t)
 	climber, setter := f.users["climber"], f.users["setter"]
 	route := f.route("7A", 18.5, nil)
-	now := time.Now()
+	// season dates are UTC days; a local clock just after midnight would end the season a day early
+	now := time.Now().UTC()
 	f.tick(climber, route, "flash", now.AddDate(0, 0, -5))
 	f.evaluate(climber)
 	if got := f.badges(climber, "season_top10"); got != 0 {

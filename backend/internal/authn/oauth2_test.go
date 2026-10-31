@@ -376,6 +376,21 @@ func TestAppleClientSecretAndMicrosoftIssuer(t *testing.T) {
 	}
 }
 
+func TestProviderIssuers(t *testing.T) {
+	t.Parallel()
+	for c, want := range map[providerConfig]string{
+		{Provider: "google"}:                                 "https://accounts.google.com",
+		{Provider: "apple"}:                                  "https://appleid.apple.com",
+		{Provider: "microsoft"}:                              "https://login.microsoftonline.com/common/v2.0",
+		{Provider: "microsoft", Tenant: "t1"}:                "https://login.microsoftonline.com/t1/v2.0",
+		{Provider: "oidc", IssuerURL: "https://id.example/"}: "https://id.example/",
+	} {
+		if got := c.issuer(); got != want {
+			t.Errorf("%s issuer = %q, want %q", c.Provider, got, want)
+		}
+	}
+}
+
 func TestOAuth2CopiesTheProviderPictureIntoNewAccounts(t *testing.T) {
 	var png bytes.Buffer
 	stdpng.Encode(&png, image.NewRGBA(image.Rect(0, 0, 4, 4)))

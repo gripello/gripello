@@ -564,3 +564,22 @@ func TestPayloadTimestampsTravelInTheAPIFormat(t *testing.T) {
 	}
 	tx.Rollback(ctx)
 }
+
+func TestPruneDropsOnlyOldEvents(t *testing.T) {
+	ctx := context.Background()
+	pool := testkit.Pool(t)
+	if _, err := pool.Exec(ctx, `INSERT INTO events (topic, kind, payload, created) VALUES
+		('settings', 'old', '{}', now() - interval '2 hours'), ('settings', 'fresh', '{}', now() - interval '30 minutes')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := NewBus(pool).Prune(ctx, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	var kinds []string
+	if err := pool.QueryRow(ctx, `SELECT coalesce(array_agg(kind), '{}') FROM events WHERE kind IN ('old', 'fresh')`).Scan(&kinds); err != nil {
+		t.Fatal(err)
+	}
+	if len(kinds) != 1 || kinds[0] != "fresh" {
+		t.Errorf("kept %v, want only fresh", kinds)
+	}
+}
