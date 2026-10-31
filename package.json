@@ -59,7 +59,7 @@
         "@vue/test-utils": "2.5.1",
         "@vueuse/core": "15.0.0",
         "cap-widget": "^0.1.58",
-        "capjs-core": "^0.1.5",
+        "capjs-core": "^0.1.6",
         "concurrently": "10.0.6",
         "echarts": "6.1.0",
         "h3": "1.15.11",
