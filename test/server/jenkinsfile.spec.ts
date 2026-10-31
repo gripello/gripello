@@ -33,3 +33,8 @@ describe('release builds', () => {
         (name) => expect(stageHead(name)).not.toMatch(SKIPPABLE),
     )
 })
+
+it('retries the e2e install, which pulls the Playwright image', () => {
+    const start = jenkinsfile.indexOf("stage('E2E Install') {")
+    expect(jenkinsfile.slice(start, start + 400)).toContain('retry(3) {')
+})
