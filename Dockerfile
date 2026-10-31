@@ -33,7 +33,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
  && su postgres -c '/usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/test -U postgres -A trust -E UTF8 --locale=C.UTF-8 >/dev/null' \
  && su postgres -c "/usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/test -w -l /tmp/postgres.log \
       -o '-c listen_addresses=127.0.0.1 -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300' start" \
- && mkdir /out && { GOOS= GOARCH= go tool -modfile=tools/go.mod gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 ./...; echo $? > /out/exit-code; }
+ && mkdir /out && { GOOS= GOARCH= go tool -modfile=tools/go.mod gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 -coverpkg="$(go list ./... | grep -vE '/platform/(testkit|testapp)$' | paste -sd,)" -coverprofile=/out/coverage.out ./...; echo $? > /out/exit-code; }
 
 FROM scratch AS go-results
 COPY --from=go-test /out /
@@ -65,8 +65,11 @@ RUN --mount=type=cache,target=/root/.yarn/berry/cache \
     yarn install --immutable --inline-builds
 
 FROM ui-deps AS unit-test
+# the coverage provider is only needed here, so it stays out of package.json; it must match the installed vitest
+RUN --mount=type=cache,target=/root/.yarn/berry/cache \
+    yarn add -D "@vitest/coverage-v8@$(node -p "require('vitest/package.json').version")"
 COPY . .
-RUN mkdir /out && { yarn test --reporter=default --reporter=junit --outputFile.junit=/out/junit.xml; echo $? > /out/exit-code; }
+RUN mkdir /out && { yarn test --reporter=default --reporter=junit --outputFile.junit=/out/junit.xml --coverage --coverage.reporter=cobertura --coverage.reporter=text-summary --coverage.reportsDirectory=/out/coverage; echo $? > /out/exit-code; }
 
 FROM scratch AS vitest-results
 COPY --from=unit-test /out /
