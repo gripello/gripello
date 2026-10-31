@@ -13,11 +13,11 @@ const invite = {
     role_name: 'routesetter',
 }
 
-const getFullList = vi.fn()
+const listInvitesMock = vi.fn()
 const remove = vi.fn()
 const send = vi.fn()
 vi.mock('~/api/members', () => ({
-    listInvites: (gym: string) => getFullList(gym),
+    listInvites: (gym: string) => listInvitesMock(gym),
     revokeInvite: (id: string) => remove(id),
     inviteMember: (gym: string, body: unknown) => send(gym, body),
 }))
@@ -40,7 +40,7 @@ function mountInvites() {
 
 describe('AdminPendingInvites', () => {
     beforeEach(() => {
-        getFullList.mockReset().mockResolvedValue([invite])
+        listInvitesMock.mockReset().mockResolvedValue([invite])
         remove.mockReset().mockResolvedValue(true)
         send.mockReset().mockResolvedValue(null)
         vi.stubGlobal('useAsyncAction', () => ({
@@ -61,7 +61,7 @@ describe('AdminPendingInvites', () => {
     })
 
     it('renders nothing without invites', async () => {
-        getFullList.mockResolvedValue([])
+        listInvitesMock.mockResolvedValue([])
         const wrapper = mountInvites()
         await flushPromises()
         expect(wrapper.find('[data-testid="pending-invites"]').exists()).toBe(
@@ -92,6 +92,6 @@ describe('AdminPendingInvites', () => {
             .trigger('click')
         await flushPromises()
         expect(remove).toHaveBeenCalledExactlyOnceWith('inv1')
-        expect(getFullList).toHaveBeenCalledTimes(2)
+        expect(listInvitesMock).toHaveBeenCalledTimes(2)
     })
 })

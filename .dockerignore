@@ -32,6 +32,7 @@
 !backend/cmd
 !backend/internal
 !backend/testdata
+!loadtest/seed.sql
 **/node_modules
 mobile/android/.gradle
 mobile/android/**/build

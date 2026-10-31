@@ -1305,7 +1305,7 @@
         "empty": "Aún no hay nada registrado",
         "emptyHint": "Las acciones aparecerán aquí a medida que ocurran.",
         "anonymous": "Anónimo",
-        "superuser": "Administrador de la plataforma",
+        "platformAdmin": "Administrador de la plataforma",
         "retentionNote": "Las entradas se eliminan automáticamente tras {days} día. | Las entradas se eliminan automáticamente tras {days} días.",
         "period": {
             "24h": "Últimas 24 horas",

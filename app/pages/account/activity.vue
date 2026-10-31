@@ -199,7 +199,7 @@ const { data: auditMembers } = useAsyncData(
 const actorItems = computed(() => [
     { value: currentUserId, title: t('audit.actor.me') },
     { value: AUDIT_ACTOR_GUESTS, title: t('audit.actor.guests') },
-    { value: AUDIT_ACTOR_PLATFORM, title: t('audit.superuser') },
+    { value: AUDIT_ACTOR_PLATFORM, title: t('audit.platformAdmin') },
     ...auditMembers.value.flatMap(({ user }) => {
         if (user.id === currentUserId) return []
         const fullName = [user.firstname, user.name].filter(Boolean).join(' ')

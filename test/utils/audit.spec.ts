@@ -142,7 +142,7 @@ describe('isPlatformAdminEntry', () => {
         ).toBe(true)
         expect(
             isPlatformAdminEntry({ actor_label: 'superuser:a@b.test' }),
-        ).toBe(true)
+        ).toBe(false)
         expect(isPlatformAdminEntry({ actor_label: 'a@b.test' })).toBe(false)
         expect(isPlatformAdminEntry({ actor_label: null })).toBe(false)
     })

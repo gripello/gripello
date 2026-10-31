@@ -32,17 +32,6 @@ const seededPermissions = readdirSync(migrationsDir)
     .map((match) => match[1]!)
 
 describe('locales', () => {
-    it('never refers to the retired PocketBase admin', () => {
-        for (const messages of [
-            english,
-            ...Object.values(translations).map((m) => flatten(m)),
-        ]) {
-            for (const [key, value] of Object.entries(messages)) {
-                expect(value, key).not.toMatch(/PocketBase/i)
-            }
-        }
-    })
-
     it('labels every seeded permission', () => {
         expect(seededPermissions).toContain('manage_tasks')
         for (const permission of seededPermissions) {

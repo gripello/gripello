@@ -1,6 +1,4 @@
 import type { TickRecord } from '~/types/models'
-import { parseDate } from '#shared/utils/formatting'
-import { tickDay } from '#shared/utils/ticks'
 
 export const TICKS_DB = 'gripello-ticks'
 
@@ -109,27 +107,6 @@ export function applyTickOutbox<T extends TickRecord>(
             b.date.localeCompare(a.date) ||
             (b.created ?? '').localeCompare(a.created ?? ''),
     )
-}
-
-const isoTimestamp = <T extends string | null | undefined>(value: T) =>
-    ((value && parseDate(value)?.toISOString()) || value) as T
-
-// Ticks queued or cached by older clients carry "YYYY-MM-DD 12:00:00.000Z" days and space-separated timestamps.
-export function currentTickRecord<T extends TickRecord>(record: T): T {
-    return {
-        ...record,
-        date: tickDay(record.date),
-        created: isoTimestamp(record.created),
-        updated: isoTimestamp(record.updated),
-    }
-}
-
-export function currentTickOp(op: TickOutboxOp): TickOutboxOp {
-    return {
-        ...op,
-        record: op.record && currentTickRecord(op.record),
-        queued: isoTimestamp(op.queued),
-    }
 }
 
 const DUPLICATE_ID = 'validation_pk_invalid'

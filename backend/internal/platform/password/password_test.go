@@ -1,6 +1,8 @@
 package password
 
 import (
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -56,5 +58,20 @@ func TestLegacyTellsPlainBcryptFromPrefixedHashes(t *testing.T) {
 	current, _ := Hash("SecurePass1!")
 	if !Legacy(string(legacy)) || Legacy(current) || Legacy("") {
 		t.Fatal("only plain bcrypt hashes are legacy")
+	}
+}
+
+func TestLoadtestSeedUsesThePrefixedHash(t *testing.T) {
+	seed, err := os.ReadFile("../../../../loadtest/seed.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	match := regexp.MustCompile(`\\set password_hash '([^']+)'`).FindSubmatch(seed)
+	if match == nil {
+		t.Fatal("seed.sql sets no default password_hash")
+	}
+	hash := string(match[1])
+	if Legacy(hash) || !Matches(hash, "loadtest-password") {
+		t.Fatalf("seed.sql default hash %q is not a sha256$ hash of loadtest-password", hash)
 	}
 }

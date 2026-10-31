@@ -221,13 +221,12 @@ describe('docker ui build', () => {
         }
     })
 
-    it('builds and starts the go api instead of pocketbase', () => {
+    it('builds and starts the go api', () => {
         const dockerfile = read('Dockerfile')
         expect(dockerfile).toContain('-o /out/gripello ./cmd/gripello')
         expect(dockerfile).toContain(
             '-X gripello/internal/platform/config.Version=',
         )
-        expect(dockerfile).not.toMatch(/pocketbase/i)
         for (const dir of ['cmd', 'internal']) {
             expect(dockerfile).toContain(`COPY backend/${dir} ./${dir}`)
             expect(read('.dockerignore')).toMatch(

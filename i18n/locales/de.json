@@ -1305,7 +1305,7 @@
         "empty": "Noch nichts aufgezeichnet",
         "emptyHint": "Aktionen erscheinen hier, sobald sie passieren.",
         "anonymous": "Anonym",
-        "superuser": "Plattform-Administrator",
+        "platformAdmin": "Plattform-Administrator",
         "retentionNote": "Einträge werden nach {days} Tag automatisch gelöscht. | Einträge werden nach {days} Tagen automatisch gelöscht.",
         "period": {
             "24h": "Letzte 24 Stunden",

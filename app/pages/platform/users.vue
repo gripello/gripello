@@ -417,7 +417,7 @@ const {
             limit,
             total: true,
         }),
-    { perPage: 48, requestKey: 'platformUsers' },
+    { perPage: 48 },
 )
 
 function reloadLoaded() {

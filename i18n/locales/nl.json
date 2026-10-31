@@ -1305,7 +1305,7 @@
         "empty": "Nog niets vastgelegd",
         "emptyHint": "Acties verschijnen hier zodra ze plaatsvinden.",
         "anonymous": "Anoniem",
-        "superuser": "Platformbeheerder",
+        "platformAdmin": "Platformbeheerder",
         "retentionNote": "Items worden na {days} dag automatisch verwijderd. | Items worden na {days} dagen automatisch verwijderd.",
         "period": {
             "24h": "Afgelopen 24 uur",

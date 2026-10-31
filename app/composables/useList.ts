@@ -8,7 +8,6 @@ export type ListFetch<TRecord> = (
 
 interface ListOptions<TRecord, TItem> {
     perPage: number
-    requestKey: string
     map?: (record: TRecord) => TItem
 }
 
@@ -58,7 +57,7 @@ export function useList<
             if (target === 1 && items.value.length && isOfflineError(err))
                 return
             error.value = err
-            console.error(`Failed to fetch ${options.requestKey}:`, err)
+            console.error(err)
             notifyError(t('notifications.error.generic'))
         } finally {
             if (request === latestRequest) busy.value = false

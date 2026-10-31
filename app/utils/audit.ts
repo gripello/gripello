@@ -127,10 +127,5 @@ export function auditTargetUrl(
 export function isPlatformAdminEntry(
     entry: Pick<AuditLogRecord, 'actor_label'>,
 ) {
-    const label = entry.actor_label ?? ''
-    return (
-        label === AUDIT_PLATFORM_LABEL ||
-        label === 'superuser' ||
-        label.startsWith('superuser:')
-    )
+    return entry.actor_label === AUDIT_PLATFORM_LABEL
 }
