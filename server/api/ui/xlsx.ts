@@ -7,6 +7,7 @@ import {
     resolveExportGymId,
     fetchRoutesByIds,
     requireRouteIds,
+    resolveExportLabel,
 } from '../../utils/export'
 import { MAX_SHEET_ROUTES } from '#shared/utils/routeExport'
 import { normalizeHexColor } from '#shared/utils/color'

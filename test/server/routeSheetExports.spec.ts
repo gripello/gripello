@@ -15,7 +15,6 @@ import {
 } from 'vitest'
 import xlsxExport from '../../server/api/ui/xlsx'
 import pdfExport from '../../server/api/ui/pdf'
-import { resolveExportLabel } from '../../server/utils/export'
 import { MAX_TAG_ROUTES } from '../../shared/utils/routeExport'
 
 const ROUTES = Array.from({ length: 5 }, (_, index) => ({
@@ -86,7 +85,6 @@ beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     Object.assign(globalThis.$fetch, { create: ofetch.create })
     globalThis.__NUXT_RUNTIME_CONFIG__ = { apiBase: goBase, public: {} }
-    vi.stubGlobal('resolveExportLabel', resolveExportLabel)
     vi.stubGlobal('useStorage', () => ({
         getItemRaw: async (key: string) => fontFiles[key] ?? null,
     }))
