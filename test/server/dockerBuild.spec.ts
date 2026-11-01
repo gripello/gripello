@@ -194,9 +194,29 @@ describe('docker ui build', () => {
         const goTest = read('Dockerfile')
             .split('\n')
             .find((line) => line.includes('gotestsum'))
-        expect(goTest).toContain('-coverprofile=/out/coverage.out ./...')
+        expect(goTest).toContain('-coverprofile=/tmp/coverage.out ./...')
         expect(goTest).toMatch(
             /-coverpkg="\$\(go list \.\/\.\.\. \| grep -vE '[^']*testkit\|testapp[^']*'/,
+        )
+    })
+
+    it('merges the per-binary go coverage blocks Jenkins would otherwise read as uncovered', () => {
+        const merge = read('Dockerfile').match(
+            /awk '([^']+)' \/tmp\/coverage\.out > \/out\/coverage\.out/,
+        )![1]!
+        const profile = [
+            'mode: set',
+            'gripello/a.go:1.1,2.2 1 0',
+            'gripello/b.go:1.1,2.2 3 0',
+            'gripello/a.go:1.1,2.2 1 1',
+            'gripello/b.go:1.1,2.2 3 0',
+            'gripello/a.go:1.1,2.2 1 0',
+            '',
+        ].join('\n')
+        expect(
+            execFileSync('awk', [merge], { input: profile }).toString(),
+        ).toBe(
+            'mode: set\ngripello/a.go:1.1,2.2 1 1\ngripello/b.go:1.1,2.2 3 0\n',
         )
     })
 

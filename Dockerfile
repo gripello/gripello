@@ -33,7 +33,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
  && su postgres -c '/usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/test -U postgres -A trust -E UTF8 --locale=C.UTF-8 >/dev/null' \
  && su postgres -c "/usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/test -w -l /tmp/postgres.log \
       -o '-c listen_addresses=127.0.0.1 -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c max_connections=300' start" \
- && mkdir /out && { GOOS= GOARCH= go tool -modfile=tools/go.mod gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 -coverpkg="$(go list ./... | grep -vE '/platform/(testkit|testapp)$' | paste -sd,)" -coverprofile=/out/coverage.out ./...; echo $? > /out/exit-code; }
+ && mkdir /out && { GOOS= GOARCH= go tool -modfile=tools/go.mod gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 -coverpkg="$(go list ./... | grep -vE '/platform/(testkit|testapp)$' | paste -sd,)" -coverprofile=/tmp/coverage.out ./...; echo $? > /out/exit-code; } \
+ && if [ -f /tmp/coverage.out ]; then awk 'NR == 1 { print; next } { key = $1 " " $2; if (!(key in hits)) order[++n] = key; if ($3 > hits[key]) hits[key] = $3 } END { for (i = 1; i <= n; i++) print order[i], hits[order[i]] + 0 }' /tmp/coverage.out > /out/coverage.out; fi
 
 FROM scratch AS go-results
 COPY --from=go-test /out /
