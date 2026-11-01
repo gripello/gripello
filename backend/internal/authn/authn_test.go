@@ -296,6 +296,28 @@ func TestRecoveryCodeKeptWhenSignInFails(t *testing.T) {
 	}
 }
 
+func TestRecoveryCodeRestoredWhenTheChallengeIsRefused(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	id := f.user("restored@example.com")
+	_, recovery := f.enableTOTP(f.loginToken("restored@example.com"))
+	mfaID, err := insertChallenge(context.Background(), f.app.DB, "login", id, methodRecovery, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if status, res := f.send(http.MethodPost, "/auth/recovery", "", map[string]string{"mfaId": mfaID, "code": recovery[0].(string)}); status != http.StatusBadRequest {
+		t.Errorf("refused challenge = %d %v", status, res)
+	}
+	if left := recoveryCodesLeft(context.Background(), f.app.DB, id); left != recoveryCodeCount {
+		t.Errorf("%d codes left after a refused sign-in", left)
+	}
+	_, body := f.login("restored@example.com", testPassword)
+	if status, res := f.send(http.MethodPost, "/auth/recovery", "", map[string]string{"mfaId": body["mfaId"].(string), "code": recovery[0].(string)}); status != http.StatusOK {
+		t.Errorf("restored code = %d %v", status, res)
+	}
+}
+
 func TestDeletingLastFactorNeedsPasswordAndDropsRecoveryCodes(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t)

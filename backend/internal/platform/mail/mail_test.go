@@ -235,7 +235,7 @@ func TestTLSOnAStartTLSPortFallsBackToPlainSMTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ln.Close()
-	delivered := make(chan string, 1)
+	delivered := make(chan smtpDelivery, 1)
 	go fakeSMTP(ln, delivered)
 
 	host, port, _ := net.SplitHostPort(ln.Addr().String())
@@ -243,13 +243,58 @@ func TestTLSOnAStartTLSPortFallsBackToPlainSMTP(t *testing.T) {
 	if err := send(context.Background(), Message{To: []string{"kim@example.com"}, Subject: "Hi", Text: "Hello"}); err != nil {
 		t.Fatal(err)
 	}
-	if got := <-delivered; got != "kim@example.com" {
-		t.Errorf("delivered to %q", got)
+	if got := <-delivered; got.rcpt != "kim@example.com" {
+		t.Errorf("delivered to %q", got.rcpt)
 	}
 }
 
+func TestClientSendDeliversOverSMTP(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	delivered := make(chan smtpDelivery, 1)
+	go fakeSMTP(ln, delivered)
+
+	host, port, _ := net.SplitHostPort(ln.Addr().String())
+	c := &Client{}
+	c.Use(SMTP{Host: host, Port: port, SenderAddress: "noreply@example.com", SenderName: "Gripello"})
+	if !c.Configured() {
+		t.Fatal("client with a host is not configured")
+	}
+	if err := c.Send(context.Background(), "kim@example.com", "Willkommen", "<p>Hallo</p>", "Hallo Text"); err != nil {
+		t.Fatal(err)
+	}
+	got := <-delivered
+	if got.rcpt != "kim@example.com" {
+		t.Errorf("delivered to %q", got.rcpt)
+	}
+	for _, want := range []string{"From: \"Gripello\" <noreply@example.com>", "To: <kim@example.com>", "Subject: Willkommen",
+		"text/plain; charset=utf-8", "Hallo Text", "text/html; charset=utf-8", "<p>Hallo</p>"} {
+		if !strings.Contains(got.data, want) {
+			t.Errorf("message lacks %q:\n%s", want, got.data)
+		}
+	}
+	if err := c.Send(context.Background(), "not an address", "x", "", "x"); err == nil {
+		t.Error("invalid recipient sent")
+	}
+}
+
+func TestUnconfiguredClientOnlyLogs(t *testing.T) {
+	c := New(config.Config{SenderName: "Gripello"})
+	if c.Configured() {
+		t.Fatal("client without a host is configured")
+	}
+	if err := c.Send(context.Background(), "not even an address", "Hi", "<p>x</p>", "x"); err != nil {
+		t.Errorf("logging transport failed: %v", err)
+	}
+}
+
+type smtpDelivery struct{ rcpt, data string }
+
 // fakeSMTP answers the first connection (the failed TLS dial) by closing it and serves the second in plain text.
-func fakeSMTP(ln net.Listener, delivered chan<- string) {
+func fakeSMTP(ln net.Listener, delivered chan<- smtpDelivery) {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -273,10 +318,12 @@ func fakeSMTP(ln net.Listener, delivered chan<- string) {
 					fmt.Fprint(conn, "250 ok\r\n")
 				case cmd == "DATA":
 					fmt.Fprint(conn, "354 go\r\n")
+					var data strings.Builder
 					for l, _ := r.ReadString('\n'); l != ".\r\n" && l != ""; l, _ = r.ReadString('\n') {
+						data.WriteString(l)
 					}
 					fmt.Fprint(conn, "250 ok\r\n")
-					delivered <- rcpt
+					delivered <- smtpDelivery{rcpt, data.String()}
 				case cmd == "QUIT":
 					fmt.Fprint(conn, "221 bye\r\n")
 					return
@@ -295,6 +342,11 @@ func TestFailedStageNamesTheBrokenStep(t *testing.T) {
 		&textproto.Error{Code: 535, Msg: "Authentication credentials invalid"}:        "sign_in",
 		fmt.Errorf("send: %v", &textproto.Error{Code: 535, Msg: "invalid"}):           "sign_in",
 		&textproto.Error{Code: 550, Msg: "mailbox unavailable"}:                       "deliver",
+		&net.DNSError{Err: "no such host", Name: "smtp.invalid"}:                       "connect",
+		errors.New("x509: certificate signed by unknown authority"):                   "encrypt",
+		errors.New("smtp: server doesn't support AUTH"):                               "deliver",
+		errors.New("unencrypted connection"):                                          "sign_in",
+		errors.New("530 5.7.0 Must issue a STARTTLS command first"):                   "sign_in",
 	} {
 		if got := FailedStage(err); got != want {
 			t.Errorf("%v = %s, want %s", err, got, want)
@@ -348,5 +400,21 @@ func TestMailButtonUsesTheBrandColor(t *testing.T) {
 	}
 	if !strings.Contains(rendered.HTML, "background: #38741c") || strings.Contains(rendered.HTML, "#1f6feb") {
 		t.Error("the action button is not in the brand green")
+	}
+}
+
+func TestOTPMailShowsTheCode(t *testing.T) {
+	c := testClient(t)
+	rendered, err := c.Render(c.AppBrand(), "en", OTP("Ana", "481516"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for part, text := range map[string]string{"html": rendered.HTML, "text": rendered.Text} {
+		if !strings.Contains(text, "481516") || !strings.Contains(text, "Gripello") || !strings.Contains(text, "Ana") {
+			t.Errorf("%s lacks code, brand or name:\n%s", part, text)
+		}
+	}
+	if rendered.Subject == "" || strings.Contains(rendered.HTML, "/auth/") {
+		t.Errorf("subject %q, html %s", rendered.Subject, rendered.HTML)
 	}
 }

@@ -74,7 +74,9 @@ export default defineConfig({
             },
         ],
         coverage: {
-            reporter: ['text', 'lcov'],
+            reporter: ['text-summary', 'lcov', 'cobertura'],
+            include: ['app/**/*.{ts,vue}', 'shared/**/*.ts', 'server/**/*.ts'],
+            reportOnFailure: true,
         },
     },
 })

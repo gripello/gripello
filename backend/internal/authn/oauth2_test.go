@@ -2,6 +2,7 @@ package authn
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -21,6 +22,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	"gripello/internal/platform/ids"
 )
 
 // fakeIdP is an OpenID provider whose token endpoint signs an id_token for claims; the code carries the nonce.
@@ -376,6 +379,21 @@ func TestAppleClientSecretAndMicrosoftIssuer(t *testing.T) {
 	}
 }
 
+func TestProviderIssuers(t *testing.T) {
+	t.Parallel()
+	for c, want := range map[providerConfig]string{
+		{Provider: "google"}:                                 "https://accounts.google.com",
+		{Provider: "apple"}:                                  "https://appleid.apple.com",
+		{Provider: "microsoft"}:                              "https://login.microsoftonline.com/common/v2.0",
+		{Provider: "microsoft", Tenant: "t1"}:                "https://login.microsoftonline.com/t1/v2.0",
+		{Provider: "oidc", IssuerURL: "https://id.example/"}: "https://id.example/",
+	} {
+		if got := c.issuer(); got != want {
+			t.Errorf("%s issuer = %q, want %q", c.Provider, got, want)
+		}
+	}
+}
+
 func TestOAuth2CopiesTheProviderPictureIntoNewAccounts(t *testing.T) {
 	var png bytes.Buffer
 	stdpng.Encode(&png, image.NewRGBA(image.Rect(0, 0, 4, 4)))
@@ -431,5 +449,55 @@ func TestMicrosoftAddressesOnlyBecomeAccountsWhenTrusted(t *testing.T) {
 		if got := newAccountEmailVerified(tc.c, tc.claims); got != tc.want {
 			t.Errorf("%s = %v, want %v", name, got, tc.want)
 		}
+	}
+}
+
+func TestAvatarImportSendsTheMicrosoftTokenOnlyToGraphAndKeepsOnlyImages(t *testing.T) {
+	var png bytes.Buffer
+	stdpng.Encode(&png, image.NewRGBA(image.Rect(0, 0, 4, 4)))
+	var requests []string
+	pictures := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.URL.String()+" "+r.Header.Get("Authorization"))
+		switch r.URL.Path {
+		case "/page":
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte("<html>"))
+		case "/missing":
+			w.Header().Set("Content-Type", "image/png")
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.Header().Set("Content-Type", "image/png; charset=binary")
+			w.Write(png.Bytes())
+		}
+	}))
+	defer pictures.Close()
+	originalClient, originalGraph := avatarClient, microsoftPhotoURL
+	avatarClient, microsoftPhotoURL = pictures.Client(), pictures.URL+"/graph"
+	t.Cleanup(func() { avatarClient, microsoftPhotoURL = originalClient, originalGraph })
+
+	f := newFixture(t)
+	m := &module{db: f.app.DB, blob: f.app.Blob}
+	avatarOf := func(provider, picture string) string {
+		requests = nil
+		id := f.user(ids.New() + "@example.com")
+		m.importAvatar(context.Background(), provider, id, identityClaims{Picture: picture, accessToken: "graph-token"})
+		var avatar string
+		f.app.DB.QueryRow(context.Background(), `SELECT avatar FROM users WHERE id = $1`, id).Scan(&avatar)
+		return avatar
+	}
+
+	if avatar := avatarOf("microsoft", pictures.URL+"/elsewhere.png"); !strings.HasSuffix(avatar, ".png") || len(requests) != 1 || requests[0] != "/graph Bearer graph-token" {
+		t.Errorf("microsoft = %q via %v", avatar, requests)
+	}
+	if avatarOf("google", pictures.URL+"/a=s96-c"); len(requests) != 1 || requests[0] != "/a=s400-c " {
+		t.Errorf("google requests = %v", requests)
+	}
+	for _, picture := range []string{pictures.URL + "/page", pictures.URL + "/missing"} {
+		if avatar := avatarOf("oidc", picture); avatar != "" {
+			t.Errorf("%s kept as %q", picture, avatar)
+		}
+	}
+	if avatar := avatarOf("oidc", strings.Replace(pictures.URL, "https://", "http://", 1)+"/me.png"); avatar != "" || len(requests) != 0 {
+		t.Errorf("plain http picture = %q via %v", avatar, requests)
 	}
 }

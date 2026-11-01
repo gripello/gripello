@@ -186,7 +186,62 @@ describe('docker ui build', () => {
 
     it('gives the go hook tests more than the default ten minutes', () => {
         expect(read('Dockerfile')).toContain(
-            'go tool -modfile=tools/go.mod gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 ./...',
+            'go tool -modfile=tools/go.mod gotestsum --junitfile /out/junit.xml -- -timeout 30m -parallel 4 ',
+        )
+    })
+
+    it('reports go coverage across packages without the test helpers', () => {
+        const goTest = read('Dockerfile')
+            .split('\n')
+            .find((line) => line.includes('gotestsum'))
+        expect(goTest).toContain('-coverprofile=/tmp/coverage.out ./...')
+        expect(goTest).toMatch(
+            /-coverpkg="\$\(go list \.\/\.\.\. \| grep -vE '[^']*testkit\|testapp[^']*'/,
+        )
+    })
+
+    it('merges the per-binary go coverage blocks Jenkins would otherwise read as uncovered', () => {
+        const merge = read('Dockerfile').match(
+            /awk '([^']+)' \/tmp\/coverage\.out > \/out\/coverage\.out/,
+        )![1]!
+        const profile = [
+            'mode: set',
+            'gripello/a.go:1.1,2.2 1 0',
+            'gripello/b.go:1.1,2.2 3 0',
+            'gripello/a.go:1.1,2.2 1 1',
+            'gripello/b.go:1.1,2.2 3 0',
+            'gripello/a.go:1.1,2.2 1 0',
+            '',
+        ].join('\n')
+        const run = (input: string) =>
+            execFileSync('awk', [merge], { input }).toString()
+        expect(run(profile)).toBe(
+            'mode: set\ngripello/a.go:1.1,2.2 1 1\ngripello/b.go:1.1,2.2 3 0\n',
+        )
+        expect(
+            run(
+                profile
+                    .replace('mode: set', 'mode: atomic')
+                    .replace('a.go:1.1,2.2 1 0\n', 'a.go:1.1,2.2 1 2\n'),
+            ),
+        ).toBe(
+            'mode: atomic\ngripello/a.go:1.1,2.2 1 3\ngripello/b.go:1.1,2.2 3 0\n',
+        )
+    })
+
+    it('installs the vitest coverage provider only in the unit-test image, matching vitest', () => {
+        const pkg = JSON.parse(read('package.json'))
+        expect(pkg.devDependencies).not.toHaveProperty('@vitest/coverage-v8')
+        const unitTest = read('Dockerfile').split(
+            'FROM ui-deps AS unit-test',
+        )[1]!
+        const install = unitTest.indexOf(
+            `yarn add -D "@vitest/coverage-v8@$(node -p "require('vitest/package.json').version")"\n`,
+        )
+        expect(install).toBeGreaterThan(-1)
+        expect(install).toBeLessThan(unitTest.indexOf('COPY . .'))
+        expect(unitTest).toContain(
+            '--coverage --coverage.reporter=cobertura --coverage.reporter=text-summary --coverage.reportsDirectory=/out/coverage',
         )
     })
 

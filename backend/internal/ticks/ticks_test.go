@@ -380,3 +380,17 @@ func TestARouteGradeCorrectionRewritesAndRepublishesItsTicks(t *testing.T) {
 		t.Errorf("a second run republished unchanged ticks: %v", err)
 	}
 }
+
+func TestLogbookSinceCountsATimestampAsItsUTCDay(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	route := f.boulder(f.hallA, "6A", 15.7)
+	f.tick("climber", route, "top", time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC))
+	f.tick("climber", route, "top", time.Date(2026, 3, 3, 12, 0, 0, 0, time.UTC))
+
+	f.call("climber", "GET", "/me/ticks?since=2026-03-01&total=true", "", http.StatusOK, `"total":2`)
+	f.call("climber", "GET", "/me/ticks?since=2026-03-02&total=true", "", http.StatusOK, `"total":1`)
+	// 23:30 at UTC-2 is already 2 March in UTC
+	f.call("climber", "GET", "/me/ticks?since=2026-03-01T23:30:00-02:00&total=true", "", http.StatusOK, `"total":1`)
+	f.call("climber", "GET", "/me/ticks?since=yesterday", "", http.StatusBadRequest, `"since"`)
+}

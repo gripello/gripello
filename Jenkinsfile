@@ -8,10 +8,14 @@ def buildCache(String name) {
     args
 }
 
-def runTestSuite(String target, boolean junitReport = true) {
+def runTestSuite(String target, boolean junitReport = true, Map coverage = null) {
     sh "docker buildx build --platform linux/amd64 --target ${target} ${buildCache(target)} --progress=plain --output type=local,dest=test-results/${target} ."
     if (junitReport) {
         junit testResults: "test-results/${target}/junit.xml"
+    }
+    if (coverage && fileExists("test-results/${target}/${coverage.file}")) {
+        recordCoverage id: coverage.id, name: coverage.name, sourceCodeRetention: 'NEVER',
+            tools: [[parser: coverage.parser, pattern: "test-results/${target}/${coverage.file}"]]
     }
     if (readFile("test-results/${target}/exit-code").trim() != '0') {
         error("${target} failed")
@@ -132,7 +136,7 @@ pipeline {
                 stage('Vitest') {
                     when { expression { env.SKIP_TESTS != 'true' } }
                     steps {
-                        script { runTestSuite('vitest-results') }
+                        script { runTestSuite('vitest-results', true, [id: 'coverage-vitest', name: 'Vitest Coverage', parser: 'COBERTURA', file: 'coverage/cobertura-coverage.xml']) }
                     }
                 }
                 stage('Typecheck') {
@@ -152,7 +156,7 @@ pipeline {
                 stage('Go Tests') {
                     when { expression { env.SKIP_TESTS != 'true' } }
                     steps {
-                        script { runTestSuite('go-results') }
+                        script { runTestSuite('go-results', true, [id: 'coverage-go', name: 'Go Coverage', parser: 'GO_COV', file: 'coverage.out']) }
                     }
                 }
                 stage('Build Image') {

@@ -14,6 +14,7 @@ vi.mock('~/api/tasks', () => ({
 vi.mock('~/api/routes', () => ({ listWalls: vi.fn(async () => []) }))
 
 const setErrors = vi.fn()
+let formValid = true
 const notifyError = vi.fn()
 
 function mountDialog(props: Record<string, unknown> = {}) {
@@ -28,7 +29,7 @@ function mountDialog(props: Record<string, unknown> = {}) {
                         _: unknown,
                         { expose }: { expose: (api: object) => void },
                     ) {
-                        expose({ validate: async () => true, setErrors })
+                        expose({ validate: async () => formValid, setErrors })
                     },
                     template: '<form />',
                 },
@@ -46,6 +47,8 @@ function mountDialog(props: Record<string, unknown> = {}) {
 describe('TaskFormDialog', () => {
     beforeEach(() => {
         vi.mocked(createTask).mockReset()
+        vi.mocked(listWalls).mockClear()
+        formValid = true
         setErrors.mockReset()
         notifyError.mockReset()
         vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -161,5 +164,33 @@ describe('TaskFormDialog', () => {
         await flushPromises()
 
         expect(updateTask).toHaveBeenCalledWith('t1', {}, null)
+    })
+
+    it('files a task for a route by its route instead of a location', async () => {
+        vi.mocked(createTask).mockResolvedValueOnce({ id: 't9' } as never)
+        const wrapper = mountDialog({ routeId: 'r1' })
+        await wrapper.setProps({ modelValue: true })
+        await flushPromises()
+        await wrapper.get('[data-testid="task-form-save"]').trigger('click')
+        await flushPromises()
+
+        expect(listWalls).not.toHaveBeenCalled()
+        const [gym, input] = vi.mocked(createTask).mock.calls[0]!
+        expect(gym).toBe('g1')
+        expect(input).toMatchObject({ kind: 'maintenance', route: 'r1' })
+        expect(input).not.toHaveProperty('location')
+        expect(input).not.toHaveProperty('status')
+        expect(wrapper.emitted('saved')).toEqual([[{ id: 't9' }]])
+        expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([false])
+    })
+
+    it('saves nothing while the form is invalid', async () => {
+        formValid = false
+        const wrapper = mountDialog()
+        await wrapper.setProps({ modelValue: true })
+        await wrapper.get('[data-testid="task-form-save"]').trigger('click')
+        await flushPromises()
+        expect(createTask).not.toHaveBeenCalled()
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined()
     })
 })

@@ -200,3 +200,30 @@ func TestTrialChangesReachOnlyMembersAndPlatformAdmins(t *testing.T) {
 		t.Fatalf("%d trial events after the trial ran out, want 2", n)
 	}
 }
+
+func TestOnlyPlatformAdminsDeleteOnboardingLinks(t *testing.T) {
+	f := newFixture(t)
+	token := f.onboardingToken("owner@gym.test")
+	var id string
+	f.scalar(`SELECT id FROM gym_onboardings WHERE email = 'owner@gym.test'`, &id)
+	f.call(f.user("someone"), "DELETE", "/platform/gym-onboardings/"+id, "", http.StatusForbidden)
+	f.call("", "DELETE", "/platform/gym-onboardings/"+id, "", http.StatusUnauthorized)
+	f.call("", "GET", "/gym-onboardings/"+token, "", http.StatusOK)
+	f.call(f.operator, "DELETE", "/platform/gym-onboardings/"+id, "", http.StatusNoContent)
+	f.call("", "GET", "/gym-onboardings/"+token, "", http.StatusNotFound)
+	f.call(f.operator, "DELETE", "/platform/gym-onboardings/"+id, "", http.StatusNoContent)
+}
+
+func TestPruneOnboardingsDropsOnlyExpiredLinks(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`INSERT INTO gym_onboardings (id, email, token_hash, expires_at) VALUES
+		('expired', 'old@gym.test', 'h1', now() - interval '1 minute'), ('valid', 'new@gym.test', 'h2', now() + interval '1 day')`)
+	if err := pruneOnboardings(context.Background(), f.app.DB); err != nil {
+		t.Fatal(err)
+	}
+	var kept []string
+	f.scalar(`SELECT coalesce(array_agg(id), '{}') FROM gym_onboardings`, &kept)
+	if len(kept) != 1 || kept[0] != "valid" {
+		t.Errorf("kept %v, want only valid", kept)
+	}
+}
