@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTemplateRef } from 'vue'
 import BoulderBandEditor from '~/components/admin/BoulderBandEditor.vue'
@@ -6,6 +6,7 @@ import {
     MAX_BOULDER_BANDS,
     type BoulderBandSetting,
 } from '#shared/utils/gradeReference'
+import { gradeLabels } from '#shared/utils/grades'
 import { translatedColorName } from '~/utils/colorName'
 import { readableTextOn } from '~/utils/color'
 
@@ -172,5 +173,71 @@ describe('AdminBoulderBandEditor', () => {
             .trigger('click')
         pick('#f00')
         expect(bandsNow()[1]).toMatchObject({ color: '#FF0000', name: 'Hard' })
+    })
+
+    it('drags a boundary to the grade under the pointer until released', async () => {
+        const font = gradeLabels('font')
+        const { wrapper, bandsNow } = mountEditor([
+            { name: 'A', color: '#facc15', to: '4' },
+            { name: 'B', color: '#2563eb', to: '6A' },
+            { name: 'C', color: '#18181b', to: '8C+' },
+        ])
+        const bar = wrapper.get('.band-bar').element as HTMLElement
+        bar.getBoundingClientRect = () =>
+            ({ left: 100, width: font.length * 10 }) as DOMRect
+        const handle = wrapper.findAll(
+            '[data-testid="boulder-band-handle"]',
+        )[1]!.element as HTMLElement
+        const capture = vi.fn()
+        handle.setPointerCapture = capture
+        const pointer = async (type: string, grade: string) => {
+            handle.dispatchEvent(
+                new PointerEvent(type, {
+                    bubbles: true,
+                    pointerId: 7,
+                    clientX: 100 + (font.indexOf(grade) + 1) * 10,
+                }),
+            )
+            await flushPromises()
+        }
+
+        await pointer('pointerdown', '6A')
+        expect(capture).toHaveBeenCalledWith(7)
+        await pointer('pointermove', '6B')
+        expect(bandsNow()[1]!.to).toBe('6B')
+        await pointer('pointermove', '<2')
+        expect(bandsNow()[1]!.to).toBe('4+')
+        await pointer('pointermove', '7A')
+        await pointer('pointerup', '7A')
+        expect(bandsNow()[1]!.to).toBe('7A')
+        expect(bandsNow()[0]!.to).toBe('4')
+
+        await pointer('pointermove', '7C')
+        expect(bandsNow()[1]!.to).toBe('7A')
+    })
+
+    it('stops following the pointer when the drag is cancelled', async () => {
+        const font = gradeLabels('font')
+        const { wrapper, bandsNow } = mountEditor(twoBands())
+        const bar = wrapper.get('.band-bar').element as HTMLElement
+        bar.getBoundingClientRect = () =>
+            ({ left: 0, width: font.length * 10 }) as DOMRect
+        const handle = wrapper.get('[data-testid="boulder-band-handle"]')
+            .element as HTMLElement
+        handle.setPointerCapture = () => {}
+        const pointer = async (type: string, grade: string) => {
+            handle.dispatchEvent(
+                new PointerEvent(type, {
+                    clientX: (font.indexOf(grade) + 1) * 10,
+                }),
+            )
+            await flushPromises()
+        }
+
+        await pointer('pointerdown', '5')
+        await pointer('pointermove', '6A')
+        await pointer('pointercancel', '6A')
+        await pointer('pointermove', '7A')
+        expect(bandsNow()[0]!.to).toBe('6A')
     })
 })

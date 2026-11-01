@@ -47,6 +47,7 @@ beforeEach(() => {
         data: ref([{ id: 'loc1', name: 'Hall' }]),
     }))
     vi.stubGlobal('useGradeSystems', () => ({ gradeSystemFor: () => 'french' }))
+    vi.stubGlobal('useDisplay', () => ({ smAndDown: ref(false) }))
 })
 
 function mountImport() {
@@ -91,8 +92,14 @@ function mountImport() {
                     template: `<div><p v-for="(row, index) in data" :key="index"
                         data-testid="import-route-row">{{ row.name }}|{{ row.grade }}|{{ row.location }}</p></div>`,
                 },
-                ImportRouteRatings: true,
-                UCollapsible: true,
+                ImportRouteRatings: {
+                    props: ['name', 'ratings'],
+                    template: `<p data-testid="import-route-ratings">{{ name }}:{{ ratings?.map((r) => r.comment).join(',') }}</p>`,
+                },
+                UCollapsible: {
+                    template:
+                        '<li v-bind="$attrs"><slot /><slot name="content" /></li>',
+                },
                 UButton: true,
                 UIcon: true,
             },
@@ -140,6 +147,29 @@ const ROUTES_JSON = JSON.stringify([
 ])
 
 describe('ImportRoute', () => {
+    it('previews routes as an expandable list on phones and imports the same routes', async () => {
+        vi.stubGlobal('useDisplay', () => ({ smAndDown: ref(true) }))
+        const { wrapper, pick, confirm } = mountImport()
+        await pick('routes.json', ROUTES_JSON)
+        expect(wrapper.find('[data-testid="import-route-row"]').exists()).toBe(
+            false,
+        )
+        const items = wrapper.findAll('[data-testid="import-route-list-item"]')
+        expect(items.map((item) => item.get('button').text())).toEqual([
+            'Arete6a · Hall · importRoutes.ratingsCount: 1',
+            'Crack7a · Annex · importRoutes.ratingsCount: 0',
+        ])
+        expect(
+            items.map((item) =>
+                item.get('[data-testid="import-route-ratings"]').text(),
+            ),
+        ).toEqual(['Arete:Nice', 'Crack:'])
+
+        await confirm()
+        expect(createRoute).toHaveBeenCalledTimes(2)
+        expect(notify).toHaveBeenCalledWith('importRoutes.success')
+    })
+
     it('guesses the mapping and creates each route in its location and wall with its reviews', async () => {
         const { wrapper, pick, isOpen, confirm, select } = mountImport()
         await pick('routes.json', ROUTES_JSON)

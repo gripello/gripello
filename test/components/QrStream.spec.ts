@@ -233,3 +233,65 @@ describe('QrStream', () => {
         )
     })
 })
+
+describe('QrStream camera load timeout', () => {
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    function mountWaiting() {
+        const onError = vi.fn()
+        const wrapper = mount(QrStream, {
+            props: { formats: ['QRCode'], constraints: {}, onError },
+        })
+        return { wrapper, onError, video: wrapper.get('video').element }
+    }
+
+    it('gives up and turns the camera off when the stream never loads', async () => {
+        const { wrapper, video } = mountWaiting()
+        await flushPromises()
+        vi.advanceTimersByTime(5999)
+        await flushPromises()
+        expect(wrapper.emitted('error')).toBeUndefined()
+        expect(track.stop).not.toHaveBeenCalled()
+
+        vi.advanceTimersByTime(1)
+        await flushPromises()
+        expect((wrapper.emitted('error')![0]![0] as Error).message).toBe(
+            'Camera stream did not load',
+        )
+        expect(track.stop).toHaveBeenCalled()
+        expect((video as HTMLVideoElement).srcObject).toBeNull()
+        expect(wrapper.emitted('camera-on')).toBeUndefined()
+        expect(FakeWorker.instances).toHaveLength(0)
+    })
+
+    it('raises no timeout once the stream loaded in time', async () => {
+        const { wrapper, video } = mountWaiting()
+        await flushPromises()
+        vi.advanceTimersByTime(3000)
+        video.dispatchEvent(new Event('loadeddata'))
+        await flushPromises()
+        vi.advanceTimersByTime(10_000)
+        await flushPromises()
+        expect(wrapper.emitted('camera-on')).toHaveLength(1)
+        expect(wrapper.emitted('error')).toBeUndefined()
+        expect(track.stop).not.toHaveBeenCalled()
+    })
+
+    it('stays quiet when closed before the timeout', async () => {
+        const { wrapper, onError } = mountWaiting()
+        await flushPromises()
+        wrapper.unmount()
+        expect(track.stop).toHaveBeenCalledOnce()
+        vi.advanceTimersByTime(6000)
+        await flushPromises()
+        expect(onError).not.toHaveBeenCalled()
+        expect(wrapper.emitted('camera-on')).toBeUndefined()
+        expect(FakeWorker.instances).toHaveLength(0)
+    })
+})
