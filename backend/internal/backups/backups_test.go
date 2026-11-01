@@ -202,3 +202,63 @@ func TestAFailedRunIsShownOnThePage(t *testing.T) {
 		t.Errorf("list = %s", got)
 	}
 }
+
+func fakePgDump(t *testing.T, script string) {
+	t.Helper()
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "pg_dump"), []byte("#!/bin/sh\n"+script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func TestARunArchivesTheDumpAndClearsLeftoversOfKilledRuns(t *testing.T) {
+	f := newFixture(t)
+	fakePgDump(t, `for a; do case "$a" in --file=*) printf DUMP > "${a#--file=}";; esac; done`)
+	touch(t, filepath.Join(f.dir, ".work-killed", "database.dump"), "plaintext", time.Hour)
+	touch(t, filepath.Join(f.dir, "gripello-20200101-000000.tar"), "old", 48*time.Hour)
+	touch(t, filepath.Join(f.app.Cfg.BlobDir, "routes", "r1", "photo.jpg"), "jpg", 0)
+	f.app.DB.Exec(context.Background(), `UPDATE backup_settings SET keep = 1, include_storage = true`)
+
+	if err := f.m().runAndRecord(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	entries, _ := os.ReadDir(f.dir)
+	if len(entries) != 1 || !archiveName.MatchString(entries[0].Name()) {
+		t.Fatalf("backup dir = %v", entries)
+	}
+	got := map[string]string{}
+	archive, _ := os.Open(filepath.Join(f.dir, entries[0].Name()))
+	defer archive.Close()
+	for tr := tar.NewReader(archive); ; {
+		header, err := tr.Next()
+		if err != nil {
+			break
+		}
+		body, _ := io.ReadAll(tr)
+		got[header.Name] = string(body)
+	}
+	if got["database.dump"] != "DUMP" || got["storage/routes/r1/photo.jpg"] != "jpg" || len(got) != 2 {
+		t.Errorf("archive = %v", got)
+	}
+	var created int
+	f.app.DB.QueryRow(context.Background(), `SELECT count(*) FROM events WHERE topic = 'platform' AND kind = 'backup.created' AND payload->>'id' = $1`, entries[0].Name()).Scan(&created)
+	if created != 1 {
+		t.Error("backup.created not published")
+	}
+	if body := f.call("GET", "/platform/backups", f.admin(false), "").Body.String(); !strings.Contains(body, `"last_error":""`) || !strings.Contains(body, `"pg_dump":true`) {
+		t.Errorf("list = %s", body)
+	}
+}
+
+func TestAFailingDumpLeavesNoArchiveOrPlaintextBehind(t *testing.T) {
+	f := newFixture(t)
+	fakePgDump(t, `for a; do case "$a" in --file=*) printf half > "${a#--file=}";; esac; done; echo "connection refused" >&2; exit 1`)
+	err := f.m().run(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "connection refused") {
+		t.Fatalf("run = %v", err)
+	}
+	if entries, _ := os.ReadDir(f.dir); len(entries) != 0 {
+		t.Errorf("backup dir = %v", entries)
+	}
+}

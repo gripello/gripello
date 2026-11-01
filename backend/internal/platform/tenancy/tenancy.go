@@ -103,25 +103,6 @@ func (p *Permissions) userIDs(ctx context.Context, query string, args ...any) ([
 	return ids, rows.Err()
 }
 
-// Memberships returns gym → permission names for one user; loaded once per request by the auth middleware's callers.
-func (p *Permissions) Memberships(ctx context.Context, userID string) (map[string][]string, error) {
-	rows, err := p.pool.Query(ctx, `SELECT m.gym, effective_permissions(m.gym, r.permissions) FROM memberships m JOIN roles r ON r.id = m.role WHERE m."user" = $1`, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := map[string][]string{}
-	for rows.Next() {
-		var gym string
-		var perms []string
-		if err := rows.Scan(&gym, &perms); err != nil {
-			return nil, err
-		}
-		out[gym] = perms
-	}
-	return out, rows.Err()
-}
-
 // ResolveGym finds a gym by id, slug or previous slug; gyms the caller may not see (gym_visible) answer 404.
 func ResolveGym(ctx context.Context, q db.Querier, key string) (string, error) {
 	var id string
