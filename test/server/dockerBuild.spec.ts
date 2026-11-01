@@ -213,10 +213,19 @@ describe('docker ui build', () => {
             'gripello/a.go:1.1,2.2 1 0',
             '',
         ].join('\n')
-        expect(
-            execFileSync('awk', [merge], { input: profile }).toString(),
-        ).toBe(
+        const run = (input: string) =>
+            execFileSync('awk', [merge], { input }).toString()
+        expect(run(profile)).toBe(
             'mode: set\ngripello/a.go:1.1,2.2 1 1\ngripello/b.go:1.1,2.2 3 0\n',
+        )
+        expect(
+            run(
+                profile
+                    .replace('mode: set', 'mode: atomic')
+                    .replace('a.go:1.1,2.2 1 0\n', 'a.go:1.1,2.2 1 2\n'),
+            ),
+        ).toBe(
+            'mode: atomic\ngripello/a.go:1.1,2.2 1 3\ngripello/b.go:1.1,2.2 3 0\n',
         )
     })
 
