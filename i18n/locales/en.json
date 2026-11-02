@@ -594,7 +594,7 @@
             },
             "serverLogs": {
                 "title": "Server logs",
-                "body": "When you open the app, our server processes technical data such as your IP address, date and time, the requested address and your browser's user agent to deliver the page and protect the service against abuse and attacks. Lawful basis: our legitimate interests in running a secure service (Art. 6(1)(f) GDPR). Request logs are deleted automatically after 5 days."
+                "body": "When you open the app, our server processes technical data such as your IP address, date and time, the requested address and your browser's user agent to deliver the page and protect the service against abuse and attacks. Lawful basis: our legitimate interests in running a secure service (Art. 6(1)(f) GDPR). Request logs are deleted automatically after 7 days."
             },
             "accounts": {
                 "title": "Your account",
