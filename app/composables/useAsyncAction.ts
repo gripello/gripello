@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import { isAbortError, isRateLimited } from '~/utils/errors'
 import { useSessionEnded } from '~/composables/useSessionEnded'
 
@@ -26,7 +27,7 @@ export function useAsyncAction() {
             if (isAbortError(error)) return undefined
             if (messages.handled?.(error) || noticeSessionEnded(error))
                 return undefined
-            console.error(error)
+            reportCaughtError(error)
             notifyError(
                 typeof messages.error === 'function'
                     ? messages.error(error)

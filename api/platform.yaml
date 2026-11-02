@@ -660,7 +660,7 @@ paths:
               type: object
               required: [kind, message]
               properties:
-                kind: { type: string, enum: [vue, window, promise, chunk, nuxt] }
+                kind: { type: string, enum: [vue, window, promise, chunk, nuxt, ssr] }
                 message: { type: string, maxLength: 500 }
                 stack: { type: string, maxLength: 2000 }
                 route: { type: string, description: 'Matched route pattern, e.g. /:gym/routes' }

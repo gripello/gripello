@@ -452,7 +452,7 @@ export async function saveOAuthProviderSettings(
 }
 
 export interface ClientErrorReport {
-    kind: 'vue' | 'window' | 'promise' | 'chunk' | 'nuxt'
+    kind: 'vue' | 'window' | 'promise' | 'chunk' | 'nuxt' | 'ssr'
     message: string
     stack: string
     route: string

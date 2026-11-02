@@ -260,6 +260,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { useTimeoutFn } from '@vueuse/core'
 import { searchClimbers } from '~/api/social'
 import { requestErrorKey } from '~/utils/errors'
@@ -394,7 +395,7 @@ async function act(id: string, action: () => Promise<unknown>) {
     try {
         await action()
     } catch (error) {
-        console.error(error)
+        reportCaughtError(error)
         notifyError(t(requestErrorKey(error, 'notifications.error.generic')))
     } finally {
         busy.value = ''

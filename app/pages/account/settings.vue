@@ -240,6 +240,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { THUMBS } from '#shared/utils/thumbs'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import { needsPasswordFirst } from '~/utils/reauth'
@@ -586,7 +587,7 @@ async function saveUser(section: Section) {
                 await requestEmailChange(requestedEmail)
                 notify(t('account.emailChangeSent'))
             } catch (mailError) {
-                console.error('Error requesting email change:', mailError)
+                reportCaughtError(mailError)
                 notifyError(
                     t(
                         blockedFieldError(mailError, ['newEmail'])?.key ??
@@ -645,7 +646,7 @@ async function deleteAccount() {
         } else if (fieldErrorCode(err, 'gym') === 'validation_last_admin') {
             notifyError(t('account.lastAdmin'))
         } else {
-            console.error('Error deleting account:', err)
+            reportCaughtError(err)
             notifyError(t('notifications.error.delete'))
         }
     } finally {

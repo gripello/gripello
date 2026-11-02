@@ -116,6 +116,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { liveTopics } from '#shared/utils/topics'
 import { achievementToast } from '~/utils/achievements'
 import { timeAgo } from '#shared/utils/formatting'
@@ -159,9 +160,8 @@ async function turnOnPush() {
     } catch (err) {
         if (isPushRefused(err))
             return notifyError(t('accountSettings.push.refused'))
-        console.error('Push subscription failed:', err)
         notifyError(t('notifications.error.edit'))
-        globalThis.reportError?.(err)
+        reportCaughtError(err)
     }
 }
 

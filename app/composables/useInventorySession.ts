@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import { isAbortError } from '~/utils/errors'
 import type { Ref } from 'vue'
 import { gymChangesTopic } from '#shared/utils/topics'
@@ -152,7 +153,7 @@ export function useInventorySession(options: {
                     }),
                 )
             } catch (error) {
-                console.error('Failed to restore archived route:', error)
+                reportCaughtError(error)
                 notifyError(t('inventory.restoreError'))
                 return 'rejected'
             }
@@ -198,7 +199,7 @@ export function useInventorySession(options: {
             reconcileScannedIds()
         } catch (error) {
             if (isAbortError(error)) return
-            console.error('Failed to load routes for inventory:', error)
+            reportCaughtError(error)
             options.onLoadError()
         } finally {
             loadingRoutes.value = false

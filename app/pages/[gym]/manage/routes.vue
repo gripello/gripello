@@ -451,6 +451,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { gymChangesTopic } from '#shared/utils/topics'
 import { archiveRoutes, listRoutes, type RouteQuery } from '~/api/routes'
 import { isAbortError } from '~/utils/errors'
@@ -636,7 +637,7 @@ const selectAll = async () => {
     try {
         await toggleAll()
     } catch (error) {
-        console.error('Failed to select all routes:', error)
+        reportCaughtError(error)
         notifyError(t('routes.selectAllError'))
     }
 }

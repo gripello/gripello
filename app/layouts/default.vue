@@ -22,6 +22,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { gymTopic, userTopic } from '#shared/utils/topics'
 import { fileUrl } from '~/api/client'
 import { refreshAuth } from '~/api/auth'
@@ -175,7 +176,7 @@ onMounted(async () => {
             await refreshSession()
         await ensureLoaded()
     } catch (error) {
-        console.error('Error during initialization:', error)
+        reportCaughtError(error)
     }
 })
 

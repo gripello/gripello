@@ -726,8 +726,10 @@ func TestBrowserErrorsAreLoggedWithoutTheQuery(t *testing.T) {
 	t.Cleanup(func() { slog.SetDefault(previous) })
 	f.call("POST", "/client-errors", `{"kind":"vue","message":"x is undefined","stack":"at Foo.vue:3","route":"/e2e/routes?q=ada@example.com","version":"1.2.0"}`, "", http.StatusNoContent)
 	f.call("POST", "/client-errors", `{"kind":"other","message":"x"}`, "", http.StatusBadRequest)
+	f.call("POST", "/client-errors", `{"kind":"ssr","message":"TypeError: gym is null","route":"/**"}`, "", http.StatusNoContent)
 	line := out.String()
-	if !strings.Contains(line, `msg="client error"`) || !strings.Contains(line, "route=/e2e/routes") || strings.Contains(line, "ada@example.com") {
+	if !strings.Contains(line, `msg="client error"`) || !strings.Contains(line, "route=/e2e/routes") || strings.Contains(line, "ada@example.com") ||
+		!strings.Contains(line, "kind=ssr") {
 		t.Errorf("client error log = %s", line)
 	}
 }

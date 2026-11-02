@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createReporter, routePattern } from '~/utils/clientErrors'
+import {
+    createReporter,
+    reportCaughtError,
+    routePattern,
+} from '~/utils/clientErrors'
 
 const context = { route: '/:gym/routes', version: '1.2.0' }
 
@@ -80,5 +84,28 @@ describe('routePattern', () => {
             '/:gym/routes',
         )
         expect(routePattern([])).toBe('')
+    })
+})
+
+describe('reportCaughtError', () => {
+    it('hands caught errors to the window error listener that reports them', () => {
+        const reportError = vi.fn()
+        vi.stubGlobal('reportError', reportError)
+        const error = new Error('replaying tick failed')
+        reportCaughtError(error)
+        expect(reportError).toHaveBeenCalledWith(error)
+        vi.unstubAllGlobals()
+    })
+
+    it('falls back to the console where reportError is missing', () => {
+        vi.stubGlobal('reportError', undefined)
+        const consoleError = vi
+            .spyOn(console, 'error')
+            .mockImplementation(() => {})
+        const error = new Error('old browser')
+        reportCaughtError(error)
+        expect(consoleError).toHaveBeenCalledWith(error)
+        consoleError.mockRestore()
+        vi.unstubAllGlobals()
     })
 })

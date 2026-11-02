@@ -59,3 +59,10 @@ export function createReporter(send: (report: ClientErrorReport) => void) {
         send({ kind, message, stack: stack.slice(0, 2000), ...context })
     }
 }
+
+// A caught error goes to the console and, through the window error listener, to the server log unless expected (API, abort, network).
+export function reportCaughtError(error: unknown) {
+    if (typeof globalThis.reportError === 'function')
+        globalThis.reportError(error)
+    else console.error(error)
+}

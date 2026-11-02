@@ -67,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { useTimeoutFn } from '@vueuse/core'
 import { listEmailSourceDomains, type EmailSource } from '~/api/platform'
 
@@ -102,7 +103,7 @@ async function load() {
         limit.value = result.limit
     } catch (err) {
         if (current !== request) return
-        console.error(err)
+        reportCaughtError(err)
         failed.value = true
     } finally {
         if (current === request) loading.value = false

@@ -172,6 +172,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { getNotificationPrefs, putNotificationPrefs } from '~/api/notifications'
 import { listWallsById } from '~/api/routes'
 import { useAuthState } from '~/api/auth'
@@ -258,9 +259,8 @@ async function addThisDevice() {
     } catch (err) {
         if (isPushRefused(err))
             return notifyError(t('accountSettings.push.refused'))
-        console.error('Push subscription failed:', err)
         notifyError(t('notifications.error.edit'))
-        globalThis.reportError?.(err)
+        reportCaughtError(err)
     }
 }
 

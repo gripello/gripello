@@ -135,7 +135,7 @@ type clientError struct {
 	Version string `json:"version"`
 }
 
-var clientErrorKinds = map[string]bool{"vue": true, "window": true, "promise": true, "chunk": true, "nuxt": true}
+var clientErrorKinds = map[string]bool{"vue": true, "window": true, "promise": true, "chunk": true, "nuxt": true, "ssr": true}
 
 func (m *module) reportClientError(w http.ResponseWriter, r *http.Request) error {
 	if !m.clientIPs.Allow(httpx.ClientIP(r), time.Now()) || !m.clientErrors.Allow("all", time.Now()) {

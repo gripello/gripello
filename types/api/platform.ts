@@ -1641,7 +1641,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    kind: "vue" | "window" | "promise" | "chunk" | "nuxt";
+                    kind: "vue" | "window" | "promise" | "chunk" | "nuxt" | "ssr";
                     message: string;
                     stack?: string;
                     /** @description Matched route pattern, e.g. /:gym/routes */
