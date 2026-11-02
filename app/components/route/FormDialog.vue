@@ -215,6 +215,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { ROUTE_TYPES } from '#shared/utils/routeTypes'
 import {
     createRoute,
@@ -538,7 +539,7 @@ const getSetters = async () => {
         })
         setterItems.value = setterNames(recent.items)
     } catch (error) {
-        console.error('Failed to fetch route setters:', error)
+        reportCaughtError(error)
     }
 }
 
@@ -658,7 +659,7 @@ async function deleteRoute() {
             forceDelete.value = true
             return
         }
-        console.error('Failed to delete route:', error)
+        reportCaughtError(error)
         notifyError(t('notifications.error.generic'))
     } finally {
         deleting.value = false

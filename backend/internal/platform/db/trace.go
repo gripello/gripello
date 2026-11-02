@@ -27,6 +27,7 @@ type queryStart struct {
 type queryStartKey struct{}
 
 func (tracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+	httpx.NoteQuery(ctx, data.SQL)
 	return context.WithValue(ctx, queryStartKey{}, queryStart{data.SQL, time.Now()})
 }
 
@@ -37,12 +38,12 @@ func (tracer) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, data pgx.TraceQuer
 		return
 	}
 	took := time.Since(q.start)
-	attrs := []any{"req", httpx.RequestID(ctx), "sql", compactSQL(q.sql), "ms", took.Milliseconds()}
+	attrs := []any{"req", httpx.RequestID(ctx), "sql", httpx.CompactSQL(q.sql), "ms", took.Milliseconds()}
 	switch {
 	case data.Err != nil && !expectedQueryError(data.Err):
-		slog.Warn("query failed", append(attrs, "error", data.Err)...)
+		slog.WarnContext(ctx, "query failed", append(attrs, "error", data.Err)...)
 	case SlowQuery > 0 && took > SlowQuery && !strings.HasPrefix(q.sql, "LISTEN"):
-		slog.Warn("slow query", append(attrs, "rows", data.CommandTag.RowsAffected())...)
+		slog.WarnContext(ctx, "slow query", append(attrs, "rows", data.CommandTag.RowsAffected())...)
 	}
 }
 
@@ -53,14 +54,6 @@ func expectedQueryError(err error) bool {
 		return strings.HasPrefix(pg.Code, "23") || pg.Code == "57014"
 	}
 	return errors.Is(err, pgx.ErrNoRows) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
-}
-
-func compactSQL(sql string) string {
-	sql = strings.Join(strings.Fields(sql), " ")
-	if len(sql) > 500 {
-		sql = sql[:500] + "…"
-	}
-	return sql
 }
 
 // IsUnique reports a unique violation on a constraint whose name contains constraint ("" matches any).

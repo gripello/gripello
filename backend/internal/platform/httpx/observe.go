@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"regexp"
 	"runtime/debug"
+	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -28,7 +30,7 @@ type requestIDKey struct{}
 
 var validRequestID = regexp.MustCompile(`^[A-Za-z0-9-]{1,64}$`)
 
-// WithRequestID takes nginx's X-Request-Id (or makes one), echoes it and puts it into the context, so every log line of the request carries it.
+// WithRequestID takes nginx's X-Request-Id (or makes one), echoes it and puts it into the context, where logbuf adds it to every *Context log line.
 func WithRequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := r.Header.Get("X-Request-Id")
@@ -38,13 +40,33 @@ func WithRequestID(next http.Handler) http.Handler {
 			id = hex.EncodeToString(b)
 		}
 		w.Header().Set("X-Request-Id", id)
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestIDKey{}, id)))
+		ctx := context.WithValue(r.Context(), requestIDKey{}, id)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, lastQueryKey{}, new(atomic.Pointer[string]))))
 	})
 }
 
 func RequestID(ctx context.Context) string {
 	id, _ := ctx.Value(requestIDKey{}).(string)
 	return id
+}
+
+type lastQueryKey struct{}
+
+// NoteQuery remembers the request's latest SQL, so a failed request names the query it most likely failed on
+// (errors such as "no rows in result set" arrive without it).
+func NoteQuery(ctx context.Context, sql string) {
+	if last, ok := ctx.Value(lastQueryKey{}).(*atomic.Pointer[string]); ok {
+		last.Store(&sql)
+	}
+}
+
+// CompactSQL puts a statement on one line and cuts it at 500 bytes for logging.
+func CompactSQL(sql string) string {
+	sql = strings.Join(strings.Fields(sql), " ")
+	if len(sql) > 500 {
+		sql = strings.ToValidUTF8(sql[:500], "") + "…"
+	}
+	return sql
 }
 
 type observedWriter struct {
@@ -112,15 +134,18 @@ func Observe(user func(context.Context) string) func(http.Handler) http.Handler 
 					"ms", took.Milliseconds(), "user", user(r.Context())}
 				switch {
 				case panicked != nil:
-					slog.Error("request panicked", append(attrs, "panic", fmt.Sprint(panicked), "stack", string(debug.Stack()))...)
+					slog.ErrorContext(r.Context(), "request panicked", append(attrs, "panic", fmt.Sprint(panicked), "stack", string(debug.Stack()))...)
 				case ow.failure != nil:
-					slog.Error("request failed", append(attrs, "error", ow.failure)...)
+					if last, ok := r.Context().Value(lastQueryKey{}).(*atomic.Pointer[string]); ok && last.Load() != nil {
+						attrs = append(attrs, "last_sql", CompactSQL(*last.Load()))
+					}
+					slog.ErrorContext(r.Context(), "request failed", append(attrs, "error", ow.failure)...)
 				case status >= 500:
-					slog.Warn("server error response", attrs...)
+					slog.WarnContext(r.Context(), "server error response", attrs...)
 				case SlowRequest > 0 && took > SlowRequest && !streaming[r.Pattern]:
-					slog.Warn("slow request", attrs...)
+					slog.WarnContext(r.Context(), "slow request", attrs...)
 				case status >= 400:
-					slog.Debug("request rejected", append(attrs, "codes", ow.codes)...)
+					slog.DebugContext(r.Context(), "request rejected", append(attrs, "codes", ow.codes)...)
 				}
 			}()
 			next.ServeHTTP(ow, r)

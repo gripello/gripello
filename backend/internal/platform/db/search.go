@@ -19,6 +19,11 @@ func WordPatterns(term string) []string {
 	return patterns
 }
 
+// Match with col ILIKE $n: the whole term as one substring.
+func ContainsPattern(term string) string {
+	return "%" + likeEscaper.Replace(term) + "%"
+}
+
 // Where collects AND-ed conditions; each Add binds its arg to every ? of the clause.
 type Where struct {
 	Clauses []string

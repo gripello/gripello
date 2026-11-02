@@ -72,7 +72,7 @@ func main() {
 		err = fmt.Errorf("unknown command %q", os.Args[1])
 	}
 	if err != nil {
-		slog.Error(err.Error())
+		slog.Error("gripello: command failed", "error", err)
 		os.Exit(1)
 	}
 }
@@ -111,7 +111,7 @@ func connect(ctx context.Context) (config.Config, *platform.App, error) {
 	store.MayView = blob.StaffView(pool, tenancy.New(pool))
 	messages := locales.Load(cfg.LocalesDir)
 	if len(messages) == 0 {
-		slog.Warn("i18n: no locale messages found", "dir", cfg.LocalesDir)
+		slog.WarnContext(ctx, "i18n: no locale messages found", "dir", cfg.LocalesDir)
 	}
 	bus := events.NewBus(pool)
 	app := &platform.App{
@@ -138,7 +138,7 @@ func connect(ctx context.Context) (config.Config, *platform.App, error) {
 			err = app.Push.UseFCM(credentials)
 		}
 		if err != nil {
-			slog.Error("push: native push disabled", "error", err)
+			slog.ErrorContext(ctx, "push: native push disabled", "error", err)
 		}
 	}
 	app.Verified.Listen(bus)
@@ -181,16 +181,16 @@ func serve(ctx context.Context, args []string) error {
 	if cfg.DebugAddr != "" {
 		// pprof and expvar register on the default mux, which only this listener serves; keep it off the public network.
 		go func() {
-			slog.Info("debug listener", "addr", cfg.DebugAddr)
+			slog.InfoContext(ctx, "debug listener", "addr", cfg.DebugAddr)
 			if err := http.ListenAndServe(cfg.DebugAddr, http.DefaultServeMux); err != nil {
-				slog.Error("debug listener stopped", "error", err)
+				slog.ErrorContext(ctx, "debug listener stopped", "error", err)
 			}
 		}()
 	}
 	mailer := app.Mail.(*mail.Client)
 	reloadMail := func() {
 		if err := mailer.Reload(ctx, app.DB, cfg, app.Tokens.Secret); err != nil {
-			slog.Error("mail: loading the platform mail settings failed", "error", err)
+			slog.ErrorContext(ctx, "mail: loading the platform mail settings failed", "error", err)
 		}
 		app.Push.UseSubject(mailer.SenderAddress(), cfg.AppURL)
 	}
@@ -257,7 +257,7 @@ func serve(ctx context.Context, args []string) error {
 		<-ctx.Done()
 		return nil
 	}
-	slog.Info("listening", "addr", cfg.HTTPAddr, "role", cfg.Role, "version", config.Version)
+	slog.InfoContext(ctx, "listening", "addr", cfg.HTTPAddr, "role", cfg.Role, "version", config.Version)
 	return app.Serve(ctx)
 }
 

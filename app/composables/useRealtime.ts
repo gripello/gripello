@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import { userTopic } from '#shared/utils/topics'
 import {
     onActivated,
@@ -144,7 +145,7 @@ async function syncOnce() {
         })
     } catch (error) {
         replaySince ||= since
-        console.error('Realtime subscription failed:', error)
+        reportCaughtError(error)
         if (target !== clientId) return
         const { status = 0 } = (error as { status?: number } | null) ?? {}
         // a refused topic set is only sent again once the topics or the stream change

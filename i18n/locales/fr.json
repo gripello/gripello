@@ -594,7 +594,7 @@
             },
             "serverLogs": {
                 "title": "Journaux du serveur",
-                "body": "Lorsque vous accédez à cette application, le serveur traite des données techniques telles que l’adresse IP, la date et l’heure, l’URL demandée et l’agent utilisateur du navigateur afin de fournir la page et de la protéger contre les abus. Base légale : intérêt légitime à assurer le fonctionnement et la sécurité du service (article 6, paragraphe 1, point f), du RGPD). Ces journaux ne sont visibles que par l’équipe technique et sont supprimés automatiquement après une courte durée (5 jours par défaut)."
+                "body": "Lorsque vous accédez à cette application, le serveur traite des données techniques telles que l’adresse IP, la date et l’heure, l’URL demandée et l’agent utilisateur du navigateur afin de fournir la page et de la protéger contre les abus. Base légale : intérêt légitime à assurer le fonctionnement et la sécurité du service (article 6, paragraphe 1, point f), du RGPD). Ces journaux ne sont visibles que par l’équipe technique et sont supprimés automatiquement après une courte durée (7 jours par défaut)."
             },
             "accounts": {
                 "title": "Compte utilisateur",
@@ -2525,6 +2525,14 @@
             "default": "par défaut",
             "replicas": "Réplicas",
             "sameModule": "Même module",
+            "filters": {
+                "req": "ID de requête",
+                "user": "ID utilisateur",
+                "route": "Route"
+            },
+            "clearFilters": "Effacer les filtres",
+            "loadOlder": "Charger les plus anciennes",
+            "noMatches": "Aucune ligne ne correspond à ces filtres",
             "replicaStatus": {
                 "online": "En ligne",
                 "offline": "Hors ligne",

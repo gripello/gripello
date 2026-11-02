@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import { isAbortOrNetworkError } from '~/utils/errors'
 import type { RecordChange } from '~/composables/useRealtime'
 import type { NotificationRecord } from '~/types/models'
@@ -44,7 +45,7 @@ export function useNotificationQueue() {
             loaded.value = true
         } catch (err) {
             if (isAbortOrNetworkError(err)) return
-            console.error('Failed to load notifications:', err)
+            reportCaughtError(err)
             loaded.value = true
         } finally {
             eventsDuringRefresh.delete(seen)
@@ -65,7 +66,7 @@ export function useNotificationQueue() {
             await markNotificationsRead({ ids: [id] })
         } catch (err) {
             item.read = false
-            console.error('Failed to mark notification read:', err)
+            reportCaughtError(err)
         }
     }
 
@@ -78,7 +79,7 @@ export function useNotificationQueue() {
             await markNotificationsRead({ ids: unread.map((item) => item.id) })
         } catch (err) {
             unread.forEach((item) => (item.read = false))
-            console.error('Failed to mark notifications read:', err)
+            reportCaughtError(err)
         }
     }
 
@@ -91,7 +92,7 @@ export function useNotificationQueue() {
             await deleteNotification(id)
         } catch (err) {
             if (removed) items.value.splice(index, 0, removed)
-            console.error('Failed to dismiss notification:', err)
+            reportCaughtError(err)
         }
     }
 

@@ -90,9 +90,14 @@ func (a *App) Serve(ctx context.Context) error {
 	drained := make(chan error, 1)
 	go func() {
 		<-ctx.Done()
+		slog.InfoContext(ctx, "shutting down, draining requests", "timeout_ms", shutdownTimeout.Milliseconds())
 		drainCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
-		drained <- srv.Shutdown(drainCtx)
+		err := srv.Shutdown(drainCtx)
+		if err != nil {
+			slog.WarnContext(ctx, "requests still running when the drain timeout ended", "error", err)
+		}
+		drained <- err
 	}()
 	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 		return err

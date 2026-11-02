@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import { isAbortOrNetworkError } from '~/utils/errors'
 import {
     activeMemberships,
@@ -57,7 +58,7 @@ export function usePermissions() {
             authRejected.value = [401, 403, 404].includes(
                 (err as { status?: number })?.status ?? 0,
             )
-            console.error('Failed to fetch permissions:', err)
+            reportCaughtError(err)
             memberships.value = []
             platformAdmin.value = false
             if (!loadFailed.value && !authRejected.value)

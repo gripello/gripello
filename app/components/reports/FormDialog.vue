@@ -100,6 +100,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { translatedItems } from '~/utils/translatedItems'
 import { REPORT_REASONS } from '#shared/utils/reports'
 import { createReport } from '~/api/moderation'
@@ -218,7 +219,7 @@ async function submit() {
         emit('submitted')
         close()
     } catch (err) {
-        console.error('Failed to submit report:', err)
+        reportCaughtError(err)
         notifyError(
             t(
                 blockedFieldError(err, ['notifier_email'])?.key ??

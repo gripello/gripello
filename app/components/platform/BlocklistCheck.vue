@@ -30,6 +30,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { useTimeoutFn } from '@vueuse/core'
 import {
     checkBlocklists,
@@ -65,7 +66,7 @@ async function check() {
         if (current === request)
             verdict.value = blocklistVerdict(result, props.sources)
     } catch (err) {
-        console.error(err)
+        reportCaughtError(err)
         if (current === request) verdict.value = null
     }
 }

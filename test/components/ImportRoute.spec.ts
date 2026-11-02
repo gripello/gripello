@@ -270,13 +270,17 @@ describe('ImportRoute', () => {
         expect(rows()).toEqual(['|6a|'])
     })
 
-    it('refuses unreadable or empty files without opening the preview', async () => {
+    it('refuses unreadable or empty files without opening the preview or reporting them as app errors', async () => {
+        const reportError = vi.fn()
+        vi.stubGlobal('reportError', reportError)
         const { pick, isOpen } = mountImport()
         await pick('routes.json', '{ not json')
         await pick('routes.json', '[]')
         expect(notifyError).toHaveBeenCalledTimes(2)
         expect(notifyError).toHaveBeenCalledWith('importRoutes.invalidFile')
         expect(isOpen()).toBe(false)
+        expect(reportError).not.toHaveBeenCalled()
+        vi.stubGlobal('reportError', undefined)
     })
 
     it('matches reviews to routes imported earlier by their old id, lists the unmatched first and reports them', async () => {

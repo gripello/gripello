@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import { isOfflineError, isRetryableSaveError } from '~/utils/errors'
 import type { TickRecord } from '~/types/models'
 import {
@@ -301,7 +302,7 @@ export function useTickOutbox() {
                 )
                     break
                 if (op.op !== 'delete' && !isAlreadyApplied(op, error)) {
-                    console.error('Replaying tick failed:', error)
+                    reportCaughtError(error)
                     setQueue(
                         queue.value.map((entry) =>
                             entry === op

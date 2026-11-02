@@ -214,6 +214,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { getClimber } from '~/api/social'
 import { listClimberTicks, listOwnTicks } from '~/api/ticks'
 import type { RouteRecord } from '~/types/models'
@@ -401,7 +402,7 @@ async function run(action: () => Promise<unknown>) {
         await action()
         await refreshTheirs()
     } catch (error) {
-        console.error(error)
+        reportCaughtError(error)
         notifyError(t(requestErrorKey(error, 'notifications.error.generic')))
     } finally {
         busy.value = false

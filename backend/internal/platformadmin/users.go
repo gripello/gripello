@@ -295,7 +295,7 @@ func (m *module) updateUser(w http.ResponseWriter, r *http.Request) error {
 		content := gmail.Content{Key: "emailChangedByAdmin", Name: t.Firstname, Params: map[string]any{"email": changes["email"]}}
 		recipients := []gmail.Recipient{{Address: t.Email, Language: t.Language}}
 		if _, err := m.app.MailTemplates.Send(r.Context(), m.app.Mail, m.app.MailTemplates.AppBrand(), content, recipients); err != nil {
-			slog.Error("platformadmin: e-mail change notice failed", "user", t.ID, "error", err)
+			slog.ErrorContext(r.Context(), "platformadmin: e-mail change notice failed", "user", t.ID, "error", err)
 		}
 	}
 	for field, old := range previous {
@@ -420,7 +420,7 @@ func (m *module) deleteBlobs(ctx context.Context, userID string, names []string)
 
 func (m *module) deleteKey(ctx context.Context, key string) {
 	if err := m.app.Blob.Delete(ctx, key); err != nil {
-		slog.Warn("platformadmin: deleting file failed", "key", key, "error", err)
+		slog.WarnContext(ctx, "platformadmin: deleting file failed", "key", key, "error", err)
 	}
 }
 
@@ -547,7 +547,7 @@ func (m *module) suspend(w http.ResponseWriter, r *http.Request) error {
 	}
 	if t.Email != "" {
 		if err := m.sendSuspensionMail(r.Context(), t, until, reason); err != nil {
-			slog.Error("platformadmin: suspension mail failed", "user", t.ID, "error", err)
+			slog.ErrorContext(r.Context(), "platformadmin: suspension mail failed", "user", t.ID, "error", err)
 		}
 	}
 	return httpx.NoContent(w, nil)

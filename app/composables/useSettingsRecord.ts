@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import { getSettings } from '~/api/gyms'
 import type { SettingsRecord } from '~/types/models'
 
@@ -9,7 +10,7 @@ export function useSettingsRecord() {
         try {
             return await getSettings()
         } catch (error) {
-            console.error('An error occurred:', error)
+            reportCaughtError(error)
             notifyError(t('settings.loadError'))
             throw error
         }

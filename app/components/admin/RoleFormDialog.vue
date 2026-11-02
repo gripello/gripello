@@ -83,6 +83,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import type { ApiError } from '~/api/client'
 import { fieldErrorCode, formFieldErrors } from '~/utils/fieldErrors'
 import { createRole, updateRole } from '~/api/members'
@@ -213,7 +214,7 @@ async function save() {
             notifyError(t('permissions.cannotGrant'))
             return
         }
-        console.error('Failed to save role:', err)
+        reportCaughtError(err)
         notifyError(t('permissions.roleSaveError'))
     } finally {
         saving.value = false

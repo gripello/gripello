@@ -176,6 +176,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { isOfflineError } from '~/utils/errors'
 import { listOwnTicks } from '~/api/ticks'
 import type { RouteRecord, TickRecord } from '~/types/models'
@@ -403,7 +404,7 @@ async function confirmDelete() {
         deleteTarget.value = null
         await reload()
     } catch (err) {
-        console.error('Deleting tick failed:', err)
+        reportCaughtError(err)
         notifyError(t('notifications.error.delete'))
     } finally {
         deleting.value = false

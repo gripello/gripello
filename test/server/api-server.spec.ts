@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { jsonResponse, mockApi } from '../api/apiMock'
 
 let authorization = 'Bearer token'
+let requestId: string | undefined
 
 vi.mock('h3', () => ({
     createError: (input: unknown) => input,
-    getHeader: () => authorization,
+    getHeader: (_: unknown, name: string) =>
+        name === 'X-Request-Id' ? requestId : authorization,
 }))
 
 const { apiFetch, fetchAll, requirePermission } =
@@ -20,6 +22,7 @@ function memberWithRole(permissions: string[] = [], gym = 'gymA') {
 beforeEach(() => {
     api = mockApi()
     authorization = 'Bearer token'
+    requestId = undefined
     globalThis.__NUXT_RUNTIME_CONFIG__ = {
         apiBase: 'http://go',
         public: { appVersion: '1.5.0' },
@@ -27,6 +30,15 @@ beforeEach(() => {
 })
 
 describe('apiFetch', () => {
+    it('passes the request id of the page on, so Go logs the same id', async () => {
+        requestId = 'nginx-req-1'
+        await apiFetch({} as never)('/me')
+        expect(api.request().headers.get('X-Request-Id')).toBe('nginx-req-1')
+        requestId = undefined
+        await apiFetch({} as never)('/me')
+        expect(api.request().headers.has('X-Request-Id')).toBe(false)
+    })
+
     it('forwards the caller token to the Go API', async () => {
         authorization = 'raw-token'
         await apiFetch({} as never)('/me')

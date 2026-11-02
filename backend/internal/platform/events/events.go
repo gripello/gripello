@@ -223,7 +223,7 @@ func (b *Bus) Start(ctx context.Context) {
 		if err == nil || ctx.Err() != nil {
 			break
 		}
-		slog.Error("events: reading the outbox head failed", "error", err)
+		slog.ErrorContext(ctx, "events: reading the outbox head failed", "error", err)
 		time.Sleep(time.Second)
 	}
 	if committed != nil {
@@ -240,7 +240,7 @@ func (b *Bus) Start(ctx context.Context) {
 func (b *Bus) run(ctx context.Context) {
 	for ctx.Err() == nil {
 		if err := b.listen(ctx); err != nil && ctx.Err() == nil {
-			slog.Error("events: listener stopped", "error", err)
+			slog.ErrorContext(ctx, "events: listener stopped", "error", err)
 			time.Sleep(time.Second)
 		}
 	}
@@ -465,7 +465,7 @@ func (b *Bus) sweepOnces(ctx context.Context, cursors map[chan Event]int64, minA
 	if err := b.pool.QueryRow(ctx, `SELECT COALESCE(MAX(id), 0) FROM events WHERE created < now() - $1::interval`,
 		minAge.String()).Scan(&upTo); err != nil {
 		if ctx.Err() == nil {
-			slog.Error("events: sweeping unclaimed events failed", "error", err)
+			slog.ErrorContext(ctx, "events: sweeping unclaimed events failed", "error", err)
 		}
 		return
 	}
@@ -482,7 +482,7 @@ func (b *Bus) sweepOnces(ctx context.Context, cursors map[chan Event]int64, minA
 			ORDER BY id`, once.prefix, once.handler, cursors[once.queue], upTo)
 		if err != nil {
 			if ctx.Err() == nil {
-				slog.Error("events: sweeping unclaimed events failed", "handler", once.handler, "error", err)
+				slog.ErrorContext(ctx, "events: sweeping unclaimed events failed", "handler", once.handler, "error", err)
 			}
 			continue
 		}

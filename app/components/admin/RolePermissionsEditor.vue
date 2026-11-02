@@ -264,6 +264,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { gymTopic } from '#shared/utils/topics'
 import type { GymEvent } from '~/composables/useRealtime'
 import { listPermissions } from '~/api/gyms'
@@ -483,7 +484,7 @@ async function fetchData({ silent = false } = {}) {
         allPermissions.value = permsData
     } catch (err) {
         if (isAbortError(err)) return
-        console.error('Failed to fetch roles/permissions:', err)
+        reportCaughtError(err)
         notifyError(t('permissions.loadError'))
     } finally {
         loading.value = false

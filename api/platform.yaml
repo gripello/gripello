@@ -576,9 +576,14 @@ paths:
     get:
       operationId: listServerLogs
       tags: [platform]
-      description: The newest 2000 log records of every replica (kept 7 days), newest first, at or above level.
+      description: The newest 2000 log records of every replica (kept 7 days), newest first, at or above level and matching every given filter.
       parameters:
         - { name: level, in: query, schema: { type: string, enum: [debug, info, warn, error], default: info } }
+        - { name: req, in: query, description: 'Request id (attrs.req), exact', schema: { type: string } }
+        - { name: user, in: query, description: 'Acting user id (attrs.user), exact', schema: { type: string } }
+        - { name: route, in: query, description: 'Route pattern (attrs.route), exact', schema: { type: string } }
+        - { name: q, in: query, description: 'Case-insensitive substring of the message or the attributes', schema: { type: string, maxLength: 200 } }
+        - { name: cursor, in: query, description: 'next of the previous page: only older records', schema: { type: string } }
       responses:
         '200':
           description: OK
@@ -592,6 +597,7 @@ paths:
                   items:
                     type: array
                     items: { type: object, properties: { time: { type: string, format: date-time }, replica: { type: string }, level: { type: string }, message: { type: string }, attrs: { type: object } } }
+                  next: { type: [string, 'null'], description: 'Cursor for the next older page; null when this page is the last' }
         '400': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
@@ -654,7 +660,7 @@ paths:
               type: object
               required: [kind, message]
               properties:
-                kind: { type: string, enum: [vue, window, promise, chunk, nuxt] }
+                kind: { type: string, enum: [vue, window, promise, chunk, nuxt, ssr] }
                 message: { type: string, maxLength: 500 }
                 stack: { type: string, maxLength: 2000 }
                 route: { type: string, description: 'Matched route pattern, e.g. /:gym/routes' }

@@ -44,7 +44,7 @@ func (m *module) inTx(ctx context.Context, fn func(w *work) error) error {
 	}
 	for _, key := range w.drop {
 		if err := m.app.Blob.Delete(ctx, key); err != nil {
-			slog.Error("moderation: deleting file failed", "key", key, "error", err)
+			slog.ErrorContext(ctx, "moderation: deleting file failed", "key", key, "error", err)
 		}
 	}
 	for _, f := range w.after {
@@ -317,7 +317,7 @@ func (m *module) release(ctx context.Context, w *work, it *Item) error {
 		if _, err := w.tx.Exec(ctx, `INSERT INTO `+k.table+` (`+list+`) SELECT `+list+` FROM jsonb_populate_record(NULL::`+k.table+`, $1)`, values); db.IsUnique(err, "ratings_route_user_idx") {
 			return httpx.NewError(http.StatusConflict, "The author has reviewed this route again since; delete that review first.")
 		} else if err != nil {
-			slog.Warn("moderation: restoring content failed", "item", it.ID, "error", err)
+			slog.WarnContext(ctx, "moderation: restoring content failed", "item", it.ID, "error", err)
 			return httpx.BadRequest("The content could not be restored.")
 		}
 	} else {
@@ -337,7 +337,7 @@ func (m *module) release(ctx context.Context, w *work, it *Item) error {
 		tag, err := w.tx.Exec(ctx, `UPDATE `+k.table+` t SET `+strings.Join(sets, ", ")+`, updated = now()
 			FROM jsonb_populate_record(NULL::`+k.table+`, $2) s WHERE t.id = $1`, it.ContentID, values)
 		if err != nil {
-			slog.Warn("moderation: restoring content failed", "item", it.ID, "error", err)
+			slog.WarnContext(ctx, "moderation: restoring content failed", "item", it.ID, "error", err)
 			return httpx.BadRequest("The content could not be restored.")
 		}
 		if tag.RowsAffected() == 0 {
@@ -454,7 +454,7 @@ func (m *module) send(ctx context.Context, gym string, content mail.Content, to 
 	}
 	sent, err := m.app.MailTemplates.Send(ctx, m.app.Mail, m.brand(ctx, gym), content, to)
 	if err != nil {
-		slog.Error("moderation: mail failed", "mail", content.Key, "error", err)
+		slog.ErrorContext(ctx, "moderation: mail failed", "mail", content.Key, "error", err)
 	}
 	return sent
 }
@@ -510,7 +510,7 @@ func (m *module) sendReceipt(ctx context.Context, report Report, caseID string) 
 		})
 	}
 	if err != nil {
-		slog.Error("moderation: loading report handlers failed", "report", report.ID, "error", err)
+		slog.ErrorContext(ctx, "moderation: loading report handlers failed", "report", report.ID, "error", err)
 	}
 	contentURL := mail.AbsoluteURL(m.app.MailTemplates.AppURL, report.ContentURL)
 	alert := mail.Content{
@@ -649,7 +649,7 @@ func (m *module) pruneQuarantine(ctx context.Context) error {
 	for _, id := range pruned {
 		m.app.Blob.Delete(ctx, "moderation_items/"+id)
 	}
-	slog.Info("moderation: pruned expired quarantine", "rows", len(pruned))
+	slog.InfoContext(ctx, "moderation: pruned expired quarantine", "rows", len(pruned))
 	return nil
 }
 
@@ -660,7 +660,7 @@ const decidedReportRetentionYears = 3
 func (m *module) pruneReports(ctx context.Context) error {
 	tag, err := m.app.DB.Exec(ctx, `DELETE FROM reports WHERE decided_at < now() - make_interval(years => $1)`, decidedReportRetentionYears)
 	if err == nil {
-		slog.Info("moderation: pruned decided reports", "rows", tag.RowsAffected())
+		slog.InfoContext(ctx, "moderation: pruned decided reports", "rows", tag.RowsAffected())
 	}
 	return err
 }

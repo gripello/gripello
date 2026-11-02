@@ -53,7 +53,7 @@ func lockoutKey(user *account, identity string) string {
 func (m *module) recordLoginFailure(ctx context.Context, r *http.Request, key string, user *account, label string) {
 	locked, err := lockout.Failed(ctx, m.db, key)
 	if err != nil {
-		slog.Error("authn: counting a failed login failed", "error", err)
+		slog.ErrorContext(ctx, "authn: counting a failed login failed", "error", err)
 		return
 	}
 	event := AuthEvent{Action: "login_failed", Label: label, IP: httpx.ClientIP(r)}
@@ -76,7 +76,7 @@ func (m *module) audit(ctx context.Context, event AuthEvent) {
 
 func (m *module) auditAs(ctx context.Context, actor string, event AuthEvent) {
 	if err := pgx.BeginFunc(ctx, m.db, func(tx pgx.Tx) error { return publishAuthEventAs(ctx, tx, actor, event) }); err != nil {
-		slog.Error("authn: audit event failed", "action", event.Action, "error", err)
+		slog.ErrorContext(ctx, "authn: audit event failed", "action", event.Action, "error", err)
 	}
 }
 
@@ -112,7 +112,7 @@ func (m *module) upgradeLegacyHash(ctx context.Context, user account, pw string)
 		_, err = m.db.Exec(ctx, `UPDATE users SET password_hash = $2 WHERE id = $1 AND password_hash = $3`, user.ID, hash, user.PasswordHash)
 	}
 	if err != nil {
-		slog.Error("authn: upgrading a legacy password hash failed", "error", err)
+		slog.ErrorContext(ctx, "authn: upgrading a legacy password hash failed", "error", err)
 	}
 }
 
@@ -266,7 +266,7 @@ func (m *module) sendAuthMail(ctx context.Context, user account, to string, cont
 	go func() {
 		_, err := m.templates.Send(ctx, m.mail, m.templates.AppBrand(), content, []mail.Recipient{{Address: to, Language: user.Language}})
 		if err != nil {
-			slog.Error("authn: sending mail failed", "mail", content.Key, "user", user.ID, "error", err)
+			slog.ErrorContext(ctx, "authn: sending mail failed", "mail", content.Key, "user", user.ID, "error", err)
 		}
 	}()
 }

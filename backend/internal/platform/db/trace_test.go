@@ -1,13 +1,20 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"gripello/internal/platform/httpx"
 )
 
 func TestExpectedQueryErrorsAreNotLogged(t *testing.T) {
@@ -26,5 +33,24 @@ func TestExpectedQueryErrorsAreNotLogged(t *testing.T) {
 		if expectedQueryError(err) {
 			t.Errorf("%v is hidden", err)
 		}
+	}
+}
+
+func TestEveryQueryIsNotedForTheRequest(t *testing.T) {
+	var ctx context.Context
+	httpx.WithRequestID(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) { ctx = r.Context() })).
+		ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+	logs := &bytes.Buffer{}
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	tracer{}.TraceQueryStart(ctx, nil, pgx.TraceQueryStartData{SQL: "SELECT 1"})
+	server := httpx.Observe(func(context.Context) string { return "" })(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		httpx.Fail(w, errors.New("boom"))
+	}))
+	server.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil).WithContext(ctx))
+	if !strings.Contains(logs.String(), `last_sql="SELECT 1"`) {
+		t.Errorf("log = %s", logs.String())
 	}
 }

@@ -399,7 +399,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description The newest 2000 log records of every replica (kept 7 days), newest first, at or above level. */
+        /** @description The newest 2000 log records of every replica (kept 7 days), newest first, at or above level and matching every given filter. */
         get: operations["listServerLogs"];
         put?: never;
         post?: never;
@@ -1496,6 +1496,16 @@ export interface operations {
         parameters: {
             query?: {
                 level?: "debug" | "info" | "warn" | "error";
+                /** @description Request id (attrs.req), exact */
+                req?: string;
+                /** @description Acting user id (attrs.user), exact */
+                user?: string;
+                /** @description Route pattern (attrs.route), exact */
+                route?: string;
+                /** @description Case-insensitive substring of the message or the attributes */
+                q?: string;
+                /** @description next of the previous page: only older records */
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -1523,6 +1533,8 @@ export interface operations {
                             message?: string;
                             attrs?: Record<string, never>;
                         }[];
+                        /** @description Cursor for the next older page; null when this page is the last */
+                        next?: string | null;
                     };
                 };
             };
@@ -1629,7 +1641,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    kind: "vue" | "window" | "promise" | "chunk" | "nuxt";
+                    kind: "vue" | "window" | "promise" | "chunk" | "nuxt" | "ssr";
                     message: string;
                     stack?: string;
                     /** @description Matched route pattern, e.g. /:gym/routes */

@@ -199,6 +199,7 @@
     </div>
 </template>
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { ROUTE_TYPES } from '#shared/utils/routeTypes'
 import { decodeText } from '~/utils/decodeText'
 import { importRatings } from '~/api/ratings'
@@ -373,7 +374,7 @@ const loadExistingRoutes = async () => {
         if (request === routesRequest) existingRoutes.value = routes
     } catch (error) {
         if (request !== routesRequest) return
-        console.error('Failed to load routes for review import', error)
+        reportCaughtError(error)
         routesError.value = true
     } finally {
         if (request === routesRequest) routesLoading.value = false
@@ -482,7 +483,7 @@ const postRatings = async (
             const response = await importRatings(gymId.value, chunk)
             failed += response.failed
         } catch (error) {
-            console.error('Failed to insert ratings', error)
+            reportCaughtError(error)
             failed += chunk.length
         }
     }
@@ -564,7 +565,7 @@ const confirmImport = async () => {
                     )
                 }
             } catch (routeError) {
-                console.error('Failed to insert route', routeError)
+                reportCaughtError(routeError)
                 failedRoutes++
             }
         }
@@ -592,7 +593,7 @@ const confirmImport = async () => {
 
         emit('closed')
     } catch (error) {
-        console.error('Error during import:', error)
+        reportCaughtError(error)
         notifyError(t('importRoutes.failed'))
     } finally {
         loading.value = false

@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import type { Ref } from 'vue'
 import { isAbortError, isOfflineError } from '~/utils/errors'
 
@@ -57,7 +58,7 @@ export function useList<
             if (target === 1 && items.value.length && isOfflineError(err))
                 return
             error.value = err
-            console.error(err)
+            reportCaughtError(err)
             notifyError(t('notifications.error.generic'))
         } finally {
             if (request === latestRequest) busy.value = false

@@ -168,6 +168,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import type { Form } from '@nuxt/ui'
 import {
     getBlocklists,
@@ -261,7 +262,7 @@ async function runSource(
         if (lists.value)
             lists.value = { ...lists.value, sources: updated.sources }
     } catch (err) {
-        console.error(err)
+        reportCaughtError(err)
         notifyError(t('settings.saveError'))
     } finally {
         busySource.value = ''

@@ -206,7 +206,7 @@ func (m *module) cachedBoard(ctx context.Context, gymID, kind, seasonID string, 
 		b.loading = true
 		go func() {
 			if err := m.loadBoard(context.WithoutCancel(ctx), b); err != nil {
-				slog.Warn("leaderboard: reload failed", "board", key, "error", err)
+				slog.WarnContext(ctx, "leaderboard: reload failed", "board", key, "error", err)
 			}
 		}()
 	}
@@ -218,7 +218,7 @@ func (m *module) cachedBoard(ctx context.Context, gymID, kind, seasonID string, 
 	}
 	derived, err, _ := c.builds.Do("derive|"+key, func() (any, error) { return m.derive(context.WithoutCancel(ctx), b) })
 	if err != nil {
-		slog.Warn("leaderboard: derive failed", "board", key, "error", err)
+		slog.WarnContext(ctx, "leaderboard: derive failed", "board", key, "error", err)
 		return board, nil
 	}
 	return derived.(leaderboardBoard), nil

@@ -51,7 +51,7 @@ func (m *module) createOnboarding(w http.ResponseWriter, r *http.Request) error 
 	if m.app.MailTemplates != nil {
 		content := gmail.Content{Key: "gymOnboarding", Action: "/auth/gym/" + token}
 		if _, err := m.app.MailTemplates.Send(r.Context(), m.app.Mail, m.app.MailTemplates.AppBrand(), content, []gmail.Recipient{{Address: email}}); err != nil {
-			slog.Error("gyms: onboarding mail failed", "error", err)
+			slog.ErrorContext(r.Context(), "gyms: onboarding mail failed", "error", err)
 		}
 	}
 	w.WriteHeader(http.StatusAccepted)
@@ -174,7 +174,7 @@ func (m *module) remindTrials(ctx context.Context) error {
 		if len(recipients) > 0 && m.app.MailTemplates != nil {
 			content := gmail.Content{Key: key, Params: map[string]any{"gym": t.name, "date": t.endsAt.UTC().Format("2006-01-02")}}
 			if _, err := m.app.MailTemplates.Send(ctx, m.app.Mail, m.app.MailTemplates.AppBrand(), content, recipients); err != nil {
-				slog.Error("gyms: trial reminder failed", "gym", t.id, "error", err)
+				slog.ErrorContext(ctx, "gyms: trial reminder failed", "gym", t.id, "error", err)
 				continue
 			}
 		}

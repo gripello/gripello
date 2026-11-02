@@ -594,7 +594,7 @@
             },
             "serverLogs": {
                 "title": "Serverlogbestanden",
-                "body": "Wanneer je deze applicatie opent, verwerkt de server technische gegevens zoals IP-adres, datum en tijd, opgevraagde URL en de user-agent van je browser om de pagina te leveren en misbruik te voorkomen. De grondslag is ons gerechtvaardigd belang bij een veilige en stabiele dienst (art. 6, lid 1, onder f, AVG). Verzoeklogs worden na korte tijd automatisch verwijderd (standaard na 5 dagen). Alleen beheerders van de server hebben toegang."
+                "body": "Wanneer je deze applicatie opent, verwerkt de server technische gegevens zoals IP-adres, datum en tijd, opgevraagde URL en de user-agent van je browser om de pagina te leveren en misbruik te voorkomen. De grondslag is ons gerechtvaardigd belang bij een veilige en stabiele dienst (art. 6, lid 1, onder f, AVG). Verzoeklogs worden na korte tijd automatisch verwijderd (standaard na 7 dagen). Alleen beheerders van de server hebben toegang."
             },
             "accounts": {
                 "title": "Gebruikersaccounts",
@@ -2525,6 +2525,14 @@
             "default": "standaard",
             "replicas": "Replica’s",
             "sameModule": "Zelfde module tonen",
+            "filters": {
+                "req": "Request-ID",
+                "user": "Gebruikers-ID",
+                "route": "Route"
+            },
+            "clearFilters": "Filters wissen",
+            "loadOlder": "Oudere laden",
+            "noMatches": "Geen logregels voldoen aan deze filters",
             "replicaStatus": {
                 "online": "Online",
                 "offline": "Offline",

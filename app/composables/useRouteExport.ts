@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import { ROUTE_TYPES } from '#shared/utils/routeTypes'
 import { MAX_SHEET_ROUTES, MAX_TAG_ROUTES } from '#shared/utils/routeExport'
 import type { ExportOptions } from '~/components/export/OptionsDialog.vue'
@@ -81,7 +82,7 @@ export function useRouteExport() {
                 `${t('export.fileName')}-${exportTimestamp()}.${format}`,
             )
         } catch (error) {
-            console.error(`Export error (${format}):`, error)
+            reportCaughtError(error)
             notifyError(t('notifications.error.generic'))
         } finally {
             exportingFormat.value = null

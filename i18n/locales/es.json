@@ -594,7 +594,7 @@
             },
             "serverLogs": {
                 "title": "Registros del servidor",
-                "body": "Cuando accedes a esta aplicación, el servidor trata datos técnicos como la dirección IP, la fecha y hora, la URL solicitada y el agente de usuario del navegador para entregar la página y protegerla frente a abusos. Base jurídica: interés legítimo en la seguridad y el funcionamiento del servicio (art. 6, apartado 1, letra f), del RGPD). Los registros de solicitudes se eliminan automáticamente al cabo de poco tiempo (por defecto, 5 días)."
+                "body": "Cuando accedes a esta aplicación, el servidor trata datos técnicos como la dirección IP, la fecha y hora, la URL solicitada y el agente de usuario del navegador para entregar la página y protegerla frente a abusos. Base jurídica: interés legítimo en la seguridad y el funcionamiento del servicio (art. 6, apartado 1, letra f), del RGPD). Los registros de solicitudes se eliminan automáticamente al cabo de poco tiempo (por defecto, 7 días)."
             },
             "accounts": {
                 "title": "Cuentas de usuario",
@@ -2525,6 +2525,14 @@
             "default": "predeterminado",
             "replicas": "Réplicas",
             "sameModule": "Mismo módulo",
+            "filters": {
+                "req": "ID de solicitud",
+                "user": "ID de usuario",
+                "route": "Ruta"
+            },
+            "clearFilters": "Borrar filtros",
+            "loadOlder": "Cargar anteriores",
+            "noMatches": "Ninguna línea coincide con estos filtros",
             "replicaStatus": {
                 "online": "En línea",
                 "offline": "Sin conexión",

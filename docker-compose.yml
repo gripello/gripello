@@ -3,6 +3,12 @@ services:
     gripello:
         container_name: gripello
         image: ghcr.io/gripello/gripello:rolling
+        # ponytail: Docker rotates by size only, so a quiet host keeps lines past the 7 days the privacy page states; enforce them with journald (driver: journald, MaxRetentionSec=7day)
+        logging:
+            driver: local
+            options:
+                max-size: 10m
+                max-file: '3'
         ports:
             - '80:80'
             - '443:443'

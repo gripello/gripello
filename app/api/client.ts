@@ -1,5 +1,9 @@
 import type { FetchContext } from 'ofetch'
-import { API_VERSION_HEADER, checkApiVersion } from '#shared/utils/apiVersion'
+import {
+    API_VERSION_HEADER,
+    checkApiVersion,
+    REQUEST_ID_HEADER,
+} from '#shared/utils/apiVersion'
 
 export interface ApiErrorBody {
     status?: number
@@ -46,6 +50,9 @@ export function apiBaseURL() {
 export function useApi() {
     const store = useAuthStore()
     const appVersion = String(useRuntimeConfig().public.appVersion ?? '')
+    const requestId = import.meta.server
+        ? useRequestHeader(REQUEST_ID_HEADER)
+        : undefined
     return $fetch.create({
         baseURL: apiBaseURL(),
         credentials: 'include',
@@ -56,6 +63,7 @@ export function useApi() {
                 headers.set('Authorization', `Bearer ${store.token}`)
             if (appVersion && !headers.has(API_VERSION_HEADER))
                 headers.set(API_VERSION_HEADER, appVersion)
+            if (requestId) headers.set(REQUEST_ID_HEADER, requestId)
             options.headers = headers
         },
         onResponse({ response }) {

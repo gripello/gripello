@@ -594,7 +594,7 @@
             },
             "serverLogs": {
                 "title": "Server-Logfiles",
-                "body": "Beim Aufruf dieser Anwendung verarbeitet der Server technische Daten wie IP-Adresse, Datum und Uhrzeit, aufgerufene URL, Antwortstatus und Browserkennung, um die Seite auszuliefern, Fehler zu beheben und Missbrauch (z. B. Angriffe, Massenanfragen) abzuwehren. Rechtsgrundlage ist unser berechtigtes Interesse an einem sicheren und stabilen Betrieb (Art. 6 Abs. 1 lit. f DSGVO). Request-Logs werden automatisch gelöscht, standardmäßig nach 5 Tagen. Einige Funktionen (z. B. Anmeldung, Registrierung, Einladungen, Datenexport) sind pro IP-Adresse und Konto ratenbegrenzt; dafür wird die IP-Adresse kurzzeitig im Arbeitsspeicher gezählt."
+                "body": "Beim Aufruf dieser Anwendung verarbeitet der Server technische Daten wie IP-Adresse, Datum und Uhrzeit, aufgerufene URL, Antwortstatus und Browserkennung, um die Seite auszuliefern, Fehler zu beheben und Missbrauch (z. B. Angriffe, Massenanfragen) abzuwehren. Rechtsgrundlage ist unser berechtigtes Interesse an einem sicheren und stabilen Betrieb (Art. 6 Abs. 1 lit. f DSGVO). Request-Logs werden automatisch gelöscht, standardmäßig nach 7 Tagen. Einige Funktionen (z. B. Anmeldung, Registrierung, Einladungen, Datenexport) sind pro IP-Adresse und Konto ratenbegrenzt; dafür wird die IP-Adresse kurzzeitig im Arbeitsspeicher gezählt."
             },
             "accounts": {
                 "title": "Benutzerkonto",
@@ -2525,6 +2525,14 @@
             "default": "Standard",
             "replicas": "Replikate",
             "sameModule": "Gleiches Modul zeigen",
+            "filters": {
+                "req": "Request-ID",
+                "user": "Benutzer-ID",
+                "route": "Route"
+            },
+            "clearFilters": "Filter zurücksetzen",
+            "loadOlder": "Ältere laden",
+            "noMatches": "Keine Logzeilen passen zu diesen Filtern",
             "replicaStatus": {
                 "online": "Online",
                 "offline": "Offline",

@@ -125,6 +125,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { translatedItems } from '~/utils/translatedItems'
 import { displayName } from '~/utils/avatar'
 import { hideAuthorContent } from '~/api/moderation'
@@ -232,7 +233,7 @@ async function send(suspension?: Suspension) {
             const patterns = suspension ? blockedPatterns() : []
             if (patterns.length)
                 await addBlockedEmails(patterns).catch((error) => {
-                    console.error(error)
+                    reportCaughtError(error)
                     notifyError(t('platform.users.blockFailed'))
                 })
             return true

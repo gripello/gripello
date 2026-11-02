@@ -286,7 +286,7 @@ func (m *module) createTask(ctx context.Context, gym string, in map[string]strin
 	m.warmPhoto(t, photo)
 	if isUrgentDefect(t) {
 		if err := m.queueUrgentAlert(ctx, gym); err != nil {
-			slog.Error("tasks: queueing urgent defect mail failed", "task", t.ID, "error", err)
+			slog.ErrorContext(ctx, "tasks: queueing urgent defect mail failed", "task", t.ID, "error", err)
 		}
 	}
 	return t, nil

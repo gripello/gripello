@@ -51,7 +51,7 @@ func (m *module) runExport(ctx context.Context, job jobs.Job) error {
 	}
 	id := ids.New()
 	if size > exportMaxBytes {
-		slog.Warn("account: export too large", "user", userID, "bytes", size)
+		slog.WarnContext(ctx, "account: export too large", "user", userID, "bytes", size)
 		return m.finishExport(ctx, recipient, id, nil, nil, "too_large")
 	}
 	secret := make([]byte, 32)
@@ -64,7 +64,7 @@ func (m *module) runExport(ctx context.Context, job jobs.Job) error {
 		reader.CloseWithError(err)
 		m.blob.Delete(ctx, exportTable+"/"+id)
 		if errors.Is(err, errExportTooLarge) {
-			slog.Warn("account: export too large", "user", userID)
+			slog.WarnContext(ctx, "account: export too large", "user", userID)
 			return m.finishExport(ctx, recipient, id, nil, nil, "too_large")
 		}
 		return err
@@ -118,7 +118,7 @@ func (m *module) mailExport(ctx context.Context, to exportRecipient, content gma
 		return
 	}
 	if _, err := m.app.MailTemplates.Send(ctx, m.app.Mail, m.app.MailTemplates.AppBrand(), content, []gmail.Recipient{{Address: to.email, Language: to.language}}); err != nil {
-		slog.Error("account: export mail failed", "user", to.id, "error", err)
+		slog.ErrorContext(ctx, "account: export mail failed", "user", to.id, "error", err)
 	}
 }
 
@@ -211,7 +211,7 @@ func (m *module) pruneExports(ctx context.Context) error {
 	}
 	for _, id := range gone {
 		if err := m.blob.Delete(ctx, exportTable+"/"+id); err != nil {
-			slog.Error("account: removing an expired export failed", "error", err)
+			slog.ErrorContext(ctx, "account: removing an expired export failed", "error", err)
 		}
 	}
 	return nil

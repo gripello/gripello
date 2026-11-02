@@ -129,12 +129,15 @@
                     >
                         <UInput
                             ref="searchInput"
-                            v-model="query"
+                            v-model="draft.q"
                             icon="i-lucide-search"
                             :placeholder="t('platform.logs.search')"
+                            :aria-label="t('platform.logs.search')"
+                            :maxlength="MAX_SEARCH"
                             size="lg"
                             class="min-w-48 flex-1"
                             data-testid="platform-logs-search"
+                            @update:model-value="typing.start()"
                         >
                             <template #trailing>
                                 <UKbd value="/" class="max-lg:hidden" />
@@ -147,12 +150,41 @@
                             test-id="platform-logs-filter"
                         />
                     </div>
+                    <div
+                        class="grid gap-2 border-b border-default p-3 sm:grid-cols-3 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]"
+                    >
+                        <UInput
+                            v-for="key in LOG_ATTR_FILTERS"
+                            :key="key"
+                            v-model="draft[key]"
+                            :placeholder="t(`platform.logs.filters.${key}`)"
+                            :aria-label="t(`platform.logs.filters.${key}`)"
+                            :ui="{ base: 'font-mono' }"
+                            :data-testid="`platform-logs-${key}`"
+                            @update:model-value="typing.start()"
+                        />
+                        <UButton
+                            v-if="hasLogFilters(draft)"
+                            color="neutral"
+                            variant="ghost"
+                            icon="i-lucide-x"
+                            class="justify-center"
+                            data-testid="platform-logs-clear-filters"
+                            @click="clearFilters"
+                        >
+                            {{ t('platform.logs.clearFilters') }}
+                        </UButton>
+                    </div>
 
                     <LayoutLoadingState v-if="!logs" />
                     <UEmpty
                         v-else-if="!visible.length"
                         icon="i-lucide-scroll-text"
-                        :title="t('platform.logs.empty')"
+                        :title="
+                            hasLogFilters(filters)
+                                ? t('platform.logs.noMatches')
+                                : t('platform.logs.empty')
+                        "
                         variant="naked"
                         class="py-16"
                     />
@@ -230,7 +262,26 @@
                                             {{ field.name }}
                                         </dt>
                                         <dd class="break-all text-highlighted">
-                                            {{ field.value }}
+                                            <UButton
+                                                v-if="field.filter"
+                                                variant="link"
+                                                size="xs"
+                                                trailing-icon="i-lucide-filter"
+                                                class="p-0 text-left font-mono break-all"
+                                                :data-testid="`platform-logs-by-${field.filter}`"
+                                                @click="
+                                                    field.filter &&
+                                                    setFilter(
+                                                        field.filter,
+                                                        field.value,
+                                                    )
+                                                "
+                                            >
+                                                {{ field.value }}
+                                            </UButton>
+                                            <template v-else>
+                                                {{ field.value }}
+                                            </template>
                                         </dd>
                                     </template>
                                 </dl>
@@ -251,7 +302,9 @@
                                         variant="outline"
                                         size="sm"
                                         icon="i-lucide-filter"
-                                        @click="query = `${entry.module}:`"
+                                        @click="
+                                            setFilter('q', `${entry.module}:`)
+                                        "
                                     >
                                         {{ t('platform.logs.sameModule') }}
                                     </UButton>
@@ -259,6 +312,22 @@
                             </div>
                         </li>
                     </ul>
+                    <div
+                        v-if="logs && hasOlder"
+                        class="border-t border-default p-3"
+                    >
+                        <UButton
+                            block
+                            color="neutral"
+                            variant="ghost"
+                            icon="i-lucide-history"
+                            :loading="loadingOlder"
+                            data-testid="platform-logs-older"
+                            @click="loadOlder"
+                        >
+                            {{ t('platform.logs.loadOlder') }}
+                        </UButton>
+                    </div>
                 </LayoutPanel>
 
                 <div class="flex flex-col gap-4">
@@ -338,19 +407,30 @@
 </template>
 
 <script setup lang="ts">
-import { useIntervalFn } from '@vueuse/core'
+import { useIntervalFn, useTimeoutFn } from '@vueuse/core'
 import { copyText } from '~/utils/clipboard'
-import { listServerLogs, setLogLevel, type LogLevel } from '~/api/platform'
+import {
+    listServerLogs,
+    setLogLevel,
+    type LogLevel,
+    type ServerLogEntry,
+} from '~/api/platform'
 import {
     filterLogs,
+    hasLogFilters,
+    isLogAttrFilter,
+    LOG_ATTR_FILTERS,
+    logFiltersFromQuery,
     logHistogram,
     logLevelColor,
     logLevelCounts,
     logModule,
     logReplicas,
     logSeverity,
+    type LogFilters,
     type LogSeverity,
     type ReplicaStatus,
+    withLogFilters,
 } from '~/utils/serverLogs'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
@@ -361,12 +441,26 @@ const { success: notifySuccess, error: notifyError } = useNotification()
 useHead({ title: () => t('platform.logs.title') })
 
 const MINUTES = 30
+const SHOWN_ROWS = 500
+const MAX_SEARCH = 200
+
+const route = useRoute()
+const router = useRouter()
 
 const filter = ref<LogSeverity>('debug')
-const query = ref('')
+const filters = computed(() => logFiltersFromQuery(route.query))
+const draft = reactive(logFiltersFromQuery(route.query))
+// Only fields the URL changed elsewhere: a field being typed keeps its untrimmed text.
+watch(filters, (next) => {
+    for (const key of Object.keys(next) as (keyof LogFilters)[])
+        if (draft[key].trim() !== next[key]) draft[key] = next[key]
+})
 const replicaFilter = ref('')
 const live = ref(true)
 const expanded = ref<string | null>(null)
+const older = ref<ServerLogEntry[]>([])
+const nextCursor = ref<string | null>(null)
+const shown = ref(SHOWN_ROWS)
 const searchInput = useTemplateRef<{ inputRef?: HTMLInputElement }>(
     'searchInput',
 )
@@ -377,9 +471,39 @@ const {
     data: logs,
     error,
     refresh,
-} = await useAsyncData('platform-logs', () => listServerLogs('debug'), {
-    server: false,
-})
+} = await useAsyncData(
+    'platform-logs',
+    () => listServerLogs('debug', filters.value),
+    { server: false, watch: [filters] },
+)
+
+watch(
+    logs,
+    (head) => {
+        older.value = []
+        nextCursor.value = head?.next ?? null
+        shown.value = SHOWN_ROWS
+    },
+    { immediate: true },
+)
+
+function applyFilters() {
+    void router.replace({ query: withLogFilters(route.query, draft) })
+}
+
+const typing = useTimeoutFn(applyFilters, 400, { immediate: false })
+
+function setFilter(key: keyof LogFilters, value: string) {
+    draft[key] = value
+    typing.stop()
+    applyFilters()
+}
+
+function clearFilters() {
+    Object.assign(draft, logFiltersFromQuery({}))
+    typing.stop()
+    applyFilters()
+}
 
 const liveRefresh = useIntervalFn(() => refresh(), 5000, { immediate: false })
 watch(
@@ -392,7 +516,7 @@ watch(
 )
 
 const lines = computed(() =>
-    (logs.value?.items ?? []).map((entry) => ({
+    [...(logs.value?.items ?? []), ...older.value].map((entry) => ({
         ...entry,
         key: `${entry.time}|${entry.replica}|${entry.level}|${entry.message}`,
         severity: logSeverity(entry.level),
@@ -411,14 +535,30 @@ const REPLICA_DOT: Record<ReplicaStatus, string> = {
     offline: 'bg-error',
     gone: 'bg-accented',
 }
-const visible = computed(() =>
-    filterLogs(
-        lines.value,
-        filter.value,
-        query.value,
-        replicaFilter.value,
-    ).slice(0, 500),
+const filtered = computed(() =>
+    filterLogs(lines.value, filter.value, replicaFilter.value),
 )
+const visible = computed(() => filtered.value.slice(0, shown.value))
+const hasOlder = computed(
+    () => filtered.value.length > shown.value || nextCursor.value !== null,
+)
+
+const { pending: loadingOlder, run: runOlder } = useAsyncAction()
+
+async function loadOlder() {
+    live.value = false
+    const cursor = nextCursor.value
+    if (filtered.value.length <= shown.value && cursor) {
+        const head = logs.value
+        const page = await runOlder(() =>
+            listServerLogs('debug', { ...filters.value, cursor }),
+        )
+        if (!page || logs.value !== head) return
+        older.value = [...older.value, ...page.items]
+        nextCursor.value = page.next
+    }
+    shown.value += SHOWN_ROWS
+}
 const histogram = computed(() => logHistogram(lines.value, MINUTES))
 const histogramMax = computed(() =>
     Math.max(4, ...histogram.value.map((b) => b.info + b.warn + b.error)),
@@ -482,7 +622,7 @@ const filterItems = computed(() =>
         ] as const
     ).map(([value, label]) => ({
         value,
-        label: `${t(label)} · ${formatNumber(filterLogs(lines.value, value, '').length)}`,
+        label: `${t(label)} · ${formatNumber(filterLogs(lines.value, value).length)}`,
     })),
 )
 
@@ -523,6 +663,8 @@ function fields(entry: LogRow) {
     return Object.entries(entry.attrs ?? {}).map(([name, value]) => ({
         name,
         value: typeof value === 'string' ? value : JSON.stringify(value),
+        filter:
+            isLogAttrFilter(name) && typeof value === 'string' ? name : null,
     }))
 }
 

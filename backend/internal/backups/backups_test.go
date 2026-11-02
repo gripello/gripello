@@ -2,8 +2,10 @@ package backups
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -219,6 +221,10 @@ func TestARunArchivesTheDumpAndClearsLeftoversOfKilledRuns(t *testing.T) {
 	touch(t, filepath.Join(f.dir, "gripello-20200101-000000.tar"), "old", 48*time.Hour)
 	touch(t, filepath.Join(f.app.Cfg.BlobDir, "routes", "r1", "photo.jpg"), "jpg", 0)
 	f.app.DB.Exec(context.Background(), `UPDATE backup_settings SET keep = 1, include_storage = true`)
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
 
 	if err := f.m().runAndRecord(context.Background()); err != nil {
 		t.Fatal(err)
@@ -226,6 +232,9 @@ func TestARunArchivesTheDumpAndClearsLeftoversOfKilledRuns(t *testing.T) {
 	entries, _ := os.ReadDir(f.dir)
 	if len(entries) != 1 || !archiveName.MatchString(entries[0].Name()) {
 		t.Fatalf("backup dir = %v", entries)
+	}
+	if !strings.Contains(logs.String(), `level=INFO msg="backups: archive written" archive=`+entries[0].Name()+" bytes=") {
+		t.Errorf("log = %s", logs.String())
 	}
 	got := map[string]string{}
 	archive, _ := os.Open(filepath.Join(f.dir, entries[0].Name()))

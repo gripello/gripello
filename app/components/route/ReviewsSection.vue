@@ -81,6 +81,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportCaughtError } from '~/utils/clientErrors'
 import { deleteRating } from '~/api/ratings'
 import type { ReviewDisplay } from '~/utils/routeReviews'
 
@@ -110,7 +111,7 @@ async function deleteOwnReview() {
         await deleteRating(id)
         emit('deleted', id)
     } catch (error) {
-        console.error(error)
+        reportCaughtError(error)
         notifyError(t('notifications.error.generic'))
     }
 }
