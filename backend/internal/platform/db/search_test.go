@@ -20,3 +20,9 @@ func TestWordPatterns(t *testing.T) {
 		t.Errorf("blank = %#v, want an empty non-nil slice", got)
 	}
 }
+
+func TestContainsPattern(t *testing.T) {
+	if got := ContainsPattern(`load 50%_a\b`); got != `%load 50\%\_a\\b%` {
+		t.Errorf("pattern = %q", got)
+	}
+}

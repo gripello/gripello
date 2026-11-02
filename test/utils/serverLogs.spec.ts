@@ -1,23 +1,48 @@
 import { describe, expect, it } from 'vitest'
 import {
     filterLogs,
-    logAttrsText,
+    hasLogFilters,
+    isLogAttrFilter,
+    logFiltersFromQuery,
     logHistogram,
     logLevelColor,
     logLevelCounts,
     logModule,
     logReplicas,
+    withLogFilters,
 } from '~/utils/serverLogs'
 
-describe('logAttrsText', () => {
-    it('writes sorted key=value pairs and quotes values with spaces', () => {
-        expect(logAttrsText({ path: '/api/x', error: 'no rows', ms: 12 })).toBe(
-            'error="no rows" ms=12 path=/api/x',
-        )
+describe('log filters in the URL', () => {
+    it('reads the filters from the query and ignores repeated keys', () => {
+        expect(
+            logFiltersFromQuery({
+                req: 'abc',
+                user: ['u1', 'u2'],
+                issue: 'fp',
+            }),
+        ).toEqual({ req: 'abc', user: '', route: '', q: '' })
     })
 
-    it('is empty without attributes', () => {
-        expect(logAttrsText(undefined)).toBe('')
+    it('swaps the filters into the query, trimmed, and drops blank ones', () => {
+        expect(
+            withLogFilters(
+                { issue: 'fp', req: 'old', route: 'GET /x' },
+                { req: ' new ', user: '', route: '  ', q: 'boom' },
+            ),
+        ).toEqual({ issue: 'fp', req: 'new', q: 'boom' })
+    })
+
+    it('tells whether any filter is set and which fields are filterable', () => {
+        expect(hasLogFilters(logFiltersFromQuery({}))).toBe(false)
+        expect(hasLogFilters({ req: '', user: '', route: '', q: ' ' })).toBe(
+            false,
+        )
+        expect(hasLogFilters({ req: '', user: 'u1', route: '', q: '' })).toBe(
+            true,
+        )
+        expect(
+            ['req', 'user', 'route', 'q', 'error'].filter(isLogAttrFilter),
+        ).toEqual(['req', 'user', 'route'])
     })
 })
 
@@ -56,19 +81,17 @@ describe('log filtering and summaries', () => {
         { time: '2026-10-11T09:00:00Z', level: 'DEBUG', message: 'old' },
     ]
 
-    it('filters by minimum level and searches message and fields', () => {
-        expect(filterLogs(lines, 'warn', '').map((l) => l.level)).toEqual([
+    it('filters by minimum level and replica', () => {
+        expect(filterLogs(lines, 'warn').map((l) => l.level)).toEqual([
             'ERROR',
             'WARN',
         ])
-        expect(filterLogs(lines, 'debug', 'IONOS')).toHaveLength(1)
         const tenth = { ...lines[2]!, replica: 'gripello-10', message: 'x' }
         expect(
-            filterLogs([...lines, tenth], 'debug', '', 'gripello-1').map(
+            filterLogs([...lines, tenth], 'debug', 'gripello-1').map(
                 (l) => l.message,
             ),
         ).toEqual(['climber search limited', 'listening'])
-        expect(filterLogs(lines, 'debug', 'gripello-1')).toHaveLength(0)
     })
 
     it('lists reporting servers with their status, then stopped ones from the lines', () => {

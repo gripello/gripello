@@ -1,14 +1,4 @@
-// logfmt-style key=value text for a log record's attributes, keys sorted so rows stay comparable.
-export function logAttrsText(attrs: Record<string, unknown> | undefined) {
-    return Object.entries(attrs ?? {})
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([key, value]) => {
-            const text =
-                typeof value === 'string' ? value : JSON.stringify(value)
-            return `${key}=${/[\s"=]/.test(text) ? JSON.stringify(text) : text}`
-        })
-        .join(' ')
-}
+import type { LocationQuery } from 'vue-router'
 
 export function logLevelColor(level: string) {
     if (level.startsWith('ERROR')) return 'error' as const
@@ -51,19 +41,47 @@ export function logModule(line: LogLine) {
 export function filterLogs<T extends LogLine>(
     lines: T[],
     min: LogSeverity,
-    query: string,
     replica = '',
 ) {
-    const needle = query.trim().toLowerCase()
     return lines.filter(
         (line) =>
             SEVERITY_RANK[logSeverity(line.level)] >= SEVERITY_RANK[min] &&
-            (!replica || line.replica === replica) &&
-            (!needle ||
-                `${line.message} ${logAttrsText(line.attrs)}`
-                    .toLowerCase()
-                    .includes(needle)),
+            (!replica || line.replica === replica),
     )
+}
+
+export const LOG_ATTR_FILTERS = ['req', 'user', 'route'] as const
+export type LogAttrFilter = (typeof LOG_ATTR_FILTERS)[number]
+export type LogFilters = Record<LogAttrFilter | 'q', string>
+
+const LOG_FILTER_KEYS = [...LOG_ATTR_FILTERS, 'q'] as const
+
+export function isLogAttrFilter(name: string): name is LogAttrFilter {
+    return (LOG_ATTR_FILTERS as readonly string[]).includes(name)
+}
+
+export function logFiltersFromQuery(query: LocationQuery) {
+    return Object.fromEntries(
+        LOG_FILTER_KEYS.map((key) => {
+            const value = query[key]
+            return [key, typeof value === 'string' ? value : '']
+        }),
+    ) as LogFilters
+}
+
+export function hasLogFilters(filters: LogFilters) {
+    return LOG_FILTER_KEYS.some((key) => filters[key].trim())
+}
+
+// The route query with the filters swapped in; blank ones leave the URL.
+export function withLogFilters(query: LocationQuery, filters: LogFilters) {
+    const next = { ...query }
+    for (const key of LOG_FILTER_KEYS) {
+        const value = filters[key].trim()
+        if (value) next[key] = value
+        else delete next[key]
+    }
+    return next
 }
 
 export function logLevelCounts(lines: LogLine[]) {

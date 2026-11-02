@@ -2525,6 +2525,14 @@
             "default": "par défaut",
             "replicas": "Réplicas",
             "sameModule": "Même module",
+            "filters": {
+                "req": "ID de requête",
+                "user": "ID utilisateur",
+                "route": "Route"
+            },
+            "clearFilters": "Effacer les filtres",
+            "loadOlder": "Charger les plus anciennes",
+            "noMatches": "Aucune ligne ne correspond à ces filtres",
             "replicaStatus": {
                 "online": "En ligne",
                 "offline": "Hors ligne",

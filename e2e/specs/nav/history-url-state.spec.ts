@@ -89,7 +89,9 @@ test('a linked server issue and log filters take one back step to leave', async 
     await page.getByTestId('platform-logs-filter-error').click()
     await page.getByTestId('platform-logs-filter-warn').click()
     await page.getByTestId('platform-logs-search').fill('realtime')
-    await expect(page).toHaveURL(/\/platform\/logs\?issue=e2e-missing-issue$/)
+    await expect(page).toHaveURL(
+        /\/platform\/logs\?issue=e2e-missing-issue&q=realtime$/,
+    )
 
     await oneBackLeaves(page, '/platform')
 })

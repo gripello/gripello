@@ -5,6 +5,7 @@ import type {
     PlatformUserFilter,
     PlatformUserSort,
 } from '../utils/platformUsers'
+import type { LogFilters } from '../utils/serverLogs'
 import { toFormData, useApi } from './client'
 import type { PageQuery, Page } from './client'
 
@@ -355,10 +356,24 @@ export interface ServerLogs {
     level: string
     replicas: ServerReplica[]
     items: ServerLogEntry[]
+    next: string | null
 }
 
-export function listServerLogs(level: LogLevel) {
-    return useApi()<ServerLogs>('/platform/logs', { query: { level } })
+export interface ServerLogQuery extends Partial<LogFilters> {
+    cursor?: string
+}
+
+export function listServerLogs(level: LogLevel, filters: ServerLogQuery = {}) {
+    return useApi()<ServerLogs>('/platform/logs', {
+        query: {
+            level,
+            req: filters.req?.trim() || undefined,
+            user: filters.user?.trim() || undefined,
+            route: filters.route?.trim() || undefined,
+            q: filters.q?.trim() || undefined,
+            cursor: filters.cursor || undefined,
+        },
+    })
 }
 
 export function setLogLevel(level: LogLevel) {

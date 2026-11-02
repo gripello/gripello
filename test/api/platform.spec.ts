@@ -208,6 +208,17 @@ describe('platform stats and features', () => {
         api.respond({ replica: 'a', level: 'INFO', items: [] })
         await listServerLogs('warn')
         expect(api.request().url).toBe('/api/platform/logs?level=warn')
+        api.respond({ replica: 'a', level: 'INFO', items: [] })
+        await listServerLogs('debug', {
+            req: ' r1 ',
+            user: '',
+            route: 'GET /api/x',
+            q: '50%',
+            cursor: '1793613600000000-7',
+        })
+        expect(api.request().url).toBe(
+            '/api/platform/logs?level=debug&req=r1&route=GET+%2Fapi%2Fx&q=50%25&cursor=1793613600000000-7',
+        )
         api.respond({ level: 'debug' })
         await setLogLevel('debug')
         expect(api.request()).toMatchObject({

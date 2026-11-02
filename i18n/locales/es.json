@@ -2525,6 +2525,14 @@
             "default": "predeterminado",
             "replicas": "Réplicas",
             "sameModule": "Mismo módulo",
+            "filters": {
+                "req": "ID de solicitud",
+                "user": "ID de usuario",
+                "route": "Ruta"
+            },
+            "clearFilters": "Borrar filtros",
+            "loadOlder": "Cargar anteriores",
+            "noMatches": "Ninguna línea coincide con estos filtros",
             "replicaStatus": {
                 "online": "En línea",
                 "offline": "Sin conexión",

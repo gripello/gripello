@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"gripello/internal/platform/db"
 	"gripello/internal/platform/httpx"
 )
 
@@ -34,6 +35,7 @@ type Entry struct {
 	Attrs   map[string]any `json:"attrs,omitempty"`
 	// Fingerprint and Weight are set for WARN+ records; a summary of suppressed repeats carries their count as Weight.
 	Fingerprint string `json:"-"`
+	ID          int64  `json:"-"`
 	Weight      int    `json:"-"`
 }
 
@@ -315,10 +317,55 @@ func cleanValue(value any) any {
 }
 
 // Filter narrows Recent; empty fields match everything, Query is a case-insensitive substring of the message or the attributes.
-// Recent returns the newest records of every replica at or above min.
-func Recent(ctx context.Context, pool *pgxpool.Pool, min slog.Level, limit int) ([]Entry, error) {
+type Filter struct {
+	Min                     slog.Level
+	Req, User, Route, Query string
+	Before                  *Cursor
+	Limit                   int
+}
+
+// Cursor is a page's oldest row: rows sort by time, then id, so it pages back without gaps at full precision.
+type Cursor struct {
+	Time time.Time
+	ID   int64
+}
+
+func (c Cursor) String() string {
+	return strconv.FormatInt(c.Time.UnixMicro(), 10) + "-" + strconv.FormatInt(c.ID, 10)
+}
+
+func ParseCursor(text string) (Cursor, bool) {
+	micros, id, ok := strings.Cut(text, "-")
+	t, timeErr := strconv.ParseInt(micros, 10, 64)
+	n, idErr := strconv.ParseInt(id, 10, 64)
+	if !ok || timeErr != nil || idErr != nil {
+		return Cursor{}, false
+	}
+	return Cursor{Time: time.UnixMicro(t), ID: n}, true
+}
+
+// Recent returns the newest records of every replica matching f.
+func Recent(ctx context.Context, pool *pgxpool.Pool, f Filter) ([]Entry, error) {
 	// a literal severity lets the planner pick the partial warn index, a parameter never does
-	rows, err := pool.Query(ctx, `SELECT time, replica, level, message, attrs FROM server_logs WHERE severity >= `+strconv.Itoa(int(min))+` ORDER BY time DESC, id DESC LIMIT $1`, limit)
+	where := db.Where{Clauses: []string{"severity >= " + strconv.Itoa(int(f.Min))}}
+	if f.Req != "" {
+		where.Add("attrs->>'req' = ?", f.Req)
+	}
+	if f.User != "" {
+		where.Add("actor = ?", f.User)
+	}
+	if f.Route != "" {
+		where.Add("attrs->>'route' = ?", f.Route)
+	}
+	if f.Query != "" {
+		where.Add("(message ILIKE ? OR attrs::text ILIKE ?)", db.ContainsPattern(f.Query))
+	}
+	if f.Before != nil {
+		at, id := where.Next(f.Before.Time), where.Next(f.Before.ID)
+		where.Clauses = append(where.Clauses, "time <= "+at+" AND (time, id) < ("+at+", "+id+")")
+	}
+	limit := where.Next(f.Limit)
+	rows, err := pool.Query(ctx, `SELECT id, time, replica, level, message, attrs FROM server_logs`+where.SQL()+` ORDER BY time DESC, id DESC LIMIT `+limit, where.Args...)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +374,7 @@ func Recent(ctx context.Context, pool *pgxpool.Pool, min slog.Level, limit int) 
 	for rows.Next() {
 		var e Entry
 		var attrs []byte
-		if err := rows.Scan(&e.Time, &e.Replica, &e.Level, &e.Message, &attrs); err != nil {
+		if err := rows.Scan(&e.ID, &e.Time, &e.Replica, &e.Level, &e.Message, &attrs); err != nil {
 			return nil, err
 		}
 		if attrs != nil {

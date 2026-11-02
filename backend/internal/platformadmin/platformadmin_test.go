@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"regexp"
 	"slices"
@@ -529,6 +530,91 @@ func TestLogLevelIsStoredAndAnnounced(t *testing.T) {
 	}
 	if e := f.lastEvent("platform_config.updated"); e["changed"].([]any)[0] != "log_level" {
 		t.Errorf("event = %v", e)
+	}
+}
+
+func TestLogFiltersFollowOneRequest(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`INSERT INTO server_logs (time, replica, severity, level, message, attrs) VALUES
+		('2026-11-02T10:04:00Z', 'r1', 0, 'INFO', 'request done', jsonb_build_object('req', 'req-a', 'user', $1::text, 'route', 'GET /api/routes/{id}')),
+		('2026-11-02T10:03:00Z', 'r2', 4, 'WARN', 'slow query', '{"req": "req-a", "sql": "SELECT 50% off"}'),
+		('2026-11-02T10:02:00Z', 'r3', 0, 'INFO', 'request done', jsonb_build_object('req', 'req-b', 'user', $2::text, 'route', 'POST /api/ticks')),
+		('2026-11-02T10:01:00Z', 'r4', 8, 'ERROR', 'Mail: sending 50_off failed', '{"route": "GET /api/routes/{id}"}')`, f.climber, f.operator)
+	shown := func(query string) string {
+		t.Helper()
+		var out []string
+		for _, item := range f.call(http.MethodGet, "/platform/logs?"+query, "", f.operator, http.StatusOK)["items"].([]any) {
+			out = append(out, item.(map[string]any)["replica"].(string))
+		}
+		return strings.Join(out, ",")
+	}
+	route := "route=" + url.QueryEscape("GET /api/routes/{id}")
+	for query, want := range map[string]string{
+		"":                            "r1,r2,r3,r4",
+		"req=req-a":                   "r1,r2",
+		"user=" + f.climber:           "r1",
+		route:                         "r1,r4",
+		"q=mAiL":                      "r4",
+		"q=" + url.QueryEscape("50%"): "r2",
+		"q=50_":                       "r4",
+		"q=req-b":                     "r3",
+		"req=req-a&level=warn":        "r2",
+		route + "&user=" + f.climber:  "r1",
+		"req=req-c":                   "",
+	} {
+		if got := shown(query); got != want {
+			t.Errorf("%q = %q, want %q", query, got, want)
+		}
+	}
+	tooLong := f.call(http.MethodGet, "/platform/logs?q="+strings.Repeat("a", 201), "", f.operator, http.StatusBadRequest)
+	if _, ok := tooLong["data"].(map[string]any)["q"]; !ok {
+		t.Errorf("long q = %v, want a field error", tooLong)
+	}
+	badCursor := f.call(http.MethodGet, "/platform/logs?cursor=2026-11-02", "", f.operator, http.StatusBadRequest)
+	if _, ok := badCursor["data"].(map[string]any)["cursor"]; !ok {
+		t.Errorf("date as cursor = %v, want a field error", badCursor)
+	}
+}
+
+func TestLogPagesFollowEachOtherWithoutGapsWithinAMillisecond(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`INSERT INTO server_logs (time, replica, severity, level, message, attrs)
+		SELECT '2026-11-02T10:00:00.123Z'::timestamptz - make_interval(secs => n / 1e6), 'r' || n, 0, 'INFO', 'tick', NULL
+		FROM generate_series(1, 2500) AS n`)
+	ctx := context.Background()
+	seen := map[string]bool{}
+	var cursor *logbuf.Cursor
+	pages := 0
+	for {
+		items, err := logbuf.Recent(ctx, f.app.DB, logbuf.Filter{Min: slog.LevelDebug, Before: cursor, Limit: 2000})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, item := range items {
+			if seen[item.Replica] {
+				t.Fatalf("%s shown twice", item.Replica)
+			}
+			seen[item.Replica] = true
+		}
+		pages++
+		if len(items) < 2000 {
+			break
+		}
+		last := items[len(items)-1]
+		parsed, ok := logbuf.ParseCursor(logbuf.Cursor{Time: last.Time, ID: last.ID}.String())
+		if !ok {
+			t.Fatal("cursor does not parse")
+		}
+		cursor = &parsed
+	}
+	if len(seen) != 2500 || pages != 2 {
+		t.Errorf("%d rows over %d pages, want 2500 over 2", len(seen), pages)
+	}
+	first := f.call(http.MethodGet, "/platform/logs?level=debug", "", f.operator, http.StatusOK)
+	next, _ := first["next"].(string)
+	second := f.call(http.MethodGet, "/platform/logs?level=debug&cursor="+next, "", f.operator, http.StatusOK)
+	if len(first["items"].([]any)) != 2000 || len(second["items"].([]any)) != 500 || second["next"] != nil {
+		t.Errorf("pages = %d + %d, next %v", len(first["items"].([]any)), len(second["items"].([]any)), second["next"])
 	}
 }
 

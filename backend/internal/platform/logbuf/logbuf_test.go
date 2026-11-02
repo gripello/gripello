@@ -29,7 +29,7 @@ func TestRecordsOfEveryReplicaAreShippedAndFilteredByLevel(t *testing.T) {
 	first.Flush(ctx, pool, "replica-1")
 	second.Flush(ctx, pool, "replica-2")
 
-	got, err := Recent(ctx, pool, slog.LevelWarn, 100)
+	got, err := Recent(ctx, pool, Filter{Min: slog.LevelWarn, Limit: 100})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestRecordsOfEveryReplicaAreShippedAndFilteredByLevel(t *testing.T) {
 		got[1].Message != "slow query" || got[1].Replica != "replica-1" || got[1].Attrs["ms"] != float64(900) || got[1].Attrs["module"] != "a" {
 		t.Fatalf("warn+ = %+v", got)
 	}
-	if all, _ := Recent(ctx, pool, slog.LevelDebug, 100); len(all) != 3 {
+	if all, _ := Recent(ctx, pool, Filter{Min: slog.LevelDebug, Limit: 100}); len(all) != 3 {
 		t.Errorf("debug was shipped although the level is info: %+v", all)
 	}
 	if !strings.Contains(out.String(), "slow query") {
@@ -48,7 +48,7 @@ func TestRecordsOfEveryReplicaAreShippedAndFilteredByLevel(t *testing.T) {
 	if err := Prune(ctx, pool, 7*24*time.Hour); err != nil {
 		t.Fatal(err)
 	}
-	if all, _ := Recent(ctx, pool, slog.LevelDebug, 100); len(all) != 2 {
+	if all, _ := Recent(ctx, pool, Filter{Min: slog.LevelDebug, Limit: 100}); len(all) != 2 {
 		t.Errorf("after prune = %+v", all)
 	}
 }
@@ -60,7 +60,7 @@ func TestAFailedShipKeepsTheRecords(t *testing.T) {
 	slog.New(b).Error("before the table exists")
 	b.Flush(ctx, pool, "replica-1")
 	b.Flush(ctx, pool, "replica-1")
-	if got, _ := Recent(ctx, pool, slog.LevelDebug, 10); len(got) != 1 {
+	if got, _ := Recent(ctx, pool, Filter{Min: slog.LevelDebug, Limit: 10}); len(got) != 1 {
 		t.Errorf("records = %+v", got)
 	}
 }
@@ -71,7 +71,7 @@ func TestBinaryJunkDoesNotBlockShipping(t *testing.T) {
 	b := New(&bytes.Buffer{})
 	slog.New(b).Warn("upload \x00name\xff", "file", "a\x00b\xfe", "parts", []string{"x\x00y", `lit\u0000eral`})
 	b.Flush(ctx, pool, "replica-1")
-	got, _ := Recent(ctx, pool, slog.LevelDebug, 10)
+	got, _ := Recent(ctx, pool, Filter{Min: slog.LevelDebug, Limit: 10})
 	parts, _ := got[0].Attrs["parts"].([]any)
 	if len(got) != 1 || got[0].Message != "upload name\uFFFD" || got[0].Attrs["file"] != "ab\uFFFD" ||
 		len(parts) != 2 || parts[0] != "xy" || parts[1] != `lit\u0000eral` {

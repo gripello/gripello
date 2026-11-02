@@ -14,15 +14,28 @@ import (
 	"gripello/internal/platform/replicas"
 )
 
+const maxLogSearch = 200
+
 // listLogs shows the newest records of every replica.
 func (m *module) listLogs(w http.ResponseWriter, r *http.Request) error {
-	min := slog.LevelInfo
-	if raw := r.URL.Query().Get("level"); raw != "" {
-		if err := min.UnmarshalText([]byte(raw)); err != nil {
+	query := r.URL.Query()
+	filter := logbuf.Filter{Min: slog.LevelInfo, Req: query.Get("req"), User: query.Get("user"), Route: query.Get("route"), Query: query.Get("q"), Limit: 2000}
+	if raw := query.Get("level"); raw != "" {
+		if err := filter.Min.UnmarshalText([]byte(raw)); err != nil {
 			return httpx.BadRequest("Unknown level.")
 		}
 	}
-	items, err := logbuf.Recent(r.Context(), m.app.DB, min, 2000)
+	if err := httpx.TooLong("q", filter.Query, maxLogSearch); err != nil {
+		return err
+	}
+	if raw := query.Get("cursor"); raw != "" {
+		cursor, ok := logbuf.ParseCursor(raw)
+		if !ok {
+			return httpx.Invalid("cursor", "Use the next value of a previous page.")
+		}
+		filter.Before = &cursor
+	}
+	items, err := logbuf.Recent(r.Context(), m.app.DB, filter)
 	if err != nil {
 		return err
 	}
@@ -34,7 +47,12 @@ func (m *module) listLogs(w http.ResponseWriter, r *http.Request) error {
 	if m.app.Logs != nil {
 		level = m.app.Logs.Level.Level().String()
 	}
-	return httpx.Respond(w, http.StatusOK, map[string]any{"level": level, "items": items, "replicas": servers}, nil)
+	var next *string
+	if len(items) == filter.Limit {
+		cursor := logbuf.Cursor{Time: items[len(items)-1].Time, ID: items[len(items)-1].ID}.String()
+		next = &cursor
+	}
+	return httpx.Respond(w, http.StatusOK, map[string]any{"level": level, "items": items, "replicas": servers, "next": next}, nil)
 }
 
 // setLogLevel stores the level; every replica applies it when the platform_config event arrives.

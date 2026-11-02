@@ -2525,6 +2525,14 @@
             "default": "standaard",
             "replicas": "Replica’s",
             "sameModule": "Zelfde module tonen",
+            "filters": {
+                "req": "Request-ID",
+                "user": "Gebruikers-ID",
+                "route": "Route"
+            },
+            "clearFilters": "Filters wissen",
+            "loadOlder": "Oudere laden",
+            "noMatches": "Geen logregels voldoen aan deze filters",
             "replicaStatus": {
                 "online": "Online",
                 "offline": "Offline",
