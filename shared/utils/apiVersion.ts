@@ -4,6 +4,8 @@ export type ApiVersionStatus = 'ok' | 'outdated' | 'unsupported'
 
 export const API_VERSION_HEADER = 'X-Gripello-Api-Version'
 
+export const REQUEST_ID_HEADER = 'X-Request-Id'
+
 export const NUXT_API_PREFIXES = ['/api/ui', '/api/version', '/api/cap']
 
 export function checkApiVersion(

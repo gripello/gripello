@@ -153,7 +153,7 @@ func (m *module) reportClientError(w http.ResponseWriter, r *http.Request) error
 	if p, ok := auth.From(r.Context()); ok {
 		user = p.UserID
 	}
-	slog.Error("client error", "source", "client", "kind", body.Kind, "route", truncate(route, 200), "error", truncate(body.Message, 500),
+	slog.ErrorContext(r.Context(), "client error", "source", "client", "kind", body.Kind, "route", truncate(route, 200), "error", truncate(body.Message, 500),
 		"stack", truncate(body.Stack, 2000), "version", truncate(body.Version, 40), "user", user, "req", httpx.RequestID(r.Context()))
 	return httpx.NoContent(w, nil)
 }

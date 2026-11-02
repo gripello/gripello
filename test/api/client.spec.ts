@@ -11,6 +11,22 @@ beforeEach(() => {
 })
 
 describe('useApi', () => {
+    it('passes the page request id on while rendering on the server', async () => {
+        vi.stubGlobal('useRequestHeader', (name: string) =>
+            name === 'X-Request-Id' ? 'nginx-req-1' : undefined,
+        )
+        vi.stubGlobal('useRequestHeaders', () => ({}))
+        process.server = true
+        try {
+            await useApi()('/settings')
+        } finally {
+            process.server = false
+        }
+        expect(api.request().headers.get('X-Request-Id')).toBe('nginx-req-1')
+        await useApi()('/settings')
+        expect(api.request().headers.has('X-Request-Id')).toBe(false)
+    })
+
     it('sends no auth header for guests and includes credentials', async () => {
         await useApi()('/settings')
         const [, init] = api.fetchMock.mock.calls[0] as unknown as [

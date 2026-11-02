@@ -41,9 +41,9 @@ func (c *Cron) Add(name, spec string, fn func(ctx context.Context) error) {
 				unclaimSlot(c.pool, name, slot)
 			}
 			if err != nil {
-				slog.Error("cron job failed", "job", name, "ms", time.Since(start).Milliseconds(), "error", err)
+				slog.ErrorContext(ctx, "cron job failed", "job", name, "ms", time.Since(start).Milliseconds(), "error", err)
 			} else {
-				slog.Debug("cron job done", "job", name, "ms", time.Since(start).Milliseconds())
+				slog.InfoContext(ctx, "cron job done", "job", name, "ms", time.Since(start).Milliseconds())
 			}
 		})
 	})
@@ -56,14 +56,14 @@ func (c *Cron) Add(name, spec string, fn func(ctx context.Context) error) {
 func runLocked(ctx context.Context, pool *pgxpool.Pool, key int64, fn func(ctx context.Context)) {
 	conn, err := pool.Acquire(ctx)
 	if err != nil {
-		slog.Warn("cron: no connection for the lock", "error", err)
+		slog.WarnContext(ctx, "cron: no connection for the lock", "error", err)
 		return
 	}
 	defer conn.Release()
 	var locked bool
 	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1)`, key).Scan(&locked); err != nil || !locked {
 		if err != nil {
-			slog.Warn("cron: taking the lock failed", "error", err)
+			slog.WarnContext(ctx, "cron: taking the lock failed", "error", err)
 		}
 		return
 	}
@@ -82,7 +82,7 @@ func claimSlot(ctx context.Context, pool *pgxpool.Pool, name string, slot time.T
 	tag, err := pool.Exec(ctx, `WITH pruned AS (DELETE FROM cron_runs WHERE name = $1 AND slot < $2::timestamptz - interval '1 day')
 		INSERT INTO cron_runs (name, slot) VALUES ($1, $2) ON CONFLICT DO NOTHING`, name, slot)
 	if err != nil {
-		slog.Warn("cron: claiming the slot failed", "job", name, "error", err)
+		slog.WarnContext(ctx, "cron: claiming the slot failed", "job", name, "error", err)
 		return false
 	}
 	return tag.RowsAffected() == 1
@@ -193,7 +193,7 @@ func claim(ctx context.Context, pool *pgxpool.Pool) (Job, bool) {
 		            ORDER BY run_after FOR UPDATE SKIP LOCKED LIMIT 1)
 		RETURNING id, kind, key, payload, run_after, attempts`, lease.String()).Scan(&j.ID, &j.Kind, &j.Key, &j.Payload, &j.RunAfter, &j.Attempts)
 	if err != nil && err != pgx.ErrNoRows && ctx.Err() == nil {
-		slog.Warn("jobs: claiming failed", "error", err)
+		slog.WarnContext(ctx, "jobs: claiming failed", "error", err)
 	}
 	return j, err == nil
 }
@@ -204,7 +204,7 @@ func run(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, job
 		bookCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 		defer cancel()
 		if _, err := pool.Exec(bookCtx, sql, args...); err != nil {
-			slog.Warn("jobs: updating the job failed", "kind", job.Kind, "key", job.Key, "error", err)
+			slog.WarnContext(ctx, "jobs: updating the job failed", "kind", job.Kind, "key", job.Key, "error", err)
 		}
 	}
 	// An Enqueue that landed while the job ran moved run_after; keep that row so the job runs again.
@@ -214,7 +214,7 @@ func run(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, job
 	}
 	w := workers[job.Kind]
 	if w == nil {
-		slog.Error("jobs: no worker", "kind", job.Kind)
+		slog.ErrorContext(ctx, "jobs: no worker", "kind", job.Kind)
 		exec(`DELETE FROM jobs WHERE id = $1`, job.ID)
 		return
 	}
@@ -229,7 +229,7 @@ func run(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, job
 				return
 			case <-ticker.C:
 				if _, err := pool.Exec(ctx, `UPDATE jobs SET locked_until = now() + $2::interval WHERE id = $1`, job.ID, lease.String()); err != nil {
-					slog.Warn("jobs: renewing the lease failed, another replica may take the job over", "kind", job.Kind, "key", job.Key, "error", err)
+					slog.WarnContext(ctx, "jobs: renewing the lease failed, another replica may take the job over", "kind", job.Kind, "key", job.Key, "error", err)
 				}
 			}
 		}
@@ -241,25 +241,25 @@ func run(ctx context.Context, pool *pgxpool.Pool, workers map[string]Worker, job
 	<-renewing
 	attrs := []any{"kind", job.Kind, "key", job.Key, "attempt", job.Attempts, "ms", took.Milliseconds(), "waited_ms", start.Sub(job.RunAfter).Milliseconds()}
 	if err != nil && ctx.Err() != nil {
-		slog.Warn("job cut off by shutdown, handed back", attrs...)
+		slog.WarnContext(ctx, "job cut off by shutdown, handed back", attrs...)
 		exec(`UPDATE jobs SET locked_until = NULL, attempts = attempts - 1 WHERE id = $1`, job.ID)
 		return
 	}
 	if err != nil {
 		if job.Attempts >= maxAttempts {
-			slog.Error("job failed for good, dropped", append(attrs, "error", err)...)
+			slog.ErrorContext(ctx, "job failed for good, dropped", append(attrs, "error", err)...)
 			finish()
 			return
 		}
-		slog.Warn("job failed, retrying in a minute", append(attrs, "error", err)...)
+		slog.WarnContext(ctx, "job failed, retrying in a minute", append(attrs, "error", err)...)
 		// ponytail: fixed 1 min retry, no backoff; attempts is there when one is needed
 		exec(`UPDATE jobs SET run_after = now() + interval '1 minute', locked_until = NULL WHERE id = $1`, job.ID)
 		return
 	}
 	if took > lease/2 {
-		slog.Warn("job slow, close to its lease", attrs...)
+		slog.WarnContext(ctx, "job slow, close to its lease", attrs...)
 	} else {
-		slog.Debug("job done", attrs...)
+		slog.DebugContext(ctx, "job done", attrs...)
 	}
 	finish()
 }

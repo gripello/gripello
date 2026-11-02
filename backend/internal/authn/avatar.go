@@ -72,7 +72,7 @@ func (m *module) importAvatar(ctx context.Context, provider, userID string, clai
 	}
 	res, err := avatarClient.Do(req)
 	if err != nil {
-		slog.Warn("oauth2 avatar download failed", "provider", provider, "err", err)
+		slog.WarnContext(ctx, "authn: OAuth2 avatar download failed", "provider", provider, "error", err)
 		return
 	}
 	defer res.Body.Close()
@@ -82,7 +82,7 @@ func (m *module) importAvatar(ctx context.Context, provider, userID string, clai
 	}
 	name, err := m.blob.Upload(ctx, "users/"+userID+"/avatar"+ext, res.Body, []string{"image/jpeg", "image/png", "image/gif", "image/webp"}, maxAvatarBytes)
 	if err != nil {
-		slog.Warn("oauth2 avatar rejected", "provider", provider, "err", err)
+		slog.WarnContext(ctx, "authn: OAuth2 avatar rejected", "provider", provider, "error", err)
 		return
 	}
 	key := "users/" + userID + "/" + name

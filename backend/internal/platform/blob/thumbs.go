@@ -106,7 +106,7 @@ func (s *Store) Thumb(ctx context.Context, key, size string) (string, error) {
 	height, _ := strconv.Atoi(match[2])
 	if vipsPath != "" {
 		if err := s.vipsThumb(ctx, key, thumbKey, format, width, height, match[3]); err != nil {
-			slog.Warn("vips thumbnail failed, serving the original", "key", key, "error", err)
+			slog.WarnContext(ctx, "vips thumbnail failed, serving the original", "key", key, "error", err)
 			return key, nil
 		}
 		return thumbKey, s.sourceExists(ctx, key)

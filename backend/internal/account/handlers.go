@@ -294,7 +294,7 @@ func blobKey(userID, name string) string { return "users/" + userID + "/" + name
 func (m *module) deleteBlobs(r *http.Request, userID string, names []string) {
 	for _, name := range names {
 		if err := m.blob.Delete(r.Context(), blobKey(userID, name)); err != nil {
-			slog.Warn("account: deleting file failed", "user", userID, "file", name, "error", err)
+			slog.WarnContext(r.Context(), "account: deleting file failed", "user", userID, "file", name, "error", err)
 		}
 	}
 }
@@ -443,7 +443,7 @@ func (m *module) deleteMe(w http.ResponseWriter, r *http.Request) error {
 	}
 	for _, key := range keys {
 		if err := m.blob.Delete(ctx, key); err != nil {
-			slog.Warn("account: deleting files of a deleted account failed", "key", key, "error", err)
+			slog.WarnContext(r.Context(), "account: deleting files of a deleted account failed", "key", key, "error", err)
 		}
 	}
 	return httpx.NoContent(w, nil)

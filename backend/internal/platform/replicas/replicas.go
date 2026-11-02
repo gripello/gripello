@@ -68,11 +68,11 @@ func Run(ctx context.Context, pool *pgxpool.Pool, self Replica, probes Probes) {
 		r.RealtimeDropped = int(now.dropped - last.dropped)
 		last = now
 		if err := Beat(ctx, pool, r); err != nil && ctx.Err() == nil {
-			slog.Warn("replicas: heartbeat failed", "error", err)
+			slog.WarnContext(ctx, "replicas: heartbeat failed", "error", err)
 		}
 		warnIfStrained(r)
 		if err := TouchSessions(ctx, pool, probes.RealtimeSessions()); err != nil && ctx.Err() == nil {
-			slog.Warn("replicas: session touch failed", "error", err)
+			slog.WarnContext(ctx, "replicas: session touch failed", "error", err)
 		}
 		select {
 		case <-ticker.C:

@@ -66,7 +66,7 @@ func hasComment(c content) bool {
 
 func logFailure(what, id string, err error) {
 	if err != nil && !errors.Is(err, httpx.ErrNotFound) {
-		slog.Error("moderation: "+what+" failed", "content", id, "error", err)
+		slog.Error("moderation: handling content failed", "kind", what, "content", id, "error", err)
 	}
 }
 

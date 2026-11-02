@@ -72,6 +72,6 @@ func (m *module) announceAccount(ctx context.Context, userID, changed string) {
 			events.Audience{Users: []string{userID}})
 	})
 	if err != nil {
-		slog.Warn("authn: account change not announced", "error", err)
+		slog.WarnContext(ctx, "authn: account change not announced", "error", err)
 	}
 }

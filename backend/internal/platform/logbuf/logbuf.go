@@ -10,7 +10,9 @@ import (
 	"io"
 	"log/slog"
 	"maps"
+	"net/url"
 	"os"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -20,6 +22,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"gripello/internal/platform/httpx"
 )
 
 type Entry struct {
@@ -58,8 +62,9 @@ type Buffer struct {
 	Level *slog.LevelVar
 	queue *queue
 	text  slog.Handler
-	attrs []slog.Attr
-	group string
+	// attrs carry the group prefix that was open when they were added.
+	attrs  []slog.Attr
+	prefix string
 }
 
 func New(out io.Writer) *Buffer {
@@ -70,43 +75,59 @@ func (b *Buffer) Enabled(ctx context.Context, level slog.Level) bool {
 	return b.text.Enabled(ctx, level)
 }
 
-// SafeError keeps Postgres errors to code, table and constraint: their message and detail may quote row values (e-mails, user input).
+var emailAddress = regexp.MustCompile(`[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}`)
+
+// SafeError keeps Postgres errors to code, table and constraint (their message and detail may quote row values) and
+// drops request URLs and e-mail addresses, which SMTP and HTTP client errors quote.
 func SafeError(err error) string {
+	text := err.Error()
 	var pg *pgconn.PgError
 	if errors.As(err, &pg) {
-		context := strings.TrimSuffix(err.Error(), pg.Error())
-		return fmt.Sprintf("%spostgres %s table=%s constraint=%s", context, pg.Code, pg.TableName, pg.ConstraintName)
+		context := strings.TrimSuffix(text, pg.Error())
+		text = fmt.Sprintf("%spostgres %s table=%s constraint=%s", context, pg.Code, pg.TableName, pg.ConstraintName)
 	}
-	return err.Error()
+	var request *url.Error
+	if errors.As(err, &request) && request.URL != "" {
+		text = strings.ReplaceAll(text, strconv.Quote(request.URL), `"<url>"`)
+	}
+	return maskEmails(text)
+}
+
+func maskEmails(text string) string {
+	if !strings.Contains(text, "@") {
+		return text
+	}
+	return emailAddress.ReplaceAllString(text, "<email>")
 }
 
 func scrub(a slog.Attr) slog.Attr {
-	if err, ok := a.Value.Resolve().Any().(error); ok {
-		return slog.String(a.Key, SafeError(err))
+	switch v := a.Value.Resolve().Any().(type) {
+	case error:
+		return slog.String(a.Key, SafeError(v))
+	case string:
+		return slog.String(a.Key, maskEmails(v))
 	}
 	return a
 }
 
-// Handle scrubs error values for stderr and server_logs alike.
+// Handle scrubs error values and e-mail addresses for stderr and server_logs alike and adds the request id from ctx.
 func (b *Buffer) Handle(ctx context.Context, original slog.Record) error {
-	r := slog.NewRecord(original.Time, original.Level, original.Message, original.PC)
+	r := slog.NewRecord(original.Time, original.Level, maskEmails(original.Message), original.PC)
+	hasRequestID := false
 	original.Attrs(func(a slog.Attr) bool {
+		hasRequestID = hasRequestID || a.Key == "req"
 		r.AddAttrs(scrub(a))
 		return true
 	})
-	attrs := map[string]any{}
-	add := func(a slog.Attr) {
-		key := a.Key
-		if b.group != "" {
-			key = b.group + "." + key
-		}
-		attrs[key] = scrub(a).Value.Resolve().Any()
+	if id := httpx.RequestID(ctx); id != "" && !hasRequestID {
+		r.AddAttrs(slog.String("req", id))
 	}
+	attrs := map[string]any{}
 	for _, a := range b.attrs {
-		add(a)
+		attrs[a.Key] = a.Value.Resolve().Any()
 	}
 	r.Attrs(func(a slog.Attr) bool {
-		add(a)
+		attrs[b.prefix+a.Key] = a.Value.Resolve().Any()
 		return true
 	})
 	if len(attrs) == 0 {
@@ -122,18 +143,24 @@ func (b *Buffer) Handle(ctx context.Context, original slog.Record) error {
 
 func (b *Buffer) WithAttrs(attrs []slog.Attr) slog.Handler {
 	clone := *b
-	attrs = slices.Clone(attrs)
+	scrubbed := make([]slog.Attr, len(attrs))
 	for i, a := range attrs {
-		attrs[i] = scrub(a)
+		scrubbed[i] = scrub(a)
 	}
-	clone.attrs = append(slices.Clip(b.attrs), attrs...)
-	clone.text = b.text.WithAttrs(attrs)
+	clone.text = b.text.WithAttrs(scrubbed)
+	clone.attrs = slices.Clip(b.attrs)
+	for _, a := range scrubbed {
+		clone.attrs = append(clone.attrs, slog.Attr{Key: b.prefix + a.Key, Value: a.Value})
+	}
 	return &clone
 }
 
 func (b *Buffer) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return b
+	}
 	clone := *b
-	clone.group = name
+	clone.prefix = b.prefix + name + "."
 	clone.text = b.text.WithGroup(name)
 	return &clone
 }
@@ -287,6 +314,7 @@ func cleanValue(value any) any {
 	return value
 }
 
+// Filter narrows Recent; empty fields match everything, Query is a case-insensitive substring of the message or the attributes.
 // Recent returns the newest records of every replica at or above min.
 func Recent(ctx context.Context, pool *pgxpool.Pool, min slog.Level, limit int) ([]Entry, error) {
 	// a literal severity lets the planner pick the partial warn index, a parameter never does

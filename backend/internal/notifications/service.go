@@ -208,12 +208,12 @@ func (m *module) sendAll(ctx context.Context, subscriptions []subscription, body
 		}
 		gone, err := m.app.Push.Send(ctx, s.Subscription, body)
 		if err != nil {
-			slog.Warn("push: send failed", "subscription", s.id, "error", err)
+			slog.WarnContext(ctx, "push: send failed", "subscription", s.id, "error", err)
 			continue
 		}
 		if gone {
 			if err := m.deleteSubscription(ctx, "", s.id, ""); err != nil && err != pgx.ErrNoRows {
-				slog.Error("push: dropping expired subscription failed", "subscription", s.id, "error", err)
+				slog.ErrorContext(ctx, "push: dropping expired subscription failed", "subscription", s.id, "error", err)
 			}
 		}
 	}
@@ -256,7 +256,7 @@ func (m *module) pruneNotifications(ctx context.Context) error {
 	tag, err := m.app.DB.Exec(ctx, `DELETE FROM notifications WHERE (read AND created < $1) OR created < $2`,
 		time.Now().Add(-readRetention), time.Now().Add(-maxRetention))
 	if err == nil {
-		slog.Info("notifications: pruned expired entries", "rows", tag.RowsAffected())
+		slog.InfoContext(ctx, "notifications: pruned expired entries", "rows", tag.RowsAffected())
 	}
 	return err
 }

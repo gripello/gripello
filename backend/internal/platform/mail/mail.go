@@ -98,7 +98,7 @@ func Settings(ctx context.Context, q db.Querier, secret string) (SMTP, error) {
 	}
 	s.Port = strconv.Itoa(port)
 	if s.Password, err = secretbox.Open(secret, sealed); err != nil {
-		slog.Warn("mail: stored SMTP password is unreadable, re-enter it in the platform settings", "error", err)
+		slog.WarnContext(ctx, "mail: stored SMTP password is unreadable, re-enter it in the platform settings", "error", err)
 		s.Password = ""
 	}
 	return s, nil

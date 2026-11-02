@@ -67,10 +67,10 @@ func loadProvider(ctx context.Context, q db.Querier, secret, provider string) (p
 		return c, err
 	}
 	if c.ClientSecret, err = secretbox.Open(secret, sealedSecret); err != nil {
-		slog.Warn("authn: stored OAuth2 client secret is unreadable", "provider", provider)
+		slog.WarnContext(ctx, "authn: stored OAuth2 client secret is unreadable", "provider", provider)
 	}
 	if c.PrivateKey, err = secretbox.Open(secret, sealedKey); err != nil {
-		slog.Warn("authn: stored Apple private key is unreadable", "provider", provider)
+		slog.WarnContext(ctx, "authn: stored Apple private key is unreadable", "provider", provider)
 	}
 	return c, nil
 }
@@ -222,7 +222,7 @@ func (m *module) oauth2Start(w http.ResponseWriter, r *http.Request) error {
 	}
 	cfg, _, err := m.oauth2Config(ctx, c)
 	if err != nil {
-		slog.Error("authn: OAuth2 provider unavailable", "provider", c.Provider, "error", err)
+		slog.ErrorContext(r.Context(), "authn: OAuth2 provider unavailable", "provider", c.Provider, "error", err)
 		return httpx.NewError(http.StatusBadGateway, "The sign-in provider is not reachable.")
 	}
 	flow := ids.Secret(32)
@@ -291,7 +291,7 @@ func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 	errorPage := appURL + "/auth/login?"
 	fail := func(code string, err error) error {
 		if err != nil {
-			slog.Warn("authn: OAuth2 sign-in failed", "provider", provider, "code", code, "error", err)
+			slog.WarnContext(r.Context(), "authn: OAuth2 sign-in failed", "provider", provider, "code", code, "error", err)
 		}
 		http.Redirect(w, r, errorPage+"oauth2Error="+url.QueryEscape(code), http.StatusFound)
 		return nil

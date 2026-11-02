@@ -118,7 +118,7 @@ func (m *module) deleteGym(w http.ResponseWriter, r *http.Request) error {
 	if m.blob != nil {
 		for _, dir := range dirs {
 			if err := m.blob.Delete(context.WithoutCancel(r.Context()), dir); err != nil {
-				slog.Warn("gyms: deleting files of a deleted gym failed", "gym", gym.ID, "key", dir, "error", err)
+				slog.WarnContext(r.Context(), "gyms: deleting files of a deleted gym failed", "gym", gym.ID, "key", dir, "error", err)
 			}
 		}
 	}
@@ -157,7 +157,7 @@ func (m *module) updateSettings(w http.ResponseWriter, r *http.Request) error {
 		return events.Publish(r.Context(), tx, TopicSettings, "settings.updated", settings, events.Audience{Public: true})
 	})
 	if err != nil {
-		slog.Warn("gyms: settings change not announced", "error", err)
+		slog.WarnContext(r.Context(), "gyms: settings change not announced", "error", err)
 	}
 	return httpx.Respond(w, http.StatusOK, settings, nil)
 }
@@ -308,6 +308,6 @@ func (m *module) deleteBlob(ctx context.Context, gymID, name string) {
 		return
 	}
 	if err := m.blob.Delete(ctx, blobKey(gymID, name)); err != nil {
-		slog.Warn("gyms: deleting file failed", "gym", gymID, "file", name, "error", err)
+		slog.WarnContext(ctx, "gyms: deleting file failed", "gym", gymID, "file", name, "error", err)
 	}
 }

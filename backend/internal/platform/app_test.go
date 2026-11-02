@@ -1,10 +1,13 @@
 package platform
 
 import (
+	"bytes"
 	"context"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,6 +38,10 @@ func TestServeDrainsInFlightRequestsAndEndsStreams(t *testing.T) {
 	}))
 	app.Handle("GET /realtime", httpx.Handler(app.Realtime.Connect))
 
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
 	ctx, cancel := context.WithCancel(context.Background())
 	served := make(chan error, 1)
 	go func() { served <- app.Serve(ctx) }()
@@ -76,6 +83,9 @@ func TestServeDrainsInFlightRequestsAndEndsStreams(t *testing.T) {
 		}
 	case <-time.After(shutdownTimeout):
 		t.Fatal("Serve did not return: the open stream kept the server busy")
+	}
+	if !strings.Contains(logs.String(), `msg="shutting down, draining requests"`) || strings.Contains(logs.String(), "still running") {
+		t.Errorf("log = %s", logs.String())
 	}
 	select {
 	case <-finished:

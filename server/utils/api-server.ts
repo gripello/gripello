@@ -1,5 +1,5 @@
 import { createError, getHeader, type H3Event } from 'h3'
-import { API_VERSION_HEADER } from '#shared/utils/apiVersion'
+import { API_VERSION_HEADER, REQUEST_ID_HEADER } from '#shared/utils/apiVersion'
 
 export type Api = typeof $fetch
 
@@ -12,6 +12,7 @@ function bearer(event: H3Event) {
 
 export function apiFetch(event?: H3Event): Api {
     const authorization = event ? bearer(event) : ''
+    const requestId = event ? getHeader(event, REQUEST_ID_HEADER) : undefined
     const config = useRuntimeConfig()
     const appVersion = String(config.public.appVersion ?? '')
     return $fetch.create({
@@ -20,6 +21,7 @@ export function apiFetch(event?: H3Event): Api {
         headers: {
             ...(authorization ? { Authorization: authorization } : {}),
             ...(appVersion ? { [API_VERSION_HEADER]: appVersion } : {}),
+            ...(requestId ? { [REQUEST_ID_HEADER]: requestId } : {}),
         },
     })
 }

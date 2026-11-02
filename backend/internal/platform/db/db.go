@@ -83,7 +83,7 @@ func ConnectWait(ctx context.Context, url string, retry time.Duration) (*pgxpool
 		if !retryable(err) {
 			return nil, err
 		}
-		slog.Warn("database unreachable, retrying", "error", err)
+		slog.WarnContext(ctx, "database unreachable, retrying", "error", err)
 		select {
 		case <-ctx.Done():
 			return nil, err
@@ -118,7 +118,17 @@ func MigrateTo(ctx context.Context, pool *pgxpool.Pool, version int64) error {
 		if err := goose.SetDialect("postgres"); err != nil {
 			return err
 		}
-		return goose.UpToContext(ctx, sqlDB, "migrations", version)
+		before, err := goose.GetDBVersionContext(ctx, sqlDB)
+		if err != nil {
+			return err
+		}
+		if err := goose.UpToContext(ctx, sqlDB, "migrations", version); err != nil {
+			return err
+		}
+		if after, err := goose.GetDBVersionContext(ctx, sqlDB); err == nil && after != before {
+			slog.InfoContext(ctx, "migrations applied", "from", before, "to", after)
+		}
+		return nil
 	})
 }
 

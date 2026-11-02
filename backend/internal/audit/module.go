@@ -225,7 +225,7 @@ func (m *module) prune(ctx context.Context) error {
 	}
 	tag, err := m.db.Exec(ctx, `DELETE FROM audit_logs WHERE created < now() - make_interval(days => $1)`, days)
 	if err == nil {
-		slog.Info("audit: pruned expired entries", "rows", tag.RowsAffected(), "retentionDays", days)
+		slog.InfoContext(ctx, "audit: pruned expired entries", "rows", tag.RowsAffected(), "retentionDays", days)
 	}
 	return err
 }

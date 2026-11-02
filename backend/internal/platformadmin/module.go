@@ -214,7 +214,7 @@ func (m *module) mailUser(ctx context.Context, userID, key string) {
 	}
 	content := gmail.Content{Key: key, Name: t.Firstname}
 	if _, err := m.app.MailTemplates.Send(ctx, m.app.Mail, m.app.MailTemplates.AppBrand(), content, []gmail.Recipient{{Address: t.Email, Language: t.Language}}); err != nil {
-		slog.Error("platformadmin: sending mail failed", "mail", key, "user", userID, "error", err)
+		slog.ErrorContext(ctx, "platformadmin: sending mail failed", "mail", key, "user", userID, "error", err)
 	}
 }
 

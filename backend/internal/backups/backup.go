@@ -105,6 +105,7 @@ func prune(dir string, keep int) error {
 
 // run dumps the database with pg_dump and packs it, plus storage without regenerable thumbnails and private tables (account exports), into one tar.
 func (m *module) run(ctx context.Context) error {
+	start := time.Now()
 	s, err := loadSettings(ctx, m.app.DB)
 	if err != nil {
 		return err
@@ -141,16 +142,19 @@ func (m *module) run(ctx context.Context) error {
 	if err := os.Rename(partial, filepath.Join(m.dir, name)); err != nil {
 		return err
 	}
+	if info, err := os.Stat(filepath.Join(m.dir, name)); err == nil {
+		slog.InfoContext(ctx, "backups: archive written", "archive", name, "bytes", info.Size(), "ms", time.Since(start).Milliseconds())
+	}
 	// The archive is complete from here on: later failures are logged, a job retry would only write another archive.
 	if s.Keep > 0 {
 		if err := prune(m.dir, s.Keep); err != nil {
-			slog.Warn("backups: pruning old archives failed", "error", err)
+			slog.WarnContext(ctx, "backups: pruning old archives failed", "error", err)
 		}
 	}
 	if err := pgx.BeginFunc(ctx, m.app.DB, func(tx pgx.Tx) error {
 		return events.PublishAs(ctx, tx, "", "platform", "backup.created", map[string]string{"id": name}, events.Audience{PlatformAdmins: true})
 	}); err != nil {
-		slog.Warn("backups: recording the archive failed", "archive", name, "error", err)
+		slog.WarnContext(ctx, "backups: recording the archive failed", "archive", name, "error", err)
 	}
 	return nil
 }

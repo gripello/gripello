@@ -1,9 +1,13 @@
 package jobs
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"strconv"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -257,4 +261,52 @@ func TestJobCutOffByShutdownKeepsItsAttempts(t *testing.T) {
 	if again, ok := claim(context.Background(), pool); !ok || again.Attempts != maxAttempts {
 		t.Fatalf("the cut-off run counted as an attempt or the job is not claimable again: %+v", again)
 	}
+}
+
+func TestFinishedCronRunsAreLoggedAtInfo(t *testing.T) {
+	pool := testkit.Pool(t)
+	var logs syncBuffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+	c := NewCron(pool)
+	ran := make(chan struct{}, 1)
+	c.Add("logged", "@every 1s", func(context.Context) error {
+		select {
+		case ran <- struct{}{}:
+		default:
+		}
+		return nil
+	})
+	c.Start()
+	defer c.Stop()
+	select {
+	case <-ran:
+	case <-time.After(3 * time.Second):
+		t.Fatal("cron job did not run")
+	}
+	deadline := time.Now().Add(time.Second)
+	for !strings.Contains(logs.String(), `level=INFO msg="cron job done" job=logged`) {
+		if time.Now().After(deadline) {
+			t.Fatalf("log = %s", logs.String())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }

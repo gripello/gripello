@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func captureLogs(t *testing.T) *bytes.Buffer {
@@ -114,5 +115,34 @@ func TestSlowRequestsWarnExceptStreamsAndTheTestMail(t *testing.T) {
 	line := logs.String()
 	if strings.Count(line, `msg="slow request"`) != 1 || strings.Contains(line, "mail/test") {
 		t.Errorf("slow request log = %s", line)
+	}
+}
+
+func TestAFailedRequestNamesItsLastQuery(t *testing.T) {
+	logs := captureLogs(t)
+	server := observedServer(map[string]http.HandlerFunc{
+		"GET /a": func(w http.ResponseWriter, r *http.Request) {
+			NoteQuery(r.Context(), "SELECT id FROM gyms WHERE slug = $1")
+			NoteQuery(r.Context(), "SELECT *\n\t FROM routes\n WHERE id = $1")
+			Fail(w, errors.New("no rows in result set"))
+		},
+		"GET /b": func(w http.ResponseWriter, r *http.Request) {
+			NoteQuery(r.Context(), "SELECT 1")
+			JSON(w, http.StatusOK, nil)
+		},
+	})
+	server.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/a", nil))
+	server.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/b", nil))
+	if line := logs.String(); !strings.Contains(line, `last_sql="SELECT * FROM routes WHERE id = $1"`) || strings.Count(line, "last_sql") != 1 {
+		t.Errorf("log = %s", line)
+	}
+}
+
+func TestCompactSQLCutsLongStatements(t *testing.T) {
+	if got := CompactSQL("SELECT\n  1"); got != "SELECT 1" {
+		t.Errorf("CompactSQL = %q", got)
+	}
+	if got := CompactSQL(strings.Repeat("ä", 400)); len(got) > 503 || !strings.HasSuffix(got, "…") || !utf8.ValidString(got) {
+		t.Errorf("CompactSQL = %q", got)
 	}
 }

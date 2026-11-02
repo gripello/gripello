@@ -193,7 +193,7 @@ func (rec *Recorder) Flush(ctx context.Context) error {
 		return tx.SendBatch(ctx, batch).Close()
 	})
 	if err != nil {
-		slog.Warn("metrics: flushing request counts failed, retrying next minute", "error", err)
+		slog.WarnContext(ctx, "metrics: flushing request counts failed, retrying next minute", "error", err)
 		rec.restore(pending, visitors)
 	}
 	return err

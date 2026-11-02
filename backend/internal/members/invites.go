@@ -105,7 +105,7 @@ func (h *handlers) inviteMember(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.sendInviteMail(ctx, pending, assigned.Name, token); err != nil {
-		slog.Error("invites: mail failed", "gym", gymID, "error", err)
+		slog.ErrorContext(r.Context(), "invites: mail failed", "gym", gymID, "error", err)
 	}
 	w.WriteHeader(http.StatusAccepted)
 	return nil
