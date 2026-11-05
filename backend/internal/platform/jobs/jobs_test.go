@@ -263,11 +263,11 @@ func TestJobCutOffByShutdownKeepsItsAttempts(t *testing.T) {
 	}
 }
 
-func TestFinishedCronRunsAreLoggedAtInfo(t *testing.T) {
+func TestFinishedCronRunsAreLoggedAtDebug(t *testing.T) {
 	pool := testkit.Pool(t)
 	var logs syncBuffer
 	previous := slog.Default()
-	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
 	t.Cleanup(func() { slog.SetDefault(previous) })
 	c := NewCron(pool)
 	ran := make(chan struct{}, 1)
@@ -286,7 +286,7 @@ func TestFinishedCronRunsAreLoggedAtInfo(t *testing.T) {
 		t.Fatal("cron job did not run")
 	}
 	deadline := time.Now().Add(time.Second)
-	for !strings.Contains(logs.String(), `level=INFO msg="cron job done" job=logged`) {
+	for !strings.Contains(logs.String(), `level=DEBUG msg="cron job done" job=logged`) {
 		if time.Now().After(deadline) {
 			t.Fatalf("log = %s", logs.String())
 		}
