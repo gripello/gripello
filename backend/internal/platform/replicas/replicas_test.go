@@ -96,3 +96,17 @@ func TestStrainFlagsOnlineReplicas(t *testing.T) {
 		t.Errorf("Strain = %v", got)
 	}
 }
+
+func TestOtherClientsSumsOnlineReplicasExceptSelf(t *testing.T) {
+	pool := testkit.Pool(t)
+	ctx := context.Background()
+	for name, clients := range map[string]int{"self": 7, "pod-a": 3, "pod-b": 4, "gone": 50} {
+		if err := Beat(ctx, pool, Replica{Name: name, Version: "1.4.0", Role: "all", Started: time.Now(), RealtimeClients: clients}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pool.Exec(ctx, `UPDATE replicas SET last_seen = now() - interval '5 minutes' WHERE name = 'gone'`)
+	if n, err := OtherClients(ctx, pool, "self"); err != nil || n != 7 {
+		t.Fatalf("other clients = %d, %v; want 7", n, err)
+	}
+}

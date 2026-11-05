@@ -9,8 +9,11 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"slices"
 	"strings"
 	"unicode"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"gripello/internal/platform/apitime"
 )
@@ -67,6 +70,9 @@ func Fail(w http.ResponseWriter, err error) {
 		e = NewError(http.StatusForbidden, "You are not allowed to perform this request.")
 	} else if errors.Is(err, ErrNotFound) {
 		e = NewError(http.StatusNotFound, "The requested resource wasn't found.")
+	} else if databaseUnavailable(err) {
+		w.Header().Set("Retry-After", "5")
+		e = NewError(http.StatusServiceUnavailable, "The service is briefly unavailable, try again.")
 	} else if !errors.As(err, &e) {
 		if ow := observed(w); ow != nil {
 			ow.failure = err
@@ -94,6 +100,16 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := h(w, r); err != nil {
 		Fail(w, err)
 	}
+}
+
+// databaseUnavailable: the primary is shutting down, still starting or was demoted (failover); a retry reaches the new one.
+func databaseUnavailable(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return slices.Contains([]string{"08000", "08001", "08003", "08004", "08006", "57P01", "57P02", "57P03", "25006"}, pgErr.Code)
+	}
+	var connectErr *pgconn.ConnectError
+	return errors.As(err, &connectErr)
 }
 
 var errNUL = NewError(http.StatusBadRequest, "Text must not contain NUL characters.")
