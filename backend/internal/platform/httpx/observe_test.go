@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 	"unicode/utf8"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func captureLogs(t *testing.T) *bytes.Buffer {
@@ -144,5 +146,36 @@ func TestCompactSQLCutsLongStatements(t *testing.T) {
 	}
 	if got := CompactSQL(strings.Repeat("ä", 400)); len(got) > 503 || !strings.HasSuffix(got, "…") || !utf8.ValidString(got) {
 		t.Errorf("CompactSQL = %q", got)
+	}
+}
+
+func TestFailoverErrorsAnswer503WithoutAnErrorLog(t *testing.T) {
+	for name, err := range map[string]error{
+		"shutdown":  fmt.Errorf("list routes: %w", &pgconn.PgError{Code: "57P01"}),
+		"read-only": &pgconn.PgError{Code: "25006"},
+		"link":      &pgconn.PgError{Code: "08006"},
+		"connect":   &pgconn.ConnectError{},
+	} {
+		t.Run(name, func(t *testing.T) {
+			logs := captureLogs(t)
+			server := observedServer(map[string]http.HandlerFunc{
+				"GET /x": func(w http.ResponseWriter, r *http.Request) { Fail(w, err) },
+			})
+			rec := httptest.NewRecorder()
+			server.ServeHTTP(rec, httptest.NewRequest("GET", "/x", nil))
+			if rec.Code != 503 || rec.Header().Get("Retry-After") == "" {
+				t.Fatalf("answered %d, Retry-After %q", rec.Code, rec.Header().Get("Retry-After"))
+			}
+			if line := logs.String(); strings.Contains(line, "level=ERROR") || !strings.Contains(line, "level=WARN") {
+				t.Errorf("log = %s", line)
+			}
+		})
+	}
+	for _, code := range []string{"23505", "08P01"} {
+		rec := httptest.NewRecorder()
+		Fail(rec, &pgconn.PgError{Code: code})
+		if rec.Code != 500 {
+			t.Errorf("SQLSTATE %s answered %d", code, rec.Code)
+		}
 	}
 }

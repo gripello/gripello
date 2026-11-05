@@ -190,6 +190,14 @@ func List(ctx context.Context, pool *pgxpool.Pool) ([]Replica, error) {
 	return out, rows.Err()
 }
 
+// OtherClients counts the realtime clients of every other online replica, as of their last heartbeat.
+func OtherClients(ctx context.Context, pool *pgxpool.Pool, self string) (int, error) {
+	var n int
+	err := pool.QueryRow(ctx, `SELECT COALESCE(sum(realtime_clients), 0) FROM replicas WHERE name <> $1 AND last_seen > now() - $2::interval`,
+		self, offlineAfter.String()).Scan(&n)
+	return n, err
+}
+
 func Prune(ctx context.Context, pool *pgxpool.Pool) error {
 	_, err := pool.Exec(ctx, `DELETE FROM replicas WHERE last_seen < now() - $1::interval`, forgetAfter.String())
 	return err

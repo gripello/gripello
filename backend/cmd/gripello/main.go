@@ -223,14 +223,13 @@ func serve(ctx context.Context, args []string) error {
 	defer cancel()
 	app.Bus.Start(ctx)
 	go app.Metrics.Run(ctx)
-	replica, _ := os.Hostname()
-	stopping.Go(func() { app.Logs.Ship(ctx, app.DB, replica) })
+	stopping.Go(func() { app.Logs.Ship(ctx, app.DB, replicaName) })
 	stopping.Go(func() {
 		<-ctx.Done()
 		app.Bus.WaitForHandlers(5 * time.Second)
 	})
 	stopping.Go(func() {
-		replicas.Run(ctx, app.DB, replicas.Replica{Name: replica, Version: config.Version, Role: cfg.Role, Started: time.Now()},
+		replicas.Run(ctx, app.DB, replicas.Replica{Name: replicaName, Version: config.Version, Role: cfg.Role, Started: time.Now()},
 			replicas.Probes{RealtimeClients: app.Realtime.Clients, RealtimeSessions: app.Realtime.Sessions, RealtimeDropped: app.Realtime.Dropped, BusLag: app.Bus.Lag, BusQueueMax: app.Bus.QueueMax})
 	})
 	app.Cron.Add("requestStatsPrune", "17 3 * * *", func(ctx context.Context) error {
@@ -261,6 +260,8 @@ func serve(ctx context.Context, args []string) error {
 	return app.Serve(ctx)
 }
 
+var replicaName, _ = os.Hostname()
+
 // mount registers every HTTP route; api/*.yaml documents them (TestEveryRouteIsDocumented).
 func mount(app *platform.App, mailConfigured func() bool) {
 	app.Handle("GET /health", healthHandler(app.DB))
@@ -274,7 +275,8 @@ func mount(app *platform.App, mailConfigured func() bool) {
 		if _, err := auth.Require(r.Context()); err != nil {
 			return err
 		}
-		return httpx.Respond(w, 200, map[string]int{"clients": app.Realtime.Clients()}, nil)
+		others, err := replicas.OtherClients(r.Context(), app.DB, replicaName)
+		return httpx.Respond(w, 200, map[string]int{"clients": app.Realtime.Clients() + others}, err)
 	}))
 	app.Handle("GET /realtime", httpx.Handler(app.Realtime.Connect))
 	app.Handle("PUT /realtime/{clientId}/subscriptions", httpx.Handler(app.Realtime.Subscriptions))

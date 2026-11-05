@@ -62,6 +62,7 @@ func Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 		// pgx waits for the OS connect timeout (minutes) on a host that drops packets
 		cfg.ConnConfig.ConnectTimeout = 10 * time.Second
 	}
+	cfg.ConnConfig.DialFunc = dialer().DialContext
 	cfg.ConnConfig.Tracer = tracer{}
 	// timestamptz values are rendered in the session zone; clients compare ISO strings, so keep it UTC everywhere.
 	cfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
