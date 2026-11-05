@@ -342,7 +342,7 @@ func TestFailedStageNamesTheBrokenStep(t *testing.T) {
 		&textproto.Error{Code: 535, Msg: "Authentication credentials invalid"}:        "sign_in",
 		fmt.Errorf("send: %v", &textproto.Error{Code: 535, Msg: "invalid"}):           "sign_in",
 		&textproto.Error{Code: 550, Msg: "mailbox unavailable"}:                       "deliver",
-		&net.DNSError{Err: "no such host", Name: "smtp.invalid"}:                       "connect",
+		&net.DNSError{Err: "no such host", Name: "smtp.invalid"}:                      "connect",
 		errors.New("x509: certificate signed by unknown authority"):                   "encrypt",
 		errors.New("smtp: server doesn't support AUTH"):                               "deliver",
 		errors.New("unencrypted connection"):                                          "sign_in",
