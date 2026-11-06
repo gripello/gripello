@@ -43,7 +43,7 @@ func (c *Cron) Add(name, spec string, fn func(ctx context.Context) error) {
 			if err != nil {
 				slog.ErrorContext(ctx, "cron job failed", "job", name, "ms", time.Since(start).Milliseconds(), "error", err)
 			} else {
-				slog.InfoContext(ctx, "cron job done", "job", name, "ms", time.Since(start).Milliseconds())
+				slog.DebugContext(ctx, "cron job done", "job", name, "ms", time.Since(start).Milliseconds())
 			}
 		})
 	})
