@@ -265,6 +265,7 @@ var replicaName, _ = os.Hostname()
 // mount registers every HTTP route; api/*.yaml documents them (TestEveryRouteIsDocumented).
 func mount(app *platform.App, mailConfigured func() bool) {
 	app.Handle("GET /health", healthHandler(app.DB))
+	app.Handle("GET /livez", livenessHandler())
 	app.Handle("GET /mail-status", httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		if _, err := auth.Require(r.Context()); err != nil {
 			return err

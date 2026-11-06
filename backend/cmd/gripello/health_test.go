@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"gripello/internal/platform/testapp"
 )
 
 type fakePinger struct{ err error }
@@ -39,5 +41,20 @@ func TestHealthReportsTheDatabase(t *testing.T) {
 				t.Fatal("health must not be cached")
 			}
 		})
+	}
+}
+
+func TestLivenessAnswersWithoutTheDatabase(t *testing.T) {
+	rec := httptest.NewRecorder()
+	livenessHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/livez", nil))
+	if rec.Code != 200 || rec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("got %d, Cache-Control %q", rec.Code, rec.Header().Get("Cache-Control"))
+	}
+	_, ops, err := testapp.Contract()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := testapp.CheckResponse(ops[testapp.RouteKey("GET", "/livez")], rec.Code, "application/json", rec.Body.Bytes()); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -12,6 +12,22 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/Health' }
         '503': { $ref: '#/components/responses/Health' }
+  /livez:
+    get:
+      operationId: getLiveness
+      tags: [system]
+      description: Answers while the process serves requests, without touching the database; for container liveness and readiness probes. Never cached.
+      responses:
+        '200':
+          description: Serving
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version, status]
+                properties:
+                  version: { type: string }
+                  status: { type: string, enum: [ok] }
   /mail-status:
     get:
       operationId: getMailStatus

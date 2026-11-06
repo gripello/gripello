@@ -27,3 +27,11 @@ func healthHandler(db pinger) http.Handler {
 		httpx.JSON(w, code, map[string]string{"version": config.Version, "status": status, "database": database})
 	})
 }
+
+// livenessHandler never touches the database: a Postgres failover must not restart or unready every pod at once.
+func livenessHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		httpx.JSON(w, http.StatusOK, map[string]string{"version": config.Version, "status": "ok"})
+	})
+}
