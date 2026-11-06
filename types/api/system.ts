@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/livez": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Answers while the process serves requests, without touching the database; for container liveness and readiness probes. Never cached. */
+        get: operations["getLiveness"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/mail-status": {
         parameters: {
             query?: never;
@@ -164,6 +181,30 @@ export interface operations {
         responses: {
             200: components["responses"]["Health"];
             503: components["responses"]["Health"];
+        };
+    };
+    getLiveness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Serving */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        version: string;
+                        /** @enum {string} */
+                        status: "ok";
+                    };
+                };
+            };
         };
     };
     getMailStatus: {

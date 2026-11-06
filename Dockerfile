@@ -185,8 +185,7 @@ RUN apt-get update \
  && useradd --uid 1000 --user-group --create-home node \
  && rm -rf /var/lib/apt/lists/* /var/log/nginx /etc/nginx/sites-* /etc/nginx/conf.d \
  && mkdir -p /data/storage /data/backups /etc/nginx/ssl \
- && touch /etc/nginx/real-ip.conf /etc/nginx/rate-limit.conf \
- && chown node:node /data /data/storage /data/backups /etc/nginx/ssl /etc/nginx/real-ip.conf /etc/nginx/rate-limit.conf \
+ && chown node:node /data /data/storage /data/backups /etc/nginx/ssl \
  && pg_dump --version && psql --version && vips --version && node --version
 
 COPY .docker/nginx.conf /etc/nginx/nginx.conf

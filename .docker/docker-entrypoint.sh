@@ -21,21 +21,30 @@ if [ -d "${BACKUP_DIR:-}" ] && ! writable "$BACKUP_DIR"; then
     echo "[startup] WARNING: $BACKUP_DIR is not writable, backups will fail. Fix with: sudo chown -R $OWNER ./backups" >&2
 fi
 
+# Generated nginx config lives in /tmp, so the image also runs with a read-only root filesystem (/tmp as tmpfs or emptyDir).
+NGINX_RUN=/tmp/nginx
+mkdir -p $NGINX_RUN
+
 TRUSTED_PROXIES="${TRUSTED_PROXIES:-127.0.0.1 ::1}"
 for proxy in ${TRUSTED_PROXIES//,/ }; do
     echo "set_real_ip_from ${proxy//[^0-9A-Fa-f.:\/]/};"
-done > /etc/nginx/real-ip.conf
+done > $NGINX_RUN/real-ip.conf
 
 RATE_LIMIT_KEY='$binary_remote_addr'
 [ "${RATE_LIMITS:-on}" = "off" ] && RATE_LIMIT_KEY='""'
-echo "map \$remote_addr \$rl_key { default $RATE_LIMIT_KEY; }" > /etc/nginx/rate-limit.conf
+echo "map \$remote_addr \$rl_key { default $RATE_LIMIT_KEY; }" > $NGINX_RUN/rate-limit.conf
 
 # Mount real certs at /etc/nginx/ssl/cert.pem and key.pem; without them a self-signed one is generated.
 SSL=/etc/nginx/ssl
 if [ -f $SSL/cert.pem ] && [ -f $SSL/key.pem ]; then
     [ -r $SSL/cert.pem ] && [ -r $SSL/key.pem ] || fail_permissions $SSL readable ./ssl
 else
-    writable $SSL || fail_permissions $SSL writable ./ssl
+    if ! writable $SSL; then
+        [[ $(awk '$2 == "/" {print $4}' /proc/mounts) == ro* ]] || fail_permissions $SSL writable ./ssl
+        SSL=$NGINX_RUN/ssl
+        mkdir -p $SSL
+        echo "[nginx] read-only root filesystem, keeping the self-signed certificate in $SSL"
+    fi
     # SSL_DNS_NAMES (comma-separated) adds names callers reach the container under (the e2e harness does).
     SAN="DNS:localhost,IP:127.0.0.1"
     for name in ${SSL_DNS_NAMES//,/ }; do SAN="$SAN,DNS:$name"; done
@@ -49,6 +58,7 @@ else
         -addext "basicConstraints=critical,CA:TRUE" \
         2>/dev/null
 fi
+printf 'ssl_certificate     %s/cert.pem;\nssl_certificate_key %s/key.pem;\n' $SSL $SSL > $NGINX_RUN/tls.conf
 
 # Bash as PID 1 forwards docker stop to every process (QUIT is nginx's graceful stop); any process exiting stops the container.
 stop_all() {
@@ -57,6 +67,11 @@ stop_all() {
     kill -QUIT $NGINX_PID 2>/dev/null || true
 }
 trap stop_all TERM INT
+
+# Go doesn't read the memory limit itself; give it a soft heap limit at 40 % of the container's (Nuxt and nginx share the rest).
+if [ -z "${GOMEMLIMIT:-}" ] && read -r MEMORY_MAX < /sys/fs/cgroup/memory.max 2>/dev/null && [ "$MEMORY_MAX" != "max" ]; then
+    export GOMEMLIMIT=$(( MEMORY_MAX * 40 / 100 ))
+fi
 
 gripello serve --http=:8080 &
 API_PID=$!

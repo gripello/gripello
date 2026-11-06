@@ -316,6 +316,38 @@ describe('docker ui build', () => {
         expect(entrypoint.trimEnd()).toMatch(/\nwait$/)
     })
 
+    it('runs with a read-only root filesystem: generated config goes to /tmp', () => {
+        const entrypoint = read('.docker/docker-entrypoint.sh')
+        const nginx = read('.docker/nginx.conf')
+        expect(entrypoint).not.toMatch(/> *\/etc\//)
+        for (const file of ['real-ip.conf', 'rate-limit.conf', 'tls.conf']) {
+            expect(entrypoint).toContain(`> $NGINX_RUN/${file}`)
+            expect(nginx).toContain(`include /tmp/nginx/${file};`)
+        }
+        expect(entrypoint).toContain('NGINX_RUN=/tmp/nginx')
+        expect(nginx).not.toMatch(/^\s*ssl_certificate/m)
+        expect(read('Dockerfile')).not.toContain('touch /etc/nginx')
+        expect(entrypoint).toContain(
+            `[[ $(awk '$2 == "/" {print $4}' /proc/mounts) == ro* ]] || fail_permissions $SSL writable ./ssl`,
+        )
+    })
+
+    it('keeps container probes out of the access log', () => {
+        expect(read('.docker/nginx.conf')).toMatch(
+            /location = \/api\/livez \{[^}]*access_log off;[^}]*proxy_pass http:\/\/api;/,
+        )
+    })
+
+    it('sizes the go heap from the container memory limit unless GOMEMLIMIT is set', () => {
+        const entrypoint = read('.docker/docker-entrypoint.sh')
+        expect(entrypoint).toContain(
+            'if [ -z "${GOMEMLIMIT:-}" ] && read -r MEMORY_MAX < /sys/fs/cgroup/memory.max',
+        )
+        expect(entrypoint.indexOf('export GOMEMLIMIT=')).toBeLessThan(
+            entrypoint.indexOf('gripello serve'),
+        )
+    })
+
     it('stops the nuxt cluster workers, which their primary never signals', () => {
         const entrypoint = read('.docker/docker-entrypoint.sh')
         expect(entrypoint).toContain('setsid node ui/server/index.mjs &')
@@ -337,7 +369,7 @@ describe('docker ui build', () => {
     it('rate-limits the api in nginx and keeps the realtime stream open', () => {
         const nginx = read('.docker/nginx.conf')
         expect(nginx).toContain('limit_req_status 429;')
-        expect(nginx).toContain('include /etc/nginx/rate-limit.conf;')
+        expect(nginx).toContain('include /tmp/nginx/rate-limit.conf;')
         expect(nginx).toMatch(
             /location = \/api\/realtime \{[^}]*proxy_buffering off;[^}]*proxy_read_timeout 35m;/,
         )
