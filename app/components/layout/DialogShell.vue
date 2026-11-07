@@ -97,8 +97,8 @@ const sheetListeners = {
         v-on="asSheet ? sheetListeners : {}"
         :content="
             asSheet
-                ? { disableOutsidePointerEvents: true }
-                : { style: widthStyle }
+                ? { disableOutsidePointerEvents: true, 'aria-modal': 'true' }
+                : { style: widthStyle, 'aria-modal': 'true' }
         "
         :ui="{
             content: asSheet
