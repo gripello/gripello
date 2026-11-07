@@ -667,3 +667,20 @@ describe('android system bars', () => {
         )
     })
 })
+
+describe('web manifest', () => {
+    const webManifest = JSON.parse(
+        readFileSync('public/manifest.webmanifest', 'utf8'),
+    )
+
+    it('lets Chrome offer the Play Store app instead of the PWA', () => {
+        expect(webManifest.prefer_related_applications).toBe(true)
+        expect(webManifest.related_applications).toEqual([
+            {
+                platform: 'play',
+                id: config.appId,
+                url: `https://play.google.com/store/apps/details?id=${config.appId}`,
+            },
+        ])
+    })
+})

@@ -22,6 +22,14 @@
     "display_override": ["standalone", "minimal-ui"],
     "theme_color": "#ffffff",
     "categories": ["sports", "lifestyle"],
+    "related_applications": [
+        {
+            "platform": "play",
+            "id": "app.gripello",
+            "url": "https://play.google.com/store/apps/details?id=app.gripello"
+        }
+    ],
+    "prefer_related_applications": true,
     "shortcuts": [
         {
             "name": "Map",
