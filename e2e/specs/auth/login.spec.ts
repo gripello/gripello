@@ -1,6 +1,13 @@
 import { test, expect } from '../../support/fixtures'
 import { fillLogin } from '../../support/auth'
 import { gotoSettled } from '../../support/nav'
+import type { Page } from '@playwright/test'
+
+// The centred form re-centres when the new heading lands, moving the buttons under a click.
+const headingSettled = (page: Page) =>
+    expect(
+        page.locator('.txt-swap-enter-active, .txt-swap-leave-active'),
+    ).toHaveCount(0)
 
 test.describe('login', () => {
     test('logs in with valid credentials and lands on the dashboard', async ({
@@ -60,9 +67,11 @@ test.describe('login', () => {
         await expect(page.getByTestId('reset-form')).toBeVisible()
         await page.goBack()
         await expect(page.getByTestId('login-form')).toBeVisible()
+        await headingSettled(page)
 
         await page.getByTestId('login-goto-reset').click()
         await expect(page.getByTestId('reset-form')).toBeVisible()
+        await headingSettled(page)
         await page.getByTestId('auth-back').click()
         await expect(page.getByTestId('login-form')).toBeVisible()
     })
