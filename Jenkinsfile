@@ -61,9 +61,8 @@ pipeline {
         BUILDX_BUILDER = 'gripello'
         E2E_IMAGE = "gripello:e2e-${CI_ID}"
         E2E_COMPOSE = "docker compose -p e2e-${CI_ID} -f e2e/docker-compose.e2e.yml"
-        // alpha = closed testing; Play only accepts draft releases until the app is published, then switch to completed.
-        PLAY_TRACK = 'alpha'
-        PLAY_STATUS = 'draft'
+        PLAY_TRACK = 'production'
+        PLAY_STATUS = 'completed'
     }
 
     options {
