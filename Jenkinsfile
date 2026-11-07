@@ -189,7 +189,7 @@ pipeline {
                         retry(3) {
                             sh '''
                                 docker volume create gripello-e2e-yarn-cache
-                                $E2E_COMPOSE run --rm --no-deps e2e sh -c "corepack enable && yarn install --immutable --mode=skip-build"
+                                $E2E_COMPOSE run --rm --no-deps e2e sh -c "npm install -g corepack --force && corepack enable && yarn install --immutable --mode=skip-build"
                             '''
                         }
                     }

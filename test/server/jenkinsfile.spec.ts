@@ -48,3 +48,15 @@ it('rolls releases out to the public Play Store listing', () => {
     expect(jenkinsfile).toContain("PLAY_TRACK = 'production'")
     expect(jenkinsfile).toContain("PLAY_STATUS = 'completed'")
 })
+
+describe('e2e container', () => {
+    it('installs corepack before enabling it, since Node 25+ images ship without it', () => {
+        const compose = readFileSync('e2e/docker-compose.e2e.yml', 'utf8')
+        for (const source of [jenkinsfile, compose]) {
+            expect(source).toContain('corepack enable')
+            expect(source).not.toMatch(
+                /(?<!npm install -g corepack --force && )corepack enable/,
+            )
+        }
+    })
+})

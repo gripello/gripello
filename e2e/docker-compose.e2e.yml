@@ -60,7 +60,7 @@ services:
             MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
     e2e:
-        image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea
+        image: mcr.microsoft.com/playwright:v1.65.0-noble@sha256:6e3fb709361521eb27161606e6da6d2674e5e89fa16516cb37d6fdd91372273d
         working_dir: /work
         shm_size: 1gb
         volumes:
@@ -86,7 +86,7 @@ services:
         command: >
             sh -c "cp /ssl/cert.pem /usr/local/share/ca-certificates/gripello-e2e.crt &&
             update-ca-certificates &&
-            corepack enable && { [ -n \"$${E2E_DEPS_INSTALLED:-}\" ] || yarn install --immutable --mode=skip-build; } && yarn test:e2e ${E2E_ARGS:-}"
+            npm install -g corepack --force && corepack enable && { [ -n \"$${E2E_DEPS_INSTALLED:-}\" ] || yarn install --immutable --mode=skip-build; } && yarn test:e2e ${E2E_ARGS:-}"
 
 volumes:
     e2e-ssl:
