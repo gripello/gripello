@@ -212,7 +212,8 @@ pipeline {
                         def flaky = fileExists('e2e/results/flaky.txt') ? readFile('e2e/results/flaky.txt').trim() : ''
                         if (flaky) {
                             publishChecks name: 'E2E flaky', title: "${flaky.readLines().size()} flaky e2e tests", summary: 'Passed only on retry', text: "```\n${flaky}\n```", conclusion: 'NEUTRAL'
-                            unstable("Flaky e2e tests (passed only on retry):\n${flaky}")
+                            // UNSTABLE reaches GitHub as a failed commit status; the neutral check is the signal
+                            echo "WARNING: Flaky e2e tests (passed only on retry):\n${flaky}"
                         }
                     }
                 }

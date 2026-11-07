@@ -38,3 +38,8 @@ it('retries the e2e install, which pulls the Playwright image', () => {
     const start = jenkinsfile.indexOf("stage('E2E Install') {")
     expect(jenkinsfile.slice(start, start + 400)).toContain('retry(3) {')
 })
+
+it('reports flaky e2e tests as a neutral check, not an unstable build', () => {
+    expect(jenkinsfile).toContain("conclusion: 'NEUTRAL'")
+    expect(jenkinsfile).not.toMatch(/\bunstable\(/)
+})
