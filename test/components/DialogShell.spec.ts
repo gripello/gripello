@@ -29,6 +29,7 @@ const overlayStub = (name: string) =>
                         'data-blocks-outside':
                             props.content?.disableOutsidePointerEvents,
                         style: props.content?.style,
+                        'data-aria-modal': props.content?.['aria-modal'],
                     },
                     props.open ? slots.content?.() : [],
                 )
@@ -115,6 +116,19 @@ describe('DialogShell', () => {
         ).toBe('true')
         wrapper.unmount()
     })
+
+    it.each([1440, 390])(
+        'marks the dialog as aria-modal at %ipx so password manager menus open inside it',
+        async (viewport) => {
+            width.value = viewport
+            const wrapper = createWrapper()
+            await wrapper.setProps({ modelValue: true })
+            expect(
+                wrapper.find('[data-overlay]').attributes('data-aria-modal'),
+            ).toBe('true')
+            wrapper.unmount()
+        },
+    )
 
     it('puts header actions between the title and the close button', async () => {
         const wrapper = mount(DialogShell, {
