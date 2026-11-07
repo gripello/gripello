@@ -43,3 +43,8 @@ it('reports flaky e2e tests as a neutral check, not an unstable build', () => {
     expect(jenkinsfile).toContain("conclusion: 'NEUTRAL'")
     expect(jenkinsfile).not.toMatch(/\bunstable\(/)
 })
+
+it('rolls releases out to the public Play Store listing', () => {
+    expect(jenkinsfile).toContain("PLAY_TRACK = 'production'")
+    expect(jenkinsfile).toContain("PLAY_STATUS = 'completed'")
+})
