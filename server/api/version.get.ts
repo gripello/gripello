@@ -63,7 +63,12 @@ export default defineCachedEventHandler(
         const get = async <T>(path: string): Promise<T | null> => {
             try {
                 return await $fetch<T, string>(`${repo}/${path}`, {
-                    headers: GITHUB_HEADERS,
+                    headers: github.token
+                        ? {
+                              ...GITHUB_HEADERS,
+                              Authorization: `Bearer ${github.token}`,
+                          }
+                        : GITHUB_HEADERS,
                 })
             } catch (error) {
                 const status = (error as { status?: number })?.status

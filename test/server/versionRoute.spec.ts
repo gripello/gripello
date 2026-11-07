@@ -5,6 +5,7 @@ type Reply = unknown | { status: number }
 let replies: Record<string, Reply> = {}
 const requested: string[] = []
 let appVersion = ''
+let token = ''
 let handler: () => Promise<Record<string, unknown>>
 
 const REPO = 'https://api.github.com/repos/gripello/gripello/'
@@ -17,15 +18,19 @@ beforeAll(async () => {
 beforeEach(() => {
     replies = {}
     requested.length = 0
+    token = ''
     vi.stubGlobal('useRuntimeConfig', () => ({
-        github: { owner: 'gripello', repo: 'gripello', branch: 'main' },
+        github: { owner: 'gripello', repo: 'gripello', branch: 'main', token },
         public: { appVersion },
     }))
     vi.mocked(globalThis.$fetch).mockImplementation(
-        async (url: string, options: { headers: object }) => {
+        async (url: string, options: { headers: Record<string, string> }) => {
             const path = url.slice(REPO.length)
             requested.push(path)
             expect(options.headers).toMatchObject({ 'User-Agent': 'gripello' })
+            expect(options.headers.Authorization).toBe(
+                token ? `Bearer ${token}` : undefined,
+            )
             const reply = replies[path]
             if (reply === undefined) throw { status: 404 }
             if (reply && typeof reply === 'object' && 'status' in reply)
@@ -136,5 +141,11 @@ describe('GET /api/version', () => {
             latest: null,
             updateAvailable: false,
         })
+    })
+
+    it('authenticates with the configured token to lift the rate limit', async () => {
+        token = 'secret'
+        replies['releases/latest'] = release('v1.2.0', 'Notes')
+        expect((await check('1.2.0')).error).toBeNull()
     })
 })

@@ -38,6 +38,8 @@ services:
             #VAPID_PRIVATE_KEY: change-me
             # Push to the native apps: Firebase service account key (Project settings › Service accounts), mounted below. Unset = off.
             #FCM_CREDENTIALS: /run/secrets/fcm.json
+            # GitHub token for release notes/update checks (read-only, public repos); unset = 60 requests/h per IP.
+            #NUXT_GITHUB_TOKEN: github_pat_change-me
             # Reverse proxies in front of this container whose X-Forwarded-For is trusted.
             #TRUSTED_PROXIES: 172.18.0.0/16
         depends_on:

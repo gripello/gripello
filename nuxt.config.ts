@@ -25,6 +25,7 @@ export default defineNuxtConfig({
             owner: process.env.GITHUB_OWNER || 'gripello',
             repo: process.env.GITHUB_REPO || 'gripello',
             branch: process.env.GITHUB_BRANCH || 'main',
+            token: '',
         },
         public: {
             mapStyle: 'https://tiles.openfreemap.org/styles/liberty',
