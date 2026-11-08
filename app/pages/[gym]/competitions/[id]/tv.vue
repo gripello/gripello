@@ -33,17 +33,15 @@
         >
             <div class="flex max-w-2xl flex-col gap-6">
                 <span
-                    class="self-start rounded-full bg-primary/10 px-5 py-2 text-2xl font-bold text-primary lg:text-3xl"
+                    class="self-start rounded-full bg-primary/10 px-5 py-2 text-3xl font-bold text-primary"
                     >{{ t(`competitions.phases.${phase}.title`) }}</span
                 >
-                <p
-                    class="text-5xl font-black tracking-tight text-highlighted lg:text-7xl"
-                >
+                <p class="text-7xl font-black tracking-tight text-highlighted">
                     {{ t('competitions.standings.scanToJoin') }}
                 </p>
                 <p
                     v-if="startsIn"
-                    class="text-3xl text-muted tabular-nums lg:text-4xl"
+                    class="text-4xl text-muted tabular-nums"
                     data-testid="competition-tv-starts-in"
                 >
                     {{ t('competitions.tv.startsIn') }}

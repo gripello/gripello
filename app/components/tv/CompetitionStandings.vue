@@ -48,7 +48,7 @@
                 :data-testid="`competition-tv-category-${category.id}`"
             >
                 <h2
-                    class="mb-3 flex items-center gap-3 px-2 text-2xl font-bold text-highlighted lg:text-3xl"
+                    class="mb-3 flex items-center gap-3 px-2 text-3xl font-bold text-highlighted"
                 >
                     <span class="h-7 w-1.5 shrink-0 rounded-full bg-primary" />
                     <span class="truncate">{{ category.name }}</span>
@@ -65,7 +65,7 @@
                         <li
                             v-for="row in category.rows"
                             :key="row.entry"
-                            class="flex items-center gap-4 rounded-xl px-3 py-2.5 lg:py-3"
+                            class="flex items-center gap-4 rounded-xl px-3 py-3"
                             :class="
                                 PODIUM_ROWS[podiumRank(row)] ?? 'bg-elevated/50'
                             "
@@ -80,10 +80,10 @@
                                 >{{ row.rank }}</span
                             >
                             <div
-                                class="flex min-w-0 flex-1 flex-col gap-1 md:flex-row md:items-center md:gap-4"
+                                class="flex min-w-0 flex-1 flex-row items-center gap-4"
                             >
                                 <span
-                                    class="min-w-0 truncate text-xl font-semibold text-highlighted md:flex-1 lg:text-2xl"
+                                    class="min-w-0 truncate flex-1 text-2xl font-semibold text-highlighted"
                                 >
                                     {{
                                         row.name ||
@@ -92,7 +92,7 @@
                                 </span>
                                 <span
                                     v-if="results?.format !== 'lead_height'"
-                                    class="flex shrink-0 gap-2 text-xl font-semibold tabular-nums lg:text-2xl"
+                                    class="flex shrink-0 gap-2 text-2xl font-semibold tabular-nums"
                                 >
                                     <span
                                         class="rounded-md bg-success/15 px-2 py-0.5 text-highlighted"
@@ -107,7 +107,7 @@
                             <span
                                 v-if="results?.format !== 'tops'"
                                 :data-testid="`tv-standing-points-${row.bib}`"
-                                class="w-16 shrink-0 text-right text-2xl font-black text-highlighted tabular-nums lg:w-24 lg:text-3xl"
+                                class="w-24 shrink-0 text-right text-3xl font-black text-highlighted tabular-nums"
                             >
                                 {{ formatStandingPoints(row, locale) }}
                             </span>

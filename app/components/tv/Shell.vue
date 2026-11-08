@@ -1,27 +1,23 @@
 <template>
     <div
-        class="relative flex h-dvh flex-col gap-6 overflow-hidden bg-(--app-bg) p-6 text-default select-none lg:p-10"
+        class="relative flex h-dvh flex-col gap-6 overflow-hidden bg-(--app-bg) p-10 text-default select-none"
         :class="{ 'cursor-none': cursorHidden }"
     >
         <div
             class="pointer-events-none absolute inset-x-0 top-0 h-72 bg-linear-to-b from-primary/10 to-transparent"
         />
         <header class="tv-drift relative flex flex-wrap items-center gap-6">
-            <LayoutBrandLogo
-                v-if="gym"
-                :gym="gym"
-                class="tv-logo hidden md:flex"
-            />
-            <div class="min-w-0 flex-1 basis-full md:basis-0">
+            <LayoutBrandLogo v-if="gym" :gym="gym" class="tv-logo flex" />
+            <div class="min-w-0 flex-1 basis-0">
                 <slot name="eyebrow" />
                 <h1
-                    class="line-clamp-2 text-4xl font-black tracking-tight break-words text-highlighted lg:text-6xl"
+                    class="line-clamp-2 text-6xl font-black tracking-tight break-words text-highlighted"
                 >
                     <slot name="title" />
                 </h1>
             </div>
             <div
-                class="hidden text-right text-5xl font-light text-muted tabular-nums md:block"
+                class="text-right text-5xl font-light text-muted tabular-nums"
                 data-testid="tv-clock"
             >
                 {{ clock }}
@@ -30,7 +26,7 @@
                 v-if="qr"
                 class="flex flex-col items-center gap-1 rounded-2xl bg-white p-3 shadow-sm ring ring-default"
             >
-                <img :src="qr" :alt="qrAlt" class="size-32 lg:size-44" />
+                <img :src="qr" :alt="qrAlt" class="size-44" />
                 <span v-if="qrLabel" class="text-sm font-semibold text-black">{{
                     qrLabel
                 }}</span>
@@ -65,7 +61,7 @@ const { cursorHidden } = useTvKiosk()
 
 // 16 px at 1080p in either orientation, scaling every rem size from 720p to 4K
 useHead({
-    htmlAttrs: { style: 'font-size: max(10px, min(1.48vmin, 0.833vmax))' },
+    htmlAttrs: { style: 'font-size: min(1.48vmin, 0.833vmax)' },
 })
 
 const now = useMountedNow(1000)
