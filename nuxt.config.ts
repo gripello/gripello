@@ -13,6 +13,14 @@ export default defineNuxtConfig({
     future: {
         compatibilityVersion: 5,
     },
+    // Nuxt 4.6.4 resolves an unset host to {}, which crashes `nuxt dev`
+    devServer: {
+        host:
+            process.env.NUXT_HOST ||
+            process.env.NITRO_HOST ||
+            process.env.HOST ||
+            'localhost',
+    },
     devtools: {
         enabled: true,
         timeline: {
