@@ -31,6 +31,9 @@ test('the TV screen shows the gym announcement in both orientations', async ({
         for (const size of [
             { width: 1920, height: 1080 },
             { width: 1080, height: 1920 },
+            { width: 720, height: 1280 },
+            { width: 390, height: 844 },
+            { width: 844, height: 390 },
         ]) {
             await page.setViewportSize(size)
             await gotoSettled(page, '/e2e/tv')
@@ -42,7 +45,13 @@ test('the TV screen shows the gym announcement in both orientations', async ({
             const rootSize = await page.evaluate(() =>
                 parseFloat(getComputedStyle(document.documentElement).fontSize),
             )
-            expect(rootSize).toBeCloseTo(16, 0)
+            const vmin = Math.min(size.width, size.height) / 100
+            const vmax = Math.max(size.width, size.height) / 100
+            expect(rootSize).toBeCloseTo(Math.min(1.48 * vmin, 0.833 * vmax), 0)
+            await expect(page.getByTestId('tv-clock')).toBeVisible()
+            const box = await page.getByTestId('tv-announcement').boundingBox()
+            expect(box!.x + box!.width).toBeLessThanOrEqual(size.width)
+            expect(box!.y + box!.height).toBeLessThanOrEqual(size.height)
         }
     } finally {
         await updateGym(adminApi, 'e2e', { tv_settings: null })
