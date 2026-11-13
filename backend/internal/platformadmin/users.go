@@ -55,7 +55,9 @@ const userJSON = climbers.OwnRecordSQL + ` || jsonb_build_object('memberships', 
 	'last_seen', ` + lastSeenSQL + `,
 	'locked_until', (SELECT l.locked_until FROM login_lockouts l WHERE l.key = u.id AND l.locked_until > now()))`
 
-const lastSeenSQL = `(SELECT max(greatest(s.last_seen, s.streamed_at)) FROM sessions s WHERE s."user" = u.id)`
+// Sessions are pruned after the token lifetime; user_last_seen keeps the time (to 5 minutes) beyond that.
+const lastSeenSQL = `(SELECT greatest(max(greatest(s.last_seen, s.streamed_at)), (SELECT l.last_seen FROM user_last_seen l WHERE l."user" = u.id))
+	FROM sessions s WHERE s."user" = u.id)`
 
 const (
 	isStaffSQL = `EXISTS (SELECT 1 FROM memberships m WHERE m."user" = u.id)`

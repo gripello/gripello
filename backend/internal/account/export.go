@@ -26,6 +26,7 @@ type exportFile struct {
 var exportQueries = []exportFile{
 	{"profile.json", `SELECT jsonb_build_object(
 		'user', ` + climbers.OwnRecordSQL + `,
+		'last_seen', (SELECT last_seen FROM user_last_seen WHERE "user" = u.id),
 		'followed_walls', COALESCE((SELECT jsonb_agg(jsonb_build_object('wall', w.name, 'location', l.name, 'gym', g.name) ORDER BY w.name)
 			FROM walls w JOIN locations l ON l.id = w.location JOIN gyms g ON g.id = w.gym WHERE w.id = ANY (u.followed_walls)), '[]'))
 		FROM users u WHERE u.id = $1`},
