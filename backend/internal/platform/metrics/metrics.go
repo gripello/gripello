@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"log/slog"
 	"maps"
+	"net"
 	"net/http"
 	"slices"
 	"strings"
@@ -33,6 +34,9 @@ var LatencyBounds = []float64{5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000}
 
 // streaming patterns stay open for minutes, their duration says nothing about speed.
 var streaming = map[string]bool{"GET /api/realtime": true}
+
+// probes come from kubelet, the readiness check and uptime monitors; counting them buries what people do.
+var probes = map[string]bool{"/api/health": true, "/api/livez": true}
 
 type key struct {
 	bucket          time.Time
@@ -102,6 +106,9 @@ func (rec *Recorder) Record(method, pattern string, status int, took time.Durati
 	} else if m, path, ok := strings.Cut(pattern, " "); ok {
 		method, pattern = m, path
 	}
+	if probes[pattern] {
+		return
+	}
 	k := key{bucket: time.Now().UTC().Truncate(Bucket), method: method, pattern: pattern}
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
@@ -129,7 +136,8 @@ func (rec *Recorder) Record(method, pattern string, status int, took time.Durati
 		}
 		c.histogram[slot]++
 	}
-	if ip != "" {
+	// Loopback is the Nuxt server or a local check, not a person.
+	if parsed := net.ParseIP(ip); ip != "" && (parsed == nil || !parsed.IsLoopback()) {
 		rec.visitors[ip] = struct{}{}
 	}
 }

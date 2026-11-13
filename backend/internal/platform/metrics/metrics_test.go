@@ -27,6 +27,9 @@ func TestRecordedRequestsAddUpAcrossReplicas(t *testing.T) {
 	}
 	second.Record("GET", "GET /api/gyms/{gym}", http.StatusNotFound, 30*time.Millisecond, "198.51.100.1")
 	second.Record("GET", "GET /api/realtime", http.StatusOK, 10*time.Minute, "203.0.113.7")
+	second.Record("GET", "GET /api/health", http.StatusOK, time.Millisecond, "192.0.2.50")
+	second.Record("GET", "GET /api/livez", http.StatusOK, time.Millisecond, "192.0.2.50")
+	second.Record("GET", "GET /api/settings", http.StatusOK, time.Millisecond, "127.0.0.1")
 	for _, rec := range []*Recorder{first, second} {
 		if err := rec.Flush(ctx); err != nil {
 			t.Fatal(err)
@@ -44,13 +47,18 @@ func TestRecordedRequestsAddUpAcrossReplicas(t *testing.T) {
 	var unmatched, streamSamples int64
 	pool.QueryRow(ctx, `SELECT total FROM request_stats WHERE pattern = 'unmatched'`).Scan(&unmatched)
 	pool.QueryRow(ctx, `SELECT b0+b1+b2+b3+b4+b5+b6+b7+b8+b9+b10 FROM request_stats WHERE pattern = '/api/realtime'`).Scan(&streamSamples)
+	var probes int
+	pool.QueryRow(ctx, `SELECT count(*) FROM request_stats WHERE pattern IN ('/api/health', '/api/livez')`).Scan(&probes)
+	if probes != 0 {
+		t.Errorf("probe rows = %d, want 0", probes)
+	}
 	if unmatched != 1 || streamSamples != 0 {
 		t.Errorf("unmatched = %d, realtime latency samples = %d", unmatched, streamSamples)
 	}
 	var visitors int
 	pool.QueryRow(ctx, `SELECT count(*) FROM request_visitors`).Scan(&visitors)
 	if visitors != 2 {
-		t.Errorf("visitors = %d, want 2 (one IP seen by both replicas)", visitors)
+		t.Errorf("visitors = %d, want 2 (one IP seen by both replicas, no probe or loopback)", visitors)
 	}
 
 	pool.Exec(ctx, `INSERT INTO visitor_salts (day, salt) VALUES ('2020-01-01', 'old')`)
