@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM golang:1.27.2-trixie@sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e AS go-deps
+FROM golang:1.27.4-trixie@sha256:b54b2639de8c1bfe538ec5ffc45f29b1932235ac5f6d63c059853646677112d9 AS go-deps
 ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH}
@@ -58,7 +58,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     GOOS= GOARCH= go tool -modfile=tools/go.mod go-licenses report ./... \
       --ignore gripello --template /go-licenses.tpl > /out/third-party-notices-go.txt
 
-FROM node:26.12.1-trixie@sha256:97fa0f1b59035c6072721a88d55be1371c7cb1cc942b521e1cc5c72ec87655f4 AS ui-deps
+FROM node:26.13.0-trixie@sha256:438603bbb5cda404b9416f0b5c8026f61501ab911760d861ec28c36b5d675725 AS ui-deps
 WORKDIR /app
 RUN npm install -g corepack@0.36.0 --force && corepack enable
 COPY .yarnrc.yml package.json yarn.lock ./
@@ -161,7 +161,7 @@ COPY --from=go-build /out/third-party-notices-go.txt /tmp/
 RUN { node .docker/third-party-notices.mts && cat /tmp/third-party-notices-go.txt; } \
       > .output/public/third-party-notices.txt
 
-FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS pg-client
+FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2 AS pg-client
 # pg_dump/pg_restore/psql must match the PostgreSQL 18 server; trixie ships 17, so the client comes from PGDG.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates postgresql-common \
@@ -172,7 +172,7 @@ RUN apt-get update \
  && cp -L /usr/lib/*-linux-gnu/libpq.so.5 /usr/lib/*-linux-gnu/libreadline.so.8 /out/lib/
 
 # Only the binaries of node and the PostgreSQL client: their packages bring npm, perl and gnupg along.
-FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad
+FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
 COPY --from=ui-deps /usr/local/bin/node /usr/local/bin/node
 COPY --from=pg-client /out/bin/ /usr/local/bin/
 COPY --from=pg-client /out/lib/ /usr/local/lib/
