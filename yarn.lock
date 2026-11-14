@@ -1415,21 +1415,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@iconify-json/lucide@npm:^1.2.151":
-  version: 1.2.151
-  resolution: "@iconify-json/lucide@npm:1.2.151"
+"@iconify-json/lucide@npm:^1.2.153":
+  version: 1.2.153
+  resolution: "@iconify-json/lucide@npm:1.2.153"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/af1fe0b7b2add1e1e488fc317857747d794e82f8e01bd52c679e136222802b6e570397b4424ad035913acf15ae63dfa8fe00c3a77d24cf5b32c6f51708c53a40
+  checksum: 10c0/a9c8301ed108b45877f6fb19091173179b0b39155915001855bff4d4c374a2d4cbe47a2a2b1c31b83a842e140bc7b2edc75ff1b4dfd7b25f1feaad7c70229a93
   languageName: node
   linkType: hard
 
-"@iconify-json/simple-icons@npm:^1.2.101":
-  version: 1.2.101
-  resolution: "@iconify-json/simple-icons@npm:1.2.101"
+"@iconify-json/simple-icons@npm:^1.2.102":
+  version: 1.2.102
+  resolution: "@iconify-json/simple-icons@npm:1.2.102"
   dependencies:
     "@iconify/types": "npm:*"
-  checksum: 10c0/189fa5b977388315745e1af56a276a918755ee982a16fe8a22c60c5862b992c696fda11bb2154794ee8c0d7cd33f6cde2469767ee7eb21bdebc748d4a9266fbe
+  checksum: 10c0/8e4e9d739ab1a5362768ed1b3654ff68a7544e1e3b0f69dcdde7bb704036c91af3c8c12520a00470d0c5b1bc4a60d887af57f669a19bc20943c17ccc5ac3566d
   languageName: node
   linkType: hard
 
@@ -8459,8 +8459,8 @@ __metadata:
     "@capacitor/share": "npm:8.0.3"
     "@capacitor/splash-screen": "npm:8.0.2"
     "@cj-tech-master/excelts": "npm:10.2.0"
-    "@iconify-json/lucide": "npm:^1.2.151"
-    "@iconify-json/simple-icons": "npm:^1.2.101"
+    "@iconify-json/lucide": "npm:^1.2.153"
+    "@iconify-json/simple-icons": "npm:^1.2.102"
     "@nuxt/ui": "npm:^4.12.0"
     "@nuxtjs/i18n": "npm:10.6.0"
     "@playwright/test": "npm:^1.65.0"
