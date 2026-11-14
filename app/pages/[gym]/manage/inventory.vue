@@ -65,34 +65,14 @@
                     </LayoutPageHeader>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <div
+                        <SegmentedControl
                             v-if="!locationLocked"
-                            class="inventory-locations flex gap-1"
-                            role="group"
+                            :model-value="sessionLocation ?? ''"
+                            :items="locationSegments"
                             :aria-label="$t('inventory.locationLabel')"
-                            data-testid="inventory-location"
-                        >
-                            <UButton
-                                v-for="item in locationItems"
-                                :key="item.value"
-                                size="sm"
-                                :variant="
-                                    sessionLocation === item.value
-                                        ? 'solid'
-                                        : 'outline'
-                                "
-                                :color="
-                                    sessionLocation === item.value
-                                        ? 'primary'
-                                        : 'neutral'
-                                "
-                                :aria-pressed="sessionLocation === item.value"
-                                :data-testid="`inventory-location-${item.label}`"
-                                @click="sessionLocation = item.value"
-                            >
-                                {{ item.label }}
-                            </UButton>
-                        </div>
+                            test-id="inventory-location"
+                            @update:model-value="sessionLocation = $event"
+                        />
                         <UButton
                             v-else
                             size="sm"
@@ -485,6 +465,12 @@ const { t, locale } = useI18n()
 const gymId = useCurrentGymId()
 const { mdAndUp } = useDisplay()
 const { items: locationItems } = useLocations()
+const locationSegments = computed(() =>
+    locationItems.value.map((item) => ({
+        ...item,
+        testId: `inventory-location-${item.label}`,
+    })),
+)
 const { success: notifySuccess } = useNotification()
 
 const isWideLayout = computed(() => mdAndUp.value)
@@ -798,10 +784,6 @@ if (initial.value) {
     max-width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
-}
-
-.inventory-locations > * {
-    flex-shrink: 0;
 }
 
 .scanner-viewport {

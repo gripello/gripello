@@ -53,6 +53,7 @@
                     variant="ghost"
                     size="sm"
                     square
+                    class="icon-btn"
                     icon="i-lucide-x"
                     :aria-label="$t('actions.cancel')"
                     data-testid="map-editor-cancel"
@@ -70,6 +71,7 @@
                     variant="ghost"
                     size="sm"
                     square
+                    class="icon-btn"
                     icon="i-lucide-x"
                     :aria-label="$t('actions.cancel')"
                     data-testid="map-editor-cancel"

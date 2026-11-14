@@ -33,49 +33,49 @@
             :hint="t('users.noUsersHint')"
         />
 
-        <UTable
-            v-else-if="mdAndUp"
-            :data="members"
-            :columns="columns"
-            class="rounded-lg bg-default ring ring-default"
-            data-testid="members-table"
-        >
-            <template #member-cell="{ row }">
-                <AdminMemberIdentity :member="row.original" />
-            </template>
-            <template #role-cell="{ row }">
-                <USelect
-                    :model-value="row.original.role"
-                    :items="assignableRoleOptions"
-                    value-key="value"
-                    :aria-label="t('members.role')"
-                    class="w-44"
-                    :disabled="!canManage(row.original)"
-                    data-testid="member-card-role"
-                    @update:model-value="
-                        (role) => changeRole(row.original, String(role))
-                    "
-                />
-            </template>
-            <template #actions-cell="{ row }">
-                <div class="flex justify-end">
-                    <UDropdownMenu
-                        :items="memberMenu(row.original)"
+        <LayoutPanel v-else-if="mdAndUp" flush>
+            <UTable
+                :data="members"
+                :columns="columns"
+                data-testid="members-table"
+            >
+                <template #member-cell="{ row }">
+                    <AdminMemberIdentity :member="row.original" />
+                </template>
+                <template #role-cell="{ row }">
+                    <USelect
+                        :model-value="row.original.role"
+                        :items="assignableRoleOptions"
+                        value-key="value"
+                        :aria-label="t('members.role')"
+                        class="w-44"
                         :disabled="!canManage(row.original)"
-                    >
-                        <UButton
-                            icon="i-lucide-ellipsis-vertical"
-                            color="neutral"
-                            variant="ghost"
-                            class="icon-btn"
+                        data-testid="member-card-role"
+                        @update:model-value="
+                            (role) => changeRole(row.original, String(role))
+                        "
+                    />
+                </template>
+                <template #actions-cell="{ row }">
+                    <div class="flex justify-end">
+                        <UDropdownMenu
+                            :items="memberMenu(row.original)"
                             :disabled="!canManage(row.original)"
-                            :aria-label="t('members.rowActions')"
-                            data-testid="member-card-menu"
-                        />
-                    </UDropdownMenu>
-                </div>
-            </template>
-        </UTable>
+                        >
+                            <UButton
+                                icon="i-lucide-ellipsis-vertical"
+                                color="neutral"
+                                variant="ghost"
+                                class="icon-btn"
+                                :disabled="!canManage(row.original)"
+                                :aria-label="t('members.rowActions')"
+                                data-testid="member-card-menu"
+                            />
+                        </UDropdownMenu>
+                    </div>
+                </template>
+            </UTable>
+        </LayoutPanel>
 
         <LayoutListGroup v-else data-testid="members-list">
             <li

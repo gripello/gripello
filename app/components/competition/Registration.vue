@@ -117,6 +117,8 @@
                     :min="currentYear - 120"
                     :max="currentYear"
                     :format-options="{ useGrouping: false }"
+                    :increment="false"
+                    :decrement="false"
                     class="w-full"
                     data-testid="competition-register-birth-year"
                 />

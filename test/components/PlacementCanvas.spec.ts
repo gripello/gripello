@@ -175,7 +175,7 @@ describe('PlacementCanvas', () => {
         expect(removed).toHaveBeenCalledWith(
             'pointerdown',
             expect.any(Function),
-            true,
+            expect.objectContaining({ capture: true }),
         )
         removed.mockRestore()
     })

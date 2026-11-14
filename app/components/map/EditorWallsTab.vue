@@ -43,6 +43,7 @@
                         color="neutral"
                         variant="ghost"
                         square
+                        class="icon-btn"
                         :aria-label="$t('mapEditor.wallActions')"
                     />
                 </UDropdownMenu>

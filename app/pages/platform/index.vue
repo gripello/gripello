@@ -219,7 +219,7 @@
                                         :class="
                                             tile.value
                                                 ? 'text-highlighted'
-                                                : 'text-dimmed'
+                                                : 'text-muted'
                                         "
                                     >
                                         {{ summary ? tile.value : '—' }}

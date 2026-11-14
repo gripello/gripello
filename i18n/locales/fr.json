@@ -513,6 +513,7 @@
             "viewOnGithub": "Voir sur GitHub",
             "fullChangelog": "Journal complet des modifications",
             "breaking": "incompatible",
+            "filterLabel": "Afficher les changements",
             "filters": {
                 "all": "Tout",
                 "feat": "Fonctionnalités",

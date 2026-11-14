@@ -144,6 +144,7 @@
 </template>
 
 <script setup lang="ts">
+import { useEventListener } from '@vueuse/core'
 import {
     boundsOf,
     nearestWall,
@@ -415,7 +416,7 @@ function onDotDown(routeId: string, event: PointerEvent) {
         target.removeEventListener('pointermove', move)
         target.removeEventListener('pointerup', end)
         target.removeEventListener('pointercancel', cancel)
-        window.removeEventListener('pointerdown', secondPointer, true)
+        stopSecondPointer()
         cancelDotDrag = null
     }
     const cancel = () => {
@@ -434,7 +435,14 @@ function onDotDown(routeId: string, event: PointerEvent) {
     target.addEventListener('pointermove', move)
     target.addEventListener('pointerup', end)
     target.addEventListener('pointercancel', cancel)
-    window.addEventListener('pointerdown', secondPointer, true)
+    const stopSecondPointer = useEventListener(
+        window,
+        'pointerdown',
+        secondPointer,
+        {
+            capture: true,
+        },
+    )
     cancelDotDrag = cancel
 }
 </script>

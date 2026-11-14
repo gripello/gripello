@@ -3,10 +3,12 @@
         <LayoutPageHeader :title="t('routes.comments')" />
 
         <div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div
+            <LayoutPanel
                 v-for="tile in statTiles"
                 :key="tile.key"
-                class="min-w-0 rounded-lg bg-default px-3 py-2 ring ring-default"
+                as="div"
+                padding="sm"
+                class="min-w-0"
                 :data-testid="`comments-stat-${tile.key}`"
             >
                 <LayoutStatTile
@@ -16,7 +18,7 @@
                     :icon="tile.icon"
                     :icon-color="tile.iconColor"
                 />
-            </div>
+            </LayoutPanel>
         </div>
 
         <FilterBar

@@ -28,6 +28,34 @@ describe('boxed sections', () => {
         expect(offenders).toEqual([])
     })
 
+    it('frame boxes and tables with LayoutPanel; only item cards and layout parts draw their own', () => {
+        const ownLook = new Set([
+            'app/components/comments/Card.vue',
+            'app/components/route/Card.vue',
+            'app/components/route/BetaTile.vue',
+            'app/components/logbook/SessionCard.vue',
+            'app/components/competition/Card.vue',
+            'app/components/competition/CategoryEditor.vue',
+            'app/components/task/Card.vue',
+            'app/components/platform/SettingsStatus.vue',
+            'app/pages/platform/logs.vue',
+            'app/components/filter/Bar.vue',
+            'app/pages/climber.vue',
+        ])
+        const offenders = vueFiles('app')
+            .filter(
+                (file) =>
+                    !file.startsWith('app/components/layout/') &&
+                    !ownLook.has(file),
+            )
+            .filter((file) =>
+                /class="[^"]*rounded-(lg|xl) bg-default\b[^"]*\bring\b/.test(
+                    readFileSync(file, 'utf8'),
+                ),
+            )
+        expect(offenders).toEqual([])
+    })
+
     it('render lists through LayoutListGroup, not a divide-y card container', () => {
         const offenders = vueFiles('app').filter((file) =>
             /container: LIST|const LIST =/.test(readFileSync(file, 'utf8')),

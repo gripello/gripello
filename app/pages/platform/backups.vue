@@ -74,10 +74,11 @@
                 class="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4"
                 data-testid="platform-backups-status"
             >
-                <div
+                <LayoutPanel
                     v-for="tile in statusTiles"
                     :key="tile.key"
-                    class="flex flex-col gap-1 rounded-lg bg-default p-4 ring ring-default"
+                    as="div"
+                    class="[&>div]:gap-1"
                     :data-testid="`platform-backups-tile-${tile.key}`"
                 >
                     <span class="text-sm text-muted">{{ tile.label }}</span>
@@ -94,7 +95,7 @@
                         size="xs"
                         class="mt-1"
                     />
-                </div>
+                </LayoutPanel>
             </div>
 
             <div
@@ -257,6 +258,7 @@
                                 color="neutral"
                                 variant="ghost"
                                 size="sm"
+                                class="icon-btn"
                                 :aria-label="t('platform.backups.copyCommand')"
                                 data-testid="platform-backups-copy-restore"
                                 @click="copyRestore"

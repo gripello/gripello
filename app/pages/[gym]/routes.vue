@@ -189,7 +189,10 @@
         </div>
 
         <div v-if="!isWideLayout && !loadFailed">
-            <div class="mt-2 flex flex-col gap-4">
+            <div
+                class="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2"
+                data-testid="index-cards"
+            >
                 <RouteCard
                     v-for="route in routes"
                     :key="route.id"

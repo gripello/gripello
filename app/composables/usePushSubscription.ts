@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import { liveTopics } from '#shared/utils/topics'
 import type { PushSubscriptionRecord } from '~/types/models'
 import type { RecordChange } from '~/composables/useRealtime'
@@ -57,7 +58,7 @@ export function usePushSubscription() {
                       })
                 : ''
         } catch (err) {
-            console.error('Failed to load notification settings:', err)
+            reportCaughtError(err)
             loadError.value = true
         }
     }

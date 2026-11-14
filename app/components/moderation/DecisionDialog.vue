@@ -5,7 +5,13 @@
         sheet-on-mobile
         :title="title"
         :subtitle="subject"
+        :submit-label="confirmLabel"
+        submit-color="error"
+        :submit-disabled="!reason"
+        :submit-loading="loading"
+        submit-test-id="moderation-decision-confirm"
         data-testid="moderation-decision-dialog"
+        @submit="emit('confirm', reason)"
     >
         <div class="flex flex-col gap-4">
             <fieldset class="flex flex-col gap-2">
@@ -48,21 +54,6 @@
                 </ul>
             </section>
         </div>
-        <template #actions>
-            <UButton color="neutral" variant="ghost" @click="open = false">
-                {{ t('actions.cancel') }}
-            </UButton>
-            <div class="flex-1" />
-            <UButton
-                color="error"
-                :disabled="!reason"
-                :loading="loading"
-                data-testid="moderation-decision-confirm"
-                @click="emit('confirm', reason)"
-            >
-                {{ confirmLabel }}
-            </UButton>
-        </template>
     </LayoutDialogShell>
 </template>
 

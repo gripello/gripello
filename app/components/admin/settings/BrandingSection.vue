@@ -81,16 +81,6 @@
                             </UButton>
                         </div>
                         <UButton
-                            v-else
-                            color="neutral"
-                            variant="outline"
-                            size="sm"
-                            icon="i-lucide-upload"
-                            @click="asset.triggerInput()"
-                        >
-                            {{ $t('settings.clickToUpload') }}
-                        </UButton>
-                        <UButton
                             v-if="asset.isDirty"
                             color="neutral"
                             variant="ghost"

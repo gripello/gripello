@@ -35,6 +35,7 @@ const items = computed(() =>
                 color="neutral"
                 variant="subtle"
                 icon="i-lucide-chevron-down"
+                class="icon-btn"
                 :aria-label="$t('gymInfo.directions.other')"
                 data-testid="gym-directions-more"
             />

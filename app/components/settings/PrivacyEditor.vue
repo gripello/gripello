@@ -97,6 +97,7 @@
 </template>
 
 <script setup lang="ts">
+import { useEventListener } from '@vueuse/core'
 import type { EditorSlots, EditorToolbarItem } from '@nuxt/ui'
 import type { LegalFields, SettingsRecord } from '~/types/models'
 import {
@@ -264,17 +265,25 @@ function startDrag(event: PointerEvent) {
         dropLine.value = edge - 2
     }
     const onUp = () => {
-        window.removeEventListener('pointermove', onMove)
-        window.removeEventListener('pointerup', onUp)
+        stopDrag()
         dragging = false
         dropLine.value = null
         if (target !== from && target !== from + 1)
             move(from, target > from ? target - 1 : target)
     }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
+    const stops = [
+        useEventListener(window, 'pointermove', onMove),
+        useEventListener(window, 'pointerup', onUp),
+    ]
+    stopDrag = () => {
+        stops.forEach((stop) => stop())
+        stopDrag = () => {}
+    }
     onMove(event)
 }
+
+let stopDrag = () => {}
+onBeforeUnmount(() => stopDrag())
 
 function nudge(step: number) {
     if (!handle.value) return

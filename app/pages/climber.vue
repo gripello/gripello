@@ -119,10 +119,11 @@
                     :class="isSelf ? 'md:grid-cols-4' : 'xl:grid-cols-5'"
                     data-testid="climber-compare"
                 >
-                    <li
+                    <LayoutPanel
                         v-for="stat in compareRows"
                         :key="stat.key"
-                        class="flex flex-col gap-1 rounded-lg bg-default p-4 ring ring-default odd:last:col-span-2 xl:odd:last:col-span-1"
+                        as="li"
+                        class="odd:last:col-span-2 xl:odd:last:col-span-1 [&>div]:gap-1"
                         :data-testid="`compare-${stat.key}`"
                     >
                         <span
@@ -142,7 +143,7 @@
                         >
                             {{ t('friends.you') }}: {{ stat.mine }}
                         </span>
-                    </li>
+                    </LayoutPanel>
                 </ul>
 
                 <div

@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import { createUpdateWatcher } from '~/utils/appUpdate'
 import { offlineTabPaths } from '~/utils/navigation'
 import { isInstalledApp } from '~/utils/native'
@@ -24,9 +25,7 @@ export default defineNuxtPlugin((nuxtApp) => {
                     ),
                 )
             })
-            .catch((error) => {
-                console.error('Service worker registration failed:', error)
-            })
+            .catch(reportCaughtError)
 
     // iOS keeps installed apps suspended for days and freezes Nuxt's hourly build check meanwhile.
     const watcher = createUpdateWatcher({

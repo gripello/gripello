@@ -37,8 +37,8 @@
             <li
                 v-for="compRoute in compRoutes"
                 :key="compRoute.id"
-                class="flex flex-wrap items-end gap-3 rounded-lg bg-default p-3 ring ring-default md:items-center"
-                :class="{ 'opacity-60': compRoute.voided }"
+                class="flex flex-wrap items-end gap-3 rounded-lg p-3 ring ring-default md:items-center"
+                :class="compRoute.voided ? 'bg-muted' : 'bg-default'"
                 :data-testid="`competition-route-${compRoute.number}`"
             >
                 <div

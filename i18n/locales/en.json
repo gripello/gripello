@@ -513,6 +513,7 @@
             "viewOnGithub": "View on GitHub",
             "fullChangelog": "Full changelog",
             "breaking": "breaking",
+            "filterLabel": "Show changes",
             "filters": {
                 "all": "All",
                 "feat": "Features",

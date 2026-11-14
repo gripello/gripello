@@ -62,7 +62,7 @@
                         class="size-5"
                     />
                 </button>
-                <span class="flex-1 opacity-90">
+                <span class="flex-1">
                     {{ videoClock(current) }} / {{ videoClock(duration) }}
                 </span>
                 <button
