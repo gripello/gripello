@@ -121,7 +121,8 @@
             </LayoutPanel>
 
             <div
-                class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]"
+                class="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]"
+                data-testid="platform-logs-layout"
             >
                 <LayoutPanel flush class="min-w-0" data-testid="platform-logs">
                     <div

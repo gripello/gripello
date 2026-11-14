@@ -77,6 +77,7 @@ spec:
     - { name: SENDER_ADDRESS, value: no-reply@gripello.test }
     - { name: SENDER_NAME, value: Gripello E2E }
     - { name: APP_NAME, value: Gripello }
+    - { name: TRUSTED_PROXIES, value: 192.0.2.1 }
     securityContext:
       allowPrivilegeEscalation: false
       # nginx carries a file capability: exec fails with EPERM unless the bounding set still holds it (no_new_privs then grants nothing; the sysctl allows :443)

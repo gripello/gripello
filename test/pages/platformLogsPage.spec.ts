@@ -182,6 +182,10 @@ describe('platform logs page', () => {
         )
         expect(cell.classes()).not.toContain('shrink-0')
         expect(cell.attributes('title')).toBe(replica)
+        // an implicit auto column grows to its widest min-content, so phones would scroll sideways
+        expect(
+            wrapper.get('[data-testid="platform-logs-layout"]').classes(),
+        ).toContain('grid-cols-[minmax(0,1fr)]')
         wrapper.unmount()
     })
 })

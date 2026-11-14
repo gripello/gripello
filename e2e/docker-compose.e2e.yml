@@ -20,6 +20,8 @@ services:
             SENDER_ADDRESS: no-reply@gripello.test
             SENDER_NAME: Gripello E2E
             APP_NAME: Gripello
+            # TEST-NET-1: no client is trusted to set X-Forwarded-For, not even loopback ones as in the CI pod
+            TRUSTED_PROXIES: 192.0.2.1
         depends_on:
             postgres:
                 condition: service_healthy
