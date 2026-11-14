@@ -229,6 +229,10 @@ func TestListAndGetUsers(t *testing.T) {
 	if got := total(f.call(http.MethodGet, "/platform/users?filter=online&q=climber", "", f.operator, http.StatusOK)); got != 1 {
 		t.Errorf("a climber with an open stream is not online (%d)", got)
 	}
+	f.exec(`DELETE FROM sessions WHERE "user" = $1`, f.climber)
+	if items := f.call(http.MethodGet, "/platform/users?q=climber", "", f.operator, http.StatusOK)["items"].([]any); len(items) != 1 || items[0].(map[string]any)["last_seen"] == nil {
+		t.Errorf("last seen is gone with the sessions: %v", items)
+	}
 }
 
 func TestPlatformAdminsEditProfilesButNotSettingsOrOtherAdmins(t *testing.T) {

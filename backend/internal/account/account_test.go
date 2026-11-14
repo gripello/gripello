@@ -570,6 +570,7 @@ func TestExportCoversEveryUserLink(t *testing.T) {
 		"moderation_items.reviewed_by": false, // moderator identity
 		"competition_scores.scored_by": false, // who typed a score in; results ship with the competition entries
 		"sessions.user":                true,
+		"user_last_seen.user":          true,
 		"user_identities.user":         true,
 		"mfa_factors.user":             true,
 		"mfa_recovery_codes.user":      false, // only hashes of one-time secrets

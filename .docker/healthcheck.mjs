@@ -1,7 +1,7 @@
 const urls = [
     'http://127.0.0.1:8080/api/health',
-    'http://127.0.0.1:3000/',
-    'http://127.0.0.1/',
+    'http://127.0.0.1:3000/robots.txt',
+    'http://127.0.0.1/robots.txt',
 ]
 
 try {
