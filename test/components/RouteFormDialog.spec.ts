@@ -93,6 +93,12 @@ describe('RouteFormDialog', () => {
         vi.stubGlobal('useNotification', () => ({ error: notifyError }))
     })
 
+    it('limits the comment to what the API accepts', async () => {
+        const wrapper = await openEdit()
+        const comment = wrapper.get('[data-testid="route-form-comment"]')
+        expect(comment.attributes('maxlength')).toBe('2000')
+    })
+
     it('sends only the changed fields of an edit', async () => {
         vi.mocked(updateRoute).mockResolvedValue({ id: 'r1' } as never)
         const wrapper = await openEdit()

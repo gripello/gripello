@@ -132,10 +132,7 @@
                         type="button"
                         class="flex w-full items-center gap-3 px-4 py-3 text-left"
                     >
-                        <span
-                            class="size-6 shrink-0 rounded-full"
-                            :style="{ background: item.color ?? undefined }"
-                        />
+                        <RouteColorDot :color="item.color" :size="24" />
                         <div class="flex-1">
                             <div class="text-base">
                                 {{ String(item.name ?? '') }}
@@ -167,10 +164,7 @@
                 :columns="previewColumns"
             >
                 <template #color-cell="{ row }">
-                    <span
-                        class="block size-6 rounded-full"
-                        :style="{ background: row.original.color ?? undefined }"
-                    />
+                    <RouteColorDot :color="row.original.color" :size="24" />
                 </template>
 
                 <template #expand-cell="{ row }">

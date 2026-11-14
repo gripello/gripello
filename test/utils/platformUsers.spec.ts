@@ -59,12 +59,25 @@ describe('membershipChips', () => {
                 gymTitle: 'Zeta',
                 role: 'r1',
                 roleName: 'admin',
-                roleColor: '#ff0000',
+                roleColor: '#FF0000',
             },
         ])
         expect(
             membershipChips({ ...user, memberships: [] }, gyms, roles),
         ).toEqual([])
+    })
+
+    it('passes only valid hex role colours on to the chips', () => {
+        const odd = [
+            { id: 'r1', gym: 'g1', name: 'admin', color: 'red; display:none' },
+        ] as RoleRecord[]
+        expect(
+            membershipChips(
+                { ...user, memberships: [user.memberships![0]!] },
+                gyms,
+                odd,
+            )[0]!.roleColor,
+        ).toBeNull()
     })
 
     it('offers only gyms the user has not joined and their roles', () => {

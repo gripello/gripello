@@ -187,7 +187,9 @@ const perceived = computed(() => {
 })
 
 const themeColors = useThemeColors()
-const heroColor = computed(() => props.route.color || themeColors.value.primary)
+const heroColor = computed(
+    () => toHex6(props.route.color) || themeColors.value.primary,
+)
 const HERO_DARK_INK = '#1a1a1a'
 const heroIsLight = computed(() => {
     const background = toHex6(heroColor.value)

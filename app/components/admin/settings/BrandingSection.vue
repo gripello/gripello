@@ -161,12 +161,12 @@ function onFileChange(event: Event, onSelect: (file: File | null) => void) {
     border: 1px solid var(--ui-border);
     border-radius: calc(var(--ui-radius) * 2);
     transition: border-color 0.18s;
-    background-color: #f4f4f5;
+    background-color: var(--ui-bg-muted);
     background-image:
-        linear-gradient(45deg, #e4e4e7 25%, transparent 25%),
-        linear-gradient(-45deg, #e4e4e7 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #e4e4e7 75%),
-        linear-gradient(-45deg, transparent 75%, #e4e4e7 75%);
+        linear-gradient(45deg, var(--ui-bg-accented) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--ui-bg-accented) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--ui-bg-accented) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--ui-bg-accented) 75%);
     background-size: 16px 16px;
     background-position:
         0 0,
