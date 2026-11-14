@@ -78,23 +78,26 @@
                     v-for="tile in statusTiles"
                     :key="tile.key"
                     as="div"
-                    class="[&>div]:gap-1"
                     :data-testid="`platform-backups-tile-${tile.key}`"
                 >
-                    <span class="text-sm text-muted">{{ tile.label }}</span>
-                    <span
-                        class="text-xl font-bold text-highlighted"
-                        :class="tile.tone"
-                    >
-                        {{ tile.value }}
-                    </span>
-                    <span class="text-xs text-muted">{{ tile.detail }}</span>
-                    <UProgress
-                        v-if="tile.meter !== undefined"
-                        :model-value="tile.meter"
-                        size="xs"
-                        class="mt-1"
-                    />
+                    <div class="flex flex-col gap-1">
+                        <span class="text-sm text-muted">{{ tile.label }}</span>
+                        <span
+                            class="text-xl font-bold text-highlighted"
+                            :class="tile.tone"
+                        >
+                            {{ tile.value }}
+                        </span>
+                        <span class="text-xs text-muted">{{
+                            tile.detail
+                        }}</span>
+                        <UProgress
+                            v-if="tile.meter !== undefined"
+                            :model-value="tile.meter"
+                            size="xs"
+                            class="mt-1"
+                        />
+                    </div>
                 </LayoutPanel>
             </div>
 

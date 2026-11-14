@@ -122,6 +122,7 @@ function nearestSnap(visible: number, velocity: number): SheetSnap {
 }
 
 function onDragStart(event: PointerEvent) {
+    stopDrag()
     if (event.button !== 0) return
     const startY = event.clientY
     const startHeight = visibleHeights.value[snap.value]

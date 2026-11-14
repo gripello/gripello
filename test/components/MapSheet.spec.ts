@@ -156,6 +156,16 @@ describe('MapSheet on phones', () => {
         removed.mockRestore()
     })
 
+    it('ends the running drag when a second one starts', async () => {
+        const { sheet, pointer } = await mountSheet()
+        pointer('pointerdown', 700, 0)
+        pointer('pointerdown', 700, 10)
+        pointer('pointerup', 700, 20)
+        pointer('pointermove', 300, 30)
+        await nextTick()
+        expect(sheet.attributes('style')).toContain('height: 64px')
+    })
+
     it('moves one step on a flick, however short', async () => {
         const { wrapper, drag } = await mountSheet()
         await wrapper.setProps({ snap: 'half' })

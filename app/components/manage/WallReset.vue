@@ -205,11 +205,13 @@ const { pending, run } = useAsyncAction()
 
 const selected = ref(new Set<string>())
 const plannedFor = ref('')
-const weekOptions = [1, 2, 4].map((weeks) => ({
-    value: inWeeks(weeks),
-    label: t('resets.inWeeks', weeks),
-    id: `${weeks}w`,
-}))
+const weekOptions = computed(() =>
+    [1, 2, 4].map((weeks) => ({
+        value: inWeeks(weeks),
+        label: t('resets.inWeeks', weeks),
+        id: `${weeks}w`,
+    })),
+)
 const doneOpen = ref(false)
 const today = computed(() => inWeeks(0, props.now))
 

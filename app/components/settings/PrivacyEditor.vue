@@ -251,6 +251,7 @@ function move(from: number, to: number) {
 }
 
 function startDrag(event: PointerEvent) {
+    stopDrag()
     if (!handle.value) return
     const from = handle.value.index
     const blocks = blockElements()

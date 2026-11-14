@@ -123,26 +123,31 @@
                         v-for="stat in compareRows"
                         :key="stat.key"
                         as="li"
-                        class="odd:last:col-span-2 xl:odd:last:col-span-1 [&>div]:gap-1"
+                        class="odd:last:col-span-2 xl:odd:last:col-span-1"
                         :data-testid="`compare-${stat.key}`"
                     >
-                        <span
-                            class="flex items-center gap-2 text-sm text-muted"
-                        >
-                            <UIcon :name="stat.icon" class="size-4 shrink-0" />
-                            <span class="truncate">{{ stat.label }}</span>
-                        </span>
-                        <span
-                            class="text-3xl font-black text-highlighted tabular-nums"
-                        >
-                            {{ stat.theirs }}
-                        </span>
-                        <span
-                            v-if="!isSelf && stat.key !== 'both'"
-                            class="text-xs text-muted tabular-nums"
-                        >
-                            {{ t('friends.you') }}: {{ stat.mine }}
-                        </span>
+                        <div class="flex flex-col gap-1">
+                            <span
+                                class="flex items-center gap-2 text-sm text-muted"
+                            >
+                                <UIcon
+                                    :name="stat.icon"
+                                    class="size-4 shrink-0"
+                                />
+                                <span class="truncate">{{ stat.label }}</span>
+                            </span>
+                            <span
+                                class="text-3xl font-black text-highlighted tabular-nums"
+                            >
+                                {{ stat.theirs }}
+                            </span>
+                            <span
+                                v-if="!isSelf && stat.key !== 'both'"
+                                class="text-xs text-muted tabular-nums"
+                            >
+                                {{ t('friends.you') }}: {{ stat.mine }}
+                            </span>
+                        </div>
                     </LayoutPanel>
                 </ul>
 
