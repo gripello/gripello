@@ -167,11 +167,11 @@
             <UFormField
                 :label="$t('climbing.comment')"
                 name="comment"
-                :hint="`${form.comment.length}/${COMMENT_MAX}`"
+                :hint="`${form.comment.length}/${ROUTE_COMMENT_MAX}`"
             >
                 <UTextarea
                     v-model="form.comment"
-                    :maxlength="COMMENT_MAX"
+                    :maxlength="ROUTE_COMMENT_MAX"
                     :rows="2"
                     autoresize
                     class="w-full"
@@ -237,6 +237,7 @@ import {
 import { normalizeCreators, localDateYYYYMMDD } from '#shared/utils/formatting'
 import { required, maxLength, type Rule } from '~/utils/validation'
 import {
+    ROUTE_COMMENT_MAX,
     SETTER_SUGGESTION_ROUTES,
     changedFields,
     setterNames,
@@ -412,7 +413,6 @@ const typeItems = computed(() =>
 const requiredRule = required(t)
 
 const NAME_MAX = 100
-const COMMENT_MAX = 2000
 const nameRules = [required(t), maxLength(t, NAME_MAX)]
 
 const isAnchorPointValid = (value: number | null) => {

@@ -1,6 +1,7 @@
 import type { ROUTE_TYPES } from '#shared/utils/routeTypes'
 import { gradeIndex, type ImportedGrading } from '#shared/utils/grades'
 import { normalizeHexColor } from '#shared/utils/color'
+import { ROUTE_COMMENT_MAX } from '~/utils/routes'
 import { localDateYYYYMMDD, parseDate } from '#shared/utils/formatting'
 
 type ImportedRouteType = (typeof ROUTE_TYPES)[number]
@@ -316,7 +317,7 @@ export function toImportedRoute(
                 : null,
         creator: Array.isArray(creator) ? creator : text('creator'),
         screw_date: parseImportDate(pick('screw_date'), context.locale),
-        comment: text('comment') ?? '',
+        comment: (text('comment') ?? '').slice(0, ROUTE_COMMENT_MAX),
         archived: parseImportFlag(pick('archived')),
     }
 }

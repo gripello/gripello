@@ -77,6 +77,8 @@ func inputOf(r Route) routeInput {
 	return in
 }
 
+const commentMaxLength = 255
+
 func deref(s *string) string {
 	if s == nil {
 		return ""
@@ -111,10 +113,14 @@ func (in *routeInput) apply(p patch) error {
 		return httpx.Required("grade")
 	}
 	in.Grade = grades.Canonical(in.GradeSystem, in.Grade)
+	comment := in.Comment
+	if _, sent := p["comment"]; !sent && in.stored {
+		comment = "" // stored comments may predate the 255 limit
+	}
 	for field, limit := range map[string]struct {
 		value string
 		max   int
-	}{"name": {in.Name, 100}, "comment": {in.Comment, 2000}, "grade": {in.Grade, grades.MaxLength}, "grade_system": {in.GradeSystem, grades.MaxSystemLength}, "color": {in.Color, 50}} {
+	}{"name": {in.Name, 100}, "comment": {comment, commentMaxLength}, "grade": {in.Grade, grades.MaxLength}, "grade_system": {in.GradeSystem, grades.MaxSystemLength}, "color": {in.Color, 50}} {
 		if err := httpx.TooLong(field, limit.value, limit.max); err != nil {
 			return err
 		}

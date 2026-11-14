@@ -227,10 +227,10 @@ func TestRouteListFilters(t *testing.T) {
 		"type=Route":                               {annex},
 		"color=%23FF0000":                          {placed},
 		"grade=6b&grade=7a&sort=-grade_index,name": {annex, placed},
-		"q=anna":                                   {loose},
-		"q=pin":                                    {placed},
-		"q=crimp+anna":                             {loose},
-		"q=crimp+nobody":                           {},
+		"q=anna":         {loose},
+		"q=pin":          {placed},
+		"q=crimp+anna":   {loose},
+		"q=crimp+nobody": {},
 		"ids=" + placed + "," + annex + "&sort=name": {annex, placed},
 		"sort=name&limit=1&page=2":                   {loose},
 		"removal=planned&sort=removal_planned_for":   {annex, placed},
@@ -374,11 +374,21 @@ func TestDeleteRouteWithHistoryNeedsForce(t *testing.T) {
 func TestRouteTextLimits(t *testing.T) {
 	f := newFixture(t)
 	long := strings.Repeat("x", 101)
-	for _, body := range []string{`{"name":"` + long + `"}`, `{"comment":"` + strings.Repeat("x", 2001) + `"}`,
+	for _, body := range []string{`{"name":"` + long + `"}`, `{"comment":"` + strings.Repeat("x", 256) + `"}`,
 		`{"creator":["` + long + `"]}`, `{"creator":["a"` + strings.Repeat(`,"a"`, 20) + `]}`, `{"grade_index":40.5}`, `{"grade_index":-1}`} {
 		f.call("setter", "POST", "/gyms/"+f.gymA+"/routes", `{"grade":"6a","name":"N","location":"`+f.hall+`",`+body[1:], http.StatusBadRequest)
 	}
 	f.call("admin", "POST", "/gyms/"+f.gymA+"/locations", `{"name":"`+long+`"}`, http.StatusBadRequest)
+}
+
+func TestRouteCommentLimit(t *testing.T) {
+	f := newFixture(t)
+	id := f.route(`,"comment":"` + strings.Repeat("ü", 255) + `"`)
+	f.call("setter", "PATCH", "/routes/"+id, `{"comment":"`+strings.Repeat("x", 256)+`"}`, http.StatusBadRequest)
+	if _, err := f.app.DB.Exec(context.Background(), `UPDATE routes SET comment = $2 WHERE id = $1`, id, strings.Repeat("x", 300)); err != nil {
+		t.Fatal(err)
+	}
+	f.call("setter", "PATCH", "/routes/"+id, `{"name":"Renamed"}`, http.StatusOK)
 }
 
 func TestRouteListPageOverflowAndRepeatedIncludes(t *testing.T) {

@@ -152,6 +152,17 @@ describe('toImportedRoute', () => {
     })
 })
 
+describe('route comments on import', () => {
+    it('cuts comments to the length the API accepts', () => {
+        const route = toImportedRoute(
+            { name: 'A', note: 'x'.repeat(300) },
+            { name: 'name', comment: 'note' },
+            context,
+        )
+        expect(route.comment).toHaveLength(255)
+    })
+})
+
 describe('parseImportDate', () => {
     it.each([
         ['2026-03-04T10:00:00Z', 'de', '2026-03-04'],
