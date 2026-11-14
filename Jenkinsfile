@@ -102,7 +102,7 @@ pipeline {
                         for (def service : ['postgres', 'mailpit', 'e2e']) {
                             pod = pod.replace("compose:${service}", sh(script: ".jenkins/compose-image.sh ${service}", returnStdout: true).trim())
                         }
-                        podTemplate(inheritFrom: 'k8s-s', yamlMergeStrategy: merge(), yaml: pod) {
+                        podTemplate(inheritFrom: 'k8s-s', yamlMergeStrategy: override(), yaml: pod) {
                             // a pod lost before the tests ran (image pull, eviction) gets a fresh one
                             retry(count: 2, conditions: [kubernetesAgent(), nonresumable()]) {
                                 node(POD_LABEL) {

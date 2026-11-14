@@ -109,6 +109,16 @@ describe('pod agents', () => {
         ).toThrow()
     })
 
+    it('replaces the template pod yaml, since a merge drops hostAliases and sysctls', () => {
+        expect(jenkinsfile).toContain(
+            "podTemplate(inheritFrom: 'k8s-s', yamlMergeStrategy: override(), yaml: pod)",
+        )
+        expect(pod).toContain('hostnames: [postgres, mailpit, vg.test]')
+        expect(pod).toContain('name: net.ipv4.ip_unprivileged_port_start')
+        expect(pod).toMatch(/- name: jnlp\n\s+securityContext:/)
+        expect(pod).toContain('seccompProfile: { type: RuntimeDefault }')
+    })
+
     it('gives the app the same environment as the compose file', () => {
         const app = compose.slice(
             compose.indexOf('environment:'),

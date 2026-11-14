@@ -1,12 +1,19 @@
-# Merged onto the k8s-s pod template; the Jenkinsfile puts in the pushed app image by digest and compose:<service> from e2e/docker-compose.e2e.yml.
+# Replaces the k8s-s pod yaml (a merge drops hostAliases and sysctls); the Jenkinsfile puts in the pushed app image by digest and compose:<service> from e2e/docker-compose.e2e.yml.
 # One network namespace: the compose service names resolve to localhost.
 spec:
+  automountServiceAccountToken: false
+  nodeSelector: { kubernetes.io/os: linux }
   hostAliases:
   - ip: 127.0.0.1
     hostnames: [postgres, mailpit, vg.test]
   imagePullSecrets:
   - name: ghcr
   securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile: { type: RuntimeDefault }
     sysctls:
     # nginx binds :443 as uid 1000; no_new_privs ignores its file capability
     - { name: net.ipv4.ip_unprivileged_port_start, value: "0" }
@@ -17,6 +24,14 @@ spec:
   - { name: ssl, emptyDir: {} }
   - { name: gripello-bin, emptyDir: {} }
   containers:
+  # no image: the plugin fills in its agent image
+  - name: jnlp
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities: { drop: [ALL] }
+    resources:
+      requests: { cpu: 500m, memory: 1Gi }
+      limits: { memory: 2Gi }
   - name: postgres
     image: compose:postgres
     env:
