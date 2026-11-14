@@ -117,6 +117,9 @@ describe('pod agents', () => {
         expect(pod).toContain('name: net.ipv4.ip_unprivileged_port_start')
         expect(pod).toMatch(/- name: jnlp\n\s+securityContext:/)
         expect(pod).toContain('seccompProfile: { type: RuntimeDefault }')
+        expect(pod).toContain(
+            'capabilities: { drop: [ALL], add: [NET_BIND_SERVICE] }',
+        )
     })
 
     it('gives the app the same environment as the compose file', () => {
