@@ -82,7 +82,7 @@ spec:
       # nginx carries a file capability: exec fails with EPERM unless the bounding set still holds it (no_new_privs then grants nothing; the sysctl allows :443)
       capabilities: { drop: [ALL], add: [NET_BIND_SERVICE] }
     resources:
-      requests: { cpu: "1", memory: 1536Mi }
+      requests: { cpu: 500m, memory: 1Gi }
       limits: { memory: 3Gi }
     volumeMounts:
     - { name: ssl, mountPath: /etc/nginx/ssl }
@@ -102,7 +102,7 @@ spec:
       allowPrivilegeEscalation: false
       capabilities: { drop: [ALL] }
     resources:
-      requests: { cpu: "2", memory: 3Gi }
+      requests: { cpu: "1", memory: 2Gi }
       limits: { memory: 6Gi }
     volumeMounts:
     - { name: ssl, mountPath: /ssl, readOnly: true }

@@ -235,8 +235,10 @@
                                     {{ entry.message }}
                                 </span>
                                 <span
-                                    class="shrink-0 text-muted"
+                                    class="min-w-0 max-w-40 truncate text-muted"
                                     :class="{ 'max-md:ml-auto': !entry.module }"
+                                    :title="entry.replica"
+                                    data-testid="platform-log-replica"
                                 >
                                     {{ entry.replica }}
                                 </span>

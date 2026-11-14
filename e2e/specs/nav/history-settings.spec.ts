@@ -10,9 +10,12 @@ async function leaveWithUnsavedEdit(
     prefix: string,
     settingsPath: RegExp,
     exitPath: RegExp,
+    listItem: string,
 ) {
     await page.goBack()
     await expect(page).toHaveURL(settingsPath)
+    // the list renders once the router committed the back step; a second back before that races it
+    await expect(page.getByTestId(listItem)).toBeVisible()
     await expect(page.getByTestId(`${prefix}-unsaved`)).toBeVisible()
 
     const discard = page.getByTestId('confirm-dialog')
@@ -54,6 +57,7 @@ test('browser back in platform settings returns to the list, then asks before dr
         'platform-settings',
         /\/platform\/settings$/,
         /\/platform\/more$/,
+        'platform-settings-drill-access',
     )
 })
 
@@ -79,5 +83,11 @@ test('browser back on a platform gym detail never replays sections and guards an
     const name = page.getByTestId('settings-org-name')
     await name.fill(`${await name.inputValue()} edited`)
 
-    await leaveWithUnsavedEdit(page, 'settings', detail, /\/platform\/gyms$/)
+    await leaveWithUnsavedEdit(
+        page,
+        'settings',
+        detail,
+        /\/platform\/gyms$/,
+        'settings-drill-organization',
+    )
 })

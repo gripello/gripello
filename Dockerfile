@@ -84,7 +84,8 @@ FROM scratch AS typecheck-results
 COPY --from=typecheck /out /
 
 FROM ui-deps AS api-types
-COPY . .
+COPY api ./api
+COPY types/api ./types/api
 RUN --mount=type=cache,target=/root/.npm mkdir /out && { yarn api:types:check > /out/api-types.txt 2>&1; echo $? > /out/exit-code; }; cat /out/api-types.txt
 
 FROM scratch AS api-types-results

@@ -6,6 +6,16 @@ import { BETA_VIDEO_MAX_BYTES } from '#shared/utils/betaVideos'
 const read = (file: string) => readFileSync(file, 'utf8')
 
 describe('docker ui build', () => {
+    it('copies only the specs and generated types into the api-types stage, so it caches across app changes', () => {
+        const stage = read('Dockerfile')
+            .split(/^FROM /m)
+            .find((part) => part.includes(' AS api-types\n'))!
+        expect(stage.match(/^COPY .*/gm)).toEqual([
+            'COPY api ./api',
+            'COPY types/api ./types/api',
+        ])
+    })
+
     const localDirs = [
         ...read('nuxt.config.ts').matchAll(/'\.\/([\w-]+)\/[\w.-]+'/g),
     ].map((match) => match[1]!)

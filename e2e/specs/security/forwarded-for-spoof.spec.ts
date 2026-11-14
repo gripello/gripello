@@ -7,7 +7,8 @@ for (const header of ['X-Forwarded-For', 'X-Real-IP']) {
         testPrefix,
     }) => {
         const identity = `spoof@${testPrefix}-${header.toLowerCase()}.test`
-        const spoofedIp = '127.0.0.1'
+        // TEST-NET-3: never the real client address, which is loopback in the CI pod
+        const spoofedIp = '203.0.113.7'
         const maskedIdentity = `s***${identity.slice(identity.indexOf('@'))}`
 
         await expect(

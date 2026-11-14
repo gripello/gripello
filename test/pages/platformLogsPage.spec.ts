@@ -165,4 +165,23 @@ describe('platform logs page', () => {
         expect(input('user').element.value).toBe('u1 ')
         wrapper.unmount()
     })
+
+    it('truncates a long replica name instead of widening the row', async () => {
+        const replica = 'gripello-gripello-pr-783-7-kqzs2-d4w82-dwlbm'
+        vi.mocked(listServerLogs).mockResolvedValue({
+            level: 'info',
+            replicas: [],
+            items: [{ ...line('2026-11-14T09:00:00.000Z'), replica }],
+            next: null,
+        })
+        const { wrapper } = mountPage({})
+        await flushPromises()
+        const cell = wrapper.get('[data-testid="platform-log-replica"]')
+        expect(cell.classes()).toEqual(
+            expect.arrayContaining(['min-w-0', 'truncate']),
+        )
+        expect(cell.classes()).not.toContain('shrink-0')
+        expect(cell.attributes('title')).toBe(replica)
+        wrapper.unmount()
+    })
 })
