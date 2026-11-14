@@ -93,7 +93,7 @@ func TestBlankRequiredTextIsRejected(t *testing.T) {
 func TestTextLimitsCountCharacters(t *testing.T) {
 	limits := map[string]int{
 		"competition name": 200, "competition description": 5000, "category name": 100, "entry display name": 60,
-		"task title": 200, "task description": 2000, "route name": 100, "route comment": 2000, "location name": 100,
+		"task title": 200, "task description": 2000, "route name": 100, "route comment": 255, "location name": 100,
 		"season name": 60, "role name": 50, "role description": 200, "gym name": 100, "gym description": 2000,
 		"tick note": 500, "review comment": 5000, "profile first name": 5000, "invite first name": 100, "invite last name": 100,
 		"report explanation": 2000, "report notifier name": 100,

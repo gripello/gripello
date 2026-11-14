@@ -1,3 +1,4 @@
+import { toHex6 } from '#shared/utils/color'
 import type {
     AuditLogRecord,
     GymRecord,
@@ -177,7 +178,7 @@ export function membershipChips(
                 gymTitle: gym ? gymTitle(gym) : membership.gym,
                 role: membership.role,
                 roleName: role?.name ?? '',
-                roleColor: role?.color || null,
+                roleColor: toHex6(role?.color) || null,
             }
         })
         .sort((a, b) => a.gymTitle.localeCompare(b.gymTitle))

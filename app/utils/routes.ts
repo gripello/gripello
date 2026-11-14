@@ -1,6 +1,7 @@
 import { normalizeCreators } from '#shared/utils/formatting'
 
 export const SETTER_SUGGESTION_ROUTES = 500
+export const ROUTE_COMMENT_MAX = 255
 
 export function setterNames(routes: { creator?: unknown }[]) {
     return [

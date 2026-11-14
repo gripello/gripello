@@ -586,7 +586,7 @@ components:
         grade_system: { type: string, maxLength: 30 }
         grade_index: { type: number }
         type: { $ref: '#/components/schemas/RouteType' }
-        comment: { type: string, maxLength: 2000 }
+        comment: { type: string, maxLength: 255 }
         creator: { type: array, maxItems: 20, items: { type: string, maxLength: 100 } }
         archived: { type: boolean }
         color: { type: string, maxLength: 50 }

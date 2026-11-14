@@ -95,6 +95,20 @@ describe('RouteHero', () => {
         ).toEqual(Array(5).fill('#1a1a1a'))
     })
 
+    it('paints only valid colours and falls back to the theme otherwise', () => {
+        const background = (color: string) =>
+            mountHero([], { color })
+                .get('[data-testid="route-hero"]')
+                .attributes('style')
+        expect(background('#f00')).toContain(
+            'linear-gradient(135deg, #FF0000 0%',
+        )
+        expect(background('#FF000080')).toContain(
+            'linear-gradient(135deg, #FF0000 0%',
+        )
+        expect(background('red; display: none')).not.toContain('display')
+    })
+
     it('inks title and grade alike on light tones', () => {
         const wrapper = mountHero([], { color: '#ffeb3b' })
         expect(
