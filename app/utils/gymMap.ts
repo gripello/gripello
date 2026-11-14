@@ -333,3 +333,16 @@ export function sparklePath([x, y]: MapPoint, r: number): string {
     const waist = r * 0.15
     return `M${x} ${y - tip} L${x + waist} ${y - waist} L${x + tip} ${y} L${x + waist} ${y + waist} L${x} ${y + tip} L${x - waist} ${y + waist} L${x - tip} ${y} L${x - waist} ${y - waist} Z`
 }
+
+export const LABEL_CHAR_EM = 0.6
+
+export function labelInside(
+    x: number,
+    text: string,
+    fontSize: number,
+    width: number,
+): number {
+    const half = (text.length * fontSize * LABEL_CHAR_EM) / 2
+    if (half * 2 >= width) return width / 2
+    return Math.min(Math.max(x, half), width - half)
+}

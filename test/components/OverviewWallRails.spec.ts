@@ -77,4 +77,60 @@ describe('OverviewWallRails', () => {
         expect(wrapper.text()).toContain('map.routes')
         expect(wrapper.text()).not.toContain('map.boulders')
     })
+
+    it("hides a wall's empty rail on phones, keeping the desktop grid", () => {
+        const wrapper = createWrapper([
+            {
+                id: 'w1',
+                name: 'Cave',
+                location: 'l',
+                fresh: 0,
+                routes: [route('a', { type: 'Boulder', grade_index: 17.1 })],
+            },
+            {
+                id: 'w2',
+                name: 'Sector A',
+                location: 'l',
+                fresh: 0,
+                routes: [route('b', { type: 'Route', grade_index: 7.4 })],
+            },
+        ])
+
+        const lanes = wrapper
+            .findAll('[data-testid="overview-wall"]')[0]!
+            .findAll('.wall-rails__rail')
+            .map((rail) => rail.element.parentElement!.className)
+        expect(lanes).toHaveLength(2)
+        expect(lanes[0]).toContain('max-lg:hidden')
+        expect(lanes[1]).not.toContain('max-lg:hidden')
+    })
+
+    it('sizes each wall by its own highest stack on phones', () => {
+        const wrapper = createWrapper([
+            {
+                id: 'w1',
+                name: 'Kids',
+                location: 'l',
+                fresh: 0,
+                routes: ['a', 'b', 'c'].map((id) =>
+                    route(id, { type: 'Boulder', grade_index: 12.1 }),
+                ),
+            },
+            {
+                id: 'w2',
+                name: 'Cave',
+                location: 'l',
+                fresh: 0,
+                routes: [route('d', { type: 'Boulder', grade_index: 17.1 })],
+            },
+        ])
+        const styles = wrapper
+            .findAll('[data-testid="overview-wall"]')
+            .map((wall) => wall.attributes('style'))
+        expect(styles[0]).toContain('--wall-levels: 3')
+        expect(styles[1]).toContain('--wall-levels: 1')
+        expect(wrapper.get('.wall-rails').attributes('style')).toContain(
+            '--levels: 3',
+        )
+    })
 })

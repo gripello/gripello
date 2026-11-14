@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { mount } from '@vue/test-utils'
 import { onUnmounted, watch } from 'vue'
 import PageHeader from '~/components/layout/PageHeader.vue'
@@ -39,6 +41,31 @@ describe('layout shells', () => {
             '/list',
         )
         expect(back.text()).toContain('Back')
+    })
+
+    it('PageHeader puts a passed class on the header next to the back link', () => {
+        const header = mount(PageHeader, {
+            props: { title: 'T', backTo: '/list' },
+            attrs: { class: 'mb-6' },
+            global: { stubs },
+        })
+        expect(header.find('header').classes()).toContain('mb-6')
+        expect(
+            header.find('[data-testid="page-back"]').classes(),
+        ).not.toContain('mb-6')
+    })
+
+    it('PageHeader keeps the lines of a wrapping title together', () => {
+        const source = readFileSync(
+            path.resolve(
+                import.meta.dirname,
+                '../../app/components/layout/PageHeader.vue',
+            ),
+            'utf8',
+        )
+        expect(source).toMatch(
+            /\.page-header__title \{\s+font-size: 1\.6rem;\s+line-height: 1\.2;/,
+        )
     })
 
     it('PageHeader lets a long title wrap beside inline actions', () => {

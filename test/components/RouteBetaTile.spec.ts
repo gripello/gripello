@@ -72,6 +72,8 @@ describe('RouteBetaTile', () => {
         expect(link.attributes('rel')).toContain('noopener')
         expect(link.text()).toContain('TikTok')
         expect(wrapper.find('[data-testid="player"]').exists()).toBe(false)
+        expect(link.find('[name="i-lucide-play"]').exists()).toBe(false)
+        expect(link.find('[name="i-lucide-external-link"]').exists()).toBe(true)
     })
 
     it('plays uploads and sizes the tile to the video', async () => {

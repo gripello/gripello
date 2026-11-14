@@ -69,12 +69,10 @@
                 class="group/link relative flex size-full flex-col items-center justify-center gap-3 bg-linear-to-br from-neutral-700 via-neutral-900 to-black text-white"
                 data-testid="beta-video-link"
             >
-                <UIcon :name="platformIcon" class="size-12 opacity-90" />
-                <span
-                    class="flex size-16 items-center justify-center rounded-full bg-white/15 backdrop-blur transition group-hover/link:scale-105 group-hover/link:bg-white/25"
-                >
-                    <UIcon name="i-lucide-play" class="ms-1 size-8" />
-                </span>
+                <UIcon
+                    :name="platformIcon"
+                    class="size-14 opacity-90 transition group-hover/link:scale-105 group-hover/link:opacity-100"
+                />
                 <span
                     class="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-linear-to-t from-black/80 to-transparent px-3 pt-8 pb-3 text-sm font-semibold"
                 >

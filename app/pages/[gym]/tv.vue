@@ -253,7 +253,7 @@ const eyebrow = computed(() => {
     return parts.filter(Boolean).join(' · ')
 })
 
-useHead({ title: () => `${t('tv.title')} · ${gym.value?.name ?? ''}` })
+useHead({ title: () => t('tv.title') })
 
 useGymCompetitionsLive(async () => {
     competitions.value = await listCompetitions(gymId.value, {

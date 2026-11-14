@@ -299,7 +299,7 @@ const columns = computed<TableColumn<PlatformGym>[]>(() => [
     { id: 'routes', header: t('platform.overview.routes'), meta: numeric },
     { id: 'active', header: t('platform.gyms.active'), meta: numeric },
     { id: 'created', header: t('platform.gyms.createdAt'), meta: wideOnly },
-    { id: 'edit', header: '', meta: { class: { td: 'w-28' } } },
+    { id: 'edit', meta: { class: { td: 'w-28' } } },
 ])
 
 const dialogOpen = ref(false)

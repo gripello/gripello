@@ -42,6 +42,13 @@ describe('gym overview status strip', () => {
     it('renders on the server whenever the gym has hours, not only once the clock runs', () => {
         expect(strip).toContain('v-if="hasHours || directionsHref"')
     })
+
+    it('keeps the button labels on phones when no opening status fills the strip', () => {
+        expect(strip).not.toContain('<span class="max-sm:hidden">')
+        expect(
+            strip.match(/<span :class="\{ 'max-sm:hidden': hasHours \}">/g),
+        ).toHaveLength(2)
+    })
 })
 
 describe('gym overview live blocks', () => {

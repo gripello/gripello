@@ -82,8 +82,8 @@
                     <LayoutEmptyState
                         v-if="!data.routes.length"
                         icon="i-lucide-sparkles"
-                        :card="false"
                         :title="t('feed.noNewRoutes')"
+                        data-testid="feed-routes-empty"
                     />
                     <LayoutListGroup v-else>
                         <LayoutListRow

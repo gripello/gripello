@@ -29,6 +29,7 @@
                 query: { location: wall.location, wall: wall.id },
             }"
             class="wall-rails__row wall-rails__wall"
+            :style="{ '--wall-levels': wallLevels(wall) }"
             data-testid="overview-wall"
             :data-name="wall.name"
         >
@@ -65,6 +66,7 @@
                 v-for="lane in wall.lanes"
                 :key="lane.type"
                 class="flex flex-col gap-0.5"
+                :class="{ 'max-lg:hidden': !lane.dots.length }"
             >
                 <span class="text-xs font-semibold text-muted lg:hidden">{{
                     lane.label
@@ -151,14 +153,14 @@ const rows = computed(() =>
     })),
 )
 
-const levels = computed(() =>
-    Math.max(
+function wallLevels(wall: { lanes: { dots: { level: number }[] }[] }) {
+    return Math.max(
         1,
-        ...rows.value.flatMap((wall) =>
-            wall.lanes.flatMap((lane) => lane.dots.map((dot) => dot.level + 1)),
-        ),
-    ),
-)
+        ...wall.lanes.flatMap((lane) => lane.dots.map((dot) => dot.level + 1)),
+    )
+}
+
+const levels = computed(() => Math.max(1, ...rows.value.map(wallLevels)))
 </script>
 
 <style scoped>
@@ -196,7 +198,7 @@ const levels = computed(() =>
 .wall-rails__rail {
     position: relative;
     display: block;
-    height: calc(4px + var(--dot) + (var(--levels) - 1) * var(--step));
+    height: calc(4px + var(--dot) + (var(--wall-levels) - 1) * var(--step));
     border-bottom: 1px solid var(--ui-border-accented);
 }
 
@@ -233,6 +235,10 @@ const levels = computed(() =>
         --dot: 10px;
         --step: 12px;
         gap: 0;
+    }
+
+    .wall-rails__rail {
+        height: calc(4px + var(--dot) + (var(--levels) - 1) * var(--step));
     }
 
     .wall-rails__row {

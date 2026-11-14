@@ -544,7 +544,7 @@ const columns = computed<TableColumn<UserRow>[]>(() => [
         header: sortable(t('platform.users.joined'), 'created'),
         meta: widestOnly,
     },
-    { id: 'actions', header: '', meta: { class: { td: 'w-12' } } },
+    { id: 'actions', meta: { class: { td: 'w-12' } } },
 ])
 
 const tableMeta = {
