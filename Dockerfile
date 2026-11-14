@@ -58,7 +58,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     GOOS= GOARCH= go tool -modfile=tools/go.mod go-licenses report ./... \
       --ignore gripello --template /go-licenses.tpl > /out/third-party-notices-go.txt
 
-FROM node:26.12.1-trixie@sha256:97fa0f1b59035c6072721a88d55be1371c7cb1cc942b521e1cc5c72ec87655f4 AS ui-deps
+FROM node:26.13.0-trixie@sha256:438603bbb5cda404b9416f0b5c8026f61501ab911760d861ec28c36b5d675725 AS ui-deps
 WORKDIR /app
 RUN npm install -g corepack@0.36.0 --force && corepack enable
 COPY .yarnrc.yml package.json yarn.lock ./
