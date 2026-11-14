@@ -8,11 +8,32 @@ updates:
       # Core, CLI and the native platforms must stay on the same version.
       capacitor:
         patterns: ["@capacitor/*"]
+      nuxt:
+        patterns: ["nuxt", "@nuxt/*", "@nuxtjs/*", "vue", "@vue/*", "@vueuse/*", "vite", "@vitejs/*", "h3", "tailwindcss"]
+        update-types: ["minor", "patch"]
+      test:
+        patterns: ["vitest", "@vitest/*", "happy-dom"]
+        update-types: ["minor", "patch"]
+      icons:
+        patterns: ["@iconify-json/*"]
+      types:
+        patterns: ["@types/*"]
+      npm-minor:
+        patterns: ["*"]
+        # Playwright moves together with the e2e image in /e2e.
+        exclude-patterns: ["@playwright/test"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "gradle"
     directory: "/mobile/android"
     schedule:
       interval: "weekly"
+    groups:
+      gradle-minor:
+        patterns: ["*"]
+        # AGP may need a newer Gradle wrapper than the ignore below allows, which would block the whole group.
+        exclude-patterns: ["com.android.tools.build:gradle"]
+        update-types: ["minor", "patch"]
     ignore:
       # Gradle 9.6+ drops an internal API that AGP 8 uses; both move with Capacitor 9 (`npx cap migrate`).
       - dependency-name: "gradle-wrapper"
@@ -24,6 +45,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      base-images:
+        patterns: ["*"]
 
   - package-ecosystem: "docker-compose"
     directories:
@@ -42,6 +66,10 @@ updates:
       - "/loadtest"
     schedule:
       interval: "weekly"
+    groups:
+      go-minor:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "gomod"
     directory: "/backend/tools"
