@@ -21,4 +21,11 @@ describe('manage routes table', () => {
             /header: sortableHeader\(t\('climbing\.location'\), 'location'\),\s+meta: widestOnly,/,
         )
     })
+
+    it('draws hold colours through the shared dot, so white holds get an outline', () => {
+        expect(source).toContain(
+            '<RouteColorDot :color="row.original.color" :size="24" />',
+        )
+        expect(source).not.toContain('background: row.original.color')
+    })
 })

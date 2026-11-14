@@ -211,10 +211,7 @@
                     />
                 </template>
                 <template #color-cell="{ row }">
-                    <span
-                        class="block size-6 rounded-full"
-                        :style="{ background: row.original.color ?? undefined }"
-                    />
+                    <RouteColorDot :color="row.original.color" :size="24" />
                 </template>
                 <template #name-cell="{ row }">
                     <div

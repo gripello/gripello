@@ -277,6 +277,7 @@ export function formatCompetitionWindow(
             new Date(competition.ends_at),
         )
         .replace(/\s/g, ' ')
+        .replace(/(\d) ([AaPp]\.?[Mm]\.?)/g, '$1\u00a0$2')
 }
 
 export function suggestedEnd(startsAt: string, endsAt: string): string {

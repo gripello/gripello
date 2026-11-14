@@ -68,6 +68,7 @@ let pageBackOwners = 0
 
 .page-header__title {
     font-size: 1.6rem;
+    line-height: 1.2;
     font-weight: 700;
     letter-spacing: -0.3px;
     color: var(--ui-text-highlighted);

@@ -135,6 +135,17 @@ describe('NavBar', () => {
         )
     })
 
+    it('scrolls overflowing section tabs without a visible scrollbar', () => {
+        const tabs = mountNavBar(true).get('[data-section-tabs]')
+        expect(tabs.classes()).toEqual(
+            expect.arrayContaining([
+                'overflow-x-auto',
+                '[scrollbar-width:none]',
+                '[&::-webkit-scrollbar]:hidden',
+            ]),
+        )
+    })
+
     it('shows a back arrow instead of the gym switcher on nested pages', () => {
         expect(
             mountNavBar(true).find('[data-testid="nav-back"]').exists(),

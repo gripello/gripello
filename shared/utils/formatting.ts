@@ -100,13 +100,7 @@ export function hasAnchorPoint(value: unknown): boolean {
 }
 
 export function formatAnchorPoint(value: unknown): unknown {
-    if (value === null || value === undefined || value === '') {
-        return '—'
-    }
-    if (Number(value) === 0) {
-        return '-'
-    }
-    return value
+    return hasAnchorPoint(value) ? value : '—'
 }
 
 export function formatScore(

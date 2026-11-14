@@ -638,7 +638,11 @@ import {
 } from '~/utils/wallResets'
 import { removableRouteIds } from '~/utils/inventory'
 import type { SheetSnap } from '~/components/map/Sheet.vue'
-import { formatAnchorPoint, formatDate } from '#shared/utils/formatting'
+import {
+    formatAnchorPoint,
+    hasAnchorPoint,
+    formatDate,
+} from '#shared/utils/formatting'
 import { cacheKeys, type GymChange } from '~/utils/realtimeCache'
 
 const gymPath = useGymPath()
@@ -868,7 +872,7 @@ const hint = computed(() => {
 
 function anchorLabel(item: RouteRecord) {
     const anchor = formatAnchorPoint(item.anchor_point)
-    return ['—', '-'].includes(String(anchor))
+    return !hasAnchorPoint(item.anchor_point)
         ? undefined
         : `${t('climbing.anchor_point')} ${anchor}`
 }

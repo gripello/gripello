@@ -217,8 +217,21 @@ describe('formatCompetitionWindow', () => {
             },
             'en',
         )
-        expect(text).not.toMatch(/[\u202f\u2009\u00a0]/)
+        expect(text).not.toMatch(/[\u202f\u2009]/)
+        expect(text.replace(/\d\u00a0[AP]M/g, '')).not.toContain('\u00a0')
         expect(text).toContain('Oct 3, 2026')
+    })
+
+    it('keeps AM/PM on the line of its time', () => {
+        const text = formatCompetitionWindow(
+            {
+                starts_at: '2026-10-03T13:53:00.000Z',
+                ends_at: '2026-10-03T14:50:00.000Z',
+            },
+            'en',
+        )
+        expect(text).toMatch(/\d\u00a0PM$/)
+        expect(text).not.toMatch(/\d [AP]M/)
     })
 })
 

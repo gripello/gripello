@@ -48,7 +48,11 @@
 <script setup lang="ts">
 import type { RouteListItem } from '~/types/models'
 import type { DefectSeverity } from '~/utils/tasks'
-import { formatAnchorPoint, wallName } from '#shared/utils/formatting'
+import {
+    formatAnchorPoint,
+    hasAnchorPoint,
+    wallName,
+} from '#shared/utils/formatting'
 
 const props = defineProps<{
     route: RouteListItem
@@ -66,7 +70,7 @@ const { t } = useI18n()
 const meta = computed(() => {
     const anchor = formatAnchorPoint(props.route.anchor_point)
     return [
-        ['—', '-'].includes(String(anchor))
+        !hasAnchorPoint(props.route.anchor_point)
             ? ''
             : `${t('climbing.anchor_point')} ${anchor}`,
         wallName(props.route),

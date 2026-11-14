@@ -73,7 +73,7 @@
 <script setup lang="ts">
 import type { RouteListItem } from '~/types/models'
 import type { DefectSeverity } from '~/utils/tasks'
-import { formatAnchorPoint } from '#shared/utils/formatting'
+import { formatAnchorPoint, hasAnchorPoint } from '#shared/utils/formatting'
 
 const gymPath = useGymPath()
 
@@ -94,7 +94,7 @@ function subtitle(route: RouteListItem) {
     const anchor = formatAnchorPoint(route.anchor_point)
     const parts = [
         route.type ? t(`routes.types.${route.type.toLowerCase()}`) : '',
-        ['—', '-'].includes(String(anchor))
+        !hasAnchorPoint(route.anchor_point)
             ? ''
             : `${t('climbing.anchor_point')} ${anchor}`,
     ]

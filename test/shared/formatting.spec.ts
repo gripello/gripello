@@ -23,12 +23,9 @@ describe('formatAnchorPoint', () => {
         expect(formatAnchorPoint('')).toBe('—')
     })
 
-    it('returns "-" for 0', () => {
-        expect(formatAnchorPoint(0)).toBe('-')
-    })
-
-    it('returns "-" for the string "0"', () => {
-        expect(formatAnchorPoint('0')).toBe('-')
+    it('returns the same "—" for 0, which means no anchor', () => {
+        expect(formatAnchorPoint(0)).toBe('—')
+        expect(formatAnchorPoint('0')).toBe('—')
     })
 
     it('passes through a positive number', () => {
