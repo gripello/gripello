@@ -1,4 +1,6 @@
 <script setup lang="ts">
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps<{
     title: string
     subtitle?: string
@@ -38,6 +40,7 @@ let pageBackOwners = 0
         {{ backLabel }}
     </UButton>
     <header
+        v-bind="$attrs"
         class="page-header flex justify-between gap-4 mb-4"
         :class="
             inlineActions

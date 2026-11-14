@@ -28,3 +28,9 @@ export function landingSections<T extends { slug: string }>(
         },
     ].filter((section) => section.gyms.length)
 }
+
+export function pageTitle(gymName: string, title = '') {
+    const page = [gymName, title].filter(Boolean).join(' · ')
+    if (!page) return 'Gripello'
+    return page.includes('Gripello') ? page : `${page} - Gripello`
+}

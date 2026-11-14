@@ -16,3 +16,10 @@ describe('feed beta delete', () => {
         )
     })
 })
+
+describe('feed empty states', () => {
+    it('frames every empty section the same way', () => {
+        expect(source).not.toContain(':card="false"')
+        expect(source).toContain('data-testid="feed-routes-empty"')
+    })
+})

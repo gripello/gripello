@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { gymSubtitle, gymTitle, landingSections } from '~/utils/gymNames'
+import {
+    gymSubtitle,
+    gymTitle,
+    landingSections,
+    pageTitle,
+} from '~/utils/gymNames'
 
 describe('gym names', () => {
     it('leads with the venue and falls back to the gym name', () => {
@@ -35,5 +40,18 @@ describe('landingSections', () => {
         expect(slugsOf(landingSections([{ slug: 'a' }], [], ['a']))).toEqual([
             ['recent', ['a']],
         ])
+    })
+})
+
+describe('pageTitle', () => {
+    it('prefixes the gym and appends the app name once', () => {
+        expect(pageTitle('Boulderwerk', 'Routes')).toBe(
+            'Boulderwerk · Routes - Gripello',
+        )
+        expect(pageTitle('', 'Logbook')).toBe('Logbook - Gripello')
+        expect(pageTitle('', '')).toBe('Gripello')
+        expect(pageTitle('', 'Delete your Gripello account')).toBe(
+            'Delete your Gripello account',
+        )
     })
 })

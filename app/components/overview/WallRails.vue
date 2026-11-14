@@ -65,6 +65,7 @@
                 v-for="lane in wall.lanes"
                 :key="lane.type"
                 class="flex flex-col gap-0.5"
+                :class="{ 'max-lg:hidden': !lane.dots.length }"
             >
                 <span class="text-xs font-semibold text-muted lg:hidden">{{
                     lane.label

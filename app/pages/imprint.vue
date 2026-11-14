@@ -43,5 +43,6 @@ useSeoMeta({
     title: () => t('legal.imprint'),
     ogTitle: () => t('legal.imprint'),
     description: () => t('legal.gymImprint', { name: 'Gripello' }),
+    ogDescription: () => t('legal.gymImprint', { name: 'Gripello' }),
 })
 </script>

@@ -39,9 +39,16 @@
             />
             <path :d="svgPath(wall.edge, false)" class="placement-wall-edge" />
             <text
-                :x="wall.labelAt[0]"
+                :x="
+                    labelInside(
+                        wall.labelAt[0],
+                        wall.name,
+                        LABEL_FONT_PX / pixelsPerUnit,
+                        map.width,
+                    )
+                "
                 :y="wall.labelAt[1]"
-                :font-size="13 / pixelsPerUnit"
+                :font-size="LABEL_FONT_PX / pixelsPerUnit"
                 class="placement-wall-label"
                 text-anchor="middle"
                 dominant-baseline="middle"
@@ -155,6 +162,7 @@ import {
     GRADE_SPACING_PX,
     HIT_RADIUS_PX,
     isolatedIds,
+    labelInside,
     placeRoutes,
     type MapRoute,
     type DotCluster,
@@ -185,6 +193,7 @@ const SNAP_RADIUS_PX = 60
 const DRAG_THRESHOLD_PX = 4
 const CLUSTER_RADIUS_PX = 11
 const CLUSTER_FONT_PX = 12
+const LABEL_FONT_PX = 13
 
 const bounds = computed<MapBounds>(() => ({
     minX: 0,

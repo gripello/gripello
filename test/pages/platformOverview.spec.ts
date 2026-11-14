@@ -27,6 +27,13 @@ describe('platform overview', () => {
             /<PlatformEndpointTable[^>]+:loading="trafficLoading"/,
         )
     })
+
+    it('marks a needs-you alert without a count by a chevron, not a symbol', () => {
+        expect(overview).not.toContain("value: '!'")
+        expect(overview).toMatch(
+            /<UIcon\s+v-if="tile\.value === null"\s+name="i-lucide-chevron-right"/,
+        )
+    })
 })
 
 describe('platform more page', () => {

@@ -92,8 +92,10 @@ export function wallSummaries<Route extends OverviewRoute>(
     routes: Route[],
     now: Date,
 ): WallSummary<Route>[] {
-    return [...walls]
-        .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    const bySort = [...walls].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    const halls = [...new Set(bySort.map((wall) => wall.location))]
+    return bySort
+        .sort((a, b) => halls.indexOf(a.location) - halls.indexOf(b.location))
         .map((wall) => {
             const onWall = routes.filter((route) => route.wall === wall.id)
             return {

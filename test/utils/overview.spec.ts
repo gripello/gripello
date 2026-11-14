@@ -74,6 +74,21 @@ describe('wallSummaries', () => {
             { id: 'w2', name: 'Island', location: 'l', routes: [], fresh: 0 },
         ])
     })
+
+    it('keeps the walls of one hall together', () => {
+        const walls = [
+            { id: 'b1', name: 'Cave', location: 'boulder', sort: 1 },
+            { id: 'r1', name: 'Sector A', location: 'rope', sort: 1 },
+            { id: 'b2', name: 'Slab', location: 'boulder', sort: 2 },
+            { id: 'r2', name: 'Sector B', location: 'rope', sort: 2 },
+        ]
+        expect(wallSummaries(walls, [], NOW).map((wall) => wall.id)).toEqual([
+            'b1',
+            'b2',
+            'r1',
+            'r2',
+        ])
+    })
 })
 
 describe('gradeAxis', () => {

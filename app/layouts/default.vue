@@ -81,10 +81,6 @@ const gymSlug = computed(() =>
 
 useHead(
     computed(() => ({
-        titleTemplate: (title?: string) =>
-            [gymSlug.value && gym.value?.name, title]
-                .filter(Boolean)
-                .join(' · ') || 'Gripello',
         link: [
             {
                 rel: 'icon',

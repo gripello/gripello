@@ -40,5 +40,6 @@ useSeoMeta({
     title: () => t('legal.privacy'),
     ogTitle: () => t('legal.privacy'),
     description: () => t('seo.privacy', { name: gym.value?.name ?? '' }),
+    ogDescription: () => t('seo.privacy', { name: gym.value?.name ?? '' }),
 })
 </script>

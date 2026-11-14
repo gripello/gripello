@@ -100,10 +100,13 @@
             </UBadge>
         </div>
 
-        <div class="flex items-center gap-2 pt-2 border-t border-default">
+        <div
+            class="flex flex-wrap items-center gap-x-2 gap-y-1 pt-2 border-t border-default"
+            data-testid="task-card-footer"
+        >
             <UTooltip :text="createdAt">
                 <span
-                    class="text-xs text-muted tabular-nums"
+                    class="text-xs whitespace-nowrap text-muted tabular-nums"
                     data-testid="task-card-created"
                     >{{ createdAgo }}</span
                 >

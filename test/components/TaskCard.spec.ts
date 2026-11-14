@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { flushPromises, mount } from '@vue/test-utils'
 import { ref } from 'vue'
 import TaskCard from '~/components/task/Card.vue'
@@ -68,6 +70,24 @@ describe('TaskCard actions', () => {
     beforeEach(() => {
         vi.stubGlobal('useGymPath', () => (path: string) => `/gym${path}`)
         vi.stubGlobal('useFileToken', () => ({ token: ref(''), renew }))
+    })
+
+    it('lets the footer wrap in narrow board columns instead of squeezing time and assignee', () => {
+        const wrapper = mountCard()
+        expect(
+            wrapper.get('[data-testid="task-card-footer"]').classes(),
+        ).toContain('flex-wrap')
+        expect(
+            readFileSync(
+                path.resolve(
+                    import.meta.dirname,
+                    '../../app/components/task/Card.vue',
+                ),
+                'utf8',
+            ),
+        ).toMatch(
+            /class="text-xs whitespace-nowrap text-muted tabular-nums"\s+data-testid="task-card-created"/,
+        )
     })
 
     it('keeps edit and open route in the menu, not as buttons', () => {

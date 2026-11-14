@@ -96,5 +96,6 @@ useSeoMeta({
     title: () => t('legal.accountDeletionPage.title'),
     ogTitle: () => t('legal.accountDeletionPage.title'),
     description: () => t('legal.accountDeletionPage.subtitle'),
+    ogDescription: () => t('legal.accountDeletionPage.subtitle'),
 })
 </script>

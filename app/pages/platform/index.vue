@@ -193,7 +193,7 @@
                                         :name="tile.icon"
                                         class="size-4 shrink-0"
                                         :class="
-                                            tile.value
+                                            tile.value !== 0
                                                 ? ATTENTION_COLORS[tile.color]
                                                 : 'text-dimmed'
                                         "
@@ -201,14 +201,20 @@
                                     <span
                                         class="flex-1"
                                         :class="
-                                            tile.value
+                                            tile.value !== 0
                                                 ? 'text-highlighted'
                                                 : 'text-muted'
                                         "
                                     >
                                         {{ tile.label }}
                                     </span>
+                                    <UIcon
+                                        v-if="tile.value === null"
+                                        name="i-lucide-chevron-right"
+                                        class="size-4 shrink-0 text-muted"
+                                    />
                                     <span
+                                        v-else
                                         class="font-bold tabular-nums"
                                         :class="
                                             tile.value
@@ -672,7 +678,7 @@ const attentionTiles = computed(() => {
               {
                   key: 'backups',
                   label: t('platform.backups.pgDumpMissing'),
-                  value: '!',
+                  value: null,
                   icon: 'i-lucide-database-backup',
                   color: 'error',
                   to: '/platform/backups',

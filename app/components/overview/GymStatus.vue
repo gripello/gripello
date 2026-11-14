@@ -34,7 +34,7 @@
                     :aria-label="$t('gymInfo.directions.route')"
                     data-testid="overview-directions"
                 >
-                    <span class="max-sm:hidden">{{
+                    <span :class="{ 'max-sm:hidden': hasHours }">{{
                         $t('gymInfo.directions.route')
                     }}</span>
                 </UButton>
@@ -46,7 +46,7 @@
                     :aria-label="$t('overview.gymInfo')"
                     data-testid="overview-gym-info"
                 >
-                    <span class="max-sm:hidden">{{
+                    <span :class="{ 'max-sm:hidden': hasHours }">{{
                         $t('overview.gymInfo')
                     }}</span>
                 </UButton>

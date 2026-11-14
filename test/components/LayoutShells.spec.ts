@@ -41,6 +41,18 @@ describe('layout shells', () => {
         expect(back.text()).toContain('Back')
     })
 
+    it('PageHeader puts a passed class on the header next to the back link', () => {
+        const header = mount(PageHeader, {
+            props: { title: 'T', backTo: '/list' },
+            attrs: { class: 'mb-6' },
+            global: { stubs },
+        })
+        expect(header.find('header').classes()).toContain('mb-6')
+        expect(
+            header.find('[data-testid="page-back"]').classes(),
+        ).not.toContain('mb-6')
+    })
+
     it('PageHeader lets a long title wrap beside inline actions', () => {
         const header = mount(PageHeader, {
             props: { title: 'T', inlineActions: true },

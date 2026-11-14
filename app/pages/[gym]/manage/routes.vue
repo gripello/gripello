@@ -565,6 +565,9 @@ const sortItemsMobile = computed(() => [
     { title: t('climbing.type'), key: 'type' },
 ])
 
+const widestOnly = {
+    class: { th: 'hidden 2xl:table-cell', td: 'hidden 2xl:table-cell' },
+}
 const tableColumns = computed<TableColumn<RouteListItem>[]>(() => [
     { id: 'selected', meta: { class: { th: 'w-11', td: 'w-11' } } },
     { id: 'color', header: t('climbing.color') },
@@ -577,11 +580,12 @@ const tableColumns = computed<TableColumn<RouteListItem>[]>(() => [
         id: 'anchor_point',
         header: sortableHeader(t('climbing.anchor_point'), 'anchor_point'),
     },
-    { id: 'comment', header: t('climbing.comment') },
+    { id: 'comment', header: t('climbing.comment'), meta: widestOnly },
     { id: 'creator', header: t('routes.route_setter') },
     {
         id: 'location',
         header: sortableHeader(t('climbing.location'), 'location'),
+        meta: widestOnly,
     },
     { id: 'type', header: sortableHeader(t('climbing.type'), 'type') },
     { id: 'score', header: sortableHeader(t('ratings.score'), 'score') },

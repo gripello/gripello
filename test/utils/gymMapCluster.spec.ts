@@ -9,6 +9,7 @@ import {
     exclamationPath,
     sparklePath,
     isolatedIds,
+    labelInside,
     spreadAround,
 } from '~/utils/gymMap'
 
@@ -124,5 +125,17 @@ describe('badge glyphs', () => {
 describe('checkPath', () => {
     it('draws a tick around the centre', () => {
         expect(checkPath([10, 10], 2)).toBe('M9 10 L9.8 10.8 L11.1 9.1')
+    })
+})
+
+describe('labelInside', () => {
+    it('moves a label on an edge wall back inside the floor plan', () => {
+        expect(labelInside(0.75, 'Verschneidung', 1, 32)).toBeCloseTo(3.9)
+        expect(labelInside(31.5, 'Verschneidung', 1, 32)).toBeCloseTo(28.1)
+        expect(labelInside(16, 'Verschneidung', 1, 32)).toBe(16)
+    })
+
+    it('centres a label wider than the plan', () => {
+        expect(labelInside(1, 'Verschneidung', 1, 5)).toBe(2.5)
     })
 })
