@@ -593,8 +593,8 @@
                 "body": "Gripello is a web app that climbing gyms use for their routes. The gym or club named above is the controller for its own gym pages (routes, reviews, route problem reports, competitions, staff tools). The operator of Gripello is the controller for the pages that are not tied to a gym: your account, logbook, friends, climber profiles and achievements. All data is stored and processed on our own servers in the European Union. If you have questions about your data, contact the controller named above."
             },
             "serverLogs": {
-                "title": "Server logs",
-                "body": "When you open the app, our server processes technical data such as your IP address, date and time, the requested address and your browser's user agent to deliver the page and protect the service against abuse and attacks. Lawful basis: our legitimate interests in running a secure service (Art. 6(1)(f) GDPR). Request logs are deleted automatically after 7 days."
+                "title": "Server logs and usage statistics",
+                "body": "When you open the app, our server processes technical data such as your IP address, date and time, the requested address and your browser's user agent to deliver the page and protect the service against abuse and attacks. Lawful basis: our legitimate interests in running a secure service (Art. 6(1)(f) GDPR). Request logs are deleted automatically after 7 days. To see which parts of the app are used and what to improve, we also count every day how often each feature is used: by signed-in people or guests, in the app or a browser, and on which kind of device and operating system (for example phone or computer, Android or Windows, without version numbers; derived from the user agent above and, in Chromium-based browsers, the device hints they send with every request). Requests from bots and link previews are not counted. To count a person only once per day, the server briefly forms a pseudonymous code from your account ID or IP address and a key that changes every day. The code and the key are deleted as soon as the day has been counted. What remains are totals that cannot be linked to anyone; we keep them for 25 months. Nothing is stored on or read from your device for this. Lawful basis: our legitimate interest in improving the service (Art. 6(1)(f) GDPR). You can object at any time using the contact details above (Art. 21 GDPR)."
             },
             "accounts": {
                 "title": "Your account",
@@ -670,7 +670,7 @@
             },
             "thirdParties": {
                 "title": "No tracking, no third parties",
-                "body": "We do not use analytics, advertising, social media plugins or tracking, and the app loads no fonts, scripts or other resources from third-party servers. We do not sell your data or use it for profiling or automated decisions with legal or similarly significant effects. The only external services involved are the push service of your browser vendor, if you turn on push notifications, and video platforms you choose to open yourself from a beta video link (see the sections above). Maps are only loaded from OpenFreeMap after you choose to show them (see Maps)."
+                "body": "We do not use third-party analytics, advertising, social media plugins or tracking (we only count usage in aggregate on our own servers, see “Server logs and usage statistics”), and the app loads no fonts, scripts or other resources from third-party servers. We do not sell your data or use it for profiling or automated decisions with legal or similarly significant effects. The only external services involved are the push service of your browser vendor, if you turn on push notifications, and video platforms you choose to open yourself from a beta video link (see the sections above). Maps are only loaded from OpenFreeMap after you choose to show them (see Maps)."
             },
             "storage": {
                 "title": "Cookies and local storage",
@@ -2592,6 +2592,166 @@
             "empty": "No open onboarding links",
             "revoke": "Revoke link",
             "sent": "Onboarding link sent to {email}"
+        },
+        "insights": {
+            "title": "Insights",
+            "kpis": {
+                "active7d": "Active in the last 7 days",
+                "active30d": "Active in the last 30 days",
+                "newAccounts": "New accounts",
+                "activation": "Logged a climb in their first week",
+                "activeGyms": "Gyms with logs this week",
+                "appShare": "Share in the app",
+                "ofGyms": "of {n} gyms"
+            },
+            "activity": {
+                "title": "Activity",
+                "visitors": "Visitors",
+                "climbers": "Climbers logging",
+                "logs": "Logs",
+                "reviews": "Reviews"
+            },
+            "cohorts": {
+                "title": "Retention by signup month",
+                "month": "Signup month",
+                "accounts": "Accounts",
+                "verified": "Verified",
+                "firstLog": "First log within 7 days",
+                "back": "Returned after {n} weeks"
+            },
+            "features": {
+                "title": "Feature usage",
+                "feature": "Feature",
+                "requests": "Requests",
+                "peoplePerDay": "People per day (avg.)",
+                "signedIn": "Signed in",
+                "app": "App"
+            },
+            "preferences": {
+                "title": "Accounts and settings",
+                "accounts": "Accounts",
+                "verified": "Verified",
+                "push": "Push notifications on",
+                "twoFactor": "Two-factor sign-in",
+                "ticksPrivate": "Private logbook",
+                "leaderboardHidden": "Hidden from leaderboards",
+                "reviewsAnonymous": "Anonymous reviews",
+                "languages": "Language",
+                "unset": "Browser language"
+            },
+            "fewPeople": "< 5",
+            "names": {
+                "routes": {
+                    "browse": "Route list",
+                    "detail": "Route page",
+                    "set": "Routes set",
+                    "edit": "Routes edited",
+                    "reset": "Reset planning"
+                },
+                "logbook": {
+                    "view": "Logbook opened",
+                    "log": "Climbs logged"
+                },
+                "reviews": {
+                    "read": "Reviews read",
+                    "write": "Reviews written"
+                },
+                "betas": {
+                    "watch": "Beta videos watched",
+                    "upload": "Beta videos uploaded"
+                },
+                "leaderboard": "Leaderboard",
+                "friends": {
+                    "feed": "Friends feed",
+                    "search": "Climber search",
+                    "follow": "Follow requests"
+                },
+                "profiles": "Climber profiles",
+                "achievements": "Achievements",
+                "competitions": {
+                    "view": "Competition results",
+                    "join": "Competition sign-ups",
+                    "score": "Competition scoring",
+                    "create": "Competitions created"
+                },
+                "defects": {
+                    "view": "Route problems viewed"
+                },
+                "tasks": {
+                    "create": "Tasks and problem reports",
+                    "manage": "Task board"
+                },
+                "map": {
+                    "edit": "Map editor"
+                },
+                "analytics": "Gym analytics",
+                "import": "Review import",
+                "moderation": "Moderation inbox",
+                "reports": "Content reports",
+                "seasons": "Seasons",
+                "notifications": "Notifications opened",
+                "push": {
+                    "subscribe": "Push turned on"
+                },
+                "account": {
+                    "export": "Data exports",
+                    "2fa": "Two-factor set up"
+                },
+                "auth": {
+                    "register": "Sign-ups",
+                    "login": "Password sign-ins",
+                    "passkey": "Passkey sign-ins",
+                    "oauth2": "Provider sign-ins"
+                },
+                "members": {
+                    "invite": "Staff invites"
+                },
+                "walls": {
+                    "follow": "Walls followed"
+                }
+            },
+            "gyms": {
+                "title": "Usage by gym",
+                "gym": "Gym",
+                "logs": "Logs",
+                "climbers": "Climbers logging",
+                "reviews": "Reviews",
+                "routesSet": "Routes set",
+                "lastRouteSet": "Last route set",
+                "tools": "Features in use",
+                "quiet": "Activity dropping",
+                "sortLogs": "Most logs",
+                "sortDrop": "Biggest drop",
+                "features": {
+                    "tasks": "Tasks",
+                    "defects": "Problem reports",
+                    "competitions": "Competitions",
+                    "betas": "Beta videos",
+                    "seasons": "Seasons",
+                    "map": "Map",
+                    "tv": "TV screen"
+                }
+            },
+            "devices": {
+                "title": "Device type",
+                "phone": "Phone",
+                "tablet": "Tablet",
+                "desktop": "Computer",
+                "tv": "TV",
+                "other": "Other",
+                "perDay": "{n} people a day",
+                "panel": "Devices and systems"
+            },
+            "systems": {
+                "title": "Operating system",
+                "android": "Android",
+                "ios": "iOS",
+                "macos": "macOS",
+                "windows": "Windows",
+                "linux": "Linux",
+                "chromeos": "ChromeOS",
+                "other": "Other"
+            }
         }
     },
     "mails": {

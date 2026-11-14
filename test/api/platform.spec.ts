@@ -4,6 +4,7 @@ import {
     deletePlatformUser,
     getMailSettings,
     platformStats,
+    getPlatformInsights,
     getPlatformSystem,
     getPlatformTraffic,
     getPlatformUser,
@@ -271,6 +272,12 @@ describe('platform stats and features', () => {
         api.respond({ range: '7d' })
         expect(await getPlatformTraffic('7d')).toEqual({ range: '7d' })
         expect(api.request().url).toBe('/api/platform/traffic?range=7d')
+    })
+
+    it('loads insights for a range', async () => {
+        api.respond({ range: '90d' })
+        expect(await getPlatformInsights('90d')).toEqual({ range: '90d' })
+        expect(api.request().url).toBe('/api/platform/insights?range=90d')
     })
 
     it('loads the system state', async () => {

@@ -8,10 +8,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -26,10 +28,11 @@ import (
 	"gripello/internal/platform/events"
 	"gripello/internal/platform/ids"
 	platformmail "gripello/internal/platform/mail"
+	"gripello/internal/platform/metrics"
 	pw "gripello/internal/platform/password"
 )
 
-const adminUsage = "usage: gripello admin create-user|set-user|delete-user|create-gym|add-membership|create-notification|show-report|truncate-prefix|restore [flags]"
+const adminUsage = "usage: gripello admin create-user|set-user|delete-user|create-gym|add-membership|create-notification|show-report|truncate-prefix|usage-classes|restore [flags]"
 
 func admin(ctx context.Context, args []string) error {
 	if len(args) == 0 {
@@ -65,6 +68,8 @@ func admin(ctx context.Context, args []string) error {
 		id, err = adminShowReport(ctx, pool, args[1:])
 	case "truncate-prefix":
 		id, err = adminTruncatePrefix(ctx, pool, args[1:])
+	case "usage-classes":
+		id, err = adminUsageClasses(ctx, pool)
 	default:
 		return errors.New(adminUsage)
 	}
@@ -437,4 +442,50 @@ func extractBackup(archive, dump, blobDir string, withStorage bool) error {
 		return errors.New("restore: the archive has no database.dump")
 	}
 	return nil
+}
+
+// adminUsageClasses replays the device and OS classification over the user agents of the stored sessions, so the
+// operator sees what lands in "other" (sessions keep the user agent anyway; client hints aren't stored, so this is
+// the worst case).
+func adminUsageClasses(ctx context.Context, pool *pgxpool.Pool) (string, error) {
+	rows, err := pool.Query(ctx, `SELECT user_agent, count(*) FROM sessions GROUP BY user_agent ORDER BY 2 DESC`)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	classes := map[string]int{}
+	var unknown []string
+	var total int
+	for rows.Next() {
+		var userAgent string
+		var n int
+		if err := rows.Scan(&userAgent, &n); err != nil {
+			return "", err
+		}
+		total += n
+		client := metrics.Client{UserAgent: userAgent}
+		class := "bot"
+		if !client.IsBot() {
+			class = client.Device() + " / " + client.OS()
+			if client.App() {
+				class += " (app)"
+			}
+		}
+		classes[class] += n
+		if !client.IsBot() && (client.Device() == "other" || client.OS() == "other") {
+			unknown = append(unknown, fmt.Sprintf("%6d  %s", n, userAgent))
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	var out strings.Builder
+	fmt.Fprintf(&out, "%d sessions\n", total)
+	for _, class := range slices.Sorted(maps.Keys(classes)) {
+		fmt.Fprintf(&out, "%6d  %5.1f%%  %s\n", classes[class], 100*float64(classes[class])/float64(max(total, 1)), class)
+	}
+	if len(unknown) > 0 {
+		out.WriteString("\nnot recognised:\n" + strings.Join(unknown, "\n"))
+	}
+	return strings.TrimRight(out.String(), "\n"), nil
 }

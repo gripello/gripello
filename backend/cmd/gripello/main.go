@@ -235,6 +235,9 @@ func serve(ctx context.Context, args []string) error {
 	app.Cron.Add("requestStatsPrune", "17 3 * * *", func(ctx context.Context) error {
 		return metrics.Prune(ctx, app.DB)
 	})
+	app.Cron.Add("usageRollup", "CRON_TZ=UTC 15 0 * * *", func(ctx context.Context) error {
+		return metrics.RollupUsage(ctx, app.DB)
+	})
 	app.Cron.Add("serverLogsPrune", "41 * * * *", func(ctx context.Context) error {
 		if err := replicas.Prune(ctx, app.DB); err != nil {
 			return err

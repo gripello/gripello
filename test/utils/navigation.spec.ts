@@ -212,6 +212,7 @@ describe('platform section', () => {
             '/platform/moderation',
             '/platform/gyms',
             '/platform/users',
+            '/platform/insights',
             '/platform/audit',
             '/platform/backups',
             '/platform/logs',
@@ -382,6 +383,7 @@ describe('sidebarSections', () => {
                 '/platform/moderation',
                 '/platform/gyms',
                 '/platform/users',
+                '/platform/insights',
                 '/platform/audit',
                 '/platform/backups',
                 '/platform/logs',
@@ -548,6 +550,7 @@ describe('bottomNavLinks', () => {
     it('keeps More active on the ops pages it lists', () => {
         for (const path of [
             '/platform/more',
+            '/platform/insights',
             '/platform/audit',
             '/platform/backups',
             '/platform/logs',

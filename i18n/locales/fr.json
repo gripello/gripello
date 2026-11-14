@@ -593,8 +593,8 @@
                 "body": "Gripello est une application web utilisée par plusieurs salles d’escalade. Pour les pages d’une salle (voies, avis, signalements, compétitions, classements), le responsable du traitement est la salle ou le club indiqué ci-dessus. Pour les pages communes à toutes les salles (carnet de croix, compte, amis, profils), le responsable est l’exploitant de la plateforme. Toutes les données sont hébergées sur nos propres serveurs dans l’Union européenne. Vous pouvez exercer vos droits auprès de l’un ou l’autre ; nous transmettons votre demande si nécessaire."
             },
             "serverLogs": {
-                "title": "Journaux du serveur",
-                "body": "Lorsque vous accédez à cette application, le serveur traite des données techniques telles que l’adresse IP, la date et l’heure, l’URL demandée et l’agent utilisateur du navigateur afin de fournir la page et de la protéger contre les abus. Base légale : intérêt légitime à assurer le fonctionnement et la sécurité du service (article 6, paragraphe 1, point f), du RGPD). Ces journaux ne sont visibles que par l’équipe technique et sont supprimés automatiquement après une courte durée (7 jours par défaut)."
+                "title": "Journaux du serveur et statistiques d’utilisation",
+                "body": "Lorsque vous accédez à cette application, le serveur traite des données techniques telles que l’adresse IP, la date et l’heure, l’URL demandée et l’agent utilisateur du navigateur afin de fournir la page et de la protéger contre les abus. Base légale : intérêt légitime à assurer le fonctionnement et la sécurité du service (article 6, paragraphe 1, point f), du RGPD). Ces journaux ne sont visibles que par l’équipe technique et sont supprimés automatiquement après une courte durée (7 jours par défaut). Pour savoir quelles parties de l’application sont utilisées et quoi améliorer, nous comptons aussi chaque jour combien de fois chaque fonctionnalité est utilisée : par des personnes connectées ou des invités, dans l’application ou dans un navigateur, et sur quel type d’appareil et quel système d’exploitation (par exemple téléphone ou ordinateur, Android ou Windows, sans numéro de version ; déduit de l’agent utilisateur mentionné ci-dessus et, pour les navigateurs basés sur Chromium, des indications sur l’appareil qu’ils envoient avec chaque requête). Les requêtes de robots et d’aperçus de liens ne sont pas comptées. Pour ne vous compter qu’une fois par jour, le serveur forme brièvement un code pseudonyme à partir de l’identifiant de votre compte ou de votre adresse IP et d’une clé qui change chaque jour. Le code et la clé sont supprimés dès que la journée est comptée. Il ne reste que des totaux qui ne peuvent être rattachés à personne ; nous les conservons 25 mois. Rien n’est enregistré sur votre appareil ni lu depuis celui-ci à cette fin. Base légale : notre intérêt légitime à améliorer le service (article 6, paragraphe 1, point f), du RGPD). Vous pouvez vous y opposer à tout moment via les coordonnées ci-dessus (article 21 du RGPD)."
             },
             "accounts": {
                 "title": "Compte utilisateur",
@@ -670,7 +670,7 @@
             },
             "thirdParties": {
                 "title": "Aucun traçage, aucun tiers",
-                "body": "Cette application n’utilise aucun outil d’analyse, de publicité ni de plugin de réseaux sociaux et ne charge aucune ressource depuis des serveurs tiers. Toutes les données sont traitées sur nos propres serveurs dans l’Union européenne ; un transfert hors de l’UE n’a lieu que si vous activez les notifications push (service push de l’éditeur de votre navigateur) ou ouvrez vous-même un lien de vidéo de bêta (voir les sections ci-dessus). Nous ne vendons ni ne louons vos données et ne prenons aucune décision automatisée produisant des effets juridiques à votre égard. Les cartes ne sont chargées depuis OpenFreeMap que si vous choisissez de les afficher (voir Cartes)."
+                "body": "Cette application n’utilise aucun outil d’analyse, de publicité ni de plugin de réseaux sociaux tiers (nous ne comptons l’utilisation que de manière agrégée sur nos propres serveurs, voir « Journaux du serveur et statistiques d’utilisation ») et ne charge aucune ressource depuis des serveurs tiers. Toutes les données sont traitées sur nos propres serveurs dans l’Union européenne ; un transfert hors de l’UE n’a lieu que si vous activez les notifications push (service push de l’éditeur de votre navigateur) ou ouvrez vous-même un lien de vidéo de bêta (voir les sections ci-dessus). Nous ne vendons ni ne louons vos données et ne prenons aucune décision automatisée produisant des effets juridiques à votre égard. Les cartes ne sont chargées depuis OpenFreeMap que si vous choisissez de les afficher (voir Cartes)."
             },
             "storage": {
                 "title": "Cookies et stockage local",
@@ -2592,6 +2592,166 @@
             "empty": "Aucun lien d’intégration ouvert",
             "revoke": "Révoquer le lien",
             "sent": "Lien d’intégration envoyé à {email}"
+        },
+        "insights": {
+            "title": "Aperçus",
+            "kpis": {
+                "active7d": "Actifs ces 7 derniers jours",
+                "active30d": "Actifs ces 30 derniers jours",
+                "newAccounts": "Nouveaux comptes",
+                "activation": "Une croix la première semaine",
+                "activeGyms": "Salles avec des croix cette semaine",
+                "appShare": "Part dans l’app",
+                "ofGyms": "sur {n} salles"
+            },
+            "activity": {
+                "title": "Activité",
+                "visitors": "Visiteurs",
+                "climbers": "Grimpeurs qui enregistrent",
+                "logs": "Croix",
+                "reviews": "Avis"
+            },
+            "cohorts": {
+                "title": "Fidélisation par mois d’inscription",
+                "month": "Mois d’inscription",
+                "accounts": "Comptes",
+                "verified": "Confirmés",
+                "firstLog": "Première croix sous 7 jours",
+                "back": "Revenus après {n} semaines"
+            },
+            "features": {
+                "title": "Utilisation des fonctionnalités",
+                "feature": "Fonctionnalité",
+                "requests": "Requêtes",
+                "peoplePerDay": "Personnes par jour (moy.)",
+                "signedIn": "Connectés",
+                "app": "App"
+            },
+            "preferences": {
+                "title": "Comptes et réglages",
+                "accounts": "Comptes",
+                "verified": "Confirmés",
+                "push": "Notifications push activées",
+                "twoFactor": "Connexion à deux facteurs",
+                "ticksPrivate": "Carnet privé",
+                "leaderboardHidden": "Masqués des classements",
+                "reviewsAnonymous": "Avis anonymes",
+                "languages": "Langue",
+                "unset": "Langue du navigateur"
+            },
+            "fewPeople": "< 5",
+            "names": {
+                "routes": {
+                    "browse": "Liste des voies",
+                    "detail": "Page d’une voie",
+                    "set": "Voies ouvertes",
+                    "edit": "Voies modifiées",
+                    "reset": "Planification des démontages"
+                },
+                "logbook": {
+                    "view": "Carnet ouvert",
+                    "log": "Croix enregistrées"
+                },
+                "reviews": {
+                    "read": "Avis lus",
+                    "write": "Avis rédigés"
+                },
+                "betas": {
+                    "watch": "Vidéos de beta vues",
+                    "upload": "Vidéos de beta envoyées"
+                },
+                "leaderboard": "Classement",
+                "friends": {
+                    "feed": "Fil des amis",
+                    "search": "Recherche de grimpeurs",
+                    "follow": "Demandes d’abonnement"
+                },
+                "profiles": "Profils de grimpeurs",
+                "achievements": "Succès",
+                "competitions": {
+                    "view": "Résultats de compétition",
+                    "join": "Inscriptions aux compétitions",
+                    "score": "Saisie des scores",
+                    "create": "Compétitions créées"
+                },
+                "defects": {
+                    "view": "Problèmes de voie consultés"
+                },
+                "tasks": {
+                    "create": "Tâches et signalements",
+                    "manage": "Tableau des tâches"
+                },
+                "map": {
+                    "edit": "Éditeur de plan"
+                },
+                "analytics": "Statistiques de la salle",
+                "import": "Import d’avis",
+                "moderation": "Boîte de modération",
+                "reports": "Signalements de contenu",
+                "seasons": "Saisons",
+                "notifications": "Notifications ouvertes",
+                "push": {
+                    "subscribe": "Push activé"
+                },
+                "account": {
+                    "export": "Exports de données",
+                    "2fa": "Deux facteurs configurés"
+                },
+                "auth": {
+                    "register": "Inscriptions",
+                    "login": "Connexions par mot de passe",
+                    "passkey": "Connexions par passkey",
+                    "oauth2": "Connexions via un fournisseur"
+                },
+                "members": {
+                    "invite": "Invitations d’équipe"
+                },
+                "walls": {
+                    "follow": "Murs suivis"
+                }
+            },
+            "gyms": {
+                "title": "Utilisation par salle",
+                "gym": "Salle",
+                "logs": "Croix",
+                "climbers": "Grimpeurs qui enregistrent",
+                "reviews": "Avis",
+                "routesSet": "Voies ouvertes",
+                "lastRouteSet": "Dernière ouverture",
+                "tools": "Fonctionnalités utilisées",
+                "quiet": "Activité en baisse",
+                "sortLogs": "Plus de croix",
+                "sortDrop": "Plus forte baisse",
+                "features": {
+                    "tasks": "Tâches",
+                    "defects": "Signalements de problèmes",
+                    "competitions": "Compétitions",
+                    "betas": "Vidéos de beta",
+                    "seasons": "Saisons",
+                    "map": "Plan",
+                    "tv": "Écran TV"
+                }
+            },
+            "devices": {
+                "title": "Type d’appareil",
+                "phone": "Téléphone",
+                "tablet": "Tablette",
+                "desktop": "Ordinateur",
+                "tv": "Téléviseur",
+                "other": "Autres",
+                "perDay": "{n} personnes par jour",
+                "panel": "Appareils et systèmes"
+            },
+            "systems": {
+                "title": "Système d’exploitation",
+                "android": "Android",
+                "ios": "iOS",
+                "macos": "macOS",
+                "windows": "Windows",
+                "linux": "Linux",
+                "chromeos": "ChromeOS",
+                "other": "Autres"
+            }
         }
     },
     "mails": {
