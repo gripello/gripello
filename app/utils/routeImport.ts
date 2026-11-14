@@ -317,7 +317,9 @@ export function toImportedRoute(
                 : null,
         creator: Array.isArray(creator) ? creator : text('creator'),
         screw_date: parseImportDate(pick('screw_date'), context.locale),
-        comment: (text('comment') ?? '').slice(0, ROUTE_COMMENT_MAX),
+        comment: Array.from(text('comment') ?? '')
+            .slice(0, ROUTE_COMMENT_MAX)
+            .join(''),
         archived: parseImportFlag(pick('archived')),
     }
 }

@@ -161,6 +161,16 @@ describe('route comments on import', () => {
         )
         expect(route.comment).toHaveLength(255)
     })
+
+    it('counts characters, not UTF-16 units, so emoji stay whole', () => {
+        const route = toImportedRoute(
+            { name: 'A', note: '🧗'.repeat(300) },
+            { name: 'name', comment: 'note' },
+            context,
+        )
+        expect(Array.from(route.comment!)).toHaveLength(255)
+        expect(route.comment).toBe('🧗'.repeat(255))
+    })
 })
 
 describe('parseImportDate', () => {
