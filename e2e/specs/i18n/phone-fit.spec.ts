@@ -90,6 +90,7 @@ const PAGES: Record<string, [Viewer, string]> = {
     'platform/backups.vue': ['platform', '/platform/backups'],
     'platform/gyms/index.vue': ['platform', '/platform/gyms'],
     'platform/gyms/[id].vue': ['platform', '/platform/gyms/{gym}'],
+    'platform/insights.vue': ['platform', '/platform/insights'],
     'platform/logs.vue': ['platform', '/platform/logs'],
     'platform/moderation.vue': ['platform', '/platform/moderation'],
     'platform/more.vue': ['platform', '/platform/more'],
