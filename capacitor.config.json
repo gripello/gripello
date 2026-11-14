@@ -4,9 +4,13 @@
     "webDir": "mobile/www",
     "appendUserAgent": "GripelloApp",
     "server": { "url": "https://gripello.app" },
-    "android": { "path": "mobile/android" },
+    "android": {
+        "path": "mobile/android",
+        "appendUserAgent": "GripelloApp/android"
+    },
     "ios": {
         "path": "mobile/ios",
+        "appendUserAgent": "GripelloApp/ios",
         "limitsNavigationsToAppBoundDomains": true
     },
     "plugins": {

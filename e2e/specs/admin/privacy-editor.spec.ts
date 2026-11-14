@@ -55,7 +55,9 @@ test('gym admins move sections and write their own privacy text', async ({
         await expect(page.getByTestId('privacy-custom')).toContainText(
             'We film the entrance of E2E',
         )
-        await expect(headings.nth(3)).toHaveText('Server logs')
+        await expect(headings.nth(3)).toHaveText(
+            'Server logs and usage statistics',
+        )
         await expect(page.getByTestId('privacy-rights')).toBeVisible()
     } finally {
         await updateGym(adminApi, E2E_GYM_SLUG, { privacy_doc: null })

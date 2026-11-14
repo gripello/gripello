@@ -11,9 +11,16 @@ beforeEach(() => {
 })
 
 describe('useApi', () => {
-    it('passes the page request id on while rendering on the server', async () => {
-        vi.stubGlobal('useRequestHeader', (name: string) =>
-            name === 'X-Request-Id' ? 'nginx-req-1' : undefined,
+    it('passes the page request id and device headers on while rendering on the server', async () => {
+        vi.stubGlobal(
+            'useRequestHeader',
+            (name: string) =>
+                ({
+                    'X-Request-Id': 'nginx-req-1',
+                    'user-agent': 'Mozilla/5.0 GripelloApp',
+                    'sec-ch-ua-mobile': '?1',
+                    'sec-ch-ua-platform': '"Android"',
+                })[name],
         )
         vi.stubGlobal('useRequestHeaders', () => ({}))
         process.server = true
@@ -23,8 +30,16 @@ describe('useApi', () => {
             process.server = false
         }
         expect(api.request().headers.get('X-Request-Id')).toBe('nginx-req-1')
+        expect(api.request().headers.get('User-Agent')).toBe(
+            'Mozilla/5.0 GripelloApp',
+        )
+        expect(api.request().headers.get('Sec-CH-UA-Mobile')).toBe('?1')
+        expect(api.request().headers.get('Sec-CH-UA-Platform')).toBe(
+            '"Android"',
+        )
         await useApi()('/settings')
         expect(api.request().headers.has('X-Request-Id')).toBe(false)
+        expect(api.request().headers.has('Sec-CH-UA-Platform')).toBe(false)
     })
 
     it('sends no auth header for guests and includes credentials', async () => {

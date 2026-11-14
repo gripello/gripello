@@ -92,6 +92,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Product usage in aggregate (KPIs, daily series, signup cohorts, feature usage, account preferences). Counts of 1–4 people come back as null. Platform admins only. */
+        get: operations["getPlatformInsights"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/system": {
         parameters: {
             query?: never;
@@ -534,6 +551,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        InsightShare: {
+            key: string;
+            requests: number;
+            people_per_day: number | null;
+        };
+        InsightKpi: {
+            value: number | null;
+            previous: number | null;
+        };
         TrafficTotals: {
             requests?: number;
             client_errors?: number;
@@ -920,6 +946,101 @@ export interface operations {
                         system: {
                             [key: string]: unknown;
                         };
+                    };
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getPlatformInsights: {
+        parameters: {
+            query?: {
+                range?: "30d" | "90d" | "12m";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Insights for the range */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        range: "30d" | "90d" | "12m";
+                        step_days: number;
+                        kpis: {
+                            [key: string]: components["schemas"]["InsightKpi"];
+                        };
+                        series: {
+                            /** Format: date */
+                            day: string;
+                            visitors: number;
+                            /** @description Distinct climbers who logged that day; null for 1–4 */
+                            climbers: number | null;
+                            logs: number;
+                            reviews: number;
+                        }[];
+                        cohorts: {
+                            month: string;
+                            accounts: number | null;
+                            verified: number | null;
+                            /** @description Logged a climb within 7 days of signing up */
+                            first_log: number | null;
+                            /** @description Seen again at least retention_weeks[i] weeks after signing up; null until the whole cohort had that time */
+                            back: (number | null)[];
+                        }[];
+                        retention_weeks: number[];
+                        features: {
+                            feature: string;
+                            requests: number;
+                            previous_requests: number;
+                            people_per_day: number | null;
+                            signed_in_share: number | null;
+                            app_share: number | null;
+                        }[];
+                        preferences: {
+                            accounts: number | null;
+                            verified: number | null;
+                            push_enabled: number | null;
+                            two_factor: number | null;
+                            ticks_private: number | null;
+                            leaderboard_hidden: number | null;
+                            reviews_anonymous: number | null;
+                            languages: {
+                                [key: string]: number | null;
+                            };
+                            follow_policies: {
+                                [key: string]: number | null;
+                            };
+                        };
+                        /** @description Device class from the user agent, most requests first; people_per_day averages the finished days of the range. */
+                        devices: (components["schemas"]["InsightShare"] & {
+                            /** @enum {string} */
+                            key?: "phone" | "tablet" | "desktop" | "tv" | "other";
+                        })[];
+                        /** @description Operating system family from the user agent (no versions), most requests first. */
+                        systems: (components["schemas"]["InsightShare"] & {
+                            /** @enum {string} */
+                            key?: "android" | "ios" | "macos" | "windows" | "linux" | "chromeos" | "other";
+                        })[];
+                        /** @description Active gyms, busiest first. features lists the tools in use: tasks, defects, competitions and betas within the range; seasons, map and tv once set up. */
+                        gyms: {
+                            gym: string;
+                            climbers: number | null;
+                            logs: number;
+                            previous_logs: number;
+                            reviews: number;
+                            routes_set: number;
+                            /** Format: date-time */
+                            last_route_set_at: string | null;
+                            features: ("tasks" | "defects" | "competitions" | "betas" | "seasons" | "map" | "tv")[];
+                        }[];
                     };
                 };
             };

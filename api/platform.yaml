@@ -179,6 +179,107 @@ paths:
                   system: { type: object, additionalProperties: true, description: 'Database, jobs, backup and mail state plus replicas: every server seen within 15 minutes (name, version, role, started, last_seen, online, realtime_clients, memory_bytes, strain: capacity problems of an online replica).' }
         '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
         '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
+  /platform/insights:
+    get:
+      operationId: getPlatformInsights
+      tags: [platform]
+      description: Product usage in aggregate (KPIs, daily series, signup cohorts, feature usage, account preferences). Counts of 1–4 people come back as null. Platform admins only.
+      parameters:
+        - { name: range, in: query, schema: { type: string, enum: ['30d', '90d', '12m'], default: '30d' } }
+      responses:
+        '200':
+          description: Insights for the range
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [range, step_days, kpis, series, cohorts, retention_weeks, features, preferences, gyms, devices, systems]
+                properties:
+                  range: { type: string, enum: ['30d', '90d', '12m'] }
+                  step_days: { type: integer }
+                  kpis:
+                    type: object
+                    required: [active_7d, active_30d, new_accounts, activation_rate, active_gyms, gyms, app_share]
+                    additionalProperties: { $ref: '#/components/schemas/InsightKpi' }
+                  series:
+                    type: array
+                    items:
+                      type: object
+                      required: [day, visitors, climbers, logs, reviews]
+                      properties:
+                        day: { type: string, format: date }
+                        visitors: { type: integer }
+                        climbers: { type: [integer, 'null'], description: 'Distinct climbers who logged that day; null for 1–4' }
+                        logs: { type: integer }
+                        reviews: { type: integer }
+                  cohorts:
+                    type: array
+                    items:
+                      type: object
+                      required: [month, accounts, verified, first_log, back]
+                      properties:
+                        month: { type: string, pattern: '^\d{4}-\d{2}$' }
+                        accounts: { type: [integer, 'null'] }
+                        verified: { type: [integer, 'null'] }
+                        first_log: { type: [integer, 'null'], description: 'Logged a climb within 7 days of signing up' }
+                        back: { type: array, items: { type: [integer, 'null'] }, description: 'Seen again at least retention_weeks[i] weeks after signing up; null until the whole cohort had that time' }
+                  retention_weeks: { type: array, items: { type: integer } }
+                  features:
+                    type: array
+                    items:
+                      type: object
+                      required: [feature, requests, previous_requests, people_per_day, signed_in_share, app_share]
+                      properties:
+                        feature: { type: string }
+                        requests: { type: integer }
+                        previous_requests: { type: integer }
+                        people_per_day: { type: [number, 'null'] }
+                        signed_in_share: { type: [number, 'null'] }
+                        app_share: { type: [number, 'null'] }
+                  preferences:
+                    type: object
+                    required: [accounts, verified, push_enabled, two_factor, ticks_private, leaderboard_hidden, reviews_anonymous, languages, follow_policies]
+                    properties:
+                      accounts: { type: [integer, 'null'] }
+                      verified: { type: [integer, 'null'] }
+                      push_enabled: { type: [integer, 'null'] }
+                      two_factor: { type: [integer, 'null'] }
+                      ticks_private: { type: [integer, 'null'] }
+                      leaderboard_hidden: { type: [integer, 'null'] }
+                      reviews_anonymous: { type: [integer, 'null'] }
+                      languages: { type: object, additionalProperties: { type: [integer, 'null'] } }
+                      follow_policies: { type: object, additionalProperties: { type: [integer, 'null'] } }
+                  devices:
+                    type: array
+                    description: 'Device class from the user agent, most requests first; people_per_day averages the finished days of the range.'
+                    items:
+                      allOf:
+                        - { $ref: '#/components/schemas/InsightShare' }
+                        - { type: object, properties: { key: { type: string, enum: [phone, tablet, desktop, tv, other] } } }
+                  systems:
+                    type: array
+                    description: 'Operating system family from the user agent (no versions), most requests first.'
+                    items:
+                      allOf:
+                        - { $ref: '#/components/schemas/InsightShare' }
+                        - { type: object, properties: { key: { type: string, enum: [android, ios, macos, windows, linux, chromeos, other] } } }
+                  gyms:
+                    type: array
+                    description: 'Active gyms, busiest first. features lists the tools in use: tasks, defects, competitions and betas within the range; seasons, map and tv once set up.'
+                    items:
+                      type: object
+                      required: [gym, climbers, logs, previous_logs, reviews, routes_set, last_route_set_at, features]
+                      properties:
+                        gym: { type: string }
+                        climbers: { type: [integer, 'null'] }
+                        logs: { type: integer }
+                        previous_logs: { type: integer }
+                        reviews: { type: integer }
+                        routes_set: { type: integer }
+                        last_route_set_at: { type: [string, 'null'], format: date-time }
+                        features: { type: array, items: { type: string, enum: [tasks, defects, competitions, betas, seasons, map, tv] } }
+        '401': { $ref: 'shared/error.yaml#/components/responses/Error' }
+        '403': { $ref: 'shared/error.yaml#/components/responses/Error' }
   /platform/system:
     get:
       operationId: getPlatformSystem
@@ -737,6 +838,19 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/PlatformUser' }
   schemas:
+    InsightShare:
+      type: object
+      required: [key, requests, people_per_day]
+      properties:
+        key: { type: string }
+        requests: { type: integer }
+        people_per_day: { type: [number, 'null'] }
+    InsightKpi:
+      type: object
+      required: [value, previous]
+      properties:
+        value: { type: [number, 'null'] }
+        previous: { type: [number, 'null'] }
     TrafficTotals:
       type: object
       properties:

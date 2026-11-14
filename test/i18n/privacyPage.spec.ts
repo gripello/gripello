@@ -36,4 +36,22 @@ describe('privacy page', () => {
             }
         }
     })
+
+    it('states the retention of the usage statistics', () => {
+        const months = Number(
+            readFileSync(
+                'backend/internal/platform/metrics/usage.go',
+                'utf8',
+            ).match(/const UsageRetentionMonths = (\d+)/)?.[1],
+        )
+        expect(months).toBeGreaterThan(0)
+        for (const locale of [en, de, es, fr, nl]) {
+            const stated = [
+                ...locale.legal.privacyPage.serverLogs.body.matchAll(
+                    /(\d+) (?:months|Monate|mois|meses|maanden)/g,
+                ),
+            ].map((match) => Number(match[1]))
+            expect(stated).toEqual([months])
+        }
+    })
 })

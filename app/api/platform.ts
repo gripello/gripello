@@ -6,6 +6,7 @@ import type {
     PlatformUserSort,
 } from '../utils/platformUsers'
 import type { LogFilters } from '../utils/serverLogs'
+import type { operations as PlatformApi } from '../../types/api/platform'
 import { toFormData, useApi } from './client'
 import type { PageQuery, Page } from './client'
 
@@ -261,6 +262,17 @@ export interface PlatformSystem {
 
 export function getPlatformTraffic(range: TrafficRange) {
     return useApi()<PlatformTraffic>('/platform/traffic', { query: { range } })
+}
+
+export type InsightRange = '30d' | '90d' | '12m'
+
+export type PlatformInsights =
+    PlatformApi['getPlatformInsights']['responses']['200']['content']['application/json']
+
+export function getPlatformInsights(range: InsightRange) {
+    return useApi()<PlatformInsights>('/platform/insights', {
+        query: { range },
+    })
 }
 
 export function getPlatformSystem() {

@@ -593,8 +593,8 @@
                 "body": "Gripello is een webapp (ook te installeren als app) die klimhallen voor hun routes gebruiken. Voor de pagina's van een hal is de hierboven genoemde hal of vereniging verantwoordelijk; voor de onderdelen die niet bij één hal horen, zoals je account, logboek, vrienden en klimmersprofielen, is dat de exploitant van het platform. Alle gegevens worden uitsluitend op eigen servers in de Europese Unie opgeslagen. Er worden geen analyse-, advertentie- of socialemediadiensten gebruikt en geen inhoud van externe servers geladen."
             },
             "serverLogs": {
-                "title": "Serverlogbestanden",
-                "body": "Wanneer je deze applicatie opent, verwerkt de server technische gegevens zoals IP-adres, datum en tijd, opgevraagde URL en de user-agent van je browser om de pagina te leveren en misbruik te voorkomen. De grondslag is ons gerechtvaardigd belang bij een veilige en stabiele dienst (art. 6, lid 1, onder f, AVG). Verzoeklogs worden na korte tijd automatisch verwijderd (standaard na 7 dagen). Alleen beheerders van de server hebben toegang."
+                "title": "Serverlogbestanden en gebruiksstatistieken",
+                "body": "Wanneer je deze applicatie opent, verwerkt de server technische gegevens zoals IP-adres, datum en tijd, opgevraagde URL en de user-agent van je browser om de pagina te leveren en misbruik te voorkomen. De grondslag is ons gerechtvaardigd belang bij een veilige en stabiele dienst (art. 6, lid 1, onder f, AVG). Verzoeklogs worden na korte tijd automatisch verwijderd (standaard na 7 dagen). Alleen beheerders van de server hebben toegang. Om te zien welke onderdelen van de app worden gebruikt en wat we kunnen verbeteren, tellen we daarnaast elke dag hoe vaak elke functie wordt gebruikt: ingelogd of als gast, in de app of in een browser, en op welk soort apparaat en besturingssysteem (bijvoorbeeld telefoon of computer, Android of Windows, zonder versienummers; afgeleid uit de hierboven genoemde user-agent en, bij browsers op basis van Chromium, de apparaathints die ze met elk verzoek meesturen). Verzoeken van bots en linkvoorbeelden tellen niet mee. Om je maar één keer per dag te tellen, maakt de server kort een pseudonieme code uit je account-ID of IP-adres en een sleutel die elke dag wisselt. Code en sleutel worden verwijderd zodra de dag is geteld. Wat overblijft zijn totalen die niet tot iemand te herleiden zijn; we bewaren ze 25 maanden. Hiervoor wordt niets op je apparaat opgeslagen of ervan uitgelezen. Grondslag: ons gerechtvaardigd belang bij het verbeteren van de dienst (art. 6, lid 1, onder f, AVG). Je kunt op elk moment bezwaar maken via de contactgegevens hierboven (art. 21 AVG)."
             },
             "accounts": {
                 "title": "Gebruikersaccounts",
@@ -670,7 +670,7 @@
             },
             "thirdParties": {
                 "title": "Geen tracking, geen derden",
-                "body": "Deze applicatie gebruikt geen analyse-, advertentie- of socialemediaplug-ins en laadt geen bronnen van servers van derden. Alle gegevens worden op onze eigen servers in de EU verwerkt en we verkopen geen gegevens. Doorgifte naar derde landen kan alleen plaatsvinden als je pushmeldingen inschakelt (pushdienst van je browserleverancier) of zelf een link naar een bètavideo opent (zie de secties hierboven). Kaarten worden pas van OpenFreeMap geladen als je ervoor kiest ze te tonen (zie Kaarten)."
+                "body": "Deze applicatie gebruikt geen analyse-, advertentie- of socialemediaplug-ins van derden (gebruik tellen we alleen geaggregeerd op onze eigen servers, zie ‘Serverlogbestanden en gebruiksstatistieken’) en laadt geen bronnen van servers van derden. Alle gegevens worden op onze eigen servers in de EU verwerkt en we verkopen geen gegevens. Doorgifte naar derde landen kan alleen plaatsvinden als je pushmeldingen inschakelt (pushdienst van je browserleverancier) of zelf een link naar een bètavideo opent (zie de secties hierboven). Kaarten worden pas van OpenFreeMap geladen als je ervoor kiest ze te tonen (zie Kaarten)."
             },
             "storage": {
                 "title": "Cookies en lokale opslag",
@@ -2592,6 +2592,166 @@
             "empty": "Geen open onboardinglinks",
             "revoke": "Link intrekken",
             "sent": "Onboardinglink verstuurd naar {email}"
+        },
+        "insights": {
+            "title": "Inzichten",
+            "kpis": {
+                "active7d": "Actief in de laatste 7 dagen",
+                "active30d": "Actief in de laatste 30 dagen",
+                "newAccounts": "Nieuwe accounts",
+                "activation": "Klim gelogd in de eerste week",
+                "activeGyms": "Hallen met logs deze week",
+                "appShare": "Aandeel in de app",
+                "ofGyms": "van {n} hallen"
+            },
+            "activity": {
+                "title": "Activiteit",
+                "visitors": "Bezoekers",
+                "climbers": "Klimmers die loggen",
+                "logs": "Logs",
+                "reviews": "Beoordelingen"
+            },
+            "cohorts": {
+                "title": "Behoud per aanmeldmaand",
+                "month": "Aanmeldmaand",
+                "accounts": "Accounts",
+                "verified": "Bevestigd",
+                "firstLog": "Eerste log binnen 7 dagen",
+                "back": "Terug na {n} weken"
+            },
+            "features": {
+                "title": "Gebruik van functies",
+                "feature": "Functie",
+                "requests": "Verzoeken",
+                "peoplePerDay": "Personen per dag (gem.)",
+                "signedIn": "Ingelogd",
+                "app": "App"
+            },
+            "preferences": {
+                "title": "Accounts en instellingen",
+                "accounts": "Accounts",
+                "verified": "Bevestigd",
+                "push": "Pushmeldingen aan",
+                "twoFactor": "Tweestapsaanmelding",
+                "ticksPrivate": "Logboek privé",
+                "leaderboardHidden": "Verborgen in ranglijsten",
+                "reviewsAnonymous": "Anonieme beoordelingen",
+                "languages": "Taal",
+                "unset": "Browsertaal"
+            },
+            "fewPeople": "< 5",
+            "names": {
+                "routes": {
+                    "browse": "Routelijst",
+                    "detail": "Routepagina",
+                    "set": "Routes geschroefd",
+                    "edit": "Routes bewerkt",
+                    "reset": "Ombouwplanning"
+                },
+                "logbook": {
+                    "view": "Logboek geopend",
+                    "log": "Beklimmingen gelogd"
+                },
+                "reviews": {
+                    "read": "Beoordelingen gelezen",
+                    "write": "Beoordelingen geschreven"
+                },
+                "betas": {
+                    "watch": "Bètavideo’s bekeken",
+                    "upload": "Bètavideo’s geüpload"
+                },
+                "leaderboard": "Ranglijst",
+                "friends": {
+                    "feed": "Feed van vrienden",
+                    "search": "Klimmers zoeken",
+                    "follow": "Volgverzoeken"
+                },
+                "profiles": "Klimmersprofielen",
+                "achievements": "Prestaties",
+                "competitions": {
+                    "view": "Wedstrijduitslagen",
+                    "join": "Wedstrijdinschrijvingen",
+                    "score": "Wedstrijdscores",
+                    "create": "Wedstrijden aangemaakt"
+                },
+                "defects": {
+                    "view": "Routeproblemen bekeken"
+                },
+                "tasks": {
+                    "create": "Taken en probleemmeldingen",
+                    "manage": "Takenbord"
+                },
+                "map": {
+                    "edit": "Kaarteditor"
+                },
+                "analytics": "Hallenstatistieken",
+                "import": "Import van beoordelingen",
+                "moderation": "Moderatie-inbox",
+                "reports": "Inhoudsmeldingen",
+                "seasons": "Seizoenen",
+                "notifications": "Meldingen geopend",
+                "push": {
+                    "subscribe": "Push ingeschakeld"
+                },
+                "account": {
+                    "export": "Gegevensexports",
+                    "2fa": "Tweestapsaanmelding ingesteld"
+                },
+                "auth": {
+                    "register": "Aanmeldingen",
+                    "login": "Inloggen met wachtwoord",
+                    "passkey": "Inloggen met passkey",
+                    "oauth2": "Inloggen via provider"
+                },
+                "members": {
+                    "invite": "Uitnodigingen voor medewerkers"
+                },
+                "walls": {
+                    "follow": "Wanden gevolgd"
+                }
+            },
+            "gyms": {
+                "title": "Gebruik per hal",
+                "gym": "Hal",
+                "logs": "Logs",
+                "climbers": "Klimmers die loggen",
+                "reviews": "Beoordelingen",
+                "routesSet": "Routes geschroefd",
+                "lastRouteSet": "Laatst geschroefd",
+                "tools": "Gebruikte functies",
+                "quiet": "Activiteit daalt",
+                "sortLogs": "Meeste logs",
+                "sortDrop": "Grootste daling",
+                "features": {
+                    "tasks": "Taken",
+                    "defects": "Probleemmeldingen",
+                    "competitions": "Wedstrijden",
+                    "betas": "Bètavideo’s",
+                    "seasons": "Seizoenen",
+                    "map": "Kaart",
+                    "tv": "Tv-scherm"
+                }
+            },
+            "devices": {
+                "title": "Soort apparaat",
+                "phone": "Telefoon",
+                "tablet": "Tablet",
+                "desktop": "Computer",
+                "tv": "Tv",
+                "other": "Overig",
+                "perDay": "{n} personen per dag",
+                "panel": "Apparaten en systemen"
+            },
+            "systems": {
+                "title": "Besturingssysteem",
+                "android": "Android",
+                "ios": "iOS",
+                "macos": "macOS",
+                "windows": "Windows",
+                "linux": "Linux",
+                "chromeos": "ChromeOS",
+                "other": "Overig"
+            }
         }
     },
     "mails": {

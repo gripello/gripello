@@ -41,6 +41,7 @@ func Register(app *platform.App) {
 		"GET /platform/stats":                           m.stats,
 		"GET /platform/traffic":                         m.traffic,
 		"GET /platform/system":                          m.system,
+		"GET /platform/insights":                        m.insights,
 		"PUT /platform/gyms/{id}/features":              m.setFeatures,
 		"POST /platform/admins":                         m.addAdmin,
 		"DELETE /platform/admins/{user}":                m.removeAdmin,

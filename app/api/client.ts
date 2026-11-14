@@ -40,6 +40,12 @@ export class ApiError extends Error {
 
 const API_PREFIX = '/api'
 
+const CLIENT_DEVICE_HEADERS = [
+    'user-agent',
+    'sec-ch-ua-mobile',
+    'sec-ch-ua-platform',
+] as const
+
 let manifestUpdateRequested = false
 
 export function apiBaseURL() {
@@ -53,6 +59,13 @@ export function useApi() {
     const requestId = import.meta.server
         ? useRequestHeader(REQUEST_ID_HEADER)
         : undefined
+    // The visitor's own device description, so usage counts don't see the Nuxt server instead.
+    const deviceHeaders = import.meta.server
+        ? CLIENT_DEVICE_HEADERS.flatMap((name) => {
+              const value = useRequestHeader(name)
+              return value ? [[name, value] as const] : []
+          })
+        : []
     return $fetch.create({
         baseURL: apiBaseURL(),
         credentials: 'include',
@@ -64,6 +77,7 @@ export function useApi() {
             if (appVersion && !headers.has(API_VERSION_HEADER))
                 headers.set(API_VERSION_HEADER, appVersion)
             if (requestId) headers.set(REQUEST_ID_HEADER, requestId)
+            for (const [name, value] of deviceHeaders) headers.set(name, value)
             options.headers = headers
         },
         onResponse({ response }) {

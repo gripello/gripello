@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"gripello/internal/platform/db"
@@ -179,5 +180,36 @@ func TestAdminShowReportPrintsTheStoredNotice(t *testing.T) {
 	}
 	if _, err := adminShowReport(ctx, pool, []string{"--id", "missing"}); err == nil {
 		t.Fatal("show-report of an unknown id succeeded")
+	}
+}
+
+func TestUsageClassesReplaysTheClassificationOverSessions(t *testing.T) {
+	pool := testkit.Pool(t)
+	ctx := context.Background()
+	user, err := adminCreateUser(ctx, pool, []string{"--email", "classes@gripello.test", "--password", "E2ePassw0rd!", "--username", "classes"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, userAgent := range []string{
+		"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148",
+		"Mozilla/5.0 (Linux; Android 14) Chrome/130 Mobile Safari/537.36 GripelloApp/android",
+		"curl/8.5.0",
+		"Mystery/1.0",
+	} {
+		if _, err := pool.Exec(ctx, `INSERT INTO sessions (id, "user", user_agent) VALUES ($1, $2, $3)`, ids.New(), user, userAgent); err != nil {
+			t.Fatal(err)
+		}
+	}
+	report, err := adminUsageClasses(ctx, pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"4 sessions", "phone / ios", "phone / android (app)", "bot", "other / other", "not recognised:", "Mystery/1.0"} {
+		if !strings.Contains(report, want) {
+			t.Errorf("report misses %q:\n%s", want, report)
+		}
+	}
+	if strings.Contains(report, "     1  curl") {
+		t.Errorf("bots are not unknown devices:\n%s", report)
 	}
 }

@@ -1099,3 +1099,141 @@ func TestUserFilesAreRemovedWhenClearedOrDeleted(t *testing.T) {
 		t.Error("the deleted user's files are still stored")
 	}
 }
+
+func TestInsightsHideSmallGroupsAndUnfinishedCohortSteps(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	rec := metrics.New(f.app.DB)
+	for i := range 6 {
+		user := f.user(fmt.Sprintf("cohort%d@example.com", i), false)
+		f.exec(`UPDATE users SET created = now() - interval '150 days', language = 'de' WHERE id = $1`, user)
+		if i < 5 {
+			f.exec(`INSERT INTO ticks (id, "user", type, attempts, date, created) VALUES ($1, $2, 'top', 1, current_date - 2, now() - interval '149 days')`, ids.New(), user)
+			f.exec(`INSERT INTO user_last_seen ("user", last_seen) VALUES ($1, now() - interval '1 day')`, user)
+			userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130"
+			if i < 2 {
+				userAgent = "Mozilla/5.0 (Linux; Android 14) Chrome/130 Mobile Safari/537.36 GripelloApp"
+			}
+			rec.Use("POST /api/me/ticks", http.StatusCreated, user, "203.0.113.7", metrics.Client{UserAgent: userAgent})
+		}
+	}
+	f.exec(`INSERT INTO ticks (id, "user", type, attempts, date) VALUES ($1, $2, 'top', 1, current_date - 5)`, ids.New(), f.climber)
+	rec.Use("GET /api/routes/{id}", http.StatusOK, "", "198.51.100.9", metrics.Client{UserAgent: "Mozilla/5.0 (iPhone) Mobile/15E148"})
+	if err := rec.Flush(ctx); err != nil {
+		t.Fatal(err)
+	}
+	f.exec(`UPDATE usage_daily SET day = day - 1`)
+	f.exec(`UPDATE usage_people SET day = day - 1`)
+	if err := metrics.RollupUsage(ctx, f.app.DB); err != nil {
+		t.Fatal(err)
+	}
+
+	f.call("GET", "/platform/insights", "", f.climber, http.StatusForbidden)
+	out := f.call("GET", "/platform/insights?range=30d", "", f.operator, http.StatusOK)
+
+	kpis := out["kpis"].(map[string]any)
+	if v := kpis["active_7d"].(map[string]any)["value"]; v != 7.0 {
+		t.Errorf("active_7d = %v, want the 5 climbers plus the two callers", v)
+	}
+	if v := kpis["new_accounts"].(map[string]any)["value"]; v != 3.0 {
+		t.Errorf("new_accounts = %v, want the 3 fixture accounts", v)
+	}
+	if v := kpis["app_share"].(map[string]any)["value"]; v != 0.4 {
+		t.Errorf("app_share = %v, want 2 of 5 signed-in requests", v)
+	}
+	series := out["series"].([]any)
+	if len(series) != 30 || series[27].(map[string]any)["logs"] != 5.0 || series[27].(map[string]any)["climbers"] != 5.0 {
+		t.Errorf("series = %d points, day -2 = %v", len(series), series[27])
+	}
+	if lone := series[24].(map[string]any); lone["logs"] != 1.0 || lone["climbers"] != nil {
+		t.Errorf("a day with one climber must hide the climber count, got %v", lone)
+	}
+
+	var old, current map[string]any
+	for _, c := range out["cohorts"].([]any) {
+		cohort := c.(map[string]any)
+		switch cohort["month"] {
+		case time.Now().UTC().AddDate(0, 0, -150).Format("2006-01"):
+			old = cohort
+		case time.Now().UTC().Format("2006-01"):
+			current = cohort
+		}
+	}
+	if old == nil || old["accounts"] != 6.0 || old["verified"] != 0.0 || old["first_log"] != 5.0 {
+		t.Fatalf("old cohort = %v", old)
+	}
+	if back := old["back"].([]any); back[0] != 5.0 || back[1] != 5.0 || back[2] != 5.0 {
+		t.Errorf("old cohort back = %v", back)
+	}
+	if current == nil || current["accounts"] != nil || current["first_log"] != nil {
+		t.Errorf("a cohort of 3 must stay hidden, got %v", current)
+	}
+
+	features := map[string]map[string]any{}
+	for _, item := range out["features"].([]any) {
+		feature := item.(map[string]any)
+		features[feature["feature"].(string)] = feature
+	}
+	if logs := features["logbook.log"]; logs == nil || logs["requests"] != 5.0 || logs["people_per_day"] != 5.0 || logs["signed_in_share"] != 1.0 {
+		t.Errorf("logbook.log = %v", logs)
+	}
+	if detail := features["routes.detail"]; detail == nil || detail["people_per_day"] != nil || detail["signed_in_share"] != nil {
+		t.Errorf("one guest must not show up as a count or share: %v", detail)
+	}
+
+	shares := func(list string) map[string]any {
+		out := map[string]any{}
+		for _, item := range f.call("GET", "/platform/insights?range=30d", "", f.operator, http.StatusOK)[list].([]any) {
+			share := item.(map[string]any)
+			out[share["key"].(string)] = share["requests"]
+			if share["people_per_day"] != nil {
+				t.Errorf("%s %s shows %v people a day, fewer than 5 must stay hidden", list, share["key"], share["people_per_day"])
+			}
+		}
+		return out
+	}
+	if devices := shares("devices"); devices["phone"] != 3.0 || devices["desktop"] != 3.0 {
+		t.Errorf("device requests = %v, want 3 phone (2 app + 1 iPhone guest) and 3 desktop", devices)
+	}
+	if systems := shares("systems"); systems["android"] != 2.0 || systems["ios"] != 1.0 || systems["windows"] != 3.0 {
+		t.Errorf("system requests = %v, want 2 android, 1 ios, 3 windows", systems)
+	}
+
+	preferences := out["preferences"].(map[string]any)
+	if languages := preferences["languages"].(map[string]any); languages["de"] != 6.0 || languages[""] != nil {
+		t.Errorf("languages = %v, want de 6 and the 3 unset hidden", languages)
+	}
+}
+
+func TestInsightGymsShowActivityAndToolsButNoStaff(t *testing.T) {
+	f := newFixture(t)
+	route := ids.New()
+	f.exec(`INSERT INTO routes (id, gym, name, grade) VALUES ($1, $2, 'Crimp', '6a')`, route, f.gym)
+	for i := range 6 {
+		user := f.user(fmt.Sprintf("gymclimber%d@example.com", i), false)
+		f.exec(`INSERT INTO ticks (id, "user", route, type, attempts, date) VALUES ($1, $2, $3, 'top', 1, current_date - 1)`, ids.New(), user, route)
+		f.exec(`INSERT INTO ticks (id, "user", route, type, attempts, date) VALUES ($1, $2, $3, 'top', 1, current_date - 40)`, ids.New(), user, route)
+	}
+	now := time.Now()
+	f.exec(`INSERT INTO seasons (id, gym, name, starts_at, ends_at) VALUES ($1, $2, 'Winter', $3, $4)`, ids.New(), f.gym, now, now.AddDate(0, 1, 0))
+	f.exec(`UPDATE gyms SET tv_settings = '{"screens": []}' WHERE id = $1`, f.gym)
+	quiet := ids.New()
+	f.exec(`INSERT INTO gyms (id, slug, name, active) VALUES ($1, 'south', 'South', true)`, quiet)
+	f.exec(`INSERT INTO gyms (id, slug, name, active) VALUES ($1, 'closed', 'Closed', false)`, ids.New())
+
+	gyms := f.call("GET", "/platform/insights?range=30d", "", f.operator, http.StatusOK)["gyms"].([]any)
+	if len(gyms) != 2 {
+		t.Fatalf("gyms = %v, want the two active ones", gyms)
+	}
+	north := gyms[0].(map[string]any)
+	if north["gym"] != f.gym || north["logs"] != 6.0 || north["previous_logs"] != 6.0 || north["climbers"] != 6.0 || north["routes_set"] != 1.0 {
+		t.Errorf("north = %v", north)
+	}
+	if features := fmt.Sprint(north["features"]); features != "[seasons tv]" {
+		t.Errorf("north features = %s", features)
+	}
+	south := gyms[1].(map[string]any)
+	if south["logs"] != 0.0 || south["climbers"] != 0.0 || south["last_route_set_at"] != nil {
+		t.Errorf("south = %v", south)
+	}
+}

@@ -22,6 +22,41 @@ async function reauthenticated(api: Api) {
     return api
 }
 
+test('insights show activity, cohorts and settings for a range', async ({
+    platformPage: page,
+}) => {
+    await gotoSettled(page, '/platform/insights')
+    const accounts = page
+        .getByTestId('platform-insight-newAccounts')
+        .getByTestId('stats-card-value')
+    await expect(accounts).toHaveText(/\d/)
+    await expect(page.getByTestId('platform-insights-chart')).toBeVisible()
+    await expect(page.getByTestId('platform-cohorts')).toBeVisible()
+    await expect(page.getByTestId('platform-insights-devices')).toBeVisible()
+    await expect(
+        page
+            .getByTestId('platform-insights-devices')
+            .locator('[data-testid^="platform-os-"]'),
+    ).not.toHaveCount(0)
+    await expect(page.getByTestId('platform-preference-accounts')).toHaveText(
+        /\d/,
+    )
+
+    const reload = page.waitForResponse(
+        (response) =>
+            response.url().includes('/api/platform/insights?range=12m') &&
+            response.ok(),
+    )
+    await page.getByTestId('platform-insights-range-12m').click()
+    await reload
+    await expect(accounts).toHaveText(/\d/)
+    await expect(
+        page
+            .getByTestId('platform-gym-adoption')
+            .locator('[data-testid^="platform-gym-adoption-"]'),
+    ).not.toHaveCount(0)
+})
+
 test('the overview shows traffic numbers and the busiest endpoints', async ({
     platformPage: page,
 }) => {

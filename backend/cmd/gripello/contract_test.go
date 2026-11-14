@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"gripello/internal/platform/metrics"
 	"gripello/internal/platform/testapp"
 )
 
@@ -60,5 +61,16 @@ func TestResponseCheckCatchesDrift(t *testing.T) {
 	}
 	if err := testapp.CheckResponse(ops[testapp.RouteKey("GET", "/online")], 401, "application/json", []byte(`{"message":"x"}`)); err == nil {
 		t.Error("error body without status and data passed")
+	}
+}
+
+func TestEveryUsageFeatureIsAMountedRoute(t *testing.T) {
+	app := testapp.App(t)
+	mount(app, func() bool { return false })
+	for pattern := range metrics.Features {
+		method, path, _ := strings.Cut(pattern, " ")
+		if !slices.Contains(app.Routes, method+" "+strings.TrimPrefix(path, "/api")) {
+			t.Errorf("metrics.Features counts %s, which is not mounted", pattern)
+		}
 	}
 }

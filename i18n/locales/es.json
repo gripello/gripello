@@ -593,8 +593,8 @@
                 "body": "Gripello es una aplicación web (también instalable como app) que usan los rocódromos para gestionar sus vías. El rocódromo o club indicado arriba es responsable de sus propias páginas; de las partes que no pertenecen a un rocódromo concreto, como tu cuenta, diario, amigos y perfiles de escalador, lo es el operador de la plataforma. Todos los datos se guardan exclusivamente en servidores propios en la Unión Europea. No usamos servicios de analítica, publicidad ni redes sociales, ni cargamos contenido de servidores externos."
             },
             "serverLogs": {
-                "title": "Registros del servidor",
-                "body": "Cuando accedes a esta aplicación, el servidor trata datos técnicos como la dirección IP, la fecha y hora, la URL solicitada y el agente de usuario del navegador para entregar la página y protegerla frente a abusos. Base jurídica: interés legítimo en la seguridad y el funcionamiento del servicio (art. 6, apartado 1, letra f), del RGPD). Los registros de solicitudes se eliminan automáticamente al cabo de poco tiempo (por defecto, 7 días)."
+                "title": "Registros del servidor y estadísticas de uso",
+                "body": "Cuando accedes a esta aplicación, el servidor trata datos técnicos como la dirección IP, la fecha y hora, la URL solicitada y el agente de usuario del navegador para entregar la página y protegerla frente a abusos. Base jurídica: interés legítimo en la seguridad y el funcionamiento del servicio (art. 6, apartado 1, letra f), del RGPD). Los registros de solicitudes se eliminan automáticamente al cabo de poco tiempo (por defecto, 7 días). Para saber qué partes de la app se usan y qué mejorar, también contamos cada día cuántas veces se usa cada función: con sesión iniciada o como invitado, en la app o en un navegador, y en qué tipo de dispositivo y sistema operativo (por ejemplo móvil u ordenador, Android o Windows, sin números de versión; deducido del agente de usuario mencionado arriba y, en los navegadores basados en Chromium, de las indicaciones del dispositivo que envían con cada solicitud). Las solicitudes de bots y vistas previas de enlaces no se cuentan. Para contarte una sola vez al día, el servidor forma brevemente un código seudónimo a partir del ID de tu cuenta o de tu dirección IP y de una clave que cambia cada día. El código y la clave se eliminan en cuanto se ha contado el día. Solo quedan totales que no se pueden vincular a nadie; los conservamos durante 25 meses. Para ello no se guarda ni se lee nada en tu dispositivo. Base jurídica: nuestro interés legítimo en mejorar el servicio (art. 6, apartado 1, letra f), del RGPD). Puedes oponerte en cualquier momento a través de los datos de contacto indicados arriba (art. 21 del RGPD)."
             },
             "accounts": {
                 "title": "Cuentas de usuario",
@@ -670,7 +670,7 @@
             },
             "thirdParties": {
                 "title": "Sin seguimiento ni terceros",
-                "body": "Esta aplicación no utiliza herramientas de análisis, publicidad ni complementos de redes sociales y no carga recursos de servidores de terceros. Todos los datos se tratan en nuestros propios servidores situados en la Unión Europea. Solo puede haber transferencias a terceros países si activas las notificaciones push (servicio push del fabricante del navegador) o abres tú mismo un enlace de vídeo de beta (consulta las secciones anteriores). Los mapas solo se cargan desde OpenFreeMap si eliges mostrarlos (consulta Mapas)."
+                "body": "Esta aplicación no utiliza herramientas de análisis, publicidad ni complementos de redes sociales de terceros (solo contamos el uso de forma agregada en nuestros propios servidores, véase «Registros del servidor y estadísticas de uso») y no carga recursos de servidores de terceros. Todos los datos se tratan en nuestros propios servidores situados en la Unión Europea. Solo puede haber transferencias a terceros países si activas las notificaciones push (servicio push del fabricante del navegador) o abres tú mismo un enlace de vídeo de beta (consulta las secciones anteriores). Los mapas solo se cargan desde OpenFreeMap si eliges mostrarlos (consulta Mapas)."
             },
             "storage": {
                 "title": "Cookies y almacenamiento local",
@@ -2592,6 +2592,166 @@
             "empty": "No hay enlaces de alta abiertos",
             "revoke": "Revocar enlace",
             "sent": "Enlace de alta enviado a {email}"
+        },
+        "insights": {
+            "title": "Información",
+            "kpis": {
+                "active7d": "Activos en los últimos 7 días",
+                "active30d": "Activos en los últimos 30 días",
+                "newAccounts": "Cuentas nuevas",
+                "activation": "Registro en la primera semana",
+                "activeGyms": "Rocódromos con registros esta semana",
+                "appShare": "Cuota en la app",
+                "ofGyms": "de {n} rocódromos"
+            },
+            "activity": {
+                "title": "Actividad",
+                "visitors": "Visitantes",
+                "climbers": "Escaladores que registran",
+                "logs": "Registros",
+                "reviews": "Reseñas"
+            },
+            "cohorts": {
+                "title": "Retención por mes de registro",
+                "month": "Mes de registro",
+                "accounts": "Cuentas",
+                "verified": "Confirmadas",
+                "firstLog": "Primer registro en 7 días",
+                "back": "Vuelven tras {n} semanas"
+            },
+            "features": {
+                "title": "Uso de funciones",
+                "feature": "Función",
+                "requests": "Solicitudes",
+                "peoplePerDay": "Personas por día (media)",
+                "signedIn": "Con sesión",
+                "app": "App"
+            },
+            "preferences": {
+                "title": "Cuentas y ajustes",
+                "accounts": "Cuentas",
+                "verified": "Confirmadas",
+                "push": "Notificaciones push activadas",
+                "twoFactor": "Inicio de sesión en dos pasos",
+                "ticksPrivate": "Diario privado",
+                "leaderboardHidden": "Ocultos en clasificaciones",
+                "reviewsAnonymous": "Reseñas anónimas",
+                "languages": "Idioma",
+                "unset": "Idioma del navegador"
+            },
+            "fewPeople": "< 5",
+            "names": {
+                "routes": {
+                    "browse": "Lista de vías",
+                    "detail": "Página de vía",
+                    "set": "Vías equipadas",
+                    "edit": "Vías editadas",
+                    "reset": "Planificación de desmontajes"
+                },
+                "logbook": {
+                    "view": "Diario abierto",
+                    "log": "Vías registradas"
+                },
+                "reviews": {
+                    "read": "Reseñas leídas",
+                    "write": "Reseñas escritas"
+                },
+                "betas": {
+                    "watch": "Vídeos de beta vistos",
+                    "upload": "Vídeos de beta subidos"
+                },
+                "leaderboard": "Clasificación",
+                "friends": {
+                    "feed": "Actividad de amigos",
+                    "search": "Búsqueda de escaladores",
+                    "follow": "Solicitudes de seguimiento"
+                },
+                "profiles": "Perfiles de escaladores",
+                "achievements": "Logros",
+                "competitions": {
+                    "view": "Resultados de competiciones",
+                    "join": "Inscripciones a competiciones",
+                    "score": "Puntuación de competiciones",
+                    "create": "Competiciones creadas"
+                },
+                "defects": {
+                    "view": "Problemas de vías consultados"
+                },
+                "tasks": {
+                    "create": "Tareas y avisos de problemas",
+                    "manage": "Tablero de tareas"
+                },
+                "map": {
+                    "edit": "Editor del plano"
+                },
+                "analytics": "Estadísticas del rocódromo",
+                "import": "Importación de reseñas",
+                "moderation": "Bandeja de moderación",
+                "reports": "Denuncias de contenido",
+                "seasons": "Temporadas",
+                "notifications": "Notificaciones abiertas",
+                "push": {
+                    "subscribe": "Push activado"
+                },
+                "account": {
+                    "export": "Exportaciones de datos",
+                    "2fa": "Dos pasos configurado"
+                },
+                "auth": {
+                    "register": "Registros de cuenta",
+                    "login": "Accesos con contraseña",
+                    "passkey": "Accesos con passkey",
+                    "oauth2": "Accesos con proveedor"
+                },
+                "members": {
+                    "invite": "Invitaciones al equipo"
+                },
+                "walls": {
+                    "follow": "Muros seguidos"
+                }
+            },
+            "gyms": {
+                "title": "Uso por rocódromo",
+                "gym": "Rocódromo",
+                "logs": "Registros",
+                "climbers": "Escaladores que registran",
+                "reviews": "Reseñas",
+                "routesSet": "Vías equipadas",
+                "lastRouteSet": "Última vía equipada",
+                "tools": "Funciones en uso",
+                "quiet": "Actividad en descenso",
+                "sortLogs": "Más registros",
+                "sortDrop": "Mayor caída",
+                "features": {
+                    "tasks": "Tareas",
+                    "defects": "Avisos de problemas",
+                    "competitions": "Competiciones",
+                    "betas": "Vídeos de beta",
+                    "seasons": "Temporadas",
+                    "map": "Plano",
+                    "tv": "Pantalla de TV"
+                }
+            },
+            "devices": {
+                "title": "Tipo de dispositivo",
+                "phone": "Móvil",
+                "tablet": "Tableta",
+                "desktop": "Ordenador",
+                "tv": "Televisor",
+                "other": "Otros",
+                "perDay": "{n} personas al día",
+                "panel": "Dispositivos y sistemas"
+            },
+            "systems": {
+                "title": "Sistema operativo",
+                "android": "Android",
+                "ios": "iOS",
+                "macos": "macOS",
+                "windows": "Windows",
+                "linux": "Linux",
+                "chromeos": "ChromeOS",
+                "other": "Otros"
+            }
         }
     },
     "mails": {

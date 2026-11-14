@@ -105,6 +105,12 @@ export const PLATFORM_LINKS: NavLink[] = [
         permission: PLATFORM_ADMIN,
     },
     {
+        to: '/platform/insights',
+        icon: 'i-lucide-chart-no-axes-combined',
+        label: 'platform.insights.title',
+        permission: PLATFORM_ADMIN,
+    },
+    {
         to: '/platform/audit',
         icon: 'i-lucide-clipboard-clock',
         label: 'audit.title',
