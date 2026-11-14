@@ -2203,9 +2203,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@maplibre/maplibre-gl-style-spec@npm:^26.4.4":
-  version: 26.4.4
-  resolution: "@maplibre/maplibre-gl-style-spec@npm:26.4.4"
+"@maplibre/maplibre-gl-style-spec@npm:^26.5.1":
+  version: 26.6.0
+  resolution: "@maplibre/maplibre-gl-style-spec@npm:26.6.0"
   dependencies:
     "@mapbox/jsonlint-lines-primitives": "npm:^2.0.3"
     "@mapbox/unitbezier": "npm:^1.0.0"
@@ -2217,7 +2217,7 @@ __metadata:
     gl-style-format: dist/gl-style-format.mjs
     gl-style-migrate: dist/gl-style-migrate.mjs
     gl-style-validate: dist/gl-style-validate.mjs
-  checksum: 10c0/a5af3e5c7e7b3ab5c427d9e51a9b5ba54981faeee9c46085fa765a043947cf327514e39e28ff488b5812620961ad315f0080acb1cdb940e626c7ba0d72f24651
+  checksum: 10c0/e304a9d0df81b82c11c07d467a0b081f52ae80dac3bde2b2375d2b61ee2d2b9340584685fb6fc41024a76bf7d2a736f890c6f63f39116a3eb361eb494cae44b2
   languageName: node
   linkType: hard
 
@@ -6375,23 +6375,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cap-widget@npm:^0.1.58":
-  version: 0.1.58
-  resolution: "cap-widget@npm:0.1.58"
-  checksum: 10c0/28f8bd6c35f678faa3a029a6788abf1335bde05a1cbe27afe9c40d0451daf0603bcd2e368fa35c54d349a3bfddebc44114d678c5b5547bfb86218f1a1a07c86f
+"cap-widget@npm:^0.1.62":
+  version: 0.1.62
+  resolution: "cap-widget@npm:0.1.62"
+  checksum: 10c0/93170a88be16df0b490b1f729d80f6ba58e42977785f4bd539db1438dbd211870005c6284b46a07f43b364affb1cd1d5c76ec9982f081a557a433bf7f0d658ce
   languageName: node
   linkType: hard
 
-"capjs-core@npm:^0.1.6":
-  version: 0.1.6
-  resolution: "capjs-core@npm:0.1.6"
+"capjs-core@npm:^0.1.14":
+  version: 0.1.14
+  resolution: "capjs-core@npm:0.1.14"
   dependencies:
     esbuild: "npm:^0.28.0"
     javascript-obfuscator: "npm:^4.2.2"
   dependenciesMeta:
     javascript-obfuscator:
       optional: true
-  checksum: 10c0/340c00e983eb933d28b1cedd598b7641bd977a63e6c5f6eb66f6b9e82aea4784d9e0fb83fa357d0da9e913bb3fa1067bbc5f1e7eca84b850a1e0b1e23635f68b
+  checksum: 10c0/8c8c58604af02afc6a4508766843922403f309afc149535e4db114b2c628070ee2930fd8dae2e53e32b9516b6a43f440437b07832ea4833aa5ec6a35b1deb90c
   languageName: node
   linkType: hard
 
@@ -6641,9 +6641,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"concurrently@npm:10.0.6":
-  version: 10.0.6
-  resolution: "concurrently@npm:10.0.6"
+"concurrently@npm:10.0.7":
+  version: 10.0.7
+  resolution: "concurrently@npm:10.0.7"
   dependencies:
     chalk: "npm:5.6.2"
     rxjs: "npm:7.8.2"
@@ -6654,7 +6654,7 @@ __metadata:
   bin:
     conc: dist/bin/index.js
     concurrently: dist/bin/index.js
-  checksum: 10c0/08b03d53f81c0e159ac92f80005a04ed9c970b6ed4875e99fbf27f4a2f3ae142b83a76cc30580c8c9f4d75942b501cba2c6f8ae433709e045efbaa5f8faeb743
+  checksum: 10c0/f6656fb26c8ee3c4b924c5a62ca9d762220bd3c9c3b43fc75a7014a6c97cc994ed88371a7075d80a0b1b06daf1719a4d7ddd61e4df7fc2f4dabe16e2ace284e4
   languageName: node
   linkType: hard
 
@@ -8469,13 +8469,13 @@ __metadata:
     "@vitejs/plugin-vue": "npm:6.0.10"
     "@vue/test-utils": "npm:2.5.1"
     "@vueuse/core": "npm:15.0.0"
-    cap-widget: "npm:^0.1.58"
-    capjs-core: "npm:^0.1.6"
-    concurrently: "npm:10.0.6"
+    cap-widget: "npm:^0.1.62"
+    capjs-core: "npm:^0.1.14"
+    concurrently: "npm:10.0.7"
     echarts: "npm:6.1.0"
     h3: "npm:1.15.11"
     happy-dom: "npm:21.0.4"
-    maplibre-gl: "npm:^6.16.0"
+    maplibre-gl: "npm:^6.17.0"
     nuxt: "npm:^4.6.4"
     pako: "npm:^3.0.3"
     pdfkit: "npm:0.20.2"
@@ -9807,16 +9807,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"maplibre-gl@npm:^6.16.0":
-  version: 6.16.0
-  resolution: "maplibre-gl@npm:6.16.0"
+"maplibre-gl@npm:^6.17.0":
+  version: 6.17.0
+  resolution: "maplibre-gl@npm:6.17.0"
   dependencies:
     "@mapbox/point-geometry": "npm:^1.1.0"
     "@mapbox/tiny-sdf": "npm:^2.3.0"
     "@mapbox/unitbezier": "npm:^1.0.0"
     "@mapbox/vector-tile": "npm:^3.0.0"
     "@maplibre/geojson-vt": "npm:^6.3.0"
-    "@maplibre/maplibre-gl-style-spec": "npm:^26.4.4"
+    "@maplibre/maplibre-gl-style-spec": "npm:^26.5.1"
     "@maplibre/mlt": "npm:^1.3.0"
     "@maplibre/vt-pbf": "npm:^4.3.3"
     "@types/geojson": "npm:^7946.0.16"
@@ -9829,7 +9829,7 @@ __metadata:
     potpack: "npm:^2.1.0"
     quickselect: "npm:^3.0.0"
     tinyqueue: "npm:^3.0.0"
-  checksum: 10c0/7230677a8f053bedf7f23eb0922911698d842cd34e7098c7d26d78f4cb652d4cc801447dadf18d320976b237a448712ec0e9d2434f233e22b6e837f57fb323b6
+  checksum: 10c0/b9d8d2628a75b2468168d053ec7e41ea147ded26547e8e826e4bfb1d7b37ff10c1df6aa9144b6dc778305d619731751c6bcec3553ccbb93ceeef9fd347ac35cb
   languageName: node
   linkType: hard
 
