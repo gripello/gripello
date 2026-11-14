@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
     createReporter,
@@ -107,5 +109,24 @@ describe('reportCaughtError', () => {
         expect(consoleError).toHaveBeenCalledWith(error)
         consoleError.mockRestore()
         vi.unstubAllGlobals()
+    })
+})
+
+describe('caught app faults', () => {
+    it('reach the error log instead of only the console', () => {
+        for (const file of [
+            'composables/usePushSubscription.ts',
+            'composables/usePushOffer.ts',
+            'plugins/service-worker.client.ts',
+        ]) {
+            const source = readFileSync(
+                path.resolve(import.meta.dirname, '../../app', file),
+                'utf8',
+            )
+            expect(source).toContain('reportCaughtError')
+            expect(source).not.toMatch(
+                /console\.error\('(Failed to load notification settings|Storing the new FCM token failed|Push offer failed|Service worker registration failed)/,
+            )
+        }
     })
 })

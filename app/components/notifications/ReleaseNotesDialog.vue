@@ -135,31 +135,14 @@
                 </div>
 
                 <template v-if="release.changes.length">
-                    <div class="mb-2 flex flex-wrap gap-2">
-                        <UButton
-                            v-for="filter in filters"
-                            :key="filter.value"
-                            size="sm"
-                            :color="
-                                category === filter.value
-                                    ? 'primary'
-                                    : 'neutral'
-                            "
-                            :variant="
-                                category === filter.value ? 'soft' : 'outline'
-                            "
-                            :aria-pressed="category === filter.value"
-                            :data-testid="`release-notes-filter-${filter.value}`"
-                            @click="category = filter.value"
-                        >
-                            {{
-                                $t(
-                                    `notifications.releaseNotes.filters.${filter.value}`,
-                                )
-                            }}
-                            <span class="filter-count">{{ filter.count }}</span>
-                        </UButton>
-                    </div>
+                    <OptionGrid
+                        v-model="category"
+                        :items="filterItems"
+                        :label="$t('notifications.releaseNotes.filterLabel')"
+                        cols="grid-cols-2 sm:grid-cols-5"
+                        test-id-prefix="release-notes-filter"
+                        class="mb-2"
+                    />
 
                     <div
                         v-for="(change, index) in visibleChanges"
@@ -252,7 +235,7 @@ const props = withDefaults(
     { commits: () => [], repoUrl: null },
 )
 
-const { locale } = useI18n()
+const { t, locale } = useI18n()
 const dialog = defineModel<boolean>('open', { default: false })
 const category = ref<'all' | ChangeCategory>('all')
 
@@ -265,6 +248,12 @@ const parsedCommits = computed(() =>
     })),
 )
 
+const filterItems = computed(() =>
+    filters.value.map((filter) => ({
+        value: filter.value,
+        label: `${t(`notifications.releaseNotes.filters.${filter.value}`)} ${filter.count}`,
+    })),
+)
 const filters = computed(() => {
     const count = (value: ChangeCategory) =>
         release.value.changes.filter((change) => change.category === value)
@@ -313,12 +302,6 @@ const changelog = computed(() =>
     font-size: 13px;
     color: var(--ui-text-toned);
     word-break: break-word;
-}
-
-.filter-count {
-    margin-left: 6px;
-    opacity: 0.6;
-    font-size: 0.75em;
 }
 
 .change-row {

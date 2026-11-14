@@ -30,6 +30,8 @@
                     :min="1900"
                     :max="currentYear"
                     :format-options="{ useGrouping: false }"
+                    :increment="false"
+                    :decrement="false"
                     class="w-full"
                     :data-testid="`competition-category-min-${index}`"
                 />
@@ -40,6 +42,8 @@
                     :min="1900"
                     :max="currentYear"
                     :format-options="{ useGrouping: false }"
+                    :increment="false"
+                    :decrement="false"
                     class="w-full"
                     :data-testid="`competition-category-max-${index}`"
                 />

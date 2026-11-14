@@ -8,27 +8,35 @@
         <LayoutLoadingState v-else-if="!achievements.length && pending" />
         <template v-else>
             <div v-if="weeks" class="mb-6 grid grid-cols-2 gap-3">
-                <div
+                <LayoutPanel
                     v-for="tile in streakTiles"
                     :key="tile.key"
-                    class="flex items-center gap-3 rounded-lg bg-default p-4 ring ring-default"
+                    as="div"
                     :data-testid="`streak-${tile.key}`"
                 >
-                    <UIcon
-                        :name="tile.icon"
-                        class="size-8 shrink-0 text-warning"
-                    />
-                    <div>
-                        <div
-                            class="text-2xl font-black text-highlighted tabular-nums"
-                        >
-                            {{
-                                t('badges.weeks', { n: tile.value }, tile.value)
-                            }}
+                    <div class="flex items-center gap-3">
+                        <UIcon
+                            :name="tile.icon"
+                            class="size-8 shrink-0 text-warning"
+                        />
+                        <div>
+                            <div
+                                class="text-2xl font-black text-highlighted tabular-nums"
+                            >
+                                {{
+                                    t(
+                                        'badges.weeks',
+                                        { n: tile.value },
+                                        tile.value,
+                                    )
+                                }}
+                            </div>
+                            <div class="text-sm text-muted">
+                                {{ tile.label }}
+                            </div>
                         </div>
-                        <div class="text-sm text-muted">{{ tile.label }}</div>
                     </div>
-                </div>
+                </LayoutPanel>
             </div>
 
             <section

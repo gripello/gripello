@@ -101,7 +101,7 @@ describe('MapSheet on phones', () => {
             return during
         }
         const handle = () => wrapper.get('[data-testid="map-sheet-handle"]')
-        return { wrapper, sheet, drag, handle }
+        return { wrapper, sheet, drag, handle, pointer }
     }
 
     const covers = (wrapper: VueWrapper) =>
@@ -139,6 +139,31 @@ describe('MapSheet on phones', () => {
         await wrapper.setProps({ snap: 'half' })
         expect(await drag(400, -2000, 30000)).toContain('height: 792px')
         expect(wrapper.emitted('update:snap')?.at(-1)).toEqual(['full'])
+    })
+
+    it('drops its window listeners when it unmounts mid-drag', async () => {
+        const { wrapper, pointer } = await mountSheet()
+        const removed = vi.spyOn(window, 'removeEventListener')
+        pointer('pointerdown', 700, 0)
+        wrapper.unmount()
+        expect(removed.mock.calls.map(([type]) => type)).toEqual(
+            expect.arrayContaining([
+                'pointermove',
+                'pointerup',
+                'pointercancel',
+            ]),
+        )
+        removed.mockRestore()
+    })
+
+    it('ends the running drag when a second one starts', async () => {
+        const { sheet, pointer } = await mountSheet()
+        pointer('pointerdown', 700, 0)
+        pointer('pointerdown', 700, 10)
+        pointer('pointerup', 700, 20)
+        pointer('pointermove', 300, 30)
+        await nextTick()
+        expect(sheet.attributes('style')).toContain('height: 64px')
     })
 
     it('moves one step on a flick, however short', async () => {

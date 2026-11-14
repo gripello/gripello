@@ -20,20 +20,13 @@
                               )
                     }}
                 </div>
-                <nav class="heatmap-years">
-                    <UButton
-                        v-for="year in availableYears"
-                        :key="year"
-                        size="sm"
-                        :color="year === selectedYear ? 'primary' : 'neutral'"
-                        :variant="year === selectedYear ? 'solid' : 'ghost'"
-                        :aria-pressed="year === selectedYear"
-                        :data-testid="`analytics-heatmap-year-${year}`"
-                        @click="selectedYear = year"
-                    >
-                        {{ year }}
-                    </UButton>
-                </nav>
+                <SegmentedControl
+                    :model-value="String(selectedYear)"
+                    :items="yearItems"
+                    size="sm"
+                    test-id="analytics-heatmap-year"
+                    @update:model-value="selectedYear = Number($event)"
+                />
             </div>
             <div class="heatmap-box">
                 <div
@@ -143,6 +136,12 @@ const countByDay = computed(
     () => new Map(props.timeline.map((item) => [item.period, item.count])),
 )
 
+const yearItems = computed(() =>
+    availableYears.value.map((year) => ({
+        value: String(year),
+        label: String(year),
+    })),
+)
 const availableYears = computed(() => {
     const years = new Set([currentYear])
     for (const item of props.timeline)
@@ -393,12 +392,6 @@ function showCellTooltip(event: MouseEvent) {
 
 .heatmap-legend span:last-child {
     margin-left: 4px;
-}
-
-.heatmap-years {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
 }
 
 .heatmap-tooltip {

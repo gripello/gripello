@@ -33,23 +33,14 @@
         <div class="flex flex-col gap-2">
             <LayoutEyebrow>{{ t('resets.date') }}</LayoutEyebrow>
             <div class="flex flex-wrap gap-2">
-                <UButton
-                    v-for="weeks in [1, 2, 4]"
-                    :key="weeks"
-                    size="sm"
-                    class="rounded-full"
-                    :color="
-                        plannedFor === inWeeks(weeks) ? 'primary' : 'neutral'
-                    "
-                    :variant="
-                        plannedFor === inWeeks(weeks) ? 'soft' : 'outline'
-                    "
-                    :aria-pressed="plannedFor === inWeeks(weeks)"
-                    :data-testid="`reset-in-${weeks}w`"
-                    @click="plannedFor = inWeeks(weeks)"
-                >
-                    {{ t('resets.inWeeks', weeks) }}
-                </UButton>
+                <OptionGrid
+                    v-model="plannedFor"
+                    :items="weekOptions"
+                    :label="t('resets.date')"
+                    cols="grid-cols-3"
+                    test-id-prefix="reset-in"
+                    class="w-full sm:w-auto"
+                />
                 <UInput
                     v-model="plannedFor"
                     type="date"
@@ -214,6 +205,13 @@ const { pending, run } = useAsyncAction()
 
 const selected = ref(new Set<string>())
 const plannedFor = ref('')
+const weekOptions = computed(() =>
+    [1, 2, 4].map((weeks) => ({
+        value: inWeeks(weeks),
+        label: t('resets.inWeeks', weeks),
+        id: `${weeks}w`,
+    })),
+)
 const doneOpen = ref(false)
 const today = computed(() => inWeeks(0, props.now))
 

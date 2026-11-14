@@ -44,8 +44,8 @@
             <li
                 v-for="entry in visibleEntries"
                 :key="entry.id"
-                class="flex flex-wrap items-center gap-3 rounded-lg bg-default p-3 ring ring-default"
-                :class="{ 'opacity-60': isInactive(entry) }"
+                class="flex flex-wrap items-center gap-3 rounded-lg p-3 ring ring-default"
+                :class="isInactive(entry) ? 'bg-muted' : 'bg-default'"
                 :data-testid="`competition-entry-${entry.bib}`"
             >
                 <div

@@ -59,6 +59,7 @@
                             color="neutral"
                             variant="link"
                             size="xs"
+                            class="icon-btn"
                             :aria-label="t('filter.clear')"
                             data-testid="moderation-author-clear"
                             @click="authorFilter = null"

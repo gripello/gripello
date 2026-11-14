@@ -1,6 +1,7 @@
 <template>
-    <article
-        class="flex flex-col overflow-hidden rounded-lg bg-default ring ring-default"
+    <LayoutPanel
+        as="article"
+        flush
         :data-testid="`moderation-detail-${item.id}`"
     >
         <header
@@ -212,7 +213,7 @@
                 {{ t(actionLabelKey(item, action)) }}
             </UButton>
         </footer>
-    </article>
+    </LayoutPanel>
 </template>
 
 <script setup lang="ts">

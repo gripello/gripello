@@ -513,6 +513,7 @@
             "viewOnGithub": "Bekijken op GitHub",
             "fullChangelog": "Volledige changelog",
             "breaking": "breaking change",
+            "filterLabel": "Wijzigingen tonen",
             "filters": {
                 "all": "Alle",
                 "feat": "Functies",

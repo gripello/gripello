@@ -81,6 +81,7 @@
                                 color="neutral"
                                 variant="link"
                                 size="xs"
+                                class="icon-btn"
                                 :aria-label="`${$t('actions.delete')} ${previous}`"
                                 :data-testid="`platform-gym-release-${previous}`"
                                 @click="releaseSlug(previous)"

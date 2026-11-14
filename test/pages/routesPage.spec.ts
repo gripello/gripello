@@ -119,3 +119,11 @@ describe('routes page infinite scroll', () => {
         )
     })
 })
+
+describe('routes page cards', () => {
+    it('fills tablet width with two card columns', () => {
+        expect(source).toMatch(
+            /class="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2"\s+data-testid="index-cards"/,
+        )
+    })
+})

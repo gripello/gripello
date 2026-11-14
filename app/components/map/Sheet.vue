@@ -61,6 +61,8 @@
 </template>
 
 <script setup lang="ts">
+import { useEventListener, useResizeObserver } from '@vueuse/core'
+
 export type SheetSnap = 'peek' | 'half' | 'full'
 
 defineOptions({ inheritAttrs: false })
@@ -120,6 +122,7 @@ function nearestSnap(visible: number, velocity: number): SheetSnap {
 }
 
 function onDragStart(event: PointerEvent) {
+    stopDrag()
     if (event.button !== 0) return
     const startY = event.clientY
     const startHeight = visibleHeights.value[snap.value]
@@ -142,17 +145,23 @@ function onDragStart(event: PointerEvent) {
         )
     }
     const end = () => {
-        window.removeEventListener('pointermove', move)
-        window.removeEventListener('pointerup', end)
-        window.removeEventListener('pointercancel', end)
+        stopDrag()
         if (dragHeight.value !== null)
             snap.value = nearestSnap(dragHeight.value, velocity)
         dragHeight.value = null
     }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', end)
-    window.addEventListener('pointercancel', end)
+    const stops = [
+        useEventListener(window, 'pointermove', move),
+        useEventListener(window, ['pointerup', 'pointercancel'], end),
+    ]
+    stopDrag = () => {
+        stops.forEach((stop) => stop())
+        stopDrag = () => {}
+    }
 }
+
+let stopDrag = () => {}
+onBeforeUnmount(() => stopDrag())
 
 function onGripClick(event: MouseEvent) {
     if (!dragged) return
@@ -161,24 +170,11 @@ function onGripClick(event: MouseEvent) {
     event.preventDefault()
 }
 
-let resizeObserver: ResizeObserver | null = null
-
-function observe() {
-    resizeObserver?.disconnect()
-    const sheet = sheetRef.value
-    const container = sheet?.parentElement
-    if (!sheet || !container || !gripRef.value) return
-    resizeObserver = new ResizeObserver(() => {
-        containerHeight.value = container.clientHeight
-        peekHeight.value = gripRef.value?.offsetHeight ?? peekHeight.value
-    })
-    resizeObserver.observe(container)
-    resizeObserver.observe(gripRef.value)
-}
-
-watch(sheetRef, () => nextTick(observe))
-onMounted(observe)
-onBeforeUnmount(() => resizeObserver?.disconnect())
+const container = computed(() => sheetRef.value?.parentElement ?? null)
+useResizeObserver([container, gripRef], () => {
+    if (container.value) containerHeight.value = container.value.clientHeight
+    peekHeight.value = gripRef.value?.offsetHeight ?? peekHeight.value
+})
 </script>
 
 <style scoped>

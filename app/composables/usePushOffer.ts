@@ -1,3 +1,4 @@
+import { reportCaughtError } from '~/utils/clientErrors'
 import type { PluginListenerHandle } from '@capacitor/core'
 import type { PushSubscriptionRecord } from '~/types/models'
 import {
@@ -41,7 +42,7 @@ function followFcmToken(
             onEndpoint?.(token)
             await deletePushSubscription(replaced.id).catch(() => null)
         } catch (error) {
-            console.error('Storing the new FCM token failed:', error)
+            reportCaughtError(error)
         }
     })
 }
@@ -134,7 +135,7 @@ export function usePushOffer() {
 
     onMounted(() => {
         if (!authStore.isValid) return
-        load().catch((err) => console.error('Push offer failed:', err))
+        load().catch(reportCaughtError)
     })
 
     return { offered, turnOn }
