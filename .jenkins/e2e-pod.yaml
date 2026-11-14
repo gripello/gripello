@@ -1,0 +1,94 @@
+# Merged onto the k8s-s pod template; the Jenkinsfile puts in the pushed app image by digest and compose:<service> from e2e/docker-compose.e2e.yml.
+# One network namespace: the compose service names resolve to localhost.
+spec:
+  hostAliases:
+  - ip: 127.0.0.1
+    hostnames: [postgres, mailpit, vg.test]
+  imagePullSecrets:
+  - name: ghcr
+  securityContext:
+    sysctls:
+    # nginx binds :443 as uid 1000; no_new_privs ignores its file capability
+    - { name: net.ipv4.ip_unprivileged_port_start, value: "0" }
+  volumes:
+  - { name: pgdata, emptyDir: { medium: Memory } }
+  - { name: pg-shm, emptyDir: { medium: Memory, sizeLimit: 256Mi } }
+  - { name: browser-shm, emptyDir: { medium: Memory, sizeLimit: 1Gi } }
+  - { name: ssl, emptyDir: {} }
+  - { name: gripello-bin, emptyDir: {} }
+  containers:
+  - name: postgres
+    image: compose:postgres
+    env:
+    - { name: POSTGRES_PASSWORD, value: e2e }
+    - { name: POSTGRES_DB, value: gripello }
+    securityContext:
+      runAsUser: 70
+      runAsGroup: 70
+      allowPrivilegeEscalation: false
+      capabilities: { drop: [ALL] }
+    resources:
+      requests: { cpu: 500m, memory: 512Mi }
+      limits: { memory: 2Gi }
+    volumeMounts:
+    - { name: pgdata, mountPath: /var/lib/postgresql }
+    - { name: pg-shm, mountPath: /dev/shm }
+  - name: mailpit
+    image: compose:mailpit
+    env:
+    - { name: MP_SMTP_AUTH_ACCEPT_ANY, value: "1" }
+    - { name: MP_SMTP_AUTH_ALLOW_INSECURE, value: "1" }
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities: { drop: [ALL] }
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { memory: 256Mi }
+  - name: app
+    image: APP_IMAGE
+    # Restart policy is Never: wait for postgres instead of exiting; the e2e runner calls the gripello CLI.
+    command: [sh, -c, 'cp /app/bin/gripello /shared/ && until psql "$DATABASE_URL" -qc "select 1" >/dev/null 2>&1; do sleep 1; done && exec /app/entrypoint.sh']
+    env:
+    - { name: DATABASE_URL, value: 'postgres://postgres:e2e@postgres:5432/gripello?sslmode=disable' }
+    - { name: NUXT_API_BASE, value: 'http://127.0.0.1:8080' }
+    - { name: RATE_LIMITS, value: 'off' }
+    - { name: SSR_CACHE_SECONDS, value: '0' }
+    - { name: URGENT_ALERT_SECONDS, value: '0' }
+    - { name: SSL_DNS_NAMES, value: vg.test }
+    - { name: SMTP_HOST, value: mailpit }
+    - { name: SMTP_PORT, value: '1025' }
+    - { name: SMTP_TLS, value: 'false' }
+    - { name: APP_URL, value: 'https://vg.test' }
+    - { name: SENDER_ADDRESS, value: no-reply@gripello.test }
+    - { name: SENDER_NAME, value: Gripello E2E }
+    - { name: APP_NAME, value: Gripello }
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities: { drop: [ALL] }
+    resources:
+      requests: { cpu: "1", memory: 1536Mi }
+      limits: { memory: 3Gi }
+    volumeMounts:
+    - { name: ssl, mountPath: /etc/nginx/ssl }
+    - { name: gripello-bin, mountPath: /shared }
+  - name: playwright
+    image: compose:e2e
+    command: [sleep, infinity]
+    env:
+    - { name: E2E_BASE_URL, value: 'https://vg.test' }
+    - { name: E2E_API_URL, value: 'https://vg.test' }
+    - { name: E2E_GRIPELLO, value: /opt/gripello/gripello }
+    - { name: DATABASE_URL, value: 'postgres://postgres:e2e@postgres:5432/gripello?sslmode=disable' }
+    - { name: MAILPIT_URL, value: 'http://mailpit:8025' }
+    - { name: CI, value: 'true' }
+    - { name: NODE_EXTRA_CA_CERTS, value: /ssl/cert.pem }
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities: { drop: [ALL] }
+    resources:
+      requests: { cpu: "2", memory: 3Gi }
+      limits: { memory: 6Gi }
+    volumeMounts:
+    - { name: ssl, mountPath: /ssl, readOnly: true }
+    - { name: gripello-bin, mountPath: /opt/gripello, readOnly: true }
+    - { name: browser-shm, mountPath: /dev/shm }

@@ -1,6 +1,8 @@
-// Main writes the layer cache into a private GHCR package (one tag per target, parallel builds would overwrite one shared tag); every branch reads it.
-def buildCache(String name) {
-    def ref = "${env.CACHE_IMAGE}:${name}"
+@Library('pipeline-kit') _
+
+// Main writes the app image's layer cache into a private GHCR package; every branch reads it (ci.test does the same per target).
+def buildCache() {
+    def ref = "${env.CACHE_IMAGE}:app"
     def args = "--cache-from type=registry,ref=${ref}"
     if (env.BRANCH_NAME == 'main') {
         args += " --cache-to type=registry,ref=${ref},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true"
@@ -8,59 +10,12 @@ def buildCache(String name) {
     args
 }
 
-def runTestSuite(String target, boolean junitReport = true, Map coverage = null) {
-    sh "docker buildx build --platform linux/amd64 --target ${target} ${buildCache(target)} --progress=plain --output type=local,dest=test-results/${target} ."
-    if (junitReport) {
-        junit testResults: "test-results/${target}/junit.xml"
-    }
-    if (coverage && fileExists("test-results/${target}/${coverage.file}")) {
-        recordCoverage id: coverage.id, name: coverage.name, sourceCodeRetention: 'NEVER',
-            tools: [[parser: coverage.parser, pattern: "test-results/${target}/${coverage.file}"]]
-    }
-    if (readFile("test-results/${target}/exit-code").trim() != '0') {
-        error("${target} failed")
-    }
-}
-
-@NonCPS
-def builtCommits(changeSets) {
-    changeSets.collectMany { changeSet -> changeSet.items.collect { it.commitId } }
-}
-
-@NonCPS
-def typeErrors(String log) {
-    log.readLines().findAll { it.contains('error TS') }
-}
-
-def reportCheck(String name, String errorLog = null, Closure body) {
-    publishChecks name: name, status: 'IN_PROGRESS'
-    try {
-        body()
-        publishChecks name: name, conclusion: 'SUCCESS'
-    } catch (err) {
-        def errors = errorLog && fileExists(errorLog)
-            ? typeErrors(readFile(errorLog))
-            : []
-        publishChecks name: name, conclusion: 'FAILURE',
-            title: errors ? "${errors.size()} errors" : 'Failed',
-            text: errors ? "```\n${errors.join('\n').take(60000)}\n```" : ''
-        throw err
-    }
-}
-
 pipeline {
-    agent any
+    agent { label 'k8s-m' }
 
     environment {
         IMAGE_NAME = "ghcr.io/gripello/gripello"
         CACHE_IMAGE = "ghcr.io/gripello/gripello-cache"
-        GHCR_CREDENTIALS_ID = "ghcr"
-        DOCKER_BUILDKIT = 1
-        CI_ID = "${JOB_NAME}-${BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9]+/, '-').toLowerCase()
-        DOCKER_CLI_EXPERIMENTAL = 'enabled'
-        BUILDX_BUILDER = 'gripello'
-        E2E_IMAGE = "gripello:e2e-${CI_ID}"
-        E2E_COMPOSE = "docker compose -p e2e-${CI_ID} -f e2e/docker-compose.e2e.yml"
         PLAY_TRACK = 'production'
         PLAY_STATUS = 'completed'
     }
@@ -74,152 +29,113 @@ pipeline {
         stage('Setup') {
             steps {
                 script {
-                    sh 'docker buildx inspect gripello >/dev/null 2>&1 || docker buildx create --name gripello --driver docker-container || docker buildx inspect gripello'
-                    sh 'docker buildx inspect --bootstrap'
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
-                        sh 'echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin'
-                    }
-                    withCredentials([usernamePassword(credentialsId: env.GHCR_CREDENTIALS_ID, usernameVariable: 'GHCR_USER', passwordVariable: 'GHCR_TOKEN')]) {
-                        sh 'echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin'
-                    }
-
-                    // Resolve tags/version once, reused by the test-image build and the release build.
-                    def branchName = env.BRANCH_NAME
-                    def isReleaseCommit = false
-                    def releaseVersion = ""
-
-                    def commitMessage = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim().toLowerCase()
-                    if (branchName == "main" && commitMessage ==~ /.*release\s+v?(\d+\.\d+\.\d+).*/) {
-                        def matcher = (commitMessage =~ /release\s+v?(\d+\.\d+\.\d+)/)
-                        if (matcher) {
-                            releaseVersion = matcher[0][1]
-                            isReleaseCommit = true
-                        }
-                    }
-
-                    def tagName = ""
-                    if (branchName == "main") {
-                        tagName = "rolling"
-                    } else if (branchName.startsWith("PR-")) {
-                        tagName = "pr-${branchName.split('-')[1]}"
-                    } else {
-                        tagName = branchName.replaceAll(/[^a-zA-Z0-9._-]/, '-')
-                    }
-
-                    sh 'git fetch --tags --force --quiet || true'
-                    def appVersion = sh(script: "git describe --tags --always | sed 's/^v//'", returnStdout: true).trim()
-                    if (isReleaseCommit) {
-                        appVersion = releaseVersion
-                    }
-
-                    def tags = "-t ${env.IMAGE_NAME}:${tagName}"
-                    if (isReleaseCommit) {
-                        tags += " -t ${env.IMAGE_NAME}:latest -t ${env.IMAGE_NAME}:${releaseVersion}"
-                    }
-
-                    env.APP_VERSION = appVersion
-                    env.IS_RELEASE = isReleaseCommit.toString()
-
+                    ci.version()
                     // A release commit that only bumps the version right after a green build of its parent ships already tested code.
                     def onlyVersionBump = sh(script: 'git diff --name-only HEAD~1 || true', returnStdout: true).trim() == 'package.json'
                     def head = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
-                    def parentPassed = currentBuild.previousBuild?.result == 'SUCCESS' && builtCommits(currentBuild.changeSets) == [head]
-                    env.SKIP_TESTS = (isReleaseCommit && onlyVersionBump && parentPassed).toString()
-                    env.RELEASE_TAGS = tags
+                    def parentPassed = currentBuild.previousBuild?.result == 'SUCCESS' && ci.builtCommits() == [head]
+                    env.SKIP_TESTS = (env.IS_RELEASE == 'true' && onlyVersionBump && parentPassed).toString()
+                    env.RELEASE_TAGS = "-t ${env.IMAGE_NAME}:${env.CI_TAG}" + (env.IS_RELEASE == 'true' ? " -t ${env.IMAGE_NAME}:latest -t ${env.IMAGE_NAME}:${env.RELEASE_VERSION}" : '')
+                    env.CI_IMAGE = "${env.IMAGE_NAME}:ci-${env.CI_TAG}"
                 }
             }
         }
 
         stage('Build & Test') {
-            parallel {
-                stage('Vitest') {
-                    when { expression { env.SKIP_TESTS != 'true' } }
-                    steps {
-                        script { runTestSuite('vitest-results', true, [id: 'coverage-vitest', name: 'Vitest Coverage', parser: 'COBERTURA', file: 'coverage/cobertura-coverage.xml']) }
-                    }
-                }
-                stage('Typecheck') {
-                    steps {
-                        script {
-                            reportCheck('Typecheck', 'test-results/typecheck-results/typecheck.txt') { runTestSuite('typecheck-results', false) }
-                        }
-                    }
-                }
-                stage('API Types') {
-                    steps {
-                        script {
-                            reportCheck('API Types') { runTestSuite('api-types-results', false) }
-                        }
-                    }
-                }
-                stage('Go Tests') {
-                    when { expression { env.SKIP_TESTS != 'true' } }
-                    steps {
-                        script { runTestSuite('go-results', true, [id: 'coverage-go', name: 'Go Coverage', parser: 'GO_COV', file: 'coverage.out']) }
-                    }
-                }
-                stage('Build Image') {
-                    when { expression { env.SKIP_TESTS != 'true' } }
-                    steps {
-                        script {
-                            reportCheck('Build Image') {
-                                sh "docker buildx build --platform linux/amd64 --load ${buildCache('app')} --build-arg APP_VERSION=${env.APP_VERSION} -t ${env.E2E_IMAGE} ."
-                            }
-                        }
-                    }
-                }
-                stage('Android') {
-                    steps {
-                        script {
-                            reportCheck('Android') {
-                                try {
-                                    runTestSuite('android-results', false)
-                                } finally {
-                                    junit testResults: 'test-results/android-results/junit/*.xml', allowEmptyResults: true
+            steps {
+                script {
+                    def runTests = env.SKIP_TESTS != 'true'
+                    def skip = 'Version bump after a green build'
+                    ci.buildx {
+                        ci.login('docker.io')
+                        ci.login('ghcr.io')
+                        parallel(
+                            'Vitest': {
+                                ci.check('Vitest', when: runTests, skip: skip) {
+                                    ci.test('vitest-results', cache: env.CACHE_IMAGE, coverage: [id: 'coverage-vitest', name: 'Vitest Coverage', parser: 'COBERTURA', file: 'coverage/cobertura-coverage.xml'])
                                 }
-                            }
-                            archiveArtifacts artifacts: 'test-results/android-results/gripello*', allowEmptyArchive: true
-                        }
-                    }
-                }
-                stage('E2E Install') {
-                    when { expression { env.SKIP_TESTS != 'true' } }
-                    steps {
-                        // mcr.microsoft.com resets connections while pulling the Playwright image
-                        retry(3) {
-                            sh '''
-                                docker volume create gripello-e2e-yarn-cache
-                                $E2E_COMPOSE run --rm --no-deps e2e sh -c "npm install -g corepack --force && corepack enable && yarn install --immutable --mode=skip-build"
-                            '''
-                        }
+                            },
+                            'Typecheck': {
+                                ci.check('Typecheck', log: 'test-results/typecheck-results/typecheck.txt') {
+                                    ci.test('typecheck-results', junit: false, cache: env.CACHE_IMAGE)
+                                }
+                            },
+                            'API Types': {
+                                ci.check('API Types') { ci.test('api-types-results', junit: false, cache: env.CACHE_IMAGE) }
+                            },
+                            'Go Tests': {
+                                ci.check('Go Tests', when: runTests, skip: skip) {
+                                    ci.test('go-results', cache: env.CACHE_IMAGE, coverage: [id: 'coverage-go', name: 'Go Coverage', parser: 'GO_COV', file: 'coverage.out'])
+                                }
+                            },
+                            'Build Image': {
+                                ci.check('Build Image', when: runTests, skip: skip) {
+                                    // the e2e pod pulls the app from a registry; release tags only point at it once the tests passed
+                                    sh "mkdir -p \"\$WORKSPACE_TMP\" && docker buildx build --platform linux/amd64 --provenance=true --sbom=true ${buildCache()} --build-arg APP_VERSION=${env.APP_VERSION} -t ${env.CI_IMAGE} --metadata-file \"\$WORKSPACE_TMP/app-image.json\" --push ."
+                                    def digest = sh(script: '''sed -n 's/.*"containerimage.digest": "\\(sha256:[0-9a-f]*\\)".*/\\1/p' "$WORKSPACE_TMP/app-image.json"''', returnStdout: true).trim()
+                                    if (!digest) {
+                                        error('Build Image: no digest in the build metadata')
+                                    }
+                                    env.E2E_IMAGE_REF = "${env.IMAGE_NAME}@${digest}"
+                                }
+                            },
+                            'Android': {
+                                ci.check('Android') {
+                                    try {
+                                        ci.test('android-results', junit: 'junit/*.xml', allowEmptyResults: true, cache: env.CACHE_IMAGE)
+                                    } finally {
+                                        archiveArtifacts artifacts: 'test-results/android-results/gripello*', allowEmptyArchive: true
+                                    }
+                                }
+                            },
+                        )
                     }
                 }
             }
         }
 
         stage('E2E Tests') {
-            when { expression { env.SKIP_TESTS != 'true' } }
             steps {
-                sh 'E2E_DEPS_INSTALLED=1 $E2E_COMPOSE up --attach e2e --abort-on-container-exit --exit-code-from e2e'
-            }
-            post {
-                failure {
-                    sh '$E2E_COMPOSE logs --tail=500 app || true'
-                }
-                success {
-                    script {
-                        def flaky = fileExists('e2e/results/flaky.txt') ? readFile('e2e/results/flaky.txt').trim() : ''
-                        if (flaky) {
-                            publishChecks name: 'E2E flaky', title: "${flaky.readLines().size()} flaky e2e tests", summary: 'Passed only on retry', text: "```\n${flaky}\n```", conclusion: 'NEUTRAL'
-                            // UNSTABLE reaches GitHub as a failed commit status; the neutral check is the signal
-                            echo "WARNING: Flaky e2e tests (passed only on retry):\n${flaky}"
+                script {
+                    ci.check('E2E Tests', when: env.SKIP_TESTS != 'true', skip: 'Version bump after a green build') {
+                        def pod = readFile('.jenkins/e2e-pod.yaml').replace('APP_IMAGE', env.E2E_IMAGE_REF)
+                        for (def service : ['postgres', 'mailpit', 'e2e']) {
+                            pod = pod.replace("compose:${service}", sh(script: ".jenkins/compose-image.sh ${service}", returnStdout: true).trim())
+                        }
+                        podTemplate(inheritFrom: 'k8s-s', yamlMergeStrategy: merge(), yaml: pod) {
+                            // a pod lost before the tests ran (image pull, eviction) gets a fresh one
+                            retry(count: 2, conditions: [kubernetesAgent(), nonresumable()]) {
+                                node(POD_LABEL) {
+                                    checkout scm
+                                    try {
+                                        container('playwright') {
+                                            sh '''
+                                                timeout 300 sh -c 'until [ -f /ssl/cert.pem ] && node -e "fetch(process.argv[1]).then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))" https://vg.test/api/health; do sleep 2; done'
+                                                # the container step passes the agent's HOME and PATH, not the pod spec's
+                                                export HOME=/tmp/home NPM_CONFIG_PREFIX=/tmp/npm PATH="/tmp/npm/bin:$PATH"
+                                                mkdir -p "$HOME"
+                                                npm install -g corepack@0.36.0 --force && corepack enable
+                                                yarn install --immutable --mode=skip-build
+                                                yarn test:e2e
+                                            '''
+                                        }
+                                        def flaky = fileExists('e2e/results/flaky.txt') ? readFile('e2e/results/flaky.txt').trim() : ''
+                                        if (flaky) {
+                                            publishChecks name: 'E2E flaky', title: "${flaky.readLines().size()} flaky e2e tests", summary: 'Passed only on retry', text: "```\n${flaky}\n```", conclusion: 'NEUTRAL'
+                                            // UNSTABLE reaches GitHub as a failed commit status; the neutral check is the signal
+                                            echo "WARNING: Flaky e2e tests (passed only on retry):\n${flaky}"
+                                        }
+                                    } catch (err) {
+                                        containerLog name: 'app', tailingLines: 500
+                                        throw err
+                                    } finally {
+                                        junit testResults: 'e2e/results/junit.xml', allowEmptyResults: true
+                                        archiveArtifacts artifacts: 'e2e/results/html/**, e2e/results/artifacts/**', allowEmptyArchive: true
+                                    }
+                                }
+                            }
                         }
                     }
-                }
-                always {
-                    junit testResults: 'e2e/results/junit.xml', allowEmptyResults: true
-                    archiveArtifacts artifacts: 'e2e/results/html/**, e2e/results/artifacts/**', allowEmptyArchive: true
-                    sh '$E2E_COMPOSE down -v || true'
                 }
             }
         }
@@ -227,8 +143,16 @@ pipeline {
         stage('Push Image') {
             steps {
                 script {
-                    reportCheck('Push Image') {
-                        sh "docker buildx build --platform linux/amd64 --provenance=true --sbom=true ${buildCache('app')} --build-arg APP_VERSION=${env.APP_VERSION} ${env.RELEASE_TAGS} --push ."
+                    ci.buildx {
+                        ci.login('ghcr.io')
+                        ci.check('Push Image') {
+                            if (env.E2E_IMAGE_REF) {
+                                // ships the image the e2e tests ran against
+                                sh "docker buildx imagetools create ${env.RELEASE_TAGS} ${env.E2E_IMAGE_REF}"
+                            } else {
+                                sh "docker buildx build --platform linux/amd64 --provenance=true --sbom=true ${buildCache()} --build-arg APP_VERSION=${env.APP_VERSION} ${env.RELEASE_TAGS} --push ."
+                            }
+                        }
                     }
                 }
             }
@@ -238,43 +162,39 @@ pipeline {
             when { expression { env.IS_RELEASE == 'true' } }
             steps {
                 script {
-                    reportCheck('Play Store') {
-                        withCredentials([
-                            file(credentialsId: 'android-upload-keystore', variable: 'ANDROID_KEYSTORE'),
-                            string(credentialsId: 'android-keystore-password', variable: 'ANDROID_KEYSTORE_PASSWORD'),
-                            string(credentialsId: 'android-key-password', variable: 'ANDROID_KEY_PASSWORD'),
-                            file(credentialsId: 'android-google-services', variable: 'GOOGLE_SERVICES'),
-                            file(credentialsId: 'play-service-account', variable: 'PLAY_SERVICE_ACCOUNT'),
-                        ]) {
-                            sh '''
-                                docker buildx build --platform linux/amd64 --target android-release-results --no-cache-filter android-release \
-                                    --build-arg PLAY_TRACK=$PLAY_TRACK --build-arg PLAY_STATUS=$PLAY_STATUS \
-                                    --secret id=android_keystore,src=$ANDROID_KEYSTORE \
-                                    --secret id=android_keystore_password,env=ANDROID_KEYSTORE_PASSWORD \
-                                    --secret id=android_key_password,env=ANDROID_KEY_PASSWORD \
-                                    --secret id=google_services,src=$GOOGLE_SERVICES \
-                                    --secret id=play_service_account,src=$PLAY_SERVICE_ACCOUNT \
-                                    --progress=plain --output type=local,dest=test-results/android-release .
-                            '''
+                    ci.buildx {
+                        ci.check('Play Store') {
+                            withCredentials([
+                                file(credentialsId: 'android-upload-keystore', variable: 'ANDROID_KEYSTORE'),
+                                string(credentialsId: 'android-keystore-password', variable: 'ANDROID_KEYSTORE_PASSWORD'),
+                                string(credentialsId: 'android-key-password', variable: 'ANDROID_KEY_PASSWORD'),
+                                file(credentialsId: 'android-google-services', variable: 'GOOGLE_SERVICES'),
+                                file(credentialsId: 'play-service-account', variable: 'PLAY_SERVICE_ACCOUNT'),
+                            ]) {
+                                sh '''
+                                    docker buildx build --platform linux/amd64 --target android-release-results --no-cache-filter android-release \
+                                        --build-arg PLAY_TRACK=$PLAY_TRACK --build-arg PLAY_STATUS=$PLAY_STATUS \
+                                        --secret id=android_keystore,src=$ANDROID_KEYSTORE \
+                                        --secret id=android_keystore_password,env=ANDROID_KEYSTORE_PASSWORD \
+                                        --secret id=android_key_password,env=ANDROID_KEY_PASSWORD \
+                                        --secret id=google_services,src=$GOOGLE_SERVICES \
+                                        --secret id=play_service_account,src=$PLAY_SERVICE_ACCOUNT \
+                                        --progress=plain --output type=local,dest=test-results/android-release .
+                                '''
+                            }
+                            archiveArtifacts artifacts: 'test-results/android-release/gripello-release.aab'
+                            if (readFile('test-results/android-release/exit-code').trim() != '0') {
+                                error('Play Store upload failed')
+                            }
                         }
-                    }
-                    archiveArtifacts artifacts: 'test-results/android-release/gripello-release.aab'
-                    if (readFile('test-results/android-release/exit-code').trim() != '0') {
-                        error('Play Store upload failed')
                     }
                 }
             }
         }
     }
 
-
     post {
         always {
-            script {
-                sh 'docker buildx prune --builder gripello --keep-storage 20gb -f || true'
-                sh '$E2E_COMPOSE down -v || true'
-                sh "docker image rm ${env.E2E_IMAGE} || true"
-            }
             cleanWs()
         }
     }

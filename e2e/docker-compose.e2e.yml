@@ -86,7 +86,7 @@ services:
         command: >
             sh -c "cp /ssl/cert.pem /usr/local/share/ca-certificates/gripello-e2e.crt &&
             update-ca-certificates &&
-            npm install -g corepack --force && corepack enable && { [ -n \"$${E2E_DEPS_INSTALLED:-}\" ] || yarn install --immutable --mode=skip-build; } && yarn test:e2e ${E2E_ARGS:-}"
+            npm install -g corepack@0.36.0 --force && corepack enable && { [ -n \"$${E2E_DEPS_INSTALLED:-}\" ] || yarn install --immutable --mode=skip-build; } && yarn test:e2e ${E2E_ARGS:-}"
 
 volumes:
     e2e-ssl:

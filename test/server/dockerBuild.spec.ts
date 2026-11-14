@@ -59,8 +59,8 @@ describe('docker ui build', () => {
             /^FROM ui-deps AS typecheck\nCOPY \. \.\n# .+\nRUN --mount=type=cache,target=\/root\/\.npm mkdir \/out && \{ yarn typecheck > \/out\/typecheck\.txt 2>&1; echo \$\? > \/out\/exit-code; \}; cat \/out\/typecheck\.txt$/m,
         )
         expect(read('Dockerfile')).toContain('AS typecheck-results')
-        expect(read('Jenkinsfile')).toContain(
-            "reportCheck('Typecheck', 'test-results/typecheck-results/typecheck.txt') { runTestSuite('typecheck-results', false) }",
+        expect(read('Jenkinsfile')).toMatch(
+            /ci\.check\('Typecheck', log: 'test-results\/typecheck-results\/typecheck\.txt'\) \{\s*ci\.test\('typecheck-results', junit: false/,
         )
     })
 
@@ -150,7 +150,7 @@ describe('docker ui build', () => {
         expect(read('Jenkinsfile')).toContain(
             'IMAGE_NAME = "ghcr.io/gripello/gripello"',
         )
-        expect(read('Jenkinsfile')).toContain('docker login ghcr.io')
+        expect(read('Jenkinsfile')).toContain("ci.login('ghcr.io')")
         expect(read('docker-compose.yml')).toContain(
             'image: ghcr.io/gripello/gripello:rolling',
         )
