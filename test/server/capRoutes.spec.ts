@@ -68,7 +68,7 @@ async function challengeFor(scope: string) {
     expect(res.status).toBe(200)
     return (await res.json()) as {
         token: string
-        challenge: { c: number }
+        challenges: unknown[]
     }
 }
 
@@ -94,28 +94,28 @@ describe('cap routes', () => {
     })
 
     it('reject a challenge redeemed for another scope', async () => {
-        const { token, challenge } = await challengeFor('login')
+        const { token, challenges } = await challengeFor('login')
         solved.pass = true
         const res = await post('register/redeem', {
             token,
-            solutions: Array(challenge.c).fill(0),
+            solutions: Array(challenges.length).fill({}),
         })
         expect(res.status).toBe(400)
     })
 
     it('reject wrong solutions', async () => {
-        const { token, challenge } = await challengeFor('login')
+        const { token, challenges } = await challengeFor('login')
         const res = await post('login/redeem', {
             token,
-            solutions: Array(challenge.c).fill(0),
+            solutions: Array(challenges.length).fill({}),
         })
         expect(res.status).toBe(400)
     })
 
     it('issue a scoped token whose jti is the challenge, so it redeems once', async () => {
-        const { token, challenge } = await challengeFor('rating')
+        const { token, challenges } = await challengeFor('rating')
         solved.pass = true
-        const body = { token, solutions: Array(challenge.c).fill(0) }
+        const body = { token, solutions: Array(challenges.length).fill({}) }
         const first = await (await post('rating/redeem', body)).json()
         const second = await (await post('rating/redeem', body)).json()
 
