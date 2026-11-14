@@ -13,7 +13,11 @@ describe('docker build cache', () => {
     it('reads the cache on every image and test build', () => {
         const cached = builds.filter((build) => !isPlayRelease(build))
         expect(cached.length).toBeGreaterThan(0)
-        for (const build of cached) expect(build).toContain('${buildCache(')
+        for (const build of cached) expect(build).toContain('${buildCache()}')
+        const tests = jenkinsfile.match(/ci\.test\([^\n]*/g) ?? []
+        expect(tests.length).toBeGreaterThan(0)
+        for (const test of tests)
+            expect(test).toContain('cache: env.CACHE_IMAGE')
     })
 
     it('keeps the signed release bundle out of the registry cache', () => {
@@ -26,7 +30,7 @@ describe('docker build cache', () => {
         expect(jenkinsfile).toContain(
             'CACHE_IMAGE = "ghcr.io/gripello/gripello-cache"',
         )
-        expect(jenkinsfile).toContain('def ref = "${env.CACHE_IMAGE}:${name}"')
+        expect(jenkinsfile).toContain('def ref = "${env.CACHE_IMAGE}:app"')
         expect(jenkinsfile).toMatch(
             /if \(env\.BRANCH_NAME == 'main'\) \{\s*args \+= " --cache-to type=registry,ref=\$\{ref\},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true"/,
         )

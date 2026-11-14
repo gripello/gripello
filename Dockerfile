@@ -60,7 +60,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 FROM node:26.12.1-trixie@sha256:97fa0f1b59035c6072721a88d55be1371c7cb1cc942b521e1cc5c72ec87655f4 AS ui-deps
 WORKDIR /app
-RUN npm install -g corepack --force && corepack enable
+RUN npm install -g corepack@0.36.0 --force && corepack enable
 COPY .yarnrc.yml package.json yarn.lock ./
 RUN --mount=type=cache,target=/root/.yarn/berry/cache \
     yarn install --immutable --inline-builds
@@ -84,7 +84,8 @@ FROM scratch AS typecheck-results
 COPY --from=typecheck /out /
 
 FROM ui-deps AS api-types
-COPY . .
+COPY api ./api
+COPY types/api ./types/api
 RUN --mount=type=cache,target=/root/.npm mkdir /out && { yarn api:types:check > /out/api-types.txt 2>&1; echo $? > /out/exit-code; }; cat /out/api-types.txt
 
 FROM scratch AS api-types-results
