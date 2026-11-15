@@ -128,6 +128,18 @@ describe('ReleaseNotesDialog', () => {
         expect(pr.text()).toBe('#42')
     })
 
+    it('sizes the filter pills to their labels instead of fixed columns', () => {
+        const wrapper = createWrapper({
+            tag: 'v1.9.0',
+            notes: '* fix: one\n* feat: two\n* chore(deps): three',
+        })
+        const cols = wrapper
+            .find('[test-id-prefix="release-notes-filter"]')
+            .attributes('cols')
+        expect(cols).toContain('sm:flex-wrap')
+        expect(cols).not.toContain('sm:grid-cols-5')
+    })
+
     it('lists commits made since the installed release', () => {
         const wrapper = createWrapper({
             tag: 'v1.9.0',

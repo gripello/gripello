@@ -139,7 +139,7 @@
                         v-model="category"
                         :items="filterItems"
                         :label="$t('notifications.releaseNotes.filterLabel')"
-                        cols="grid-cols-2 sm:grid-cols-5"
+                        cols="grid-cols-2 sm:flex sm:flex-wrap sm:*:flex-auto"
                         test-id-prefix="release-notes-filter"
                         class="mb-2"
                     />
