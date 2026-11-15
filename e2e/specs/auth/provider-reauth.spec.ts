@@ -1,6 +1,11 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { authHeader, gotoSettled } from '../../support/nav'
+import { ensureUser } from '../../support/seed'
+
+// platformPage shares one session with every platform spec, whose confirmations would leak in here.
+const freshPlatformAdmin = (prefix: string) =>
+    ensureUser(undefined, 'platform', `${prefix}-reauth`, true)
 
 // A guarded call on this page's own session: 403 reauth_required unless it was just confirmed.
 async function sessionConfirmed(page: Page) {
@@ -13,8 +18,10 @@ async function sessionConfirmed(page: Page) {
 
 // Catches: the app's return from the provider (a page with ?oauth2Reauth=) crashing or confirming a bad ticket.
 test('a provider ticket that comes back to a page is redeemed safely', async ({
-    platformPage: page,
+    pageAs,
+    testPrefix,
 }) => {
+    const page = await pageAs(await freshPlatformAdmin(testPrefix))
     for (const query of [
         'oauth2Reauth=bogus-ticket',
         'oauth2ReauthError=failed',
@@ -33,8 +40,10 @@ test('a provider ticket that comes back to a page is redeemed safely', async ({
 
 // Catches: the popup page crashing or reporting success for a ticket the server refused.
 test('the popup page reports a refused ticket', async ({
-    platformPage: page,
+    pageAs,
+    testPrefix,
 }) => {
+    const page = await pageAs(await freshPlatformAdmin(testPrefix))
     await gotoSettled(page, '/auth/reauth?oauth2Reauth=bogus-ticket')
     await expect(page.getByTestId('reauth-page')).toHaveAttribute(
         'data-state',
