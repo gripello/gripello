@@ -6,6 +6,7 @@ import {
     reportCaughtError,
     routePattern,
 } from '~/utils/clientErrors'
+import { ProviderConfirmationMissing } from '~/utils/providerReauth'
 
 const context = { route: '/:gym/routes', version: '1.2.0' }
 
@@ -78,6 +79,13 @@ describe('createReporter', () => {
         for (let i = 0; i < 15; i++) report('vue', new Error(`e${i}`), context)
         expect(send).toHaveBeenCalledTimes(10)
     })
+})
+
+// Catches: an admin pressing a guarded action before confirming being logged as a server ERROR.
+it('does not report a missing provider confirmation', () => {
+    const send = vi.fn()
+    createReporter(send)('promise', new ProviderConfirmationMissing(), context)
+    expect(send).not.toHaveBeenCalled()
 })
 
 describe('routePattern', () => {

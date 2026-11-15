@@ -35,7 +35,7 @@ export interface paths {
         get: operations["getGym"];
         put?: never;
         post?: never;
-        /** @description Platform admins only. Deletes the gym's content, then retires its slug and previous slugs. */
+        /** @description Platform admins only. Needs a password confirmation from the last five minutes (POST /me/reauthenticate, else 403 reauth_required). Deletes the gym's content, then retires its slug and previous slugs. */
         delete: operations["deleteGym"];
         options?: never;
         head?: never;

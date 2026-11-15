@@ -809,7 +809,8 @@
             "feed": "Feed",
             "info": "Gym info",
             "gymOnboarding": "Gym onboarding",
-            "dataExport": "Your data"
+            "dataExport": "Your data",
+            "reauth": "Confirm sign-in"
         },
         "content": {
             "settings": "Settings",
@@ -3265,6 +3266,13 @@
                 "email_unverified": "The provider did not confirm an email address, so no account can be created.",
                 "email_blocked": "This e-mail address can't be used for a new account."
             }
+        },
+        "reauth": {
+            "confirmWith": "Confirm with {provider}",
+            "confirmed": "Confirmed",
+            "failed": "Confirmation failed",
+            "repeat": "Confirmed for 5 minutes. Repeat the action.",
+            "required": "Confirm with your sign-in provider first."
         }
     },
     "resets": {

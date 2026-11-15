@@ -287,7 +287,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Stores state, PKCE verifier and nonce (single use, 10 minutes), sets the HttpOnly gripello_oauth2 flow cookie and returns the provider URL. link=true needs sign-in and links the identity to the caller. redirect must be a same-origin path. native=true (native apps, which open the URL in the system browser) makes the callback return to the app scheme `app.gripello:` instead of the app URL; the app's WebView holds the flow cookie and redeems the ticket. 404 for unknown or disabled providers. */
+        /** @description Stores state, PKCE verifier and nonce (single use, 10 minutes), sets the HttpOnly gripello_oauth2 flow cookie and returns the provider URL. link=true needs sign-in and links the identity to the caller. reauth=true needs sign-in, an account without a password (else 400 password_set) and a provider already linked to it (else 400 not_linked); the provider is asked for a fresh sign-in and the callback returns to redirect (default /account) with ?oauth2Reauth=<ticket> (or ?oauth2ReauthError=failed). redirect must be a same-origin path. native=true (native apps, which open the URL in the system browser) makes the callback return to the app scheme `app.gripello:` instead of the app URL; the app's WebView holds the flow cookie and redeems the ticket. 404 for unknown or disabled providers. */
         post: operations["startOAuth2"];
         delete?: never;
         options?: never;
@@ -343,6 +343,23 @@ export interface paths {
         put?: never;
         /** @description Links the identity of a link ticket (callback of a link flow) to the signed-in account. Needs the flow cookie of the browser that started the flow and the same account, so a provider URL sent to someone else links nothing. */
         post: operations["finishOAuth2Link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/oauth2/reauth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Redeems the ticket of a reauth flow and counts as a password confirmation of the caller's session for the next five minutes (like POST /me/reauthenticate). Needs the flow cookie of the browser that started the flow, the same account, and the provider identity linked to it. */
+        post: operations["finishOAuth2Reauth"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1152,6 +1169,7 @@ export interface operations {
                 "application/json": {
                     redirect?: string;
                     link?: boolean;
+                    reauth?: boolean;
                     persistent?: boolean;
                     native?: boolean;
                 };
@@ -1288,6 +1306,32 @@ export interface operations {
             400: components["responses"]["Error"];
             401: components["responses"]["Error"];
             409: components["responses"]["Error"];
+        };
+    };
+    finishOAuth2Reauth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    ticket: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Confirmed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
         };
     };
     listLinkedAccounts: {

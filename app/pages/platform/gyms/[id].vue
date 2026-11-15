@@ -208,7 +208,13 @@
                 "
                 :loading="removing"
                 @confirm="deleteGym"
-            />
+            >
+                <UserReauthField
+                    v-model="adminPassword"
+                    class="mt-3"
+                    data-testid="platform-gym-delete-password"
+                />
+            </ConfirmDialog>
         </template>
     </div>
 </template>
@@ -312,15 +318,24 @@ const openCases = computed(
 
 const deleteDialogOpen = ref(false)
 const { pending: removing, run: runRemove } = useAsyncAction()
+const {
+    password: adminPassword,
+    confirm: reauthenticate,
+    errorText: reauthError,
+} = useReauth(deleteDialogOpen)
 
 async function deleteGym() {
     await runRemove(
         async () => {
+            await reauthenticate()
             await deleteGymRecord(gymId)
             deleteDialogOpen.value = false
             await navigateTo('/platform/gyms')
         },
-        { success: t('platform.gyms.deleted') },
+        {
+            success: t('platform.gyms.deleted'),
+            error: reauthError(t('notifications.error.generic')),
+        },
     )
 }
 </script>

@@ -116,7 +116,12 @@ export function listAuthMethods() {
 
 export function startOAuth2(
     provider: string,
-    options: { redirect?: string; link?: boolean; persistent?: boolean } = {},
+    options: {
+        redirect?: string
+        link?: boolean
+        reauth?: boolean
+        persistent?: boolean
+    } = {},
 ) {
     return post<{ url: string }>(`/auth/oauth2/${provider}/start`, {
         ...options,
@@ -130,6 +135,10 @@ export function finishOAuth2(ticket: string) {
 
 export function finishOAuth2Link(ticket: string) {
     return post('/auth/oauth2/link', { ticket })
+}
+
+export function finishOAuth2Reauth(ticket: string) {
+    return post('/auth/oauth2/reauth', { ticket })
 }
 
 export function refreshAuth() {

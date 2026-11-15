@@ -16,6 +16,7 @@ const PAGES: Record<string, [Viewer, string]> = {
     'route.vue': ['guest', '/route?id={route}'],
     'scan.vue': ['guest', '/scan'],
     'auth/login.vue': ['guest', '/auth/login'],
+    'auth/reauth.vue': ['guest', '/auth/reauth'],
     'auth/confirm-email-change/[token].vue': [
         'guest',
         '/auth/confirm-email-change/e2e-invalid',

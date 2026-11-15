@@ -55,6 +55,7 @@ func Register(app *platform.App) {
 	app.Handle("POST /auth/oauth2/{provider}/callback", httpx.Handler(m.oauth2Callback))
 	app.Handle("POST /auth/oauth2/finish", httpx.Handler(m.oauth2Finish))
 	app.Handle("POST /auth/oauth2/link", httpx.Handler(m.oauth2FinishLink))
+	app.Handle("POST /auth/oauth2/reauth", httpx.Handler(m.oauth2FinishReauth))
 	app.Handle("GET /me/identities", httpx.Handler(m.listIdentities))
 	app.Handle("DELETE /me/identities/{id}", httpx.Handler(m.unlinkIdentity))
 	app.Handle("GET /platform/oauth2", httpx.Handler(m.listProviderSettings))

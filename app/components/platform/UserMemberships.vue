@@ -74,11 +74,24 @@
                 :loading="busy"
                 :disabled="!newMembership.gym || !newMembership.role"
                 data-testid="platform-user-add-membership"
-                @click="grantMembership"
+                @click="grantOpen = true"
             >
                 {{ t('platform.users.addMembership') }}
             </UButton>
         </div>
+        <ConfirmDialog
+            v-model="grantOpen"
+            :title="t('platform.users.addMembership')"
+            :confirm-text="t('platform.users.addMembership')"
+            confirm-color="primary"
+            :loading="busy"
+            @confirm="grantMembership"
+        >
+            <UserReauthField
+                v-model="adminPassword"
+                data-testid="platform-user-add-membership-password"
+            />
+        </ConfirmDialog>
     </section>
 </template>
 
@@ -143,6 +156,12 @@ function roleItems(gymId: string) {
 }
 
 const { pending: busy, run } = useAsyncAction()
+const grantOpen = ref(false)
+const {
+    password: adminPassword,
+    confirm: reauthenticate,
+    errorText: reauthError,
+} = useReauth(grantOpen)
 
 function membershipError(error: unknown) {
     return (error as { status?: number })?.status === 400
@@ -176,14 +195,18 @@ function removeMembership(chip: MembershipChip) {
 
 async function grantMembership() {
     const done = await update(
-        () =>
-            addMembership({
+        async () => {
+            await reauthenticate()
+            await addMembership({
                 user: props.user.id,
                 gym: newMembership.gym,
                 role: newMembership.role,
-            }),
-        t('notifications.error.generic'),
+            })
+        },
+        reauthError(t('notifications.error.generic')),
     )
-    if (done) Object.assign(newMembership, { gym: '', role: '' })
+    if (!done) return
+    grantOpen.value = false
+    Object.assign(newMembership, { gym: '', role: '' })
 }
 </script>

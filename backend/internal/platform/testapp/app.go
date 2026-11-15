@@ -119,8 +119,19 @@ func WaitFor(t *testing.T, cond func() bool) {
 // Token signs in an existing user with a fresh session row, as a login would.
 func Token(t testing.TB, app *platform.App, userID, tokenKey string) string {
 	t.Helper()
+	return sign(t, app, userID, tokenKey, false)
+}
+
+// ReauthToken is Token for a session that confirmed the password just now.
+func ReauthToken(t testing.TB, app *platform.App, userID, tokenKey string) string {
+	t.Helper()
+	return sign(t, app, userID, tokenKey, true)
+}
+
+func sign(t testing.TB, app *platform.App, userID, tokenKey string, reauthenticated bool) string {
+	t.Helper()
 	sid := ids.New()
-	if _, err := app.DB.Exec(context.Background(), `INSERT INTO sessions (id, "user") VALUES ($1, $2)`, sid, userID); err != nil {
+	if _, err := app.DB.Exec(context.Background(), `INSERT INTO sessions (id, "user", reauthenticated_at) VALUES ($1, $2, CASE WHEN $3 THEN now() END)`, sid, userID, reauthenticated); err != nil {
 		t.Fatal(err)
 	}
 	token, err := app.Tokens.Sign(userID, tokenKey, sid)

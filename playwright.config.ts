@@ -8,6 +8,7 @@ const SETTINGS_WRITERS = [
     '**/admin/tv-screen.spec.ts',
     '**/admin/platform-settings.spec.ts',
     '**/admin/platform-operations.spec.ts',
+    '**/admin/privacy-editor.spec.ts',
     '**/auth/guest-register-link.spec.ts',
     '**/mail/register.spec.ts',
 ]
@@ -24,6 +25,7 @@ const MOBILE_AUTH = [
     '**/auth/logout.spec.ts',
     '**/auth/login-brand-contrast.spec.ts',
     '**/auth/permissions-after-login.spec.ts',
+    '**/auth/provider-reauth.spec.ts',
 ]
 
 const PHONE_FIT = '**/i18n/phone-fit.spec.ts'

@@ -809,7 +809,8 @@
             "feed": "Feed",
             "info": "Halleninfo",
             "gymOnboarding": "Halle einrichten",
-            "dataExport": "Deine Daten"
+            "dataExport": "Deine Daten",
+            "reauth": "Anmeldung bestätigen"
         },
         "content": {
             "settings": "Einstellungen",
@@ -3265,6 +3266,13 @@
                 "email_unverified": "Der Anbieter hat keine E-Mail-Adresse bestätigt, daher kann kein Konto angelegt werden.",
                 "email_blocked": "Diese E-Mail-Adresse kann nicht für ein neues Konto verwendet werden."
             }
+        },
+        "reauth": {
+            "confirmWith": "Mit {provider} bestätigen",
+            "confirmed": "Bestätigt",
+            "failed": "Bestätigung fehlgeschlagen",
+            "repeat": "Für 5 Minuten bestätigt. Bitte die Aktion wiederholen.",
+            "required": "Bitte zuerst mit deinem Anmeldedienst bestätigen."
         }
     },
     "resets": {

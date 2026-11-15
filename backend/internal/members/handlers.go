@@ -65,6 +65,9 @@ func (h *handlers) addMembership(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	ctx := r.Context()
+	if err := auth.RequireRecentReauth(ctx, h.app.DB, p); err != nil {
+		return err
+	}
 	gymID := r.PathValue("gym")
 	var body struct {
 		User string `json:"user"`
