@@ -19,7 +19,7 @@ describe('single-choice pickers', () => {
         ],
         [
             'components/notifications/ReleaseNotesDialog.vue',
-            '<OptionGrid',
+            '<SegmentedControl',
             'release-notes-filter',
         ],
     ])('%s uses the shared radio component', (file, component, testId) => {
