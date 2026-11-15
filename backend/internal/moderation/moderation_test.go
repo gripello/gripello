@@ -804,9 +804,9 @@ func TestHidingAnAuthorSkipsVanishedContent(t *testing.T) {
 	f.call("operator", "POST", "/moderation/authors/"+f.users["climber"]+"/hide", `{"reason":"spam"}`, http.StatusOK, `"hidden":1`)
 }
 
-func TestContactAddressGetsNoNotifierIdentity(t *testing.T) {
+func TestReportAddressGetsNoNotifierIdentity(t *testing.T) {
 	f := newFixture(t)
-	f.exec(`UPDATE gyms SET contact_email = 'desk@example.com' WHERE id = $1 RETURNING id`, f.gymA)
+	f.exec(`UPDATE gyms SET report_email = 'desk@example.com', contact_email = 'public@example.com' WHERE id = $1 RETURNING id`, f.gymA)
 	report := f.report("rating", f.rating("climber", "rude"), "harassment")
 	testapp.WaitFor(t, func() bool {
 		return f.count(`SELECT count(*) FROM reports WHERE id = $1 AND receipt_sent`, report) == 1
@@ -825,7 +825,10 @@ func TestContactAddressGetsNoNotifierIdentity(t *testing.T) {
 			t.Errorf("report alert to %v does not link the case %s", m.To, caseURL)
 		}
 		if slices.Contains(m.To, "desk@example.com") && strings.Contains(m.Text, "n@example.com") {
-			t.Error("contact address got the notifier's e-mail")
+			t.Error("report address got the notifier's e-mail")
+		}
+		if slices.Contains(m.To, "public@example.com") {
+			t.Error("the public contact address got a report alert")
 		}
 		if slices.Contains(m.To, "admina@example.com") && !strings.Contains(m.Text, "n@example.com") {
 			t.Error("report handler lost the notifier's e-mail")
@@ -1032,4 +1035,30 @@ func TestOpeningARouteCaseNeedsManageRoutes(t *testing.T) {
 	body := `{"content_type":"route","content_id":"` + f.route + `"}`
 	f.call("commentsOnly", "POST", "/moderation/cases", body, http.StatusForbidden)
 	f.call("setterA", "POST", "/moderation/cases", body, http.StatusOK)
+}
+
+func TestDecisionMailNamesThePrivacyContact(t *testing.T) {
+	f := newFixture(t)
+	f.exec(`UPDATE gyms SET contact_email = 'info@example.com', report_email = 'desk@example.com',
+		contacts = '[{"kind":"privacy","phone":"1"},{"kind":"privacy","email":"privacy@example.com"},{"kind":"privacy","email":"later@example.com"}]'
+		WHERE id = $1 RETURNING id`, f.gymA)
+	rating := f.rating("climber", "hate")
+	report := f.report("rating", rating, "hate_speech")
+	f.call("adminA", "POST", "/moderation/"+f.item("rating", rating).ID, `{"action":"hide","reason":"hate speech"}`, http.StatusOK)
+	testapp.WaitFor(t, func() bool {
+		return f.count(`SELECT count(*) FROM reports WHERE id = $1 AND notified_at IS NOT NULL`, report) == 1
+	})
+	named := false
+	for _, m := range testapp.Mails(f.app) {
+		if !slices.Contains(m.To, "n@example.com") {
+			continue
+		}
+		named = named || strings.Contains(m.Text, "privacy@example.com")
+		if strings.Contains(m.Text, "desk@example.com") || strings.Contains(m.Text, "info@example.com") || strings.Contains(m.Text, "later@example.com") {
+			t.Errorf("a mail to the notifier names a non-privacy contact:\n%s", m.Text)
+		}
+	}
+	if !named {
+		t.Error("the decision mail does not name the privacy contact")
+	}
 }

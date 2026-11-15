@@ -33,6 +33,11 @@
                 :form="copySettings"
             />
 
+            <AdminSettingsContactsSection
+                v-if="activeSection === 'contacts'"
+                :form="copySettings"
+            />
+
             <LayoutPanel
                 v-if="activeSection === 'tv'"
                 id="settings-tv"
@@ -114,7 +119,16 @@
                 :title="$t('settings.legalTitle')"
             >
                 <div :class="SETTINGS_FIELDS_GRID">
-                    <SettingsLegalFields :legal="copySettings" />
+                    <SettingsLegalFields
+                        :legal="copySettings"
+                        :contact="{
+                            email: copySettings.contact_email,
+                            phone: copySettings.legal_phone,
+                        }"
+                        @edit-contact="
+                            selectSection('contacts', { push: true })
+                        "
+                    />
                 </div>
             </LayoutPanel>
             <LayoutPanel
@@ -154,16 +168,22 @@ import {
 } from '#shared/utils/tvSettings'
 import { tvSettingsPayload } from '~/utils/tvScreen'
 import { isValidOpeningHours } from '#shared/utils/openingHours'
+import { isValidGymContacts } from '#shared/utils/gymContacts'
 import type { Form, FormError } from '@nuxt/ui'
 import type { GymRecord } from '~/types/models'
 import { isValidGymSlug } from '#shared/utils/gymSlug'
 import { type RichTextDoc } from '#shared/utils/privacyDoc'
 import { gymLink } from '~/utils/navigation'
 import { privacyDocProblem } from '~/utils/privacyEditor'
-import { fieldErrorCode } from '~/utils/fieldErrors'
+import { fieldErrorCode, formFieldErrors } from '~/utils/fieldErrors'
 import { required, validEmail, validateRules } from '~/utils/validation'
 import { SETTINGS_FIELD_UI, SETTINGS_FIELDS_GRID } from '~/utils/settingsUi'
-import { changedGymSettings, gymSettingsDraft } from '~/utils/gymSettingsDraft'
+import {
+    changedGymSettings,
+    contactsPayload,
+    gymSettingsDraft,
+    type GymContactDraft,
+} from '~/utils/gymSettingsDraft'
 import {
     DEFAULT_GYM_BANDS,
     bandSettingsFrom,
@@ -207,10 +227,17 @@ const settingsForm = ref<Form<typeof copySettings> | null>(null)
 function validateSettings(state: typeof copySettings) {
     return validateRules(state, {
         contact_email: [(email) => !email || validEmail(t)(email)],
+        report_email: [(email) => !email || validEmail(t)(email)],
         opening_hours: [
             (hours) =>
                 isValidOpeningHours(hours) ||
                 t('gymInfo.settings.invalidHours'),
+        ],
+        contacts: [
+            (contacts) =>
+                isValidGymContacts(
+                    contactsPayload(contacts as GymContactDraft[]),
+                ) || t('gymInfo.settings.invalidContacts'),
         ],
         privacy_doc: [
             (doc) => privacyDocProblem(doc as RichTextDoc, t) || true,
@@ -235,8 +262,11 @@ function validateSettings(state: typeof copySettings) {
 const FIELD_SECTIONS: Record<string, string> = {
     slug: 'organization',
     previous_slugs: 'organization',
-    contact_email: 'organization',
+    contact_email: 'contacts',
+    legal_phone: 'contacts',
+    report_email: 'contacts',
     opening_hours: 'info',
+    contacts: 'contacts',
     tv_settings: 'tv',
     privacy_doc: 'privacy',
 }
@@ -263,8 +293,24 @@ function slugFieldErrors(error: unknown): FormError[] {
     })
 }
 
-function showSlugErrors(error: unknown) {
-    const errors = slugFieldErrors(error)
+const CONTACT_FIELDS = [
+    'contact_email',
+    'legal_phone',
+    'contacts',
+    'report_email',
+]
+// The general contact is edited in a dialog, so its errors show on the contact list (UForm drops unregistered names).
+const shownOnContactList = (name: string) =>
+    name === 'contact_email' || name === 'legal_phone' ? 'contacts' : name
+
+function showFieldErrors(error: unknown) {
+    const errors = [
+        ...slugFieldErrors(error),
+        ...formFieldErrors(error, CONTACT_FIELDS, t).map((fieldError) => ({
+            ...fieldError,
+            name: shownOnContactList(fieldError.name),
+        })),
+    ]
     if (!errors.length) return false
     settingsForm.value?.setErrors(errors)
     showSectionOf(errors)
@@ -365,6 +411,11 @@ const formSections = computed(() => [
         icon: 'i-lucide-info',
     },
     {
+        id: 'contacts',
+        label: t('gymInfo.settings.contacts'),
+        icon: 'i-lucide-contact-round',
+    },
+    {
         id: 'tv',
         label: t('settings.tv.title'),
         icon: 'i-lucide-tv',
@@ -460,7 +511,7 @@ async function saveSettings() {
         {
             success: t('settings.saveSuccess'),
             error: t('settings.saveError'),
-            handled: showSlugErrors,
+            handled: showFieldErrors,
         },
     )
 }

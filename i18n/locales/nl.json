@@ -601,7 +601,7 @@
             },
             "accounts": {
                 "title": "Gebruikersaccounts",
-                "body": "Als de exploitant registratie toestaat, kun je een account aanmaken met e-mailadres en wachtwoord; je ontvangt een verificatiemail. Bevestig je het adres niet binnen 7 dagen, dan wordt het account verwijderd. Beheerders van een hal kunnen je ook als medewerker uitnodigen door je e-mailadres en eventueel je voor- en achternaam in te voeren. Je ontvangt dan een uitnodigingslink die 7 dagen geldig is; we bewaren de uitnodiging tot je die accepteert, ze verloopt of de hal ze intrekt. Zonder jou wordt niets aangemaakt: om te accepteren meld je je aan met dat e-mailadres of maak je een account aan met je eigen wachtwoord, en pas dan word je lid. Wij slaan je e-mailadres, gebruikersnaam, voor- en achternaam, wachtwoord (alleen als veilige hash), een optionele profielfoto en profielbanner, je taal, je meldingsvoorkeuren, je privacy-instellingen en de muren die je volgt op. Als je medewerker van een hal bent, komt daar je lidmaatschap met rol per hal bij. Je e-mailadres wordt niet getoond aan andere klimmers of aan medewerkers van de hal; de beheerders van het platform kunnen het zien, en als je inhoud meldt, ontvangen de moderatoren van de hal en het contactadres van de hal je naam en e-mailadres (zie Meldingen van inhoud). De grondslag is de uitvoering van de overeenkomst voor het gebruik van de dienst (art. 6, lid 1, onder b, AVG). De gegevens worden bewaard zolang je account bestaat."
+                "body": "Als de exploitant registratie toestaat, kun je een account aanmaken met e-mailadres en wachtwoord; je ontvangt een verificatiemail. Bevestig je het adres niet binnen 7 dagen, dan wordt het account verwijderd. Beheerders van een hal kunnen je ook als medewerker uitnodigen door je e-mailadres en eventueel je voor- en achternaam in te voeren. Je ontvangt dan een uitnodigingslink die 7 dagen geldig is; we bewaren de uitnodiging tot je die accepteert, ze verloopt of de hal ze intrekt. Zonder jou wordt niets aangemaakt: om te accepteren meld je je aan met dat e-mailadres of maak je een account aan met je eigen wachtwoord, en pas dan word je lid. Wij slaan je e-mailadres, gebruikersnaam, voor- en achternaam, wachtwoord (alleen als veilige hash), een optionele profielfoto en profielbanner, je taal, je meldingsvoorkeuren, je privacy-instellingen en de muren die je volgt op. Als je medewerker van een hal bent, komt daar je lidmaatschap met rol per hal bij. Je e-mailadres wordt niet getoond aan andere klimmers of aan medewerkers van de hal; de beheerders van het platform kunnen het zien, en als je inhoud meldt, ontvangen de moderatoren van de hal je naam en e-mailadres (zie Meldingen van inhoud). De grondslag is de uitvoering van de overeenkomst voor het gebruik van de dienst (art. 6, lid 1, onder b, AVG). De gegevens worden bewaard zolang je account bestaat."
             },
             "privacySettings": {
                 "title": "Jouw privacy-instellingen",
@@ -645,7 +645,7 @@
             },
             "reports": {
                 "title": "Meldingen van inhoud",
-                "body": "Als je inhoud meldt, verwerken wij je naam, e-mailadres, de reden van de melding en je toelichting om de melding te behandelen en je over het besluit te informeren (art. 6, lid 1, onder c, AVG juncto art. 16 DSA). De moderatoren van de hal en het contactadres van de hal ontvangen je naam en e-mailadres bij de melding. Wie de gemelde inhoud heeft geplaatst, hoort niet wie hem heeft gemeld, tenzij de wet dat vereist. Meldingen worden drie jaar na de beslissing verwijderd; tot dan blijven deze gegevens ook na het verwijderen van je account bewaard."
+                "body": "Als je inhoud meldt, verwerken wij je naam, e-mailadres, de reden van de melding en je toelichting om de melding te behandelen en je over het besluit te informeren (art. 6, lid 1, onder c, AVG juncto art. 16 DSA). De moderatoren van de hal ontvangen je naam en e-mailadres bij de melding; een meldadres dat de hal heeft opgegeven ontvangt alleen de melding zelf. Wie de gemelde inhoud heeft geplaatst, hoort niet wie hem heeft gemeld, tenzij de wet dat vereist. Meldingen worden drie jaar na de beslissing verwijderd; tot dan blijven deze gegevens ook na het verwijderen van je account bewaard."
             },
             "notifications": {
                 "title": "Meldingen",
@@ -696,7 +696,8 @@
             "map": {
                 "title": "Kaarten",
                 "body": "Kaarten op halpagina’s worden pas geladen als je Kaart tonen kiest. Je browser vraagt dan kaartgegevens, lettertypen en symbolen op bij OpenFreeMap (openfreemap.org), dat je IP-adres en browsergegevens ontvangt (art. 6 lid 1 sub a AVG, je toestemming). We onthouden de keuze op je apparaat; wis de sitegegevens om haar in te trekken. Medewerkers die in de instellingen een haladres opzoeken of de kaartspeld verplaatsen, sturen dat adres of de coördinaten naar OpenStreetMap Nominatim."
-            }
+            },
+            "privacyContact": "Contactpersoon privacy"
         },
         "accountDeletionPage": {
             "title": "Je Gripello-account verwijderen",
@@ -981,7 +982,6 @@
         "saveSuccess": "Instellingen opgeslagen.",
         "saveError": "Instellingen konden niet worden opgeslagen. Probeer het opnieuw.",
         "contactEmail": "Contact-e-mail",
-        "contactEmailHint": "Wordt gepubliceerd als aanspreekpunt en ontvangt meldingen over nieuwe inhoudsmeldingen.",
         "mailNotConfigured": "E-mail is niet geconfigureerd, dus wachtwoordherstel en meldingen over inhoud kunnen niet worden verzonden. Een platformbeheerder stelt dit in onder Platforminstellingen › E-mail.",
         "legalTitle": "Colofon",
         "legalName": "Naam van de aanbieder",
@@ -3246,8 +3246,40 @@
             "closes": "sluit",
             "addInterval": "Tijden toevoegen",
             "removeInterval": "Tijden verwijderen",
-            "copyMonday": "Maandag naar di–vr kopiëren"
-        }
+            "copyMonday": "Maandag naar di–vr kopiëren",
+            "contacts": "Contacten",
+            "contactList": "Contactpersonen",
+            "contactKind": "Afdeling",
+            "contactLabel": "Eigen titel",
+            "contactName": "Naam",
+            "contactEmail": "E-mail",
+            "contactPhone": "Telefoon",
+            "addContact": "Contact toevoegen",
+            "editContact": "Contact bewerken",
+            "removeContact": "Contact verwijderen",
+            "invalidContacts": "Elk contact heeft een geldig e-mailadres of telefoonnummer nodig.",
+            "generalContact": "Algemeen",
+            "noContact": "Niet ingesteld",
+            "contactUses": "Gebruikt voor",
+            "reports": "Inhoudsmeldingen",
+            "reportEmail": "Meldingen naar",
+            "uses": {
+                "info": "Hal-info",
+                "imprint": "Colofon",
+                "privacy": "Privacy",
+                "replyTo": "Antwoordadres",
+                "appeals": "Bezwaren"
+            }
+        },
+        "contactKinds": {
+            "front_desk": "Receptie",
+            "privacy": "Privacy",
+            "routesetting": "Routebouw",
+            "competitions": "Wedstrijden",
+            "courses": "Cursussen",
+            "other": "Contact"
+        },
+        "appContact": "Vragen over de app"
     },
     "imageCrop": {
         "zoom": "Zoomen",

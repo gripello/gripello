@@ -601,7 +601,7 @@
             },
             "accounts": {
                 "title": "Your account",
-                "body": "If the operator allows sign-up, you can register with an e-mail address and password; we send a verification e-mail to confirm the address. If you don't confirm the address within 7 days, the account is deleted. A gym admin can also invite you as a staff member by entering your e-mail address and, optionally, your first and last name. We then send you an invitation link that is valid for 7 days and keep the invitation until you accept it, it expires or the gym withdraws it. Nothing is created without you: to accept, you sign in with that e-mail address or create an account with your own password, and only then do you become a member. We store your e-mail address, username, first and last name, password (only as a secure hash), language, notification preferences, privacy settings, the walls you follow and, if you add them, an avatar and a profile banner. If you work for a gym, your staff rights come from your membership in that gym and its role. We use this data to provide your account and the features you use (Art. 6(1)(b) GDPR). Your e-mail address is not shown to other climbers or to gym staff; the platform administrators can see it, and if you report content, the gym's moderators and the gym's contact address receive your name and e-mail address (see Content reports). Your account data is kept until you delete your account."
+                "body": "If the operator allows sign-up, you can register with an e-mail address and password; we send a verification e-mail to confirm the address. If you don't confirm the address within 7 days, the account is deleted. A gym admin can also invite you as a staff member by entering your e-mail address and, optionally, your first and last name. We then send you an invitation link that is valid for 7 days and keep the invitation until you accept it, it expires or the gym withdraws it. Nothing is created without you: to accept, you sign in with that e-mail address or create an account with your own password, and only then do you become a member. We store your e-mail address, username, first and last name, password (only as a secure hash), language, notification preferences, privacy settings, the walls you follow and, if you add them, an avatar and a profile banner. If you work for a gym, your staff rights come from your membership in that gym and its role. We use this data to provide your account and the features you use (Art. 6(1)(b) GDPR). Your e-mail address is not shown to other climbers or to gym staff; the platform administrators can see it, and if you report content, the gym's moderators receive your name and e-mail address (see Content reports). Your account data is kept until you delete your account."
             },
             "privacySettings": {
                 "title": "Your privacy settings",
@@ -645,7 +645,7 @@
             },
             "reports": {
                 "title": "Content reports",
-                "body": "If you report illegal or inappropriate content, we process your name, e-mail address, the reason and your explanation to handle the report and inform you of the decision (Art. 6(1)(c) GDPR in conjunction with Art. 16 of the EU Digital Services Act). The gym's moderators and the gym's contact address receive your name and e-mail address with the report. The person whose content you report is not told who you are, unless the law requires it. Reports are deleted three years after the decision; deleting your account does not delete them earlier."
+                "body": "If you report illegal or inappropriate content, we process your name, e-mail address, the reason and your explanation to handle the report and inform you of the decision (Art. 6(1)(c) GDPR in conjunction with Art. 16 of the EU Digital Services Act). The gym's moderators receive your name and e-mail address with the report; a report address set by the gym receives only the report itself. The person whose content you report is not told who you are, unless the law requires it. Reports are deleted three years after the decision; deleting your account does not delete them earlier."
             },
             "notifications": {
                 "title": "Notifications",
@@ -696,7 +696,8 @@
             "map": {
                 "title": "Maps",
                 "body": "Maps on gym pages are only loaded after you select Show map. Your browser then requests map data, fonts and symbols from OpenFreeMap (openfreemap.org), which receives your IP address and browser details (Art. 6(1)(a) GDPR, your consent). We remember the choice on your device; clear the site data to withdraw it. Staff who look up a gym address or move the map pin in the settings send that address or the pin coordinates to OpenStreetMap Nominatim."
-            }
+            },
+            "privacyContact": "Data protection contact"
         },
         "accountDeletionPage": {
             "title": "Delete your Gripello account",
@@ -981,7 +982,6 @@
         "saveSuccess": "Settings saved.",
         "saveError": "Could not save settings. Please try again.",
         "contactEmail": "Contact email",
-        "contactEmailHint": "Published as your point of contact and notified about new content reports.",
         "mailNotConfigured": "Email is not configured, so password resets and content report notices cannot be delivered. A platform admin sets it up under Platform settings › Mail.",
         "legalTitle": "Legal notice",
         "legalName": "Provider name",
@@ -3246,8 +3246,40 @@
             "closes": "closes",
             "addInterval": "Add hours",
             "removeInterval": "Remove hours",
-            "copyMonday": "Copy Monday to Tue–Fri"
-        }
+            "copyMonday": "Copy Monday to Tue–Fri",
+            "contacts": "Contacts",
+            "contactList": "People and departments",
+            "contactKind": "Area",
+            "contactLabel": "Custom title",
+            "contactName": "Name",
+            "contactEmail": "Email",
+            "contactPhone": "Phone",
+            "addContact": "Add contact",
+            "editContact": "Edit contact",
+            "removeContact": "Remove contact",
+            "invalidContacts": "Every contact needs a valid email address or phone number.",
+            "generalContact": "General",
+            "noContact": "Not set",
+            "contactUses": "Used for",
+            "reports": "Content reports",
+            "reportEmail": "Send reports to",
+            "uses": {
+                "info": "Gym info",
+                "imprint": "Legal notice",
+                "privacy": "Privacy policy",
+                "replyTo": "Reply-to",
+                "appeals": "Appeals"
+            }
+        },
+        "contactKinds": {
+            "front_desk": "Front desk",
+            "privacy": "Data protection",
+            "routesetting": "Route setting",
+            "competitions": "Competitions",
+            "courses": "Courses",
+            "other": "Contact"
+        },
+        "appContact": "Questions about the app"
     },
     "imageCrop": {
         "zoom": "Zoom",

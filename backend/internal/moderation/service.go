@@ -434,7 +434,7 @@ func publishRouteArchived(ctx context.Context, tx pgx.Tx, route, gym string) err
 func (m *module) brand(ctx context.Context, gym string) mail.Brand {
 	t := m.app.MailTemplates
 	b := t.AppBrand()
-	b.ReplyTo = contactEmail(ctx, m.app.DB, "")
+	b.ReplyTo = platformContactEmail(ctx, m.app.DB)
 	var name, slug, language, contact string
 	if gym == "" || m.app.DB.QueryRow(ctx, `SELECT name, slug, language, contact_email FROM gyms WHERE id = $1`, gym).
 		Scan(&name, &slug, &language, &contact) != nil {
@@ -523,8 +523,8 @@ func (m *module) sendReceipt(ctx context.Context, report Report, caseID string) 
 		},
 		Action: tenancy.GymPath(ctx, m.app.DB, report.Gym, inboxPath("/manage/moderation", caseID)),
 	}
-	// The contact address is whatever manage_settings typed in; the notifier's identity stays with the report handlers.
-	if contact := contactEmail(ctx, m.app.DB, report.Gym); contact != "" &&
+	// The report address is whatever manage_settings typed in; the notifier's identity stays with the report handlers.
+	if contact := reportEmail(ctx, m.app.DB, report.Gym); contact != "" &&
 		!slices.ContainsFunc(to, func(r mail.Recipient) bool { return strings.EqualFold(r.Address, contact) }) {
 		m.send(ctx, report.Gym, alert, []mail.Recipient{{Address: contact}})
 	}
@@ -543,7 +543,7 @@ func (m *module) sendDecision(ctx context.Context, report Report) {
 		details = append(details, mail.Detail{Label: "reasoning", Value: report.DecisionReason})
 	}
 	outro := []string{"mails.reportDecision.redress"}
-	contact := contactEmail(ctx, m.app.DB, report.Gym)
+	contact := redressEmail(ctx, m.app.DB, report.Gym)
 	if contact != "" {
 		outro = append(outro, "mails.reportDecision.redressContact")
 	}

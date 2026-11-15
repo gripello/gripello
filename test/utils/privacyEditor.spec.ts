@@ -20,6 +20,25 @@ describe('privacy block text', () => {
         )
     })
 
+    it('adds the privacy contact to the controller', () => {
+        const controller = {
+            name: 'E2E Gym',
+            contacts: [
+                { kind: 'front_desk' as const, email: 'desk@example.com' },
+                {
+                    kind: 'privacy' as const,
+                    name: 'DPO Ltd',
+                    email: 'dpo@example.com',
+                },
+            ],
+        }
+        expect(
+            privacyBlockText('controller', t, { controller, auditDays: 90 }),
+        ).toBe(
+            'legal.privacyPage.controllerTitle\nE2E Gym\nlegal.privacyPage.privacyContact\nDPO Ltd\ndpo@example.com',
+        )
+    })
+
     it('shows the controller from the legal settings', () => {
         const controller = {
             name: 'E2E Gym',

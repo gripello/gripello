@@ -1,4 +1,5 @@
 import { hasOpeningHours } from '#shared/utils/openingHours'
+import type { GymContact } from '#shared/utils/gymContacts'
 import type { GymRecord } from '~/types/models'
 import { gymTitle } from './gymNames'
 
@@ -65,7 +66,8 @@ export function hasGymInfo(gym: Partial<GymRecord> | null | undefined) {
             gym.amenities?.length ||
             gym.website_url ||
             gym.legal_phone ||
-            gym.contact_email)
+            gym.contact_email ||
+            gym.contacts?.length)
     )
 }
 
@@ -95,22 +97,32 @@ function websiteLabel(url: string) {
     }
 }
 
+const phoneLink = (phone: string) => ({
+    key: 'phone',
+    icon: 'i-lucide-phone',
+    label: phone,
+    href: `tel:${phone.replace(/[^\d+]/g, '')}`,
+})
+
+const emailLink = (email: string) => ({
+    key: 'email',
+    icon: 'i-lucide-mail',
+    label: email,
+    href: `mailto:${email}`,
+})
+
+export function contactLinks(contact: Pick<GymContact, 'email' | 'phone'>) {
+    return [
+        contact.phone && phoneLink(contact.phone),
+        contact.email && emailLink(contact.email),
+    ].filter((link) => !!link)
+}
+
 export function gymContacts(
     gym: Pick<GymRecord, 'legal_phone' | 'contact_email' | 'website_url'>,
 ) {
     return [
-        gym.legal_phone && {
-            key: 'phone',
-            icon: 'i-lucide-phone',
-            label: gym.legal_phone,
-            href: `tel:${gym.legal_phone.replace(/[^\d+]/g, '')}`,
-        },
-        gym.contact_email && {
-            key: 'email',
-            icon: 'i-lucide-mail',
-            label: gym.contact_email,
-            href: `mailto:${gym.contact_email}`,
-        },
+        ...contactLinks({ phone: gym.legal_phone, email: gym.contact_email }),
         gym.website_url && {
             key: 'website',
             icon: 'i-lucide-globe',

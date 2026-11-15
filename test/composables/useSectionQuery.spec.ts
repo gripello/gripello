@@ -49,6 +49,15 @@ describe('useSectionQuery', () => {
         )
     })
 
+    it('pushes a jump from one section to another, so back returns to it', () => {
+        route.query = { tab: 'profile' }
+        setup(null).select('security', { push: true })
+        expect(navigateTo).toHaveBeenCalledWith(
+            { query: { tab: 'security' } },
+            { replace: false },
+        )
+    })
+
     it('steps back to the list entry it came from', () => {
         route.query = { tab: 'security' }
         setup('/account/settings').backToList()

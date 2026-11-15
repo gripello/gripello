@@ -7,7 +7,13 @@ import fr from '../../i18n/locales/fr.json'
 import nl from '../../i18n/locales/nl.json'
 import { PRIVACY_TEXT_SECTIONS } from '#shared/utils/privacyDoc'
 
-const RENDERED_ELSEWHERE = ['subtitle', 'controllerTitle', 'storage', 'rights']
+const RENDERED_ELSEWHERE = [
+    'subtitle',
+    'controllerTitle',
+    'privacyContact',
+    'storage',
+    'rights',
+]
 
 describe('privacy page', () => {
     it('offers every privacy section in the locale files as a block', () => {

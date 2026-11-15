@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
     addressParts,
+    contactLinks,
     directionLinks,
     formatNominatimAddress,
     geocodeAddress,
@@ -89,9 +90,21 @@ describe('gymInfo', () => {
         ])
     })
 
+    it('links only the phone and e-mail a contact has', () => {
+        expect(
+            contactLinks({ email: 'dpo@gym.test' }).map((c) => c.href),
+        ).toEqual(['mailto:dpo@gym.test'])
+        expect(
+            contactLinks({ phone: '0123 45', email: '' }).map((c) => c.href),
+        ).toEqual(['tel:012345'])
+    })
+
     it('detects whether a gym has any public info', () => {
         expect(hasGymInfo({ name: 'x', latitude: 0, longitude: 0 })).toBe(false)
         expect(hasGymInfo({ amenities: ['showers'] })).toBe(true)
+        expect(
+            hasGymInfo({ contacts: [{ kind: 'privacy', phone: '1' }] }),
+        ).toBe(true)
         expect(
             hasGymInfo({ opening_hours: { mon: [['07:00', '23:00']] } }),
         ).toBe(true)

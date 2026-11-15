@@ -601,7 +601,7 @@
             },
             "accounts": {
                 "title": "Compte utilisateur",
-                "body": "Si l’exploitant autorise les inscriptions, vous pouvez créer un compte avec une adresse e-mail et un mot de passe ; un e-mail de vérification confirme l’adresse. Si vous ne confirmez pas l’adresse dans les 7 jours, le compte est supprimé. Un administrateur d’une salle peut aussi vous inviter comme membre du personnel en saisissant votre adresse e-mail et, si besoin, votre prénom et votre nom. Vous recevez alors un lien d’invitation valable 7 jours ; nous conservons l’invitation jusqu’à ce que vous l’acceptiez, qu’elle expire ou que la salle la retire. Rien n’est créé sans vous : pour accepter, vous vous connectez avec cette adresse e-mail ou créez un compte avec votre propre mot de passe, et ce n’est qu’à ce moment que vous devenez membre. Nous conservons votre adresse e-mail, votre nom d’utilisateur, votre prénom et votre nom, une photo de profil et une bannière facultatives, votre langue, vos préférences de notification, vos paramètres de confidentialité et les murs que vous suivez. Le mot de passe n’est stocké que sous forme chiffrée (hachée). Si une salle vous donne un rôle (par ex. ouvreur ou administrateur), nous enregistrons cette adhésion et ce rôle pour la salle concernée. Votre adresse e-mail n’est pas affichée aux autres grimpeurs ni au personnel des salles ; les administrateurs de la plateforme peuvent la voir et, si vous signalez un contenu, les modérateurs de la salle et l’adresse de contact de la salle reçoivent votre nom et votre adresse e-mail (voir Signalements de contenu). Base légale : exécution du contrat d’utilisation du service (article 6, paragraphe 1, point b), du RGPD). Durée de conservation : tant que le compte existe ; vous pouvez modifier ces données ou supprimer votre compte à tout moment dans les paramètres."
+                "body": "Si l’exploitant autorise les inscriptions, vous pouvez créer un compte avec une adresse e-mail et un mot de passe ; un e-mail de vérification confirme l’adresse. Si vous ne confirmez pas l’adresse dans les 7 jours, le compte est supprimé. Un administrateur d’une salle peut aussi vous inviter comme membre du personnel en saisissant votre adresse e-mail et, si besoin, votre prénom et votre nom. Vous recevez alors un lien d’invitation valable 7 jours ; nous conservons l’invitation jusqu’à ce que vous l’acceptiez, qu’elle expire ou que la salle la retire. Rien n’est créé sans vous : pour accepter, vous vous connectez avec cette adresse e-mail ou créez un compte avec votre propre mot de passe, et ce n’est qu’à ce moment que vous devenez membre. Nous conservons votre adresse e-mail, votre nom d’utilisateur, votre prénom et votre nom, une photo de profil et une bannière facultatives, votre langue, vos préférences de notification, vos paramètres de confidentialité et les murs que vous suivez. Le mot de passe n’est stocké que sous forme chiffrée (hachée). Si une salle vous donne un rôle (par ex. ouvreur ou administrateur), nous enregistrons cette adhésion et ce rôle pour la salle concernée. Votre adresse e-mail n’est pas affichée aux autres grimpeurs ni au personnel des salles ; les administrateurs de la plateforme peuvent la voir et, si vous signalez un contenu, les modérateurs de la salle reçoivent votre nom et votre adresse e-mail (voir Signalements de contenu). Base légale : exécution du contrat d’utilisation du service (article 6, paragraphe 1, point b), du RGPD). Durée de conservation : tant que le compte existe ; vous pouvez modifier ces données ou supprimer votre compte à tout moment dans les paramètres."
             },
             "privacySettings": {
                 "title": "Vos paramètres de confidentialité",
@@ -645,7 +645,7 @@
             },
             "reports": {
                 "title": "Signalements de contenu",
-                "body": "Si vous signalez un contenu, nous traitons votre nom, votre adresse e-mail, le motif du signalement et vos explications afin de traiter le signalement et de vous informer de la décision (article 6, paragraphe 1, point c), du RGPD, en liaison avec l’article 16 du règlement sur les services numériques). Les modérateurs de la salle concernée et l’adresse de contact de la salle reçoivent votre nom et votre adresse e-mail avec le signalement. La personne dont vous signalez le contenu n’apprend pas qui vous êtes, sauf obligation légale. Les signalements sont supprimés trois ans après la décision ; la suppression de votre compte ne les supprime pas plus tôt."
+                "body": "Si vous signalez un contenu, nous traitons votre nom, votre adresse e-mail, le motif du signalement et vos explications afin de traiter le signalement et de vous informer de la décision (article 6, paragraphe 1, point c), du RGPD, en liaison avec l’article 16 du règlement sur les services numériques). Les modérateurs de la salle concernée reçoivent votre nom et votre adresse e-mail avec le signalement ; une adresse de signalement indiquée par la salle ne reçoit que le signalement lui-même. La personne dont vous signalez le contenu n’apprend pas qui vous êtes, sauf obligation légale. Les signalements sont supprimés trois ans après la décision ; la suppression de votre compte ne les supprime pas plus tôt."
             },
             "notifications": {
                 "title": "Notifications",
@@ -696,7 +696,8 @@
             "map": {
                 "title": "Cartes",
                 "body": "Les cartes des pages de salle ne sont chargées qu’après avoir choisi Afficher la carte. Votre navigateur demande alors des données cartographiques, polices et symboles à OpenFreeMap (openfreemap.org), qui reçoit votre adresse IP et des informations sur votre navigateur (art. 6, par. 1, point a) RGPD, votre consentement). Nous mémorisons ce choix sur votre appareil ; effacez les données du site pour le retirer. Le personnel qui recherche l’adresse d’une salle ou déplace le repère de la carte dans les paramètres envoie cette adresse ou les coordonnées à OpenStreetMap Nominatim."
-            }
+            },
+            "privacyContact": "Contact protection des données"
         },
         "accountDeletionPage": {
             "title": "Supprimer votre compte Gripello",
@@ -981,7 +982,6 @@
         "saveSuccess": "Paramètres enregistrés.",
         "saveError": "Impossible d’enregistrer les paramètres. Veuillez réessayer.",
         "contactEmail": "E-mail de contact",
-        "contactEmailHint": "Publié comme point de contact et notifié des nouveaux signalements de contenu.",
         "mailNotConfigured": "L’e-mail n’est pas configuré : les réinitialisations de mot de passe et les avis de signalement ne peuvent pas être envoyés. Un administrateur de la plateforme le configure dans Paramètres de la plateforme › E-mail.",
         "legalTitle": "Mentions légales",
         "legalName": "Nom du prestataire",
@@ -3246,8 +3246,40 @@
             "closes": "ferme",
             "addInterval": "Ajouter une plage",
             "removeInterval": "Supprimer la plage",
-            "copyMonday": "Copier lundi sur mar–ven"
-        }
+            "copyMonday": "Copier lundi sur mar–ven",
+            "contacts": "Contacts",
+            "contactList": "Interlocuteurs",
+            "contactKind": "Domaine",
+            "contactLabel": "Titre personnalisé",
+            "contactName": "Nom",
+            "contactEmail": "E-mail",
+            "contactPhone": "Téléphone",
+            "addContact": "Ajouter un contact",
+            "editContact": "Modifier le contact",
+            "removeContact": "Supprimer le contact",
+            "invalidContacts": "Chaque contact doit avoir une adresse e-mail ou un numéro de téléphone valide.",
+            "generalContact": "Général",
+            "noContact": "Non renseigné",
+            "contactUses": "Utilisé pour",
+            "reports": "Signalements de contenu",
+            "reportEmail": "Envoyer les signalements à",
+            "uses": {
+                "info": "Infos de la salle",
+                "imprint": "Mentions légales",
+                "privacy": "Confidentialité",
+                "replyTo": "Adresse de réponse",
+                "appeals": "Contestations"
+            }
+        },
+        "contactKinds": {
+            "front_desk": "Accueil",
+            "privacy": "Protection des données",
+            "routesetting": "Ouverture de voies",
+            "competitions": "Compétitions",
+            "courses": "Cours",
+            "other": "Contact"
+        },
+        "appContact": "Questions sur l'application"
     },
     "imageCrop": {
         "zoom": "Zoom",

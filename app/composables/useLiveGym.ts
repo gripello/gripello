@@ -13,9 +13,13 @@ export function updatedGym(
             : null
     if (event.kind !== 'gym.updated' || event.record.id !== current?.id)
         return null
-    // gym.updated goes out without the trial end; members get it as gym.trial_changed.
-    return current.trial_ends_at
-        ? { ...event.record, trial_ends_at: current.trial_ends_at }
+    // gym.updated goes out without the trial end (members get it as gym.trial_changed) and the staff-only report address.
+    const kept: Partial<GymRecord> = {}
+    if (current.trial_ends_at) kept.trial_ends_at = current.trial_ends_at
+    if (current.report_email !== undefined)
+        kept.report_email = current.report_email
+    return Object.keys(kept).length
+        ? { ...event.record, ...kept }
         : event.record
 }
 

@@ -334,6 +334,17 @@ components:
     Amenity:
       type: string
       enum: [toilets, showers, changing_rooms, lockers, cafe, shop, rental, parking, bike_parking, public_transport, kids_area, training_area, outdoor_area, yoga, sauna, wheelchair, wifi]
+    GymContact:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      description: Needs an email or a phone.
+      properties:
+        kind: { type: string, enum: [front_desk, privacy, routesetting, competitions, courses, other] }
+        label: { type: string, maxLength: 50 }
+        name: { type: string, maxLength: 100 }
+        email: { type: string }
+        phone: { type: string, maxLength: 100 }
     Language:
       type: string
       enum: ['', en, de, nl, fr, es]
@@ -348,6 +359,7 @@ components:
         hidden: { type: boolean }
         trial_ends_at: { type: [string, 'null'], format: date-time, description: "Set while the gym is on trial; staff are read-only once it passed. Platform admins only." }
         contact_email: { type: string, format: email }
+        report_email: { type: string, format: email, description: Only for viewers with manage_settings }
         route_grade_system: { type: string, maxLength: 50 }
         boulder_grade_system: { type: string, maxLength: 50 }
         boulder_bands: {}
@@ -376,6 +388,10 @@ components:
         amenities:
           type: array
           items: { $ref: '#/components/schemas/Amenity' }
+        contacts:
+          type: [array, 'null']
+          maxItems: 10
+          items: { $ref: '#/components/schemas/GymContact' }
         tv_settings: { $ref: '#/components/schemas/TvSettings' }
     GymInput:
       description: Any subset of the fields; file fields only accept null or "" (clear), uploads go through multipart.
@@ -402,7 +418,7 @@ components:
         - $ref: '#/components/schemas/GymFields'
         - type: object
           description: 'trial_ends_at only for members and platform admins; GET /gyms leaves out privacy_doc and tv_settings'
-          required: [id, created, updated, slug, name, unit_name, short_name, active, hidden, page_logo, page_icon, sign_image, cover_image, contact_email, route_grade_system, boulder_grade_system, boulder_bands, legal_address, legal_phone, legal_register, legal_vat_id, legal_editorial, legal_representatives, imprint_url, privacy_url, previous_slugs, language, features, premoderate_betas, description, address, latitude, longitude, website_url, opening_hours, hours_note, amenities]
+          required: [id, created, updated, slug, name, unit_name, short_name, active, hidden, page_logo, page_icon, sign_image, cover_image, contact_email, route_grade_system, boulder_grade_system, boulder_bands, legal_address, legal_phone, legal_register, legal_vat_id, legal_editorial, legal_representatives, imprint_url, privacy_url, previous_slugs, language, features, premoderate_betas, description, address, latitude, longitude, website_url, opening_hours, hours_note, amenities, contacts]
           properties:
             id: { type: string }
             created: { type: string, format: date-time }
@@ -418,6 +434,7 @@ components:
             sign_image: { type: string }
             cover_image: { type: string }
             contact_email: { type: string }
+            report_email: { type: string, description: Only for viewers with manage_settings }
             route_grade_system: { type: string }
             boulder_grade_system: { type: string }
             boulder_bands: {}
@@ -445,6 +462,9 @@ components:
             amenities:
               type: array
               items: { $ref: '#/components/schemas/Amenity' }
+            contacts:
+              type: array
+              items: { $ref: '#/components/schemas/GymContact' }
     SettingsFields:
       type: object
       properties:

@@ -2,10 +2,10 @@ export function useSectionQuery(key: string) {
     const route = useRoute()
     const router = useRouter()
 
-    function select(section: string) {
+    function select(section: string, { push = false } = {}) {
         return navigateTo(
             { query: { [key]: section } },
-            { replace: !!route.query[key] },
+            { replace: !push && !!route.query[key] },
         )
     }
 

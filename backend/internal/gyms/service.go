@@ -84,6 +84,7 @@ var gymFields = map[string]field{
 	"sign_image":            {kind: "file"},
 	"cover_image":           {kind: "file"},
 	"contact_email":         {kind: "email"},
+	"report_email":          {kind: "email"},
 	"route_grade_system":    {kind: "text", max: 50},
 	"boulder_grade_system":  {kind: "text", max: 50},
 	"boulder_bands":         {kind: "bands", max: 5000},
@@ -108,6 +109,7 @@ var gymFields = map[string]field{
 	"opening_hours":         {kind: "hours", max: 4000},
 	"hours_note":            {kind: "text", max: 300},
 	"amenities":             {kind: "amenities"},
+	"contacts":              {kind: "contacts"},
 	"tv_settings":           {kind: "tv", max: 16000},
 	"trial_ends_at":         {kind: "time"},
 }
@@ -265,6 +267,14 @@ func validateValue(spec field, raw json.RawMessage) (any, string) {
 		}
 		if isNull(raw) {
 			return nil, ""
+		}
+		return raw, ""
+	case "contacts":
+		if !isValidGymContacts(raw) {
+			return nil, "Contacts are a list of at most 10 entries, each with a role and an e-mail address or phone number."
+		}
+		if isNull(raw) {
+			return json.RawMessage("[]"), ""
 		}
 		return raw, ""
 	case "tv":

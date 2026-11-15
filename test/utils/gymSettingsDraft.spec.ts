@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { changedGymSettings, gymSettingsDraft } from '~/utils/gymSettingsDraft'
+import {
+    changedGymSettings,
+    emptyContact,
+    gymSettingsDraft,
+} from '~/utils/gymSettingsDraft'
 import type { GymRecord } from '~/types/models'
 
 const bands = () => [{ key: 'a', name: 'A', from: 0, to: 1, color: '#000' }]
@@ -39,6 +43,35 @@ describe('gym settings draft', () => {
         draft.boulder_bands[0]!.name = ' A '
         expect(changedGymSettings(draft, pristine)).toEqual({
             short_name: 'GG',
+        })
+    })
+
+    it('sends contacts without blank rows, blank fields or a title outside other', () => {
+        const record = {
+            contacts: [{ kind: 'privacy', email: 'dpo@gym.test' }],
+        } as unknown as GymRecord
+        const pristine = gymSettingsDraft(record, bands as never)
+        const draft = gymSettingsDraft(record, bands as never)
+        expect(draft.contacts[0]).toEqual({
+            ...emptyContact(),
+            kind: 'privacy',
+            email: 'dpo@gym.test',
+        })
+        expect(changedGymSettings(draft, pristine)).toEqual({})
+        draft.contacts[0]!.name = ' Jana '
+        draft.contacts[0]!.label = 'DPO'
+        draft.contacts.push(emptyContact())
+        draft.contacts.push({
+            ...emptyContact(),
+            kind: 'other',
+            label: 'Youth',
+            phone: '0123',
+        })
+        expect(changedGymSettings(draft, pristine)).toEqual({
+            contacts: [
+                { kind: 'privacy', name: 'Jana', email: 'dpo@gym.test' },
+                { kind: 'other', label: 'Youth', phone: '0123' },
+            ],
         })
     })
 

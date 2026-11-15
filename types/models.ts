@@ -91,6 +91,7 @@ export type LegalFields = Partial<
         | 'legal_vat_id'
         | 'legal_editorial'
         | 'legal_representatives'
+        | 'contacts'
     >
 > & { privacy_doc?: GymsApi['schemas']['PrivacyDoc'] }
 

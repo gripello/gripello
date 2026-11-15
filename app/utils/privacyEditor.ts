@@ -1,3 +1,4 @@
+import { privacyContact } from '#shared/utils/gymContacts'
 import { CLIENT_STORAGE } from '~/utils/clientStorage'
 import type { LegalFields } from '~/types/models'
 import {
@@ -84,13 +85,23 @@ export function privacyBlockText(
     const title = t(privacyBlockTitleKey(key))
     let body: string[]
     switch (key) {
-        case 'controller':
+        case 'controller': {
+            const officer = privacyContact(controller?.contacts)
             body = [
                 controller?.name,
                 controller?.legal_address,
                 controller?.contact_email,
+                ...(officer
+                    ? [
+                          t('legal.privacyPage.privacyContact'),
+                          officer.name,
+                          officer.email,
+                          officer.phone,
+                      ]
+                    : []),
             ].filter((line): line is string => !!line)
             break
+        }
         case 'contact':
             body = contactLines(t, controller)
             break

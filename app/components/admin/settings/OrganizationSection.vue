@@ -91,20 +91,6 @@
                 </UFormField>
             </template>
             <UFormField
-                :label="$t('settings.contactEmail')"
-                :help="$t('settings.contactEmailHint')"
-                name="contact_email"
-                :ui="SETTINGS_FIELD_UI"
-            >
-                <UInput
-                    v-model="form.contact_email"
-                    type="email"
-                    icon="i-lucide-mail"
-                    class="w-full"
-                    data-testid="settings-contact-email"
-                />
-            </UFormField>
-            <UFormField
                 :label="$t('settings.defaultLanguage')"
                 :help="$t('settings.defaultLanguageHelp')"
                 name="language"

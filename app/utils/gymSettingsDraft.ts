@@ -1,5 +1,6 @@
 import { tvSettingsOf, type ResolvedTvSettings } from '#shared/utils/tvSettings'
 import type { GymAmenity } from '#shared/utils/gymAmenities'
+import type { GymContact } from '#shared/utils/gymContacts'
 import { HOURS_DAYS, type GymOpeningHours } from '#shared/utils/openingHours'
 import type { BoulderBandSetting } from '#shared/utils/gradeReference'
 import {
@@ -18,6 +19,38 @@ function hoursFrom(hours: GymOpeningHours | null | undefined) {
             (hours?.[day] ?? []).map((interval) => [...interval]),
         ]),
     ) as GymOpeningHours
+}
+
+export type GymContactDraft = Required<GymContact>
+
+export const emptyContact = (): GymContactDraft => ({
+    kind: 'front_desk',
+    label: '',
+    name: '',
+    email: '',
+    phone: '',
+})
+
+function contactsFrom(contacts: GymContact[] | null | undefined) {
+    return (contacts ?? []).map((contact) => ({
+        ...emptyContact(),
+        ...contact,
+    }))
+}
+
+// Blank rows are dropped and blank fields left out (a title only for `other`), so stored contacts stay minimal.
+export function contactsPayload(contacts: GymContactDraft[]): GymContact[] {
+    return contacts.flatMap(({ kind, ...fields }) => {
+        const filled = Object.fromEntries(
+            Object.entries(fields)
+                .map(([key, value]) => [key, value.trim()])
+                .filter(
+                    ([key, value]) =>
+                        value && (key !== 'label' || kind === 'other'),
+                ),
+        )
+        return Object.keys(filled).length ? [{ kind, ...filled }] : []
+    })
 }
 
 function tvSettingsFrom(rec: Partial<GymRecord> | null): ResolvedTvSettings {
@@ -45,6 +78,7 @@ export function gymSettingsDraft(
         unit_name: rec?.unit_name ?? '',
         short_name: rec?.short_name ?? '',
         contact_email: rec?.contact_email ?? '',
+        report_email: rec?.report_email ?? '',
         language: (rec?.language || DEFAULT_LOCALE) as string,
         slug: rec?.slug ?? '',
         previous_slugs: [...(rec?.previous_slugs ?? [])],
@@ -61,6 +95,7 @@ export function gymSettingsDraft(
         opening_hours: hoursFrom(rec?.opening_hours),
         hours_note: rec?.hours_note ?? '',
         amenities: [...(rec?.amenities ?? [])] as GymAmenity[],
+        contacts: contactsFrom(rec?.contacts),
         tv_settings: tvSettingsFrom(rec ?? null),
         ...legalFieldsFrom(rec ?? {}),
         boulder_bands: rec?.boulder_bands?.length
@@ -83,6 +118,7 @@ function gymSettingsPayload(state: GymSettingsDraft) {
         unit_name: state.unit_name,
         short_name: state.short_name,
         contact_email: state.contact_email,
+        report_email: state.report_email,
         language: state.language,
         slug: state.slug,
         previous_slugs: state.previous_slugs,
@@ -97,6 +133,7 @@ function gymSettingsPayload(state: GymSettingsDraft) {
         opening_hours: state.opening_hours,
         hours_note: state.hours_note,
         amenities: state.amenities,
+        contacts: contactsPayload(state.contacts),
         tv_settings: tvSettingsPayload(state.tv_settings),
         ...legalPayload(state),
         boulder_bands: state.boulder_bands.map(({ name, color, to }) => ({

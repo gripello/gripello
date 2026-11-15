@@ -10,7 +10,46 @@
             :data-testid="`${testIdPrefix}-legal-address`"
         />
     </UFormField>
-    <UFormField :label="$t('settings.legalPhone')" :ui="SETTINGS_FIELD_UI">
+    <UFormField
+        v-if="contact"
+        :label="$t('legal.imprintPage.contact')"
+        :ui="SETTINGS_FIELD_UI"
+        class="min-w-0"
+    >
+        <LayoutListGroup>
+            <LayoutListRow dense icon="i-lucide-building-2" icon-active>
+                <button
+                    type="button"
+                    class="min-w-0 flex-1 py-2 text-start"
+                    :data-testid="`${testIdPrefix}-legal-contact`"
+                    @click="emit('editContact')"
+                >
+                    <span class="block truncate font-medium text-highlighted">
+                        {{ $t('gymInfo.settings.generalContact') }}
+                    </span>
+                    <span
+                        v-for="line in contactLines(
+                            contact,
+                            $t('gymInfo.settings.noContact'),
+                        )"
+                        :key="line"
+                        class="block truncate text-sm text-muted"
+                    >
+                        {{ line }}
+                    </span>
+                </button>
+                <UIcon
+                    name="i-lucide-chevron-right"
+                    class="me-3 size-4 text-muted"
+                />
+            </LayoutListRow>
+        </LayoutListGroup>
+    </UFormField>
+    <UFormField
+        v-else
+        :label="$t('settings.legalPhone')"
+        :ui="SETTINGS_FIELD_UI"
+    >
         <UInput
             v-model="legal.legal_phone"
             type="tel"
@@ -105,13 +144,19 @@
 </template>
 
 <script setup lang="ts">
+import { contactLines } from '~/utils/gymContactUses'
 import type { LegalFieldsState } from '~/utils/legalFields'
 import { SETTINGS_FIELD_UI } from '~/utils/settingsUi'
 
 withDefaults(
-    defineProps<{ legal: LegalFieldsState; testIdPrefix?: string }>(),
-    { testIdPrefix: 'settings' },
+    defineProps<{
+        legal: LegalFieldsState
+        testIdPrefix?: string
+        contact?: { email: string; phone: string }
+    }>(),
+    { testIdPrefix: 'settings', contact: undefined },
 )
+const emit = defineEmits<{ editContact: [] }>()
 </script>
 
 <style scoped>

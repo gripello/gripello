@@ -42,8 +42,11 @@ const SETTINGS_SECTIONS = [
             'settings.organization',
             'settings.organizationName',
             'settings.organizationUnit',
-            'settings.contactEmail',
         ],
+    },
+    {
+        section: 'contacts',
+        labels: ['gymInfo.settings.contacts', 'settings.contactEmail'],
     },
     {
         section: 'urls',

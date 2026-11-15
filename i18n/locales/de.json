@@ -601,7 +601,7 @@
             },
             "accounts": {
                 "title": "Benutzerkonto",
-                "body": "Wenn der Betreiber die Registrierung zulässt, kannst du dir selbst ein Konto mit E-Mail-Adresse und Passwort anlegen; zur Bestätigung senden wir dir eine Verifizierungs-E-Mail. Bestätigst du die Adresse nicht innerhalb von 7 Tagen, wird das Konto gelöscht. Außerdem können Administratorinnen und Administratoren einer Halle dich als Mitarbeiterin oder Mitarbeiter einladen, indem sie deine E-Mail-Adresse und optional deinen Vor- und Nachnamen eingeben. Du erhältst dann einen Einladungslink, der 7 Tage gültig ist; die Einladung speichern wir, bis du sie annimmst, sie abläuft oder die Halle sie zurückzieht. Ohne dich wird nichts angelegt: Zum Annehmen meldest du dich mit dieser E-Mail-Adresse an oder legst ein Konto mit deinem eigenen Passwort an, und erst dann wirst du Mitglied. Zum Konto speichern wir E-Mail-Adresse, Benutzername, Vor- und Nachname, optional ein Profilbild und ein Profilbanner, deine Sprache, Benachrichtigungs- und Privatsphäre-Einstellungen sowie die Wände, denen du folgst. Das Passwort wird nur als Hash gespeichert. Rechte als Mitarbeiterin oder Mitarbeiter einer Halle ergeben sich aus einer Mitgliedschaft (Konto, Halle, Rolle), die die Administratorinnen und Administratoren der Halle verwalten. Deine E-Mail-Adresse wird anderen Kletternden und den Mitarbeitenden der Halle nicht angezeigt; die Administratorinnen und Administratoren der Plattform können sie sehen, und meldest du Inhalte, erhalten die Moderation der Halle und ihre Kontaktadresse deinen Namen und deine E-Mail-Adresse (siehe Meldungen von Inhalten). Rechtsgrundlage ist die Erfüllung des Nutzungsvertrags (Art. 6 Abs. 1 lit. b DSGVO). Die Daten bleiben gespeichert, solange dein Konto besteht; du kannst sie in den Einstellungen jederzeit ändern und das Konto selbst löschen."
+                "body": "Wenn der Betreiber die Registrierung zulässt, kannst du dir selbst ein Konto mit E-Mail-Adresse und Passwort anlegen; zur Bestätigung senden wir dir eine Verifizierungs-E-Mail. Bestätigst du die Adresse nicht innerhalb von 7 Tagen, wird das Konto gelöscht. Außerdem können Administratorinnen und Administratoren einer Halle dich als Mitarbeiterin oder Mitarbeiter einladen, indem sie deine E-Mail-Adresse und optional deinen Vor- und Nachnamen eingeben. Du erhältst dann einen Einladungslink, der 7 Tage gültig ist; die Einladung speichern wir, bis du sie annimmst, sie abläuft oder die Halle sie zurückzieht. Ohne dich wird nichts angelegt: Zum Annehmen meldest du dich mit dieser E-Mail-Adresse an oder legst ein Konto mit deinem eigenen Passwort an, und erst dann wirst du Mitglied. Zum Konto speichern wir E-Mail-Adresse, Benutzername, Vor- und Nachname, optional ein Profilbild und ein Profilbanner, deine Sprache, Benachrichtigungs- und Privatsphäre-Einstellungen sowie die Wände, denen du folgst. Das Passwort wird nur als Hash gespeichert. Rechte als Mitarbeiterin oder Mitarbeiter einer Halle ergeben sich aus einer Mitgliedschaft (Konto, Halle, Rolle), die die Administratorinnen und Administratoren der Halle verwalten. Deine E-Mail-Adresse wird anderen Kletternden und den Mitarbeitenden der Halle nicht angezeigt; die Administratorinnen und Administratoren der Plattform können sie sehen, und meldest du Inhalte, erhält die Moderation der Halle deinen Namen und deine E-Mail-Adresse (siehe Meldungen von Inhalten). Rechtsgrundlage ist die Erfüllung des Nutzungsvertrags (Art. 6 Abs. 1 lit. b DSGVO). Die Daten bleiben gespeichert, solange dein Konto besteht; du kannst sie in den Einstellungen jederzeit ändern und das Konto selbst löschen."
             },
             "privacySettings": {
                 "title": "Privatsphäre-Einstellungen",
@@ -645,7 +645,7 @@
             },
             "reports": {
                 "title": "Meldungen von Inhalten",
-                "body": "Wenn du Inhalte wie Kommentare oder Beta-Videos meldest, verarbeiten wir Name, E-Mail-Adresse, Meldegrund und deine Begründung, um die Meldung zu prüfen, zu entscheiden und dich über die Entscheidung zu informieren (Art. 6 Abs. 1 lit. c DSGVO i. V. m. Art. 16 DSA). Meldungen bearbeitet die Moderation der Halle; sie und die Kontaktadresse der Halle erhalten deinen Namen und deine E-Mail-Adresse mit der Meldung. Wer den gemeldeten Inhalt erstellt hat, erfährt nicht, wer gemeldet hat, außer das Gesetz verlangt es. Meldungen werden drei Jahre nach der Entscheidung gelöscht; Name und E-Mail-Adresse der meldenden Person bleiben bis dahin auch nach einer Kontolöschung erhalten."
+                "body": "Wenn du Inhalte wie Kommentare oder Beta-Videos meldest, verarbeiten wir Name, E-Mail-Adresse, Meldegrund und deine Begründung, um die Meldung zu prüfen, zu entscheiden und dich über die Entscheidung zu informieren (Art. 6 Abs. 1 lit. c DSGVO i. V. m. Art. 16 DSA). Meldungen bearbeitet die Moderation der Halle; sie erhält deinen Namen und deine E-Mail-Adresse mit der Meldung, eine von der Halle angegebene Meldeadresse nur die Meldung selbst. Wer den gemeldeten Inhalt erstellt hat, erfährt nicht, wer gemeldet hat, außer das Gesetz verlangt es. Meldungen werden drei Jahre nach der Entscheidung gelöscht; Name und E-Mail-Adresse der meldenden Person bleiben bis dahin auch nach einer Kontolöschung erhalten."
             },
             "notifications": {
                 "title": "Benachrichtigungen",
@@ -696,7 +696,8 @@
             "map": {
                 "title": "Karten",
                 "body": "Karten auf Hallenseiten werden erst geladen, wenn du „Karte anzeigen“ wählst. Dein Browser lädt dann Kartendaten, Schriften und Symbole von OpenFreeMap (openfreemap.org), das deine IP-Adresse und Browserangaben erhält (Art. 6 Abs. 1 lit. a DSGVO, deine Einwilligung). Die Auswahl wird auf deinem Gerät gespeichert; lösche die Websitedaten, um sie zu widerrufen. Wenn Mitarbeitende in den Einstellungen eine Hallenadresse suchen oder die Stecknadel verschieben, werden diese Adresse bzw. die Koordinaten an OpenStreetMap Nominatim gesendet."
-            }
+            },
+            "privacyContact": "Ansprechpartner Datenschutz"
         },
         "accountDeletionPage": {
             "title": "Gripello-Konto löschen",
@@ -981,7 +982,6 @@
         "saveSuccess": "Einstellungen gespeichert.",
         "saveError": "Einstellungen konnten nicht gespeichert werden. Bitte erneut versuchen.",
         "contactEmail": "Kontakt-E-Mail",
-        "contactEmailHint": "Wird als Kontaktstelle veröffentlicht und über neue Inhaltsmeldungen benachrichtigt.",
         "mailNotConfigured": "E-Mail ist nicht konfiguriert, daher können Passwort-Zurücksetzungen und Meldungsbenachrichtigungen nicht zugestellt werden. Ein Plattform-Admin richtet sie unter Plattform-Einstellungen › E-Mail ein.",
         "legalTitle": "Impressum",
         "legalName": "Name des Anbieters",
@@ -3246,8 +3246,40 @@
             "closes": "schließt",
             "addInterval": "Zeitraum hinzufügen",
             "removeInterval": "Zeitraum entfernen",
-            "copyMonday": "Montag auf Di–Fr übernehmen"
-        }
+            "copyMonday": "Montag auf Di–Fr übernehmen",
+            "contacts": "Kontakte",
+            "contactList": "Ansprechpartner",
+            "contactKind": "Bereich",
+            "contactLabel": "Eigene Bezeichnung",
+            "contactName": "Name",
+            "contactEmail": "E-Mail",
+            "contactPhone": "Telefon",
+            "addContact": "Kontakt hinzufügen",
+            "editContact": "Kontakt bearbeiten",
+            "removeContact": "Kontakt entfernen",
+            "invalidContacts": "Jeder Kontakt braucht eine gültige E-Mail-Adresse oder Telefonnummer.",
+            "generalContact": "Allgemein",
+            "noContact": "Nicht angegeben",
+            "contactUses": "Verwendet für",
+            "reports": "Inhaltsmeldungen",
+            "reportEmail": "Meldungen an",
+            "uses": {
+                "info": "Hallen-Info",
+                "imprint": "Impressum",
+                "privacy": "Datenschutz",
+                "replyTo": "Antwortadresse",
+                "appeals": "Einsprüche"
+            }
+        },
+        "contactKinds": {
+            "front_desk": "Empfang",
+            "privacy": "Datenschutz",
+            "routesetting": "Routenbau",
+            "competitions": "Wettkämpfe",
+            "courses": "Kurse",
+            "other": "Kontakt"
+        },
+        "appContact": "Fragen zur App"
     },
     "imageCrop": {
         "zoom": "Zoom",

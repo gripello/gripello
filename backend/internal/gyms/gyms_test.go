@@ -173,6 +173,30 @@ func TestValidateGymSlug(t *testing.T) {
 	}
 }
 
+func TestIsValidGymContacts(t *testing.T) {
+	raw, err := os.ReadFile("../../testdata/gymContacts.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixtures struct {
+		Valid   []json.RawMessage `json:"valid"`
+		Invalid []json.RawMessage `json:"invalid"`
+	}
+	if err := json.Unmarshal(raw, &fixtures); err != nil {
+		t.Fatal(err)
+	}
+	for _, contacts := range fixtures.Valid {
+		if !isValidGymContacts(contacts) {
+			t.Errorf("isValidGymContacts(%s) rejected", contacts)
+		}
+	}
+	for _, contacts := range fixtures.Invalid {
+		if isValidGymContacts(contacts) {
+			t.Errorf("isValidGymContacts(%s) accepted", contacts)
+		}
+	}
+}
+
 func TestIsValidOpeningHours(t *testing.T) {
 	raw, err := os.ReadFile("../../testdata/openingHours.json")
 	if err != nil {
@@ -420,6 +444,48 @@ func TestGymAdminsSaveGymInfo(t *testing.T) {
 	f.call(admin, "PATCH", path, `{"boulder_bands":"abc"}`, http.StatusBadRequest, `"boulder_bands"`)
 	f.call(admin, "PATCH", path, `{"opening_hours":null,"boulder_bands":[{"name":"Easy","color":"#facc15","to":"5"}],"description":"Hi","premoderate_betas":true}`,
 		http.StatusOK, `"opening_hours":null`, `"premoderate_betas":true`, `"color":"#facc15"`)
+}
+
+func TestGymAdminsSaveContacts(t *testing.T) {
+	f := newFixture(t)
+	gym := f.createGym("gym-a", "Gym A", true)
+	admin := f.user("admin-a")
+	f.member(admin, gym, "admin")
+	path := "/gyms/" + gym
+
+	f.call(admin, "PATCH", path, `{"contacts":[{"kind":"privacy","name":"DPO Ltd","email":"dpo@gym.example"}]}`,
+		http.StatusOK, `"contacts":[{"kind":"privacy","name":"DPO Ltd","email":"dpo@gym.example"}]`)
+	f.call("", "GET", "/gyms/"+gym, "", http.StatusOK, `"email":"dpo@gym.example"`)
+	f.call(admin, "PATCH", path, `{"contacts":[{"kind":"privacy","name":"DPO Ltd"}]}`, http.StatusBadRequest, `"contacts"`)
+	f.call(admin, "PATCH", path, `{"contacts":null}`, http.StatusOK, `"contacts":[]`)
+}
+
+func TestReportAddressStaysWithSettingsManagers(t *testing.T) {
+	f := newFixture(t)
+	gym := f.createGym("gym-a", "Gym A", true)
+	admin := f.user("admin-a")
+	f.member(admin, gym, "admin")
+	setter := f.user("setter-a")
+	f.member(setter, gym, "routesetter")
+	path := "/gyms/" + gym
+
+	f.call(admin, "PATCH", path, `{"report_email":"nope"}`, http.StatusBadRequest, `"report_email"`)
+	f.call(admin, "PATCH", path, `{"report_email":"reports@gym.example"}`, http.StatusOK, `"report_email":"reports@gym.example"`)
+	f.call(admin, "GET", path, "", http.StatusOK, `"report_email":"reports@gym.example"`)
+	f.call(f.operator, "GET", path, "", http.StatusOK, `"report_email":"reports@gym.example"`)
+	for _, viewer := range []string{"", setter} {
+		if body := f.call(viewer, "GET", path, "", http.StatusOK).Body; strings.Contains(body, "reports@gym.example") {
+			t.Errorf("viewer %q sees the report address", viewer)
+		}
+	}
+	if strings.Contains(f.call("", "GET", "/gyms", "", http.StatusOK).Body, "reports@gym.example") {
+		t.Error("the gym list carries the report address")
+	}
+	var leaked int
+	f.scalar(`SELECT count(*) FROM events WHERE topic = $1 AND payload::text LIKE '%reports@gym.example%'`, &leaked, "gym:"+gym)
+	if leaked != 0 {
+		t.Error("a gym event carries the report address")
+	}
 }
 
 func TestGymAdminsSaveTvSettings(t *testing.T) {

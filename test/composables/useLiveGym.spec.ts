@@ -18,6 +18,15 @@ describe('updatedGym', () => {
         })
     })
 
+    it('keeps the report address that gym events leave out', () => {
+        const staff = { ...gym, report_email: 'reports@gym.test' }
+        const record = { id: 'g1', name: 'New' } as GymRecord
+        expect(updatedGym(staff, { kind: 'gym.updated', record })).toEqual({
+            ...record,
+            report_email: 'reports@gym.test',
+        })
+    })
+
     it('applies a trial change to the shown gym only', () => {
         const event = {
             kind: 'gym.trial_changed' as const,
