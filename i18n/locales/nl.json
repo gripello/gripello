@@ -3271,7 +3271,8 @@
             "confirmWith": "Bevestigen met {provider}",
             "confirmed": "Bevestigd",
             "failed": "Bevestigen mislukt",
-            "repeat": "5 minuten bevestigd. Herhaal de actie."
+            "repeat": "5 minuten bevestigd. Herhaal de actie.",
+            "required": "Bevestig eerst met je aanmeldprovider."
         }
     },
     "resets": {

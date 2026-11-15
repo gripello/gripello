@@ -3,6 +3,7 @@ import { listLinkedAccounts } from '~/api/account'
 import { listAuthMethods } from '~/api/auth'
 import { oauth2ProviderIcon, oauth2ProviderName } from '~/utils/oauth2'
 import { reportCaughtError } from '~/utils/clientErrors'
+import { accountWithoutPassword } from '~/utils/providerReauth'
 
 const password = defineModel<string>({ default: '' })
 
@@ -19,6 +20,9 @@ const { data: providers } = useAsyncData(
 const { pending, failed, confirmed, confirmWith } = useProviderReauth()
 
 const passwordless = computed(() => linked.value?.hasPassword === false)
+watch(passwordless, (value) => (accountWithoutPassword.value = value), {
+    immediate: true,
+})
 
 function providerName(name: string) {
     return oauth2ProviderName(

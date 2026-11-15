@@ -1,6 +1,7 @@
 import { nextTick, ref } from 'vue'
 import { useReauth } from '~/composables/useReauth'
 import {
+    accountWithoutPassword,
     markProviderConfirmed,
     providerConfirmedAt,
 } from '~/utils/providerReauth'
@@ -18,6 +19,23 @@ describe('useReauth', () => {
     beforeEach(() => {
         reauthenticate.mockReset()
         providerConfirmedAt.value = 0
+        accountWithoutPassword.value = false
+    })
+
+    it('asks an account without a password to confirm with its provider first', async () => {
+        accountWithoutPassword.value = true
+        const { confirm, errorText } = useReauth()
+        const error = await confirm().catch((e: unknown) => e)
+        expect(reauthenticate).not.toHaveBeenCalled()
+        expect(errorText('generic')(error)).toBe('auth.reauth.required')
+    })
+
+    it('lets an account without a password through after the provider confirmed', async () => {
+        accountWithoutPassword.value = true
+        markProviderConfirmed()
+        const { confirm } = useReauth()
+        await expect(confirm()).resolves.toBeUndefined()
+        expect(reauthenticate).not.toHaveBeenCalled()
     })
 
     it('skips the password check right after a provider confirmation', async () => {

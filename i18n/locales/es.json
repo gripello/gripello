@@ -3271,7 +3271,8 @@
             "confirmWith": "Confirmar con {provider}",
             "confirmed": "Confirmado",
             "failed": "No se pudo confirmar",
-            "repeat": "Confirmado durante 5 minutos. Repite la acción."
+            "repeat": "Confirmado durante 5 minutos. Repite la acción.",
+            "required": "Confirma primero con tu proveedor de inicio de sesión."
         }
     },
     "resets": {

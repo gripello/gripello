@@ -3271,7 +3271,8 @@
             "confirmWith": "Confirm with {provider}",
             "confirmed": "Confirmed",
             "failed": "Confirmation failed",
-            "repeat": "Confirmed for 5 minutes. Repeat the action."
+            "repeat": "Confirmed for 5 minutes. Repeat the action.",
+            "required": "Confirm with your sign-in provider first."
         }
     },
     "resets": {

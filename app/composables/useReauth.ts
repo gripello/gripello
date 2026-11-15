@@ -2,7 +2,11 @@ import type { WatchSource } from 'vue'
 import { reauthenticate } from '~/api/account'
 import { isWrongPassword, needsPasswordFirst } from '~/utils/reauth'
 import { throttledErrorKey } from '~/utils/authErrors'
-import { providerConfirmationFresh } from '~/utils/providerReauth'
+import {
+    accountWithoutPassword,
+    ProviderConfirmationMissing,
+    providerConfirmationFresh,
+} from '~/utils/providerReauth'
 
 export function useReauth(open?: WatchSource<unknown>) {
     const { t } = useI18n()
@@ -14,6 +18,8 @@ export function useReauth(open?: WatchSource<unknown>) {
 
     function errorText(fallback: string | ((error: unknown) => string)) {
         return (error: unknown) => {
+            if (error instanceof ProviderConfirmationMissing)
+                return t('auth.reauth.required')
             if (isWrongPassword(error))
                 return t('platform.users.adminPasswordWrong')
             if (needsPasswordFirst(error)) return t('account.passwordRequired')
@@ -27,10 +33,13 @@ export function useReauth(open?: WatchSource<unknown>) {
         password,
         reset: () => (password.value = ''),
         // A fresh provider confirmation already stamped the session; accounts with a password still type it.
-        confirm: () =>
-            !password.value && providerConfirmationFresh()
-                ? Promise.resolve()
-                : reauthenticate(password.value),
+        confirm: () => {
+            if (!password.value && providerConfirmationFresh())
+                return Promise.resolve()
+            if (!password.value && accountWithoutPassword.value)
+                return Promise.reject(new ProviderConfirmationMissing())
+            return reauthenticate(password.value)
+        },
         errorText,
     }
 }

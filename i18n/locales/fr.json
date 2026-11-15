@@ -3271,7 +3271,8 @@
             "confirmWith": "Confirmer avec {provider}",
             "confirmed": "Confirmé",
             "failed": "La confirmation a échoué",
-            "repeat": "Confirmé pour 5 minutes. Répétez l’action."
+            "repeat": "Confirmé pour 5 minutes. Répétez l’action.",
+            "required": "Confirmez d’abord avec votre service de connexion."
         }
     },
     "resets": {

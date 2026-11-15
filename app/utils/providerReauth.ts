@@ -12,6 +12,11 @@ export function markProviderConfirmed(now = Date.now()) {
     providerConfirmedAt.value = now
 }
 
+// Set by the reauth field once the account's sign-in methods are known.
+export const accountWithoutPassword = shallowRef(false)
+
+export class ProviderConfirmationMissing extends Error {}
+
 export function providerConfirmationFresh(now = Date.now()) {
     return (
         providerConfirmedAt.value > 0 &&
