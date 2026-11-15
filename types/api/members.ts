@@ -34,7 +34,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Adds an existing user directly (platform admins only; gym staff invite by e-mail). */
+        /** @description Adds an existing user directly (platform admins only; gym staff invite by e-mail). Needs a password confirmation from the last five minutes (POST /me/reauthenticate, else 403 reauth_required). */
         post: operations["addMembership"];
         delete?: never;
         options?: never;

@@ -92,6 +92,9 @@ func (m *module) deleteGym(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if err := auth.RequireRecentReauth(r.Context(), m.db, p); err != nil {
+		return err
+	}
 	gym, err := loadGym(r.Context(), m.db, r.PathValue("gym"))
 	if err != nil {
 		return err

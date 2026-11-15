@@ -73,6 +73,17 @@ test('platform admin creates, manages, deactivates and deletes a gym', async ({
 
         await gotoSettled(page, `/platform/gyms/${gym!.id}?section=danger`)
         await page.getByTestId('platform-gym-delete').click()
+        await page.getByTestId('platform-gym-delete-password').fill('wrong')
+        await page.getByTestId('confirm-dialog-confirm').click()
+        await expect(
+            page.getByTestId('global-snackbar-message').last(),
+        ).toBeVisible()
+        await expect(page.getByTestId('confirm-dialog')).toBeVisible()
+        expect(await gymBySlug(api, slug)).not.toBeNull()
+
+        await page
+            .getByTestId('platform-gym-delete-password')
+            .fill('E2ePassw0rd!')
         await page.getByTestId('confirm-dialog-confirm').click()
         await page.waitForURL((url) => url.pathname === '/platform/gyms')
         await expect(page.getByTestId(`platform-gym-link-${slug}`)).toHaveCount(

@@ -8,6 +8,9 @@ import {
     watch,
 } from 'vue'
 import GymDetailPage from '~/pages/platform/gyms/[id].vue'
+import { useReauth } from '~/composables/useReauth'
+import { deleteGym } from '~/api/gyms'
+import { reauthenticate } from '~/api/account'
 
 vi.mock('~/api/gyms', () => ({
     getGymById: vi.fn(),
@@ -15,6 +18,7 @@ vi.mock('~/api/gyms', () => ({
     deleteGym: vi.fn(),
 }))
 vi.mock('~/api/platform', () => ({ setGymFeatures: vi.fn() }))
+vi.mock('~/api/account', () => ({ reauthenticate: vi.fn() }))
 
 describe('platform gym detail page', () => {
     it('reloads the gym on profile and trial changes', async () => {
@@ -66,5 +70,59 @@ describe('platform gym detail page', () => {
         expect(refreshWhen?.({ kind: 'gym.updated' })).toBe(true)
         expect(refreshWhen?.({ kind: 'gym.trial_changed' })).toBe(true)
         expect(refreshWhen?.({ kind: 'member.created' })).toBe(false)
+    })
+
+    it('confirms the admin password before deleting the gym', async () => {
+        const order: string[] = []
+        vi.mocked(reauthenticate).mockImplementation(async () => {
+            order.push('reauth')
+        })
+        vi.mocked(deleteGym).mockImplementation(async () => {
+            order.push('delete')
+            return null as never
+        })
+        vi.stubGlobal('useReauth', useReauth)
+        vi.stubGlobal('navigateTo', vi.fn())
+        vi.stubGlobal('useAsyncAction', () => ({
+            pending: ref(false),
+            run: async (action: () => Promise<unknown>) =>
+                action().catch(() => undefined),
+        }))
+        const wrapper = mount(
+            defineComponent({
+                components: { GymDetailPage },
+                template: '<Suspense><GymDetailPage /></Suspense>',
+            }),
+            {
+                global: {
+                    mocks: { $t: (key: string) => key },
+                    stubs: {
+                        LayoutPageHeader: true,
+                        AdminGymSettingsForm: true,
+                        ConfirmDialog: {
+                            emits: ['confirm'],
+                            template: `<div><slot /><button data-testid="confirm-stub"
+                                @click="$emit('confirm')" /></div>`,
+                        },
+                        UserReauthField: {
+                            props: ['modelValue'],
+                            emits: ['update:modelValue'],
+                            template: `<input v-bind="$attrs"
+                                @input="$emit('update:modelValue', $event.target.value)" />`,
+                        },
+                    },
+                },
+            },
+        )
+        await flushPromises()
+        await wrapper
+            .get('[data-testid="platform-gym-delete-password"]')
+            .setValue('secret')
+        const confirm = wrapper.findAll('[data-testid="confirm-stub"]').at(-1)!
+        await confirm.trigger('click')
+        await flushPromises()
+
+        expect(reauthenticate).toHaveBeenCalledWith('secret')
+        expect(order).toEqual(['reauth', 'delete'])
     })
 })

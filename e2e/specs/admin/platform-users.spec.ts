@@ -71,6 +71,10 @@ test('platform admin edits a user, manages memberships and deletes the account',
             .first()
             .click()
         await page.getByTestId('platform-user-add-membership').click()
+        await page
+            .getByTestId('platform-user-add-membership-password')
+            .fill('E2ePassw0rd!')
+        await page.getByTestId('confirm-dialog-confirm').click()
         await expect(
             page.getByTestId(`platform-user-membership-${gym.id}`),
         ).toBeVisible()

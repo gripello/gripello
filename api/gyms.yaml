@@ -98,7 +98,7 @@ paths:
     delete:
       operationId: deleteGym
       tags: [gyms]
-      description: Platform admins only. Deletes the gym's content, then retires its slug and previous slugs.
+      description: Platform admins only. Needs a password confirmation from the last five minutes (POST /me/reauthenticate, else 403 reauth_required). Deletes the gym's content, then retires its slug and previous slugs.
       responses:
         '204': { description: Deleted }
         '401': { $ref: 'shared/error.yaml#/components/responses/Error' }

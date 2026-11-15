@@ -72,8 +72,10 @@ func (f *fixture) member(userID, gymID, role string) {
 func (f *fixture) token(userID string) string {
 	var tokenKey string
 	f.scalar(`SELECT token_key FROM users WHERE id = $1`, &tokenKey, userID)
-	token := testapp.Token(f.t, f.app, userID, tokenKey)
-	return token
+	if userID == f.operator {
+		return testapp.ReauthToken(f.t, f.app, userID, tokenKey)
+	}
+	return testapp.Token(f.t, f.app, userID, tokenKey)
 }
 
 type response struct {
@@ -270,6 +272,10 @@ func TestGymLifecycle(t *testing.T) {
 	}
 
 	f.call(climber, "DELETE", "/gyms/"+first, "", http.StatusForbidden)
+	unconfirmed := f.user("unconfirmed-operator")
+	f.exec(`UPDATE users SET platform_admin = true WHERE id = $1`, unconfirmed)
+	f.call(unconfirmed, "DELETE", "/gyms/"+first, "", http.StatusForbidden, "reauth_required")
+	f.call("", "GET", "/gyms/first", "", http.StatusOK)
 	f.call(f.operator, "DELETE", "/gyms/"+first, "", http.StatusNoContent)
 	f.call("", "GET", "/gyms/first", "", http.StatusNotFound)
 	var deleted int

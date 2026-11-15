@@ -144,6 +144,9 @@ func (f *fixture) call(method, url, body, caller string, status int, content ...
 	request.Header.Set("Content-Type", "application/json")
 	if caller != "" {
 		token := testapp.Token(f.t, f.app, caller, f.tokenKeys[caller])
+		if caller == f.operator {
+			token = testapp.ReauthToken(f.t, f.app, caller, f.tokenKeys[caller])
+		}
 		request.Header.Set("Authorization", token)
 	}
 	recorder := httptest.NewRecorder()
@@ -715,6 +718,12 @@ func TestAddMembershipDirectly(t *testing.T) {
 	f.call(http.MethodPost, "/gyms/"+f.gymA+"/memberships", `{"user":"nobody","role":"`+f.setterRoleA+`"}`, f.operator, http.StatusBadRequest, "user")
 	if f.can(f.climber, f.gymA, "manage_routes") {
 		t.Error("gym staff attached a user without an invite")
+	}
+
+	unconfirmed := f.user("unconfirmed-operator@example.com", true)
+	f.call(http.MethodPost, "/gyms/"+f.gymB+"/memberships", body, unconfirmed, http.StatusForbidden, "reauth_required")
+	if f.can(f.climber, f.gymB, "manage_routes") {
+		t.Error("membership created without a password confirmation")
 	}
 
 	f.call(http.MethodPost, "/gyms/"+f.gymB+"/memberships", body, f.operator, http.StatusOK, `"user":"`+f.climber+`"`)

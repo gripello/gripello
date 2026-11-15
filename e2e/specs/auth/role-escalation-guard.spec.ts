@@ -22,7 +22,9 @@ test.describe('role escalation guard', () => {
         const adminRole = await findRole(adminApi, 'admin')
 
         await expect(
-            addMembership(await apiAs(user), user.id, adminRole.id),
+            addMembership(await apiAs(user), user.id, adminRole.id, undefined, {
+                reauth: false,
+            }),
         ).rejects.toMatchObject({ status: 403 })
 
         expect(await membershipOf(adminApi, user.id)).toBeNull()
@@ -51,7 +53,13 @@ test.describe('role escalation guard', () => {
         const setterRole = await findRole(adminApi, 'routesetter')
 
         await expect(
-            addMembership(await apiAs(manager), target.id, setterRole.id),
+            addMembership(
+                await apiAs(manager),
+                target.id,
+                setterRole.id,
+                undefined,
+                { reauth: false },
+            ),
         ).rejects.toMatchObject({ status: 403 })
 
         expect(await membershipOf(adminApi, target.id)).toBeNull()

@@ -141,7 +141,12 @@ export const createGym = (
 ) => api.post<GymRecord>('/gyms', input)
 export const updateGym = async (api: Api, slugOrId: string, patch: Body) =>
     api.patch<GymRecord>(`/gyms/${(await getGym(api, slugOrId)).id}`, patch)
-export const deleteGym = (api: Api, gym: string) => api.delete(`/gyms/${gym}`)
+export const confirmPassword = (api: Api, password = 'E2ePassw0rd!') =>
+    api.post('/me/reauthenticate', { password })
+export async function deleteGym(api: Api, gym: string) {
+    await confirmPassword(api)
+    return api.delete(`/gyms/${gym}`)
+}
 export const deleteMe = (api: Api, password: string) =>
     api.request('/me', { method: 'DELETE', body: { password } })
 export const setGymFeatures = (
@@ -673,7 +678,9 @@ export async function addMembership(
     user: string,
     roleId: string,
     gymId?: string,
+    { reauth = true } = {},
 ) {
+    if (reauth) await confirmPassword(api)
     return api.post<{ id: string; user: string; gym: string; role: string }>(
         `/gyms/${await memberGym(gymId)}/memberships`,
         { user, role: roleId },
