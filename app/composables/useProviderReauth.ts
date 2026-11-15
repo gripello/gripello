@@ -1,4 +1,4 @@
-import { useIntervalFn } from '@vueuse/core'
+import { useIntervalFn, useNow } from '@vueuse/core'
 import { startOAuth2 } from '~/api/auth'
 import { isNativeApp, openSignInPage } from '~/utils/native'
 import {
@@ -74,10 +74,12 @@ export function useProviderReauth() {
         }
     }
 
+    // A ticking clock, so an expired confirmation offers the provider button again in a dialog left open.
+    const now = useNow({ scheduler: (update) => useIntervalFn(update, 10_000) })
     const confirmed = computed(
         () =>
             !!providerConfirmation.value &&
-            providerConfirmationFresh(auth.record?.id),
+            providerConfirmationFresh(auth.record?.id, now.value.getTime()),
     )
 
     return { pending, failed, confirmed, confirmWith }

@@ -72,4 +72,17 @@ describe('useProviderReauth in a browser', () => {
         expect(pending.value).toBe('')
         expect(confirmed.value).toBe(false)
     })
+
+    // Catches: a dialog left open past the confirmation's lifetime keeping a disabled "Confirmed" button.
+    it('offers the provider again once the confirmation expires', async () => {
+        const { popup, confirmed } = await openPopup()
+        popup.closed = true
+        channel?.onmessage?.({
+            data: { ok: true },
+        } as MessageEvent<ReauthMessage>)
+        expect(confirmed.value).toBe(true)
+
+        vi.advanceTimersByTime(4.5 * 60_000 + 10_000)
+        expect(confirmed.value).toBe(false)
+    })
 })
