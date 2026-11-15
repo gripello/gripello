@@ -42,11 +42,12 @@ async function expectRetryRecovers(
     await expect(page.getByText('No data', { exact: true })).toHaveCount(0)
 
     await page.unroute(failing)
-    const retry = page.getByTestId('load-error-retry')
-    await expect(async () => {
-        if (await retry.isVisible()) await retry.click({ timeout: 2_000 })
-        await expect(loadError).toBeHidden({ timeout: 2_000 })
-    }).toPass()
+    const recovered = page.waitForResponse(
+        (response) => failing(new URL(response.url())) && response.ok(),
+    )
+    await page.getByTestId('load-error-retry').click()
+    await recovered
+    await expect(loadError).toBeHidden()
     await loaded()
 }
 
