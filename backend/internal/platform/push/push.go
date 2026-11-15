@@ -149,5 +149,26 @@ func AllowedEndpoint(endpoint string) bool {
 
 // Text is the bell's notifications.center.types.<type> label, so push and bell read the same.
 func Text(messages locales.Messages, language, notificationType string, params map[string]any) string {
+	if notificationType == "achievement_earned" {
+		notificationType, params = achievementText(messages, language, params)
+	}
 	return messages.Translate(language, "notifications.center.types."+notificationType, params)
+}
+
+// achievementText mirrors notificationLabel in app/utils/notificationLabel.ts.
+func achievementText(messages locales.Messages, language string, params map[string]any) (string, map[string]any) {
+	key, _ := params["key"].(string)
+	count, _ := params["count"].(float64)
+	if n, ok := params["count"].(int); ok {
+		count = float64(n)
+	}
+	name := messages.Translate(language, "achievements.names."+key, nil)
+	if name == "" {
+		return "achievement_earned_unnamed", params
+	}
+	named := map[string]any{"name": name, "more": int(count) - 1}
+	if count > 1 {
+		return "achievement_earned_more", named
+	}
+	return "achievement_earned", named
 }

@@ -118,14 +118,13 @@
 <script setup lang="ts">
 import { reportCaughtError } from '~/utils/clientErrors'
 import { liveTopics } from '#shared/utils/topics'
-import { achievementToast } from '~/utils/achievements'
 import { timeAgo } from '#shared/utils/formatting'
 import type { RecordChange } from '~/composables/useRealtime'
 import type { NotificationRecord } from '~/types/models'
-import { notificationLabelKey } from '~/utils/notificationLabel'
+import { notificationLabel } from '~/utils/notificationLabel'
 import { isPushRefused } from '~/utils/push'
 
-const { t, locale } = useI18n()
+const { t, te, locale } = useI18n()
 const authStore = useAuthStore()
 const {
     items,
@@ -143,7 +142,7 @@ const open = ref(false)
 const { offered: pushOffered, turnOn } = usePushOffer()
 
 function label(item: NotificationRecord) {
-    return t(notificationLabelKey(item), item.params ?? {})
+    return notificationLabel(item, t, te)
 }
 
 async function openItem(item: NotificationRecord) {
@@ -169,8 +168,11 @@ useRealtime(
     () => (authStore.isValid ? liveTopics.ownNotifications : null),
     (event: RecordChange<NotificationRecord>) => {
         applyEvent(event)
-        const text = achievementToast(event, t)
-        if (text) announce(text)
+        if (
+            event.action === 'create' &&
+            event.record.type === 'achievement_earned'
+        )
+            announce(label(event.record))
     },
     { resync: () => authStore.isValid && void refresh() },
 )

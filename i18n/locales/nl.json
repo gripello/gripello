@@ -548,7 +548,9 @@
                 "follow_requested": "{name} wil je volgen",
                 "follow_accepted": "{name} heeft je volgverzoek geaccepteerd",
                 "new_follower": "{name} volgt je nu",
-                "achievement_earned": "Nieuwe prestaties ontgrendeld: {count}",
+                "achievement_earned": "Prestatie ontgrendeld: {name}",
+                "achievement_earned_more": "Prestaties ontgrendeld: {name} en nog {more}",
+                "achievement_earned_unnamed": "Nieuwe prestaties ontgrendeld: {count}",
                 "report_filed_platform": "Inhoud gemeld in een hal: ‘{snippet}’",
                 "moderation_pending": "Een beta-video wacht op goedkeuring",
                 "content_hidden": "Je inhoud is verborgen: {reason}",
@@ -3095,9 +3097,7 @@
             "helper": "Meld {n} probleem dat wordt opgelost | Meld {n} problemen die worden opgelost",
             "competitions": "Doe mee aan {n} wedstrijd | Doe mee aan {n} wedstrijden",
             "season_top10": "Eindig {n} seizoen in de top 10 | Eindig {n} seizoenen in de top 10"
-        },
-        "unlocked": "Prestatie ontgrendeld: {name}",
-        "more": "en nog {n}"
+        }
     },
     "moderation": {
         "title": "Moderatie",
