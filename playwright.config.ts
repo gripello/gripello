@@ -24,6 +24,7 @@ const MOBILE_AUTH = [
     '**/auth/logout.spec.ts',
     '**/auth/login-brand-contrast.spec.ts',
     '**/auth/permissions-after-login.spec.ts',
+    '**/auth/provider-reauth.spec.ts',
 ]
 
 const PHONE_FIT = '**/i18n/phone-fit.spec.ts'
