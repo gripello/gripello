@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-    achievementToast,
     groupAchievements,
     nextTier,
     tierStyle,
@@ -47,24 +46,5 @@ describe('achievements', () => {
             'sessions',
             'sends',
         ])
-    })
-
-    it('celebrates newly created achievement notifications only', () => {
-        const t = (key: string, params?: Record<string, unknown>) =>
-            `${key}${params ? JSON.stringify(params) : ''}`
-        const record = {
-            type: 'achievement_earned',
-            params: { key: 'sends', count: 3 },
-        }
-        expect(achievementToast({ action: 'create', record }, t)).toBe(
-            'achievements.unlocked{"name":"achievements.names.sends"} achievements.more{"n":2}',
-        )
-        expect(achievementToast({ action: 'update', record }, t)).toBeNull()
-        expect(
-            achievementToast(
-                { action: 'create', record: { type: 'new_follower' } },
-                t,
-            ),
-        ).toBeNull()
     })
 })

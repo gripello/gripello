@@ -158,3 +158,16 @@ func vapidSubject(t *testing.T, header string) string {
 	json.Unmarshal(claims, &decoded)
 	return decoded.Sub
 }
+
+func TestAchievementPushNamesTheAchievement(t *testing.T) {
+	messages := locales.Load(filepath.Join("..", "..", "..", "..", "i18n", "locales"))
+	if got := Text(messages, "en", "achievement_earned", map[string]any{"key": "flashes", "count": float64(1)}); got != "Achievement unlocked: Flashes" {
+		t.Errorf("single = %q", got)
+	}
+	if got := Text(messages, "en", "achievement_earned", map[string]any{"key": "sends", "count": float64(3)}); got != "Achievements unlocked: Sends and 2 more" {
+		t.Errorf("several = %q", got)
+	}
+	if got := Text(messages, "en", "achievement_earned", map[string]any{"key": "retired", "count": float64(2)}); got != "New achievements unlocked: 2" {
+		t.Errorf("unknown key = %q", got)
+	}
+}

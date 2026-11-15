@@ -548,7 +548,9 @@
                 "follow_requested": "{name} möchte dir folgen",
                 "follow_accepted": "{name} hat deine Folgeanfrage angenommen",
                 "new_follower": "{name} folgt dir jetzt",
-                "achievement_earned": "Neue Erfolge freigeschaltet: {count}",
+                "achievement_earned": "Erfolg freigeschaltet: {name}",
+                "achievement_earned_more": "Erfolge freigeschaltet: {name} und {more} weitere",
+                "achievement_earned_unnamed": "Neue Erfolge freigeschaltet: {count}",
                 "report_filed_platform": "Inhalt in einer Halle gemeldet: „{snippet}“",
                 "moderation_pending": "Ein Beta-Video wartet auf Freigabe",
                 "content_hidden": "Dein Inhalt wurde ausgeblendet: {reason}",
@@ -3095,9 +3097,7 @@
             "helper": "Melde {n} Problem, das behoben wird | Melde {n} Probleme, die behoben werden",
             "competitions": "Nimm an {n} Wettkampf teil | Nimm an {n} Wettkämpfen teil",
             "season_top10": "Beende {n} Saison in den Top 10 | Beende {n} Saisons in den Top 10"
-        },
-        "unlocked": "Erfolg freigeschaltet: {name}",
-        "more": "und {n} weitere"
+        }
     },
     "moderation": {
         "title": "Moderation",

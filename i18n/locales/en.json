@@ -548,7 +548,9 @@
                 "follow_requested": "{name} wants to follow you",
                 "follow_accepted": "{name} accepted your follow request",
                 "new_follower": "{name} follows you now",
-                "achievement_earned": "New achievements unlocked: {count}",
+                "achievement_earned": "Achievement unlocked: {name}",
+                "achievement_earned_more": "Achievements unlocked: {name} and {more} more",
+                "achievement_earned_unnamed": "New achievements unlocked: {count}",
                 "report_filed_platform": "Content reported in a gym: “{snippet}”",
                 "moderation_pending": "A beta video is waiting for approval",
                 "content_hidden": "Your content was hidden: {reason}",
@@ -3095,9 +3097,7 @@
             "helper": "Report {n} problem that gets fixed | Report {n} problems that get fixed",
             "competitions": "Take part in {n} competition | Take part in {n} competitions",
             "season_top10": "Finish {n} season in the top 10 | Finish {n} seasons in the top 10"
-        },
-        "unlocked": "Achievement unlocked: {name}",
-        "more": "and {n} more"
+        }
     },
     "moderation": {
         "title": "Moderation",

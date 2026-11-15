@@ -548,7 +548,9 @@
                 "follow_requested": "{name} quiere seguirte",
                 "follow_accepted": "{name} aceptó tu solicitud",
                 "new_follower": "{name} ahora te sigue",
-                "achievement_earned": "Nuevos logros desbloqueados: {count}",
+                "achievement_earned": "Logro desbloqueado: {name}",
+                "achievement_earned_more": "Logros desbloqueados: {name} y {more} más",
+                "achievement_earned_unnamed": "Nuevos logros desbloqueados: {count}",
                 "report_filed_platform": "Contenido denunciado en un rocódromo: «{snippet}»",
                 "moderation_pending": "Un vídeo beta espera aprobación",
                 "content_hidden": "Tu contenido se ha ocultado: {reason}",
@@ -3095,9 +3097,7 @@
             "helper": "Informa de {n} problema que se arregla | Informa de {n} problemas que se arreglan",
             "competitions": "Participa en {n} competición | Participa en {n} competiciones",
             "season_top10": "Termina {n} temporada en el top 10 | Termina {n} temporadas en el top 10"
-        },
-        "unlocked": "Logro desbloqueado: {name}",
-        "more": "y {n} más"
+        }
     },
     "moderation": {
         "title": "Moderación",

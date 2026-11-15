@@ -548,7 +548,9 @@
                 "follow_requested": "{name} souhaite vous suivre",
                 "follow_accepted": "{name} a accepté votre demande de suivi",
                 "new_follower": "{name} vous suit désormais",
-                "achievement_earned": "Nouveaux succès débloqués : {count}",
+                "achievement_earned": "Succès débloqué : {name}",
+                "achievement_earned_more": "Succès débloqués : {name} et {more} de plus",
+                "achievement_earned_unnamed": "Nouveaux succès débloqués : {count}",
                 "report_filed_platform": "Contenu signalé dans une salle : « {snippet} »",
                 "moderation_pending": "Une vidéo bêta attend une approbation",
                 "content_hidden": "Ton contenu a été masqué : {reason}",
@@ -3095,9 +3097,7 @@
             "helper": "Signale {n} problème qui est réparé | Signale {n} problèmes qui sont réparés",
             "competitions": "Participe à {n} compétition | Participe à {n} compétitions",
             "season_top10": "Termine {n} saison dans le top 10 | Termine {n} saisons dans le top 10"
-        },
-        "unlocked": "Succès débloqué : {name}",
-        "more": "et {n} de plus"
+        }
     },
     "moderation": {
         "title": "Modération",

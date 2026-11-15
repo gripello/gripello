@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -51,7 +52,7 @@ func TestEveryNotificationTypeHasATopic(t *testing.T) {
 	}
 	types := map[string]bool{}
 	for notificationType := range messages.Group("en", "notifications.center.types") {
-		if !strings.HasSuffix(notificationType, "_gym") {
+		if !slices.ContainsFunc([]string{"_gym", "_more", "_unnamed"}, func(variant string) bool { return strings.HasSuffix(notificationType, variant) }) {
 			types[notificationType] = true
 		}
 	}
