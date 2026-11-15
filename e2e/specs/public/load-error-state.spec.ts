@@ -18,16 +18,18 @@ test('the overview offers a retry when its routes fail to load', async ({
     await expect(loadError).toHaveAttribute('role', 'alert')
 
     const retry = page.getByTestId('load-error-retry')
-    const refetch = page.waitForRequest((request) =>
+    const refetchFailed = page.waitForEvent('requestfailed', (request) =>
         overviewRoutes(new URL(request.url())),
     )
     await retry.click()
-    await refetch
+    await refetchFailed
     await expect(loadError).toBeVisible()
 
     await page.unroute(overviewRoutes)
-    await expect(async () => {
-        if (await retry.isVisible()) await retry.click({ timeout: 2_000 })
-        await expect(loadError).toBeHidden({ timeout: 2_000 })
-    }).toPass()
+    const recovered = page.waitForResponse(
+        (response) => overviewRoutes(new URL(response.url())) && response.ok(),
+    )
+    await retry.click()
+    await recovered
+    await expect(loadError).toBeHidden()
 })

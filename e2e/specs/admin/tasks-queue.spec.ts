@@ -142,6 +142,9 @@ test('a task moves to waiting via the keyboard and stays a known problem', async
             .getByTestId('task-column-waiting')
             .getByTestId(`task-card-${task.id}`),
     ).toBeVisible()
+    await expect
+        .poll(async () => (await getTask(adminApi, task.id)).status)
+        .toBe('waiting')
 
     await gotoSettled(page, `/route?id=${route.id}`)
     await expect(page.getByTestId('task-defect-banner')).toBeVisible()

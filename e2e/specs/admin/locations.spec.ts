@@ -2,7 +2,12 @@ import type { Page } from '@playwright/test'
 import { test, expect } from '../../support/fixtures'
 import { authHeader, gotoSettled } from '../../support/nav'
 import { E2E_GYM_SLUG } from '../../support/seed'
-import { createLocation, deleteRoute } from '../../support/api'
+import {
+    createLocation,
+    deleteRoute,
+    getRoute,
+    listLocations,
+} from '../../support/api'
 
 const locationRow = (page: Page, name: string) =>
     page.locator(`[data-testid="settings-location"][data-name="${name}"]`)
@@ -46,6 +51,7 @@ test('admins add, rename and delete locations used by the route form', async ({
     await expect(locationRow(page, renamed)).toHaveCount(0)
 })
 
+// Catches: deleting a location that still holds routes (and losing them).
 test('a location that still has routes cannot be deleted', async ({
     adminPage: page,
     adminApi,
@@ -63,10 +69,17 @@ test('a location that still has routes cannot be deleted', async ({
         /cannot be deleted/,
     )
     await expect(row).toHaveCount(1)
+    expect((await listLocations(adminApi)).map((l) => l.id)).toContain(
+        location.id,
+    )
+    expect((await getRoute(adminApi, route.id)).location).toBe(location.id)
 
     await deleteRoute(adminApi, route.id)
     await row.getByTestId('settings-location-delete').click()
     await expect(row).toHaveCount(0)
+    await expect
+        .poll(async () => (await listLocations(adminApi)).map((l) => l.id))
+        .not.toContain(location.id)
 })
 
 test('only settings managers may change locations', async ({

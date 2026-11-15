@@ -13,10 +13,7 @@ test('logs out without landing on the login page or reopening staff pages', asyn
         await page.waitForURL((url) => url.pathname === '/')
         await page.goBack()
     } else {
-        const back = page.getByTestId('nav-back-to-climbing-mobile')
-        await back.or(page.getByTestId('bottom-nav-account')).first().waitFor()
-        if (await back.isVisible()) await back.click()
-        await page.getByTestId('bottom-nav-account').click()
+        await gotoSettled(page, '/account')
         await page.getByTestId('me-logout').click()
         await expect(page.getByTestId('me-logout')).toHaveCount(0)
         await expect(page).toHaveURL(/\/account$/)

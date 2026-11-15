@@ -4,6 +4,7 @@ import { gotoSettled } from '../../support/nav'
 import {
     createCompetition,
     createCompetitionCategory,
+    getCompetition,
     listCompetitionCategories,
 } from '../../support/api'
 import type {
@@ -109,6 +110,11 @@ test('a setter adds boulders, opens the competition and copies it', async ({
     await expect(setterPage.getByTestId('competition-phase')).toHaveText(
         'Registration open',
     )
+    await expect
+        .poll(
+            async () => (await getCompetition(adminApi, competition.id)).status,
+        )
+        .toBe('open')
     await setterPage.getByTestId('competition-share').click()
     await expect(setterPage.getByTestId('competition-share-url')).toHaveValue(
         new RegExp(`/competitions/${competition.id}$`),
@@ -133,6 +139,14 @@ test('a setter adds boulders, opens the competition and copies it', async ({
     await expect(setterPage.getByTestId('competition-phase')).toHaveText(
         'Draft',
     )
+    const copyId = new URL(setterPage.url()).pathname.split('/').pop()!
+    const copy = await getCompetition(adminApi, copyId)
+    expect([copy.status, copy.discipline]).toEqual(['draft', 'boulder'])
+    expect(copy.name).toBe(`${testPrefix} League 1 (copy)`)
+    expect(
+        (await listCompetitionCategories(adminApi, copyId)).map((c) => c.name),
+    ).toEqual(['Open'])
+    expect((await getCompetition(adminApi, competition.id)).status).toBe('open')
 })
 
 test('a setter sets up a rope competition with hold counts', async ({

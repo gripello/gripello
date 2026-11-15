@@ -13,10 +13,7 @@ async function logOut(page: Page) {
         await page.getByTestId('user-menu-activator').click()
         await page.getByTestId('user-menu-logout').click()
     } else {
-        const back = page.getByTestId('nav-back-to-climbing-mobile')
-        await back.or(page.getByTestId('bottom-nav-account')).first().waitFor()
-        if (await back.isVisible()) await back.click()
-        await page.getByTestId('bottom-nav-account').click()
+        await gotoSettled(page, '/account')
         await page.getByTestId('me-logout').click()
     }
     await expect(page).not.toHaveURL(/\/manage\//)
@@ -27,11 +24,10 @@ test('a guest who signs in keeps the redirect to a permission-guarded page', asy
     page,
 }) => {
     await gotoSettled(page, gymPath('/'))
-    await page.waitForLoadState('networkidle')
     await gotoSettled(page, '/manage/comments', /\/auth\/login/)
     await signIn(page)
 
-    await page.waitForURL('**/manage/comments')
+    await page.waitForURL((url) => url.pathname.endsWith('/manage/comments'))
     await expect(page).toHaveURL(/\/manage\/comments/)
 })
 
@@ -43,11 +39,11 @@ test('signing in again after a logout in the same session reaches the dashboard'
         `/auth/login?redirect=${gymPath('/manage/comments')}`,
     )
     await signIn(page)
-    await page.waitForURL('**/manage/comments')
+    await page.waitForURL((url) => url.pathname.endsWith('/manage/comments'))
 
     await logOut(page)
     await signIn(page)
 
-    await page.waitForURL('**/manage/routes')
+    await page.waitForURL((url) => url.pathname.endsWith('/manage/routes'))
     await expect(page.getByTestId('routes-create-open')).toBeVisible()
 })

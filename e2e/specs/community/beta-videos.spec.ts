@@ -1,11 +1,13 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled } from '../../support/nav'
 import { signInAs } from '../../support/auth'
-import { apiAs, createBetaLink } from '../../support/api'
+import { apiAs, createBetaLink, listBetas } from '../../support/api'
 import type { BetaVideoRecord } from '../../../types/models'
 
+// Catches: a beta that shows as shared or removed in the page but not in the database.
 test('a climber shares and removes a beta link', async ({
     page,
+    adminApi,
     createUser,
     route,
 }) => {
@@ -31,6 +33,9 @@ test('a climber shares and removes a beta link', async ({
         'https://youtube.com/shorts/e2e-beta',
     )
     await expect(link).toContainText('YouTube')
+    await expect
+        .poll(async () => (await listBetas(adminApi, route.id)).length)
+        .toBe(1)
     await expect(page.getByTestId('beta-video-author')).toHaveAttribute(
         'href',
         `/climber?id=${climber.id}`,
@@ -39,10 +44,14 @@ test('a climber shares and removes a beta link', async ({
     await page.getByTestId('beta-video-delete').click()
     await page.getByTestId('confirm-dialog-confirm').click()
     await expect(link).toHaveCount(0)
+    await expect
+        .poll(async () => (await listBetas(adminApi, route.id)).length)
+        .toBe(0)
 })
 
 test('only the uploader deletes a beta, everyone else reports it', async ({
     page,
+    adminApi,
     adminPage,
     createUser,
     route,
@@ -68,6 +77,11 @@ test('only the uploader deletes a beta, everyone else reports it', async ({
     await own.getByTestId('beta-video-delete').click()
     await page.getByTestId('confirm-dialog-confirm').click()
     await expect(own).toHaveCount(0)
+    await expect
+        .poll(async () =>
+            (await listBetas(adminApi, route.id)).map((beta) => beta.id),
+        )
+        .not.toContain(video.id)
 })
 
 test('archived routes take no new beta', async ({

@@ -9,7 +9,7 @@ import {
     type Api,
 } from '../../support/api'
 import { uiaa } from '../../support/seed'
-import type { RouteScoreRecord } from '../../../types/models'
+import type { RouteRecord } from '../../../types/models'
 
 async function seedRoute(
     api: Api,
@@ -46,7 +46,7 @@ test('a comment-only review does not pull down the average', async ({
         [api, 0],
     ])
     try {
-        const score = await seeded.api.get<RouteScoreRecord>(
+        const score = await seeded.api.get<RouteRecord>(
             `/routes/${seeded.routeId}`,
         )
         expect(score.average_rating).toBe(4)
