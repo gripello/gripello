@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import type { Api } from '../../support/api'
 import { test, expect } from '../../support/fixtures'
-import { gotoSettled } from '../../support/nav'
+import { gotoSettled, reloadSettled } from '../../support/nav'
 
 const PASSWORD = 'E2ePassw0rd!'
 
@@ -111,6 +111,44 @@ test('server logs filter by level, search and open a line', async ({
     )
 })
 
+// Catches: the level filter showing lines below the picked level, or hiding ones at it.
+test('the error filter shows a client error and hides info lines', async ({
+    platformPage: page,
+    api,
+    testPrefix,
+}) => {
+    const marker = `${testPrefix} level-filter`
+    await api.post('/client-errors', { kind: 'window', message: marker })
+    await expect
+        .poll(
+            async () =>
+                (
+                    await api.get<{ items: { message: string }[] }>(
+                        '/platform/logs',
+                        { level: 'error', q: marker },
+                    )
+                ).items.length,
+        )
+        .toBeGreaterThan(0)
+
+    await gotoSettled(page, '/platform/logs')
+    const list = page.getByTestId('platform-logs-list')
+    await page.getByTestId('platform-logs-count-error').click()
+    await expect(page.getByTestId('platform-logs-count-error')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+    )
+    await page.getByTestId('platform-logs-search').fill(marker)
+    await expect(
+        list.getByText('client error', { exact: true }),
+    ).not.toHaveCount(0)
+
+    await page.getByTestId('platform-logs-search').fill('listening')
+    await expect(list.getByText('listening')).toHaveCount(0)
+    await page.getByTestId('platform-logs-filter-debug').click()
+    await expect(list.getByText('listening').first()).toBeVisible()
+})
+
 test('platform admins change the server log level', async ({
     platformPage: page,
     api,
@@ -154,7 +192,7 @@ test('backups run, keep their schedule and can be deleted', async ({
             { timeout: 60_000 },
         )
         .toBe(true)
-    await page.reload()
+    await reloadSettled(page)
     const row = page.getByTestId(`platform-backup-${created}`)
     await expect(row).toBeVisible()
 
@@ -174,6 +212,14 @@ test('backups run, keep their schedule and can be deleted', async ({
         await page.getByTestId(`platform-backup-delete-${created}`).click()
         await confirmWithPassword(page, 'platform-backups-admin-password')
         await expect(row).toHaveCount(0)
+        const deleted = created
+        await expect
+            .poll(async () =>
+                (await api.get<BackupList>('/platform/backups')).items.map(
+                    (item) => item.name,
+                ),
+            )
+            .not.toContain(deleted)
         created = ''
     } finally {
         const admin = await reauthenticated(api)

@@ -471,6 +471,8 @@ export const createSeason = (
     input: { name: string; starts_at: string; ends_at: string },
     gym = E2E_GYM_SLUG,
 ) => api.post<SeasonRecord>(`/gyms/${gym}/seasons`, input)
+export const listSeasons = (api: Api, gym = E2E_GYM_SLUG) =>
+    api.get<SeasonRecord[]>(`/gyms/${gym}/seasons`)
 export const deleteSeason = (api: Api, id: string) =>
     api.delete(`/seasons/${id}`)
 

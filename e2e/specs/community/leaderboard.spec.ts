@@ -7,6 +7,7 @@ import {
     createSeason,
     createTick,
     getMe,
+    listSeasons,
     updateMe,
 } from '../../support/api'
 
@@ -102,10 +103,17 @@ test('hidden climbers are told how to show up again', async ({
         .toBe(false)
 })
 
+// Catches: season create/edit/delete that only changes the dialog, and inverted seasons being stored.
 test('staff manage seasons and the TV view shows the board', async ({
     adminPage: page,
+    adminApi,
     testPrefix,
 }) => {
+    const mine = async () =>
+        (await listSeasons(adminApi))
+            .filter((season) => season.name.startsWith(testPrefix))
+            .map((season) => [season.name, season.starts_at, season.ends_at])
+
     await gotoSettled(page, '/e2e/leaderboard')
     await page.getByTestId('leaderboard-seasons-open').click()
     const dialog = page.getByTestId('seasons-dialog')
@@ -114,10 +122,31 @@ test('staff manage seasons and the TV view shows the board', async ({
     await dialog.getByTestId('season-end').fill(daysAgo(20))
     await dialog.getByTestId('season-save').click()
     await expect(dialog).toContainText("end can't be before")
+    expect(await mine()).toEqual([])
 
     await dialog.getByTestId('season-end').fill(daysAgo(1))
     await dialog.getByTestId('season-save').click()
     await expect(dialog.getByText(`${testPrefix} spring`)).toBeVisible()
+    await expect
+        .poll(mine)
+        .toEqual([[`${testPrefix} spring`, daysAgo(10), daysAgo(1)]])
+
+    const [season] = (await listSeasons(adminApi)).filter(
+        (s) => s.name === `${testPrefix} spring`,
+    )
+    const row = dialog.getByTestId(`season-${season!.id}`)
+    await row.getByTestId('season-edit').click()
+    await dialog.getByTestId('season-name').fill(`${testPrefix} summer`)
+    await dialog.getByTestId('season-save').click()
+    await expect(row).toContainText(`${testPrefix} summer`)
+    await expect
+        .poll(mine)
+        .toEqual([[`${testPrefix} summer`, daysAgo(10), daysAgo(1)]])
+
+    await row.getByTestId('season-delete').click()
+    await page.getByTestId('confirm-dialog-confirm').click()
+    await expect(row).toHaveCount(0)
+    await expect.poll(mine).toEqual([])
 
     await gotoSettled(page, '/e2e/leaderboard/tv')
     await expect(page.getByTestId('leaderboard-tv')).toBeVisible()
