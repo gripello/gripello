@@ -1,0 +1,200 @@
+{
+    "valid": [
+        null,
+        [],
+        [
+            {
+                "kind": "front_desk",
+                "email": "desk@gym.example"
+            }
+        ],
+        [
+            {
+                "kind": "privacy",
+                "name": "Data Protection Ltd",
+                "phone": "+49 30 123"
+            }
+        ],
+        [
+            {
+                "kind": "other",
+                "label": "Youth team",
+                "email": "youth@gym.example",
+                "phone": "0123"
+            },
+            {
+                "kind": "courses",
+                "label": "",
+                "name": "",
+                "email": "",
+                "phone": "0456"
+            }
+        ],
+        [
+            {
+                "kind": "front_desk",
+                "phone": "1"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "2"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "3"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "4"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "5"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "6"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "7"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "8"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "9"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "10"
+            }
+        ]
+    ],
+    "invalid": [
+        [{ "kind": "other", "email": "a@gym..example" }],
+        [{ "kind": "other", "email": "a..b@gym.example" }],
+        [{ "kind": "other", "email": ".a@gym.example" }],
+        [{ "kind": "other", "email": "a@gym.example." }],
+        [{ "kind": "toString", "email": "a@gym.example" }],
+        {},
+        "desk@gym.example",
+        [null],
+        ["desk@gym.example"],
+        [
+            {
+                "kind": "boss",
+                "email": "boss@gym.example"
+            }
+        ],
+        [
+            {
+                "email": "desk@gym.example"
+            }
+        ],
+        [
+            {
+                "kind": "front_desk"
+            }
+        ],
+        [
+            {
+                "kind": "front_desk",
+                "name": "Front desk"
+            }
+        ],
+        [
+            {
+                "kind": "front_desk",
+                "email": "not an address"
+            }
+        ],
+        [
+            {
+                "kind": "front_desk",
+                "email": "\"desk\"@gym.example"
+            }
+        ],
+        [
+            {
+                "kind": "front_desk",
+                "email": "desk@localhost"
+            }
+        ],
+        [
+            {
+                "kind": "front_desk",
+                "email": "Desk <desk@gym.example>"
+            }
+        ],
+        [
+            {
+                "kind": "front_desk",
+                "email": null,
+                "phone": "0123"
+            }
+        ],
+        [
+            {
+                "kind": "front_desk",
+                "phone": "0123",
+                "fax": "0456"
+            }
+        ],
+        [
+            {
+                "kind": "other",
+                "label": "123456789012345678901234567890123456789012345678901",
+                "phone": "0123"
+            }
+        ],
+        [
+            {
+                "kind": "front_desk",
+                "phone": "1"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "2"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "3"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "4"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "5"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "6"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "7"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "8"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "9"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "10"
+            },
+            {
+                "kind": "front_desk",
+                "phone": "11"
+            }
+        ]
+    ]
+}

@@ -35,7 +35,7 @@
             data-testid="gym-info-empty"
         />
 
-        <div v-else class="grid items-start gap-4 lg:grid-cols-3">
+        <div v-else class="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
             <div class="flex flex-col gap-4 lg:col-span-2">
                 <LayoutPanel v-if="gym?.description">
                     <p
@@ -72,36 +72,55 @@
 
             <div class="flex flex-col gap-4">
                 <LayoutPanel
-                    v-if="contacts.length"
+                    v-if="contacts.length || gym?.contacts?.length || appEmail"
                     :title="$t('gymInfo.contact')"
                 >
-                    <ul class="flex flex-col gap-2 text-sm">
-                        <li
-                            v-for="contact in contacts"
-                            :key="contact.key"
-                            class="min-w-0"
+                    <div class="flex flex-col gap-5 text-sm">
+                        <GymContactLinks
+                            v-if="contacts.length"
+                            :links="contacts"
+                            test-id-prefix="gym-info"
+                        />
+                        <div
+                            v-for="(contact, index) in gym?.contacts"
+                            :key="index"
+                            :data-testid="`gym-info-contact-${index}`"
                         >
-                            <ULink
-                                :href="contact.href"
-                                :target="
-                                    contact.key === 'website'
-                                        ? '_blank'
-                                        : undefined
-                                "
-                                rel="noopener"
-                                class="flex min-w-0 items-center gap-2 text-default hover:text-primary"
-                                :data-testid="`gym-info-${contact.key}`"
-                            >
+                            <LayoutEyebrow class="flex items-center gap-1.5">
                                 <UIcon
-                                    :name="contact.icon"
-                                    class="size-5 shrink-0 text-primary"
+                                    :name="GYM_CONTACT_KINDS[contact.kind]"
+                                    class="size-3.5"
                                 />
-                                <span class="truncate">{{
-                                    contact.label
-                                }}</span>
-                            </ULink>
-                        </li>
-                    </ul>
+                                {{
+                                    contact.label ||
+                                    $t(`gymInfo.contactKinds.${contact.kind}`)
+                                }}
+                            </LayoutEyebrow>
+                            <p
+                                v-if="contact.name"
+                                class="mb-2 font-medium text-highlighted"
+                            >
+                                {{ contact.name }}
+                            </p>
+                            <GymContactLinks
+                                :links="contactLinks(contact)"
+                                :test-id-prefix="`gym-info-contact-${index}`"
+                            />
+                        </div>
+                        <div v-if="appEmail" data-testid="gym-info-app-contact">
+                            <LayoutEyebrow class="flex items-center gap-1.5">
+                                <UIcon
+                                    name="i-lucide-smartphone"
+                                    class="size-3.5"
+                                />
+                                {{ $t('gymInfo.appContact') }}
+                            </LayoutEyebrow>
+                            <GymContactLinks
+                                :links="contactLinks({ email: appEmail })"
+                                test-id-prefix="gym-info-app"
+                            />
+                        </div>
+                    </div>
                 </LayoutPanel>
 
                 <LayoutPanel
@@ -135,8 +154,11 @@
 import { THUMBS, THUMB_SETS, thumbSrcset } from '#shared/utils/thumbs'
 import { fileUrl } from '~/api/client'
 import { GYM_AMENITIES } from '#shared/utils/gymAmenities'
+import { GYM_CONTACT_KINDS } from '#shared/utils/gymContacts'
 import { hasOpeningHours, toSchemaOrgHours } from '#shared/utils/openingHours'
+import type { SettingsRecord } from '~/types/models'
 import {
+    contactLinks,
     gymContacts,
     gymMarkers,
     hasGymInfo,
@@ -176,6 +198,8 @@ const {
 } = useOpenStatus(() => gym.value?.opening_hours)
 
 const contacts = computed(() => (gym.value ? gymContacts(gym.value) : []))
+const { data: settings } = useNuxtData<SettingsRecord>('settings')
+const appEmail = computed(() => settings.value?.contact_email ?? '')
 
 const infoDescription = computed(
     () =>

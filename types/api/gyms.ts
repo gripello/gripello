@@ -231,6 +231,15 @@ export interface components {
         };
         /** @enum {string} */
         Amenity: "toilets" | "showers" | "changing_rooms" | "lockers" | "cafe" | "shop" | "rental" | "parking" | "bike_parking" | "public_transport" | "kids_area" | "training_area" | "outdoor_area" | "yoga" | "sauna" | "wheelchair" | "wifi";
+        /** @description Needs an email or a phone. */
+        GymContact: {
+            /** @enum {string} */
+            kind: "front_desk" | "privacy" | "routesetting" | "competitions" | "courses" | "other";
+            label?: string;
+            name?: string;
+            email?: string;
+            phone?: string;
+        };
         /** @enum {string} */
         Language: "" | "en" | "de" | "nl" | "fr" | "es";
         GymFields: {
@@ -247,6 +256,11 @@ export interface components {
             trial_ends_at?: string | null;
             /** Format: email */
             contact_email?: string;
+            /**
+             * Format: email
+             * @description Only for viewers with manage_settings
+             */
+            report_email?: string;
             route_grade_system?: string;
             boulder_grade_system?: string;
             boulder_bands?: unknown;
@@ -276,6 +290,7 @@ export interface components {
             opening_hours?: components["schemas"]["OpeningHours"];
             hours_note?: string;
             amenities?: components["schemas"]["Amenity"][];
+            contacts?: components["schemas"]["GymContact"][] | null;
             tv_settings?: components["schemas"]["TvSettings"];
         };
         /** @description Any subset of the fields; file fields only accept null or "" (clear), uploads go through multipart. */
@@ -331,6 +346,8 @@ export interface components {
             sign_image: string;
             cover_image: string;
             contact_email: string;
+            /** @description Only for viewers with manage_settings */
+            report_email?: string;
             route_grade_system: string;
             boulder_grade_system: string;
             boulder_bands: unknown;
@@ -356,6 +373,7 @@ export interface components {
             opening_hours: components["schemas"]["OpeningHours"];
             hours_note: string;
             amenities: components["schemas"]["Amenity"][];
+            contacts: components["schemas"]["GymContact"][];
         };
         SettingsFields: {
             /** Format: uri */

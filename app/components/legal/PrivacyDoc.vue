@@ -40,6 +40,21 @@
                             controller.contact_email
                         }}</a>
                     </p>
+                    <p v-if="officer" data-testid="privacy-officer">
+                        <strong>{{
+                            $t('legal.privacyPage.privacyContact')
+                        }}</strong>
+                        <template v-if="officer.name"
+                            ><br />{{ officer.name }}</template
+                        >
+                        <template
+                            v-for="link in contactLinks(officer)"
+                            :key="link.key"
+                            ><br /><a :href="link.href">{{
+                                link.label
+                            }}</a></template
+                        >
+                    </p>
                     <p>
                         <NuxtLink :to="imprintPath">{{
                             $t('legal.imprint')
@@ -142,6 +157,8 @@ import {
     isPrivacyBlockKey,
     privacyDocOrDefault,
 } from '#shared/utils/privacyDoc'
+import { privacyContact } from '#shared/utils/gymContacts'
+import { contactLinks } from '~/utils/gymInfo'
 import { inlineText, privacySections } from '~/utils/legalRichText'
 import { PRIVACY_RIGHTS, privacyBlockTitleKey } from '~/utils/privacyEditor'
 
@@ -152,6 +169,8 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+
+const officer = computed(() => privacyContact(props.controller?.contacts))
 
 const mentionLabel = (id: string) =>
     isPrivacyBlockKey(id) ? t(privacyBlockTitleKey(id)) : id

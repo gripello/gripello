@@ -211,9 +211,24 @@ func platformAdmins(ctx context.Context, q db.Querier) ([]string, error) {
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
-func contactEmail(ctx context.Context, q db.Querier, gym string) string {
+func redressEmail(ctx context.Context, q db.Querier, gym string) string {
 	var email string
-	q.QueryRow(ctx, `SELECT COALESCE(NULLIF((SELECT contact_email FROM gyms WHERE id = $1), ''),
+	q.QueryRow(ctx, `SELECT COALESCE(
+		(SELECT c->>'email' FROM gyms, jsonb_array_elements(contacts) WITH ORDINALITY AS e(c, position)
+			WHERE id = $1 AND c->>'kind' = 'privacy' AND COALESCE(c->>'email', '') <> '' ORDER BY position LIMIT 1),
+		NULLIF((SELECT contact_email FROM gyms WHERE id = $1), ''),
 		(SELECT contact_email FROM settings ORDER BY id LIMIT 1), '')`, gym).Scan(&email)
+	return email
+}
+
+func platformContactEmail(ctx context.Context, q db.Querier) string {
+	var email string
+	q.QueryRow(ctx, `SELECT contact_email FROM settings ORDER BY id LIMIT 1`).Scan(&email)
+	return email
+}
+
+func reportEmail(ctx context.Context, q db.Querier, gym string) string {
+	var email string
+	q.QueryRow(ctx, `SELECT report_email FROM gyms WHERE id = $1`, gym).Scan(&email)
 	return email
 }

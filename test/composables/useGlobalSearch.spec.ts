@@ -31,6 +31,7 @@ beforeEach(() => {
             ({
                 'settings.contactEmail': 'Contact e-mail',
                 'settings.organization': 'Organisation',
+                'gymInfo.settings.contacts': 'Contacts',
             })[key] ?? key,
     }))
     api.listRoutes.mockResolvedValue({
@@ -122,8 +123,8 @@ describe('useGlobalSearch', () => {
         expect(settings.items).toEqual([
             expect.objectContaining({
                 title: 'Contact e-mail',
-                subtitle: 'Organisation',
-                to: '/gym-a/admin/settings?section=organization',
+                subtitle: 'Contacts',
+                to: '/gym-a/admin/settings?section=contacts',
             }),
         ])
     })

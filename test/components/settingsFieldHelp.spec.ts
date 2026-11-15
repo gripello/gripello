@@ -20,6 +20,23 @@ describe('settings fields', () => {
         for (const field of fields) expect(field).not.toMatch(/:description=/)
     })
 
+    it('shows errors of the contact fields edited in the dialog', () => {
+        const pattern = source('admin/settings/ContactsSection.vue').match(
+            /:error-pattern="\/(.+)\/"/,
+        )
+        const errorPattern = new RegExp(pattern![1]!)
+        for (const name of ['contacts', 'contact_email', 'legal_phone'])
+            expect(name).toMatch(errorPattern)
+    })
+
+    it('shows server errors of the general contact on the contact list', () => {
+        const form = source('admin/GymSettingsForm.vue')
+        expect(form).toContain('handled: showFieldErrors')
+        expect(form).toMatch(
+            /name === 'contact_email' \|\| name === 'legal_phone' \? 'contacts'/,
+        )
+    })
+
     it('offers the default language with its explanation', () => {
         const form = source('admin/settings/OrganizationSection.vue')
         expect(form).toContain("$t('settings.defaultLanguage')")

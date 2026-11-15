@@ -111,9 +111,13 @@ func listGyms(ctx context.Context, q db.Querier, includeAll bool, viewer string)
 	return items, err
 }
 
-// The trial end is only for the gym's members and platform admins ($2 is the viewer); trial_notice is internal.
+// The trial end is only for the gym's members and platform admins ($2 is the viewer), the report address only for
+// those who may change it; trial_notice is internal.
 const gymForViewer = `(to_jsonb(g) - 'trial_notice' - CASE WHEN EXISTS (SELECT 1 FROM memberships WHERE gym = g.id AND "user" = $2)
-	OR EXISTS (SELECT 1 FROM users WHERE id = $2 AND platform_admin) THEN '' ELSE 'trial_ends_at' END)`
+	OR EXISTS (SELECT 1 FROM users WHERE id = $2 AND platform_admin) THEN '' ELSE 'trial_ends_at' END
+	- CASE WHEN EXISTS (SELECT 1 FROM memberships m JOIN roles r ON r.id = m.role WHERE m.gym = g.id AND m."user" = $2
+		AND 'manage_settings' = ANY (effective_permissions(g.id, r.permissions)))
+	OR EXISTS (SELECT 1 FROM users WHERE id = $2 AND platform_admin) THEN '' ELSE 'report_email' END)`
 
 func gymJSON(ctx context.Context, q db.Querier, id string) (json.RawMessage, error) {
 	var out json.RawMessage
@@ -123,7 +127,7 @@ func gymJSON(ctx context.Context, q db.Querier, id string) (json.RawMessage, err
 
 func publicGymJSON(ctx context.Context, q db.Querier, id string) (json.RawMessage, error) {
 	var out json.RawMessage
-	err := q.QueryRow(ctx, `SELECT to_jsonb(g) - 'trial_notice' - 'trial_ends_at' FROM gyms g WHERE id = $1`, id).Scan(&out)
+	err := q.QueryRow(ctx, `SELECT to_jsonb(g) - 'trial_notice' - 'trial_ends_at' - 'report_email' FROM gyms g WHERE id = $1`, id).Scan(&out)
 	return out, err
 }
 
