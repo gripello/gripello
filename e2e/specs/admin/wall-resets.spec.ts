@@ -1,7 +1,9 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, searchRoutes } from '../../support/nav'
 import { seedMap } from '../../support/map'
+import { getRoute } from '../../support/api'
 
+// Catches: removal plans or the final archive living only in the planner, not on the routes.
 test('setters plan route removals per wall, climbers see them, finishing archives them', async ({
     setterPage,
     userPage,
@@ -29,6 +31,17 @@ test('setters plan route removals per wall, climbers see them, finishing archive
         await planner.getByTestId(`reset-route-${kept}`).click()
         await planner.getByTestId('reset-save').click()
         await expect(planner.getByTestId('reset-planned')).toHaveText(/· 1$/)
+        const routeState = async () =>
+            Promise.all(
+                [planned!, kept!].map(async (id) => {
+                    const route = await getRoute(adminApi, id)
+                    return [route.removal_planned_for, route.archived]
+                }),
+            )
+        await expect.poll(routeState).toEqual([
+            [day, false],
+            [null, false],
+        ])
 
         await setterPage
             .locator(
@@ -58,6 +71,10 @@ test('setters plan route removals per wall, climbers see them, finishing archive
         await setterPage.getByTestId('confirm-dialog-confirm').click()
         await expect(planner.getByTestId('reset-planned')).toHaveCount(0)
         await expect(outSoon(planned!)).toHaveCount(0)
+        await expect.poll(routeState).toEqual([
+            [null, true],
+            [null, false],
+        ])
     } finally {
         await seeded.cleanup()
     }

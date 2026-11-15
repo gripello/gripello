@@ -2,7 +2,12 @@ import { test, expect } from '../../support/fixtures'
 import { gotoSettled, gotoSubscribed } from '../../support/nav'
 import { signInAs } from '../../support/auth'
 import { uiaa } from '../../support/seed'
-import { apiAs, archiveRoute, createTick } from '../../support/api'
+import {
+    apiAs,
+    archiveRoute,
+    createTick,
+    listOwnTicks,
+} from '../../support/api'
 
 test('the logbook sends guests to sign in and back', async ({ page }) => {
     await page.goto('/logbook')
@@ -63,6 +68,14 @@ test('a climber logs, edits and deletes an ascent', async ({
     await page.getByTestId('tick-submit').click()
     await expect(tick.getByTestId('logbook-tick-type')).toHaveText('Flash')
     await expect(tick.getByTestId('logbook-tick-attempts')).toHaveCount(0)
+    const climberApi = await apiAs(climber)
+    await expect
+        .poll(async () =>
+            (await listOwnTicks(climberApi, { route: route.id })).map(
+                (saved) => [saved.type, saved.note],
+            ),
+        )
+        .toEqual([['flash', 'Crux at the roof']])
 
     await archiveRoute(adminApi, route.id)
     await gotoSettled(page, '/logbook')
@@ -74,6 +87,9 @@ test('a climber logs, edits and deletes an ascent', async ({
     await page.getByTestId('logbook-tick-delete').click()
     await page.getByTestId('confirm-dialog-confirm').click()
     await expect(page.getByTestId('logbook-empty')).toBeVisible()
+    await expect
+        .poll(async () => listOwnTicks(climberApi, { route: route.id }))
+        .toEqual([])
 })
 
 test('the dashboard sums up sends and turns a project into a send', async ({
