@@ -530,7 +530,7 @@ func TestOAuth2ReauthConfirmsPasswordlessAccounts(t *testing.T) {
 		t.Errorf("guest reauth = %d", status)
 	}
 
-	rec := start(map[string]any{"reauth": true, "redirect": "/platform/gyms/g1?section=danger"})
+	rec := start(map[string]any{"reauth": true, "redirect": "/platform/gyms/g1?section=danger#delete"})
 	var out struct{ URL string }
 	json.Unmarshal(rec.Body.Bytes(), &out)
 	authURL, _ := url.Parse(out.URL)
@@ -540,7 +540,7 @@ func TestOAuth2ReauthConfirmsPasswordlessAccounts(t *testing.T) {
 	flow := oauthFlow{state: authURL.Query().Get("state"), nonce: authURL.Query().Get("nonce"), cookie: rec.Result().Cookies()[0]}
 	target := f.callback(flow)
 	ticket := target.Query().Get("oauth2Reauth")
-	if target.Path != "/platform/gyms/g1" || target.Query().Get("section") != "danger" || ticket == "" {
+	if target.Path != "/platform/gyms/g1" || target.Query().Get("section") != "danger" || target.Fragment != "delete" || ticket == "" {
 		t.Fatalf("reauth target = %s", target)
 	}
 	if confirmed() {
@@ -583,5 +583,19 @@ func TestOAuth2ReauthConfirmsPasswordlessAccounts(t *testing.T) {
 	}
 	if status := redeem(token, ticket, cookie); status == http.StatusNoContent {
 		t.Error("a ticket redeemed twice")
+	}
+}
+
+// Catches: a return path with a #fragment swallowing the ticket into the hash, where the app never reads it.
+func TestAddQueryKeepsTheFragmentLast(t *testing.T) {
+	for _, tc := range []struct{ path, want string }{
+		{"/account", "/account?k=v+1"},
+		{"/route?id=r1", "/route?id=r1&k=v+1"},
+		{"/route?id=r1#beta-b1", "/route?id=r1&k=v+1#beta-b1"},
+		{"/platform#x", "/platform?k=v+1#x"},
+	} {
+		if got := addQuery(tc.path, "k", "v 1"); got != tc.want {
+			t.Errorf("addQuery(%q) = %q, want %q", tc.path, got, tc.want)
+		}
 	}
 }

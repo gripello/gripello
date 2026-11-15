@@ -5,6 +5,7 @@ import { markProviderConfirmed, REAUTH_PAGE } from '~/utils/providerReauth'
 export default defineNuxtPlugin((nuxtApp) => {
     const router = useRouter()
     const { success, error } = useNotification()
+    const auth = useAuthStore()
     const t = nuxtApp.$i18n.t
 
     nuxtApp.hook('app:mounted', async () => {
@@ -19,8 +20,8 @@ export default defineNuxtPlugin((nuxtApp) => {
                 () => true,
                 () => false,
             ))
-        if (!ok) return error(t('auth.reauth.failed'))
-        markProviderConfirmed()
+        if (!ok || !auth.record?.id) return error(t('auth.reauth.failed'))
+        markProviderConfirmed(auth.record.id)
         success(t('auth.reauth.repeat'))
     })
 })

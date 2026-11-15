@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import ReauthField from '~/components/user/ReauthField.vue'
-import { providerConfirmedAt } from '~/utils/providerReauth'
+import { providerConfirmation } from '~/utils/providerReauth'
 
 const confirmWith = vi.fn()
 const linked = ref<{
@@ -18,7 +18,7 @@ function mountField() {
     vi.stubGlobal('useProviderReauth', () => ({
         pending: ref(''),
         failed: ref(false),
-        confirmed: computed(() => providerConfirmedAt.value > 0),
+        confirmed: computed(() => !!providerConfirmation.value),
         confirmWith,
     }))
     return mount(ReauthField, {
@@ -39,7 +39,7 @@ function mountField() {
 describe('UserReauthField', () => {
     beforeEach(() => {
         confirmWith.mockReset()
-        providerConfirmedAt.value = 0
+        providerConfirmation.value = null
     })
 
     it('asks for the password when the account has one', async () => {
@@ -78,7 +78,7 @@ describe('UserReauthField', () => {
             items: [{ id: 'i1', provider: 'oidc' }],
             hasPassword: false,
         }
-        providerConfirmedAt.value = Date.now()
+        providerConfirmation.value = { user: 'u1', at: Date.now() }
         const wrapper = mountField()
         await flushPromises()
         expect(wrapper.get('[data-testid="reauth-provider-oidc"]').text()).toBe(

@@ -3,7 +3,7 @@ import { useReauth } from '~/composables/useReauth'
 import {
     accountWithoutPassword,
     markProviderConfirmed,
-    providerConfirmedAt,
+    providerConfirmation,
 } from '~/utils/providerReauth'
 
 const reauthenticate = vi.fn()
@@ -18,7 +18,8 @@ const fieldError = (code: string) => ({
 describe('useReauth', () => {
     beforeEach(() => {
         reauthenticate.mockReset()
-        providerConfirmedAt.value = 0
+        providerConfirmation.value = null
+        globalThis.__AUTH_STORE__ = { record: { id: 'u1' } }
         accountWithoutPassword.value = false
     })
 
@@ -32,7 +33,7 @@ describe('useReauth', () => {
 
     it('lets an account without a password through after the provider confirmed', async () => {
         accountWithoutPassword.value = true
-        markProviderConfirmed()
+        markProviderConfirmed('u1')
         const { confirm } = useReauth()
         await expect(confirm()).resolves.toBeUndefined()
         expect(reauthenticate).not.toHaveBeenCalled()
@@ -40,21 +41,28 @@ describe('useReauth', () => {
 
     it('skips the password check right after a provider confirmation', async () => {
         const { confirm } = useReauth()
-        markProviderConfirmed()
+        markProviderConfirmed('u1')
         await confirm()
         expect(reauthenticate).not.toHaveBeenCalled()
     })
 
+    it('does not carry a confirmation over to another account in this tab', async () => {
+        markProviderConfirmed('someone-else')
+        const { confirm } = useReauth()
+        await confirm()
+        expect(reauthenticate).toHaveBeenCalledWith('')
+    })
+
     it('asks the server again once the provider confirmation is old', async () => {
         const { confirm } = useReauth()
-        markProviderConfirmed(Date.now() - 5 * 60_000)
+        markProviderConfirmed('u1', Date.now() - 5 * 60_000)
         await confirm()
         expect(reauthenticate).toHaveBeenCalledWith('')
     })
 
     it('still checks a typed password after a provider confirmation', async () => {
         const { password, confirm } = useReauth()
-        markProviderConfirmed()
+        markProviderConfirmed('u1')
         password.value = 'secret'
         await confirm()
         expect(reauthenticate).toHaveBeenCalledWith('secret')

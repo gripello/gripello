@@ -303,13 +303,12 @@ func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	provider := r.PathValue("provider")
 	appURL := m.appURL
-	errorPage := appURL + "/auth/login?"
-	errorParam := "oauth2Error="
+	errorPage := func(code string) string { return appURL + addQuery("/auth/login", "oauth2Error", code) }
 	fail := func(code string, err error) error {
 		if err != nil {
 			slog.WarnContext(r.Context(), "authn: OAuth2 sign-in failed", "provider", provider, "code", code, "error", err)
 		}
-		http.Redirect(w, r, errorPage+errorParam+url.QueryEscape(code), http.StatusFound)
+		http.Redirect(w, r, errorPage(code), http.StatusFound)
 		return nil
 	}
 	state, err := takeChallenge(ctx, m.db, "oauth2_state", r.FormValue("state"))
@@ -321,13 +320,14 @@ func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 	if s.Native {
 		appURL = nativeAppScheme
 	}
-	errorPage = appURL + "/auth/login?"
 	if s.Link {
-		errorPage = appURL + "/account/settings?tab=security&"
+		errorPage = func(code string) string {
+			return appURL + addQuery("/account/settings?tab=security", "oauth2Error", code)
+		}
 	}
+	returnTo := firstNonEmpty(s.Redirect, "/account")
 	if s.Reauth {
-		errorPage = appURL + withQuery(firstNonEmpty(s.Redirect, "/account"))
-		errorParam = "oauth2ReauthError="
+		errorPage = func(code string) string { return appURL + addQuery(returnTo, "oauth2ReauthError", code) }
 	}
 	if r.FormValue("error") != "" {
 		return fail("failed", nil)
@@ -357,7 +357,7 @@ func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return fail("failed", err)
 		}
-		http.Redirect(w, r, appURL+withQuery(firstNonEmpty(s.Redirect, "/account"))+"oauth2Reauth="+url.QueryEscape(ticket), http.StatusFound)
+		http.Redirect(w, r, appURL+addQuery(returnTo, "oauth2Reauth", ticket), http.StatusFound)
 		return nil
 	}
 	if s.Link {
@@ -621,12 +621,18 @@ func (m *module) reauthProvider(ctx context.Context, userID, provider string) er
 	return nil
 }
 
-// withQuery appends the separator for one more query parameter.
-func withQuery(path string) string {
+// addQuery adds one query parameter to a same-origin path, in front of any #fragment.
+func addQuery(path, key, value string) string {
+	path, fragment, hasFragment := strings.Cut(path, "#")
+	separator := "?"
 	if strings.Contains(path, "?") {
-		return path + "&"
+		separator = "&"
 	}
-	return path + "?"
+	path += separator + key + "=" + url.QueryEscape(value)
+	if hasFragment {
+		path += "#" + fragment
+	}
+	return path
 }
 
 // oauth2FinishReauth marks the caller's session as just confirmed once the provider signed in the same identity in this browser.

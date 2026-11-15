@@ -1,6 +1,6 @@
 import { flushPromises } from '@vue/test-utils'
 import { finishOAuth2Reauth } from '~/api/auth'
-import { providerConfirmedAt } from '~/utils/providerReauth'
+import { providerConfirmation } from '~/utils/providerReauth'
 import { runSetup, setupOnly } from '../__stubs__/setupContext'
 
 vi.mock('~/api/auth', () => ({ finishOAuth2Reauth: vi.fn() }))
@@ -12,6 +12,10 @@ async function startPlugin(path: string, query: Record<string, string>) {
     const notify = { success: vi.fn(), error: vi.fn() }
     const replace = vi.fn(async () => {})
     vi.stubGlobal('defineNuxtPlugin', (setup: unknown) => setup)
+    vi.stubGlobal(
+        'useAuthStore',
+        setupOnly('useAuthStore', () => ({ record: { id: 'u1' } })),
+    )
     vi.stubGlobal(
         'useRouter',
         setupOnly('useRouter', () => ({
@@ -41,7 +45,7 @@ async function startPlugin(path: string, query: Record<string, string>) {
 describe('oauth2 reauth return plugin', () => {
     beforeEach(() => {
         vi.mocked(finishOAuth2Reauth).mockReset()
-        providerConfirmedAt.value = 0
+        providerConfirmation.value = null
     })
 
     // Catches: composables called after an await in the hook (the app crashed with a 500 after the Custom Tab).
@@ -60,7 +64,7 @@ describe('oauth2 reauth return plugin', () => {
         expect(replace).toHaveBeenCalledWith({ query: { section: 'danger' } })
         expect(finishOAuth2Reauth).toHaveBeenCalledWith('ticket-1')
         expect(notify.success).toHaveBeenCalledWith('auth.reauth.repeat')
-        expect(providerConfirmedAt.value).toBeGreaterThan(0)
+        expect(providerConfirmation.value?.user).toBe('u1')
     })
 
     it('reports a refused ticket and a provider error without confirming', async () => {
@@ -79,7 +83,7 @@ describe('oauth2 reauth return plugin', () => {
         expect(providerError.notify.error).toHaveBeenCalledWith(
             'auth.reauth.failed',
         )
-        expect(providerConfirmedAt.value).toBe(0)
+        expect(providerConfirmation.value).toBeNull()
     })
 
     it('leaves the popup page and pages without a ticket alone', async () => {

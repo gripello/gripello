@@ -10,6 +10,7 @@ import {
 
 export function useReauth(open?: WatchSource<unknown>) {
     const { t } = useI18n()
+    const auth = useAuthStore()
     const password = ref('')
     if (open)
         watch(open, (isOpen) => {
@@ -34,7 +35,7 @@ export function useReauth(open?: WatchSource<unknown>) {
         reset: () => (password.value = ''),
         // A fresh provider confirmation already stamped the session; accounts with a password still type it.
         confirm: () => {
-            if (!password.value && providerConfirmationFresh())
+            if (!password.value && providerConfirmationFresh(auth.record?.id))
                 return Promise.resolve()
             if (!password.value && accountWithoutPassword.value)
                 return Promise.reject(new ProviderConfirmationMissing())

@@ -5,8 +5,8 @@ import {
     REAUTH_CHANNEL,
     REAUTH_PAGE,
     markProviderConfirmed,
+    providerConfirmation,
     providerConfirmationFresh,
-    providerConfirmedAt,
     type ReauthMessage,
 } from '~/utils/providerReauth'
 
@@ -14,12 +14,17 @@ import {
 // the app's Custom Tab returns to the page and the reauth plugin redeems the ticket there.
 export function useProviderReauth() {
     const route = useRoute()
+    const auth = useAuthStore()
     const pending = ref('')
     const failed = ref(false)
     const popup = shallowRef<Window | null>(null)
+    // The popup posts its result and closes itself; give the message one more interval before calling it failed.
+    let closedSeen = false
     const { pause, resume } = useIntervalFn(
         () => {
-            if (popup.value?.closed) finish(false)
+            if (!popup.value?.closed) return
+            if (closedSeen) finish(false)
+            closedSeen = true
         },
         500,
         { immediate: false },
@@ -33,7 +38,8 @@ export function useProviderReauth() {
         popup.value = null
         pending.value = ''
         failed.value = !ok
-        if (ok) markProviderConfirmed()
+        const user = auth.record?.id
+        if (ok && user) markProviderConfirmed(user)
     }
 
     async function confirmWith(provider: string) {
@@ -58,6 +64,7 @@ export function useProviderReauth() {
             channel.onmessage = (event: MessageEvent<ReauthMessage>) =>
                 finish(event.data.ok)
             popup.value = window_
+            closedSeen = false
             window_.location.href = url
             resume()
         } catch (error) {
@@ -68,7 +75,9 @@ export function useProviderReauth() {
     }
 
     const confirmed = computed(
-        () => providerConfirmedAt.value > 0 && providerConfirmationFresh(),
+        () =>
+            !!providerConfirmation.value &&
+            providerConfirmationFresh(auth.record?.id),
     )
 
     return { pending, failed, confirmed, confirmWith }
