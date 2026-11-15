@@ -128,6 +128,16 @@ describe('ReleaseNotesDialog', () => {
         expect(pr.text()).toBe('#42')
     })
 
+    it('filters with the compact segmented pills', () => {
+        const wrapper = createWrapper({
+            tag: 'v1.9.0',
+            notes: '* fix: one\n* feat: two\n* chore(deps): three',
+        })
+        expect(wrapper.find('[test-id="release-notes-filter"]').exists()).toBe(
+            true,
+        )
+    })
+
     it('lists commits made since the installed release', () => {
         const wrapper = createWrapper({
             tag: 'v1.9.0',

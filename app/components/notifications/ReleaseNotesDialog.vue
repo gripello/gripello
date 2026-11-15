@@ -135,13 +135,14 @@
                 </div>
 
                 <template v-if="release.changes.length">
-                    <OptionGrid
+                    <SegmentedControl
                         v-model="category"
                         :items="filterItems"
-                        :label="$t('notifications.releaseNotes.filterLabel')"
-                        cols="grid-cols-2 sm:grid-cols-5"
-                        test-id-prefix="release-notes-filter"
-                        class="mb-2"
+                        :aria-label="
+                            $t('notifications.releaseNotes.filterLabel')
+                        "
+                        test-id="release-notes-filter"
+                        class="mb-2 items-start"
                     />
 
                     <div
