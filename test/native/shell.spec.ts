@@ -684,3 +684,19 @@ describe('web manifest', () => {
         ])
     })
 })
+
+describe('android overscroll', () => {
+    it('keeps the native edge stretch in the app while the web stays without', () => {
+        const activity = readFileSync(
+            'mobile/android/app/src/main/java/app/gripello/MainActivity.java',
+            'utf8',
+        )
+        expect(activity).not.toContain('OVER_SCROLL_NEVER')
+        expect(readFileSync('app/assets/css/main.css', 'utf8')).toContain(
+            'overscroll-behavior-y: none',
+        )
+        expect(readFileSync('app/plugins/native.client.ts', 'utf8')).toContain(
+            "document.documentElement.style.overscrollBehaviorY = 'auto'",
+        )
+    })
+})

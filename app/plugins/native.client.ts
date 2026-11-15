@@ -15,6 +15,7 @@ import { parentPath } from '~/utils/navigation'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
     if (!isNativeApp()) return
+    document.documentElement.style.overscrollBehaviorY = 'auto'
     // Composables need the app context, which is gone after the first await.
     const router = useRouter()
     const colorMode = useColorMode()

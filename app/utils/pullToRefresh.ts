@@ -12,6 +12,10 @@ export function pullGesture(dx: number, dy: number): PullGesture {
     return dy > Math.abs(dx) ? 'pull' : 'cancel'
 }
 
+// A downward move from the page top would only overscroll; claiming it keeps the native stretch out of the pull.
+export const claimsTouch = (dx: number, dy: number) =>
+    dy > 0 && dy >= Math.abs(dx)
+
 export const pullOffset = (fingerDistance: number) =>
     Math.max(0, Math.min(MAX_PULL, fingerDistance * RESISTANCE))
 

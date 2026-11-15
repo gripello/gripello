@@ -48,7 +48,6 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GripelloWidgetPlugin.class);
         super.onCreate(savedInstanceState);
         WebView webView = bridge.getWebView();
-        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         // Android 15 draws every app edge to edge; older ones get it too, so the page's own bars show behind the system bars.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) WindowCompat.enableEdgeToEdge(getWindow());
         // Android 11–14: SystemBars only sets the legacy light flags, which the window ignores once the splash screen has set its appearance.

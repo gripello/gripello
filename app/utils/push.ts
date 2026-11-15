@@ -1,6 +1,6 @@
 import type { PushSubscriptionRecord } from '~/types/models'
 import type { NotificationSettings } from '~/api/notifications'
-import { isInstalledApp, isNativeApp } from './native'
+import { isInstalledApp, isIos, isNativeApp } from './native'
 
 export type PushSupport = 'ok' | 'install' | 'unsupported'
 
@@ -19,7 +19,7 @@ export function browserPushSupport(): PushSupport {
     return pushSupport({
         hasPushManager: 'PushManager' in window,
         hasNotification: 'Notification' in window,
-        isIos: /iPad|iPhone|iPod/.test(navigator.userAgent),
+        isIos: isIos(),
         isStandalone: isInstalledApp(),
     })
 }

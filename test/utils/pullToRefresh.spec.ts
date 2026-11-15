@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
     canPullFrom,
+    claimsTouch,
     PULL_THRESHOLD,
     pullGesture,
     pullOffset,
@@ -23,6 +24,14 @@ describe('pullGesture', () => {
         expect(pullGesture(4, 20)).toBe('pull')
         expect(pullGesture(25, 15)).toBe('cancel')
         expect(pullGesture(0, -15)).toBe('cancel')
+    })
+})
+
+describe('claimsTouch', () => {
+    it('claims downward moves and leaves sideways and upward ones to the page', () => {
+        expect(claimsTouch(2, 3)).toBe(true)
+        expect(claimsTouch(8, 3)).toBe(false)
+        expect(claimsTouch(0, -3)).toBe(false)
     })
 })
 
