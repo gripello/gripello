@@ -8,6 +8,7 @@ const SETTINGS_WRITERS = [
     '**/admin/tv-screen.spec.ts',
     '**/admin/platform-settings.spec.ts',
     '**/admin/platform-operations.spec.ts',
+    '**/admin/privacy-editor.spec.ts',
     '**/auth/guest-register-link.spec.ts',
     '**/mail/register.spec.ts',
 ]
