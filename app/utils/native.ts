@@ -2,6 +2,11 @@ import { Capacitor } from '@capacitor/core'
 
 export const isNativeApp = () => Capacitor.isNativePlatform()
 
+// iPadOS reports itself as a Mac; only the touch points give it away.
+export const isIos = () =>
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
 export const isInstalledApp = () =>
     isNativeApp() ||
     matchMedia('(display-mode: standalone)').matches ||
