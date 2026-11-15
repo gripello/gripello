@@ -1,9 +1,16 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, reloadSettled } from '../../support/nav'
-import { deleteRole, findRole } from '../../support/api'
+import {
+    deleteRole,
+    findRole,
+    listRoles,
+    membershipOf,
+} from '../../support/api'
 
+// Catches: role create/delete that only changes the page, never the gym's roles.
 test('creates a role with a color, toggles a permission, then deletes it', async ({
     adminPage: page,
+    adminApi,
     testPrefix,
 }) => {
     await gotoSettled(page, '/admin/users#roles')
@@ -54,6 +61,9 @@ test('creates a role with a color, toggles a permission, then deletes it', async
 
     await expect(page.getByTestId('role-delete-dialog')).toBeHidden()
     await expect(page.getByTestId(`role-permissions-row-${name}`)).toBeHidden()
+    await expect
+        .poll(async () => (await listRoles(adminApi)).map((role) => role.name))
+        .not.toContain(name)
 })
 
 test('moves the holders of a deleted role to the role picked in the dialog', async ({
@@ -105,6 +115,12 @@ test('moves the holders of a deleted role to the role picked in the dialog', asy
     await expect(card.getByTestId('member-card-role')).toHaveText(
         'Route setter',
     )
+    expect((await membershipOf(adminApi, holder.id))?.role.name).toBe(
+        'routesetter',
+    )
+    expect((await listRoles(adminApi)).map((role) => role.name)).not.toContain(
+        roleName,
+    )
 })
 
 test('the admin role cannot be deleted and its permissions are locked', async ({
@@ -124,8 +140,10 @@ test('the admin role cannot be deleted and its permissions are locked', async ({
     await expect(page.getByTestId('role-form-name')).not.toBeEditable()
 })
 
+// Catches: a second "admin" role slipping through, which would split the admin rights.
 test('rejects a role name that is already taken', async ({
     adminPage: page,
+    adminApi,
 }) => {
     await gotoSettled(page, '/admin/users#roles')
 
@@ -137,6 +155,9 @@ test('rejects a role name that is already taken', async ({
     await expect(
         page.getByTestId('role-form-name'),
     ).toHaveAccessibleDescription(/already/)
+    expect(
+        (await listRoles(adminApi)).filter((role) => role.name === 'admin'),
+    ).toHaveLength(1)
 })
 
 test('add role button looks like the add member button', async ({
