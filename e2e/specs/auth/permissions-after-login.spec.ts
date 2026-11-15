@@ -27,7 +27,7 @@ test('a guest who signs in keeps the redirect to a permission-guarded page', asy
     await gotoSettled(page, '/manage/comments', /\/auth\/login/)
     await signIn(page)
 
-    await page.waitForURL('**/manage/comments')
+    await page.waitForURL((url) => url.pathname.endsWith('/manage/comments'))
     await expect(page).toHaveURL(/\/manage\/comments/)
 })
 
@@ -39,11 +39,11 @@ test('signing in again after a logout in the same session reaches the dashboard'
         `/auth/login?redirect=${gymPath('/manage/comments')}`,
     )
     await signIn(page)
-    await page.waitForURL('**/manage/comments')
+    await page.waitForURL((url) => url.pathname.endsWith('/manage/comments'))
 
     await logOut(page)
     await signIn(page)
 
-    await page.waitForURL('**/manage/routes')
+    await page.waitForURL((url) => url.pathname.endsWith('/manage/routes'))
     await expect(page.getByTestId('routes-create-open')).toBeVisible()
 })

@@ -1,6 +1,5 @@
 import { test, expect } from '../../support/fixtures'
 import { gotoSettled, gotoSubscribed, reloadSettled } from '../../support/nav'
-import { signInAs } from '../../support/auth'
 import {
     apiAs,
     createRating,
@@ -42,11 +41,11 @@ test('signed-in climbers see review authors, who can delete their own', async ({
     await gotoSettled(readerPage, `/route?id=${route.id}`)
     await expect(card(readerPage)).toContainText('Anonymous')
 
-    await signInAs(page, author.email, author.password)
-    await gotoSettled(page, `/route?id=${route.id}`)
-    await card(page).getByTestId('comment-card-delete').click()
-    await page.getByTestId('confirm-dialog-confirm').click()
-    await expect(card(page)).toHaveCount(0)
+    const authorPage = await pageAs(author)
+    await gotoSettled(authorPage, `/route?id=${route.id}`)
+    await card(authorPage).getByTestId('comment-card-delete').click()
+    await authorPage.getByTestId('confirm-dialog-confirm').click()
+    await expect(card(authorPage)).toHaveCount(0)
     expect(
         (await listRouteRatings(adminApi, route.id)).map((rating) => rating.id),
     ).not.toContain(review.id)
