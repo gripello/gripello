@@ -501,3 +501,87 @@ func TestAvatarImportSendsTheMicrosoftTokenOnlyToGraphAndKeepsOnlyImages(t *test
 		t.Errorf("plain http picture = %q via %v", avatar, requests)
 	}
 }
+
+func TestOAuth2ReauthConfirmsPasswordlessAccounts(t *testing.T) {
+	t.Parallel()
+	f := newFixture(t)
+	idp := newFakeIdP(t)
+	f.enableOIDC(idp)
+	climber := f.user("climber@example.com")
+	f.user("other@example.com")
+	token := f.loginToken("climber@example.com")
+	otherToken := f.loginToken("other@example.com")
+	start := func(body map[string]any) *httptest.ResponseRecorder {
+		return f.raw(http.MethodPost, "/auth/oauth2/oidc/start", token, body)
+	}
+	confirmed := func() bool {
+		return f.count(`SELECT count(*) FROM sessions WHERE "user" = $1 AND reauthenticated_at IS NOT NULL`, climber) > 0
+	}
+
+	if rec := start(map[string]any{"reauth": true}); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "password_set") {
+		t.Fatalf("reauth with a password = %d %s", rec.Code, rec.Body)
+	}
+	f.exec(`UPDATE users SET password_hash = '' WHERE id = $1`, climber)
+	if rec := start(map[string]any{"reauth": true}); rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "not_linked") {
+		t.Fatalf("reauth without a linked provider = %d %s", rec.Code, rec.Body)
+	}
+	f.exec(`INSERT INTO user_identities (id, "user", provider, subject, email) VALUES ($1, $2, 'oidc', 'subject-1', 'climber@example.com')`, ids.New(), climber)
+	if status, _ := f.send(http.MethodPost, "/auth/oauth2/oidc/start", "", map[string]any{"reauth": true}); status != http.StatusUnauthorized {
+		t.Errorf("guest reauth = %d", status)
+	}
+
+	rec := start(map[string]any{"reauth": true, "redirect": "/platform/gyms/g1?section=danger"})
+	var out struct{ URL string }
+	json.Unmarshal(rec.Body.Bytes(), &out)
+	authURL, _ := url.Parse(out.URL)
+	if authURL.Query().Get("prompt") != "login" {
+		t.Errorf("reauth does not ask for a fresh sign-in: %s", out.URL)
+	}
+	flow := oauthFlow{state: authURL.Query().Get("state"), nonce: authURL.Query().Get("nonce"), cookie: rec.Result().Cookies()[0]}
+	target := f.callback(flow)
+	ticket := target.Query().Get("oauth2Reauth")
+	if target.Path != "/platform/gyms/g1" || target.Query().Get("section") != "danger" || ticket == "" {
+		t.Fatalf("reauth target = %s", target)
+	}
+	if confirmed() {
+		t.Fatal("the callback confirmed the session by itself")
+	}
+
+	if status, _ := f.finish(ticket, flow.cookie); status == http.StatusOK {
+		t.Fatal("a reauth ticket signed in")
+	}
+	redeem := func(token, ticket string, cookie *http.Cookie) int {
+		return f.raw(http.MethodPost, "/auth/oauth2/reauth", token, map[string]string{"ticket": ticket}, cookie).Code
+	}
+	next := func() (string, *http.Cookie) {
+		flow := f.startOAuth(token, map[string]any{"reauth": true})
+		return f.callback(flow).Query().Get("oauth2Reauth"), flow.cookie
+	}
+	ticket, cookie := next()
+	if status := redeem(token, ticket, nil); status == http.StatusNoContent {
+		t.Fatal("redeemed without the flow cookie")
+	}
+	ticket, cookie = next()
+	if status := redeem(otherToken, ticket, cookie); status == http.StatusNoContent {
+		t.Fatal("another account redeemed the ticket")
+	}
+	idp.claims["sub"] = "someone-else"
+	ticket, cookie = next()
+	if status := redeem(token, ticket, cookie); status == http.StatusNoContent {
+		t.Fatal("an identity of someone else confirmed the session")
+	}
+	if confirmed() {
+		t.Fatal("a refused redeem confirmed the session")
+	}
+	idp.claims["sub"] = "subject-1"
+	ticket, cookie = next()
+	if status := redeem(token, ticket, cookie); status != http.StatusNoContent {
+		t.Fatalf("redeem = %d", status)
+	}
+	if !confirmed() {
+		t.Error("the session was not confirmed")
+	}
+	if status := redeem(token, ticket, cookie); status == http.StatusNoContent {
+		t.Error("a ticket redeemed twice")
+	}
+}

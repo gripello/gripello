@@ -2,6 +2,7 @@ import type { WatchSource } from 'vue'
 import { reauthenticate } from '~/api/account'
 import { isWrongPassword, needsPasswordFirst } from '~/utils/reauth'
 import { throttledErrorKey } from '~/utils/authErrors'
+import { providerConfirmationFresh } from '~/utils/providerReauth'
 
 export function useReauth(open?: WatchSource<unknown>) {
     const { t } = useI18n()
@@ -25,7 +26,11 @@ export function useReauth(open?: WatchSource<unknown>) {
     return {
         password,
         reset: () => (password.value = ''),
-        confirm: () => reauthenticate(password.value),
+        // A fresh provider confirmation already stamped the session; accounts with a password still type it.
+        confirm: () =>
+            !password.value && providerConfirmationFresh()
+                ? Promise.resolve()
+                : reauthenticate(password.value),
         errorText,
     }
 }

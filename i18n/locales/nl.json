@@ -809,7 +809,8 @@
             "feed": "Feed",
             "info": "Halinfo",
             "gymOnboarding": "Hal inrichten",
-            "dataExport": "Je gegevens"
+            "dataExport": "Je gegevens",
+            "reauth": "Aanmelding bevestigen"
         },
         "content": {
             "settings": "Instellingen",
@@ -3265,6 +3266,12 @@
                 "email_unverified": "De provider heeft geen e-mailadres bevestigd, dus er kan geen account worden aangemaakt.",
                 "email_blocked": "Dit e-mailadres kan niet worden gebruikt voor een nieuw account."
             }
+        },
+        "reauth": {
+            "confirmWith": "Bevestigen met {provider}",
+            "confirmed": "Bevestigd",
+            "failed": "Bevestigen mislukt",
+            "repeat": "5 minuten bevestigd. Herhaal de actie."
         }
     },
     "resets": {

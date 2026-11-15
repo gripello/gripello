@@ -809,7 +809,8 @@
             "feed": "Novedades",
             "info": "Info del rocódromo",
             "gymOnboarding": "Configurar rocódromo",
-            "dataExport": "Tus datos"
+            "dataExport": "Tus datos",
+            "reauth": "Confirmar inicio de sesión"
         },
         "content": {
             "settings": "Ajustes",
@@ -3265,6 +3266,12 @@
                 "email_unverified": "El proveedor no confirmó ninguna dirección de correo, así que no se puede crear una cuenta.",
                 "email_blocked": "Esta dirección de correo no se puede usar para una cuenta nueva."
             }
+        },
+        "reauth": {
+            "confirmWith": "Confirmar con {provider}",
+            "confirmed": "Confirmado",
+            "failed": "No se pudo confirmar",
+            "repeat": "Confirmado durante 5 minutos. Repite la acción."
         }
     },
     "resets": {

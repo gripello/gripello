@@ -1,5 +1,9 @@
 import { nextTick, ref } from 'vue'
 import { useReauth } from '~/composables/useReauth'
+import {
+    markProviderConfirmed,
+    providerConfirmedAt,
+} from '~/utils/providerReauth'
 
 const reauthenticate = vi.fn()
 vi.mock('~/api/account', () => ({
@@ -11,7 +15,32 @@ const fieldError = (code: string) => ({
 })
 
 describe('useReauth', () => {
-    beforeEach(() => reauthenticate.mockReset())
+    beforeEach(() => {
+        reauthenticate.mockReset()
+        providerConfirmedAt.value = 0
+    })
+
+    it('skips the password check right after a provider confirmation', async () => {
+        const { confirm } = useReauth()
+        markProviderConfirmed()
+        await confirm()
+        expect(reauthenticate).not.toHaveBeenCalled()
+    })
+
+    it('asks the server again once the provider confirmation is old', async () => {
+        const { confirm } = useReauth()
+        markProviderConfirmed(Date.now() - 5 * 60_000)
+        await confirm()
+        expect(reauthenticate).toHaveBeenCalledWith('')
+    })
+
+    it('still checks a typed password after a provider confirmation', async () => {
+        const { password, confirm } = useReauth()
+        markProviderConfirmed()
+        password.value = 'secret'
+        await confirm()
+        expect(reauthenticate).toHaveBeenCalledWith('secret')
+    })
 
     it('clears the password whenever the dialog opens', async () => {
         const open = ref(false)

@@ -175,6 +175,8 @@ type oauthState struct {
 	FlowHash string `json:"flow_hash"`
 	Redirect string `json:"redirect"`
 	Link     bool   `json:"link"`
+	// Reauth confirms a signed-in account without a password; Redirect is then the page to return to.
+	Reauth bool `json:"reauth,omitempty"`
 	// SessionOnly carries an unchecked "Remember me" across the provider redirect.
 	SessionOnly bool `json:"session_only,omitempty"`
 	Native      bool `json:"native,omitempty"`
@@ -185,6 +187,7 @@ func (m *module) oauth2Start(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		Redirect   string `json:"redirect"`
 		Link       bool   `json:"link"`
+		Reauth     bool   `json:"reauth"`
 		Persistent *bool  `json:"persistent"`
 		Native     bool   `json:"native"`
 	}
@@ -217,6 +220,16 @@ func (m *module) oauth2Start(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
+	if body.Reauth {
+		p, err := auth.Require(ctx)
+		if err != nil {
+			return err
+		}
+		if err := m.reauthProvider(ctx, p.UserID, c.Provider); err != nil {
+			return err
+		}
+		linkUser = p.UserID
+	}
 	if !safeRedirect.MatchString(body.Redirect) {
 		body.Redirect = ""
 	}
@@ -227,7 +240,7 @@ func (m *module) oauth2Start(w http.ResponseWriter, r *http.Request) error {
 	}
 	flow := ids.Secret(32)
 	state := oauthState{Verifier: oauth2.GenerateVerifier(), Nonce: ids.Secret(32), FlowHash: ids.Hash(flow), Redirect: body.Redirect, Link: body.Link,
-		SessionOnly: body.Persistent != nil && !*body.Persistent, Native: body.Native}
+		Reauth: body.Reauth, SessionOnly: body.Persistent != nil && !*body.Persistent, Native: body.Native}
 	data, _ := json.Marshal(state)
 	stateID, err := insertChallenge(ctx, m.db, "oauth2_state", linkUser, c.Provider, data)
 	if err != nil {
@@ -236,6 +249,8 @@ func (m *module) oauth2Start(w http.ResponseWriter, r *http.Request) error {
 	options := []oauth2.AuthCodeOption{oauth2.S256ChallengeOption(state.Verifier), oidc.Nonce(state.Nonce)}
 	if c.Provider == "apple" {
 		options = append(options, oauth2.SetAuthURLParam("response_mode", "form_post"))
+	} else if body.Reauth {
+		options = append(options, oauth2.SetAuthURLParam("prompt", "login"))
 	}
 	http.SetCookie(w, &http.Cookie{Name: flowCookie, Value: flow, Path: "/api/auth/oauth2", MaxAge: int(challengeTTL.Seconds()),
 		HttpOnly: true, Secure: strings.HasPrefix(m.appURL, "https://"), SameSite: http.SameSiteLaxMode})
@@ -289,11 +304,12 @@ func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 	provider := r.PathValue("provider")
 	appURL := m.appURL
 	errorPage := appURL + "/auth/login?"
+	errorParam := "oauth2Error="
 	fail := func(code string, err error) error {
 		if err != nil {
 			slog.WarnContext(r.Context(), "authn: OAuth2 sign-in failed", "provider", provider, "code", code, "error", err)
 		}
-		http.Redirect(w, r, errorPage+"oauth2Error="+url.QueryEscape(code), http.StatusFound)
+		http.Redirect(w, r, errorPage+errorParam+url.QueryEscape(code), http.StatusFound)
 		return nil
 	}
 	state, err := takeChallenge(ctx, m.db, "oauth2_state", r.FormValue("state"))
@@ -308,6 +324,10 @@ func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 	errorPage = appURL + "/auth/login?"
 	if s.Link {
 		errorPage = appURL + "/account/settings?tab=security&"
+	}
+	if s.Reauth {
+		errorPage = appURL + withQuery(firstNonEmpty(s.Redirect, "/account"))
+		errorParam = "oauth2ReauthError="
 	}
 	if r.FormValue("error") != "" {
 		return fail("failed", nil)
@@ -330,6 +350,15 @@ func (m *module) oauth2Callback(w http.ResponseWriter, r *http.Request) error {
 		if json.Unmarshal([]byte(r.FormValue("user")), &user) == nil {
 			claims.GivenName, claims.FamilyName = user.Name.FirstName, user.Name.LastName
 		}
+	}
+	if s.Reauth {
+		data, _ := json.Marshal(linkTicket{FlowHash: s.FlowHash, Reauth: true, Subject: claims.Subject})
+		ticket, err := insertChallenge(ctx, m.db, "oauth2", state.User, c.Provider, data)
+		if err != nil {
+			return fail("failed", err)
+		}
+		http.Redirect(w, r, appURL+withQuery(firstNonEmpty(s.Redirect, "/account"))+"oauth2Reauth="+url.QueryEscape(ticket), http.StatusFound)
+		return nil
 	}
 	if s.Link {
 		// Linking finishes in the browser that started it (flow cookie), so a provider URL sent to someone else can't link their identity.
@@ -499,7 +528,7 @@ func (m *module) oauth2Finish(w http.ResponseWriter, r *http.Request) error {
 	}
 	var data linkTicket
 	json.Unmarshal(ticket.Data, &data)
-	if data.Link || subtle.ConstantTimeCompare([]byte(ids.Hash(cookie.Value)), []byte(data.FlowHash)) != 1 {
+	if data.Link || data.Reauth || subtle.ConstantTimeCompare([]byte(ids.Hash(cookie.Value)), []byte(data.FlowHash)) != 1 {
 		return errFailedAuth
 	}
 	user, err := findAccount(ctx, m.db, ticket.User)
@@ -518,6 +547,7 @@ func (m *module) oauth2Finish(w http.ResponseWriter, r *http.Request) error {
 type linkTicket struct {
 	FlowHash string `json:"flow_hash"`
 	Link     bool   `json:"link,omitempty"`
+	Reauth   bool   `json:"reauth,omitempty"`
 	Subject  string `json:"subject,omitempty"`
 	Email    string `json:"email,omitempty"`
 }
@@ -571,5 +601,75 @@ func (m *module) oauth2FinishLink(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	m.announceAccount(ctx, p.UserID, "identities")
+	return httpx.NoContent(w, nil)
+}
+
+// reauthProvider allows a provider confirmation only for accounts without a password and only with a provider they already sign in with.
+func (m *module) reauthProvider(ctx context.Context, userID, provider string) error {
+	var hasPassword, linked bool
+	err := m.db.QueryRow(ctx, `SELECT password_hash <> '', EXISTS (SELECT 1 FROM user_identities WHERE "user" = $1 AND provider = $2)
+		FROM users WHERE id = $1`, userID, provider).Scan(&hasPassword, &linked)
+	if err != nil {
+		return err
+	}
+	if hasPassword {
+		return httpx.BadRequest("Confirm with your password.").Field("provider", "password_set", "Confirm with your password.")
+	}
+	if !linked {
+		return httpx.BadRequest("This sign-in is not linked to your account.").Field("provider", "not_linked", "This sign-in is not linked to your account.")
+	}
+	return nil
+}
+
+// withQuery appends the separator for one more query parameter.
+func withQuery(path string) string {
+	if strings.Contains(path, "?") {
+		return path + "&"
+	}
+	return path + "?"
+}
+
+// oauth2FinishReauth marks the caller's session as just confirmed once the provider signed in the same identity in this browser.
+func (m *module) oauth2FinishReauth(w http.ResponseWriter, r *http.Request) error {
+	p, err := auth.Require(r.Context())
+	if err != nil {
+		return err
+	}
+	var body struct {
+		Ticket string `json:"ticket"`
+	}
+	if err := httpx.Decode(r, &body); err != nil {
+		return err
+	}
+	ctx := r.Context()
+	cookie, err := r.Cookie(flowCookie)
+	if err != nil {
+		return errFailedAuth
+	}
+	http.SetCookie(w, &http.Cookie{Name: flowCookie, Path: "/api/auth/oauth2", MaxAge: -1, HttpOnly: true,
+		Secure: strings.HasPrefix(m.appURL, "https://"), SameSite: http.SameSiteLaxMode})
+	ticket, err := takeChallenge(ctx, m.db, "oauth2", body.Ticket)
+	if isNoRows(err) {
+		return errFailedAuth
+	}
+	if err != nil {
+		return err
+	}
+	var data linkTicket
+	json.Unmarshal(ticket.Data, &data)
+	if !data.Reauth || ticket.User != p.UserID || subtle.ConstantTimeCompare([]byte(ids.Hash(cookie.Value)), []byte(data.FlowHash)) != 1 {
+		return errFailedAuth
+	}
+	var owner string
+	err = m.db.QueryRow(ctx, `SELECT "user" FROM user_identities WHERE provider = $1 AND subject = $2`, ticket.Method, data.Subject).Scan(&owner)
+	if isNoRows(err) || err == nil && owner != p.UserID {
+		return errFailedAuth
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := m.db.Exec(ctx, `UPDATE sessions SET reauthenticated_at = now() WHERE id = $1`, p.SessionID); err != nil {
+		return err
+	}
 	return httpx.NoContent(w, nil)
 }

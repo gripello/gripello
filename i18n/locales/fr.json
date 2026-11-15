@@ -809,7 +809,8 @@
             "feed": "Fil d’actu",
             "info": "Infos de la salle",
             "gymOnboarding": "Configurer la salle",
-            "dataExport": "Vos données"
+            "dataExport": "Vos données",
+            "reauth": "Confirmer la connexion"
         },
         "content": {
             "settings": "Paramètres",
@@ -3265,6 +3266,12 @@
                 "email_unverified": "Le fournisseur n’a confirmé aucune adresse e-mail, aucun compte ne peut donc être créé.",
                 "email_blocked": "Cette adresse e-mail ne peut pas être utilisée pour un nouveau compte."
             }
+        },
+        "reauth": {
+            "confirmWith": "Confirmer avec {provider}",
+            "confirmed": "Confirmé",
+            "failed": "La confirmation a échoué",
+            "repeat": "Confirmé pour 5 minutes. Répétez l’action."
         }
     },
     "resets": {
