@@ -149,6 +149,15 @@ export const setGymFeatures = (
     gymId: string,
     features: Record<string, boolean>,
 ) => api.put<GymRecord>(`/platform/gyms/${gymId}/features`, features)
+export type Blocklists = {
+    blocked_emails: string[]
+    allowed_emails: string[]
+    protected_names: string[]
+}
+export const getBlocklists = (api: Api) =>
+    api.get<Blocklists>('/platform/blocklists')
+export const updateBlocklists = (api: Api, lists: Blocklists) =>
+    api.put<Blocklists>('/platform/blocklists', lists)
 export const getSettings = (api: Api) => api.get<SettingsRecord>('/settings')
 export const updateSettings = (api: Api, patch: Partial<SettingsRecord>) =>
     api.patch<SettingsRecord>('/settings', patch)
