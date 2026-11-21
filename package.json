@@ -50,7 +50,7 @@
         "@cj-tech-master/excelts": "10.2.0",
         "@iconify-json/lucide": "^1.2.156",
         "@iconify-json/simple-icons": "^1.2.103",
-        "@nuxt/ui": "^4.12.2",
+        "@nuxt/ui": "^4.13.0",
         "@nuxtjs/i18n": "10.6.0",
         "@playwright/test": "^1.65.0",
         "@types/pdfkit": "0.17.7",
