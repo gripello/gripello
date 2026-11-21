@@ -2239,18 +2239,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@maplibre/geojson-vt@npm:^6.3.0":
-  version: 6.3.0
-  resolution: "@maplibre/geojson-vt@npm:6.3.0"
+"@maplibre/geojson-vt@npm:^6.3.1":
+  version: 6.3.3
+  resolution: "@maplibre/geojson-vt@npm:6.3.3"
   dependencies:
     kdbush: "npm:^4.1.0"
-  checksum: 10c0/64f28e38cb27d43c49ce26f8b8b7f113daaa611192f49de1a03ca622a67cacaa926c4dce30fdbd5bd5bcabbded03bdb3bed78df2b41870bb1c785e889b063388
+  checksum: 10c0/84fa9ae08e402ea199a046a471a60607f521e382de8b3d810058fcf5f1db0d9dd807c0fbd2525fb55035d939afa182497f2b29ada900d2e6904c92f465c1e060
   languageName: node
   linkType: hard
 
-"@maplibre/maplibre-gl-style-spec@npm:^26.5.1":
-  version: 26.6.0
-  resolution: "@maplibre/maplibre-gl-style-spec@npm:26.6.0"
+"@maplibre/maplibre-gl-style-spec@npm:^26.8.0":
+  version: 26.8.0
+  resolution: "@maplibre/maplibre-gl-style-spec@npm:26.8.0"
   dependencies:
     "@mapbox/jsonlint-lines-primitives": "npm:^2.0.3"
     "@mapbox/unitbezier": "npm:^1.0.0"
@@ -2262,7 +2262,7 @@ __metadata:
     gl-style-format: dist/gl-style-format.mjs
     gl-style-migrate: dist/gl-style-migrate.mjs
     gl-style-validate: dist/gl-style-validate.mjs
-  checksum: 10c0/e304a9d0df81b82c11c07d467a0b081f52ae80dac3bde2b2375d2b61ee2d2b9340584685fb6fc41024a76bf7d2a736f890c6f63f39116a3eb361eb494cae44b2
+  checksum: 10c0/19559be6d6d3ea8508dd493740fafecb2cc97e4a7601faef08271c22470ff6e4d651d1c14f38ac19a2b0a7d241495bab9c2e89ff3f99a45adfc1ede2d3cb9d7d
   languageName: node
   linkType: hard
 
@@ -6548,23 +6548,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cap-widget@npm:^0.1.62":
-  version: 0.1.62
-  resolution: "cap-widget@npm:0.1.62"
-  checksum: 10c0/93170a88be16df0b490b1f729d80f6ba58e42977785f4bd539db1438dbd211870005c6284b46a07f43b364affb1cd1d5c76ec9982f081a557a433bf7f0d658ce
+"cap-widget@npm:^0.1.63":
+  version: 0.1.63
+  resolution: "cap-widget@npm:0.1.63"
+  checksum: 10c0/8bedcc5fc795148dd8835bddf331c57222e03cbf7d9fd45c4928dccc36668de43fe095927a5e531d3510eb56cf3ff4e72b536243d9aa4d8eecde954f4e95e22f
   languageName: node
   linkType: hard
 
-"capjs-core@npm:^0.1.14":
-  version: 0.1.14
-  resolution: "capjs-core@npm:0.1.14"
+"capjs-core@npm:^0.1.18":
+  version: 0.1.18
+  resolution: "capjs-core@npm:0.1.18"
   dependencies:
     esbuild: "npm:^0.28.0"
     javascript-obfuscator: "npm:^4.2.2"
   dependenciesMeta:
     javascript-obfuscator:
       optional: true
-  checksum: 10c0/8c8c58604af02afc6a4508766843922403f309afc149535e4db114b2c628070ee2930fd8dae2e53e32b9516b6a43f440437b07832ea4833aa5ec6a35b1deb90c
+  checksum: 10c0/2b935a38cfd560df973da727104fc528b792c40234dc4df8067002ffd6601cfeb5eb248359437c1936fd303fe029bf4eb5c073a3be8d267f100088ec2227a35e
   languageName: node
   linkType: hard
 
@@ -8642,24 +8642,24 @@ __metadata:
     "@vitejs/plugin-vue": "npm:6.0.10"
     "@vue/test-utils": "npm:2.5.1"
     "@vueuse/core": "npm:15.0.0"
-    cap-widget: "npm:^0.1.62"
-    capjs-core: "npm:^0.1.14"
+    cap-widget: "npm:^0.1.63"
+    capjs-core: "npm:^0.1.18"
     concurrently: "npm:10.0.7"
     echarts: "npm:6.1.0"
     h3: "npm:1.15.11"
     happy-dom: "npm:21.0.4"
-    maplibre-gl: "npm:^6.17.0"
+    maplibre-gl: "npm:^6.19.0"
     nuxt: "npm:^4.6.4"
     pako: "npm:^3.0.3"
     pdfkit: "npm:0.20.2"
-    prettier: "npm:3.9.10"
+    prettier: "npm:3.10.1"
     qrcode: "npm:1.5.4"
     release-it: "npm:21.1.2"
     tailwindcss: "npm:^4.3.5"
     vite: "npm:8.3.8"
     vitest: "npm:5.1.0"
     vue: "npm:3.5.45"
-    zxing-wasm: "npm:3.1.6"
+    zxing-wasm: "npm:3.1.7"
   languageName: unknown
   linkType: soft
 
@@ -9980,16 +9980,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"maplibre-gl@npm:^6.17.0":
-  version: 6.17.0
-  resolution: "maplibre-gl@npm:6.17.0"
+"maplibre-gl@npm:^6.19.0":
+  version: 6.19.0
+  resolution: "maplibre-gl@npm:6.19.0"
   dependencies:
     "@mapbox/point-geometry": "npm:^1.1.0"
     "@mapbox/tiny-sdf": "npm:^2.3.0"
     "@mapbox/unitbezier": "npm:^1.0.0"
     "@mapbox/vector-tile": "npm:^3.0.0"
-    "@maplibre/geojson-vt": "npm:^6.3.0"
-    "@maplibre/maplibre-gl-style-spec": "npm:^26.5.1"
+    "@maplibre/geojson-vt": "npm:^6.3.1"
+    "@maplibre/maplibre-gl-style-spec": "npm:^26.8.0"
     "@maplibre/mlt": "npm:^1.3.0"
     "@maplibre/vt-pbf": "npm:^4.3.3"
     "@types/geojson": "npm:^7946.0.16"
@@ -10002,7 +10002,8 @@ __metadata:
     potpack: "npm:^2.1.0"
     quickselect: "npm:^3.0.0"
     tinyqueue: "npm:^3.0.0"
-  checksum: 10c0/b9d8d2628a75b2468168d053ec7e41ea147ded26547e8e826e4bfb1d7b37ff10c1df6aa9144b6dc778305d619731751c6bcec3553ccbb93ceeef9fd347ac35cb
+    zustand: "npm:^5.1.0"
+  checksum: 10c0/6daeb441e778c5ad274d8fcb4e3a48d641c4ba8929a448b4ac51e20a98a6b304143b41a268d99e4599d4456a075539430db2b7e864be4c9ed3e5c95ebe798211
   languageName: node
   linkType: hard
 
@@ -11455,12 +11456,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:3.9.10":
-  version: 3.9.10
-  resolution: "prettier@npm:3.9.10"
+"prettier@npm:3.10.1":
+  version: 3.10.1
+  resolution: "prettier@npm:3.10.1"
   bin:
     prettier: bin/prettier.cjs
-  checksum: 10c0/0b3531593aa6fb36ac6baf629cb058bda472c59a6938774f931fe55283a07c62e6f56e621b043a82d8a3e21fc284c08c34f9e539fc70072635f79b7bae1a1067
+  checksum: 10c0/e8c03ea575a30e15afa75a3700e94609050502980d7c906374aea4cf623eef4dce0816100126207e675cc1ed54b7dfce60f02dbee8d61ec27dc69ce5df6c3723
   languageName: node
   linkType: hard
 
@@ -14848,14 +14849,35 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zxing-wasm@npm:3.1.6":
-  version: 3.1.6
-  resolution: "zxing-wasm@npm:3.1.6"
+"zustand@npm:^5.1.0":
+  version: 5.1.0
+  resolution: "zustand@npm:5.1.0"
+  peerDependencies:
+    "@types/react": ">=18.0.0"
+    immer: ">=9.0.6"
+    react: ">=18.0.0"
+    use-sync-external-store: ">=1.2.0"
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+    immer:
+      optional: true
+    react:
+      optional: true
+    use-sync-external-store:
+      optional: true
+  checksum: 10c0/cde7f90e7eb1b8340046aafae12e73b027cb6ef05bdc7e5bc124c6928af50eacbbdaf09ad3c50123de309d4edadbb57dade5b979c089e5a9910ccaecb78405b0
+  languageName: node
+  linkType: hard
+
+"zxing-wasm@npm:3.1.7":
+  version: 3.1.7
+  resolution: "zxing-wasm@npm:3.1.7"
   dependencies:
     "@types/emscripten": "npm:^1.41.6"
     type-fest: "npm:^5.10.0"
   peerDependencies:
     "@types/emscripten": ">=1.39.6"
-  checksum: 10c0/5df631ec1ca2ef53c6c22ffbc0cb4a27f28cf40d120eb64733bfa7c3070e844f46ad1c9c629f345e110c128db6a46afd3663c26f402d360b997f000ca7925387
+  checksum: 10c0/766cb7ec8a1bda6eacfb942819e4b8f2a5313efdb75942a15ba9dfb7176a67d0e18bd60a97467b96faf5b28617649f6b6860339b3999492b99a68e3e0b3d9065
   languageName: node
   linkType: hard
