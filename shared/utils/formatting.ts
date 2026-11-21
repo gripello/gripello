@@ -53,10 +53,11 @@ export function timeAgo(
         plural?: number,
     ) => string,
     locale: string,
+    now = Date.now(),
 ): string {
     const parsed = parseDate(dateStr)
     if (!parsed) return ''
-    const diff = Date.now() - parsed.getTime()
+    const diff = now - parsed.getTime()
     const mins = Math.floor(diff / 60_000)
     const hours = Math.floor(diff / 3_600_000)
     const days = Math.floor(diff / 86_400_000)
