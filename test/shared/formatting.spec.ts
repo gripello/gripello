@@ -7,6 +7,7 @@ import {
     formatDate,
     parseDate,
     localDateYYYYMMDD,
+    timeAgo,
 } from '#shared/utils/formatting'
 import { formatNumber } from '#shared/utils/number'
 
@@ -245,5 +246,18 @@ describe.each([
             expect(formatNumber(missing, locale)).toBe('—')
         }
         expect(formatScore({ score: NaN }, locale)).toBe('—')
+    })
+})
+
+describe('timeAgo', () => {
+    it('measures against the given clock', () => {
+        const now = Date.parse('2026-10-24T12:00:00Z')
+        const t = (key: string) => key
+        expect(timeAgo('2026-10-21T12:00:00Z', t, 'en', now)).toBe(
+            'time.daysAgo',
+        )
+        expect(timeAgo('2026-09-01T12:00:00Z', t, 'en', now)).toBe(
+            'Sep 1, 2026',
+        )
     })
 })

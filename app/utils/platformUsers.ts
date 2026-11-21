@@ -109,7 +109,7 @@ export function lastSeenLabel(
     const tone = lastSeenTone(lastSeen, now)
     if (tone === 'never') return t('platform.users.never')
     if (tone === 'online') return t('platform.users.onlineNow')
-    return timeAgo(lastSeen, t, locale)
+    return timeAgo(lastSeen, t, locale, now)
 }
 
 export type UserAlertKind = 'suspended' | 'locked' | 'unverified' | 'staffNoMfa'
