@@ -2826,9 +2826,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nuxt/ui@npm:^4.12.0":
-  version: 4.12.0
-  resolution: "@nuxt/ui@npm:4.12.0"
+"@nuxt/ui@npm:^4.12.2":
+  version: 4.12.2
+  resolution: "@nuxt/ui@npm:4.12.2"
   dependencies:
     "@floating-ui/dom": "npm:^1.8.0"
     "@iconify/vue": "npm:^5.0.3"
@@ -2886,7 +2886,7 @@ __metadata:
     reka-ui: "npm:2.11.0"
     scule: "npm:^1.3.0"
     tailwind-merge: "npm:^3.7.0"
-    tailwind-variants: "npm:^3.2.2"
+    tailwind-variants: "npm:3.2.2"
     tailwindcss: "npm:^4.3.3"
     tinyglobby: "npm:^0.2.17"
     ufo: "npm:^1.6.4"
@@ -2952,7 +2952,7 @@ __metadata:
       optional: true
     zod:
       optional: true
-  checksum: 10c0/06ba8b25d912715acff89afb9a38d09fc83dbd6de3d7b03e77d0cfa6867888191cb209e1bc5dd76ed826c5ec96bda61a9762b30cb232911951e478875bf278a0
+  checksum: 10c0/ac1cf9a6619cb3fc5df1f14127015d2d23e491c7bcf8df35f263d6f6b801a4c363bb3627cee3b01faa0210003ac50dff133bad3151608db8c314d82938760b39
   languageName: node
   linkType: hard
 
@@ -5308,7 +5308,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitejs/plugin-vue@npm:6.0.10, @vitejs/plugin-vue@npm:^6.0.10":
+"@vitejs/plugin-vue@npm:6.0.11":
+  version: 6.0.11
+  resolution: "@vitejs/plugin-vue@npm:6.0.11"
+  dependencies:
+    "@rolldown/pluginutils": "npm:^1.0.1"
+  peerDependencies:
+    vite: ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
+    vue: ^3.2.25 || ^3.6.0-rc.15
+  checksum: 10c0/4d9ff0e2c56ebd8e20916feccc1f97f2973d46d02d98fdeb2d9511c2cf48932bd0dbdcbe8914359718347e1494a524f4d04af55e004d7be360de6e768a91d25b
+  languageName: node
+  linkType: hard
+
+"@vitejs/plugin-vue@npm:^6.0.10":
   version: 6.0.10
   resolution: "@vitejs/plugin-vue@npm:6.0.10"
   dependencies:
@@ -5619,9 +5631,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vue/test-utils@npm:2.5.1":
-  version: 2.5.1
-  resolution: "@vue/test-utils@npm:2.5.1"
+"@vue/test-utils@npm:2.6.0":
+  version: 2.6.0
+  resolution: "@vue/test-utils@npm:2.6.0"
   dependencies:
     js-beautify: "npm:^2.0.0"
     vue-component-type-helpers: "npm:^3.0.0"
@@ -5632,7 +5644,7 @@ __metadata:
   peerDependenciesMeta:
     "@vue/server-renderer":
       optional: true
-  checksum: 10c0/f44597b0db0689f4d30e32d1f8d367bf2ab040e80431b46cb9ce423fae5485bc56c03c15c530fa29c6a824868355cc59c33ed4704304215d17bc75ac3565e385
+  checksum: 10c0/71b0b12a995b392fa63d21609b340afd263425bf7720ddac2f014f9f58693540fe3a41b547b92c768c7ffeeb35dbb727ce775ea859531ab65c50062559cd4d5f
   languageName: node
   linkType: hard
 
@@ -8634,13 +8646,13 @@ __metadata:
     "@cj-tech-master/excelts": "npm:10.2.0"
     "@iconify-json/lucide": "npm:^1.2.153"
     "@iconify-json/simple-icons": "npm:^1.2.102"
-    "@nuxt/ui": "npm:^4.12.0"
+    "@nuxt/ui": "npm:^4.12.2"
     "@nuxtjs/i18n": "npm:10.6.0"
     "@playwright/test": "npm:^1.65.0"
     "@types/pdfkit": "npm:0.17.7"
     "@types/qrcode": "npm:1.5.6"
-    "@vitejs/plugin-vue": "npm:6.0.10"
-    "@vue/test-utils": "npm:2.5.1"
+    "@vitejs/plugin-vue": "npm:6.0.11"
+    "@vue/test-utils": "npm:2.6.0"
     "@vueuse/core": "npm:15.0.0"
     cap-widget: "npm:^0.1.63"
     capjs-core: "npm:^0.1.18"
@@ -12935,18 +12947,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwind-variants@npm:^3.2.2":
-  version: 3.3.1
-  resolution: "tailwind-variants@npm:3.3.1"
+"tailwind-variants@npm:3.2.2":
+  version: 3.2.2
+  resolution: "tailwind-variants@npm:3.2.2"
   peerDependencies:
     tailwind-merge: ">=3.0.0"
     tailwindcss: "*"
   peerDependenciesMeta:
     tailwind-merge:
       optional: true
-    tailwindcss:
-      optional: true
-  checksum: 10c0/dd0255f545b1f395540ec694de27df4c195bd06a2d38616a27d6fbe10273fa7f1f59a50bd3276b10db7275d18fcf386975d31e16046e1aa831223cbd361aa1b2
+  checksum: 10c0/715a35b66c374f3bb234cd1e6737588cb7c0213c80a69bd62239d752d20c44377bec1d028c3ea7c28882d81384507fbae407813d348c142cb991c5a0ad063d48
   languageName: node
   linkType: hard
 
