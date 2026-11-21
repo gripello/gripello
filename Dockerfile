@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM golang:1.27.4-trixie@sha256:b54b2639de8c1bfe538ec5ffc45f29b1932235ac5f6d63c059853646677112d9 AS go-deps
+FROM golang:1.27.4-trixie@sha256:f18c3d73a184fb0582828510722e723b63a93f7188d11dd223d9be6f6880e65d AS go-deps
 ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH}
@@ -58,7 +58,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     GOOS= GOARCH= go tool -modfile=tools/go.mod go-licenses report ./... \
       --ignore gripello --template /go-licenses.tpl > /out/third-party-notices-go.txt
 
-FROM node:26.13.0-trixie@sha256:438603bbb5cda404b9416f0b5c8026f61501ab911760d861ec28c36b5d675725 AS ui-deps
+FROM node:26.13.1-trixie@sha256:e18c3ccdf7d71619990b0e85639f506e2028a95410999cab24cc373cbd10e0ac AS ui-deps
 WORKDIR /app
 RUN npm install -g corepack@0.36.0 --force && corepack enable
 COPY .yarnrc.yml package.json yarn.lock ./
