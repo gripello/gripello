@@ -1,9 +1,16 @@
 version: 2
+multi-ecosystem-groups:
+  playwright:
+    schedule:
+      interval: "weekly"
+
 updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
+    multi-ecosystem-group: "playwright"
+    patterns: ["@playwright/test"]
     groups:
       # Core, CLI and the native platforms must stay on the same version.
       capacitor:
@@ -55,6 +62,8 @@ updates:
       - "/e2e"
     schedule:
       interval: "weekly"
+    multi-ecosystem-group: "playwright"
+    patterns: ["*playwright"]
     ignore:
       # A new PostgreSQL major needs a dump and restore, and the image's pg_dump has to follow it.
       - dependency-name: "postgres"

@@ -130,6 +130,15 @@ describe('docker ui build', () => {
         )
     })
 
+    it('bumps the playwright package and its e2e image in one pull request', () => {
+        const config = read('.github/dependabot.yml')
+        expect(config).toContain('patterns: ["@playwright/test"]')
+        expect(config).toContain('patterns: ["*playwright"]')
+        expect(
+            config.match(/multi-ecosystem-group: "playwright"/g),
+        ).toHaveLength(2)
+    })
+
     it('renders pages in a capped pool of worker processes', () => {
         expect(read('Dockerfile')).toContain('NITRO_PRESET=node-cluster')
         expect(read('.docker/docker-entrypoint.sh')).toContain(
