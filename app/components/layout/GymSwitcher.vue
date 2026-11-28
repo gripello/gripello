@@ -32,7 +32,7 @@
                     v-if="logoUrl"
                     :src="logoUrl"
                     alt=""
-                    class="gym-switcher__custom logo-mono"
+                    class="gym-switcher__custom logo-chip"
                     :class="collapsed ? 'max-w-8' : 'max-w-20'"
                     data-testid="nav-logo-custom"
                 />
@@ -167,8 +167,8 @@ function gymItem(target: Partial<GymRecord>, role?: string): GymItem {
                       src: logo,
                       alt: '',
                       ui: {
-                          root: 'bg-transparent rounded-none',
-                          image: 'logo-mono object-contain',
+                          root: 'bg-transparent rounded-md',
+                          image: 'logo-chip object-contain',
                       },
                   },
               }

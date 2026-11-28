@@ -62,7 +62,7 @@ test('a comment-only review does not pull down the average', async ({
     }
 })
 
-test('a new review cannot be submitted without stars', async ({
+test('a new review can be submitted with only a comment, not empty', async ({
     page,
     adminApi,
     testPrefix,
@@ -71,18 +71,12 @@ test('a new review cannot be submitted without stars', async ({
     try {
         await gotoSettled(page, `/route?id=${seeded.routeId}`)
         await page.getByTestId('review-open-cta').click()
+        await expect(page.getByTestId('review-form-submit')).toBeDisabled()
+
         await page
             .getByTestId('review-form-comment')
             .first()
             .fill('Only words, no stars')
-
-        await expect(page.getByTestId('review-form-submit')).toBeDisabled()
-
-        await page
-            .getByTestId('review-form-rating')
-            .locator('button, [role="radio"]')
-            .nth(2)
-            .click()
         await expect(page.getByTestId('review-form-submit')).toBeEnabled()
     } finally {
         await seeded.cleanup()

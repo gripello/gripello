@@ -18,7 +18,7 @@ const width = ref(1440)
 const overlayStub = (name: string) =>
     defineComponent({
         name,
-        props: ['open', 'content', 'noBodyStyles'],
+        props: ['open', 'content', 'noBodyStyles', 'dismissible'],
         setup(props, { slots }) {
             return () =>
                 h(
@@ -30,6 +30,7 @@ const overlayStub = (name: string) =>
                             props.content?.disableOutsidePointerEvents,
                         style: props.content?.style,
                         'data-aria-modal': props.content?.['aria-modal'],
+                        'data-dismissible': String(props.dismissible),
                     },
                     props.open ? slots.content?.() : [],
                 )
@@ -50,10 +51,58 @@ function createWrapper(props: Record<string, unknown> = {}) {
     })
 }
 
+const discardStub = defineComponent({
+    name: 'ConfirmDialog',
+    props: ['modelValue'],
+    emits: ['confirm', 'update:modelValue'],
+    setup(props, { emit }) {
+        return () =>
+            props.modelValue
+                ? h('button', {
+                      'data-testid': 'discard',
+                      onClick: () => emit('confirm'),
+                  })
+                : null
+    },
+})
+
+function mountDirty(props: Record<string, unknown> = {}) {
+    return mount(DialogShell, {
+        props: {
+            modelValue: true,
+            dirty: true,
+            title: 'T',
+            closable: true,
+            submitLabel: 'Save',
+            cancelTestId: 'cancel',
+            'onUpdate:modelValue': () => {},
+            ...props,
+        },
+        global: {
+            mocks: { $t: (key: string) => key },
+            components: {
+                UModal: overlayStub('UModal'),
+                UDrawer: overlayStub('UDrawer'),
+            },
+            stubs: {
+                UButton: {
+                    props: ['dataTestid'],
+                    emits: ['click'],
+                    template:
+                        '<button :data-testid="dataTestid" @click="$emit(\'click\')"><slot /></button>',
+                },
+                ConfirmDialog: discardStub,
+                CaptchaLoader: true,
+            },
+        },
+    })
+}
+
 beforeEach(() => {
     width.value = 1440
     vi.stubGlobal('resolveComponent', resolveComponent)
     vi.stubGlobal('watch', watch)
+    vi.stubGlobal('nextTick', nextTick)
     vi.stubGlobal('useDisplay', () => ({
         smAndUp: computed(() => width.value >= 600),
     }))
@@ -194,6 +243,82 @@ describe('DialogShell', () => {
         await wrapper.setProps({ modelValue: true })
         expect(history.length).toBe(before)
         wrapper.unmount()
+    })
+
+    it('cannot be cancelled or dismissed while its action runs', async () => {
+        const wrapper = mountDirty({ dirty: false, submitLoading: true })
+        await nextTick()
+        expect(
+            wrapper.get('[data-testid="cancel"]').attributes('disabled'),
+        ).toBeDefined()
+        expect(
+            wrapper.get('[data-testid="dialog-close"]').attributes('disabled'),
+        ).toBeDefined()
+        expect(
+            wrapper
+                .findComponent({ name: 'UModal' })
+                .attributes('data-dismissible'),
+        ).toBe('false')
+        wrapper.unmount()
+    })
+
+    describe('with unsaved changes', () => {
+        it.each(['dialog-close', 'cancel'])(
+            'asks before %s closes the dialog',
+            async (testId) => {
+                const wrapper = mountDirty()
+                await nextTick()
+                expect(wrapper.find('[data-testid="discard"]').exists()).toBe(
+                    false,
+                )
+                await wrapper.get(`[data-testid="${testId}"]`).trigger('click')
+                expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+                await wrapper.get('[data-testid="discard"]').trigger('click')
+                await vi.waitFor(() =>
+                    expect(wrapper.emitted('update:modelValue')).toEqual([
+                        [false],
+                    ]),
+                )
+                wrapper.unmount()
+            },
+        )
+
+        it('asks on escape and outside clicks instead of closing', async () => {
+            const wrapper = mountDirty()
+            await nextTick()
+            const overlay = wrapper.findComponent({ name: 'UModal' })
+            expect(overlay.attributes('data-dismissible')).toBe('false')
+            overlay.vm.$emit('close:prevent')
+            await nextTick()
+            expect(wrapper.find('[data-testid="discard"]').exists()).toBe(true)
+            wrapper.unmount()
+        })
+
+        it('stays open on back and keeps its history entry', async () => {
+            const wrapper = mountDirty({ modelValue: false })
+            await wrapper.setProps({ modelValue: true })
+            const entry = history.state.dialogShell
+
+            window.dispatchEvent(new PopStateEvent('popstate', { state: null }))
+            await nextTick()
+
+            expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+            expect(history.state.dialogShell).toBeGreaterThan(entry)
+            await wrapper.get('[data-testid="discard"]').trigger('click')
+            await vi.waitFor(() =>
+                expect(wrapper.emitted('update:modelValue')).toEqual([[false]]),
+            )
+            wrapper.unmount()
+        })
+
+        it('leaves persistent dialogs closed to their owner', async () => {
+            const wrapper = mountDirty({ persistent: true })
+            await nextTick()
+            wrapper.findComponent({ name: 'UModal' }).vm.$emit('close:prevent')
+            await nextTick()
+            expect(wrapper.find('[data-testid="discard"]').exists()).toBe(false)
+            wrapper.unmount()
+        })
     })
 
     describe('footer', () => {

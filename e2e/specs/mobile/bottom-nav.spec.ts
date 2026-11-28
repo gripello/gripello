@@ -6,7 +6,6 @@ test('the bottom bar leads to gym, community, scanner and account', async ({
 }) => {
     await gotoSettled(page, '/map')
     await expect(page.getByTestId('bottom-nav')).toBeVisible()
-    await expect(page.getByTestId('bottom-nav-home')).toHaveCount(0)
 
     await page.getByTestId('bottom-nav-scan').click()
     await page.waitForURL('**/scan')
@@ -18,8 +17,8 @@ test('the bottom bar leads to gym, community, scanner and account', async ({
 
     await page.getByTestId('bottom-nav-feed').click()
     await page.waitForURL('**/feed')
-    await page.getByTestId('bottom-nav-routes').click()
-    await page.waitForURL('**/routes')
+    await page.getByTestId('bottom-nav-home').click()
+    await page.waitForURL(/\/e2e$/)
 })
 
 test('signed-in climbers reach their logbook and account', async ({

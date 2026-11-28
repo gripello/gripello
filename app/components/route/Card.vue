@@ -52,6 +52,18 @@
                 <span class="route-card__comment">{{ route.comment }}</span>
             </div>
 
+            <div
+                v-if="setBy"
+                class="list-card__meta-row text-xs text-muted"
+                data-testid="route-card-set-by"
+            >
+                <UIcon
+                    name="i-lucide-hard-hat"
+                    class="list-card__meta-icon size-[13px]"
+                />
+                <span>{{ setBy }}</span>
+            </div>
+
             <div class="list-card__pills">
                 <span
                     v-if="removalDate"
@@ -61,20 +73,12 @@
                     <UIcon name="i-lucide-calendar-clock" class="size-[13px]" />
                     {{ $t('routes.outSoon', { date: removalDate }) }}
                 </span>
-                <span v-if="route.creator?.length" class="list-card__pill">
-                    <UIcon name="i-lucide-hard-hat" class="size-[13px]" />
-                    {{ route.creator.join(', ') }}
-                </span>
                 <span
                     v-if="Number(route.anchor_point) > 0"
                     class="list-card__pill"
                     data-testid="route-card-anchor"
                 >
                     {{ $t('climbing.anchor_point') }} {{ route.anchor_point }}
-                </span>
-                <span v-if="screwDate" class="list-card__pill">
-                    <UIcon name="i-lucide-calendar-days" class="size-[13px]" />
-                    {{ screwDate }}
                 </span>
                 <span v-if="locationName(route)" class="list-card__pill">
                     <UIcon name="i-lucide-map-pin" class="size-[13px]" />
@@ -147,6 +151,11 @@ const { locale } = useI18n()
 const difficulty = computed(() => formatGrade(props.route))
 const screwDate = computed(() =>
     formatDate(props.route.screw_date, { locale: locale.value }),
+)
+const setBy = computed(() =>
+    [props.route.creator?.join(', '), screwDate.value]
+        .filter(Boolean)
+        .join(' · '),
 )
 const removalDate = computed(() =>
     props.route.archived

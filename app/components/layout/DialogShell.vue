@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ButtonProps } from '@nuxt/ui'
-import { pushDialogEntry } from '~/utils/dialogHistory'
+import { pushDialogEntry, ownBackStepsDone } from '~/utils/dialogHistory'
 
 defineOptions({ inheritAttrs: false })
 
@@ -12,6 +12,7 @@ const props = withDefaults(
         subtitle?: string
         maxWidth?: string | number
         persistent?: boolean
+        dirty?: boolean
         closable?: boolean
         scrollable?: boolean
         flush?: boolean
@@ -32,9 +33,23 @@ const props = withDefaults(
 
 const emit = defineEmits<{ submit: [] }>()
 
+const discardOpen = ref(false)
+
+function requestClose() {
+    if (props.dirty) discardOpen.value = true
+    else open.value = false
+}
+
+async function discard() {
+    discardOpen.value = false
+    await nextTick()
+    await ownBackStepsDone()
+    open.value = false
+}
+
 function cancel() {
     if (props.onCancel) props.onCancel()
-    else open.value = false
+    else requestClose()
 }
 
 const captchaRunning = computed(() => props.captcha && props.submitLoading)
@@ -53,12 +68,20 @@ watch(
     { flush: 'sync' },
 )
 let releaseHistoryEntry: (() => void) | undefined
+function pushHistoryEntry() {
+    releaseHistoryEntry = pushDialogEntry(() => {
+        if (!props.dirty) return (open.value = false)
+        pushHistoryEntry()
+        requestClose()
+    })
+}
 watch(
     open,
     (isOpen) => {
         if (isOpen && !props.persistent && import.meta.client)
-            releaseHistoryEntry ??= pushDialogEntry(() => (open.value = false))
+            releaseHistoryEntry ?? pushHistoryEntry()
         else if (!isOpen) {
+            discardOpen.value = false
             releaseHistoryEntry?.()
             releaseHistoryEntry = undefined
         }
@@ -92,9 +115,10 @@ const sheetListeners = {
         v-model:open="open"
         :title="title || ' '"
         :description="subtitle"
-        :dismissible="!persistent"
+        :dismissible="!persistent && !dirty && !submitLoading"
         v-bind="asSheet ? { noBodyStyles: true } : {}"
         v-on="asSheet ? sheetListeners : {}"
+        @close:prevent="!persistent && requestClose()"
         :content="
             asSheet
                 ? { disableOutsidePointerEvents: true, 'aria-modal': 'true' }
@@ -129,7 +153,8 @@ const sheetListeners = {
                         class="icon-btn"
                         :aria-label="$t('actions.close')"
                         data-testid="dialog-close"
-                        @click="open = false"
+                        :disabled="submitLoading"
+                        @click="requestClose"
                     />
                 </div>
 
@@ -160,6 +185,7 @@ const sheetListeners = {
                             color="neutral"
                             variant="ghost"
                             :data-testid="cancelTestId"
+                            :disabled="submitLoading"
                             @click="cancel"
                         >
                             {{ $t('actions.cancel') }}
@@ -184,6 +210,14 @@ const sheetListeners = {
             </div>
         </template>
     </component>
+    <ConfirmDialog
+        v-if="dirty || discardOpen"
+        v-model="discardOpen"
+        :title="$t('dialog.discardChanges.title')"
+        :message="$t('dialog.discardChanges.message')"
+        :confirm-text="$t('mapPlacement.discard')"
+        @confirm="discard"
+    />
 </template>
 
 <style>

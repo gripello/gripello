@@ -155,6 +155,15 @@ describe('SettingsLayout', () => {
         )
     })
 
+    it('asks to discard settings changes, not map changes', () => {
+        const wrapper = mountLayout(true)
+        expect(
+            wrapper
+                .findComponent({ name: 'ConfirmDialog' })
+                .attributes('message'),
+        ).toBe('settings.discardChanges')
+    })
+
     it('lets the route change only without unsaved changes', async () => {
         mountLayout(false)
         await expect(leaveGuards[0]!()).resolves.toBe(true)

@@ -97,7 +97,7 @@
                                     v-if="gym.page_logo"
                                     :src="logoUrl(gym)"
                                     alt=""
-                                    class="landing-gym__logo logo-mono"
+                                    class="landing-gym__logo logo-chip"
                                 />
                                 <UIcon
                                     v-else
@@ -150,6 +150,7 @@ import type { GymRecord } from '~/types/models'
 import { readRecentGyms } from '~/utils/recentGyms'
 import { gymSubtitle, gymTitle, landingSections } from '~/utils/gymNames'
 import { gymMarkers, hasLocation } from '~/utils/gymInfo'
+import { isInstalledApp } from '~/utils/native'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -172,6 +173,19 @@ if (
     !useGymCookie().value
 )
     await navigateTo(`/${onlyGym.slug}`, { redirectCode: 302 })
+
+// A cold start of the installed app (no referrer) reopens the last gym; the gym switcher's link to / keeps the picker.
+const { gym: cookieGym } = useGym()
+const launchedHere = import.meta.client && useNuxtApp().isHydrating
+onMounted(() => {
+    if (
+        launchedHere &&
+        cookieGym.value &&
+        !document.referrer &&
+        isInstalledApp()
+    )
+        navigateTo(`/${cookieGym.value.slug}`, { replace: true })
+})
 
 const matching = computed(() => {
     const term = search.value.trim().toLowerCase()

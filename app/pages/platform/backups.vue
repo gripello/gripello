@@ -162,6 +162,15 @@
                                 {{ formatBytes(archive.size, locale) }}
                             </span>
                             <UButton
+                                icon="i-lucide-terminal"
+                                color="neutral"
+                                variant="ghost"
+                                class="icon-btn"
+                                :aria-label="t('platform.backups.copyRestore')"
+                                :data-testid="`platform-backup-copy-restore-${archive.name}`"
+                                @click="copyRestore(archive)"
+                            />
+                            <UButton
                                 icon="i-lucide-download"
                                 color="neutral"
                                 variant="outline"
@@ -248,13 +257,18 @@
                         </div>
                     </LayoutPanel>
 
-                    <LayoutPanel :title="t('platform.backups.restore')">
+                    <LayoutPanel
+                        :title="t('platform.backups.restore')"
+                        icon="i-lucide-triangle-alert"
+                        class="ring-error/40!"
+                        data-testid="platform-backups-restore"
+                    >
                         <div
                             class="flex items-start gap-2 rounded-md bg-muted p-3 ring ring-default"
                         >
                             <code
                                 class="min-w-0 flex-1 overflow-x-auto font-mono text-xs leading-relaxed whitespace-pre text-highlighted"
-                                >{{ restoreCommand }}</code
+                                >{{ latestRestoreCommand }}</code
                             >
                             <UButton
                                 icon="i-lucide-copy"
@@ -264,7 +278,7 @@
                                 class="icon-btn"
                                 :aria-label="t('platform.backups.copyCommand')"
                                 data-testid="platform-backups-copy-restore"
-                                @click="copyRestore"
+                                @click="copyRestore()"
                             />
                         </div>
                     </LayoutPanel>
@@ -310,6 +324,7 @@ import {
     nextBackupRun,
     timeZoneName,
     syncCleanForm,
+    restoreCommand,
 } from '~/utils/backups'
 
 definePageMeta({ middleware: ['auth'], platformAdmin: true })
@@ -429,15 +444,15 @@ const statusTiles = computed(() => {
     return tiles
 })
 
-const restoreCommand = computed(() => {
-    const latest = data.value?.items[0]?.name ?? 'gripello-YYYYMMDD-HHMMSS.tar'
-    const dir = (data.value?.dir || '/data/backups').replace(/\/$/, '')
-    return `docker compose exec gripello gripello admin restore --file ${dir}/${latest} --storage --yes`
-})
+const latestRestoreCommand = computed(() =>
+    restoreCommand(data.value?.dir, data.value?.items[0]?.name),
+)
 
-async function copyRestore() {
-    if (await copyText(restoreCommand.value))
-        notifySuccess(t('platform.logs.copied'))
+async function copyRestore(archive?: BackupArchive) {
+    const command = archive
+        ? restoreCommand(data.value?.dir, archive.name)
+        : latestRestoreCommand.value
+    if (await copyText(command)) notifySuccess(t('platform.logs.copied'))
     else notifyError(t('notifications.error.generic'))
 }
 

@@ -9,7 +9,7 @@ test('command palette dialog and search field are named', async ({ page }) => {
     ).toBeVisible()
     await expect(page.getByTestId('command-palette-input')).toHaveAttribute(
         'aria-label',
-        /Route name/,
+        'Search E2E Gym',
     )
 })
 

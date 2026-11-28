@@ -71,11 +71,7 @@
             "strong": "Strong"
         },
         "requirements": {
-            "minLength": "At least 8 characters",
-            "uppercase": "Uppercase letter (A–Z)",
-            "lowercase": "Lowercase letter (a–z)",
-            "number": "Number (0–9)",
-            "special": "Special character (!{'@'}#...)"
+            "minLength": "At least 8 characters"
         },
         "capsLockOn": "Caps Lock is on",
         "eyebrowWelcomeBack": "WELCOME BACK",
@@ -478,7 +474,8 @@
             "emailChange": "Your email address has been changed. Please sign in again.",
             "passwordChanged": "Your password has been set. You can sign in now.",
             "registered": "Account created. Check your email to verify your address, then sign in.",
-            "verificationSent": "If an unverified account exists, a new verification link is on its way."
+            "verificationSent": "If an unverified account exists, a new verification link is on its way.",
+            "archived": "Route archived."
         },
         "error": {
             "resetPassword": "The reset link could not be sent.",
@@ -499,8 +496,12 @@
             "account_locked": "Too many failed attempts. Try again in 15 minutes.",
             "mfa_expired": "The sign-in took too long. Please sign in again."
         },
-        "deleteItem": "Delete this item? This cannot be undone.",
+        "deleteRouteTitle": "Delete “{name}”?",
+        "deleteRoute": "The route is removed for good and its QR tag stops working.",
+        "deleteRouteWithHistoryTitle": "Delete “{name}” and its history?",
         "deleteRouteWithHistory": "This route has reviews, beta videos or competition results. Deleting it removes them too. Archive it instead to keep them.",
+        "deleteEverything": "Delete everything",
+        "archiveInstead": "Archive instead",
         "archiveMoreItems": "Archive the selected routes?",
         "updateAvailable": "Update available",
         "releaseNotes": {
@@ -832,9 +833,23 @@
         "maxLength": "Maximum {n} character. | Maximum {n} characters.",
         "passwordMismatch": "Passwords do not match.",
         "integerRange": "Enter a whole number from {min} to {max}.",
-        "passwordTooWeak": "Password must be at least “Good”.",
         "email": "Please enter a valid email address.",
-        "invalid": "This value is not valid."
+        "invalid": "This value is not valid.",
+        "notUnique": "Already in use. Choose another one.",
+        "previousSlugs": "Use valid URL names that no other gym uses.",
+        "httpsUrl": "Enter a full address starting with https://.",
+        "linkInvalid": "This link is invalid or has expired. Request a new one.",
+        "date": "Enter a valid date.",
+        "futureDate": "Pick a date in the future.",
+        "role": "Pick one of this gym's roles.",
+        "missingRecord": "This no longer exists. Pick another one.",
+        "permission": "Unknown permission. Reload the page and try again.",
+        "ownEmail": "Change your own e-mail address in your account settings.",
+        "wallHasRoutes": "Move or archive the routes on this wall first.",
+        "lengthRange": "Enter {min} to {max} characters.",
+        "tooMany": "Choose at most {n}.",
+        "atLeast": "Enter {n} or more.",
+        "tooLong": "Too long. Please shorten it."
     },
     "captcha": {
         "verifying": "Verifying… {progress}%"
@@ -865,7 +880,8 @@
         "paletteOpen": "open",
         "paletteClose": "close",
         "commandPalette": "Search",
-        "commandPalettePlaceholder": "Route name, setter or grade (e.g. 6+)",
+        "commandPalettePlaceholder": "Search {gym}",
+        "paletteAllRoutes": "All {n} routes",
         "commandPaletteEmpty": "No results",
         "themeToggle": "Switch theme",
         "themeSystem": "System theme",
@@ -1086,7 +1102,8 @@
             "removeScreen": "Remove screen",
             "screenName": "Name",
             "screenNumber": "Screen {n}"
-        }
+        },
+        "discardChanges": "Discard your unsaved changes?"
     },
     "errors": {
         "notFound": {
@@ -1467,7 +1484,7 @@
         "saved": "Ascent saved.",
         "saveError": "The ascent could not be saved.",
         "deleted": "Ascent deleted.",
-        "deleteConfirm": "Delete this ascent? This cannot be undone.",
+        "deleteConfirm": "This cannot be undone.",
         "sent": "Sent",
         "moreActions": "More actions",
         "types": {
@@ -1528,7 +1545,8 @@
         "savedOffline": "Ascent saved offline. It syncs once you are back online.",
         "syncFailed": "Sync failed",
         "gym": "Gym",
-        "allGyms": "All gyms"
+        "allGyms": "All gyms",
+        "deleteTitle": "Delete ascent of “{name}”?"
     },
     "map": {
         "title": "Gym map",
@@ -2097,7 +2115,7 @@
         "search": "Search members…",
         "noMembers": "No members found",
         "remove": "Remove member",
-        "removeConfirm": "Remove this person from the gym staff? Their account stays.",
+        "removeConfirm": "Remove {name} from the gym staff? Their account stays.",
         "removed": "Member removed.",
         "alreadyMember": "This person is already a member.",
         "invited": "Invitation sent.",
@@ -2106,7 +2124,8 @@
             "routesetter": "Route setter",
             "public": "Public"
         },
-        "rowActions": "Member actions"
+        "rowActions": "Member actions",
+        "removeAction": "Remove"
     },
     "invites": {
         "eyebrow": "INVITATION",
@@ -2565,8 +2584,9 @@
             "daily": "Daily backups",
             "keepCount": "Backups to keep",
             "estimate": "≈ {size} on disk",
-            "restore": "Restore",
+            "restore": "Restore replaces the whole database",
             "copyCommand": "Copy command",
+            "copyRestore": "Copy restore command",
             "lastBackup": "Last backup",
             "failed": "Failed",
             "nextBackup": "Next backup",
@@ -3440,5 +3460,11 @@
         "competition": "{name}: schedule, categories and live results.",
         "leaderboard": "Leaderboard of {name}: climbers ranked by their best sends.",
         "privacy": "How {name} processes personal data."
+    },
+    "dialog": {
+        "discardChanges": {
+            "title": "Discard changes?",
+            "message": "Your unsaved changes will be lost."
+        }
     }
 }

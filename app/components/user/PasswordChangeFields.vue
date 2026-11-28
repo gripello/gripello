@@ -19,7 +19,7 @@
             :placeholder="$t('account.placeholders.newPassword')"
             autocomplete="new-password"
             validate-on="blur"
-            :rules="[rules.required, rules.minLength, rules.strength]"
+            :rules="[rules.required, rules.minLength]"
             icon="i-lucide-lock-keyhole-open"
             data-testid="password-new"
             @update:model-value="emit('update:password', $event)"
@@ -129,28 +129,22 @@ const emit = defineEmits<{
     validity: [valid: boolean]
 }>()
 
-// ── i18n ──────────────────────────────────────────────────────────────────
 const { t } = useI18n()
 
-// ── Strength logic ────────────────────────────────────────────────────────
+const passwordLength = computed(() => [...props.password].length)
+
 const passwordRequirements = computed(() => [
-    { key: 'minLength', met: [...props.password].length >= 8 },
-    { key: 'uppercase', met: /[A-Z]/.test(props.password) },
-    { key: 'lowercase', met: /[a-z]/.test(props.password) },
-    { key: 'number', met: /\d/.test(props.password) },
-    {
-        key: 'special',
-        met: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(props.password),
-    },
+    { key: 'minLength', met: passwordLength.value >= 8 },
 ])
 
 const strengthScore = computed(() => {
     if (!props.password) return 0
-    const met = passwordRequirements.value.filter((r) => r.met).length
-    if (met <= 1) return 1
-    if (met <= 2) return 2
-    if (met <= 3) return 3
-    return 4
+    if (passwordLength.value < 8) return 1
+    if (passwordLength.value >= 15) return 4
+    const classes = [/[A-Z]/, /[a-z]/, /\d/, /[^A-Za-z\d]/].filter((re) =>
+        re.test(props.password),
+    ).length
+    return Math.max(2, classes)
 })
 
 const strengthLabel = computed(
@@ -176,14 +170,10 @@ const rules = {
     required: required(t),
     minLength: minLength(t, 8),
     matchPassword: makePasswordsMatchRule(t, () => props.password),
-    strength: () => strengthScore.value >= 3 || t('validation.passwordTooWeak'),
 }
 
 const isValid = computed(() => {
-    const baseOk =
-        [...props.password].length >= 8 &&
-        strengthScore.value >= 3 &&
-        passwordsMatch.value
+    const baseOk = passwordLength.value >= 8 && passwordsMatch.value
 
     return props.requireOldPassword ? baseOk && !!props.oldPassword : baseOk
 })

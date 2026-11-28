@@ -89,7 +89,7 @@
                             :ticks="session.ticks"
                             :initially-open="index < 2"
                             @edit="openEdit"
-                            @delete="deleteTarget = $event"
+                            @delete="askDelete"
                         />
                     </div>
                 </div>
@@ -166,7 +166,7 @@
 
         <ConfirmDialog
             :model-value="!!deleteTarget"
-            :title="t('actions.confirm')"
+            :title="t('ticks.deleteTitle', { name: deleteRouteName })"
             :message="t('ticks.deleteConfirm')"
             :loading="deleting"
             @update:model-value="deleteTarget = null"
@@ -374,6 +374,13 @@ const editing = ref<TickRecord | null>(null)
 const logRouteId = ref<string | null>(null)
 const deleteTarget = ref<TickRecord | null>(null)
 const deleting = ref(false)
+const deleteRouteName = ref('')
+
+function askDelete(tick: TickRecord) {
+    deleteTarget.value = tick
+    deleteRouteName.value =
+        tick.expand?.route?.name || tick.route_name || t('ticks.removedRoute')
+}
 
 function retry() {
     return Promise.all([refresh(), refreshNuxtData('my-contributions')])

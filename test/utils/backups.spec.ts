@@ -3,6 +3,7 @@ import {
     backupHourOptions,
     nextBackupRun,
     syncCleanForm,
+    restoreCommand,
     timeZoneName,
 } from '~/utils/backups'
 
@@ -67,5 +68,21 @@ describe('syncCleanForm', () => {
         const form = { keep: 0, include_storage: false, hour: 0 }
         syncCleanForm(form, saved, undefined)
         expect(form).toEqual(saved)
+    })
+})
+
+describe('restoreCommand', () => {
+    it('names the archive and leaves the confirmation to the CLI', () => {
+        expect(
+            restoreCommand('/srv/backups/', 'gripello-20260101-020000.tar'),
+        ).toBe(
+            'docker compose exec gripello gripello admin restore --file /srv/backups/gripello-20260101-020000.tar --storage',
+        )
+    })
+
+    it('falls back to the default dir and a placeholder archive', () => {
+        expect(restoreCommand(undefined)).toContain(
+            '--file /data/backups/gripello-YYYYMMDD-HHMMSS.tar',
+        )
     })
 })

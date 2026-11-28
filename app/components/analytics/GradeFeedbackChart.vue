@@ -76,8 +76,8 @@ const option = computed(() => {
         tooltip: itemTooltip(colors.value, ({ data }) => {
             const route = data.route as FeedbackRoute
             return `<strong>${escapeHtml(route.name)}</strong><br/>
-                ${t('analytics.labels.setGrade')}: ${route.grade}<br/>
-                ${t('analytics.labels.votedGrade')}: ${route.votedGradeLabel || formatNumber(route.votedGrade, locale.value)}<br/>
+                ${t('analytics.labels.setGrade')}: ${escapeHtml(route.grade)}<br/>
+                ${t('analytics.labels.votedGrade')}: ${escapeHtml(route.votedGradeLabel || formatNumber(route.votedGrade, locale.value))}<br/>
                 ${t('analytics.labels.voteCount', { n: route.votes }, route.votes)}`
         }),
         grid: { ...gridBase, left: 36, bottom: 30, top: 16 },

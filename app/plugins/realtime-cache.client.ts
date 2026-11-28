@@ -298,18 +298,6 @@ export default defineNuxtPlugin((nuxtApp) => {
         )
     }
 
-    function patchMapMatches(record: RouteRecord, removed: boolean) {
-        const query = keyQueries.value[cacheKeys.mapMatching]
-        const matches = read<{ id: string }[] | null>(cacheKeys.mapMatching)
-        if (!query || !matches) return
-        const next = patchList(
-            matches,
-            { id: record.id },
-            !removed && routeMatchesQuery(record, query),
-        )
-        if (next !== matches) write(cacheKeys.mapMatching, next)
-    }
-
     function onRoute({ action, record }: GymChange<RouteRecord>) {
         if (!inLiveGym(record)) return
         const removed = action === 'delete' || !!record.archived
@@ -330,8 +318,6 @@ export default defineNuxtPlugin((nuxtApp) => {
             ),
         )
         if (listNeedsRow) refreshRoutesListSoon()
-        if (keys.includes(cacheKeys.mapMatching))
-            patchMapMatches(record, action === 'delete')
         if (keys.includes(cacheKeys.route(record.id))) {
             if (action === 'delete') write(cacheKeys.route(record.id), null)
             else refreshRouteDetailSoon(record.id)

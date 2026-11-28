@@ -79,17 +79,9 @@
                             size="lg"
                             class="min-w-0"
                         >
-                            <template #meta>
+                            <template v-if="wallOf(currentRoute)" #meta>
                                 <span data-testid="judge-route-details">{{
-                                    [
-                                        translatedColorName(
-                                            t,
-                                            routeOf(currentRoute)?.color,
-                                        ),
-                                        wallOf(currentRoute),
-                                    ]
-                                        .filter(Boolean)
-                                        .join(' · ')
+                                    wallOf(currentRoute)
                                 }}</span>
                             </template>
                         </RouteSummary>
@@ -366,7 +358,6 @@ import {
     upsertCompetitionScores,
     type ScoreInput,
 } from '~/api/competitions'
-import { translatedColorName } from '~/utils/colorName'
 import {
     applyScoreAction,
     EMPTY_SCORE,

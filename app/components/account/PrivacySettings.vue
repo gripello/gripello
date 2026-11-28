@@ -22,7 +22,8 @@
                 {{ t(`accountSettings.privacy.${toggle.label}`) }}
             </span>
             <USwitch
-                :model-value="!hidden[toggle.field]"
+                :model-value="!hidden[toggle.field] && !lockedOff(toggle.field)"
+                :disabled="lockedOff(toggle.field)"
                 :data-testid="`privacy-${toggle.label}`"
                 @update:model-value="save({ [toggle.field]: !$event })"
             />
@@ -91,6 +92,8 @@ const hidden = reactive(
         TOGGLES.map(({ field }) => [field, !!record()?.[field]]),
     ) as Record<HiddenField, boolean>,
 )
+const lockedOff = (field: HiddenField) =>
+    field === 'leaderboard_hidden' && hidden.ticks_private
 const policyItems = computed(() =>
     translatedItems(
         ['approve', 'open', 'closed'] as const,

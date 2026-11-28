@@ -60,7 +60,17 @@
                     </UButton>
                 </div>
 
-                <ul class="max-h-[400px] overflow-y-auto py-1">
+                <LayoutLoadError
+                    v-if="!items.length && failed"
+                    :card="false"
+                    @retry="refresh"
+                />
+                <LayoutLoadingState
+                    v-else-if="!items.length && !loaded"
+                    class="py-1"
+                    :count="3"
+                />
+                <ul v-else class="max-h-[400px] overflow-y-auto py-1">
                     <li
                         v-if="!items.length"
                         class="px-4 py-2 text-sm text-muted"
@@ -128,6 +138,8 @@ const { t, te, locale } = useI18n()
 const authStore = useAuthStore()
 const {
     items,
+    loaded,
+    failed,
     unreadCount,
     refresh,
     applyEvent,
@@ -146,7 +158,7 @@ function label(item: NotificationRecord) {
 }
 
 async function openItem(item: NotificationRecord) {
-    await markRead(item.id)
+    void markRead(item.id)
     if (item.url) {
         open.value = false
         await navigateTo(item.url)

@@ -71,11 +71,7 @@
             "strong": "Sterk"
         },
         "requirements": {
-            "minLength": "Minstens 8 tekens",
-            "uppercase": "Hoofdletter (A–Z)",
-            "lowercase": "Kleine letter (a–z)",
-            "number": "Cijfer (0–9)",
-            "special": "Speciaal teken (!{'@'}#...)"
+            "minLength": "Minstens 8 tekens"
         },
         "capsLockOn": "Caps Lock staat aan",
         "eyebrowWelcomeBack": "WELKOM TERUG",
@@ -478,7 +474,8 @@
             "emailChange": "Je e-mailadres is gewijzigd. Log opnieuw in.",
             "passwordChanged": "Je wachtwoord is ingesteld. Je kunt nu inloggen.",
             "registered": "Account aangemaakt. Bevestig je e-mailadres via de link in je inbox en log daarna in.",
-            "verificationSent": "Als er een onbevestigd account bestaat, is er een nieuwe bevestigingslink onderweg."
+            "verificationSent": "Als er een onbevestigd account bestaat, is er een nieuwe bevestigingslink onderweg.",
+            "archived": "Route gearchiveerd."
         },
         "error": {
             "resetPassword": "De resetlink kon niet worden verstuurd.",
@@ -499,8 +496,12 @@
             "account_locked": "Te veel mislukte pogingen. Probeer het over 15 minuten opnieuw.",
             "mfa_expired": "Het inloggen duurde te lang. Log opnieuw in."
         },
-        "deleteItem": "Dit item verwijderen? Dit kan niet ongedaan worden gemaakt.",
+        "deleteRouteTitle": "“{name}” verwijderen?",
+        "deleteRoute": "De route wordt definitief verwijderd en haar QR-label werkt niet meer.",
+        "deleteRouteWithHistoryTitle": "“{name}” en de geschiedenis verwijderen?",
         "deleteRouteWithHistory": "Deze route heeft beoordelingen, beta-video’s of wedstrijdresultaten. Verwijderen wist die ook. Archiveer de route om ze te bewaren.",
+        "deleteEverything": "Alles verwijderen",
+        "archiveInstead": "Liever archiveren",
         "archiveMoreItems": "De geselecteerde routes archiveren?",
         "updateAvailable": "Update beschikbaar",
         "releaseNotes": {
@@ -832,9 +833,23 @@
         "maxLength": "Maximaal {n} teken. | Maximaal {n} tekens.",
         "passwordMismatch": "Wachtwoorden komen niet overeen.",
         "integerRange": "Voer een geheel getal van {min} tot {max} in.",
-        "passwordTooWeak": "Wachtwoord moet minstens “Goed” zijn.",
         "email": "Voer een geldig e-mailadres in.",
-        "invalid": "Deze waarde is ongeldig."
+        "invalid": "Deze waarde is ongeldig.",
+        "notUnique": "Al in gebruik. Kies iets anders.",
+        "previousSlugs": "Gebruik geldige URL-namen die geen andere hal gebruikt.",
+        "httpsUrl": "Voer een volledig adres in dat begint met https://.",
+        "linkInvalid": "Deze link is ongeldig of verlopen. Vraag een nieuwe aan.",
+        "date": "Voer een geldige datum in.",
+        "futureDate": "Kies een datum in de toekomst.",
+        "role": "Kies een rol van deze hal.",
+        "missingRecord": "Dit bestaat niet meer. Kies iets anders.",
+        "permission": "Onbekende rechten. Laad de pagina opnieuw en probeer het nog eens.",
+        "ownEmail": "Wijzig je eigen e-mailadres in je accountinstellingen.",
+        "wallHasRoutes": "Verplaats of archiveer eerst de routes op deze wand.",
+        "lengthRange": "Voer {min} tot {max} tekens in.",
+        "tooMany": "Kies er maximaal {n}.",
+        "atLeast": "Voer {n} of meer in.",
+        "tooLong": "Te lang. Maak het korter."
     },
     "captcha": {
         "verifying": "Verifiëren… {progress}%"
@@ -865,7 +880,8 @@
         "paletteOpen": "openen",
         "paletteClose": "sluiten",
         "commandPalette": "Zoeken",
-        "commandPalettePlaceholder": "Routenaam, routebouwer of graad (bijv. 6+)",
+        "commandPalettePlaceholder": "Zoeken in {gym}",
+        "paletteAllRoutes": "Alle {n} routes",
         "commandPaletteEmpty": "Geen resultaten",
         "themeToggle": "Thema wisselen",
         "themeSystem": "Systeemthema",
@@ -1086,7 +1102,8 @@
             "removeScreen": "Scherm verwijderen",
             "screenName": "Naam",
             "screenNumber": "Scherm {n}"
-        }
+        },
+        "discardChanges": "Niet-opgeslagen wijzigingen verwerpen?"
     },
     "errors": {
         "notFound": {
@@ -1467,7 +1484,7 @@
         "saved": "Beklimming opgeslagen.",
         "saveError": "De beklimming kon niet worden opgeslagen.",
         "deleted": "Beklimming verwijderd.",
-        "deleteConfirm": "Deze beklimming verwijderen? Dit kan niet ongedaan worden gemaakt.",
+        "deleteConfirm": "Dit kan niet ongedaan worden gemaakt.",
         "sent": "Geklommen",
         "moreActions": "Meer acties",
         "types": {
@@ -1528,7 +1545,8 @@
         "savedOffline": "Beklimming offline opgeslagen. Deze wordt gesynchroniseerd zodra je weer online bent.",
         "syncFailed": "Synchronisatie mislukt",
         "gym": "Hal",
-        "allGyms": "Alle hallen"
+        "allGyms": "Alle hallen",
+        "deleteTitle": "Beklimming van ‘{name}’ verwijderen?"
     },
     "map": {
         "title": "Plattegrond",
@@ -2097,7 +2115,7 @@
         "search": "Leden zoeken…",
         "noMembers": "Geen leden gevonden",
         "remove": "Lid verwijderen",
-        "removeConfirm": "Deze persoon uit het team van de hal verwijderen? Het account blijft bestaan.",
+        "removeConfirm": "{name} uit het team van de hal verwijderen? Het account blijft bestaan.",
         "removed": "Lid verwijderd.",
         "alreadyMember": "Deze persoon is al lid.",
         "invited": "Uitnodiging verstuurd.",
@@ -2106,7 +2124,8 @@
             "routesetter": "Routebouwer",
             "public": "Openbaar"
         },
-        "rowActions": "Acties voor lid"
+        "rowActions": "Acties voor lid",
+        "removeAction": "Verwijderen"
     },
     "invites": {
         "eyebrow": "UITNODIGING",
@@ -2565,8 +2584,9 @@
             "daily": "Dagelijkse back-ups",
             "keepCount": "Te bewaren back-ups",
             "estimate": "≈ {size} op schijf",
-            "restore": "Herstellen",
+            "restore": "Herstellen vervangt de hele database",
             "copyCommand": "Opdracht kopiëren",
+            "copyRestore": "Herstelopdracht kopiëren",
             "lastBackup": "Laatste back-up",
             "failed": "Mislukt",
             "nextBackup": "Volgende back-up",
@@ -3440,5 +3460,11 @@
         "competition": "{name}: programma, categorieën en live-uitslagen.",
         "leaderboard": "Ranglijst van {name}: klimmers gerangschikt op hun beste beklimmingen.",
         "privacy": "Hoe {name} persoonsgegevens verwerkt."
+    },
+    "dialog": {
+        "discardChanges": {
+            "title": "Wijzigingen verwerpen?",
+            "message": "Je niet-opgeslagen wijzigingen gaan verloren."
+        }
     }
 }

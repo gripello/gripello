@@ -284,7 +284,7 @@
                         color="primary"
                         block
                         size="xl"
-                        :disabled="loading"
+                        :disabled="loading || !registerPasswordValid"
                         class="mt-6 font-semibold"
                         data-testid="register-submit"
                     >
@@ -810,7 +810,7 @@ function registerFieldError(err: unknown) {
 }
 
 async function submitRegister() {
-    if (!(await validate(registerForm)) || !registerPasswordValid.value) return
+    if (!registerPasswordValid.value || !(await validate(registerForm))) return
     loading.value = true
     try {
         const { verificationSent } = await register(

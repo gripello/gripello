@@ -5,7 +5,7 @@
         closable
         sheet-on-mobile
         :title="isEditMode ? $t('actions.edit') : $t('climbing.create')"
-        :persistent="hasChanges"
+        :dirty="hasChanges"
         data-testid="route-form-dialog"
         :submit-label="isEditMode ? $t('actions.save') : $t('actions.create')"
         :submit-loading="saving"
@@ -66,6 +66,14 @@
                     />
                 </UFormField>
             </div>
+            <UFormField :label="$t('climbing.color')" name="color">
+                <ColorSwatchPicker
+                    v-model="form.color"
+                    :swatches="activePalette"
+                    :label="$t('climbing.color')"
+                    test-id-prefix="route-form"
+                />
+            </UFormField>
 
             <div class="grid grid-cols-2 gap-4">
                 <UFormField
@@ -178,15 +186,6 @@
                     data-testid="route-form-comment"
                 />
             </UFormField>
-
-            <UFormField :label="$t('climbing.color')" name="color">
-                <ColorSwatchPicker
-                    v-model="form.color"
-                    :swatches="activePalette"
-                    :label="$t('climbing.color')"
-                    test-id-prefix="route-form"
-                />
-            </UFormField>
         </UForm>
         <template #footer-start>
             <UButton
@@ -204,21 +203,45 @@
 
     <ConfirmDialog
         v-model="deleteDialog"
-        :title="$t('actions.confirm')"
+        :title="
+            forceDelete
+                ? $t('notifications.deleteRouteWithHistoryTitle', {
+                      name: form.name,
+                  })
+                : $t('notifications.deleteRouteTitle', { name: form.name })
+        "
         :message="
             forceDelete
                 ? $t('notifications.deleteRouteWithHistory')
-                : $t('notifications.deleteItem')
+                : $t('notifications.deleteRoute')
+        "
+        :confirm-text="
+            forceDelete ? $t('notifications.deleteEverything') : undefined
         "
         :loading="deleting"
         @confirm="deleteRoute"
-    />
+    >
+        <UButton
+            v-if="forceDelete"
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-archive"
+            class="mt-4"
+            :loading="archiving"
+            :disabled="deleting"
+            data-testid="route-delete-archive"
+            @click="archiveInstead"
+        >
+            {{ $t('notifications.archiveInstead') }}
+        </UButton>
+    </ConfirmDialog>
 </template>
 
 <script setup lang="ts">
 import { reportCaughtError } from '~/utils/clientErrors'
 import { ROUTE_TYPES } from '#shared/utils/routeTypes'
 import {
+    archiveRoute,
     createRoute,
     deleteRoute as deleteRouteRecord,
     listRouteColors,
@@ -305,14 +328,13 @@ function buildDefaultPalette() {
     const pool = usedColorsList.value.length
         ? usedColorsList.value
         : fallbackColors
-    defaultPalette.value = [...pool]
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 12)
+    defaultPalette.value = pool.slice(0, 12)
 }
 
 const dialogOpen = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
+const archiving = ref(false)
 const deleteDialog = ref(false)
 const forceDelete = ref(false)
 watch(deleteDialog, (open) => {
@@ -570,6 +592,7 @@ const emit = defineEmits<{
     saved: [payload: RouteInput & { id?: string }]
     closed: []
     deleted: [id: string]
+    archived: [id: string]
 }>()
 
 watch(dialogOpen, (val) => {
@@ -648,7 +671,7 @@ async function submit() {
 }
 
 async function deleteRoute() {
-    if (!editRouteId.value) return
+    if (!editRouteId.value || deleting.value || archiving.value) return
     deleting.value = true
     try {
         await deleteRouteRecord(editRouteId.value, forceDelete.value)
@@ -665,6 +688,23 @@ async function deleteRoute() {
         notifyError(t('notifications.error.generic'))
     } finally {
         deleting.value = false
+    }
+}
+
+async function archiveInstead() {
+    const id = editRouteId.value
+    if (!id || archiving.value || deleting.value) return
+    archiving.value = true
+    try {
+        await archiveRoute(id)
+        deleteDialog.value = false
+        close()
+        emit('archived', id)
+    } catch (error) {
+        reportCaughtError(error)
+        notifyError(t('notifications.error.generic'))
+    } finally {
+        archiving.value = false
     }
 }
 

@@ -189,6 +189,13 @@
         </div>
 
         <div v-if="!isWideLayout && !loadFailed">
+            <p
+                v-if="routes.length"
+                class="mt-2 text-sm text-muted"
+                data-testid="index-cards-count"
+            >
+                {{ $t('climbing.routesFound', { n: totalItems }) }}
+            </p>
             <div
                 class="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2"
                 data-testid="index-cards"
@@ -202,8 +209,14 @@
                 >
                     <template #actions>
                         <div class="flex items-center gap-2 justify-end">
-                            <RouteViewButton :route-id="route.id" />
-                            <RouteDetails :route_id="route.id" />
+                            <RouteViewButton
+                                :route-id="route.id"
+                                class="after:absolute after:inset-0"
+                            />
+                            <RouteDetails
+                                :route_id="route.id"
+                                class="relative z-1"
+                            />
                         </div>
                     </template>
                 </RouteCard>

@@ -45,6 +45,7 @@ test('json download is named in the ui language and carries location names', asy
     await page.getByTestId('routes-select-all').click()
 
     const jsonDownload = page.waitForEvent('download')
+    await page.getByTestId('routes-export').click()
     await page.getByTestId('routes-export-json').click()
     const download = await jsonDownload
     expect(download.suggestedFilename()).toMatch(/^climbing-routes.*\.json$/)

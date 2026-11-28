@@ -3,7 +3,7 @@ import RouteSummary from '~/components/route/Summary.vue'
 
 const route = {
     name: 'Nordwand',
-    color: 'red',
+    color: '#e53935',
     grade: '6a',
     grade_system: 'french',
 }
@@ -33,7 +33,7 @@ describe('RouteSummary', () => {
         const wrapper = createWrapper({ meta: 'Wall A', ticked: true })
 
         expect(wrapper.text()).toContain('Nordwand')
-        expect(wrapper.text()).toContain('Wall A')
+        expect(wrapper.text()).toContain('colors.red · Wall A')
         expect(wrapper.find('.grade').exists()).toBe(true)
         expect(wrapper.find('i').attributes()).toMatchObject({
             'data-size': '28',
@@ -64,5 +64,16 @@ describe('RouteSummary', () => {
 
         expect(wrapper.find('.marker').exists()).toBe(true)
         expect(wrapper.text()).toContain('custom meta')
+    })
+
+    it('names the hold colour without any meta', () => {
+        expect(
+            createWrapper().get('[data-testid="route-summary-color"]').text(),
+        ).toBe('colors.red')
+        expect(
+            createWrapper({ route: { ...route, color: null } })
+                .find('p.text-xs')
+                .exists(),
+        ).toBe(false)
     })
 })

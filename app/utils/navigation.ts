@@ -48,7 +48,7 @@ const SCAN_TAB: NavLink = {
 }
 
 export const CLIMBER_TABS: NavLink[] = [
-    { to: '/routes', icon: 'i-lucide-mountain', label: 'nav.gym' },
+    { to: '/', icon: 'i-lucide-mountain', label: 'nav.gym' },
     { to: '/feed', icon: 'i-lucide-users', label: 'nav.community' },
     SCAN_TAB,
     { to: '/logbook', icon: 'i-lucide-book-check', label: 'routes.logbook' },
@@ -175,6 +175,11 @@ export const NAV_ITEMS: NavItem[] = [
         to: '/info',
         icon: 'i-lucide-info',
         label: 'routes.info',
+    },
+    {
+        key: 'scan',
+        zone: 'gym',
+        ...SCAN_TAB,
     },
     {
         key: 'feed',
@@ -485,7 +490,7 @@ export function zoneOfPath(path: string): Zone | null {
 }
 
 const TAB_ZONES: Record<string, Zone> = {
-    '/routes': 'gym',
+    '/': 'gym',
     '/feed': 'community',
 }
 
@@ -531,14 +536,14 @@ export function bottomNavLinks(
         ...link,
         to: TAB_ZONES[link.to]
             ? gymSlug
-                ? `/${gymSlug}${link.to}`
+                ? gymLink(link.to, gymSlug)
                 : '/'
             : link.to,
         path: link.to,
         active: TAB_ZONES[link.to]
             ? TAB_ZONES[link.to] === zone
             : link.to === '/account'
-              ? path === link.to
+              ? isWithin(path, link.to) && !isWithin(path, '/account/export')
               : isWithin(path, link.to),
     }))
 }
@@ -651,10 +656,17 @@ export function sidebarSections(
             staffEntry: null,
         }
     const pages = visibleNavItems(can, signedIn, slug).filter(isPage)
+    const pathOnly = currentPath.split(/[?#]/)[0]!
+    const onRoutePage =
+        pathOnly === '/route' || gymLocalPath(pathOnly) === '/route'
     const zone = (key: Zone) =>
         pages
             .filter((item) => item.zone === key)
-            .map((item) => toItem(item as NavLink))
+            .map((item) => ({
+                ...toItem(item as NavLink),
+                ...(onRoutePage &&
+                    item.path === '/routes' && { current: true, active: true }),
+            }))
     const you = [
         ...zone('you'),
         ...(signedIn && myId

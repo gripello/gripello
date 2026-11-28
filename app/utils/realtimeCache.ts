@@ -14,7 +14,6 @@ export const cacheKeys = {
     mapWalls: 'map-walls',
     keyLocations: 'live-key-locations',
     keyQueries: 'live-key-queries',
-    mapMatching: 'map-matching',
     routesList: 'routes-list',
     route: (routeId: string) => `route:${routeId}`,
     ratings: (routeId: string) => `ratings:${routeId}`,
@@ -190,7 +189,6 @@ const RESYNCED_KEYS: string[] = [
     cacheKeys.logbook,
     cacheKeys.locations,
     cacheKeys.blocks,
-    cacheKeys.mapMatching,
 ]
 
 export function isLiveKey(key: string, keyLocations: KeyLocations = {}) {

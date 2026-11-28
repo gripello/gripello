@@ -38,6 +38,10 @@ export function settleDialogHistory(): Promise<void> | undefined {
         ownBackSteps++
         history.go(-steps)
     }
+    return ownBackStepsDone()
+}
+
+export function ownBackStepsDone(): Promise<void> | undefined {
     if (!ownBackSteps) return
     return new Promise((resolve) => {
         backStepWaiters.push(resolve)

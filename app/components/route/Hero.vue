@@ -26,6 +26,16 @@
                     {{ t(`routes.types.${route.type?.toLowerCase()}`) }}
                 </UBadge>
                 <UBadge
+                    v-if="colorName"
+                    size="lg"
+                    color="neutral"
+                    class="bg-(--hero-tint) text-(--hero-ink) hover:bg-(--hero-tint)/80 rounded-full"
+                    icon="i-lucide-palette"
+                    data-testid="route-color-chip"
+                >
+                    {{ colorName }}
+                </UBadge>
+                <UBadge
                     v-if="ticked"
                     size="lg"
                     color="primary"
@@ -34,6 +44,16 @@
                     data-testid="route-ticked"
                 >
                     {{ t('ticks.sent') }}
+                </UBadge>
+                <UBadge
+                    v-if="route.archived"
+                    size="lg"
+                    color="warning"
+                    class="rounded-full"
+                    icon="i-lucide-archive"
+                    data-testid="route-archived"
+                >
+                    {{ t('filter.archived') }}
                 </UBadge>
                 <UBadge
                     v-if="locationName(route)"
@@ -158,6 +178,7 @@ import { locationName, wallName } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
 import { gymBandFor } from '#shared/utils/gradeReference'
 import { toHex6 } from '#shared/utils/color'
+import { translatedColorName } from '~/utils/colorName'
 import { contrastRatio, gradientEndColor } from '~/utils/color'
 import {
     commonDifficulty,
@@ -176,6 +197,7 @@ const { t } = useI18n()
 const { goBack } = useGoBack()
 
 const difficulty = computed(() => formatGrade(props.route))
+const colorName = computed(() => translatedColorName(t, props.route.color))
 
 const perceived = computed(() => {
     const grade = commonDifficulty(props.reviews)

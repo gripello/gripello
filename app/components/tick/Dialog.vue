@@ -5,6 +5,7 @@
         closable
         sheet-on-mobile
         :title="tick ? $t('ticks.edit') : $t('ticks.logAscent')"
+        :subtitle="routeName"
         data-testid="tick-dialog"
         :submit-label="$t('actions.save')"
         :submit-loading="saving"
@@ -129,6 +130,14 @@ function shownRoute(id: string): RouteRecord | undefined {
         (route) => route.id === id,
     )
 }
+
+const routeName = computed(() =>
+    props.tick
+        ? props.tick.expand?.route?.name || props.tick.route_name
+        : props.routeId
+          ? shownRoute(props.routeId)?.name
+          : undefined,
+)
 
 // The server copies the route into a tick; a queued tick needs it to show in the logbook before it syncs.
 function routeSnapshot(id: string): Partial<TickRecord> {

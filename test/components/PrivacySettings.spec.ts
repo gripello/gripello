@@ -12,9 +12,9 @@ const notifyError = vi.fn()
 const unblock = vi.fn()
 const blocks = ref<{ id: string; blocker: string; blocked: string }[]>([])
 const switchStub = {
-    props: ['modelValue'],
+    props: ['modelValue', 'disabled'],
     template:
-        '<button :data-on="modelValue" @click="$emit(\'update:modelValue\', !modelValue)" />',
+        '<button :data-on="modelValue" :disabled="disabled" @click="$emit(\'update:modelValue\', !modelValue)" />',
 }
 
 function mountSettings(user: Record<string, unknown>) {
@@ -77,6 +77,17 @@ describe('PrivacySettings', () => {
                 .get('[data-testid="privacy-shareSends"]')
                 .attributes('data-on'),
         ).toBe('true')
+    })
+
+    it('shows the leaderboard switch off and locked while sends are private', async () => {
+        update.mockResolvedValue({ id: 'me' })
+        const wrapper = mountSettings({})
+        const leaderboard = wrapper.get('[data-testid="privacy-leaderboard"]')
+        expect(leaderboard.attributes('data-on')).toBe('true')
+        expect(leaderboard.attributes('disabled')).toBeUndefined()
+        await wrapper.get('[data-testid="privacy-shareSends"]').trigger('click')
+        expect(leaderboard.attributes('data-on')).toBe('false')
+        expect(leaderboard.attributes('disabled')).toBeDefined()
     })
 
     it('saves each toggle as its hidden field', async () => {

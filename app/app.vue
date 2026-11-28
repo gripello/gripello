@@ -8,6 +8,7 @@
         <div class="app-root fontbody">
             <NuxtLoadingIndicator color="var(--ui-primary)" :height="3" />
             <NuxtAnnouncer />
+            <NuxtRouteAnnouncer />
             <LayoutPullToRefresh />
             <NuxtLayout>
                 <NuxtPage />
