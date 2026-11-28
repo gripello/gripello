@@ -1,6 +1,7 @@
 export const dialogShellStub = {
     props: {
         modelValue: Boolean,
+        dirty: Boolean,
         title: String,
         submitLabel: String,
         submitDisabled: Boolean,

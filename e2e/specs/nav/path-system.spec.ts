@@ -12,6 +12,7 @@ test('the desktop sidebar splits gym, community and you', async ({
         'nav-link-home',
         'nav-link-routes',
         'nav-link-map',
+        'nav-link-scan',
         'nav-link-feed',
         'nav-link-friends',
         'nav-link-logbook',

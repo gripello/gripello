@@ -1,13 +1,13 @@
 <template>
     <UIcon
         v-if="severity"
-        name="i-lucide-triangle-alert"
+        :name="urgent ? 'i-lucide-octagon-alert' : 'i-lucide-triangle-alert'"
         role="img"
-        :aria-label="$t('tasks.defect.marker')"
-        :title="$t('tasks.defect.marker')"
+        :aria-label="label"
+        :title="label"
         class="shrink-0"
         :class="[
-            severity === 'urgent' ? 'text-error' : 'text-warning',
+            urgent ? 'text-error' : 'text-warning',
             size === 'sm' ? 'size-[14px]' : 'size-4',
         ]"
         data-testid="route-defect-marker"
@@ -18,5 +18,11 @@
 <script setup lang="ts">
 import type { DefectSeverity } from '~/utils/tasks'
 
-defineProps<{ severity?: DefectSeverity; size?: 'sm' | 'md' }>()
+const props = defineProps<{ severity?: DefectSeverity; size?: 'sm' | 'md' }>()
+
+const { t } = useI18n()
+const urgent = computed(() => props.severity === 'urgent')
+const label = computed(() =>
+    t(urgent.value ? 'tasks.defect.urgentMarker' : 'tasks.defect.marker'),
+)
 </script>

@@ -40,6 +40,7 @@ test('the export dialog sends type labels in the ui language', async ({
 }) => {
     await gotoSettled(page, '/manage/routes')
     await page.getByTestId('routes-select-all').click()
+    await page.getByTestId('routes-export').click()
     await page.getByTestId('routes-export-xlsx').click()
 
     const exportRequest = page.waitForRequest('**/api/ui/xlsx')

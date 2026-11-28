@@ -44,6 +44,7 @@
                             {{ t('ticks.logAscent') }}
                         </UButton>
                         <UButton
+                            v-if="!metadata.archived || myReview"
                             :color="isLoggedIn ? 'neutral' : 'primary'"
                             :variant="isLoggedIn ? 'soft' : 'solid'"
                             size="lg"

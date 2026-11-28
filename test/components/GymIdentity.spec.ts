@@ -26,15 +26,15 @@ function mountWith(record: GymRecord) {
 }
 
 describe('GymIdentity', () => {
-    it('renders the logo monochrome so white logos stay visible', () => {
+    it('shows the logo as uploaded on a light chip', () => {
         const wrapper = mountWith(gym({ page_logo: 'logo.png' }))
 
         const logo = wrapper.get('img')
         expect(logo.attributes('src')).toBe(
             '/api/files/gyms/g1/logo.png?thumb=0x200',
         )
-        expect(logo.classes()).toContain('logo-mono')
-        expect(logo.element.parentElement?.classList).toContain('bg-elevated')
+        expect(logo.attributes('class')).not.toContain('logo-mono')
+        expect(logo.element.parentElement?.classList).toContain('logo-chip')
     })
 
     it('marks inactive and invisible gyms', () => {

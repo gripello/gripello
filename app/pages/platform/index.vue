@@ -382,7 +382,12 @@ import {
     listPlatformUsers,
     type TrafficRange,
 } from '~/api/platform'
-import { errorRate, formatMs, methodShares } from '~/utils/platformTraffic'
+import {
+    errorRate,
+    formatMs,
+    methodShares,
+    serverErrorKpiColor,
+} from '~/utils/platformTraffic'
 import { formatDate } from '#shared/utils/formatting'
 import { platformTotals, type PlatformGym } from '~/utils/platformGyms'
 import { parseDate } from '#shared/utils/formatting'
@@ -465,7 +470,7 @@ const kpis = computed(() => {
             value: data ? errorRate(data.totals) : null,
             previous: null,
             icon: 'i-lucide-triangle-alert',
-            color: 'error',
+            color: serverErrorKpiColor(data ? errorRate(data.totals) : null),
             format: (value: number) => formatPercent(value, locale.value),
             spark: series.map((point) =>
                 point.requests ? point.server_errors / point.requests : 0,

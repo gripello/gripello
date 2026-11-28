@@ -57,9 +57,13 @@ async function openDialog(
                     template:
                         '<button @click="$emit(\'click\')"><slot /></button>',
                 },
-                SegmentedControl: {
-                    name: 'SegmentedControl',
-                    props: ['modelValue', 'items'],
+                OptionGrid: {
+                    name: 'OptionGrid',
+                    props: {
+                        modelValue: null,
+                        items: Array,
+                        deselectable: Boolean,
+                    },
                     template: '<div />',
                 },
                 UInputRating: {
@@ -86,20 +90,36 @@ async function openDialog(
 }
 
 describe('ReviewFormDialog', () => {
-    it('offers two grades either side of the route grade, starting on it', async () => {
+    it('offers two grades either side of the route grade, none picked yet', async () => {
         const wrapper = await openDialog('5')
 
-        const grades = wrapper.getComponent({ name: 'SegmentedControl' })
+        const grades = wrapper.getComponent({ name: 'OptionGrid' })
         expect(
             grades.props('items').map(({ value }: { value: string }) => value),
         ).toEqual(['4+', '5-', '5', '5+', '6-'])
-        expect(grades.props('modelValue')).toBe('5')
+        expect(grades.props('modelValue')).toBeNull()
+        expect(grades.props('deselectable')).toBe(true)
+    })
+
+    it('shows only the stored grade when editing a review without one', async () => {
+        const wrapper = await openDialog('5', {
+            id: 'rev1',
+            mine: true,
+            rating: 3,
+            grade: '',
+            comment: 'Old',
+            grade_system: 'uiaa',
+        })
+
+        expect(
+            wrapper.getComponent({ name: 'OptionGrid' }).props('modelValue'),
+        ).toBeNull()
     })
 
     it('keeps the picked grade', async () => {
         const wrapper = await openDialog('5')
 
-        const grades = wrapper.getComponent({ name: 'SegmentedControl' })
+        const grades = wrapper.getComponent({ name: 'OptionGrid' })
         grades.vm.$emit('update:modelValue', '6-')
         await wrapper.vm.$nextTick()
 
@@ -109,9 +129,9 @@ describe('ReviewFormDialog', () => {
     it('falls back to every grade when the route grade is unknown', async () => {
         const wrapper = await openDialog(null)
 
-        expect(
-            wrapper.findComponent({ name: 'SegmentedControl' }).exists(),
-        ).toBe(false)
+        expect(wrapper.findComponent({ name: 'OptionGrid' }).exists()).toBe(
+            false,
+        )
         const select = wrapper.getComponent({ name: 'USelectMenu' })
         expect(select.props('items')).toContain('9+')
         expect(select.props('modelValue')).toBeNull()
@@ -145,7 +165,7 @@ describe('ReviewFormDialog', () => {
             gym: 'g1',
             route_id: 'r1',
             rating: 4,
-            grade: '5',
+            grade: '',
             grade_system: 'uiaa',
             comment: 'Good',
         })
@@ -160,6 +180,65 @@ describe('ReviewFormDialog', () => {
             'grade_system',
             'rating',
         ])
+    })
+
+    it('needs stars, a grade or a comment for a new review, any one of them', async () => {
+        const submitDisabled = (
+            wrapper: Awaited<ReturnType<typeof openDialog>>,
+        ) =>
+            wrapper
+                .get('[data-testid="review-form-submit"]')
+                .attributes('disabled')
+
+        const empty = await openDialog('5')
+        expect(submitDisabled(empty)).toBeDefined()
+        await empty.get('textarea').setValue('   ')
+        expect(submitDisabled(empty)).toBeDefined()
+
+        const starsOnly = await openDialog('5')
+        starsOnly
+            .getComponent({ name: 'UInputRating' })
+            .vm.$emit('update:modelValue', 4)
+        await starsOnly.vm.$nextTick()
+        expect(submitDisabled(starsOnly)).toBeUndefined()
+
+        const gradeOnly = await openDialog('5')
+        gradeOnly
+            .getComponent({ name: 'OptionGrid' })
+            .vm.$emit('update:modelValue', '5+')
+        await gradeOnly.vm.$nextTick()
+        expect(submitDisabled(gradeOnly)).toBeUndefined()
+
+        const commentOnly = await openDialog('5')
+        await commentOnly.get('textarea').setValue('Fun moves')
+        expect(submitDisabled(commentOnly)).toBeUndefined()
+    })
+
+    it('keeps what the author is typing when the review is refetched', async () => {
+        const review = {
+            id: 'rev1',
+            mine: true,
+            rating: 3,
+            grade: '5',
+            comment: 'Old',
+            grade_system: 'uiaa',
+        }
+        const wrapper = await openDialog('5', review)
+        await wrapper.get('textarea').setValue('Half typed')
+
+        await wrapper.setProps({ review: { ...review } as never })
+
+        expect(
+            (wrapper.get('textarea').element as HTMLTextAreaElement).value,
+        ).toBe('Half typed')
+    })
+
+    it('marks the dialog dirty only after the review was changed', async () => {
+        const wrapper = await openDialog('5')
+        const shell = () => wrapper.getComponent(dialogShellStub)
+        expect(shell().props('dirty')).toBe(false)
+        await wrapper.get('textarea').setValue('Fun moves')
+        expect(shell().props('dirty')).toBe(true)
     })
 
     it('names the star picker', async () => {

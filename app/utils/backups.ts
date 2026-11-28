@@ -55,3 +55,9 @@ export function syncCleanForm<T extends object>(
         )
     if (untouched) Object.assign(form, next)
 }
+
+export function restoreCommand(dir: string | undefined, archive?: string) {
+    const base = (dir || '/data/backups').replace(/\/$/, '')
+    const name = archive ?? 'gripello-YYYYMMDD-HHMMSS.tar'
+    return `docker compose exec gripello gripello admin restore --file ${base}/${name} --storage`
+}

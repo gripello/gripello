@@ -37,6 +37,28 @@
     ::backdrop {
         border-color: var(--ui-border);
     }
+
+    @media (prefers-reduced-motion: reduce) {
+        html {
+            scroll-behavior: auto !important;
+        }
+
+        *:not(
+            .tv-progress,
+            .animate-spin,
+            [class*='animate-[spin'],
+            [data-state='indeterminate']
+        ),
+        ::before,
+        ::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            animation-delay: 0s !important;
+            transition-duration: 0.01ms !important;
+            transition-delay: 0s !important;
+            scroll-behavior: auto !important;
+        }
+    }
 }
 
 @layer components {
@@ -716,12 +738,8 @@
 }
 
 @layer components {
-    .logo-mono {
-        filter: brightness(0);
-    }
-
-    .dark .logo-mono {
-        filter: brightness(0) invert(1);
+    .logo-chip {
+        @apply rounded-md bg-white p-0.5;
     }
 }
 

@@ -3,6 +3,7 @@ import type { TrafficEndpoint } from '~/api/platform'
 import {
     errorRate,
     errorRateColor,
+    serverErrorKpiColor,
     formatUptime,
     methodShares,
     sortEndpoints,
@@ -64,5 +65,13 @@ describe('platformTraffic', () => {
     it('labels points by clock time or date depending on the step', () => {
         expect(trafficLabel('2026-10-11T09:05:00Z', 300, 'de').length).toBe(5)
         expect(trafficLabel('2026-10-11T00:00:00Z', 86400, 'en')).toMatch(/Oct/)
+    })
+})
+
+describe('serverErrorKpiColor', () => {
+    it('stays neutral without server errors', () => {
+        expect(serverErrorKpiColor(0)).toBe('neutral')
+        expect(serverErrorKpiColor(null)).toBe('neutral')
+        expect(serverErrorKpiColor(0.001)).toBe('error')
     })
 })

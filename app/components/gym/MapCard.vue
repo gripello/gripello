@@ -28,7 +28,7 @@ const { status, label } = useOpenStatus(() => props.gym.opening_hours)
                 v-if="logoUrl"
                 :src="logoUrl"
                 alt=""
-                class="logo-mono size-10 shrink-0 object-contain"
+                class="logo-chip size-10 shrink-0 object-contain"
             />
             <div class="min-w-0 flex-1">
                 <h2 class="truncate font-semibold">{{ gymTitle(gym) }}</h2>

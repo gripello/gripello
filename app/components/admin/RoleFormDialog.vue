@@ -2,7 +2,7 @@
     <LayoutDialogShell
         v-model="dialog"
         :title="isEdit ? t('permissions.editRole') : t('permissions.addRole')"
-        :persistent="hasChanges"
+        :dirty="hasChanges"
         sheet-on-mobile
         closable
         data-testid="role-form-dialog"

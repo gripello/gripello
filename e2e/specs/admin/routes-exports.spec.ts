@@ -22,6 +22,7 @@ test.describe('exports', () => {
         testPrefix,
     }) => {
         await selectOwnRoutes(page, testPrefix)
+        await page.getByTestId('routes-export').click()
         await page.getByTestId('routes-export-pdf').click()
         const downloadPromise = page.waitForEvent('download')
         await page.getByTestId('export-confirm').click()
@@ -37,6 +38,7 @@ test.describe('exports', () => {
         testPrefix,
     }) => {
         await selectOwnRoutes(page, testPrefix)
+        await page.getByTestId('routes-export').click()
         await page.getByTestId('routes-export-xlsx').click()
         const downloadPromise = page.waitForEvent('download')
         await page.getByTestId('export-confirm').click()
@@ -55,6 +57,7 @@ test.describe('exports', () => {
     }) => {
         await selectOwnRoutes(page, testPrefix)
         const downloadPromise = page.waitForEvent('download')
+        await page.getByTestId('routes-export').click()
         await page.getByTestId('routes-export-json').click()
         const download = await downloadPromise
         const filePath = await download.path()
@@ -80,6 +83,7 @@ test.describe('exports', () => {
         testPrefix,
     }) => {
         await selectOwnRoutes(page, testPrefix)
+        await page.getByTestId('routes-export').click()
         await page.getByTestId('routes-export-xlsx').click()
 
         await page.getByTestId('export-toggle-all').click()

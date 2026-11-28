@@ -6,7 +6,7 @@
             content:
                 'sm:max-w-[min(760px,calc(100vw-4rem))] rounded-xl sm:top-[10vh] sm:translate-y-0',
         }"
-        @after:leave="query = ''"
+        @after:enter="selectQuery"
     >
         <template #content>
             <UCommandPalette
@@ -14,7 +14,7 @@
                 :groups="groups"
                 :fuse="{ resultLimit: Infinity }"
                 :loading="searching"
-                :placeholder="$t('nav.commandPalettePlaceholder')"
+                :placeholder="placeholder"
                 :input="inputAttrs"
                 :ui="{
                     content: 'max-h-[min(65dvh,640px)]',
@@ -67,7 +67,11 @@
 
 <script setup lang="ts">
 import { useTimeoutFn } from '@vueuse/core'
-import type { SearchGroup, SearchResult } from '~/composables/useGlobalSearch'
+import {
+    searchFailureKey,
+    type SearchGroup,
+    type SearchResult,
+} from '~/composables/useGlobalSearch'
 import { paletteGroups } from '~/utils/commandPalette'
 import { routeDotColor } from '~/utils/color'
 
@@ -77,19 +81,41 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const { search } = useGlobalSearch()
+const { gym } = useGym()
 const open = defineModel<boolean>('open', { required: true })
 const query = ref('')
 const searching = ref(false)
 const remoteGroups = ref<SearchGroup[]>([])
+const placeholder = computed(() =>
+    t('nav.commandPalettePlaceholder', { gym: gym.value?.name || 'Gripello' }),
+)
 // UCommandPalette types `input` as InputProps; the attributes still reach the <input>
 const inputAttrs = computed(() => ({
     size: 'xl' as const,
     'data-testid': 'command-palette-input',
-    'aria-label': t('nav.commandPalettePlaceholder'),
+    'aria-label': placeholder.value,
 }))
 
-const groups = computed(() =>
-    paletteGroups(
+const failureKey = computed(() => searchFailureKey(remoteGroups.value))
+
+const groups = computed(() => [
+    ...(failureKey.value && !searching.value
+        ? [
+              {
+                  id: 'error',
+                  label: t(failureKey.value),
+                  ignoreFilter: true,
+                  items: [
+                      {
+                          label: t('errors.retry'),
+                          icon: 'i-lucide-refresh-cw',
+                          onSelect: () => runSearch(query.value),
+                      },
+                  ],
+              },
+          ]
+        : []),
+    ...paletteGroups(
         props.pages.map((page) => ({
             key: `page-${page.to}`,
             to: page.to,
@@ -100,7 +126,7 @@ const groups = computed(() =>
         t,
         choose,
     ),
-)
+])
 
 let searchRun = 0
 
@@ -115,7 +141,9 @@ const { start: searchSoon, stop: cancelSearch } = useTimeoutFn(
     { immediate: false },
 )
 
-watch(query, (value) => {
+watch(query, runSearch)
+
+function runSearch(value: string) {
     cancelSearch()
     const run = ++searchRun
     if (!value.trim()) {
@@ -125,7 +153,15 @@ watch(query, (value) => {
     }
     searching.value = true
     searchSoon(value, run)
-})
+}
+
+function selectQuery() {
+    document
+        .querySelector<HTMLInputElement>(
+            '[data-testid="command-palette-input"]',
+        )
+        ?.select()
+}
 
 function choose(result: SearchResult) {
     open.value = false

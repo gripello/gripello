@@ -27,12 +27,14 @@ beforeEach(() => {
         can: (perm: string) => granted.includes(perm),
     }))
     vi.stubGlobal('useI18n', () => ({
-        t: (key: string) =>
-            ({
-                'settings.contactEmail': 'Contact e-mail',
-                'settings.organization': 'Organisation',
-                'gymInfo.settings.contacts': 'Contacts',
-            })[key] ?? key,
+        t: (key: string, params?: Record<string, unknown>) =>
+            params
+                ? `${key}:${JSON.stringify(params)}`
+                : ({
+                      'settings.contactEmail': 'Contact e-mail',
+                      'settings.organization': 'Organisation',
+                      'gymInfo.settings.contacts': 'Contacts',
+                  }[key] ?? key),
     }))
     api.listRoutes.mockResolvedValue({
         items: [
@@ -107,12 +109,43 @@ describe('useGlobalSearch', () => {
         })
     })
 
-    it('keeps the other groups when one source fails', async () => {
+    it('keeps the other groups when one source fails and reports the failure', async () => {
         granted = ['manage_users']
-        api.listMembers.mockRejectedValue(new Error('down'))
+        const down = Object.assign(new Error('down'), { status: 500 })
+        api.listMembers.mockRejectedValue(down)
         const groups = await search('crimp')
-        expect(groups.find((g) => g.key === 'users')!.items).toEqual([])
+        const users = groups.find((g) => g.key === 'users')!
+        expect(users.items).toEqual([])
+        expect(users.error).toBe(down)
+        expect(groups.find((g) => g.key === 'roles')).not.toHaveProperty(
+            'error',
+        )
         expect(groups.find((g) => g.key === 'roles')!.items).toHaveLength(1)
+    })
+
+    it('links to all routes when the search finds more than it shows', async () => {
+        api.listRoutes.mockResolvedValue({
+            items: [{ id: 'r1', name: 'Crimp', creator: [] }],
+            total: 23,
+        })
+        const [routes] = await search('crimp')
+        expect(api.listRoutes).toHaveBeenCalledWith(
+            'gymA',
+            expect.objectContaining({ total: true }),
+        )
+        expect(routes!.items.at(-1)).toEqual({
+            key: 'routes-all',
+            to: '/gym-a/routes',
+            icon: 'i-lucide-list',
+            title: 'nav.paletteAllRoutes:{"n":23}',
+        })
+
+        api.listRoutes.mockResolvedValue({
+            items: [{ id: 'r1', name: 'Crimp', creator: [] }],
+            total: 1,
+        })
+        const [single] = await search('crimp')
+        expect(single!.items.map((item) => item.key)).toEqual(['route-r1'])
     })
 
     it('finds settings by their translated label', async () => {
@@ -127,5 +160,32 @@ describe('useGlobalSearch', () => {
                 to: '/gym-a/admin/settings?section=contacts',
             }),
         ])
+    })
+})
+
+describe('searchFailureKey', () => {
+    const groups = (error?: unknown) => [
+        { key: 'routes', label: 'r', items: [] },
+        { key: 'users', label: 'u', items: [], error },
+    ]
+
+    it('is null while every source answered', async () => {
+        const { searchFailureKey } =
+            await import('~/composables/useGlobalSearch')
+        expect(searchFailureKey(groups())).toBeNull()
+    })
+
+    it('names offline, rate-limited and other failures', async () => {
+        const { searchFailureKey } =
+            await import('~/composables/useGlobalSearch')
+        expect(searchFailureKey(groups({ status: 0 }))).toBe(
+            'errors.offline.title',
+        )
+        expect(searchFailureKey(groups({ status: 429 }))).toBe(
+            'errors.rateLimited',
+        )
+        expect(searchFailureKey(groups({ status: 500 }))).toBe(
+            'errors.loadFailed',
+        )
     })
 })

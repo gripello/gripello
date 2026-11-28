@@ -12,8 +12,8 @@
                         {{ $t('climbing.create') }}
                     </UButton>
                     <UButton
-                        color="primary"
-                        variant="soft"
+                        color="neutral"
+                        variant="outline"
                         icon="i-lucide-file-input"
                         data-testid="routes-import-open"
                         @click="importRouteRef?.open()"
@@ -21,8 +21,8 @@
                         {{ $t('actions.import') }}
                     </UButton>
                     <UButton
-                        color="primary"
-                        variant="soft"
+                        color="neutral"
+                        variant="outline"
                         icon="i-lucide-map-pinned"
                         :to="gymPath('/manage/map')"
                         data-testid="routes-place-on-map"
@@ -62,6 +62,7 @@
             ref="routeFormRef"
             @saved="onRouteSaved"
             @deleted="onRouteDeleted"
+            @archived="onRouteArchived"
         />
         <ImportRoute ref="importRouteRef" @closed="reloadRoutes()" />
 
@@ -120,8 +121,8 @@
 
         <div class="route-manager__actions">
             <UButton
-                color="primary"
-                variant="soft"
+                color="neutral"
+                variant="outline"
                 :icon="selectAllIcon"
                 :size="isMobile ? 'sm' : 'md'"
                 :aria-label="selectAllLabel"
@@ -132,45 +133,23 @@
             >
                 {{ selectAllText }}
             </UButton>
-            <UButton
+            <UDropdownMenu
                 v-if="hasSelection"
-                color="success"
-                variant="soft"
-                icon="i-lucide-printer"
-                :loading="exportingFormat === 'pdf'"
-                :disabled="!!exportingFormat && exportingFormat !== 'pdf'"
-                :size="isMobile ? 'sm' : 'md'"
-                data-testid="routes-export-pdf"
-                @click="openExportOptions('pdf')"
+                :items="exportItems"
+                :content="{ align: 'start' }"
             >
-                {{ $t('actions.print') }}
-            </UButton>
-            <UButton
-                v-if="hasSelection"
-                color="success"
-                variant="soft"
-                icon="i-lucide-file-spreadsheet"
-                :loading="exportingFormat === 'xlsx'"
-                :disabled="!!exportingFormat && exportingFormat !== 'xlsx'"
-                :size="isMobile ? 'sm' : 'md'"
-                data-testid="routes-export-xlsx"
-                @click="openExportOptions('xlsx')"
-            >
-                XLSX
-            </UButton>
-            <UButton
-                v-if="hasSelection"
-                color="success"
-                variant="soft"
-                icon="i-lucide-file-json"
-                :loading="exportingFormat === 'json'"
-                :disabled="!!exportingFormat && exportingFormat !== 'json'"
-                :size="isMobile ? 'sm' : 'md'"
-                data-testid="routes-export-json"
-                @click="exportSelectedJson"
-            >
-                JSON
-            </UButton>
+                <UButton
+                    color="neutral"
+                    variant="outline"
+                    icon="i-lucide-download"
+                    trailing-icon="i-lucide-chevron-down"
+                    :loading="!!exportingFormat"
+                    :size="isMobile ? 'sm' : 'md'"
+                    data-testid="routes-export"
+                >
+                    {{ $t('actions.export') }}
+                </UButton>
+            </UDropdownMenu>
             <UButton
                 v-if="hasSelection"
                 color="warning"
@@ -699,6 +678,11 @@ const onRouteSaved = async (payload?: { id?: string } | null) => {
     await reloadRoutes()
 }
 
+const onRouteArchived = async () => {
+    notify(t('notifications.success.archived'))
+    await reloadRoutes()
+}
+
 const onRouteDeleted = async (id: string) => {
     removeSelectedIds([id])
     notify(t('notifications.success.delete'))
@@ -776,6 +760,29 @@ const exportSelected = (options: ExportOptions) =>
         options,
     )
 const exportSelectedJson = () => exportJson(selectedIds())
+const exportItems = computed(() => [
+    {
+        label: t('actions.print'),
+        icon: 'i-lucide-printer',
+        'data-testid': 'routes-export-pdf',
+        disabled: !!exportingFormat.value,
+        onSelect: () => openExportOptions('pdf'),
+    },
+    {
+        label: 'XLSX',
+        icon: 'i-lucide-file-spreadsheet',
+        'data-testid': 'routes-export-xlsx',
+        disabled: !!exportingFormat.value,
+        onSelect: () => openExportOptions('xlsx'),
+    },
+    {
+        label: 'JSON',
+        icon: 'i-lucide-file-json',
+        'data-testid': 'routes-export-json',
+        disabled: !!exportingFormat.value,
+        onSelect: exportSelectedJson,
+    },
+])
 
 const mobileListRef = useTemplateRef('mobileListRef')
 

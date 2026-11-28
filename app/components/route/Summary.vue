@@ -16,7 +16,16 @@
                 <span v-else class="min-w-0 truncate">{{ route?.name }}</span>
                 <slot name="markers" />
             </p>
-            <p v-if="meta || $slots.meta" class="truncate text-xs text-muted">
+            <p
+                v-if="colorName || meta || $slots.meta"
+                class="truncate text-xs text-muted"
+            >
+                <span v-if="colorName" data-testid="route-summary-color">{{
+                    colorName
+                }}</span>
+                <template v-if="colorName && (meta || $slots.meta)">
+                    ·
+                </template>
                 <slot name="meta">{{ meta }}</slot>
             </p>
         </div>
@@ -32,6 +41,7 @@
 <script setup lang="ts">
 import type { RouteLocationRaw } from 'vue-router'
 import type { GradeSource } from '#shared/utils/grades'
+import { translatedColorName } from '~/utils/colorName'
 
 const DOT_SIZES = { sm: 16, md: 28, lg: 36 }
 
@@ -54,5 +64,7 @@ const props = withDefaults(
     { size: 'md', meta: undefined, to: undefined },
 )
 
+const { t } = useI18n()
 const small = computed(() => props.size === 'sm')
+const colorName = computed(() => translatedColorName(t, props.route?.color))
 </script>

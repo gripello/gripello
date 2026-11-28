@@ -94,15 +94,45 @@ describe('PasswordChangeFields – validity emit', () => {
         expect(emits[emits.length - 1]).toEqual([false])
     })
 
-    it('emits validity=false for a weak password (no uppercase/numbers/special)', () => {
+    it('accepts a passphrase without uppercase, digits or symbols', () => {
+        const phrase = 'correct horse battery staple'
         const wrapper = createWrapper({
             requireOldPassword: false,
-            password: 'onlylower',
-            passwordConfirm: 'onlylower',
+            password: phrase,
+            passwordConfirm: phrase,
+        })
+
+        const emits = wrapper.emitted('validity')!
+        expect(emits[emits.length - 1]).toEqual([true])
+    })
+
+    it('rejects 7 characters', () => {
+        const wrapper = createWrapper({
+            requireOldPassword: false,
+            password: 'abcdefg',
+            passwordConfirm: 'abcdefg',
         })
 
         const emits = wrapper.emitted('validity')!
         expect(emits[emits.length - 1]).toEqual([false])
+    })
+
+    it('rates a long passphrase strong', () => {
+        const wrapper = createWrapper({
+            requireOldPassword: false,
+            password: 'correct horse battery staple',
+        })
+
+        expect(wrapper.text()).toContain('account.strength.strong')
+    })
+
+    it('rates a short single-class password below good', () => {
+        const wrapper = createWrapper({
+            requireOldPassword: false,
+            password: 'onlylower',
+        })
+
+        expect(wrapper.text()).toContain('account.strength.fair')
     })
 
     it('emits validity=false in change flow when old password is empty', () => {

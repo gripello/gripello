@@ -109,7 +109,11 @@ const props = withDefaults(
 
 const labelId = useId()
 
-const accent = computed(() => `var(--ui-${props.color})`)
+const accent = computed(() =>
+    props.color === 'neutral'
+        ? 'var(--ui-text-muted)'
+        : `var(--ui-${props.color})`,
+)
 const tint = computed(
     () => `color-mix(in oklab, ${accent.value} 12%, transparent)`,
 )
@@ -121,7 +125,7 @@ const delta = computed(() =>
 
 const sparkPoints = computed(() => {
     if (props.spark.length < 2) return ''
-    const max = Math.max(...props.spark, 1)
+    const max = Math.max(...props.spark) || 1
     const step = 100 / (props.spark.length - 1)
     return props.spark
         .map((value, index) => `${index * step},${22 - (value / max) * 20}`)

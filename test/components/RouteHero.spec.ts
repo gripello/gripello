@@ -65,6 +65,28 @@ function mountHero(
 }
 
 describe('RouteHero', () => {
+    it('names the hold colour in a chip', () => {
+        expect(
+            mountHero([]).get('[data-testid="route-color-chip"]').text(),
+        ).toBe('Rot')
+        expect(
+            mountHero([], { color: '' })
+                .find('[data-testid="route-color-chip"]')
+                .exists(),
+        ).toBe(false)
+    })
+
+    it('marks an archived route', () => {
+        expect(
+            mountHero([]).find('[data-testid="route-archived"]').exists(),
+        ).toBe(false)
+        expect(
+            mountHero([], { archived: true })
+                .get('[data-testid="route-archived"]')
+                .text(),
+        ).toBe('Archiviert')
+    })
+
     it('opens the grade conversion from the whole grade card', async () => {
         const wrapper = mountHero([])
         const card = wrapper.get('[data-testid="route-grade-badge"]')

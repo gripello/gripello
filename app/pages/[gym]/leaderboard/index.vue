@@ -142,7 +142,8 @@ const gymPath = useGymPath()
 const { can } = usePermissions()
 const canManage = computed(() => can('manage_competitions'))
 const myId = authStore.record?.id ?? ''
-const hidden = !!authStore.record?.leaderboard_hidden
+const hidden =
+    !!authStore.record?.leaderboard_hidden || !!authStore.record?.ticks_private
 
 const { gym } = useGym()
 useSeoMeta({

@@ -23,6 +23,10 @@ export function sortEndpoints(endpoints: TrafficEndpoint[], by: EndpointSort) {
     return [...endpoints].sort((a, b) => key[by](b) - key[by](a))
 }
 
+export function serverErrorKpiColor(rate: number | null) {
+    return rate ? 'error' : 'neutral'
+}
+
 export function errorRateColor(rate: number) {
     return rate >= 0.05 ? 'error' : rate >= 0.01 ? 'warning' : 'success'
 }

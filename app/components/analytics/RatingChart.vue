@@ -33,7 +33,7 @@ const option = computed(() => ({
     backgroundColor: 'transparent',
     tooltip: itemTooltip(colors.value, ({ data }) => {
         const route = data.route as RatedRoute
-        return `<strong>${escapeHtml(route.name)}</strong> · ${route.grade}<br/>
+        return `<strong>${escapeHtml(route.name)}</strong> · ${escapeHtml(route.grade)}<br/>
             ★ ${formatNumber(route.averageRating, locale.value, 2)} · ${t('analytics.labels.ratingCount', { n: route.ratings }, route.ratings)}`
     }),
     grid: { ...gridBase, left: 12, top: 28, right: 48 },

@@ -71,11 +71,7 @@
             "strong": "Fort"
         },
         "requirements": {
-            "minLength": "Au moins 8 caractères",
-            "uppercase": "Lettre majuscule (A–Z)",
-            "lowercase": "Lettre minuscule (a–z)",
-            "number": "Chiffre (0–9)",
-            "special": "Caractère spécial (!{'@'}#...)"
+            "minLength": "Au moins 8 caractères"
         },
         "capsLockOn": "Verr. Maj est activé",
         "eyebrowWelcomeBack": "BON RETOUR",
@@ -478,7 +474,8 @@
             "emailChange": "Votre adresse e-mail a été modifiée. Veuillez vous reconnecter.",
             "passwordChanged": "Votre mot de passe a été défini. Vous pouvez maintenant vous connecter.",
             "registered": "Compte créé. Confirmez votre adresse via le lien reçu par e-mail, puis connectez-vous.",
-            "verificationSent": "Si un compte non confirmé existe, un nouveau lien de confirmation vous a été envoyé."
+            "verificationSent": "Si un compte non confirmé existe, un nouveau lien de confirmation vous a été envoyé.",
+            "archived": "Voie archivée."
         },
         "error": {
             "resetPassword": "Impossible d’envoyer le lien de réinitialisation.",
@@ -499,8 +496,12 @@
             "account_locked": "Trop de tentatives échouées. Réessaie dans 15 minutes.",
             "mfa_expired": "La connexion a pris trop de temps. Reconnecte-toi."
         },
-        "deleteItem": "Supprimer cet élément ? Cette action est irréversible.",
+        "deleteRouteTitle": "Supprimer « {name} » ?",
+        "deleteRoute": "La voie est supprimée définitivement et son étiquette QR ne fonctionne plus.",
+        "deleteRouteWithHistoryTitle": "Supprimer « {name} » et son historique ?",
         "deleteRouteWithHistory": "Cette voie a des avis, des vidéos bêta ou des résultats de compétition. La supprimer les efface aussi. Archivez-la pour les conserver.",
+        "deleteEverything": "Tout supprimer",
+        "archiveInstead": "Archiver plutôt",
         "archiveMoreItems": "Archiver les voies sélectionnées ?",
         "updateAvailable": "Mise à jour disponible",
         "releaseNotes": {
@@ -832,9 +833,23 @@
         "maxLength": "Maximum {n} caractère. | Maximum {n} caractères.",
         "passwordMismatch": "Les mots de passe ne correspondent pas.",
         "integerRange": "Saisissez un nombre entier de {min} à {max}.",
-        "passwordTooWeak": "Le mot de passe doit être au moins « Bon ».",
         "email": "Veuillez saisir une adresse e-mail valide.",
-        "invalid": "Cette valeur n'est pas valide."
+        "invalid": "Cette valeur n'est pas valide.",
+        "notUnique": "Déjà utilisé. Choisissez autre chose.",
+        "previousSlugs": "Utilisez des noms d’URL valides qu’aucune autre salle n’utilise.",
+        "httpsUrl": "Saisissez une adresse complète commençant par https://.",
+        "linkInvalid": "Ce lien est invalide ou a expiré. Demandez-en un nouveau.",
+        "date": "Saisissez une date valide.",
+        "futureDate": "Choisissez une date dans le futur.",
+        "role": "Choisissez un des rôles de cette salle.",
+        "missingRecord": "Cet élément n’existe plus. Choisissez-en un autre.",
+        "permission": "Permission inconnue. Rechargez la page et réessayez.",
+        "ownEmail": "Modifiez votre propre adresse e-mail dans les paramètres de votre compte.",
+        "wallHasRoutes": "Déplacez ou archivez d’abord les voies de ce mur.",
+        "lengthRange": "Saisissez de {min} à {max} caractères.",
+        "tooMany": "Choisissez-en {n} au maximum.",
+        "atLeast": "Saisissez {n} ou plus.",
+        "tooLong": "Trop long. Raccourcissez le texte."
     },
     "captcha": {
         "verifying": "Vérification… {progress} %"
@@ -865,7 +880,8 @@
         "paletteOpen": "ouvrir",
         "paletteClose": "fermer",
         "commandPalette": "Rechercher",
-        "commandPalettePlaceholder": "Nom de voie, ouvreur ou cotation (ex. 6+)",
+        "commandPalettePlaceholder": "Rechercher dans {gym}",
+        "paletteAllRoutes": "Les {n} voies",
         "commandPaletteEmpty": "Aucun résultat",
         "themeToggle": "Changer de thème",
         "themeSystem": "Thème du système",
@@ -1086,7 +1102,8 @@
             "removeScreen": "Supprimer l’écran",
             "screenName": "Nom",
             "screenNumber": "Écran {n}"
-        }
+        },
+        "discardChanges": "Abandonner les modifications non enregistrées ?"
     },
     "errors": {
         "notFound": {
@@ -1467,7 +1484,7 @@
         "saved": "Réussite enregistrée.",
         "saveError": "La réussite n'a pas pu être enregistrée.",
         "deleted": "Réussite supprimée.",
-        "deleteConfirm": "Supprimer cette réussite ? Cette action est irréversible.",
+        "deleteConfirm": "Cette action est irréversible.",
         "sent": "Réussie",
         "moreActions": "Plus d'actions",
         "types": {
@@ -1528,7 +1545,8 @@
         "savedOffline": "Réussite enregistrée hors ligne. Elle sera synchronisée dès votre retour en ligne.",
         "syncFailed": "Échec de la synchronisation",
         "gym": "Salle",
-        "allGyms": "Toutes les salles"
+        "allGyms": "Toutes les salles",
+        "deleteTitle": "Supprimer la réussite de « {name} » ?"
     },
     "map": {
         "title": "Plan de la salle",
@@ -2097,7 +2115,7 @@
         "search": "Rechercher des membres…",
         "noMembers": "Aucun membre trouvé",
         "remove": "Retirer le membre",
-        "removeConfirm": "Retirer cette personne de l’équipe de la salle ? Son compte est conservé.",
+        "removeConfirm": "Retirer {name} de l’équipe de la salle ? Son compte est conservé.",
         "removed": "Membre retiré.",
         "alreadyMember": "Cette personne est déjà membre.",
         "invited": "Invitation envoyée.",
@@ -2106,7 +2124,8 @@
             "routesetter": "Ouvreur",
             "public": "Public"
         },
-        "rowActions": "Actions du membre"
+        "rowActions": "Actions du membre",
+        "removeAction": "Retirer"
     },
     "invites": {
         "eyebrow": "INVITATION",
@@ -2565,8 +2584,9 @@
             "daily": "Sauvegardes quotidiennes",
             "keepCount": "Sauvegardes à conserver",
             "estimate": "≈ {size} sur le disque",
-            "restore": "Restaurer",
+            "restore": "La restauration remplace toute la base de données",
             "copyCommand": "Copier la commande",
+            "copyRestore": "Copier la commande de restauration",
             "lastBackup": "Dernière sauvegarde",
             "failed": "Échec",
             "nextBackup": "Prochaine sauvegarde",
@@ -3440,5 +3460,11 @@
         "competition": "{name} : programme, catégories et résultats en direct.",
         "leaderboard": "Classement de {name} : grimpeurs classés selon leurs meilleures croix.",
         "privacy": "Comment {name} traite les données personnelles."
+    },
+    "dialog": {
+        "discardChanges": {
+            "title": "Abandonner les modifications ?",
+            "message": "Vos modifications non enregistrées seront perdues."
+        }
     }
 }

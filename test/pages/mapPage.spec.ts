@@ -6,24 +6,20 @@ const source = readFileSync(
     'utf8',
 )
 
-describe('map page server-side filter', () => {
-    it('dims nothing until the matching routes have loaded', () => {
+describe('map page search', () => {
+    it('matches the loaded location routes locally instead of asking the server per keystroke', () => {
         expect(source).toMatch(
-            /const serverIds =\s+hasServerFilter\.value && serverMatches\.value\s+\? new Set\(serverMatches\.value\.map/,
+            /routes\.value\s+\.filter\(\s+\(item\) =>\s+!hasRouteQuery\.value \|\|\s+routeMatchesQuery\(item, routeQuery\.value\)/,
         )
+        expect(source.match(/listRoutes\(/g)).toHaveLength(1)
         expect(source).toContain(
-            'if (!serverIds && !hasSentFilter && !colorFilter.value) return null',
+            'listRoutes(gymId.value, { location: locationId.value })',
         )
-        expect(source).not.toContain('serverMatches.value ?? []')
     })
 
-    it('shows the load error with a retry when the matching fetch fails', () => {
-        expect(source).toMatch(/error: matchesError,\s+refresh: refreshMatches/)
+    it('shows the load error only for the map data itself', () => {
         expect(source).toMatch(
-            /const loadFailed = computed\([\s\S]+?!!matchesError\.value/,
-        )
-        expect(source).toMatch(
-            /async function retryLoad\(\) \{[\s\S]+?refreshMatches\(\)/,
+            /const loadFailed = computed\(\s+\(\) =>\s+!!routesError\.value \|\|\s+!!wallsError\.value \|\|\s+!!locationsError\.value,?\s+\)/,
         )
         expect(source).toMatch(
             /v-if="loadFailed"[\s\S]+?<LayoutLoadError[^>]+@retry="retryLoad"/,

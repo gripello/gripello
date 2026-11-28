@@ -1,5 +1,5 @@
 import { reportCaughtError } from '~/utils/clientErrors'
-import { isAbortOrNetworkError } from '~/utils/errors'
+import { isAbortError, isNetworkError, requestErrorKey } from '~/utils/errors'
 import type { RecordChange } from '~/composables/useRealtime'
 import type { NotificationRecord } from '~/types/models'
 import {
@@ -25,6 +25,9 @@ export function useNotificationQueue() {
     const authStore = useAuthStore()
     const items = useState<NotificationRecord[]>('notification-queue', () => [])
     const loaded = useState<boolean>('notification-queue-loaded', () => false)
+    const failed = useState<boolean>('notification-queue-failed', () => false)
+    const { t } = useI18n()
+    const { error: notifyError } = useNotification()
 
     const unreadCount = computed(
         () => items.value.filter((item) => !item.read).length,
@@ -43,13 +46,19 @@ export function useNotificationQueue() {
             const { items: listed } = await listNotifications()
             items.value = seen.reduce(applyChange, listed)
             loaded.value = true
+            failed.value = false
         } catch (err) {
-            if (isAbortOrNetworkError(err)) return
-            reportCaughtError(err)
-            loaded.value = true
+            if (isAbortError(err)) return
+            failed.value = true
+            if (!isNetworkError(err)) reportCaughtError(err)
         } finally {
             eventsDuringRefresh.delete(seen)
         }
+    }
+
+    function changeFailed(err: unknown, fallback: string) {
+        notifyError(t(requestErrorKey(err, fallback)))
+        if (!isNetworkError(err)) reportCaughtError(err)
     }
 
     function applyEvent(change: RecordChange<NotificationRecord>) {
@@ -66,7 +75,7 @@ export function useNotificationQueue() {
             await markNotificationsRead({ ids: [id] })
         } catch (err) {
             item.read = false
-            reportCaughtError(err)
+            changeFailed(err, 'notifications.error.edit')
         }
     }
 
@@ -79,7 +88,7 @@ export function useNotificationQueue() {
             await markNotificationsRead({ ids: unread.map((item) => item.id) })
         } catch (err) {
             unread.forEach((item) => (item.read = false))
-            reportCaughtError(err)
+            changeFailed(err, 'notifications.error.edit')
         }
     }
 
@@ -92,13 +101,14 @@ export function useNotificationQueue() {
             await deleteNotification(id)
         } catch (err) {
             if (removed) items.value.splice(index, 0, removed)
-            reportCaughtError(err)
+            changeFailed(err, 'notifications.error.delete')
         }
     }
 
     return {
         items,
         loaded,
+        failed,
         unreadCount,
         refresh,
         applyEvent,

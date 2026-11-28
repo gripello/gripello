@@ -16,6 +16,8 @@ vi.stubGlobal('computed', vueComputed)
 
 let apiMock: any
 vi.stubGlobal('useAuthStore', () => apiMock.authStore)
+const notifyError = vi.fn()
+vi.stubGlobal('useNotification', () => ({ error: notifyError }))
 
 function record(id: string, read = false) {
     return { id, user: 'u1', type: 'report_filed', read, created: '' }
@@ -37,6 +39,7 @@ describe('useNotificationQueue', () => {
         vi.resetModules()
         for (const key of Object.keys(useStateMocks)) delete useStateMocks[key]
         apiMock = { authStore: { isValid: true } }
+        notifyError.mockClear()
     })
 
     async function loadComposable() {
@@ -79,6 +82,7 @@ describe('useNotificationQueue', () => {
         await markRead('a')
 
         expect(unreadCount.value).toBe(1)
+        expect(notifyError).toHaveBeenCalledWith('notifications.error.edit')
         consoleError.mockRestore()
     })
 
@@ -108,6 +112,7 @@ describe('useNotificationQueue', () => {
         await dismiss('a')
 
         expect(items.value.map((i: any) => i.id)).toEqual(['a', 'b'])
+        expect(notifyError).toHaveBeenCalledWith('notifications.error.delete')
         consoleError.mockRestore()
     })
 
@@ -138,6 +143,7 @@ describe('useNotificationQueue', () => {
         await markAllRead()
 
         expect(unreadCount.value).toBe(2)
+        expect(notifyError).toHaveBeenCalledWith('notifications.error.edit')
         consoleError.mockRestore()
     })
 
@@ -156,6 +162,52 @@ describe('useNotificationQueue', () => {
         await refresh()
 
         expect(items.value).toHaveLength(1)
+    })
+
+    it('says when a change was rate limited', async () => {
+        serve([record('a')], () =>
+            Promise.reject(
+                Object.assign(new Error('slow down'), { status: 429 }),
+            ),
+        )
+        const consoleError = vi
+            .spyOn(console, 'error')
+            .mockImplementation(() => {})
+        const { refresh, dismiss } = await loadComposable()
+        await refresh()
+        await dismiss('a')
+
+        expect(notifyError).toHaveBeenCalledWith('errors.rateLimited')
+        consoleError.mockRestore()
+    })
+
+    it('marks the list failed when the first load drops, and recovers on retry', async () => {
+        routeApi(() =>
+            Promise.reject(Object.assign(new Error('offline'), { status: 0 })),
+        )
+        const { refresh, loaded, failed } = await loadComposable()
+        await refresh()
+        expect(failed.value).toBe(true)
+        expect(loaded.value).toBe(false)
+
+        serve([record('a')])
+        await refresh()
+        expect(failed.value).toBe(false)
+        expect(loaded.value).toBe(true)
+    })
+
+    it('does not mark an aborted load as failed', async () => {
+        routeApi(() =>
+            Promise.reject(
+                Object.assign(new Error('aborted'), {
+                    isAbort: true,
+                    status: 0,
+                }),
+            ),
+        )
+        const { refresh, failed } = await loadComposable()
+        await refresh()
+        expect(failed.value).toBe(false)
     })
 
     it('applies realtime events without refetching', async () => {

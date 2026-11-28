@@ -139,25 +139,6 @@ describe('realtime cache plugin', () => {
         expect(refreshNuxtData).toHaveBeenCalledWith('routes-list')
     })
 
-    it('adds and drops map highlights as routes start or stop matching', async () => {
-        const app = await startPlugin(
-            { 'map-matching': [{ id: 'r1' }] },
-            { 'map-matching': { grade: ['6a'], location: 'l1' } },
-        )
-        const route = { gym: 'g1', name: 'x', location: 'l1' }
-        emit('gym_changes:g1', {
-            collection: 'routes',
-            action: 'update',
-            record: { ...route, id: 'r2', grade: '6a' },
-        })
-        emit('gym_changes:g1', {
-            collection: 'routes',
-            action: 'update',
-            record: { ...route, id: 'r1', grade: '7a' },
-        })
-        expect(app.payload.data['map-matching']).toEqual([{ id: 'r2' }])
-    })
-
     it('reloads own achievements after a tick and an earned badge', async () => {
         await startPlugin({ 'achievements:me': [], logbook: [] })
         emit('own_ticks', { action: 'create', record: { user: 'me' } })

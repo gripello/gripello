@@ -71,11 +71,7 @@
             "strong": "Stark"
         },
         "requirements": {
-            "minLength": "Mindestens 8 Zeichen",
-            "uppercase": "Großbuchstabe (A–Z)",
-            "lowercase": "Kleinbuchstabe (a–z)",
-            "number": "Zahl (0–9)",
-            "special": "Sonderzeichen (!{'@'}#...)"
+            "minLength": "Mindestens 8 Zeichen"
         },
         "capsLockOn": "Feststelltaste ist aktiv",
         "eyebrowWelcomeBack": "WILLKOMMEN ZURÜCK",
@@ -478,7 +474,8 @@
             "emailChange": "Deine E-Mail-Adresse wurde geändert. Bitte melde dich erneut an.",
             "passwordChanged": "Dein Passwort wurde gesetzt. Du kannst dich jetzt anmelden.",
             "registered": "Konto erstellt. Bestätige deine E-Mail-Adresse über den Link in deinem Postfach und melde dich dann an.",
-            "verificationSent": "Falls ein unbestätigtes Konto existiert, ist ein neuer Bestätigungslink unterwegs."
+            "verificationSent": "Falls ein unbestätigtes Konto existiert, ist ein neuer Bestätigungslink unterwegs.",
+            "archived": "Route archiviert."
         },
         "error": {
             "resetPassword": "Der Link zum Zurücksetzen konnte nicht gesendet werden.",
@@ -499,8 +496,12 @@
             "account_locked": "Zu viele Fehlversuche. Versuche es in 15 Minuten erneut.",
             "mfa_expired": "Die Anmeldung hat zu lange gedauert. Bitte melde dich erneut an."
         },
-        "deleteItem": "Diesen Eintrag löschen? Das kann nicht rückgängig gemacht werden.",
+        "deleteRouteTitle": "„{name}“ löschen?",
+        "deleteRoute": "Die Route wird endgültig entfernt und ihr QR-Schild funktioniert nicht mehr.",
+        "deleteRouteWithHistoryTitle": "„{name}“ samt Verlauf löschen?",
         "deleteRouteWithHistory": "Diese Route hat Bewertungen, Beta-Videos oder Wettkampfergebnisse. Beim Löschen werden sie mit entfernt. Archiviere sie stattdessen, um sie zu behalten.",
+        "deleteEverything": "Alles löschen",
+        "archiveInstead": "Stattdessen archivieren",
         "archiveMoreItems": "Die ausgewählten Routen archivieren?",
         "updateAvailable": "Update verfügbar",
         "releaseNotes": {
@@ -832,9 +833,23 @@
         "maxLength": "Maximal {n} Zeichen.",
         "passwordMismatch": "Passwörter stimmen nicht überein.",
         "integerRange": "Gib eine ganze Zahl von {min} bis {max} ein.",
-        "passwordTooWeak": "Passwort muss mindestens „Gut“ sein.",
         "email": "Bitte gib eine gültige E-Mail-Adresse ein.",
-        "invalid": "Dieser Wert ist ungültig."
+        "invalid": "Dieser Wert ist ungültig.",
+        "notUnique": "Wird schon verwendet. Wähle etwas anderes.",
+        "previousSlugs": "Verwende gültige URL-Namen, die keine andere Halle nutzt.",
+        "httpsUrl": "Gib eine vollständige Adresse ein, die mit https:// beginnt.",
+        "linkInvalid": "Dieser Link ist ungültig oder abgelaufen. Fordere einen neuen an.",
+        "date": "Gib ein gültiges Datum ein.",
+        "futureDate": "Wähle ein Datum in der Zukunft.",
+        "role": "Wähle eine Rolle dieser Halle.",
+        "missingRecord": "Existiert nicht mehr. Wähle etwas anderes.",
+        "permission": "Unbekannte Berechtigung. Lade die Seite neu und versuche es noch einmal.",
+        "ownEmail": "Ändere deine eigene E-Mail-Adresse in deinen Kontoeinstellungen.",
+        "wallHasRoutes": "Verschiebe oder archiviere zuerst die Routen an dieser Wand.",
+        "lengthRange": "Gib {min} bis {max} Zeichen ein.",
+        "tooMany": "Wähle höchstens {n}.",
+        "atLeast": "Gib {n} oder mehr ein.",
+        "tooLong": "Zu lang. Bitte kürze den Text."
     },
     "captcha": {
         "verifying": "Überprüfung… {progress}%"
@@ -865,7 +880,8 @@
         "paletteOpen": "öffnen",
         "paletteClose": "schließen",
         "commandPalette": "Suche",
-        "commandPalettePlaceholder": "Routenname, Schrauber oder Grad (z. B. 6+)",
+        "commandPalettePlaceholder": "{gym} durchsuchen",
+        "paletteAllRoutes": "Alle {n} Routen",
         "commandPaletteEmpty": "Keine Ergebnisse",
         "themeToggle": "Design wechseln",
         "themeSystem": "Systemdesign",
@@ -1086,7 +1102,8 @@
             "removeScreen": "Bildschirm entfernen",
             "screenName": "Name",
             "screenNumber": "Bildschirm {n}"
-        }
+        },
+        "discardChanges": "Ungespeicherte Änderungen verwerfen?"
     },
     "errors": {
         "notFound": {
@@ -1467,7 +1484,7 @@
         "saved": "Begehung gespeichert.",
         "saveError": "Die Begehung konnte nicht gespeichert werden.",
         "deleted": "Begehung gelöscht.",
-        "deleteConfirm": "Diese Begehung löschen? Das kann nicht rückgängig gemacht werden.",
+        "deleteConfirm": "Das kann nicht rückgängig gemacht werden.",
         "sent": "Geschafft",
         "moreActions": "Weitere Aktionen",
         "types": {
@@ -1528,7 +1545,8 @@
         "savedOffline": "Begehung offline gespeichert. Sie wird synchronisiert, sobald du wieder online bist.",
         "syncFailed": "Synchronisierung fehlgeschlagen",
         "gym": "Halle",
-        "allGyms": "Alle Hallen"
+        "allGyms": "Alle Hallen",
+        "deleteTitle": "Begehung von „{name}“ löschen?"
     },
     "map": {
         "title": "Hallenplan",
@@ -2097,7 +2115,7 @@
         "search": "Mitglieder suchen…",
         "noMembers": "Keine Mitglieder gefunden",
         "remove": "Mitglied entfernen",
-        "removeConfirm": "Diese Person aus dem Team der Halle entfernen? Das Konto bleibt bestehen.",
+        "removeConfirm": "{name} aus dem Team der Halle entfernen? Das Konto bleibt bestehen.",
         "removed": "Mitglied entfernt.",
         "alreadyMember": "Diese Person ist bereits Mitglied.",
         "invited": "Einladung verschickt.",
@@ -2106,7 +2124,8 @@
             "routesetter": "Routenschrauber",
             "public": "Öffentlich"
         },
-        "rowActions": "Aktionen für Mitglied"
+        "rowActions": "Aktionen für Mitglied",
+        "removeAction": "Entfernen"
     },
     "invites": {
         "eyebrow": "EINLADUNG",
@@ -2565,8 +2584,9 @@
             "daily": "Tägliche Sicherung",
             "keepCount": "Aufzubewahrende Sicherungen",
             "estimate": "≈ {size} auf der Festplatte",
-            "restore": "Wiederherstellen",
+            "restore": "Wiederherstellen ersetzt die ganze Datenbank",
             "copyCommand": "Befehl kopieren",
+            "copyRestore": "Wiederherstellungsbefehl kopieren",
             "lastBackup": "Letzte Sicherung",
             "failed": "Fehlgeschlagen",
             "nextBackup": "Nächste Sicherung",
@@ -3440,5 +3460,11 @@
         "competition": "{name}: Ablauf, Kategorien und Live-Ergebnisse.",
         "leaderboard": "Bestenliste von {name}: Kletternde nach ihren besten Begehungen.",
         "privacy": "Wie {name} personenbezogene Daten verarbeitet."
+    },
+    "dialog": {
+        "discardChanges": {
+            "title": "Änderungen verwerfen?",
+            "message": "Deine ungespeicherten Änderungen gehen verloren."
+        }
     }
 }

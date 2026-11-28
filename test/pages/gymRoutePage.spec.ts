@@ -24,6 +24,12 @@ describe('gym route page', () => {
         )
     })
 
+    it('offers no new review on an archived route but keeps editing your own', () => {
+        expect(source).toMatch(
+            /v-if="!metadata\.archived \|\| myReview"\s+:color="isLoggedIn \? 'neutral' : 'primary'"[\s\S]+?data-testid="review-open-cta"/,
+        )
+    })
+
     it('offers a retry when reviews or defects fail to load instead of hiding them', () => {
         expect(source).toMatch(
             /keepShownOnError\(ratingsKey,[\s\S]+?\{ default: \(\) => \[\] \}/,

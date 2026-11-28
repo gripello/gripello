@@ -20,11 +20,8 @@
         data-testid="review-form-dialog"
         :submit-label="isEditMode ? $t('actions.save') : $t('actions.submit')"
         :submit-loading="saving"
-        :submit-disabled="
-            isEditMode
-                ? !staffEdit && !form.rating
-                : !isFormValid || !form.rating
-        "
+        :submit-disabled="!staffEdit && !hasContent"
+        :dirty="dirty"
         :captcha="!isEditMode"
         submit-test-id="review-form-submit"
         cancel-test-id="review-form-cancel"
@@ -45,12 +42,7 @@
             </div>
         </div>
 
-        <UForm
-            ref="formRef"
-            :state="form"
-            :validate="(state) => validateRules(state, formRules)"
-            @submit.prevent
-        >
+        <UForm ref="formRef" :state="form" @submit.prevent>
             <div class="grid grid-cols-12 items-end gap-4 mb-4">
                 <UFormField
                     :label="$t('ratings.stars')"
@@ -84,22 +76,24 @@
                 </UFormField>
 
                 <UFormField
-                    :label="`${$t('ratings.difficulty')} (${$t(`gradeSystems.${gradeSystem}`)})`"
+                    :label="gradeLabel"
                     name="grade"
                     class="col-span-12 sm:col-span-6"
                 >
-                    <SegmentedControl
+                    <OptionGrid
                         v-if="nearbyGrades"
-                        v-model="selectedGrade"
+                        v-model="form.grade"
                         :items="
                             nearbyGrades.map((grade) => ({
                                 value: grade,
                                 label: grade,
                             }))
                         "
-                        size="md"
-                        block
-                        test-id="review-form-difficulty"
+                        :label="gradeLabel"
+                        cols="grid-cols-5"
+                        deselectable
+                        data-testid="review-form-difficulty"
+                        test-id-prefix="review-form-difficulty"
                     />
                     <USelectMenu
                         v-else
@@ -132,12 +126,6 @@
 
 <script setup lang="ts">
 import { createRating, updateRating, type RatingInput } from '~/api/ratings'
-import {
-    required,
-    nonBlank,
-    validateRules,
-    type Rule,
-} from '~/utils/validation'
 import {
     DEFAULT_ROUTE_GRADE_SYSTEM,
     canonicalGrade,
@@ -200,12 +188,10 @@ const nearbyGrades = computed(() =>
         : null,
 )
 
-const selectedGrade = computed({
-    get: () => form.grade ?? routeGradeLabel.value ?? '',
-    set: (grade: string) => {
-        form.grade = grade
-    },
-})
+const gradeLabel = computed(
+    () =>
+        `${t('ratings.difficulty')} (${t(`gradeSystems.${gradeSystem.value}`)})`,
+)
 
 // ── Open state ─────────────────────────────────────────────────────────────
 
@@ -236,56 +222,39 @@ const form = reactive({
     comment: '',
 })
 
-const rules = {
-    required: required(t),
-    requiredAndNotEmpty: nonBlank(t),
-}
+const snapshot = () => JSON.stringify(form)
+const baseline = ref(snapshot())
+const dirty = computed(() => snapshot() !== baseline.value)
 
-const formRules = computed((): Record<string, Rule[]> =>
-    isEditMode.value
-        ? {}
-        : { grade: [rules.required], comment: [rules.requiredAndNotEmpty] },
-)
-
-const isFormValid = computed(
-    () => validateRules(form, formRules.value).length === 0,
+const hasContent = computed(
+    () => !!form.rating || !!form.grade || form.comment.trim() !== '',
 )
 
 watch(
-    () => props.review,
-    (review) => {
-        if (review) {
-            form.rating = review.rating ?? undefined
-            form.grade = review.grade || null
-            form.comment = review.comment ?? ''
-        }
-    },
-    { immediate: true },
-)
-
-watch(sheetOpen, (open) => {
-    if (open) {
-        if (props.review) {
+    sheetOpen,
+    (open) => {
+        if (open && props.review) {
             form.rating = props.review.rating ?? undefined
             form.grade = props.review.grade || null
             form.comment = props.review.comment ?? ''
-        } else {
+        } else if (open || !isEditMode.value) {
             resetForm()
         }
-    } else if (!isEditMode.value) {
-        resetForm()
-    }
-})
+        baseline.value = snapshot()
+    },
+    { immediate: true },
+)
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function resetForm() {
     form.rating = undefined
-    form.grade = routeGradeLabel.value
+    form.grade = null
     form.comment = ''
 }
 
 function close() {
+    baseline.value = snapshot()
     sheetOpen.value = false
 }
 

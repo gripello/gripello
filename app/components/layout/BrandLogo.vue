@@ -9,7 +9,7 @@
             v-if="logoUrl"
             :src="logoUrl"
             :alt="logoAlt"
-            class="brand-logo__custom logo-mono"
+            class="brand-logo__custom logo-chip"
             data-testid="nav-logo-custom"
         />
         <template v-else>
@@ -49,7 +49,6 @@ const logoUrl = computed(() =>
 .brand-logo__custom {
     max-width: 90px;
     max-height: 44px;
-    transition: filter 0.3s ease;
 }
 
 .brand-logo__default {

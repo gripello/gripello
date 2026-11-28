@@ -115,7 +115,7 @@
         <ConfirmDialog
             v-model="discardDialogOpen"
             :title="$t('account.unsavedChanges')"
-            :message="$t('mapEditor.discard')"
+            :message="$t('settings.discardChanges')"
             :confirm-text="$t('mapPlacement.discard')"
             @confirm="settleDiscard(true)"
         />

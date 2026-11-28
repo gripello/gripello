@@ -6,6 +6,7 @@ test('pdf export asks for language and fields before printing', async ({
 }) => {
     await gotoSettled(page, '/manage/routes')
     await page.getByTestId('routes-select-all').click()
+    await page.getByTestId('routes-export').click()
     await page.getByTestId('routes-export-pdf').click()
 
     const dialog = page.getByTestId('export-options-dialog')
@@ -34,6 +35,7 @@ test('xlsx export translates headers into the chosen language', async ({
 }) => {
     await gotoSettled(page, '/manage/routes')
     await page.getByTestId('routes-select-all').click()
+    await page.getByTestId('routes-export').click()
     await page.getByTestId('routes-export-xlsx').click()
 
     await page.getByTestId('export-locale').click()

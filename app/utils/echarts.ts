@@ -81,9 +81,9 @@ export function buildTooltip(
     value: string | number,
     unit: string,
 ) {
-    return `<span style="font-size:13px;color:${colors.tooltipMuted}">${name}</span><br/>
-            <span style="font-weight:600;font-size:15px;color:${colors.tooltipText}">${value}</span>
-            <span style="font-size:12px;color:${colors.tooltipMuted};margin-left:4px">${unit}</span>`
+    return `<span style="font-size:13px;color:${colors.tooltipMuted}">${escapeHtml(name)}</span><br/>
+            <span style="font-weight:600;font-size:15px;color:${colors.tooltipText}">${escapeHtml(String(value))}</span>
+            <span style="font-size:12px;color:${colors.tooltipMuted};margin-left:4px">${escapeHtml(unit)}</span>`
 }
 
 export function tooltipBase(colors: ChartColors) {

@@ -2,13 +2,9 @@
     <div class="flex min-w-0 items-center gap-3">
         <span
             v-if="logoUrl"
-            class="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-elevated p-1"
+            class="inline-flex size-10 shrink-0 items-center justify-center logo-chip p-1"
         >
-            <img
-                :src="logoUrl"
-                alt=""
-                class="logo-mono size-full object-contain"
-            />
+            <img :src="logoUrl" alt="" class="size-full object-contain" />
         </span>
         <span
             v-else

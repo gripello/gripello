@@ -66,7 +66,9 @@ test('a judge records lead heights, staff export results and tops reach the logb
     await expect(setterPage.getByTestId('judge-route-name')).toContainText(
         rope.name,
     )
-    await expect(setterPage.getByTestId('judge-route-details')).toBeVisible()
+    await expect(
+        setterPage.getByTestId('route-summary-color').first(),
+    ).toBeVisible()
     const row = setterPage.getByTestId(`judge-entry-${entry.bib}`)
     await row.getByTestId(`judge-height-${entry.bib}`).fill('22')
     await row.getByTestId(`judge-height-${entry.bib}`).blur()

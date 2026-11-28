@@ -9,6 +9,7 @@ import { normalizeCreators } from '#shared/utils/formatting'
 import { formatGrade } from '#shared/utils/grades'
 import { routeSearchQuery } from '~/utils/routeSearch'
 import { moderationText } from '~/utils/moderation'
+import { isOfflineError, requestErrorKey } from '~/utils/errors'
 
 export interface SearchResult {
     key: string
@@ -23,9 +24,19 @@ export interface SearchGroup {
     key: string
     label: string
     items: SearchResult[]
+    error?: unknown
+}
+
+export function searchFailureKey(groups: SearchGroup[]) {
+    const failed = groups.find((group) => group.error)
+    if (!failed) return null
+    return isOfflineError(failed.error)
+        ? 'errors.offline.title'
+        : requestErrorKey(failed.error, 'errors.loadFailed')
 }
 
 const RESULTS_PER_GROUP = 5
+const ROUTE_RESULTS = 8
 
 const SETTINGS_SECTIONS = [
     {
@@ -77,9 +88,10 @@ export function useGlobalSearch() {
             ...search,
             sort: 'name',
             page: 1,
-            limit: 8,
+            limit: ROUTE_RESULTS,
+            total: true,
         })
-        return res.items.map((route) => ({
+        const routes: SearchResult[] = res.items.map((route) => ({
             key: `route-${route.id}`,
             to: gymPath(`/route?id=${route.id}`),
             icon: 'i-lucide-waypoints',
@@ -92,6 +104,14 @@ export function useGlobalSearch() {
                 .join(' · '),
             color: route.color,
         }))
+        if ((res.total ?? 0) > routes.length)
+            routes.push({
+                key: 'routes-all',
+                to: gymPath('/routes'),
+                icon: 'i-lucide-list',
+                title: t('nav.paletteAllRoutes', { n: res.total }),
+            })
+        return routes
     }
 
     const searchUsers = async (query: string): Promise<SearchResult[]> => {
@@ -224,11 +244,21 @@ export function useGlobalSearch() {
             (source) => !source.permission || can(source.permission),
         )
         return Promise.all(
-            allowed.map(async (source) => ({
-                key: source.key,
-                label: source.label,
-                items: await source.search(term).catch(() => []),
-            })),
+            allowed.map((source) =>
+                source.search(term).then(
+                    (items) => ({
+                        key: source.key,
+                        label: source.label,
+                        items,
+                    }),
+                    (error: unknown) => ({
+                        key: source.key,
+                        label: source.label,
+                        items: [],
+                        error,
+                    }),
+                ),
+            ),
         )
     }
 

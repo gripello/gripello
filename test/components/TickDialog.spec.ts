@@ -164,6 +164,23 @@ describe('TickDialog', () => {
         expect(notifyError).toHaveBeenCalledWith('errors.rateLimited')
     })
 
+    it('names the route it logs or edits', async () => {
+        asyncData = {
+            'route:r1': { data: { value: { id: 'r1', name: 'Crimpy' } } },
+        }
+        const wrapper = mountDialog()
+        const shell = () => wrapper.findComponent(dialogShellStub)
+        expect(shell().attributes('subtitle')).toBe('Crimpy')
+        await wrapper.setProps({
+            tick: {
+                id: 't1',
+                route: 'r2',
+                route_name: 'Sloper',
+            } as never,
+        })
+        expect(shell().attributes('subtitle')).toBe('Sloper')
+    })
+
     it('gives a new tick the route snapshot so a queued tick shows its route', async () => {
         asyncData = {
             'route:r1': {

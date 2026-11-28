@@ -253,6 +253,7 @@ import { normalizeCreators } from '#shared/utils/formatting'
 import { routesOnWall } from '~/utils/gymMap'
 import { toHex6 } from '#shared/utils/color'
 import { cacheKeys } from '~/utils/realtimeCache'
+import { routeMatchesQuery } from '~/utils/routeSearch'
 
 const gymPath = useGymPath()
 
@@ -331,16 +332,12 @@ const locationMenuItems = computed(() =>
 )
 
 const loadFailed = computed(
-    () =>
-        !!routesError.value ||
-        !!wallsError.value ||
-        !!locationsError.value ||
-        !!matchesError.value,
+    () => !!routesError.value || !!wallsError.value || !!locationsError.value,
 )
 
 async function retryLoad() {
     await refreshLocations()
-    return Promise.all([refreshRoutes(), refreshWalls(), refreshMatches()])
+    return Promise.all([refreshRoutes(), refreshWalls()])
 }
 
 const allRoutes = computed<RouteListItem[]>(() =>
@@ -375,44 +372,19 @@ const gradeFilter = computed({
     set: (value: string | null) => (selectedDifficulty.value = value ?? ''),
 })
 
-const hasServerFilter = computed(() => Object.keys(routeQuery.value).length > 0)
-const routeQueryKey = computed(() => JSON.stringify(routeQuery.value))
-
-const matchQuery = computed(() =>
-    locationId.value && hasServerFilter.value
-        ? { ...routeQuery.value, location: locationId.value }
-        : null,
-)
-useLiveQuery(cacheKeys.mapMatching, matchQuery)
-const {
-    data: serverMatches,
-    error: matchesError,
-    refresh: refreshMatches,
-} = useAsyncData(
-    cacheKeys.mapMatching,
-    () =>
-        matchQuery.value
-            ? listRoutes<{ id: string }>(gymId.value, matchQuery.value).then(
-                  (list) => list.items,
-              )
-            : Promise.resolve(null),
-    {
-        watch: [routeQueryKey, locationId],
-        server: false,
-        default: () => null,
-    },
-)
+const hasRouteQuery = computed(() => Object.keys(routeQuery.value).length > 0)
 
 const matchingIds = computed<Set<string> | null>(() => {
     const hasSentFilter = isLoggedIn.value && sentFilter.value !== 'all'
-    const serverIds =
-        hasServerFilter.value && serverMatches.value
-            ? new Set(serverMatches.value.map((match) => match.id))
-            : null
-    if (!serverIds && !hasSentFilter && !colorFilter.value) return null
+    if (!hasRouteQuery.value && !hasSentFilter && !colorFilter.value)
+        return null
     return new Set(
         routes.value
-            .filter((item) => !serverIds || serverIds.has(item.id))
+            .filter(
+                (item) =>
+                    !hasRouteQuery.value ||
+                    routeMatchesQuery(item, routeQuery.value),
+            )
             .filter(
                 (item) =>
                     !colorFilter.value ||

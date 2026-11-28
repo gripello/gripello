@@ -126,4 +126,19 @@ describe('routes page cards', () => {
             /class="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2"\s+data-testid="index-cards"/,
         )
     })
+
+    it('opens the route from anywhere on the card and keeps the reviews button clickable', () => {
+        expect(source).toMatch(
+            /<RouteViewButton\s+:route-id="route\.id"\s+class="after:absolute after:inset-0"/,
+        )
+        expect(source).toMatch(
+            /<RouteDetails\s+:route_id="route\.id"\s+class="relative z-1"/,
+        )
+    })
+
+    it('shows the result count above the cards', () => {
+        expect(source).toMatch(
+            /data-testid="index-cards-count"\s*>\s*\{\{ \$t\('climbing\.routesFound', \{ n: totalItems \}\) \}\}/,
+        )
+    })
 })

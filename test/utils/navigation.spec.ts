@@ -78,6 +78,7 @@ describe('visibleNavItems', () => {
             '/gym-a/routes',
             '/gym-a/map',
             '/gym-a/info',
+            '/scan',
             '/gym-a/feed',
             '/gym-a/leaderboard',
             '/gym-a/competitions',
@@ -93,6 +94,7 @@ describe('visibleNavItems', () => {
             'list',
             'map',
             'info',
+            'scan',
             'feed',
             'leaderboard',
             'competitions',
@@ -103,7 +105,7 @@ describe('visibleNavItems', () => {
         const keys = visibleNavItems(allowing('manage_routes'), true).map(
             (item) => item.key,
         )
-        expect(keys).toEqual(['home', 'friends', 'logbook'])
+        expect(keys).toEqual(['home', 'scan', 'friends', 'logbook'])
     })
 })
 
@@ -280,6 +282,7 @@ describe('sidebarSections', () => {
                     'nav-link-routes',
                     'nav-link-map',
                     'nav-link-info',
+                    'nav-link-scan',
                 ],
             ],
             [
@@ -313,6 +316,24 @@ describe('sidebarSections', () => {
             .find((item) => item.testid === 'nav-link-climber')
         expect(profile).toMatchObject({ current: own, active: own })
     })
+
+    it.each(['/gym-a/route?id=r1', '/route?id=r1'])(
+        'marks Routes current on a route page (%s)',
+        (path) => {
+            const current = sidebarSections(
+                allowing(),
+                true,
+                'gym-a',
+                path,
+                t,
+                'gym',
+            )
+                .sections.flatMap((section) => section.items)
+                .filter((item) => item.current)
+                .map((item) => item.testid)
+            expect(current).toEqual(['nav-link-routes'])
+        },
+    )
 
     it('keeps the same zones on personal pages and hides staff for climbers', () => {
         const { sections, staffEntry } = sidebarSections(
@@ -478,24 +499,22 @@ describe('bottomNavLinks', () => {
             bottomNavLinks('/logbook', 'gym-a', 'global').map(
                 (link) => link.to,
             ),
-        ).toEqual([
-            '/gym-a/routes',
-            '/gym-a/feed',
-            '/scan',
-            '/logbook',
-            '/account',
-        ])
+        ).toEqual(['/gym-a', '/gym-a/feed', '/scan', '/logbook', '/account'])
+        expect(bottomNavLinks('/logbook', '', 'global')[0]!.to).toBe('/')
         expect(bottomNavLinks('/logbook', '', 'global')[1]!.to).toBe('/')
     })
 
     it('marks the zone of the current page', () => {
-        expect(activeAt('/gym-a/map')).toBe('/routes')
-        expect(activeAt('/gym-a')).toBe('/routes')
+        expect(activeAt('/gym-a/map')).toBe('/')
+        expect(activeAt('/gym-a')).toBe('/')
+        expect(activeAt('/gym-a/route')).toBe('/')
         expect(activeAt('/gym-a/leaderboard')).toBe('/feed')
         expect(activeAt('/friends', 'global')).toBe('/feed')
         expect(activeAt('/logbook', 'global')).toBe('/logbook')
         expect(activeAt('/account', 'global')).toBe('/account')
-        expect(activeAt('/account/settings', 'global')).toBeUndefined()
+        expect(activeAt('/account/settings', 'global')).toBe('/account')
+        expect(activeAt('/account/activity', 'global')).toBe('/account')
+        expect(activeAt('/account/export/t1', 'global')).toBeUndefined()
     })
 
     it('swaps to permitted staff tabs in the staff workspace', () => {
@@ -631,12 +650,12 @@ describe('staffExitPath', () => {
 describe('offlineTabPaths', () => {
     it('covers the phone tabs and the gym pages a climber opens at the wall', () => {
         expect(offlineTabPaths('gym-a')).toEqual([
-            '/gym-a/routes',
+            '/gym-a',
             '/gym-a/feed',
             '/scan',
             '/logbook',
             '/account',
-            '/gym-a',
+            '/gym-a/routes',
             '/gym-a/map',
             '/gym-a/info',
             '/gym-a/route',

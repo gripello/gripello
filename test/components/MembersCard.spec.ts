@@ -153,9 +153,9 @@ async function mountCard() {
                         <p v-for="error in errors" :key="error.name" data-testid="form-error">{{ error.name }}</p></form>`,
                 },
                 ConfirmDialog: {
-                    props: ['modelValue'],
+                    props: ['modelValue', 'message', 'confirmText'],
                     emits: ['confirm'],
-                    template: `<div v-if="modelValue" data-testid="confirm-dialog">
+                    template: `<div v-if="modelValue" data-testid="confirm-dialog" :data-message="message" :data-confirm-text="confirmText">
                         <button data-testid="confirm-dialog-confirm" @click="$emit('confirm')" /></div>`,
                 },
             },
@@ -299,6 +299,27 @@ describe('MembersCard', () => {
         expect(wrapper.text()).not.toContain('ann')
         expect(wrapper.find('[data-testid="confirm-dialog"]').exists()).toBe(
             false,
+        )
+    })
+
+    it('names the member and the remove action in the confirm', async () => {
+        const i18n = globalThis.useI18n
+        vi.stubGlobal('useI18n', () => ({
+            ...i18n(),
+            t: (key: string, params?: Record<string, string>) =>
+                params ? `${key}:${params.name}` : key,
+        }))
+        const { wrapper, row } = await mountCard()
+        vi.stubGlobal('useI18n', i18n)
+        await row('ann')
+            .get('[data-testid="member-card-remove"]')
+            .trigger('click')
+        const dialog = wrapper.get('[data-testid="confirm-dialog"]')
+        expect(dialog.attributes('data-message')).toBe(
+            'members.removeConfirm:ann X',
+        )
+        expect(dialog.attributes('data-confirm-text')).toBe(
+            'members.removeAction',
         )
     })
 

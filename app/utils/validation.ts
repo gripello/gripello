@@ -13,13 +13,13 @@ export const required =
 export const minLength =
     (t: TranslateFn, n: number): Rule =>
     (v) =>
-        (typeof v === 'string' && v.length >= n) ||
+        (typeof v === 'string' && [...v].length >= n) ||
         t('validation.minLength', { n }, n)
 
 export const maxLength =
     (t: TranslateFn, n: number): Rule =>
     (v) =>
-        (typeof v === 'string' && v.length <= n) ||
+        (typeof v === 'string' && [...v].length <= n) ||
         t('validation.maxLength', { n }, n)
 
 export const validEmail =

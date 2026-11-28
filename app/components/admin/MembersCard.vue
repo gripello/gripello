@@ -198,7 +198,12 @@
         <ConfirmDialog
             v-model="removeDialog"
             :title="t('members.remove')"
-            :message="t('members.removeConfirm')"
+            :message="
+                t('members.removeConfirm', {
+                    name: removingMember?.displayName ?? '',
+                })
+            "
+            :confirm-text="t('members.removeAction')"
             :loading="removing"
             @confirm="removeMember"
         />
@@ -443,7 +448,6 @@ async function removeMember() {
                 (member) => member.id !== target.id,
             )
             removeDialog.value = false
-            removingMember.value = null
         },
         {
             success: t('members.removed'),

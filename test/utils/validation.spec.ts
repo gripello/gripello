@@ -66,6 +66,10 @@ describe('minLength', () => {
         expect(rule('')).toBe('validation.minLength')
     })
 
+    it('counts emoji as one character each', () => {
+        expect(rule('ab😀😀😀')).toBe('validation.minLength')
+    })
+
     it('returns an error key for a non-string value', () => {
         expect(rule(12345)).toBe('validation.minLength')
     })
@@ -86,6 +90,10 @@ describe('maxLength', () => {
 
     it('passes when length equals n', () => {
         expect(rule('abcdefghij')).toBe(true)
+    })
+
+    it('counts emoji as one character each', () => {
+        expect(rule('abcdefgh😀😀')).toBe(true)
     })
 
     it('passes when length is less than n', () => {
